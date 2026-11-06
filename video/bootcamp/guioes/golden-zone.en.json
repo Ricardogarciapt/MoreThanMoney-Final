@@ -1,0 +1,557 @@
+{
+ "estrategia": "Golden Zone",
+ "marca": "MoreThanMoney",
+ "cores": {
+  "bull": "#16A34A",
+  "bear": "#DC2626"
+ },
+ "ui": {
+  "nivel": "Level",
+  "compra": "Buy",
+  "venda": "Sell",
+  "entrada": "Entry",
+  "tp1": "Exit 1",
+  "tp2": "Exit 2",
+  "tp3": "Exit 3"
+ },
+ "pronuncia": [
+  [
+   "XAUUSD",
+   "gold dollar"
+  ],
+  [
+   "TradingView",
+   "Trading View"
+  ]
+ ],
+ "plano": {
+  "warning": false,
+  "slAtr": 1,
+  "alvos": [
+   1,
+   2
+  ],
+  "rotulos": [
+   "Exit 1",
+   "Exit 2"
+  ]
+ },
+ "videos": [
+  {
+   "rotulo": "Bootcamp Golden Zone · 1/2",
+   "titulo": "What the Golden Zone is and how to read it",
+   "cenas": [
+    {
+     "id": "v1-00",
+     "tipo": "abertura",
+     "kicker": "Bootcamp MTM · Module 1 of 2",
+     "titulo": "Golden Zone",
+     "sub": "What it is and how to read the chart",
+     "rodape": "morethanmoney.pt",
+     "semVoz": 5
+    },
+    {
+     "id": "v1-01",
+     "tipo": "frase",
+     "cap": "Welcome",
+     "texto": "A signal marks the spot. <span class='ouro'>You decide whether to enter.</span>",
+     "autor": "Ricardo Garcia · MoreThanMoney",
+     "fala": "Hi, I'm Ricardo Garcia, and this is the Golden Zone Bootcamp from MoreThanMoney. It's two videos. In this first one we'll look at what the strategy is and how to read each element that appears on the chart. Before we start, one idea that runs through everything: the Golden Zone doesn't tell you to chase the price. When a signal appears, it marks a zone and waits for the price to come back to it. The final decision is yours, once you've validated the confirmations. We'll go slowly, one piece at a time."
+    },
+    {
+     "id": "v1-02",
+     "tipo": "pontos",
+     "cap": "Welcome",
+     "kicker": "The bootcamp plan",
+     "titulo": "Two videos, one process",
+     "itens": [
+      "Video 1 · What the strategy is and how to read the chart",
+      "Video 2 · Confirmations, entry, plan and routine"
+     ],
+     "fala": "The bootcamp has two videos. In the first, you'll understand what the Golden Zone is, which market and which chart it was designed for, and what each element the scanner draws means: the yellow tick, the action zone, the exits, the invalidation and the white flag. In the second video we get into the decision process: the four confirmations, the limit order, the stop, managing the trade, when not to enter, and a simple routine for your day. I suggest you watch the videos in order, and don't skip ahead to the entry part before you understand the chart."
+    },
+    {
+     "id": "v1-03",
+     "tipo": "capitulo",
+     "cap": "01 · What the Golden Zone is",
+     "numero": "01",
+     "titulo": "What the Golden Zone is",
+     "sub": "Gold scalping, with patience",
+     "fala": "Chapter one: so what exactly is the Golden Zone?"
+    },
+    {
+     "id": "v1-04",
+     "tipo": "pontos",
+     "cap": "01 · What the Golden Zone is",
+     "kicker": "In a few words",
+     "titulo": "Scalping with a waiting zone",
+     "itens": [
+      "Gold scalping, on the five-minute chart",
+      "The signal marks an action zone, not an entry",
+      "You decide, after four confirmations",
+      "Every new signal erases the previous one"
+     ],
+     "fala": "The Golden Zone is the MoreThanMoney scalping strategy for gold, on the XAUUSD symbol. It works on the five-minute chart, both for analysis and for entry. Scalping means the trades are short: you're looking for small moves, in the direction the market is already moving. It's not a strategy for catching the top or the bottom of the day. The core idea is something else. When a signal appears, the scanner doesn't tell you to buy or sell right away. It marks an action zone and waits for the price to come back to it. The difference in words is small, but in practice it's big. Someone who chases the price usually enters far from the place where the plan made sense. Someone who waits for the retest enters closer to the zone. Waiting also has a cost: some signals never return to the zone, and that is part of the strategy. The scanner shows the plan clearly. The decision still belongs to you."
+    },
+    {
+     "id": "v1-05",
+     "tipo": "pontos",
+     "cap": "01 · What the Golden Zone is",
+     "kicker": "Where and when",
+     "titulo": "Asset, timeframe and monitoring",
+     "itens": [
+      "Asset: gold, on the XAUUSD pair",
+      "Timeframe: five minutes, for analysis and entry",
+      "Style: scalping in the direction of the trend",
+      "Watch it live, because every new signal erases the previous one"
+     ],
+     "fala": "The Golden Zone was designed for one asset, gold, on the XAUUSD pair. And for one working timeframe, the five-minute chart. That's where you see the signal, confirm the zone, validate the confirmations and decide on the entry. Notice a detail the guide stresses: every new signal erases the previous one. This means the Golden Zone is not a list of ideas kept on the chart. It's something you follow live, as it happens. If you only look at the chart once an hour, you'll miss signals, and you'll miss the reading of the moment the price reacts. So this is a strategy for someone who can be present, even if it's in short blocks of time. If you don't have that time, this may not be the right strategy for you. That's not a failure. It's a choice of style, and it's worth choosing well rather than forcing a strategy that doesn't fit your day."
+    },
+    {
+     "id": "v1-06",
+     "tipo": "checklist",
+     "cap": "01 · What the Golden Zone is",
+     "kicker": "Before you start",
+     "titulo": "What you need",
+     "itens": [
+      "A demo account with your broker",
+      "Access to the Golden Zone, through MoreThanMoney",
+      "A gold chart, XAUUSD, on five minutes",
+      "A notebook or sheet for your journal",
+      "Time to follow the chart live"
+     ],
+     "fala": "Before we go on, here's what you need to get the most out of this bootcamp. A demo account with your broker, because everything you learn should be practised without real money first. Access to the Golden Zone, through MoreThanMoney. A gold chart, on the XAUUSD pair, on five minutes. A notebook or a spreadsheet for your journal, which we'll build in the second video. And time to follow the chart live, because that's how the strategy is used. You don't need anything else. If you have all of this ready, you're set for the rest of the bootcamp."
+    },
+    {
+     "id": "v1-07",
+     "tipo": "capitulo",
+     "cap": "02 · Reading the chart",
+     "numero": "02",
+     "titulo": "Reading the chart, piece by piece",
+     "sub": "Tick, zone, plan and flag",
+     "fala": "Chapter two: how to read the chart, piece by piece."
+    },
+    {
+     "id": "v1-08",
+     "tipo": "grafico",
+     "cap": "02 · Reading the chart",
+     "kicker": "First look",
+     "titulo": "The chart with everything on",
+     "cenario": "compra",
+     "seed": 7,
+     "base": [
+      "medias",
+      "cores",
+      "niveis"
+     ],
+     "camadas": [
+      "sinal",
+      "plano"
+     ],
+     "ate": [
+      0.7,
+      0.7
+     ],
+     "zoom": [
+      0,
+      0.5
+     ],
+     "rotulo": "Yellow tick",
+     "fala": "This is what the chart looks like with everything on. At first glance it can look like a lot, and that's normal. In a few minutes you'll read each element in seconds. One important note before we continue: the charts you see in this bootcamp are illustrative. They're there to explain how the strategy works. They are not real results or market history, and they shouldn't be read as such. Now, what you can see. The fifty and two hundred exponential moving averages, which tell you the trend. The horizontal zones, which are levels where the price has already reacted in the past. The candles, coloured by direction. And the yellow tick, with the yellow box above it, which marks the action zone. The exit and invalidation lines don't appear yet. Why? Because there's no plan yet. We'll look at each element on its own."
+    },
+    {
+     "id": "v1-09",
+     "tipo": "pontos",
+     "cap": "02 · Reading the chart",
+     "kicker": "The elements",
+     "titulo": "Four pieces you need to recognise",
+     "itens": [
+      "Yellow tick: a warning on the signal candle",
+      "Action zone: the yellow box where you wait for the price",
+      "Exit 1 and Exit 2: the targets, in green",
+      "Invalidation: the stop, in red. The white flag marks the end"
+     ],
+     "fala": "Let's go piece by piece. First, the yellow tick. It appears over the signal candle, together with the yellow box, which is the action zone. The tick is a warning, not the entry candle. It only means the scanner found a setup that deserves attention. The parameters are still missing, and there's no trade yet. Second, the action zone. This is the area where, in theory, you place your limit order and wait for the price to return. Notice that the zone is a box, not a line, because the price rarely respects one exact value. Third, the exits. When the next five-minute candle closes after the tick, Exit 1 and Exit 2 appear, the two targets, in green. And the invalidation, in red, which is the level where the idea stops making sense. Without these three levels there's no trade. It isn't optional, it's the rule. Fourth, the white flag. When it appears, the trade is over. It may have won, it may have lost, or the price may have reached the targets without returning to the zone. With the flag in view, you don't enter. The flag is a closing piece of information. It tells you the moment has passed."
+    },
+    {
+     "id": "v1-10",
+     "tipo": "grafico",
+     "cap": "02 · Reading the chart",
+     "kicker": "The same reasoning, reversed",
+     "titulo": "A sell signal",
+     "cenario": "venda",
+     "seed": 11,
+     "base": [
+      "medias",
+      "cores",
+      "niveis"
+     ],
+     "camadas": [
+      "sinal",
+      "plano"
+     ],
+     "ate": [
+      0.6,
+      1
+     ],
+     "zoom": [
+      0,
+      0.5
+     ],
+     "rotulo": "Yellow tick · sell",
+     "fala": "Now a sell signal. On a sell, everything flips. The action zone sits above the price, the invalidation sits even higher, and the exits sit below. The logic is the same, only the direction changes. What I want you to see is that the reading is symmetrical. Once you can read a buy, you can read a sell, as long as you remember to invert each piece. The averages also read the other way round. On a sell, the fifty average sits below the two hundred, and that's what gives you a downtrend. Here's one of the most common beginner mistakes: reading a sell as if it were a buy with the colours swapped. Swapping the colours isn't enough. You have to confirm that each piece is on the correct side. The structure of the reading is the same. Only the positions change."
+    },
+    {
+     "id": "v1-11",
+     "tipo": "capitulo",
+     "cap": "03 · From reading to idea",
+     "numero": "03",
+     "titulo": "From reading to idea",
+     "sub": "The sequence from tick to plan",
+     "fala": "Chapter three: how you move from the tick to the plan, without skipping steps."
+    },
+    {
+     "id": "v1-12",
+     "tipo": "pontos",
+     "cap": "03 · From reading to idea",
+     "kicker": "The sequence",
+     "titulo": "From the tick to the plan",
+     "itens": [
+      "The tick appears over the signal candle",
+      "You wait for the next five-minute candle to close",
+      "Only then do the exits and invalidation appear",
+      "No complete plan, no trade"
+     ],
+     "fala": "The sequence is always the same, and the order matters. First, the yellow tick appears over the signal candle. At that moment you have nothing to execute yet. Second, you wait for the next five-minute candle to close. Only at that close do Exit 1, Exit 2 and the invalidation appear. Before that, what you have is a warning. Third, you read all the levels, and only then look at the confirmations. The temptation is to jump straight to the tick and start imagining the entry. The guide asks for a different order: first the reading, then the validation, and only then the plan. Once you get used to this sequence, you stop acting on impulse. If the candle hasn't closed yet, there's no plan to read and no decision to make. This detail seems small, but it's what separates someone who waits from someone who gets ahead of the chart."
+    },
+    {
+     "id": "v1-13",
+     "tipo": "checklist",
+     "cap": "03 · From reading to idea",
+     "kicker": "Quick read",
+     "titulo": "Five questions to ask the chart",
+     "itens": [
+      "Is there a yellow tick, and has the next candle closed?",
+      "Is the yellow box over the signal candle?",
+      "Are Exit 1, Exit 2 and the invalidation drawn?",
+      "Is there a white flag on the chart?",
+      "Are you looking at the current signal, not an old one?"
+     ],
+     "fala": "Before you look at the confirmations, five quick questions. Is there a yellow tick, and has the next candle closed? Is the yellow box over the signal candle? Are Exit 1, Exit 2 and the invalidation drawn? Is there a white flag on the chart, meaning a trade that has already finished? And are you looking at the current signal, not one that the next signal has already erased? If the answer to any of these is no, stop there. There's no trade to analyse. Only when all five answers are right do you move on to validation."
+    },
+    {
+     "id": "v1-14",
+     "tipo": "pontos",
+     "cap": "Exercise",
+     "kicker": "Common reading mistakes",
+     "titulo": "What beginners get wrong",
+     "itens": [
+      "Entering on the tick, before there is a plan",
+      "Reading a sell as a buy with the colours swapped",
+      "Looking at a signal from hours ago, already erased",
+      "Drawing more lines than the chart needs",
+      "Giving weight to a trade that already has a white flag"
+     ],
+     "fala": "Before we close this video, the most common reading mistakes. First, entering on the yellow tick without waiting for the plan. The tick is a warning, and a warning is not an order. Second, reading a sell as a buy with the colours swapped. We've already seen that's not enough. Third, looking at a signal from a few hours ago, which has already been erased by the next one, and treating it as if it were still alive. Fourth, drawing more lines than the chart needs. The Golden Zone already shows you the essentials, and extra lines only pull your attention away from the zone. And fifth, giving weight to a trade that already has a white flag. Once the flag appears, the matter is closed. Write it in the journal and wait for the next signal."
+    },
+    {
+     "id": "v1-14b",
+     "tipo": "pontos",
+     "cap": "Exercise",
+     "kicker": "Homework",
+     "titulo": "Before the second video",
+     "itens": [
+      "Keep the Golden Zone on one five-minute gold chart",
+      "Find ten yellow ticks in the history, without trading",
+      "For each one, note whether the plan appeared",
+      "Note how many ended with a white flag"
+     ],
+     "fala": "Before the second video, a simple exercise. Pick a gold chart, on the XAUUSD pair, on five minutes, and keep the strategy running on that one only. Then, look back through the history for ten moments when a yellow tick appeared. For each one, note two things: whether the plan ever appeared, and whether the price came back to the action zone before reaching the exits or the white flag. Don't trade. Only observe and note. This exercise trains your eye to see what the strategy actually shows, and in the second video you'll understand why this reading matters so much."
+    },
+    {
+     "id": "v1-15",
+     "tipo": "aviso",
+     "cap": "",
+     "titulo": "Until module 2",
+     "sub": "Confirmations, entry and routine",
+     "texto": "Educational content. This is not financial advice. Trading gold and other assets carries high risk, and you can lose part or all of your capital. The charts in this video are illustrative. Past results do not guarantee future results. Practise first on a demo account and define your risk before every entry.",
+     "fala": "Remember: this is educational content, not financial advice. Trading carries risk and you can lose money. Practise first on a demo account. See you in the second video.",
+     "respiro": 4
+    }
+   ]
+  },
+  {
+   "rotulo": "Bootcamp Golden Zone · 2/2",
+   "titulo": "Confirmations, entry and routine",
+   "cenas": [
+    {
+     "id": "v2-00",
+     "tipo": "abertura",
+     "kicker": "Bootcamp MTM · Module 2 of 2",
+     "titulo": "Golden Zone",
+     "sub": "Confirmations, entry and routine",
+     "rodape": "morethanmoney.pt",
+     "semVoz": 5
+    },
+    {
+     "id": "v2-01",
+     "tipo": "pontos",
+     "cap": "Welcome",
+     "kicker": "In this video",
+     "titulo": "From signal to decision",
+     "itens": [
+      "The four confirmations, in order",
+      "Entry inside the action zone",
+      "The stop, the exits and position size",
+      "When not to enter",
+      "A routine for following the strategy"
+     ],
+     "fala": "Welcome to the second video of the Golden Zone Bootcamp. In the first we went through the chart, piece by piece. Now we move on to the decision. We'll look at the four confirmations, in the order you should validate them. Then how to place the limit order inside the action zone, where to put the stop, and how to read the two exits. We'll also look at when not to enter, which is just as important as entering. And at the end we'll close with a simple routine for following the strategy without spending the whole day in front of the screen. The scanner finds the signal and draws the plan. Everything that follows is your process, and that's what we'll build together."
+    },
+    {
+     "id": "v2-02",
+     "tipo": "capitulo",
+     "cap": "01 · The confirmations",
+     "numero": "01",
+     "titulo": "The four confirmations",
+     "sub": "In this order",
+     "fala": "Chapter one: the four confirmations, in order."
+    },
+    {
+     "id": "v2-03",
+     "tipo": "pontos",
+     "cap": "01 · The confirmations",
+     "kicker": "Validation order",
+     "titulo": "Trend, zone, candle and imbalances",
+     "itens": [
+      "Trend: the 50 average and the 200 average",
+      "Support and resistance: the zone has reacted before",
+      "Candle pattern: an engulfing candle in the direction",
+      "Imbalances: no unfilled price gaps near the invalidation"
+     ],
+     "fala": "Once you have the signal and the plan drawn, validate the four confirmations in this order. The more of them line up, the stronger the trade. The first is the trend. Use the 50 and 200 exponential moving averages on the five-minute chart. If the 50 is above the 200, the trend is up, and you only consider buys. If it's below, the trend is down, and you only consider sells. If the trend is against the signal, the guide is clear: let it go. The second is support and resistance. Ask yourself whether the action zone coincides with a place where the price has reacted in the past. If it does, mark that area on the chart. A zone that matches an old level gains strength. The third is the candle pattern. You're looking for a candle that confirms the direction. On a buy, a bullish engulfing, where the current candle engulfs the previous one. On a sell, a bearish engulfing. The fourth is imbalances. You confirm there are no unfilled price gaps near the invalidation. The guide sums this up in one line worth keeping: an efficient price path protects your stop."
+    },
+    {
+     "id": "v2-04",
+     "tipo": "grafico",
+     "cap": "01 · The confirmations",
+     "kicker": "Four confirmations in favour",
+     "titulo": "A buy with context",
+     "cenario": "compra",
+     "seed": 7,
+     "base": [
+      "medias",
+      "cores",
+      "niveis"
+     ],
+     "camadas": [
+      "sinal",
+      "plano"
+     ],
+     "ate": [
+      0.6,
+      1
+     ],
+     "zoom": [
+      0,
+      0.5
+     ],
+     "rotulo": "Yellow tick · 4 of 4",
+     "fala": "Let's apply the four confirmations to a buy. The 50 average is above the 200, so the trend is up, and you only look for buys. The action zone coincides with an area where the price had already reacted before. That's the second confirmation, and it's marked in purple. Then the signal candle. It's a bullish engulfing, where the current candle engulfs the previous one, and it closes strongly. Third confirmation. Last, the path to the zone. There are no unfilled price gaps near the stop, so the price path is clean. Four out of four. That doesn't mean the trade will work. It means the readings agree, and the decision is now yours. With fewer confirmations, the decision is weaker, and the guide asks you to be more cautious. And if the trend is against you, you never get to this point at all."
+    },
+    {
+     "id": "v2-05",
+     "tipo": "capitulo",
+     "cap": "02 · Entry and management",
+     "numero": "02",
+     "titulo": "Entry and management",
+     "sub": "Limit order, stop and targets",
+     "fala": "Chapter two: the entry, the stop and the targets."
+    },
+    {
+     "id": "v2-06",
+     "tipo": "plano",
+     "cap": "02 · Entry and management",
+     "kicker": "The plan levels",
+     "titulo": "Zone, exits and invalidation",
+     "linhas": [
+      [
+       "Action zone",
+       "yellow box · limit order at the middle",
+       "entrada"
+      ],
+      [
+       "Exit 1",
+       "target, in green",
+       "tp"
+      ],
+      [
+       "Exit 2",
+       "target, in green",
+       "tp"
+      ],
+      [
+       "Invalidation",
+       "stop, in red",
+       "sl"
+      ]
+     ],
+     "fala": "The plan has four levels, and each one has a job. The action zone is the yellow box, where you place the limit order. The guide suggests placing it in the middle of the zone, because that tends to give a better balance between risk and return. It's a suggestion, and you'll measure it in your journal. Exit 1 and Exit 2 are the targets, in green. If the price gets there, there's a profit. The invalidation is the stop, in red, and it's the level where the idea stops making sense. Don't put it tight against the signal candle. The guide asks for the stop to sit beyond the invalidation and beyond the most extreme wick of the previous candles, not just the signal candle. A wick that breaks the invalidation and takes you out of the trade is the classic mistake of a stop that's too tight. Before you send the order, calculate the position size. The scanner shows the levels, but you're the one who defines the risk."
+    },
+    {
+     "id": "v2-07",
+     "tipo": "pontos",
+     "cap": "02 · Entry and management",
+     "kicker": "Step by step",
+     "titulo": "From reading to order",
+     "itens": [
+      "Wait for the close of the candle after the tick",
+      "Validate the four confirmations",
+      "Place the limit order inside the zone",
+      "Stop beyond the most extreme wick",
+      "Calculate the size before sending"
+     ],
+     "fala": "Let's put this in sequence, at the guide's pace. One: wait for the five-minute candle after the tick to close. Two: validate the four confirmations. If the trend is against the signal, let it go, and there's nothing more to do. Three: place a limit order inside the action zone. It isn't a market order. You want the price to come back to the zone and find you there. Four: the stop. Put it beyond the invalidation and beyond the most extreme wick of the previous candles. Five: confirm the targets, Exit 1 and Exit 2. And six, the most important, before you send the order: calculate the position size based on your account and the risk you decided on. A signal that looks good on the chart, but doesn't fit your risk, isn't a trade for you. Only after all of this does the order go to the market."
+    },
+    {
+     "id": "v2-08",
+     "tipo": "grafico",
+     "cap": "02 · Entry and management",
+     "kicker": "The retest",
+     "titulo": "The order at the middle of the zone",
+     "cenario": "compra",
+     "seed": 7,
+     "base": [
+      "medias",
+      "cores",
+      "niveis",
+      "sinal"
+     ],
+     "camadas": [
+      "plano"
+     ],
+     "ate": [
+      0.6,
+      1
+     ],
+     "zoom": [
+      0.4,
+      0.9
+     ],
+     "rotulo": "Order at the middle of the zone",
+     "fala": "Here you can see the retest. The price came back to the action zone, the yellow box, and the limit order sits in the middle of it. The price touches the zone and turns back up, without reaching the invalidation. Notice that the stop sits beyond the lowest wick of the previous candles, not tight against the signal candle. That gives it room, without moving it away from the logic of the idea. The exits sit above, in green. This example shows an execution where the entry was at the planned place, the stop was at the planned place, and the management was the one written down beforehand. It isn't a promise that the move repeats. If this trade had gone to the stop, the execution would have been just as correct, and the loss would have been the one planned from the start."
+    },
+    {
+     "id": "v2-09",
+     "tipo": "capitulo",
+     "cap": "03 · When not to enter",
+     "numero": "03",
+     "titulo": "When not to enter",
+     "sub": "As important as entering",
+     "fala": "Chapter three: when not to enter."
+    },
+    {
+     "id": "v2-10",
+     "tipo": "checklist",
+     "cap": "03 · When not to enter",
+     "kicker": "Let it go when",
+     "titulo": "Six situations",
+     "itens": [
+      "On the yellow tick candle, still without a plan",
+      "Against the trend of the 50 and 200 averages",
+      "After the white flag",
+      "Price already past Exit 2 without returning to the zone",
+      "Imbalances to fill near the stop",
+      "Stop tight only against the wick of the signal candle"
+     ],
+     "fala": "The guide has a clear list of when not to enter, and it's the part people forget most. First: on the yellow tick candle. There's still no plan, and a tick is not an order. Second: against the trend of the 50 and 200 averages. If the 50 is below the 200, you're not looking for buys, however nice the tick looks. Third: after the white flag. The trade is over, and entering now means entering a different trade, with no plan. Fourth: when the price has already passed Exit 2 without returning to the zone. You're late, and in that case there's no entry. Fifth: imbalances to fill near the stop. If the price path is full of gaps, your protection is weaker. And sixth: a stop tight only against the wick of the signal candle. A stop like that is too tight, and the guide has already warned you what happens in those cases. If any of these situations is on the chart, you don't have a trade. You don't have to justify it to anyone. That's the process working."
+    },
+    {
+     "id": "v2-11",
+     "tipo": "grafico",
+     "cap": "03 · When not to enter",
+     "kicker": "When the zone doesn't come back",
+     "titulo": "White flag, no entry",
+     "cenario": "falha",
+     "seed": 7,
+     "base": [
+      "medias",
+      "cores",
+      "niveis"
+     ],
+     "camadas": [
+      "sinal",
+      "plano"
+     ],
+     "ate": [
+      0.6,
+      0.95
+     ],
+     "zoom": [
+      0,
+      0.5
+     ],
+     "rotulo": "White flag",
+     "fala": "Look at this example. There's a yellow tick, there's a zone, and there's a plan. But the price rises beyond Exit 2 and never returns to the action zone. At no point was an entry possible, because the price never came back. The scanner marks the white flag. The trade is over, with no entry, no gain and no loss. This is one of the most useful situations for a beginner, because it shows that not every signal has an entry. Some people find this frustrating, and that's understandable. But notice: if you had chased the price, you would have entered far from the zone, with a stop that no longer made sense. Not entering was consistent with the process, even if it didn't feel that way. Record in your journal that there was a signal and no trade."
+    },
+    {
+     "id": "v2-12",
+     "tipo": "capitulo",
+     "cap": "04 · Routine",
+     "numero": "04",
+     "titulo": "Following without living on the screen",
+     "sub": "A routine for the Golden Zone",
+     "fala": "Chapter four: the following routine."
+    },
+    {
+     "id": "v2-13",
+     "tipo": "checklist",
+     "cap": "04 · Routine",
+     "kicker": "Before each session",
+     "titulo": "The routine in five steps",
+     "itens": [
+      "Open the five-minute gold chart, live",
+      "Confirm the trend with the 50 and 200 averages",
+      "Look at the yellow ticks and the drawn zones",
+      "Validate the four confirmations before acting",
+      "Note in the journal, yes or no, and why"
+     ],
+     "fala": "The routine is simple. Before a session, you open the five-minute gold chart and follow it live, because every new signal erases the previous one. You confirm the trend with the 50 and 200 averages. You see whether there's a yellow tick and where the zones are drawn. When there's a signal, you validate the four confirmations, in order, without skipping any. If the answer is no, you let it go. And at the end, you note it in the journal, with a yes or no and the reason. This last step is the one most people skip, and it's the one that teaches you the most. You don't need to stare at the screen all day. You need to be present in the moments when the strategy can give a signal, and to follow the same process every time."
+    },
+    {
+     "id": "v2-14",
+     "tipo": "pontos",
+     "cap": "04 · Routine",
+     "kicker": "The journal",
+     "titulo": "What to record for each signal",
+     "itens": [
+      "Time, direction and whether there was a yellow tick",
+      "The four confirmations, yes or no",
+      "If you entered: where, the stop and the size",
+      "Result: Exit 1, Exit 2, stop or white flag",
+      "Did you follow the process? What did you learn?"
+     ],
+     "fala": "The journal is the part that turns a strategy into learning. For each signal, record the time, the direction, and whether there was a yellow tick. Then the four confirmations, one by one, with yes or no. If you entered, record where the order in the zone went, the stop, and the position size. Then the result: did it reach Exit 1, Exit 2, the stop, or did the white flag arrive before any entry? And finally, two questions worth answering honestly. Did you follow the process? And what did you learn from this signal? After a few weeks, the journal tells you where you're being consistent and where you're improvising. It doesn't give you magic answers. It gives you the pattern of your own behaviour, written by you."
+    },
+    {
+     "id": "v2-15",
+     "tipo": "frase",
+     "cap": "Closing",
+     "texto": "The zone waits. <span class='ouro'>You decide.</span>",
+     "autor": "Ricardo Garcia · MoreThanMoney",
+     "fala": "We've reached the end of the Golden Zone Bootcamp. Remember what I said at the start: the strategy doesn't tell you to chase the price. It marks a zone and waits. You validate the confirmations, you calculate the risk, and you only enter when the process is complete. Do the exercises, practise first on a demo account, and write your journal from the very first signal, even if you don't enter. If you have questions, bring your cases to the community and to the live sessions at MoreThanMoney. I'm Ricardo Garcia. See you next time."
+    },
+    {
+     "id": "v2-16",
+     "tipo": "aviso",
+     "cap": "",
+     "titulo": "Golden Zone Bootcamp complete",
+     "sub": "morethanmoney.pt",
+     "texto": "Educational content. This is not financial advice. Trading gold and other assets carries high risk, and you can lose part or all of your capital. The charts and examples in this video are illustrative. Past results do not guarantee future results. Practise first on a demo account and define your risk before every entry.",
+     "fala": "Educational content, not financial advice. Trading carries risk and you can lose money. Practise first on a demo account. See you next time.",
+     "respiro": 4
+    }
+   ]
+  }
+ ]
+}

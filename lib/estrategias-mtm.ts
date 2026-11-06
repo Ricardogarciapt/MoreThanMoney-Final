@@ -115,11 +115,11 @@ export const ESTRATEGIAS_MTM: EstrategiaMtm[] = [
     guia: guias("premium-scanner"),
   },
   {
-    // 05/11/2026: só o guia por agora; as playlists entram quando os vídeos estiverem no YouTube.
+    // 06/11/2026: playlists do Bootcamp DEFY criadas pelo publicador (video/bootcamp/publicar-youtube.mjs).
     slug: "defy",
     nome: "DEFY",
     resumo: { pt: "Bandas de exaustão, níveis-chave e confirmações com estrelas: entrada, Warning, stop e três alvos fixos na vela.", en: "Exhaustion bands, key levels and confirmations with stars: entry, Warning, stop and three targets fixed on the candle." },
-    playlist: { pt: null, en: null },
+    playlist: { pt: "https://www.youtube.com/playlist?list=PLGgrpPKdUTXs", en: "https://www.youtube.com/playlist?list=PLDeelQZ27vQE" },
     guia: guias("defy"),
   },
 ]

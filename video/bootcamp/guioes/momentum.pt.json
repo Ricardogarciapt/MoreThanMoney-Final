@@ -1,0 +1,676 @@
+{
+ "estrategia": "Momentum",
+ "marca": "MoreThanMoney",
+ "cores": {
+  "bull": "#22C55E",
+  "bear": "#EF4444"
+ },
+ "ui": {
+  "nivel": "Nível",
+  "compra": "Compra",
+  "venda": "Venda",
+  "entrada": "Entrada",
+  "tp1": "Exit 1",
+  "tp2": "Exit 2",
+  "tp3": "Exit 3"
+ },
+ "pronuncia": [
+  [
+   "XAUUSD",
+   "ouro dólar"
+  ],
+  [
+   "RSI",
+   "R S I"
+  ],
+  [
+   "TradingView",
+   "Trading View"
+  ]
+ ],
+ "plano": {
+  "warning": false,
+  "slAtr": 1,
+  "alvos": [
+   1,
+   2,
+   3,
+   4,
+   5
+  ],
+  "rotulos": [
+   "Exit 1",
+   "Exit 2",
+   "Exit 3",
+   "Exit 4",
+   "Exit 5"
+  ]
+ },
+ "videos": [
+  {
+   "rotulo": "Bootcamp Momentum · 1/2",
+   "titulo": "O que é o Momentum e como se lê",
+   "cenas": [
+    {
+     "id": "v1-00",
+     "tipo": "abertura",
+     "kicker": "Bootcamp MTM · Módulo 1 de 2",
+     "titulo": "Momentum",
+     "sub": "O que é e como se lê o gráfico",
+     "rodape": "morethanmoney.pt",
+     "semVoz": 5
+    },
+    {
+     "id": "v1-01",
+     "tipo": "frase",
+     "cap": "Boas-vindas",
+     "texto": "A cor mostra a direção. <span class='ouro'>A pontuação mostra a qualidade.</span>",
+     "autor": "Ricardo Garcia · MoreThanMoney",
+     "fala": "Olá, sou o Ricardo Garcia e este é o Bootcamp Momentum da MoreThanMoney. São dois vídeos. Neste primeiro vamos perceber o que é o Momentum e como se lê cada peça do gráfico. O Momentum funciona por cores. Verde é compra, vermelho é venda. Mas a cor, por si só, não basta. Cada sinal reúne cinco confirmações, e é a soma delas que diz quão forte é a ideia. Vamos com calma, uma peça de cada vez, porque é assim que se aprende a ler o gráfico sem ficar perdido."
+    },
+    {
+     "id": "v1-02",
+     "tipo": "pontos",
+     "cap": "Boas-vindas",
+     "kicker": "O plano do bootcamp",
+     "titulo": "Dois vídeos, um processo",
+     "itens": [
+      "Vídeo 1 · O indicador e cada peça do gráfico",
+      "Vídeo 2 · Pontuação, plano, gestão e rotina"
+     ],
+     "fala": "O bootcamp tem dois vídeos. No primeiro, vamos ver o que o Momentum desenha sobre o gráfico, em que mercados e timeframes funciona, e como ler a nuvem, a média móvel, o volume e o RSI. No segundo, entramos na decisão: as cinco confirmações e a pontuação, o plano com entrada, saídas e invalidação, a forma de afinar uma entrada quando o espaço é grande, quando não entrar e uma rotina para o teu dia. Vê os vídeos por ordem. Cada um assenta no anterior."
+    },
+    {
+     "id": "v1-03",
+     "tipo": "capitulo",
+     "cap": "01 · O que é o Momentum",
+     "numero": "01",
+     "titulo": "O que é o Momentum",
+     "sub": "Seguimento de direção, por cores",
+     "fala": "Primeiro capítulo: o que é, afinal, o Momentum?"
+    },
+    {
+     "id": "v1-04",
+     "tipo": "pontos",
+     "cap": "01 · O que é o Momentum",
+     "kicker": "Em poucas palavras",
+     "titulo": "Um indicador sobre o gráfico",
+     "itens": [
+      "Desenha um indicador diretamente sobre o gráfico",
+      "Verde é compra, vermelho é venda",
+      "Reúne cinco peças, e cada uma vale um ponto",
+      "Desenha também entrada, saídas e invalidação"
+     ],
+     "fala": "O Momentum é o scanner da MoreThanMoney que desenha um indicador diretamente sobre o gráfico. Funciona por cores: verde para comprar, vermelho para vender. O indicador reúne cinco peças: a nuvem, a posição da nuvem, uma média móvel exponencial, o volume e o RSI. Cada uma vale um ponto, e a soma diz-te a qualidade do sinal. Além do sinal, o scanner desenha o plano: a entrada, as saídas, que são os alvos, e a invalidação, que é o stop. O tamanho da posição e o risco calculas tu, em função da tua conta. O scanner dá-te a leitura, a decisão de quanto arriscar é tua."
+    },
+    {
+     "id": "v1-04b",
+     "tipo": "pontos",
+     "cap": "01 · O que é o Momentum",
+     "kicker": "Porque cinco peças",
+     "titulo": "Cada peça responde a uma pergunta",
+     "itens": [
+      "A nuvem e a média dizem a direção",
+      "A posição da nuvem diz se a direção está do lado certo",
+      "O volume diz se a direção tem participação",
+      "O RSI diz em que zona do movimento estamos"
+     ],
+     "fala": "Porque são cinco peças e não uma? Porque cada uma responde a uma pergunta diferente. A nuvem e a média móvel respondem à pergunta de direção: para onde está a apontar o movimento. A posição da nuvem responde a outra pergunta, que é se essa direção está do lado certo das velas, porque uma cor certa no lado errado não diz o mesmo. O volume responde a uma pergunta de participação: a direção tem movimento por trás, ou é apenas uma vela isolada? E o RSI responde a uma pergunta de zona: em que região do movimento estamos, e se o momento está a virar ou a continuar. Quando uma peça responde a uma pergunta, ganha um ponto. Quando respondem todas, tens uma leitura completa. Nenhuma peça, sozinha, decide por ti."
+    },
+    {
+     "id": "v1-05",
+     "tipo": "pontos",
+     "cap": "01 · O que é o Momentum",
+     "kicker": "Onde e quando",
+     "titulo": "Mercados e timeframes",
+     "itens": [
+      "Forex, cripto, índices e matérias-primas",
+      "Exemplos do guia no ouro, XAUUSD",
+      "Intradiário: 1 hora, 30 e 15 minutos",
+      "Scalping: 1 e 5 minutos. Gráficos maiores para operações longas"
+     ],
+     "fala": "O Momentum funciona em forex, cripto, índices e matérias-primas. Os exemplos do guia são no ouro, no par XAUUSD. Quanto ao tempo, o guia indica o gráfico de uma hora, o de trinta minutos e o de quinze como os mais consistentes para este estilo, que é sobretudo intradiário. Para scalping, o guia aponta o de um e o de cinco minutos. E para operações que duram dias ou meses, sobem para o gráfico de quatro horas e até ao semanal. Escolhe um mercado e um timeframe, e mantém-nos durante as primeiras semanas. Trocar de gráfico a cada hora só embaralha a leitura."
+    },
+    {
+     "id": "v1-06",
+     "tipo": "checklist",
+     "cap": "01 · O que é o Momentum",
+     "kicker": "Antes de começar",
+     "titulo": "O que precisas",
+     "itens": [
+      "Uma conta de demonstração na tua corretora",
+      "Acesso ao scanner Momentum, pela MoreThanMoney",
+      "Um gráfico com painel de volume e painel de RSI",
+      "Um caderno ou folha para o diário",
+      "Acesso ao calendário de notícias"
+     ],
+     "fala": "Antes de avançarmos, o que precisas para este bootcamp. Uma conta de demonstração na tua corretora, porque tudo deve ser treinado sem dinheiro real primeiro. O acesso ao scanner Momentum, pela MoreThanMoney. Um gráfico com o painel de volume e o painel do RSI ligados, que são peças essenciais da leitura. Um caderno ou uma folha de cálculo para o diário. E o calendário de notícias, porque o guia pede que acompanhes as notícias, que podem mudar a direção do mercado."
+    },
+    {
+     "id": "v1-07",
+     "tipo": "capitulo",
+     "cap": "02 · Ler o gráfico",
+     "numero": "02",
+     "titulo": "Ler o gráfico, peça a peça",
+     "sub": "Nuvem, média, volume e RSI",
+     "fala": "Segundo capítulo: como se lê o gráfico, peça a peça."
+    },
+    {
+     "id": "v1-08",
+     "tipo": "grafico",
+     "cap": "02 · Ler o gráfico",
+     "kicker": "Primeiro olhar",
+     "titulo": "Uma compra com tudo ligado",
+     "cenario": "compra",
+     "seed": 7,
+     "base": [
+      "nuvem",
+      "medias",
+      "cores",
+      "volume"
+     ],
+     "camadas": [
+      "sinal",
+      "plano"
+     ],
+     "ate": [
+      0.7,
+      0.7
+     ],
+     "zoom": [
+      0,
+      0.5
+     ],
+     "rotulo": "Compra · 5 em 5",
+     "fala": "Este é o gráfico com tudo ligado, numa compra. Uma nota antes de avançarmos: os gráficos deste bootcamp são ilustrativos. Servem para explicar a leitura. Não são resultados reais nem histórico de mercado. Agora, o que vês. A nuvem verde, abaixo das velas, que indica que a direção de fundo é de subida. A média móvel exponencial, também verde e abaixo das velas. O volume, em verde, no painel do meio. E as linhas do plano, que aparecem depois de a vela fechar. Vamos ver cada uma destas peças separadamente, porque a leitura só funciona quando sabes o que cada cor quer dizer."
+    },
+    {
+     "id": "v1-09",
+     "tipo": "pontos",
+     "cap": "02 · Ler o gráfico",
+     "kicker": "Os níveis do plano",
+     "titulo": "Entrada, saídas e invalidação",
+     "itens": [
+      "Linha azul: a entrada, Entry",
+      "Linhas laranja: as saídas, de Exit 1 a Exit 5",
+      "Linha vermelha: a invalidação, o teu stop",
+      "Numa venda, as saídas ficam abaixo e a invalidação acima"
+     ],
+     "fala": "Vamos aos níveis do plano. A linha azul é a entrada, o Entry. As linhas laranja são as saídas, de Exit 1 a Exit 5, que são os alvos. A linha vermelha é a invalidação, o teu stop. Numa compra, as saídas ficam acima da entrada e a invalidação fica abaixo. Numa venda, é tudo ao contrário: as saídas ficam abaixo da entrada e a invalidação acima. A regra de leitura é sempre a mesma. Olhas para onde ganhas, para onde estás errado, e para onde está a entrada no meio. Se a invalidação estiver do lado errado da entrada, é porque estás a ler o gráfico ao contrário. Confirma sempre o lado de cada linha antes de avançares."
+    },
+    {
+     "id": "v1-10",
+     "tipo": "grafico",
+     "cap": "02 · Ler o gráfico",
+     "kicker": "O mesmo raciocínio, numa venda",
+     "titulo": "Nuvem e média vermelhas",
+     "cenario": "venda",
+     "seed": 11,
+     "base": [
+      "nuvem",
+      "medias",
+      "cores",
+      "volume"
+     ],
+     "camadas": [
+      "sinal",
+      "plano"
+     ],
+     "ate": [
+      0.6,
+      1
+     ],
+     "zoom": [
+      0,
+      0.5
+     ],
+     "rotulo": "Venda · 4 em 5",
+     "fala": "Agora uma venda. A nuvem está vermelha e acima das velas, e a média móvel também é vermelha e está acima delas. O volume aparece a vermelho no painel do meio. Estes três sinais estão de acordo, e é isso que procuras. Repara que a cor sozinha não chega. Uma nuvem vermelha no sítio errado, por exemplo abaixo das velas numa venda, não conta como confirmação. Cor certa no sítio errado não soma pontos. É um erro comum de principiante olhar para a cor e parar aí. O Momentum pede-te que vejas a cor, o lado e a direção ao mesmo tempo."
+    },
+    {
+     "id": "v1-11",
+     "tipo": "capitulo",
+     "cap": "03 · Nuvem, média e caixas",
+     "numero": "03",
+     "titulo": "Nuvem, média e caixas lilás",
+     "sub": "O canal do movimento",
+     "fala": "Terceiro capítulo: a nuvem, a média móvel e as caixas lilás."
+    },
+    {
+     "id": "v1-12",
+     "tipo": "pontos",
+     "cap": "03 · Nuvem, média e caixas",
+     "kicker": "Como ler",
+     "titulo": "O canal em três leituras",
+     "itens": [
+      "Nuvem verde abaixo das velas numa subida",
+      "Nuvem vermelha acima das velas numa descida",
+      "Média móvel da cor da direção, do lado certo",
+      "Caixa lilás sobre as velas: mercado em range"
+     ],
+     "fala": "A nuvem verde fica abaixo das velas numa subida, e a vermelha fica acima delas numa descida. A média móvel exponencial segue a mesma lógica: verde e abaixo das velas numa compra, vermelha e acima numa venda. Depois, há as caixas lilás. Quando aparecem sobre as velas, o guia diz que o mercado está em range, ou seja, lateral. Não há direção definida, e aí não se entra. Repara que a caixa lilás não é um sinal de venda nem de compra. É uma indicação de que o mercado não está a puxar para nenhum lado, e o Momentum não foi desenhado para esse tipo de movimento."
+    },
+    {
+     "id": "v1-12b",
+     "tipo": "pontos",
+     "cap": "03 · Nuvem, média e caixas",
+     "kicker": "Erros de leitura",
+     "titulo": "O que os principiantes fazem mal",
+     "itens": [
+      "Olhar só para a cor, sem ver o lado",
+      "Entrar dentro de uma caixa lilás",
+      "Ignorar o volume porque a cor da vela parece boa",
+      "Trocar de timeframe quando a ideia não aparece"
+     ],
+     "fala": "Antes de avançarmos, os erros de leitura mais comuns. Primeiro, olhar só para a cor e esquecer o lado. Já vimos que uma nuvem verde acima das velas, numa compra, não conta como confirmação. Segundo, entrar dentro de uma caixa lilás, pensando que o mercado está quase a virar. O guia diz o contrário: aí fica de fora. Terceiro, ignorar o volume porque a cor da vela parece boa. O volume é uma das cinco peças, e cada uma vale um ponto. Quarto, trocar de timeframe sempre que a ideia não aparece. Se mudas de gráfico para encontrar um sinal, estás a procurar o sinal e deixaste de seguir o processo. Escreve o erro no diário quando acontecer. É assim que deixas de o repetir."
+    },
+    {
+     "id": "v1-13",
+     "tipo": "grafico",
+     "cap": "03 · Nuvem, média e caixas",
+     "kicker": "Range: fica de fora",
+     "titulo": "Caixas lilás sobre as velas",
+     "cenario": "tendencia",
+     "seed": 21,
+     "base": [
+      "nuvem",
+      "medias",
+      "cores",
+      "volume"
+     ],
+     "camadas": [],
+     "ate": [
+      0.3,
+      1
+     ],
+     "zoom": [
+      0,
+      0
+     ],
+     "rotulo": "Caixa lilás · fora",
+     "fala": "Vê este gráfico. O preço toca em cima e em baixo, vez após vez, sem direção definida. As caixas lilás marcam esses toques. A nuvem muda de cor e a média anda à volta do preço, sem se afastar. O volume alterna de cor, sem uma direção clara. Neste tipo de movimento, o guia é claro: fica de fora. Não se compra nem se vende. Muitos principiantes entram exatamente aqui, porque o gráfico parece estar sempre a dar sinais. Mas um sinal num mercado sem direção é só ruído, e a tua paciência é a melhor ferramenta que tens nestes momentos."
+    },
+    {
+     "id": "v1-14",
+     "tipo": "capitulo",
+     "cap": "04 · Volume e RSI",
+     "numero": "04",
+     "titulo": "Volume e RSI",
+     "sub": "Os painéis de baixo",
+     "fala": "Quarto capítulo: os painéis de volume e de RSI."
+    },
+    {
+     "id": "v1-15",
+     "tipo": "pontos",
+     "cap": "04 · Volume e RSI",
+     "kicker": "Os dois painéis",
+     "titulo": "Volume e RSI",
+     "itens": [
+      "Volume em histograma: verde compra, vermelho venda",
+      "RSI em cima: zona de sobrecompra, a rosa",
+      "RSI em baixo: zona de sobrevenda, a verde",
+      "A cor do volume tem de bater com a direção"
+     ],
+     "fala": "O painel do meio mostra o volume em histograma. Verde quando a direção é de compra, vermelho quando é de venda. Numa venda, queres vermelho. Numa compra, queres verde. O painel de baixo é o RSI. A zona de sobrecompra fica em cima, a rosa, e a zona de sobrevenda fica em baixo, a verde. Para o Momentum, o que importa é o RSI a cruzar na zona certa: numa venda, as linhas a descer a partir da zona vermelha; numa compra, a subir a partir da zona verde. Não precisas de ser um especialista em RSI para usar isto. Precisas de saber onde ele está e se está do lado da tua ideia."
+    },
+    {
+     "id": "v1-16",
+     "tipo": "pontos",
+     "cap": "Exercício",
+     "kicker": "Antes do segundo vídeo",
+     "titulo": "O teu trabalho de casa",
+     "itens": [
+      "Escolhe um mercado e um timeframe, e mantém-nos",
+      "Lê a nuvem, a média, o volume e o RSI, um de cada vez",
+      "Marca dez caixas lilás e observa o que o preço faz",
+      "Anota quantas vezes a cor do volume bateu com a direção"
+     ],
+     "fala": "Antes do segundo vídeo, um exercício. Escolhe um mercado e um timeframe, e mantém-nos durante o exercício. Depois, lê a nuvem, a média, o volume e o RSI, um de cada vez, como fizemos aqui. Procura no histórico dez caixas lilás e observa o que o preço fez a seguir. Não operes. Só observas. E anota quantas vezes a cor do volume bateu com a direção da nuvem e da média. No segundo vídeo vamos transformar estas leituras em pontuação."
+    },
+    {
+     "id": "v1-17",
+     "tipo": "aviso",
+     "cap": "",
+     "titulo": "Até ao módulo 2",
+     "sub": "Pontuação, plano e rotina",
+     "texto": "Conteúdo educativo. Não é aconselhamento financeiro. Negociar forex, cripto, índices e matérias-primas envolve risco elevado e podes perder parte ou a totalidade do capital. Os gráficos deste vídeo são ilustrativos. Resultados passados não garantem resultados futuros. Treina primeiro em conta de demonstração e define o teu risco antes de cada entrada.",
+     "fala": "Lembra-te: isto é conteúdo educativo e não é aconselhamento financeiro. Negociar tem risco e podes perder dinheiro. Treina primeiro em conta de demonstração. Vemo-nos no segundo vídeo.",
+     "respiro": 4
+    }
+   ]
+  },
+  {
+   "rotulo": "Bootcamp Momentum · 2/2",
+   "titulo": "Pontuação, plano e rotina",
+   "cenas": [
+    {
+     "id": "v2-00",
+     "tipo": "abertura",
+     "kicker": "Bootcamp MTM · Módulo 2 de 2",
+     "titulo": "Momentum",
+     "sub": "Pontuação, plano e rotina",
+     "rodape": "morethanmoney.pt",
+     "semVoz": 5
+    },
+    {
+     "id": "v2-01",
+     "tipo": "pontos",
+     "cap": "Boas-vindas",
+     "kicker": "Neste vídeo",
+     "titulo": "Da leitura à decisão",
+     "itens": [
+      "As cinco confirmações, uma a uma",
+      "A pontuação: A+, B e C",
+      "Entrada, saídas, invalidação e tamanho",
+      "Afinar a entrada quando o espaço é grande",
+      "Quando não entrar, e uma rotina"
+     ],
+     "fala": "Bem-vindo ao segundo vídeo do Bootcamp Momentum. No primeiro aprendeste a ler cada peça do gráfico. Agora passamos à decisão. Vamos ver as cinco confirmações, uma a uma, e como somar os pontos. Depois, o plano, com a entrada, as saídas, a invalidação e o tamanho da posição. Vamos ver também como afinar uma entrada quando o espaço até ao stop é grande demais para a tua conta. E no fim, quando não entrar e uma rotina simples. A pontuação organiza a leitura. Quem decide és tu, e a decisão começa sempre pelo risco."
+    },
+    {
+     "id": "v2-02",
+     "tipo": "capitulo",
+     "cap": "01 · As confirmações",
+     "numero": "01",
+     "titulo": "As cinco confirmações",
+     "sub": "Uma a uma, sim ou não",
+     "fala": "Primeiro capítulo: as cinco confirmações, uma a uma."
+    },
+    {
+     "id": "v2-03",
+     "tipo": "pontos",
+     "cap": "01 · As confirmações",
+     "kicker": "Antes de entrar",
+     "titulo": "Responde sim ou não a cada uma",
+     "itens": [
+      "Nuvem presente e da cor certa",
+      "Posição da nuvem: acima numa venda, abaixo numa compra",
+      "Média móvel: cor e lado certos",
+      "Volume com a cor da direção",
+      "RSI a cruzar na zona certa"
+     ],
+     "fala": "Antes de entrar, responde sim ou não a cada uma das cinco perguntas. A primeira: a nuvem está presente e tem a cor certa? Vermelha para vender, verde para comprar. Sem nuvem, não há sinal. A segunda: a nuvem está do lado certo? Numa venda, fica acima das velas. Numa compra, fica abaixo. A terceira: a média móvel exponencial tem a cor certa e está do lado certo das velas? A quarta: o histograma do volume tem a cor da direção? Vermelho numa venda, verde numa compra. E a quinta: o RSI está a cruzar na zona certa? Numa venda, as linhas na zona vermelha a cruzar para baixo. Numa compra, na zona verde a cruzar para cima. Cada sim vale um ponto. Mais nada."
+    },
+    {
+     "id": "v2-04",
+     "tipo": "pontuacao",
+     "cap": "01 · As confirmações",
+     "kicker": "Cada sim soma um",
+     "titulo": "A contagem",
+     "inicio": 0,
+     "itens": [
+      "Nuvem",
+      "Posição da nuvem",
+      "Média móvel",
+      "Volume",
+      "RSI"
+     ],
+     "fala": "Vamos somar. Começa em zero e sobe um ponto por cada confirmação que estiver a favor. A nuvem, primeiro. Depois a posição da nuvem, que é um ponto à parte: uma cor certa no sítio errado não conta. A média móvel. O volume. E o RSI. Cinco peças, cinco pontos possíveis. A soma é a tua leitura da qualidade do sinal. Não é uma probabilidade, nem uma promessa. É uma forma organizada de comparar sinais, e de decidir quais merecem a tua atenção. Se a soma ficar abaixo de quatro, o guia pede que deixes passar."
+    },
+    {
+     "id": "v2-05",
+     "tipo": "comparar",
+     "cap": "01 · As confirmações",
+     "kicker": "Níveis de pontuação",
+     "titulo": "O que cada soma quer dizer",
+     "cartoes": [
+      {
+       "t": "5 em 5 · A+",
+       "d": "Setup A+. As cinco peças estão de acordo."
+      },
+      {
+       "t": "4 em 5 · B",
+       "d": "Setup B. Ainda dentro do critério do guia."
+      },
+      {
+       "t": "3 em 5 · C",
+       "d": "Setup C. O guia hesita, e a regra prudente é não operar."
+      },
+      {
+       "t": "2 ou menos",
+       "d": "Afasta-te do mercado."
+      }
+     ],
+     "fala": "O guia classifica a soma em três níveis. Cinco em cinco é o setup A+. Quatro em cinco é o setup B. Três em cinco é o setup C. E com dois ou menos, afasta-te do mercado. Repara num ponto importante: a própria fonte hesita sobre o C. Por isso, a regra prudente que o guia sugere é operar só os A+ e os B. Não é uma regra de ouro. É uma forma de não aceitar os sinais mais fracos quando ainda estás a aprender. Se a tua soma é três, a resposta honesta é: esta ideia não é para mim, neste momento."
+    },
+    {
+     "id": "v2-06",
+     "tipo": "capitulo",
+     "cap": "02 · Entrada e gestão",
+     "numero": "02",
+     "titulo": "Entrada, saídas e invalidação",
+     "sub": "O plano do scanner",
+     "fala": "Segundo capítulo: a entrada, as saídas e a invalidação."
+    },
+    {
+     "id": "v2-07",
+     "tipo": "plano",
+     "cap": "02 · Entrada e gestão",
+     "kicker": "Os níveis",
+     "titulo": "Entry, saídas e stop",
+     "linhas": [
+      [
+       "Entry",
+       "linha azul · preço de entrada",
+       "entrada"
+      ],
+      [
+       "Exit 1 a Exit 5",
+       "linhas laranja · alvos",
+       "tp"
+      ],
+      [
+       "Invalidação",
+       "linha vermelha · o stop",
+       "sl"
+      ],
+      [
+       "Tamanho",
+       "calculado por ti, pela tua conta",
+       "warning"
+      ]
+     ],
+     "fala": "O plano tem três níveis desenhados pelo scanner e um cálculo que é teu. A linha azul é a entrada, o Entry. As linhas laranja são as saídas, de Exit 1 a Exit 5. A linha vermelha é a invalidação, o stop. E o tamanho da posição é o cálculo que fazes antes de enviar a ordem, em função da tua conta. O guia avisa que, mesmo com cinco em cinco, não deves alavancar demasiado. A pontuação alta diz-te que a leitura está de acordo. Não te dá licença para arriscar mais. O risco continua a ser o mesmo, e continua a ser definido antes da entrada."
+    },
+    {
+     "id": "v2-08",
+     "tipo": "pontos",
+     "cap": "02 · Entrada e gestão",
+     "kicker": "Passo a passo",
+     "titulo": "Da pontuação à ordem",
+     "itens": [
+      "Soma os pontos: abaixo de quatro, deixa passar",
+      "A entrada é a linha azul",
+      "O stop é a linha vermelha de invalidação",
+      "Calcula o tamanho antes de enviar a ordem",
+      "Confirma as notícias antes de entrar"
+     ],
+     "fala": "Vamos pôr a sequência em ordem. Um: soma os pontos. Abaixo de quatro em cinco, deixas passar. Dois: a entrada é a linha azul, o Entry. Três: o stop é a linha vermelha de invalidação. Quatro: calcula o tamanho da posição com o risco que decidiste, antes de enviar a ordem. Cinco: confirma as notícias. O guia lembra que podem mudar a direção do mercado, e um sinal técnico limpo não te protege de um evento que mexe com o preço em segundos. Se algum destes passos não estiver feito, não há trade. Só depois disto é que a ordem segue para a corretora."
+    },
+    {
+     "id": "v2-09",
+     "tipo": "grafico",
+     "cap": "02 · Entrada e gestão",
+     "kicker": "Uma compra com plano",
+     "titulo": "Compra, 5 em 5",
+     "cenario": "compra",
+     "seed": 7,
+     "base": [
+      "nuvem",
+      "medias",
+      "cores",
+      "volume"
+     ],
+     "camadas": [
+      "sinal",
+      "plano"
+     ],
+     "ate": [
+      0.6,
+      1
+     ],
+     "zoom": [
+      0,
+      0.5
+     ],
+     "rotulo": "Compra · 5 em 5",
+     "fala": "Vamos ler esta compra com a lista que acabámos de ver. A nuvem é verde e está abaixo das velas. A média móvel também é verde e está abaixo delas. O volume está verde no painel do meio. E o RSI cruza para cima a partir da zona verde. Cinco em cinco. A entrada está na linha azul, as saídas estão acima, a verde e laranja, e a invalidação está abaixo, em vermelho. Repara que o plano só aparece depois de a vela fechar. Antes disso, não há nada para executar. Este exemplo mostra a leitura completa. O resultado não é o que importa aqui. O que importa é que a leitura, a entrada e o stop foram feitos pelo mesmo processo."
+    },
+    {
+     "id": "v2-10",
+     "tipo": "capitulo",
+     "cap": "03 · Afinar a entrada",
+     "numero": "03",
+     "titulo": "Afinar a entrada",
+     "sub": "Quando o espaço é grande demais",
+     "fala": "Terceiro capítulo: como afinar a entrada quando o espaço é grande."
+    },
+    {
+     "id": "v2-11",
+     "tipo": "pontos",
+     "cap": "03 · Afinar a entrada",
+     "kicker": "Quando o stop está longe",
+     "titulo": "O espaço é grande demais para a tua conta",
+     "itens": [
+      "Espera uma quebra de estrutura",
+      "Marca a última vela contrária antes do movimento impulsivo",
+      "Espera que o preço volte a essa zona",
+      "O stop fica um pouco abaixo, e a entrada melhora",
+      "Se o preço não voltar, não entras"
+     ],
+     "fala": "Há uma situação que o guia descreve com cuidado. Às vezes, o espaço entre a entrada e a invalidação é grande demais para a tua conta. Não é um erro do scanner. É simplesmente a distância que o mercado criou. Nesse caso, podes afinar a entrada. Espera uma quebra de estrutura. Depois, marca a última vela contrária antes do movimento impulsivo, e espera que o preço volte a essa zona. Se voltar, entras com o stop um pouco abaixo, e a relação entre a entrada e o stop fica melhor. Se o preço não voltar, não entras. Repara que esta opção troca a certeza de entrar pela qualidade do preço de entrada. Não é uma alternativa gratuita, e tens de a aceitar com os olhos abertos."
+    },
+    {
+     "id": "v2-12",
+     "tipo": "grafico",
+     "cap": "03 · Afinar a entrada",
+     "kicker": "Entrada à espera do retorno",
+     "titulo": "Afinar a entrada numa compra",
+     "cenario": "compra",
+     "seed": 21,
+     "base": [
+      "nuvem",
+      "medias",
+      "cores"
+     ],
+     "camadas": [
+      "sinal",
+      "plano"
+     ],
+     "ate": [
+      0.6,
+      1
+     ],
+     "zoom": [
+      0,
+      0.5
+     ],
+     "rotulo": "Entrada a afinar",
+     "fala": "Aqui está o princípio na prática. O movimento impulsivo arranca, e antes dele há uma última vela contrária. É essa vela que marcas. O preço sobe, sem voltar à zona, e a entrada fica por ver. Depois, o preço recua e volta à zona marcada. Nesse momento, e só nesse, a entrada ajustada faz sentido, com o stop um pouco abaixo. Se o preço tivesse continuado a subir sem voltar, o trade simplesmente não existiria para ti. Esperar pelo retorno é uma decisão legítima, desde que saibas que vais perder alguns movimentos. Quem afina a entrada aceita perder trades para ganhar um preço melhor."
+    },
+    {
+     "id": "v2-13",
+     "tipo": "capitulo",
+     "cap": "04 · Quando não entrar",
+     "numero": "04",
+     "titulo": "Quando não entrar",
+     "sub": "E a rotina diária",
+     "fala": "Quarto capítulo: quando não entrar, e uma rotina simples."
+    },
+    {
+     "id": "v2-14",
+     "tipo": "checklist",
+     "cap": "04 · Quando não entrar",
+     "kicker": "Deixa passar quando",
+     "titulo": "Seis situações",
+     "itens": [
+      "Caixa lilás sobre as velas",
+      "Mercado lateral, sem direção definida",
+      "Menos de quatro em cinco pontos",
+      "Risco por calcular",
+      "Stop demasiado largo, sem tentar afinar a entrada",
+      "Conta real, sem treino prévio em demonstração"
+     ],
+     "fala": "Há seis situações em que o guia manda ficar de fora. Primeiro: caixa lilás sobre as velas. O mercado está em range, e não há direção. Segundo: mercado lateral, sem direção definida, o que os traders chamam de choppy. Terceiro: menos de quatro em cinco pontos. Quarto: o risco não está calculado em função da tua conta. Quinto: um stop demasiado largo para a tua conta, sem antes tentares afinar a entrada. E sexto, o mais simples de todos: entrar em conta real sem ter treinado antes em demonstração. Se alguma destas situações estiver no gráfico, não tens trade. Não precisas de o justificar a ninguém. É o processo a funcionar."
+    },
+    {
+     "id": "v2-15",
+     "tipo": "grafico",
+     "cap": "04 · Quando não entrar",
+     "kicker": "Uma venda com plano",
+     "titulo": "Venda, 4 em 5",
+     "cenario": "venda",
+     "seed": 11,
+     "base": [
+      "nuvem",
+      "medias",
+      "cores",
+      "volume"
+     ],
+     "camadas": [
+      "sinal",
+      "plano"
+     ],
+     "ate": [
+      0.6,
+      1
+     ],
+     "zoom": [
+      0,
+      0.5
+     ],
+     "rotulo": "Venda · 4 em 5",
+     "fala": "Vamos a uma venda com quatro em cinco. A nuvem é vermelha e está acima das velas. A média também é vermelha e está acima delas. O volume está vermelho. Falta uma confirmação, por exemplo o RSI ainda não cruzou para baixo na zona vermelha. Quatro em cinco é um setup B, e dentro do critério do guia. Repara que o que muda aqui é a tua escolha de tamanho e de gestão. O plano é o mesmo, com entrada, saídas e invalidação do lado certo. Um setup B não é um setup A+, e a diferença deve refletir-se no que arriscas, e não apenas na vontade de entrar."
+    },
+    {
+     "id": "v2-16",
+     "tipo": "pontos",
+     "cap": "04 · Quando não entrar",
+     "kicker": "A rotina",
+     "titulo": "Cinco passos por dia",
+     "itens": [
+      "Ver o calendário de notícias do dia",
+      "Abrir o mercado no timeframe escolhido",
+      "Ler a nuvem, a média, o volume e o RSI",
+      "Somar os pontos antes de agir",
+      "Escrever a decisão no diário"
+     ],
+     "fala": "A rotina é curta. Primeiro, vês o calendário de notícias do dia, porque o guia pede que acompanhes as notícias e elas podem mudar a direção do mercado. Segundo, abres o mercado no timeframe que escolheste, sempre o mesmo. Terceiro, lês a nuvem, a média, o volume e o RSI, pela ordem em que os aprendeste. Quarto, somas os pontos, e só então decides. E quinto, escreves a decisão no diário, mesmo quando é não entrar. Não precisas de estar o dia inteiro no ecrã. Precisas de consistência, e de seguir sempre o mesmo processo."
+    },
+    {
+     "id": "v2-16b",
+     "tipo": "pontos",
+     "cap": "04 · Quando não entrar",
+     "kicker": "O diário",
+     "titulo": "O que registar em cada sinal",
+     "itens": [
+      "Hora, direção e cor do volume",
+      "As cinco peças, sim ou não",
+      "Se entraste: entrada, stop e tamanho",
+      "Resultado, e se seguiste o plano",
+      "Uma frase sobre o que aprendeste"
+     ],
+     "fala": "O diário é o que transforma o Momentum em aprendizagem. Para cada sinal, regista a hora, a direção e a cor do volume no momento. Depois, as cinco peças, uma a uma, com sim ou não. Assim, a pontuação fica escrita e não fica só na memória. Se entraste, regista a entrada, o stop e o tamanho da posição que calculaste. Depois, o resultado, e uma pergunta honesta: seguiste o plano? E por fim, uma frase sobre o que aprendeste. Ao fim de algumas semanas, o diário mostra-te como se comportam os teus setups A+, B e C, medidos por ti, e não por ninguém. Não te dá respostas mágicas. Dá-te factos teus para decidires com mais critério."
+    },
+    {
+     "id": "v2-17",
+     "tipo": "frase",
+     "cap": "Fecho",
+     "texto": "A direção mostra-se. <span class='ouro'>A decisão é tua.</span>",
+     "autor": "Ricardo Garcia · MoreThanMoney",
+     "fala": "Chegámos ao fim do Bootcamp Momentum. Lembra-te do essencial: verde é compra, vermelho é venda, e a cor só conta quando as outras peças estão de acordo. Soma os pontos, respeita o plano, calcula o risco antes de entrar, e deixa passar tudo o que está abaixo de quatro em cinco. Faz os exercícios, treina em conta de demonstração, e escreve o diário desde o primeiro sinal. Se tiveres dúvidas, traz os teus casos para a comunidade e para as sessões ao vivo da MoreThanMoney. Eu sou o Ricardo Garcia. Até à próxima."
+    },
+    {
+     "id": "v2-18",
+     "tipo": "aviso",
+     "cap": "",
+     "titulo": "Bootcamp Momentum concluído",
+     "sub": "morethanmoney.pt",
+     "texto": "Conteúdo educativo. Não é aconselhamento financeiro. Negociar forex, cripto, índices e matérias-primas envolve risco elevado e podes perder parte ou a totalidade do capital. Os gráficos e exemplos deste vídeo são ilustrativos. Resultados passados não garantem resultados futuros. Treina primeiro em conta de demonstração e define o teu risco antes de cada entrada.",
+     "fala": "Conteúdo educativo, não é aconselhamento financeiro. Negociar tem risco e podes perder dinheiro. Treina primeiro em conta de demonstração. Até à próxima.",
+     "respiro": 4
+    }
+   ]
+  }
+ ]
+}

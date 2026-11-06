@@ -1,0 +1,1354 @@
+{
+ "estrategia": "Sensei",
+ "marca": "MoreThanMoney",
+ "cores": {
+  "bull": "#8b5cf6",
+  "bear": "#6b7280"
+ },
+ "ui": {
+  "nivel": "Level",
+  "compra": "Buy",
+  "venda": "Sell",
+  "entrada": "Entry",
+  "tp1": "TP1",
+  "tp2": "TP2",
+  "tp3": "TP3"
+ },
+ "pronuncia": [
+  ["TradingView", "Trading View"],
+  ["ATR", "A T R"],
+  ["ADX", "A D X"],
+  ["RSI", "R S I"],
+  ["POC", "P O C"],
+  ["DEMA", "D E M A"],
+  ["EMA", "E M A"],
+  ["BOS", "B O S"],
+  ["CHoCH", "C H O C H"],
+  ["IDM", "I D M"],
+  ["HTF", "H T F"],
+  ["R", "ar"],
+  ["TP1", "T P one"],
+  ["TP2", "T P two"],
+  ["TP3", "T P three"],
+  ["XAUUSD", "gold dollar"],
+  ["EURUSD", "euro dollar"]
+ ],
+ "plano": {
+  "warning": false,
+  "slAtr": 1.5,
+  "alvos": [1.5, 2.5, 4, 6],
+  "rotulos": ["Exit 1", "Exit 2", "Exit 3", "Exit 4"]
+ },
+ "videos": [
+  {
+   "rotulo": "Sensei Bootcamp · 1/3",
+   "titulo": "Foundations: what Sensei draws on the chart",
+   "cenas": [
+    {
+     "id": "v1-00",
+     "tipo": "abertura",
+     "kicker": "Bootcamp MTM · Module 1 of 3",
+     "titulo": "Sensei",
+     "sub": "Foundations: what Sensei draws on the chart",
+     "rodape": "morethanmoney.pt",
+     "semVoz": 5
+    },
+    {
+     "id": "v1-01",
+     "tipo": "frase",
+     "cap": "Welcome",
+     "texto": "A confluence is not a certainty. <span class='ouro'>It is agreement</span> between different readings.",
+     "autor": "Ricardo Garcia · MoreThanMoney",
+     "fala": "Hello, I'm Ricardo Garcia, and this is the Sensei Bootcamp from MoreThanMoney. Before we start, I want to make one thing clear: no indicator guarantees results. Sensei brings several market readings together on one chart, with fixed rules, and shows you when those readings agree. That is different from predicting price. Over these three modules you will understand each piece of the chart, then see how a signal is born and how the trade plan is drawn, and in the last module we talk about risk, management, and a fifteen-minute daily routine. Let's go slowly. Each module builds on the one before, so don't skip ahead."
+    },
+    {
+     "id": "v1-02",
+     "tipo": "pontos",
+     "cap": "Welcome",
+     "kicker": "The plan of the bootcamp",
+     "titulo": "Three modules, one method",
+     "itens": [
+      "Module 1 · Each piece of the chart and how to read it",
+      "Module 2 · From the score to the trade plan",
+      "Module 3 · Risk, management and daily routine"
+     ],
+     "fala": "The bootcamp has three modules. This first one is the foundation: what Sensei is, how you put it on your chart, and what each reading draws. The second is the engine: how a signal is born, how the score of twenty confirmations works, which filters apply, and how the plan is fixed on the signal candle, with entry, stop and four exits. The third is practice: risk per idea, position size, trade management, when not to enter, and the daily routine. I suggest you watch them in order, and pause the video whenever you want to try something on your own chart."
+    },
+    {
+     "id": "v1-03",
+     "tipo": "capitulo",
+     "cap": "01 · What is Sensei",
+     "numero": "01",
+     "titulo": "What is Sensei",
+     "sub": "Several readings, one confluence",
+     "fala": "Let's start with the first chapter. So what exactly is Sensei?"
+    },
+    {
+     "id": "v1-04",
+     "tipo": "camadas3d",
+     "cap": "01 · What is Sensei",
+     "kicker": "Four lenses on the same chart",
+     "titulo": "Where each piece comes from",
+     "itens": [
+      "Market structure",
+      "Double averages and POC",
+      "Sensei band and cloud",
+      "Order flow"
+     ],
+     "fala": "Sensei is built from pieces that already had a purpose of their own. The first is the structure engine from MTM Scanner, which identifies breaks and changes of character in price. The second is the double averages and the POC, which show the trend and a reference point in volume. The third is the Sensei band, an average of eighty-nine candles with one standard deviation above and below it. And the fourth is order flow, read from a lower timeframe, which tries to see who is buying and who is selling inside each candle. Picture four lenses on the same chart. Each one gives you a piece of the story. Sensei only lets an idea move forward when the lenses agree enough, and that word, agree, is the centre of the whole indicator."
+    },
+    {
+     "id": "v1-05",
+     "tipo": "pontos",
+     "cap": "01 · What is Sensei",
+     "kicker": "How agreement is measured",
+     "titulo": "Twenty confirmations, four groups",
+     "itens": [
+      "Double averages: trend and alignment",
+      "Volume, strength and momentum",
+      "Structure and POC",
+      "Band and buying pressure"
+     ],
+     "fala": "To make that agreement measurable, Sensei uses twenty confirmations, organised into four groups of five. The first group is the trend of the double averages: how they line up, their slope, and where price sits against the fast average. The second is volume, strength and momentum: volume on the signal candle, expansion in volatility, the strength of the trend measured by ADX, RSI, and order flow. The third is structure and POC: the state of market structure, changes of character, breaks of structure, the position against the POC, and the order flow imbalance. And the fourth is the band and buying pressure: the cloud, the position against the band, a recent phase, and buying pressure. Each confirmation adds one point. How many light up at the same time is the score. Later we'll see how much score you need."
+    },
+    {
+     "id": "v1-06",
+     "tipo": "pontos",
+     "cap": "01 · What is Sensei",
+     "kicker": "Where it works",
+     "titulo": "Markets and timeframes",
+     "itens": [
+      "Forex, gold, indices and crypto",
+      "Scalp on 5 and 15 minutes",
+      "Intraday on the 1-hour chart",
+      "Swing on the 4-hour chart"
+     ],
+     "fala": "Sensei was designed for forex, gold, indices and crypto, and for different rhythms. In practice there are three ways to use it, and the difference is mainly the timeframe. On scalp, on the five- and fifteen-minute charts, more ideas appear and the moves are shorter, which demands more time at the screen. On intraday, on the one-hour chart, there are fewer ideas, and for many people that is a good balance, because two or three checks a day are enough. On swing, on the four-hour chart, ideas are rare and the moves tend to last longer. If you are just starting, choose one market and one timeframe for the first few weeks. Changing everything at once is the fastest way to not understand what you are looking at."
+    },
+    {
+     "id": "v1-06b",
+     "tipo": "checklist",
+     "cap": "01 · What is Sensei",
+     "kicker": "Before we start",
+     "titulo": "What you need",
+     "itens": [
+      "A TradingView account, where the indicator runs",
+      "Sensei on your chart",
+      "A demo account with your broker",
+      "A notebook or spreadsheet for your journal",
+      "Fifteen minutes a day"
+     ],
+     "fala": "Before we move on, here is what you need to get the most from this bootcamp. A TradingView account, because that is where the indicator runs. Sensei on your chart. A demo account with your broker, because everything you learn should be practised without real money first. A notebook, or a spreadsheet, for your journal, which we will build in the third module. And fifteen minutes a day. What makes the difference is not how long you spend looking at charts, it is how consistently you repeat the same process over weeks."
+    },
+    {
+     "id": "v1-07",
+     "tipo": "capitulo",
+     "cap": "02 · Putting Sensei on the chart",
+     "numero": "02",
+     "titulo": "Putting Sensei on the chart",
+     "sub": "Settings and themes",
+     "fala": "Second chapter: how you put Sensei on your chart, and how to read the settings without getting lost."
+    },
+    {
+     "id": "v1-08",
+     "tipo": "pontos",
+     "cap": "02 · Putting Sensei on the chart",
+     "kicker": "The settings",
+     "titulo": "A map of the settings",
+     "itens": [
+      "Sensei Otimizado and Estilo de Trading",
+      "Core: minimum confirmations, POC and averages",
+      "Quality filters: higher-timeframe trend, anti-sideways and candle close",
+      "Order flow, bands and structure",
+      "Risk management, breakeven and alerts"
+     ],
+     "fala": "When you open Sensei's settings you will see several groups, and it helps to have a mental map of them. At the top are the theme and the trading style, with the option Sensei Otimizado, which applies, for each pair and timeframe, the configuration the code has for that combination. Then the core, with the minimum number of confirmations, the POC period and the visibility of the averages. After that, the quality filters: the higher-timeframe trend, the session filter, the anti-sideways filter, and the requirement of a candle close. Further down, the buy and sell sides, the phase, the order flow with the lower timeframe, the band and the cloud. And at the end, risk management, breakeven, trailing and alerts. In this first part, the rule is simple: leave everything at the default and learn to read before you change anything."
+    },
+    {
+     "id": "v1-09",
+     "tipo": "grafico",
+     "cap": "02 · Putting Sensei on the chart",
+     "kicker": "First look",
+     "titulo": "The chart with everything switched on",
+     "cenario": "compra",
+     "seed": 7,
+     "base": ["banda", "medias", "poc", "estrutura", "cores", "sinal", "plano"],
+     "camadas": [],
+     "zoom": [0, 0],
+     "estrelas": "14/20",
+     "fala": "This is what the chart looks like with every layer switched on. At first glance it looks like a lot, and that is normal. In a few minutes you will read each element in seconds: the band around price, the averages, the POC, the structure markers, the coloured candles, the signal, the score card and the plan lines. One important note, which I will say only once in this module: the charts in this bootcamp are illustrative animations, designed to explain how things work. They are not real results and not market history. Now let's switch everything off and turn on one layer at a time."
+    },
+    {
+     "id": "v1-10",
+     "tipo": "comparar",
+     "cap": "02 · Putting Sensei on the chart",
+     "kicker": "Theme",
+     "titulo": "The colour themes",
+     "cartoes": [
+      {"t": "Light", "d": "Light background. The original theme of the indicator."},
+      {"t": "Dark", "d": "A modern dark mode, for people who work at night."},
+      {"t": "Classic", "d": "Night-blue tones."},
+      {"t": "Pop", "d": "Vibrant, almost neon colours."}
+     ],
+     "fala": "Before we get into the readings, one practical point: the theme. In the settings, Sensei has a theme for the indicator. Light, which is the original, uses a light background. Dark is a modern dark mode. Classic uses night-blue tones. And Pop uses vibrant, almost neon colours. The logic of reading is the same in all of them, only the palette changes. Pick one and don't keep switching, because your eye gets used to the colours, and that makes reading much faster. In this bootcamp I use the original theme, so what you see on screen matches what you will find."
+    },
+    {
+     "id": "v1-11",
+     "tipo": "capitulo",
+     "cap": "03 · Band and cloud",
+     "numero": "03",
+     "titulo": "Reading 1: the Sensei band and cloud",
+     "sub": "The eighty-nine average and its band",
+     "fala": "Third chapter, and the first foundation reading: the Sensei band and the cloud."
+    },
+    {
+     "id": "v1-12",
+     "tipo": "grafico",
+     "cap": "03 · Band and cloud",
+     "kicker": "Reading 1",
+     "titulo": "Eighty-nine average, with one standard deviation",
+     "cenario": "compra",
+     "seed": 7,
+     "base": [],
+     "camadas": ["banda"],
+     "ate": [0.55, 0.6],
+     "zoom": [0, 0],
+     "fala": "The Sensei band is built from a simple average of eighty-nine candles, and a standard deviation, which measures how far price usually strays from that average. The upper band sits one standard deviation above the average, and the lower one a standard deviation below. Most of the time, price wanders inside that range. When it leaves it, it is moving further away than usual. Notice the colour too. The band switches between purple and grey, depending on the cloud. Purple appears when the cloud is rising, and grey when it is falling. The cloud compares a faster average with the eighty-nine average, and the colour tells you which of the two is on top. It is not a buy order. It is a reading of the direction of the background trend."
+    },
+    {
+     "id": "v1-13",
+     "tipo": "pontos",
+     "cap": "03 · Band and cloud",
+     "kicker": "How to read it",
+     "titulo": "What the band tells you",
+     "itens": [
+      "Price inside the band: normal movement",
+      "Price outside the band: stretched further than usual",
+      "Purple: rising cloud",
+      "Grey: falling cloud",
+      "Position against the band is a confirmation, not a signal"
+     ],
+     "fala": "How do you read the band in practice? While price stays inside the range, you are in normal movement, with the market breathing around the average. When price leaves the range, above or below, it is stretched, and that deserves attention, but it is not an order. Sensei counts the position of price against the band as one of the twenty confirmations, in the band and buying pressure group. In other words, it adds one point, and nothing more. A candle outside the band, on its own, does not make an idea. In the same way, purple does not mean you should buy. It means the cloud is on the buying side. Everything depends on how the other readings behave at the same time."
+    },
+    {
+     "id": "v1-14",
+     "tipo": "comparar",
+     "cap": "03 · Band and cloud",
+     "kicker": "Band settings",
+     "titulo": "Length and cloud mode",
+     "cartoes": [
+      {"t": "Length 89", "d": "The original value. Changing the length changes the character of the whole band."},
+      {"t": "Cloud Active", "d": "The original mode. The fast average in the cloud reacts faster."},
+      {"t": "Cloud Passive", "d": "The fast average is slower, and the colour changes less often."}
+     ],
+     "fala": "Two parameters change the character of the band. The length, which is eighty-nine by default. If you lower it, the band hugs price more closely and more moves appear outside it. If you raise it, the band becomes wider and slower. And the cloud mode: in Active, the original, the fast average reacts faster, and the colour changes sooner. In Passive, the fast average is slower, and the colour changes less often. There is no single right choice for every market. The recommendation is the same as always: change one value at a time, and observe for a few weeks before drawing conclusions."
+    },
+    {
+     "id": "v1-15",
+     "tipo": "capitulo",
+     "cap": "04 · Double averages and POC",
+     "numero": "04",
+     "titulo": "Reading 2: double averages and POC",
+     "sub": "Trend and a volume reference point",
+     "fala": "Fourth chapter: the double averages and the POC."
+    },
+    {
+     "id": "v1-16",
+     "tipo": "grafico",
+     "cap": "04 · Double averages and POC",
+     "kicker": "Reading 2",
+     "titulo": "Three averages in pairs, and the POC",
+     "cenario": "compra",
+     "seed": 7,
+     "base": ["banda"],
+     "camadas": ["medias", "poc"],
+     "ate": [0.6, 0.6],
+     "zoom": [0, 0],
+     "fala": "The double averages are three exponential averages of different lengths: fifteen, fifty and two hundred and thirty-eight candles. Each has its own colour, and you read them by the order in which they line up. When the fastest average sits above the middle one, and the middle one above the slow one, the alignment is rising. When the slope of the averages also agrees, the trend is clean. Notice how the averages open out and follow each other. These alignments and slopes count as confirmations in the first group. The line of orange dots is the POC, the point of control. We explain it on the next screen. For now, keep this idea: price crossing the POC upwards is one of the buy triggers."
+    },
+    {
+     "id": "v1-17",
+     "tipo": "pontos",
+     "cap": "04 · Double averages and POC",
+     "kicker": "Context",
+     "titulo": "Alignment, slope and price",
+     "itens": [
+      "Averages in rising order: buyer alignment",
+      "Averages in falling order: seller alignment",
+      "Averages rising or falling: strength on your side",
+      "Price above the fast average: short-term momentum"
+     ],
+     "fala": "How do you use the averages? Four simple ideas. First: the order. With the fastest average above the others, the alignment is for buyers. With it below, it is for sellers. Second: the slope. An average that rises gives the trend strength, and one that flattens tells you the move is losing traction. Third: the position of price against the fast average. A price above it has short-term momentum on its side. And fourth: all three together. When alignment, slope and price point the same way, the group of averages adds many confirmations. When they disagree, the score comes out lower, and that is useful information too."
+    },
+    {
+     "id": "v1-18",
+     "tipo": "pontos",
+     "cap": "04 · Double averages and POC",
+     "kicker": "The POC",
+     "titulo": "Where the most trading happened",
+     "itens": [
+      "Calculated over blocks of fourteen candles",
+      "It is the price of the candle with the most volume in each block",
+      "Price above the POC: buyer side",
+      "Crossing the POC upwards can be a buy trigger"
+     ],
+     "fala": "Let's talk about the POC in plain words. Every fourteen candles, the indicator looks at the block that has just closed and finds the candle with the most volume. That candle's price becomes the POC for that block, drawn as a line of orange dots. Why does this matter? Because zones where a lot of volume traded tend to carry weight: they are references many people see. So Sensei treats price above the POC as being on the buyer side. And a crossover of price upwards through the POC is one of the two buy triggers. The other is a complete phase, which we will look at in the second module. Remember: the POC is a reference, not a guarantee that price will stop there."
+    },
+    {
+     "id": "v1-19",
+     "tipo": "capitulo",
+     "cap": "05 · Structure",
+     "numero": "05",
+     "titulo": "Reading 3: market structure",
+     "sub": "When the move changes character",
+     "fala": "Fifth chapter, third reading: market structure."
+    },
+    {
+     "id": "v1-20",
+     "tipo": "grafico",
+     "cap": "05 · Structure",
+     "kicker": "Reading 3",
+     "titulo": "Breaks, changes and traps",
+     "cenario": "compra",
+     "seed": 7,
+     "base": ["banda", "medias", "cores"],
+     "camadas": ["estrutura"],
+     "ate": [0.62, 0.9],
+     "zoom": [0, 0],
+     "fala": "Market structure is the sequence of highs and lows that price draws. When price breaks a previous high in an uptrend, we have a break of structure, a BOS, and the trend is confirmed. When, on the other hand, price breaks an important low against the trend, a change of character appears, a CHoCH. It is the first sign that the move may have changed. The indicator also marks liquidity traps, which are moments when price pushes through a known level, catches the people who were positioned there, and then returns inside. And it draws order blocks, which are zones formed by the last candle before a strong move. All of this is context. None of these marks, on its own, is an order."
+    },
+    {
+     "id": "v1-21",
+     "tipo": "pontos",
+     "cap": "05 · Structure",
+     "kicker": "On the panel",
+     "titulo": "Structure in four marks",
+     "itens": [
+      "BOS: structure confirms the direction",
+      "CHoCH: first hint that the move has changed",
+      "Liquidity traps: price sweeps a level and returns",
+      "Order blocks: origin zone of a strong move"
+     ],
+     "fala": "It is worth separating the four marks, because each one answers a different question. The BOS asks: does the trend continue? If price breaks the last high in an uptrend, the answer is yes. The CHoCH asks: is the trend still in charge? If price breaks the last important low, there is a first hint that it is not. Liquidity traps ask: who was on the wrong side? When price sweeps a known level and returns inside, many stops have been triggered. And order blocks ask: where did this move come from? The zone of the last candle before the strength can serve as a reference. These are four questions. None of them has a perfect answer, and it is the combination that gives you context."
+    },
+    {
+     "id": "v1-22",
+     "tipo": "capitulo",
+     "cap": "06 · Order flow",
+     "numero": "06",
+     "titulo": "Reading 4: order flow",
+     "sub": "Who is buying and selling inside the candle",
+     "fala": "Sixth chapter: order flow, the most technical reading in Sensei."
+    },
+    {
+     "id": "v1-23",
+     "tipo": "pontos",
+     "cap": "06 · Order flow",
+     "kicker": "Order flow",
+     "titulo": "Looking inside the candle",
+     "itens": [
+      "The flow uses one-minute candles by default",
+      "Delta: buying minus selling, as a share of volume",
+      "Imbalance: when delta passes the threshold of 0.25",
+      "Without lower-timeframe data, it uses an approximation on the chart"
+     ],
+     "fala": "A one-hour candle looks like a box, but inside it there were many trades, buys and sells. Sensei asks the one-minute chart, which is the default timeframe for order flow, to measure how much of the volume was buying and how much was selling. The difference, divided by total volume, is called delta. When that proportion passes the threshold, which by default is zero point two five, the indicator marks an imbalance, either buying or selling. If the chart has no data from that lower timeframe, the indicator uses an approximation built from the candle itself. It is useful, but less precise. So order flow is one more vote in the score, not a reason to enter on its own."
+    },
+    {
+     "id": "v1-24",
+     "tipo": "grafico",
+     "cap": "06 · Order flow",
+     "kicker": "Pause the video",
+     "titulo": "Read it yourself first",
+     "cenario": "tendencia",
+     "seed": 11,
+     "base": ["banda", "medias", "poc", "estrutura", "cores"],
+     "camadas": [],
+     "ate": [0.6, 0.62],
+     "zoom": [0, 0.3],
+     "fala": "Now it's your turn. Pause the video and read this chart on your own, layer by layer, before you continue. Where is price against the band? Is it inside or outside? What colour is the cloud? Where is price against the POC, above or below? Is there a recent BOS or CHoCH? And what do the last candles say about order flow? Answer these six questions in writing. There is no right answer for training your eye. In the next module you will see what the score says about this type of situation, and you can compare your reading with the indicator's."
+    },
+    {
+     "id": "v1-24b",
+     "tipo": "pontos",
+     "cap": "06 · Order flow",
+     "kicker": "A reading order",
+     "titulo": "Before you look at the score",
+     "itens": [
+      "First the context: band and cloud",
+      "Then the direction: averages and structure",
+      "Then the flow, as a vote and not as an order",
+      "Only then look at the score"
+     ],
+     "fala": "Before we put everything together, a reading order that will save you a lot of time. First, the context: where price sits against the band, and what colour the cloud is. Then, the direction: the alignment and slope of the double averages, and the last structure mark. Next, order flow, which you should treat as one more vote, never as an order in itself. And only at the end do you look at the score. The reason is simple. If you start with the number, you tend to look for readings that confirm what you already wanted to do. If you start with the context, the number becomes a confirmation, and not an excuse."
+    },
+    {
+     "id": "v1-25",
+     "tipo": "capitulo",
+     "cap": "07 · Putting it together",
+     "numero": "07",
+     "titulo": "Putting the readings together",
+     "sub": "An illustrative example",
+     "fala": "Seventh chapter: let's put everything together in one example."
+    },
+    {
+     "id": "v1-26",
+     "tipo": "grafico",
+     "cap": "07 · Putting it together",
+     "kicker": "Illustrative example",
+     "titulo": "From the stretch to the confirmation",
+     "cenario": "compra",
+     "seed": 7,
+     "base": ["banda", "medias", "poc", "cores"],
+     "camadas": ["estrutura", "sinal", "plano"],
+     "ate": [0.6, 1],
+     "zoom": [0, 0.5],
+     "estrelas": "14/20",
+     "fala": "Let's read this example calmly. Price is falling, with the cloud grey, and it reaches the lower zone of the band. Nothing has happened yet, and that is where the indicator waits. Then the structure changes character: a bullish CHoCH appears. Right after, price closes above the POC, which is the crossover that triggers a buy setup. Sensei counts the confirmations, and the signal candle closes with a score of fourteen out of twenty. That number clears the minimum of the custom style, which is twelve. The plan is drawn on the signal candle: the entry at the close, the stop one and a half ATR below, ATR being the measure of the average volatility of the candles, and the four exits above. Notice that the idea only exists after the close. Until then, it was just a reading. In the second module we will take each of these numbers apart."
+    },
+    {
+     "id": "v1-27",
+     "tipo": "pontos",
+     "cap": "07 · Putting it together",
+     "kicker": "Reading mistakes",
+     "titulo": "What beginners get wrong",
+     "itens": [
+      "Buying just because price touched the band",
+      "Reading a signal before the candle closes",
+      "Ignoring the four-hour trend",
+      "Filling the chart with more indicators on top of Sensei",
+      "Changing the settings every day"
+     ],
+     "fala": "Before we close this module, the most common reading mistakes. First, buying just because price touched the lower band. The band is a confirmation, not a trigger. Second, reading a signal before the candle closes. Until the close, nothing is confirmed, and price can change its mind many times. Third, ignoring the four-hour trend. A buy below the two-hundred-candle average on the four-hour chart is a buy against the filter, and the filter exists for a reason. Fourth, filling the chart with more indicators on top of Sensei. It already brings together the readings you need. More lines do not give you more certainty, they give you more doubt. And fifth, changing the settings every day. That way you never get to know how the indicator behaves on your market. Choose, fix, observe."
+    },
+    {
+     "id": "v1-28",
+     "tipo": "checklist",
+     "cap": "Summary",
+     "kicker": "Module 1 summary",
+     "titulo": "What you need to be able to read",
+     "itens": [
+      "Band: where price is against the eighty-nine average",
+      "Double averages and POC: which way the trend is leaning",
+      "Structure: whether the move keeps or changes character",
+      "Order flow: who is buying and selling inside the candle",
+      "The score only counts when the readings agree"
+     ],
+     "fala": "A quick recap of the first module. The band tells you where price is against the eighty-nine average. The double averages and the POC tell you which way the trend is leaning. Structure tells you whether the move keeps its character or changes it. Order flow shows who is buying and selling inside the candle. And the score only counts when these readings agree."
+    },
+    {
+     "id": "v1-29",
+     "tipo": "pontos",
+     "cap": "Exercise",
+     "kicker": "Before module 2",
+     "titulo": "Your homework",
+     "itens": [
+      "Put Sensei on one market and one timeframe only",
+      "Turn everything off and switch on one layer at a time",
+      "Mark five times when price left the band",
+      "Note what happened next, without trading"
+     ],
+     "fala": "Before the second module, an exercise. Put Sensei on one market and one timeframe only, and stick with them. Turn everything off and switch on one layer at a time, as we did here. Then search the history for five moments when price left the band, above or below, and note what happened in the candles that followed. Without trading, just observing. This simple exercise trains your eye more than any video can. In the next module we will see how a signal is born, how the score is counted, and how the plan is fixed on the candle."
+    },
+    {
+     "id": "v1-30",
+     "tipo": "aviso",
+     "cap": "",
+     "titulo": "See you in module 2",
+     "sub": "From the score to the trade plan",
+     "texto": "Educational content. Not financial advice. Trading forex, indices, metals and crypto involves high risk, and you can lose part or all of your capital. The charts in this video are illustrative. Past results do not guarantee future results.",
+     "fala": "Remember: this is educational content and not financial advice. Trading carries risk, and you can lose money. Practise on a demo account first. See you in module two.",
+     "respiro": 4
+    }
+   ]
+  },
+  {
+   "rotulo": "Sensei Bootcamp · 2/3",
+   "titulo": "From the score to the trade plan",
+   "cenas": [
+    {
+     "id": "v2-00",
+     "tipo": "abertura",
+     "kicker": "Bootcamp MTM · Module 2 of 3",
+     "titulo": "Sensei",
+     "sub": "From the score to the trade plan",
+     "rodape": "morethanmoney.pt",
+     "semVoz": 5
+    },
+    {
+     "id": "v2-01",
+     "tipo": "pontos",
+     "cap": "Welcome",
+     "kicker": "In this module",
+     "titulo": "Sensei's engine",
+     "itens": [
+      "How a signal is born",
+      "The twenty confirmations and the score",
+      "Filters that decide what reaches the screen",
+      "Trade plan: entry, stop and four exits",
+      "Alerts and reading a sell"
+     ],
+     "fala": "Welcome to the second module of the Sensei Bootcamp. In the first one you learned to read each piece of the chart. Now we open the engine. You will see how a setup forms, what triggers a signal, how the score of twenty confirmations works, and why the filters decide which signals reach your screen. Then we move on to the trade plan: entry at the close of the signal candle, the stop at a multiple of ATR, and the four exits in R, with the rule that the stop moves to entry after the first exit. At the end we look at alerts. This is the most technical module, so take your time, and go back whenever you need to."
+    },
+    {
+     "id": "v2-02",
+     "tipo": "capitulo",
+     "cap": "01 · How a signal is born",
+     "numero": "01",
+     "titulo": "How a signal is born",
+     "sub": "A close, never a guess",
+     "fala": "First chapter: how a signal is born."
+    },
+    {
+     "id": "v2-03",
+     "tipo": "pontos",
+     "cap": "01 · How a signal is born",
+     "kicker": "Triggers",
+     "titulo": "What triggers a buy setup",
+     "itens": [
+      "Price crosses the POC upwards",
+      "Or a phase completes: Momentum or Exaustão",
+      "Only at the candle close, with the setting Apenas Fecho de Vela on",
+      "And only if the score clears the style minimum"
+     ],
+     "fala": "A buy setup can be born in two ways. The first is the POC crossover: price closes above a point of control that was below it. The second is a phase. Sensei counts sequences of candles, and when the count completes, the phase fires. There are two counts. One is Momentum, where the setup completes after nine candles by default, and which looks for continuation. The other is Exaustão, a countdown of thirteen candles that looks for reversals. But a setup is not yet a signal. For the signal to appear, the score must clear the minimum, the candle cannot carry order flow against the buy, and it must pass the volume and volatility filters. And with the candle-close filter on, the indicator only evaluates the candle after it has closed."
+    },
+    {
+     "id": "v2-04",
+     "tipo": "comparar",
+     "cap": "01 · How a signal is born",
+     "kicker": "Phase modes",
+     "titulo": "Momentum and Exaustão",
+     "cartoes": [
+      {"t": "Momentum", "d": "Fires when the setup completes. Follows continuation. Used in the scalp and intraday styles."},
+      {"t": "Exaustão", "d": "Fires at the end of the full countdown. Looks for reversals. Used in the swing and conservative styles."}
+     ],
+     "fala": "There are two phase modes, and the choice depends on the style. Momentum is continuation: it fires when the sequence of nine candles completes, which happens when the move keeps gaining traction. Exaustão is reversal: it requires the full countdown of thirteen candles, and it looks for the point where the previous move runs out of steam. In the scalp and intraday styles, the indicator uses Momentum. In swing and conservative, it uses Exaustão. And in the optimised mode, each pair and timeframe can have its own. The rule is the same as always: don't change mode every week, because otherwise your journal cannot tell you what is working."
+    },
+    {
+     "id": "v2-05",
+     "tipo": "grafico",
+     "cap": "01 · How a signal is born",
+     "kicker": "Candle close",
+     "titulo": "The candle has to close",
+     "cenario": "compra",
+     "seed": 7,
+     "base": ["banda", "cores"],
+     "camadas": ["medias", "sinal"],
+     "ate": [0.58, 0.63],
+     "zoom": [0.4, 0.95],
+     "estrelas": "13/20",
+     "fala": "See how the close decides everything. While the candle is forming, price can rise and fall as much as it likes, and the indicator waits. Only after the close, with volume and volatility confirming, does the signal appear, with the score next to it. Notice that the candle that fires does not have to be the biggest on the chart. It has to be a candle that closes on the right side of the references. With the candle-close filter on, the signal never appears halfway through a candle. That matters a lot, because a signal that appears and disappears mid-candle is worthless in practice."
+    },
+    {
+     "id": "v2-06",
+     "tipo": "capitulo",
+     "cap": "02 · The score",
+     "numero": "02",
+     "titulo": "The confirmation score",
+     "sub": "Twenty confirmations, four groups",
+     "fala": "Second chapter: the score."
+    },
+    {
+     "id": "v2-07",
+     "tipo": "pontuacao",
+     "cap": "02 · The score",
+     "kicker": "Each piece adds one",
+     "titulo": "The score in fourteen pieces",
+     "inicio": 0,
+     "itens": [
+      "Double averages aligned",
+      "Averages rising",
+      "Price above the fast average",
+      "Volume and expansion",
+      "Strength (ADX) above the minimum",
+      "RSI and order flow",
+      "Structure and change of character",
+      "Recent BOS",
+      "Price above the POC",
+      "Flow imbalance",
+      "Sensei band and cloud",
+      "Recent phase",
+      "Buying pressure",
+      "Safe volatility"
+     ],
+     "fala": "The score starts at zero, and every confirmation that lights up adds one. For clarity, I have arranged the twenty confirmations into fourteen pieces here, because they fit better on the screen. Each piece combines one or two readings of the same kind. Double averages aligned, and the averages rising. Price above the fast average. Volume and expansion. The strength of ADX, and RSI with order flow. Structure and the change of character. A recent BOS. Price above the POC. The flow imbalance. The band and the cloud. A recent phase. Buying pressure. And volatility in a safe zone. In this example, fourteen pieces are lit. On the indicator's panel you see all twenty, one by one, and that is where you should read. The minimum in the custom style is twelve out of twenty. Each style has its own, and the panel shows the real count."
+    },
+    {
+     "id": "v2-08",
+     "tipo": "comparar",
+     "cap": "02 · The score",
+     "kicker": "Four groups of five",
+     "titulo": "Where each confirmation sits",
+     "cartoes": [
+      {"t": "Double averages", "d": "Alignment, slope, and where price sits against the fast average."},
+      {"t": "Volume, strength and momentum", "d": "Volume, expansion, ADX, RSI and order flow."},
+      {"t": "Structure and POC", "d": "State of structure, change of character, breaks, POC and flow imbalance."},
+      {"t": "Band and pressure", "d": "Cloud, position against the band, recent phase, buying pressure and volatility."}
+     ],
+     "fala": "Twenty is a lot to memorise, so sort them into four groups of five. The first is the trend of the double averages: alignment, slope and where price sits against the fast average. The second is volume, strength and momentum: volume on the candle, volatility expansion, ADX, RSI and order flow. The third is structure and the POC: the state of the structure, the change of character, the break of structure, the POC and the flow imbalance. And the fourth is the band and buying pressure: the cloud, the position against the band, a recent phase, buying pressure and volatility. A balanced idea has pieces from several groups. A high score that comes entirely from one group deserves a more critical look, because it means one family of readings is pulling everything."
+    },
+    {
+     "id": "v2-08b",
+     "tipo": "pontos",
+     "cap": "02 · The score",
+     "kicker": "Reading the signal card",
+     "titulo": "What the signal card tells you",
+     "itens": [
+      "Direction: buy or sell",
+      "Score: how many pieces are lit, out of twenty",
+      "Style and phase mode in use",
+      "Whether the optimised mode was on"
+     ],
+     "fala": "When a signal appears, the card tells you four things, and it is worth reading them always in the same order. First, the direction: buy or sell. Second, the score, which is the number of pieces lit out of twenty. Third, the style and the phase mode in use at that moment, because the same idea can be produced by one mode or another. And fourth, whether the optimised mode was on, because that changes the configuration the indicator applied. When you write in your journal, copy these four things onto the line for that idea. Without them, a month from now you will not be able to tell why that idea was different from the others."
+    },
+    {
+     "id": "v2-09",
+     "tipo": "pontos",
+     "cap": "02 · The score",
+     "kicker": "How to think about the score",
+     "titulo": "Agreement, not certainty",
+     "itens": [
+      "More pieces lit = more readings in agreement",
+      "It is not a probability or a promise",
+      "A high score with no structure is a warning",
+      "Always read the context above the number"
+     ],
+     "fala": "I want you to think about the score the right way. A high score means many different readings agree at the same time. It does not mean the idea will work. It is not a probability, and certainly not a promise. The score gives you an objective way to compare setups and decide which ones deserve your attention. A high score with no structure piece at all, for example, is a warning: the averages and volume may be saying something that price has not yet confirmed. Your job is still to read the context: the four-hour trend, the news of the day, and whether price has already moved too far from the signal."
+    },
+    {
+     "id": "v2-10",
+     "tipo": "capitulo",
+     "cap": "03 · Filters",
+     "numero": "03",
+     "titulo": "Filters that decide",
+     "sub": "Higher-timeframe trend, anti-sideways and candle close",
+     "fala": "Third chapter: the filters, which decide whether a signal with a good score actually reaches the screen."
+    },
+    {
+     "id": "v2-11",
+     "tipo": "comparar",
+     "cap": "03 · Filters",
+     "kicker": "Four gates",
+     "titulo": "Before a signal appears",
+     "cartoes": [
+      {"t": "Higher-timeframe trend", "d": "Buys only above the two-hundred-candle average on the four-hour chart. Sells only below it."},
+      {"t": "Anti-sideways", "d": "ADX blocks signals when the market has no strength. Minimum of fifteen by default."},
+      {"t": "Candle close", "d": "Only evaluates after the candle has closed, so the signal does not vanish halfway."},
+      {"t": "Side", "d": "Sells are off. When you switch them on, they require three extra confirmations."}
+     ],
+     "fala": "The filters are the gates a signal has to pass through. The first is the higher-timeframe trend: Sensei only lets buys through when price is above the two-hundred-candle average on the four-hour chart, and sells when it is below. This aligns the entry with the bigger current. The second is the anti-sideways filter: when ADX shows that the market has no strength, the indicator blocks signals. It is not a perfect filter, and that is why reading the market stays your job. The third is the candle close, which we have already seen. And the fourth is the side: sells are off by default, and when you switch them on the indicator requires three more confirmations than for a buy. A signal that passes all four gates is a signal with context. One that does not pass, even with a high score, should be left out."
+    },
+    {
+     "id": "v2-12",
+     "tipo": "pontos",
+     "cap": "03 · Filters",
+     "kicker": "Switches",
+     "titulo": "Three switches to know",
+     "itens": [
+      "Filtro de Sessão: off, limits the hours for signals",
+      "Permitir Vendas: off by default",
+      "Só operar setups validados: off, blocks pairs with no validated configuration",
+      "Only change these three after you know the indicator"
+     ],
+     "fala": "There are three switches worth knowing, all off by default. The session filter, called Filtro de Sessão, limits the indicator to a window of hours that you define on the chart. Permitir Vendas, as we have seen, turns on the sell side with more demands. And the third, Só operar setups validados, blocks any pair or timeframe that has no validated configuration in the code. It is more restrictive, and it cuts exposure to combinations that have not been tested. For now, leave all three as they come. Once you have a few weeks of journal, you can try them one at a time and measure the effect in your own record."
+    },
+    {
+     "id": "v2-12b",
+     "tipo": "pontos",
+     "cap": "03 · Filters",
+     "kicker": "When a signal does not come",
+     "titulo": "Why a setup may not become a signal",
+     "itens": [
+      "Score below the style minimum",
+      "Price on the wrong side of the four-hour 200 average",
+      "ADX below the minimum: market without strength",
+      "Setup without a candle close: not a signal yet"
+     ],
+     "fala": "It is worth knowing why a setup can appear and still not become a signal. There are four typical reasons. The first is the score: the crossover exists, but the number of confirmations stays below the style minimum, so there is no card. The second is the higher-timeframe trend: a buy with price below the two-hundred-candle average on the four-hour chart does not pass that filter. The third is the anti-sideways filter: with ADX below the minimum, the market does not have enough strength, and the indicator prefers to stay quiet. And the fourth is the simplest: without a candle close, there is no signal yet, only a reading in progress. When a setup does not become a signal, the indicator is not failing. It is doing the job it was designed for."
+    },
+    {
+     "id": "v2-12c",
+     "tipo": "grafico",
+     "cap": "03 · Filters",
+     "kicker": "Illustrative example",
+     "titulo": "A setup that never becomes a signal",
+     "cenario": "tendencia",
+     "seed": 11,
+     "base": ["banda", "medias", "poc", "cores"],
+     "camadas": ["estrutura"],
+     "ate": [0.6, 0.9],
+     "zoom": [0, 0.4],
+     "fala": "Look at this illustrative chart. Price crosses the POC and the structure shows a change of character, so at first glance it seems there is an idea. But notice there is no signal card and no plan lines. In this example, the score stays below the minimum of the chosen style, because some of the pieces that usually accompany this kind of move are not lit. The indicator draws nothing, and that is exactly its job. You, on the other hand, will feel the temptation to draw the idea yourself. Don't. If the indicator did not draw it, the idea is not validated, and your journal should record it as a reading without a signal."
+    },
+    {
+     "id": "v2-13",
+     "tipo": "capitulo",
+     "cap": "04 · Styles",
+     "numero": "04",
+     "titulo": "Styles and the optimised mode",
+     "sub": "From scalp to swing",
+     "fala": "Fourth chapter: the styles and the optimised mode."
+    },
+    {
+     "id": "v2-14",
+     "tipo": "pontos",
+     "cap": "04 · Styles",
+     "kicker": "Choose by the time you have",
+     "titulo": "Scalp, intraday and swing",
+     "itens": [
+      "Scalp: 5 and 15-minute charts, more ideas, more screen time",
+      "Intraday: 1-hour chart, two or three checks a day",
+      "Swing: 4-hour chart, fewer ideas and more patience",
+      "Personalizado: you choose the minimum confirmations"
+     ],
+     "fala": "The styles are the first big switch. Scalp works on the five- and fifteen-minute charts, produces more ideas, and needs you at the screen regularly. Intraday works on the one-hour chart, and for someone with a job it is the most realistic: two or three checks a day are enough. Swing works on the four-hour chart, with fewer ideas, trades that last longer, and a lot of patience. And Personalizado lets you change the minimum number of confirmations, which comes at twelve, and the other parameters. Each style adjusts a whole set of things at once: the minimum confirmations, the spacing between signals, the ADX filter, the stop multiplier and the phase mode. So changing style means changing the indicator, not just the colours."
+    },
+    {
+     "id": "v2-15",
+     "tipo": "pontos",
+     "cap": "04 · Styles",
+     "kicker": "Automatic mode",
+     "titulo": "Sensei Otimizado",
+     "itens": [
+      "Applies the code's configuration for the pair and timeframe",
+      "Replaces the chosen style whenever that configuration exists",
+      "With no configuration for that combination, it uses the chosen style",
+      "Check the settings to see which one is active"
+     ],
+     "fala": "Sensei Otimizado is on by default. When you are on a pair and timeframe for which the code has its own configuration, the indicator applies that configuration, and it replaces the style you picked. When there is no configuration for that combination, it falls back to your chosen style. This is practical, but it has a consequence: if you are comparing two days, it is worth checking in the settings which mode was in use, because the pair and timeframe matter more than the style. For your journal, always record the style and whether the optimised mode was on. Without that, you cannot compare one week with another."
+    },
+    {
+     "id": "v2-16",
+     "tipo": "capitulo",
+     "cap": "05 · The trade plan",
+     "numero": "05",
+     "titulo": "The trade plan",
+     "sub": "Fixed on the signal candle",
+     "fala": "Fifth chapter, and perhaps the most important: the trade plan."
+    },
+    {
+     "id": "v2-17",
+     "tipo": "grafico",
+     "cap": "05 · The trade plan",
+     "kicker": "Full plan",
+     "titulo": "Entry, stop and four exits",
+     "cenario": "compra",
+     "seed": 7,
+     "base": ["banda", "cores", "sinal"],
+     "camadas": ["plano"],
+     "ate": [0.64, 0.64],
+     "zoom": [0.7, 0.7],
+     "estrelas": "14/20",
+     "fala": "When the idea is born, Sensei draws the full plan and fixes it on the signal candle. The entry is that candle's close. The stop sits a few ATR away, on the opposite side from the direction: by default, one and a half ATR in the custom style. The other styles and the optimised mode may use a different multiplier, so always check the value on the card. The four exits sit on the side of the direction, at multiples of the risk. That risk is called R, and it is the distance between entry and stop. The levels do not move afterwards. The dynamic levels setting is off, and that is what guarantees that the plan you see is the plan you have. Having the plan drawn before you enter is half the discipline. You know where you enter, where you are wrong, and where you take profit."
+    },
+    {
+     "id": "v2-18",
+     "tipo": "plano",
+     "cap": "05 · The trade plan",
+     "kicker": "How it is calculated",
+     "titulo": "Entry, stop and exits in R",
+     "linhas": [
+      ["Entry", "close of the signal candle", "entrada"],
+      ["Stop", "1.5 ATR away", "sl"],
+      ["Exit 1", "1.5 R · 25% of the position", "tp"],
+      ["Exit 2", "2.5 R · 25%", "tp"],
+      ["Exit 3", "4 R · 25%", "tp"],
+      ["Exit 4", "6 R · 25%", "tp"]
+     ],
+     "fala": "Let's go through the arithmetic in words. R is the distance between entry and stop. If the stop is six points from entry, one R is six points. Exit one sits at one and a half R, which means nine points. Exit two at two and a half R, fifteen points. Exit three at four R, twenty-four points. And exit four at six R, thirty-six points. At each exit you close a quarter of the position, by default. The four percentages add up to one hundred per cent, which guarantees that if all four exits are reached, the position is fully closed. And after the first exit, the stop moves to entry. From then on, in normal market conditions, the idea no longer carries a risk of loss."
+    },
+    {
+     "id": "v2-19",
+     "tipo": "plano",
+     "cap": "05 · The trade plan",
+     "kicker": "Invented example",
+     "titulo": "A buy in round numbers",
+     "linhas": [
+      ["Entry", "2,000.0", "entrada"],
+      ["ATR of the signal candle", "4.0", ""],
+      ["Stop (1.5 ATR)", "1,994.0 · R = 6.0", "sl"],
+      ["Exit 1 (1.5 R)", "2,009.0 · 25%", "tp"],
+      ["Exit 2 (2.5 R)", "2,015.0 · 25%", "tp"],
+      ["Exit 3 (4 R)", "2,024.0 · 25%", "tp"],
+      ["Exit 4 (6 R)", "2,036.0 · 25%", "tp"]
+     ],
+     "fala": "An example with round numbers, invented, on gold. Entry is at two thousand, at the close of the signal candle. The ATR of that candle is four points. The stop, at one and a half ATR, sits six points below, at one thousand, nine hundred and ninety-four. That is the R: six points. The first target, at one and a half R, is nine points above, at two thousand and nine. The second, at two and a half R, at two thousand and fifteen. The third, at four R, at two thousand and twenty-four. And the fourth, at six R, at two thousand and thirty-six. The indicator does these sums for you. But it is important that you understand where they come from, because the position size, which comes in the third module, depends precisely on this distance."
+    },
+    {
+     "id": "v2-20",
+     "tipo": "pontos",
+     "cap": "05 · The trade plan",
+     "kicker": "Fixed",
+     "titulo": "The plan does not move on its own",
+     "itens": [
+      "Levels fixed on the signal candle",
+      "Dynamic levels is off by default",
+      "You are the one who moves the trade, through management",
+      "The stop only moves to entry after the first exit"
+     ],
+     "fala": "There are four things worth knowing about how the plan is fixed. First: the levels stay attached to the signal candle. They do not redraw when price moves. Second: the dynamic levels mode exists, but it is off. If you switch it on, the entry follows the current close and the levels recalculate on every candle. That changes the whole reading, and it is not what Sensei does by default. Third: once the plan is drawn, you are the one who moves the trade, through the management we will look at. And fourth: the only automatic change to the stop, by default, is moving it to entry after the first exit. Nothing else slides for you."
+    },
+    {
+     "id": "v2-21",
+     "tipo": "comparar",
+     "cap": "05 · The trade plan",
+     "kicker": "Management options",
+     "titulo": "Breakeven and trailing",
+     "cartoes": [
+      {"t": "Mover SL para BE em", "d": "By default, at Exit 1. The stop goes to entry."},
+      {"t": "Trailing Stop", "d": "Off by default. When on, the stop follows price at a distance of ATR times the multiplier, only in your favour."},
+      {"t": "BE conclui a trade", "d": "Off by default. When on, reaching breakeven marks the trade as complete."}
+     ],
+     "fala": "There are several ways to protect a position, and they all come in a calm mode. Breakeven, by default, moves the stop to entry when Exit 1 is reached. You can choose another reference point, such as Exit 2, Exit 3, or a number of points. The trailing stop, which is off, makes the stop follow price at a distance of ATR times the multiplier. And there is also the option to treat the trade as complete once breakeven is reached, which is off too. Notice that the trailing only tightens the stop in your favour, it never moves it away. You decide whether to switch it on, and you read its effect in your journal before you keep it."
+    },
+    {
+     "id": "v2-22",
+     "tipo": "capitulo",
+     "cap": "06 · The sell side",
+     "numero": "06",
+     "titulo": "Reading a sell",
+     "sub": "The same process, in reverse, with caution",
+     "fala": "Sixth chapter: the sell side. With caution, because it is switched off on purpose."
+    },
+    {
+     "id": "v2-23",
+     "tipo": "pontos",
+     "cap": "06 · The sell side",
+     "kicker": "Sells",
+     "titulo": "Off, and with more demands",
+     "itens": [
+      "Off by default",
+      "When switched on, requires three extra confirmations over a buy",
+      "Only fires below the four-hour two-hundred-candle average",
+      "The plan mirrors the buy: stop above, exits below"
+     ],
+     "fala": "Reading a sell is the same process, in reverse. Price stretches, the score counts, the signal candle closes on the sell side, and the plan is drawn mirrored: the stop above, the exits below. But there is an important difference. Sells are off by default, because the indicator has to be certain that the context is a sell. When you switch the sell side on, the minimum rises by three confirmations, and the trend filter only lets sells through below the four-hour two-hundred-candle average. In other words, a sell has to be a very clear sell. If you have no experience trading the sell side, leave it off and practise the reading on a demo account first."
+    },
+    {
+     "id": "v2-24",
+     "tipo": "capitulo",
+     "cap": "07 · Alerts",
+     "numero": "07",
+     "titulo": "Alerts",
+     "sub": "Sensei working for you",
+     "fala": "Seventh chapter: alerts."
+    },
+    {
+     "id": "v2-25",
+     "tipo": "pontos",
+     "cap": "07 · Alerts",
+     "kicker": "On TradingView",
+     "titulo": "One alert, every entry",
+     "itens": [
+      "Create an alert on the Sensei condition",
+      "Choose «any alert() function call»",
+      "Watchlist mode: one alert covers several symbols",
+      "Optional webhook, with a JSON message"
+     ],
+     "fala": "So you don't have to stare at the screen, you create an alert on TradingView. For the condition you pick Sensei, and then the option any alert function call. With Watchlist mode on, which is the default, that single alert sends one message for each symbol and each state of the idea. The code's frequency is once per bar, and with the candle-close filter on that respects the close of the candle. If you use a webhook, each message arrives as JSON, with the symbol, the timeframe, the style, the state, the direction, the score, the signal type and the plan levels. Notice that the score is in the message, but the context is still yours to read."
+    },
+    {
+     "id": "v2-26",
+     "tipo": "pontos",
+     "cap": "07 · Alerts",
+     "kicker": "Follow-up",
+     "titulo": "The idea followed to the end",
+     "itens": [
+      "ENTRY: the idea is born, buy or sell",
+      "TP1 to TP4: each exit reached",
+      "BE: the stop should move to entry",
+      "SL: the stop has been hit"
+     ],
+     "fala": "After the signal, the indicator keeps following the idea, and each state has its own message. ENTRY marks the start, whether buy or sell. The TP1 to TP4 messages arrive when each exit is touched. BE tells you the stop should move to entry. And SL tells you the stop has been hit. With these message types, you can keep a journal of each idea from start to finish without having to guess what happened. That is what makes the journal honest: every idea has its entry, its exits and its end recorded."
+    },
+    {
+     "id": "v2-27",
+     "tipo": "checklist",
+     "cap": "Summary",
+     "kicker": "Module 2 summary",
+     "titulo": "The engine, in five sentences",
+     "itens": [
+      "Signal = setup at the close, with the score above the minimum",
+      "The score measures agreement, not certainty",
+      "Filters decide which signals reach you",
+      "The plan is fixed: entry, stop and four exits in R",
+      "The stop moves to entry after the first exit"
+     ],
+     "fala": "A recap of the second module. A signal comes from a setup, at the candle close, when the score clears the minimum. The score measures agreement, not certainty. The filters decide which signals reach the screen. The plan stays fixed on the signal candle, with entry, stop and four exits in R. And after the first exit, the stop moves to entry."
+    },
+    {
+     "id": "v2-28",
+     "tipo": "pontos",
+     "cap": "Exercise",
+     "kicker": "Before module 3",
+     "titulo": "Your homework",
+     "itens": [
+      "Go through the history of your market, on your timeframe",
+      "Find ten signals and note the score of each",
+      "For each one: style, phase mode and what happened",
+      "Count how many reached Exit 1 before hitting the stop"
+     ],
+     "fala": "The exercise for this module. Go through the history of your market, on your own timeframe, and find ten signals. For each one, note the score, the style and the phase mode in use. Then note what happened: did it reach the first target? Did it hit the stop? How many times did the stop have to move to entry before anything else happened? At the end, count how many reached Exit 1 before hitting the stop. That number is yours, measured by you, and it is worth more than any statistic I could give you. In the third module we take this and turn it into risk management."
+    },
+    {
+     "id": "v2-29",
+     "tipo": "aviso",
+     "cap": "",
+     "titulo": "See you in module 3",
+     "sub": "Risk, management and daily routine",
+     "texto": "Educational content. Not financial advice. Trading forex, indices, metals and crypto involves high risk, and you can lose part or all of your capital. The charts and numbers in this video are illustrative. Past results do not guarantee future results.",
+     "fala": "Remember: this is educational content and not financial advice. The numbers in this video are examples. Practise on a demo account before you risk any money. See you in module three.",
+     "respiro": 4
+    }
+   ]
+  },
+  {
+   "rotulo": "Sensei Bootcamp · 3/3",
+   "titulo": "Risk, management and daily routine",
+   "cenas": [
+    {
+     "id": "v3-00",
+     "tipo": "abertura",
+     "kicker": "Bootcamp MTM · Module 3 of 3",
+     "titulo": "Sensei",
+     "sub": "Risk, management and daily routine",
+     "rodape": "morethanmoney.pt",
+     "semVoz": 5
+    },
+    {
+     "id": "v3-01",
+     "tipo": "frase",
+     "cap": "Welcome",
+     "texto": "The score finds the opportunity. <span class='ouro'>Management</span> decides the result.",
+     "autor": "Sensei Bootcamp · Module 3",
+     "fala": "Welcome to the third and final module of the Sensei Bootcamp. So far you have learned to read the chart, to understand how a signal is born and how the plan is drawn. Now comes the part that separates someone who uses a tool from someone who uses it consistently: management. The score finds the opportunity. Management decides what happens next. In this module we talk about risk per idea, position size, how to manage an idea from start to finish, when not to enter, profiles, a simple fifteen-minute daily routine, and the journal. At the end you will have a complete, written process that you can follow on a demo account starting tomorrow."
+    },
+    {
+     "id": "v3-02",
+     "tipo": "capitulo",
+     "cap": "01 · Risk per trade",
+     "numero": "01",
+     "titulo": "Risk per trade",
+     "sub": "The one variable you truly control",
+     "fala": "First chapter: risk per idea."
+    },
+    {
+     "id": "v3-03",
+     "tipo": "pontos",
+     "cap": "01 · Risk per trade",
+     "kicker": "The principle",
+     "titulo": "Decide how much you lose before deciding how much you win",
+     "itens": [
+      "You don't control the market, you control the risk",
+      "Set the risk as a percentage of the account, per idea",
+      "Many traders use between half a per cent and one per cent",
+      "Keep the same risk from idea to idea"
+     ],
+     "fala": "There is one thing you must accept from day one: you do not control the market. You do not control whether price reaches the first target or the stop. The only thing you truly control is how much you risk on each idea. So the first decision is not where to enter, it is how much you are willing to lose if you are wrong. That amount is set as a percentage of the account, per idea. Many traders use between half a per cent and one per cent. It is not a magic rule. It is a way to make sure that a run of losses, which will happen, does not take you out of the game. And keep the same risk from idea to idea. Someone who increases risk after a loss in order to recover is doing exactly the opposite of what they should."
+    },
+    {
+     "id": "v3-04",
+     "tipo": "plano",
+     "cap": "01 · Risk per trade",
+     "kicker": "Maths, not prediction",
+     "titulo": "Ten losses in a row",
+     "linhas": [
+      ["Risk of 1% per idea", "account at about 90%", "entrada"],
+      ["Risk of 2% per idea", "account at about 82%", "warning"],
+      ["Risk of 5% per idea", "account at about 60%", "sl"],
+      ["Risk of 10% per idea", "account at about 35%", "sl"]
+     ],
+     "fala": "Look at what happens over a run of ten losses in a row. This is not a prediction, it is arithmetic, and any method can go through a month like that. With one per cent risk per idea, after ten losses in a row you are left with about ninety per cent of the account. With two per cent, about eighty-two. With five per cent, about sixty. And with ten per cent, about thirty-five. From there, to get back to the start, you need to almost triple what is left. This is just maths, and it is the reason small risk is not cowardice, it is survival. The numbers are examples, and they have no relationship to the indicator's performance."
+    },
+    {
+     "id": "v3-05",
+     "tipo": "capitulo",
+     "cap": "02 · Position size",
+     "numero": "02",
+     "titulo": "Position size",
+     "sub": "From cash risk to lots",
+     "fala": "Second chapter: position size."
+    },
+    {
+     "id": "v3-06",
+     "tipo": "pontos",
+     "cap": "02 · Position size",
+     "kicker": "The formula",
+     "titulo": "Size = risk ÷ (R × value per unit)",
+     "itens": [
+      "Cash risk: account times percentage",
+      "R: the distance from entry to stop, which Sensei shows",
+      "Value per unit: what one pip or one point is worth per lot",
+      "The lot comes from the numbers, not from intuition"
+     ],
+     "fala": "Position size is worked out with a simple formula. First, the cash risk: the value of the account times the percentage you have decided to risk. Second, R, the distance between entry and stop, which Sensei already shows you on the plan, in pips for forex and in points for indices, gold and crypto. Third, the value per unit: what one pip or one point is worth per lot, on your instrument and with your broker. The size is the cash risk divided by R times the value per unit. The important consequence is this: the lot changes from idea to idea. When the stop is close, the lot is bigger. When it is far, the lot is smaller. What stays the same is the cash risk."
+    },
+    {
+     "id": "v3-07",
+     "tipo": "plano",
+     "cap": "02 · Position size",
+     "kicker": "Example with round numbers",
+     "titulo": "A ten thousand account",
+     "linhas": [
+      ["Account", "10,000", "entrada"],
+      ["Risk per idea (1%)", "100", "warning"],
+      ["Distance to stop (R)", "20 pips", "sl"],
+      ["Pip value per standard lot", "10", "entrada"],
+      ["Size = 100 ÷ (20 × 10)", "0.5 lots", "tp"]
+     ],
+     "fala": "An example with round numbers, on a forex pair. The account is ten thousand. You decide to risk one per cent, which is one hundred. Sensei shows the stop is twenty pips from entry. On a pair where one pip is worth ten per standard lot, the calculation is one hundred divided by twenty times ten, which gives half a lot. If the stop were forty pips away, the lot would be a quarter. The cash risk always stays at one hundred. Always confirm the pip value on your platform, because it changes with the pair and with the account currency. And if the calculated lot is smaller than your broker's minimum, the idea simply does not fit your account. Let it pass."
+    },
+    {
+     "id": "v3-08",
+     "tipo": "pontos",
+     "cap": "02 · Position size",
+     "kicker": "Small accounts",
+     "titulo": "When the minimum lot does not fit",
+     "itens": [
+      "The broker's minimum lot sets the smallest possible risk",
+      "A far stop on a small account can exceed your limit",
+      "In that case, the idea is not for that account",
+      "Alternatives: a lower timeframe, another instrument, or waiting"
+     ],
+     "fala": "A situation that comes up often with small accounts. The broker has a minimum lot, normally one hundredth of a lot. That minimum sets the smallest risk you can have on an idea. If the account is small and the stop is far away, even the minimum lot can risk more than your limit. When that happens, the honest answer is: this idea is not for your account. You do not increase the risk to make it fit. The alternatives are to trade a lower timeframe, where stops tend to be shorter, to choose an instrument with a smaller value per point, or simply to wait for the next idea that fits. Letting pass an idea that does not fit is risk management working."
+    },
+    {
+     "id": "v3-09",
+     "tipo": "capitulo",
+     "cap": "03 · Managing the idea",
+     "numero": "03",
+     "titulo": "Managing the idea",
+     "sub": "Before, during and after",
+     "fala": "Third chapter: how to manage an idea from start to finish."
+    },
+    {
+     "id": "v3-10",
+     "tipo": "checklist",
+     "cap": "03 · Managing the idea",
+     "kicker": "Thirty seconds",
+     "titulo": "The check before you click",
+     "itens": [
+      "Higher-timeframe trend in your favour: buy above the 4-hour 200 average",
+      "Market with strength: the anti-sideways filter helps, but you confirm too",
+      "Candle closed: the signal came at the close",
+      "Score above the minimum and no empty groups",
+      "Size calculated from the risk"
+     ],
+     "fala": "Before you enter, do a thirty-second check. Is the four-hour trend in your favour? Buys above the two-hundred-candle average, sells below it. Does the market have strength? The anti-sideways filter helps, but you confirm it too, with the chart. Is the candle closed, and did the signal come at the close? Is the score above the minimum of your style, and are there whole groups empty? And is the lot calculated from the stop, and does it fit your risk? If any answer is no, you let it pass. Other ideas will come. An idea you never entered has never cost you money."
+    },
+    {
+     "id": "v3-11",
+     "tipo": "grafico",
+     "cap": "03 · Managing the idea",
+     "kicker": "Entry",
+     "titulo": "You enter at the close, with the plan written",
+     "cenario": "compra",
+     "seed": 7,
+     "base": ["banda", "cores", "sinal", "plano"],
+     "camadas": [],
+     "zoom": [0.5, 0.5],
+     "estrelas": "14/20",
+     "fala": "Entry is taken at the close of the signal candle, with the size calculated from the risk. In this indicator, the plan is drawn on the signal candle, and the entry is that close. See how the card shows the score of fourteen out of twenty, and how the plan lines are already on the chart before anything has happened. Nothing else is needed to decide. If the idea does not meet what the check asked for, then you do not enter, even if the card looks attractive. The plan is only useful if it is followed with the same discipline on the good ideas and on the bad ones."
+    },
+    {
+     "id": "v3-12",
+     "tipo": "grafico",
+     "cap": "03 · Managing the idea",
+     "kicker": "During",
+     "titulo": "A quarter at Exit 1",
+     "cenario": "compra",
+     "seed": 7,
+     "base": ["banda", "cores", "sinal", "plano"],
+     "camadas": ["estrutura"],
+     "ate": [0.63, 1],
+     "zoom": [0.5, 0.5],
+     "estrelas": "14/20",
+     "fala": "During the idea, management has three moments. Until the first target, your only task is to watch the stop and the structure. At Exit 1, you close a quarter of the position and move the stop to entry. From then on, the idea should no longer cost you money, in normal market conditions. Then, at each following exit, you close another quarter, until you have no position left at Exit 4. In the meantime, there are three reasons to exit before the last target, and they are written in the strategy guide. If the structure changes character against you. If the cloud stops being purple and turns grey. Or if the score drops. You do not exit because you are nervous. You exit because the reason for the entry no longer exists. And what you must not do is move the stop further away. Never."
+    },
+    {
+     "id": "v3-13",
+     "tipo": "grafico",
+     "cap": "03 · Managing the idea",
+     "kicker": "When it fails",
+     "titulo": "The stop doing its job",
+     "cenario": "falha",
+     "seed": 7,
+     "base": ["banda", "cores", "sinal", "plano"],
+     "camadas": [],
+     "ate": [0.62, 0.9],
+     "zoom": [0.5, 0.5],
+     "estrelas": "12/20",
+     "fala": "And when the idea fails? Look at this example. The idea appears, price rises a little, but does not reach the first target. Then it falls back, and hits the stop, which sits one and a half ATR from entry. The loss is one R, plus broker costs, and it was planned before you entered. There is no surprise, no improvising, and no reason to move the stop halfway. Losing one R is the plan working. What must not happen is losing two, three or ten R on one idea, because you moved the stop. Over many ideas, what separates those who last from those who do not is exactly this discipline. Losing a little, and in a planned way, is part of the process."
+    },
+    {
+     "id": "v3-14",
+     "tipo": "capitulo",
+     "cap": "04 · When not to enter",
+     "numero": "04",
+     "titulo": "When not to enter",
+     "sub": "The ideas you let pass",
+     "fala": "Fourth chapter: when not to enter. A large part of the discipline is letting ideas pass."
+    },
+    {
+     "id": "v3-15",
+     "tipo": "checklist",
+     "cap": "04 · When not to enter",
+     "kicker": "Let it pass when",
+     "titulo": "Five situations",
+     "itens": [
+      "Against the four-hour 200-candle average",
+      "Sideways market, without strength",
+      "Score on the limit, with whole groups empty",
+      "Price already far from entry",
+      "A sell taken without knowing it is switched off, and without the extra confirmations"
+     ],
+     "fala": "There are five situations in which you should let the idea pass. First: the four-hour trend is against it. A buy below the two-hundred-candle average is a buy against the bigger current, and the filter exists for that reason. Second: the market is sideways, without strength. The anti-sideways filter helps, but you also have to look. Third: the score is right at the minimum and whole groups are empty. Fourth: price is already far from entry. If you arrived late, you arrived late, and chasing price ruins the relationship between risk and exits. And fifth: a sell taken without knowing that sells are switched off, and without the extra confirmations they require."
+    },
+    {
+     "id": "v3-16",
+     "tipo": "pontos",
+     "cap": "04 · When not to enter",
+     "kicker": "Outside the indicator",
+     "titulo": "What the indicator cannot see",
+     "itens": [
+      "Central bank decisions and employment or inflation data",
+      "An economic calendar shows the times",
+      "At those moments, price can jump through your levels",
+      "Decide in advance what you will do with an open idea"
+     ],
+     "fala": "There is one thing the indicator cannot see: the calendar. Central bank interest-rate decisions, employment data and inflation data can move the market violently within seconds. In those moments, price can jump over your stop, and the technical reading loses its meaning for a few minutes. The practical rule, which is a choice you make, is not to open ideas in the minutes before and after these events. If you have an idea open, decide before the news what you will do: protect it, close part of it, or leave. An economic calendar is easy to check, and it fits well into your daily routine."
+    },
+    {
+     "id": "v3-17",
+     "tipo": "capitulo",
+     "cap": "05 · Your profile",
+     "numero": "05",
+     "titulo": "Your profile",
+     "sub": "Scalp, intraday or swing",
+     "fala": "Fifth chapter: choosing your profile."
+    },
+    {
+     "id": "v3-18",
+     "tipo": "comparar",
+     "cap": "05 · Your profile",
+     "kicker": "Three ways to use Sensei",
+     "titulo": "Pick one and stick with it",
+     "cartoes": [
+      {"t": "Scalp", "d": "5 and 15 minutes. Many ideas, needs screen time and quick decisions."},
+      {"t": "Intraday", "d": "1 hour. Two or three checks a day are usually enough."},
+      {"t": "Swing", "d": "4 hours. Few ideas, longer trades, a lot of patience."}
+     ],
+     "fala": "There are three typical profiles. Scalp, on the five- and fifteen-minute charts. It gives more ideas, but it demands screen time and quick decisions, which makes it the most demanding. Intraday, on the one-hour chart, is the one I recommend for people with a job: two or three checks a day are usually enough. And swing, on the four-hour chart, with few ideas and trades that last longer. It demands patience above all, because you can go days with nothing to do. Pick a profile and stick with it for at least a few weeks before you change. Every change of profile is a change of method, and your journal needs time to show you what works."
+    },
+    {
+     "id": "v3-19",
+     "tipo": "checklist",
+     "cap": "05 · Your profile",
+     "kicker": "From reading to routine",
+     "titulo": "Four weeks, no rush",
+     "itens": [
+      "Week 1: only read, don't trade, and note the signals",
+      "Week 2: trade on demo, with a fixed risk per idea",
+      "Week 3: demo with full management and a journal every day",
+      "Week 4: review the journal and decide the next steps"
+     ],
+     "fala": "To make this concrete, here is a four-week plan. In the first week, you only read. You open your market on your timeframe, and note each signal that appears and what happened next. In the second week, you trade on a demo account, with a fixed risk per idea, without worrying about perfect management. In the third week, still on demo, you apply full management: the plan, protection at Exit 1, the four exits, and you write in the journal every day. In the fourth week, you review everything. How many ideas came up? In how many did you follow the plan? What was the average result in R? Only after that do you decide the next steps. Four weeks sounds like a long time, but it is the shortest route to not losing money while you learn."
+    },
+    {
+     "id": "v3-20",
+     "tipo": "capitulo",
+     "cap": "06 · The fifteen-minute routine",
+     "numero": "06",
+     "titulo": "The fifteen-minute routine",
+     "sub": "Consistency beats intensity",
+     "fala": "Sixth chapter: the fifteen-minute daily routine."
+    },
+    {
+     "id": "v3-21",
+     "tipo": "checklist",
+     "cap": "06 · The fifteen-minute routine",
+     "kicker": "Every day",
+     "titulo": "Fifteen minutes, five steps",
+     "itens": [
+      "Check today's economic calendar",
+      "Open your market on your timeframe",
+      "Check the four-hour trend and the position against the 200 average",
+      "Review the signals received and the open ideas",
+      "Update the journal"
+     ],
+     "fala": "The routine fits into fifteen minutes. First, today's economic calendar, so you know at what times there are high-impact events. Second, you open your market on your timeframe, always the same one. Third, you check the four-hour trend and the position of price against the two-hundred-candle average: is the bigger current in favour of buys or sells? Fourth, you review the signals you received and the ideas you have open, and you apply the management we have seen. Fifth, you update the journal. For the rest of the day, the alerts work for you. You don't need to be glued to the screen. You need to be consistent."
+    },
+    {
+     "id": "v3-22",
+     "tipo": "pontos",
+     "cap": "06 · The fifteen-minute routine",
+     "kicker": "Once a week",
+     "titulo": "The weekly review",
+     "itens": [
+      "How many signals appeared and how many you traded",
+      "In how many you followed the plan",
+      "Average result in R",
+      "Where your mistakes were",
+      "One single change for next week"
+     ],
+     "fala": "On top of the daily routine, set aside half an hour a week for the review. Count how many signals appeared and how many you traded. In how many you followed the plan. What the average result in R was. And where your mistakes were: did you enter late, move the stop, ignore an exit, skip the check? Then decide on one single change for the following week. Only one. If you change five things at once, you will not know which one made the difference. The weekly review is the moment you stop reacting to the market and start improving your process."
+    },
+    {
+     "id": "v3-23",
+     "tipo": "pontos",
+     "cap": "06 · The fifteen-minute routine",
+     "kicker": "After each idea",
+     "titulo": "Write it down, even when it went well",
+     "itens": [
+      "Date, market, timeframe and direction",
+      "Score, style and phase mode",
+      "Result in R, not in money",
+      "Did you follow the plan? Yes or no",
+      "One sentence: what you learned"
+     ],
+     "fala": "After each idea, whether it went well or badly, you write in the journal. Date, market, timeframe and direction. The score, the style and the phase mode in use. The result measured in R, not in money, because R can be compared across ideas, accounts and lot sizes. The most important question: did you follow the plan, yes or no? And one sentence about what you learned. After thirty or forty ideas, the journal tells you things no video can tell you: on which market and at which hours Sensei works best for you, and where you, not the indicator, are falling short."
+    },
+    {
+     "id": "v3-24",
+     "tipo": "plano",
+     "cap": "06 · The fifteen-minute routine",
+     "kicker": "Invented example",
+     "titulo": "One idea recorded",
+     "linhas": [
+      ["05/11 · XAUUSD · 1 hour · Buy", "14 of 20 · intraday", "entrada"],
+      ["Management", "Exit 1 and stop at entry", "warning"],
+      ["Result", "+0.4 R", "tp"],
+      ["Did you follow the plan?", "Yes", "tp"],
+      ["Learning", "Waited for the candle close, did not enter halfway", "entrada"]
+     ],
+     "fala": "Here is what one line of the journal looks like, in an invented example. The fifth of November, gold, one-hour chart, buy. Score fourteen out of twenty, with the intraday style. Entry at the close of the signal candle. On management: a quarter closed at Exit 1, at one and a half R, and the stop moved to entry. The rest of the position came out at entry, with no loss. A quarter at one and a half R gives zero point three seven five R, so the result comes out at roughly plus zero point four R. Did you follow the plan? Yes. And the learning: I waited for the close and did not enter halfway. Notice there are no cash values. R lets you compare ideas over months. And the learning can be about something that went well. The journal is not only for mistakes."
+    },
+    {
+     "id": "v3-25",
+     "tipo": "capitulo",
+     "cap": "07 · The trader's mind",
+     "numero": "07",
+     "titulo": "The trader's mind",
+     "sub": "Mistakes no indicator can fix",
+     "fala": "Seventh chapter: the trader's mind. Some mistakes no indicator can fix."
+    },
+    {
+     "id": "v3-26",
+     "tipo": "pontos",
+     "cap": "07 · The trader's mind",
+     "kicker": "The four classic mistakes",
+     "titulo": "Recognise them in yourself",
+     "itens": [
+      "Revenge: raising risk to recover a loss",
+      "Fear of missing out: entering late, far from the signal",
+      "Overconfidence: skipping the check after winning",
+      "Moving the stop further away"
+     ],
+     "fala": "There are four classic mistakes, and almost everyone goes through them. The first is revenge: you lose an idea and raise the risk on the next one to get it back. It is the fastest way to turn a bad day into a bad week. The second is fear of missing out: you see an idea running well, you enter late, far from the signal, and your stop ends up in the wrong place. The third is overconfidence: after three or four good ideas in a row, you skip the thirty-second check because you think you no longer need it. And the fourth, the most dangerous, is moving the stop further away when price gets close to it. If you recognise yourself in any of these, don't feel bad. Write it in the journal. Seeing the pattern written down is the first step to breaking it."
+    },
+    {
+     "id": "v3-27",
+     "tipo": "pontos",
+     "cap": "07 · The trader's mind",
+     "kicker": "Protection rules",
+     "titulo": "Limits set with a cool head",
+     "itens": [
+      "A maximum number of losses per day",
+      "Once reached, you close the platform",
+      "A mandatory pause after a large loss",
+      "A weekly journal review, always on the same day"
+     ],
+     "fala": "The best way to protect yourself from these mistakes is to set rules with a cool head, before you open the chart. For example: a maximum number of losses per day, after which you close the platform, whatever happens. A mandatory pause after a loss bigger than usual. And a weekly journal review, always on the same day, in which you look at the numbers in R and at the answer to the question: did you follow the plan? These rules seem simple, and they are. The difficult part is keeping them on the days the market tests you. That is why you write them down before."
+    },
+    {
+     "id": "v3-28",
+     "tipo": "capitulo",
+     "cap": "08 · Frequently asked questions",
+     "numero": "08",
+     "titulo": "Frequently asked questions",
+     "sub": "What students ask most",
+     "fala": "Eighth chapter: the questions that come up again and again."
+    },
+    {
+     "id": "v3-29",
+     "tipo": "pontos",
+     "cap": "08 · Frequently asked questions",
+     "kicker": "Questions and answers",
+     "titulo": "Common doubts",
+     "itens": [
+      "Does Sensei repaint? With Apenas Fecho de Vela on, the signal is only evaluated at the close",
+      "Can I switch sells on? Yes, but three extra confirmations are required",
+      "Should I change the parameters? Only after weeks of journal, and one at a time",
+      "Do I need several timeframes? Read a higher one for the trend, and trade just one"
+     ],
+     "fala": "First question: does Sensei repaint? With the Apenas Fecho de Vela filter on, the signal is only evaluated after the candle closes, not halfway through it. Second: can I switch sells on? You can, but know that the sell side requires three extra confirmations, and that the trend filter only lets sells through below the four-hour two-hundred-candle average. Third: should I change the parameters? Only after a few weeks of journal, and always one at a time, so you know the effect of each change. Fourth: do I need several timeframes? You can look at a higher timeframe to read the trend, but trade just one, so you don't contradict yourself."
+    },
+    {
+     "id": "v3-30",
+     "tipo": "pontos",
+     "cap": "08 · Frequently asked questions",
+     "kicker": "More doubts",
+     "titulo": "Questions that come later",
+     "itens": [
+      "What if several fail in a row? Check whether you followed the plan",
+      "Raising the minimum confirmations gives fewer signals",
+      "Can I trade only the strongest signals? You can, but there will be fewer",
+      "How long until real money? The journal tells you"
+     ],
+     "fala": "A few more questions. What if several ideas fail in a row? It is normal, it happens with any method. The right question is not whether the indicator has stopped working, it is whether you followed the plan in each of them. Raising the minimum number of confirmations gives fewer signals, and that is your choice, which has to be tested in the journal. Can I trade only the strongest signals? You can, but there will be few, and you need patience to wait weeks for one. And finally: how long until I am ready for real money? There is no number. Your journal tells you. When you follow the plan consistently for several weeks, with fixed risk, you are treating this as a process. That is the goal."
+    },
+    {
+     "id": "v3-31",
+     "tipo": "pontos",
+     "cap": "Summary",
+     "kicker": "One last idea",
+     "titulo": "Expectancy",
+     "itens": [
+      "Expectancy = the average of the R won and lost per idea",
+      "It is measured in your journal, after many ideas",
+      "Positive: the process has an edge in your hands",
+      "Negative: review your execution before blaming the indicator"
+     ],
+     "fala": "One last idea that ties everything together. After thirty, forty or fifty ideas, you can calculate your expectancy: the average of the R won and lost per idea. You add up all the results in R and divide by the number of ideas. If that number is positive, the process, in your hands, has an edge. If it is negative, before you blame the indicator, review the execution: did you follow the plan? Did you respect the stop? Did you enter late? Very often the difference lies there. This number is yours, measured by you, on your market. No video, no guru and no indicator can give you that number. Only your journal can."
+    },
+    {
+     "id": "v3-32",
+     "tipo": "checklist",
+     "cap": "Summary",
+     "kicker": "Pocket checklist",
+     "titulo": "The full Sensei process",
+     "itens": [
+      "Higher-timeframe trend in your favour",
+      "Market with strength",
+      "Candle closed",
+      "Score above the minimum",
+      "No empty group",
+      "Size by risk",
+      "Stop at entry at Exit 1",
+      "Journal written"
+     ],
+     "fala": "To close, the Sensei pocket checklist. Higher-timeframe trend in your favour. Market with strength. Candle closed. Score above the minimum, and no empty group. Size calculated from the risk. Stop at entry at Exit 1. And the journal written. Eight steps. If you follow them every time, even when it is tedious, you are already ahead of most people who try to trade without a method."
+    },
+    {
+     "id": "v3-33",
+     "tipo": "frase",
+     "cap": "Closing",
+     "texto": "More than indicators: <span class='ouro'>method, time and discipline</span>.",
+     "autor": "Ricardo Garcia · MoreThanMoney",
+     "fala": "We have reached the end of the Sensei Bootcamp. Thank you for getting through all three modules. Remember what I said at the beginning: Sensei does not decide for you, it brings readings together and shows you when they agree. The rest is process, patience and controlled risk. Do the exercises, practise on demo, write your journal, and bring your questions to the community. I'm Ricardo Garcia, and this is MoreThanMoney."
+    },
+    {
+     "id": "v3-34",
+     "tipo": "aviso",
+     "cap": "",
+     "titulo": "Sensei Bootcamp complete",
+     "sub": "morethanmoney.pt",
+     "texto": "Educational content. Not financial advice. Trading forex, indices, metals and crypto involves high risk, and you can lose part or all of your capital. The charts and numbers in this video are illustrative. Past results do not guarantee future results.",
+     "fala": "Educational content, not financial advice. Trading carries risk, and you can lose money. See you next time.",
+     "respiro": 4
+    }
+   ]
+  }
+ ]
+}

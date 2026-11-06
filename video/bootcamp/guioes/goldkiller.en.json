@@ -1,0 +1,795 @@
+{
+ "estrategia": "GoldKiller",
+ "marca": "MoreThanMoney",
+ "cores": {
+  "bull": "#22A06B",
+  "bear": "#C0262D"
+ },
+ "ui": {
+  "nivel": "Level",
+  "compra": "Buy",
+  "venda": "Sell",
+  "entrada": "Entry",
+  "tp1": "TP1",
+  "tp2": "TP2",
+  "tp3": "TP3"
+ },
+ "pronuncia": [
+  [
+   "GoldKiller",
+   "Gold Killer"
+  ],
+  [
+   "SuperTrend",
+   "Super Trend"
+  ],
+  [
+   "XAUUSD",
+   "X A U U S D"
+  ],
+  [
+   "TradingView",
+   "Trading View"
+  ],
+  [
+   "ATR",
+   "A T R"
+  ],
+  [
+   "TP1",
+   "T P one"
+  ],
+  [
+   "TP2",
+   "T P two"
+  ],
+  [
+   "TP3",
+   "T P three"
+  ],
+  [
+   "P25",
+   "P twenty-five"
+  ],
+  [
+   "P50",
+   "P fifty"
+  ],
+  [
+   "P75",
+   "P seventy-five"
+  ],
+  [
+   "P90",
+   "P ninety"
+  ],
+  [
+   "UTC",
+   "U T C"
+  ]
+ ],
+ "plano": {
+  "warning": false,
+  "slAtr": 1,
+  "alvos": [
+   1,
+   2,
+   3
+  ],
+  "rotulos": [
+   "P25",
+   "P50",
+   "P75"
+  ]
+ },
+ "videos": [
+  {
+   "rotulo": "Bootcamp GoldKiller · 1/2",
+   "titulo": "Fundamentals: what it is and how to read it",
+   "cenas": [
+    {
+     "id": "v1-00",
+     "tipo": "abertura",
+     "kicker": "MTM Bootcamp · Module 1 of 2",
+     "titulo": "GoldKiller",
+     "sub": "What it is and how to read every element",
+     "rodape": "morethanmoney.pt",
+     "semVoz": 5
+    },
+    {
+     "id": "v1-01",
+     "tipo": "frase",
+     "cap": "Welcome",
+     "texto": "The trend sets the side. <span class='ouro'>The flip</span> gives the signal.",
+     "autor": "Ricardo Garcia · MoreThanMoney",
+     "fala": "Hi, I'm Ricardo Garcia, and this is the GoldKiller Bootcamp from MoreThanMoney. Before we start, one idea that will run through both videos: a scanner does not decide for you. What GoldKiller does is draw a line on the gold chart that tells you which side the trend is on, mark the flip with a signal, and show how far price usually goes in your favour and against you. Reading that is one skill. Executing it well is another. This bootcamp covers both, calmly, and without promising anything the chart does not show."
+    },
+    {
+     "id": "v1-02",
+     "tipo": "pontos",
+     "cap": "Welcome",
+     "kicker": "The plan for this bootcamp",
+     "titulo": "Two videos, one method",
+     "itens": [
+      "Video 1 · What it is and how to read every element",
+      "Video 2 · Confirmations, entry, management and routine"
+     ],
+     "fala": "The bootcamp has two videos. In this first one, we look at what the strategy is and at each element on the chart: the SuperTrend line, the flip with its buy and sell signals, and the percentile levels. In the second video we get into the process: the confirmations before you accept a flip, entry, stop, scaling out, the cases where you do not enter, and a simple daily routine. I suggest you watch both in order. The second one makes little sense without the first, because every management rule uses a reading you learn here."
+    },
+    {
+     "id": "v1-03",
+     "tipo": "capitulo",
+     "cap": "01 · What GoldKiller is",
+     "numero": "01",
+     "titulo": "What GoldKiller is",
+     "sub": "Trend following on gold",
+     "fala": "First chapter. So what is GoldKiller, exactly?"
+    },
+    {
+     "id": "v1-04",
+     "tipo": "pontos",
+     "cap": "01 · What GoldKiller is",
+     "kicker": "In a few words",
+     "titulo": "A scanner for gold",
+     "itens": [
+      "Follows the trend in XAUUSD with a SuperTrend line",
+      "Fifteen minutes as the reference, one hour and four hours for swing",
+      "Stores the gains and drawdowns of previous legs",
+      "An analysis tool: it does not place orders"
+     ],
+     "fala": "GoldKiller is the house scanner for gold, the XAUUSD pair. It follows the trend with a SuperTrend line, and it does not try to guess tops or bottoms. At every flip of the line, the scanner stores the maximum gain and the maximum drawdown of the previous legs of price, and draws those values as levels from the entry. The guide uses the fifteen-minute chart as the reference, and suggests the one-hour and four-hour charts for swing readings. Two things to keep in mind from the start: it is a trend-following style, and it is an analysis tool. The person who decides and the person who executes is you."
+    },
+    {
+     "id": "v1-05",
+     "tipo": "grafico",
+     "cap": "01 · What GoldKiller is",
+     "kicker": "First look",
+     "titulo": "The chart with everything on",
+     "cenario": "tendencia",
+     "seed": 7,
+     "base": [
+      "cores",
+      "niveis",
+      "sinal",
+      "setas"
+     ],
+     "camadas": [],
+     "ate": [
+      0.55,
+      0.55
+     ],
+     "zoom": [
+      0,
+      0
+     ],
+     "fala": "This is what the chart looks like with everything switched on. At first glance it seems like a lot, but in a few minutes you will read each element in seconds. You can see the line following price, the coloured candles, the flips with their signals, and the horizontal levels to the right of the entries. Before we go on, a note about every chart in this bootcamp: they are illustrative, drawn to explain how the strategy works. They are not real market history, and they are not the results of any trade. Now let us read one layer at a time."
+    },
+    {
+     "id": "v1-06",
+     "tipo": "capitulo",
+     "cap": "02 · The SuperTrend line",
+     "numero": "02",
+     "titulo": "The SuperTrend line",
+     "sub": "The trend, drawn on the chart",
+     "fala": "Second chapter: the line that gives you the trend."
+    },
+    {
+     "id": "v1-07",
+     "tipo": "pontos",
+     "cap": "02 · The SuperTrend line",
+     "kicker": "How it is calculated",
+     "titulo": "Three ingredients",
+     "itens": [
+      "The average volatility of the last ten candles, the ATR",
+      "Three times that distance, away from price",
+      "A smoothed price, which gives more weight to the close",
+      "Green below price: uptrend. Red above: downtrend"
+     ],
+     "fala": "The line measures the average volatility of the last ten candles, the ATR, and sits three times that distance away from price. It is not calculated on the raw price of each candle. It uses a smoothed price, which gives more weight to the close. The result is a line that follows price and, while the trend holds, does not move back against the trade. In an uptrend, the line climbs in steps, beneath the candles. In a downtrend, it drops above them. It only changes side when price crosses it with a closed candle. This is the big advantage of a line like this: instead of arguing with every candle, you have one single reference for the trend."
+    },
+    {
+     "id": "v1-08",
+     "tipo": "grafico",
+     "cap": "02 · The SuperTrend line",
+     "kicker": "Reading 1",
+     "titulo": "The line follows price",
+     "cenario": "compra",
+     "seed": 7,
+     "base": [],
+     "camadas": [
+      "cores"
+     ],
+     "ate": [
+      0.5,
+      0.7
+     ],
+     "zoom": [
+      0,
+      0
+     ],
+     "fala": "Look at the line in an uptrend. It is green and sits below price. Notice how it rises with price, step by step, and how the candles pull back from time to time, while the line does not pull back with them. That is what gives GoldKiller its discipline. A green line below price tells you the uptrend is still alive. It does not tell you that price will keep rising. It tells you that the buying side has the initiative, and that is all the line claims. When the line moves to the other side, the reading changes, even if your opinion has not changed."
+    },
+    {
+     "id": "v1-09",
+     "tipo": "comparar",
+     "cap": "02 · The SuperTrend line",
+     "kicker": "The colours",
+     "titulo": "What each colour tells you",
+     "cartoes": [
+      {
+       "t": "Green",
+       "d": "Below price: uptrend."
+      },
+      {
+       "t": "Red",
+       "d": "Above price: downtrend."
+      },
+      {
+       "t": "Colour change",
+       "d": "Happens on a closed candle. That is where the signal is born."
+      }
+     ],
+     "fala": "Three readings to keep. The green colour, below price, marks an uptrend. The red colour, above price, marks a downtrend. And the change of colour is the moment that matters, because it only happens on a closed candle, and that is when the scanner decides whether there is a signal. A practical rule: do not look at the colour halfway through a candle and draw conclusions. Wait for the close. The line can change colour several times while a candle is forming, and only the last reading counts. A useful exercise: open the fifteen-minute chart and count how many times the colour changes in a normal week. That number tells you a lot about the kind of market you are looking at, and you will need it in the second video, when we talk about sideways markets."
+    },
+    {
+     "id": "v1-10",
+     "tipo": "capitulo",
+     "cap": "03 · The flip",
+     "numero": "03",
+     "titulo": "The flip",
+     "sub": "Where the signal is born",
+     "fala": "Third chapter: the flip, and the buy and sell signals."
+    },
+    {
+     "id": "v1-11",
+     "tipo": "grafico",
+     "cap": "03 · The flip",
+     "kicker": "Reading 2",
+     "titulo": "BUY and SELL at the flip",
+     "cenario": "compra",
+     "seed": 7,
+     "base": [],
+     "camadas": [
+      "cores",
+      "sinal"
+     ],
+     "ate": [
+      0.6,
+      0.66
+     ],
+     "zoom": [
+      0,
+      0
+     ],
+     "fala": "Here is a flip. The line was red, above price, and the trend was down. Then price rose and closed on the other side of the line. The line turns green, below price, and the BUY signal appears. That is a buy. If the move had been the opposite, from green to red, a SELL would have appeared, and that would be a sell. Notice that the signal is born with the closed candle. Before that, what you see is only a possibility, not a signal. The scanner waits for the close, and you should wait for it too."
+    },
+    {
+     "id": "v1-12",
+     "tipo": "pontos",
+     "cap": "03 · The flip",
+     "kicker": "Rules for the flip",
+     "titulo": "Only with a closed candle",
+     "itens": [
+      "Red to green: buy, BUY",
+      "Green to red: sell, SELL",
+      "The signal candle must close on the other side of the line",
+      "While the candle is forming, nothing is confirmed"
+     ],
+     "fala": "Let us sum up the rules of the flip. From red to green, a buy. From green to red, a sell. In both cases, the signal only exists when the signal candle closes on the other side of the line. Until then, the reading is provisional. This point sounds obvious, but it is where most people go wrong. They see the candle rising, feel the urge to get in, and enter before the close. Then the candle closes differently, and the idea disappears. Someone who waits for the close misses some entries, and that is true. In return, they never take signals that were never really there."
+    },
+    {
+     "id": "v1-13",
+     "tipo": "capitulo",
+     "cap": "04 · The percentile levels",
+     "numero": "04",
+     "titulo": "The percentile levels",
+     "sub": "Targets and drawdowns from the entry",
+     "fala": "Fourth chapter, and the third reading: the percentile levels."
+    },
+    {
+     "id": "v1-14",
+     "tipo": "grafico",
+     "cap": "04 · The percentile levels",
+     "kicker": "Reading 3",
+     "titulo": "Targets in green, drawdowns in red",
+     "cenario": "compra",
+     "seed": 7,
+     "base": [
+      "cores"
+     ],
+     "camadas": [
+      "niveis",
+      "sinal"
+     ],
+     "ate": [
+      0.6,
+      0.9
+     ],
+     "zoom": [
+      0,
+      0
+     ],
+     "fala": "From each flip, the scanner draws two sets of lines. The green lines are targets: P25, P50, P75 and P90. The red lines are drawdowns, meaning how far price usually falls against the entry. The values come from the previous legs of price itself. Unlike a moving average, they are not a forecast. They are a count of the past. P50, for example, is the level that half of the previous legs reached. The higher the percentile, the fewer times price got that far. So P90 is an ambitious target, reached only by the strongest legs."
+    },
+    {
+     "id": "v1-15",
+     "tipo": "comparar",
+     "cap": "04 · The percentile levels",
+     "kicker": "The four levels",
+     "titulo": "P25, P50, P75, P90",
+     "cartoes": [
+      {
+       "t": "P25",
+       "d": "A quarter of the previous legs got this far. The first target."
+      },
+      {
+       "t": "P50",
+       "d": "Half of the previous legs got this far. The second target."
+      },
+      {
+       "t": "P75 and P90",
+       "d": "Further out. Fewer legs got that far, so these are more demanding targets."
+      }
+     ],
+     "fala": "The four green levels follow an increasing logic. P25 is the first reference target: a quarter of the previous legs reached it. P50 is the second: half reached it. P75 and P90 sit further out, and fewer legs reached them, which makes them more demanding targets. You do not need to memorise the percentages. Just remember the rule: the further out, the fewer times price got there. When you are deciding what to do with an open position, that rule is worth more than any single number on its own."
+    },
+    {
+     "id": "v1-16",
+     "tipo": "pontos",
+     "cap": "04 · The percentile levels",
+     "kicker": "Drawdowns",
+     "titulo": "The red lines",
+     "itens": [
+      "Calculated from the previous legs of price",
+      "They show how far price usually moves against you",
+      "They help you see how much room there is before an obstacle",
+      "They do not replace the SuperTrend line as the stop reference"
+     ],
+     "fala": "The red lines are the drawdowns. They are calculated the same way as the targets, but from the falls within the previous legs. They show how far price usually moves against the entry before it carries on its way. They serve two practical purposes: to see the risk you are accepting, and to size your position with a realistic idea of the room available. A word of caution, though. The GoldKiller stop is not the drawdown. As we will see in the second video, the stop sits on the other side of the SuperTrend line. The drawdowns give context. They do not move the stop. Imagine you are in a buy, and the nearest red line sits a certain distance below price. That distance does not tell you that price will go there. It tells you how much adverse movement has happened, across many legs, before price came back. It is context, and it helps you avoid being surprised when the market breathes."
+    },
+    {
+     "id": "v1-17",
+     "tipo": "grafico",
+     "cap": "04 · The percentile levels",
+     "kicker": "In practice",
+     "titulo": "A trend that keeps going",
+     "cenario": "tendencia",
+     "seed": 21,
+     "base": [
+      "cores"
+     ],
+     "camadas": [
+      "niveis"
+     ],
+     "ate": [
+      0.5,
+      1
+     ],
+     "zoom": [
+      0,
+      0
+     ],
+     "fala": "Let us look at an example that shows the limit of the levels. In this strong trend, price passes P50, passes P75 and keeps going. The levels are not walls. It is not true that price always stops at a green target, or always returns to a red one. They are a statistical reference, drawn from the past and from the entry. Their use lies in two things: telling you how much room you have before an obstacle, and helping you decide where to take profits in parts. Do not treat them as promises. They are reference points for a decision that you still make yourself."
+    },
+    {
+     "id": "v1-18",
+     "tipo": "checklist",
+     "cap": "Summary",
+     "kicker": "Module 1 summary",
+     "titulo": "What you need to know how to read",
+     "itens": [
+      "SuperTrend line: which side the trend is on",
+      "Flip: BUY and SELL only with a closed candle",
+      "Green levels: percentile targets from the entry",
+      "Red levels: drawdowns, for context, not for the stop"
+     ],
+     "fala": "Summing up the first video. The SuperTrend line tells you which side the trend is on. The flip, on a closed candle, gives the signal, buy or sell. The green levels are percentile targets, calculated from the entry. And the red levels are drawdowns, which serve as context. Always read the four pieces together, not one at a time, because the chart only makes sense in combination."
+    },
+    {
+     "id": "v1-19",
+     "tipo": "pontos",
+     "cap": "Exercise",
+     "kicker": "Before video 2",
+     "titulo": "Your homework",
+     "itens": [
+      "Put GoldKiller on gold only, on a fifteen-minute chart",
+      "Turn on one layer at a time and find five flips",
+      "For each flip, note what the line did in the candles that followed",
+      "Do not trade yet: just observe"
+     ],
+     "fala": "Before you move on to the second video, a simple exercise. Pick gold and the fifteen-minute chart, and do not change either during the exercise. Turn on one layer at a time. Look back through history for five flips and, for each one, note what the line did in the candles that followed. Did it go up? Did it fall? Did price reach P25 or P50? Do all of this without trading. This exercise trains your eye better than any explanation, because it forces you to see the chart the way it actually behaves."
+    },
+    {
+     "id": "v1-20",
+     "tipo": "aviso",
+     "cap": "",
+     "titulo": "Until video 2",
+     "sub": "Confirmations, entry and management",
+     "texto": "Educational content. Not financial advice. Trading forex, indices, metals and crypto involves high risk, and you can lose part or all of your capital. The charts in this video are illustrative. Past results do not guarantee future results.",
+     "fala": "Remember: this is educational content, and it is not financial advice. Trading carries risk, and you can lose part or all of your capital. Practise on a demo account first. See you in the second video.",
+     "respiro": 4
+    }
+   ]
+  },
+  {
+   "rotulo": "Bootcamp GoldKiller · 2/2",
+   "titulo": "Signal, plan, management and routine",
+   "cenas": [
+    {
+     "id": "v2-00",
+     "tipo": "abertura",
+     "kicker": "MTM Bootcamp · Module 2 of 2",
+     "titulo": "GoldKiller",
+     "sub": "Confirmations, entry, management and routine",
+     "rodape": "morethanmoney.pt",
+     "semVoz": 5
+    },
+    {
+     "id": "v2-01",
+     "tipo": "pontos",
+     "cap": "Welcome",
+     "kicker": "In this video",
+     "titulo": "From signal to routine",
+     "itens": [
+      "The four confirmations before you accept a flip",
+      "Entry, stop and size by risk",
+      "Scaling out and stop to entry",
+      "When not to enter",
+      "A fifteen-minute routine"
+     ],
+     "fala": "Welcome to the second video of the GoldKiller Bootcamp. In the first one you learned to read the line, the flip and the percentile levels. Now we are going to use those readings to make decisions. We will look at the four confirmations the guide asks for before accepting a flip, how to enter and where to place the stop, how to scale out, when it is better not to enter, and how to organise a short routine for every day. This is the most practical video. It moves more slowly, because each rule depends on the one before."
+    },
+    {
+     "id": "v2-02",
+     "tipo": "capitulo",
+     "cap": "01 · Confirmations",
+     "numero": "01",
+     "titulo": "Confirmations",
+     "sub": "Four checks before you accept",
+     "fala": "First chapter: confirmations. Before you accept a flip, go through them."
+    },
+    {
+     "id": "v2-03",
+     "tipo": "checklist",
+     "cap": "01 · Confirmations",
+     "kicker": "Golden rule",
+     "titulo": "Four before you accept",
+     "itens": [
+      "The flip is closed, on the other side of the line",
+      "There is room up to P25 and P50",
+      "The higher timeframe agrees: the line has the same colour",
+      "The size is calculated by risk"
+     ],
+     "fala": "The guide asks for four confirmations, and the rule is simple: if any one fails, wait for the next flip. The first is a closed flip. The signal candle has already closed on the other side of the line. The second is room. There must be no recent top or bottom between the entry and P25 or P50, because in that case the first target sits right against an obstacle. The third is the higher timeframe. On the one-hour chart, the line has to be the same colour. The fourth is size. The distance to the line changes from day to day, so the lot has to change too. Only when all four are in place does the flip deserve your attention."
+    },
+    {
+     "id": "v2-04",
+     "tipo": "grafico",
+     "cap": "01 · Confirmations",
+     "kicker": "Example",
+     "titulo": "Closed flip, open room",
+     "cenario": "compra",
+     "seed": 7,
+     "base": [
+      "cores"
+     ],
+     "camadas": [
+      "niveis",
+      "sinal"
+     ],
+     "ate": [
+      0.6,
+      0.66
+     ],
+     "zoom": [
+      0,
+      0
+     ],
+     "fala": "Let us read a buy flip with the four confirmations in view. The signal candle has already closed on the other side of the line, and the BUY appears. Ahead of the entry, the path to P25 is clear: there is no recent top blocking it. P50 sits higher, with open room. As for the higher timeframe, the line is also green, which gives you the alignment you are looking for. The only thing left is the fourth confirmation, which is handled in the lot calculation, and we will see that next. Notice how mechanical the reading is. There is no opinion in the middle. Either the confirmations are there, or they are not."
+    },
+    {
+     "id": "v2-05",
+     "tipo": "pontos",
+     "cap": "01 · Confirmations",
+     "kicker": "Room",
+     "titulo": "Room up to the first target",
+     "itens": [
+      "Look for a recent top or bottom between the entry and P25 and P50",
+      "If there is one, the first target sits right against it",
+      "It is not forbidden to enter, but the path becomes short",
+      "Always compare the entry with the levels drawn"
+     ],
+     "fala": "Room deserves more attention, because it is the confirmation most people skip. The question is simple: between the price where you enter and P25, is there a recent top or bottom? If there is, that is exactly where price tends to stop. Your first target then sits right against that obstacle, and the move in your favour becomes too short to justify the risk. In that case, the guide asks you to let it go. It is not an absolute prohibition, but it is a clear sign to be more demanding. Make the comparison with the drawn levels before each entry, not after."
+    },
+    {
+     "id": "v2-06",
+     "tipo": "comparar",
+     "cap": "01 · Confirmations",
+     "kicker": "Higher timeframe",
+     "titulo": "Two windows, the same colour",
+     "cartoes": [
+      {
+       "t": "Fifteen minutes",
+       "d": "The chart where you read the flip and define the entry."
+      },
+      {
+       "t": "One hour",
+       "d": "The higher timeframe. The line must have the same colour."
+      },
+      {
+       "t": "They agree",
+       "d": "Only then does the flip gain strength. If they disagree, wait."
+      }
+     ],
+     "fala": "The higher timeframe is the confirmation that protects you best from trades against the current. You read the flip on the fifteen-minute chart, but you also look at the one-hour chart. If the one-hour line has the same colour, both windows agree, and the flip carries more weight. If they disagree, the guide tells you it is better to wait. Do not try to win the argument between the windows. Pick the one that agrees with the flip, or let it pass."
+    },
+    {
+     "id": "v2-07",
+     "tipo": "capitulo",
+     "cap": "02 · Entry and stop",
+     "numero": "02",
+     "titulo": "Entry and stop",
+     "sub": "From signal to order",
+     "fala": "Second chapter: entry and stop."
+    },
+    {
+     "id": "v2-08",
+     "tipo": "plano",
+     "cap": "02 · Entry and stop",
+     "kicker": "Entry",
+     "titulo": "Enter on the close or the next open",
+     "linhas": [
+      [
+       "Main entry",
+       "Close of the signal candle",
+       "entrada"
+      ],
+      [
+       "Alternative",
+       "Open of the next candle",
+       "entrada"
+      ],
+      [
+       "Do not chase",
+       "If price has already run",
+       "warning"
+      ]
+     ],
+     "fala": "Once you have confirmed, there are two ways to enter, both covered in the guide. The first is at the close of the signal candle. The second is at the open of the next candle. In either case, the principle is the same: do not chase price. If the candle has already run a long way since the flip, the entry sits far from the line, and the risk becomes too big for the target on offer. The guide is clear: in that case, let it go. Entering late into a move that has already run is one of the most common ways to turn a good reading into a bad result."
+    },
+    {
+     "id": "v2-09",
+     "tipo": "grafico",
+     "cap": "02 · Entry and stop",
+     "kicker": "Stop",
+     "titulo": "The stop on the other side of the line",
+     "cenario": "compra",
+     "seed": 7,
+     "base": [
+      "cores"
+     ],
+     "camadas": [
+      "sinal",
+      "plano"
+     ],
+     "ate": [
+      0.6,
+      0.85
+     ],
+     "zoom": [
+      0,
+      0
+     ],
+     "fala": "The stop sits on the other side of the line. On a buy, that means below the green line, which is beneath price. The logic is this: the line represents the trend, and if price closes on the other side of it, the trend is over, and the signal is no longer valid. So the stop is not an arbitrary number. It is a fact of the chart. Look at the drawing: the entry, the stop and the targets. The distance between the entry and the stop is your risk, and that is what you will use to calculate the size of the position, as we will see next."
+    },
+    {
+     "id": "v2-10",
+     "tipo": "pontos",
+     "cap": "02 · Entry and stop",
+     "kicker": "Size",
+     "titulo": "The lot changes, the risk does not",
+     "itens": [
+      "The distance to the line changes from day to day",
+      "Calculate the lot so you risk only the percentage you defined",
+      "If the distance changes, the lot must change too",
+      "A fixed lot makes your risk depend on the day's volatility"
+     ],
+     "fala": "Let us talk about position size, which is where many traders get lost. The distance between the entry and the line changes from day to day, because the line depends on recent volatility. If you always use the same lot, your cash risk changes from trade to trade without you noticing. The guide asks for the opposite. Define the percentage of your account you are willing to lose on one trade, and calculate the lot so that this amount matches the stop shown on the chart. That way, the distance changes, the lot follows it, and the risk stays the same. That sameness is what makes the difference across many trades."
+    },
+    {
+     "id": "v2-11",
+     "tipo": "capitulo",
+     "cap": "03 · Scaling out",
+     "numero": "03",
+     "titulo": "Scaling out",
+     "sub": "P25, P50 and the line as a guide",
+     "fala": "Third chapter: how to take profits in parts, and how to protect the position."
+    },
+    {
+     "id": "v2-12",
+     "tipo": "pontos",
+     "cap": "03 · Scaling out",
+     "kicker": "Management",
+     "titulo": "Four steps after the entry",
+     "itens": [
+      "When price moves in your favour, move the stop to entry",
+      "Take one part off at P25",
+      "Take another part off at P50",
+      "The rest follows the line up to P75 or P90, or until a close on the other side"
+     ],
+     "fala": "Once you are in, management follows four steps. First, when price moves in your favour, you move the stop to the entry. From then on, the trade can no longer lose money. Second, you take one part off at P25. Third, you take another part off at P50. And fourth, the rest of the position runs with the stop following the SuperTrend line, up to P75 or P90, or until a close crosses the line on the other side. The guide does not fix the percentage for each part. That choice is yours, and it should be written into your plan before you enter."
+    },
+    {
+     "id": "v2-13",
+     "tipo": "grafico",
+     "cap": "03 · Scaling out",
+     "kicker": "In practice",
+     "titulo": "Partials and the line to follow",
+     "cenario": "tendencia",
+     "seed": 21,
+     "base": [
+      "cores"
+     ],
+     "camadas": [
+      "niveis",
+      "setas"
+     ],
+     "ate": [
+      0.5,
+      1
+     ],
+     "zoom": [
+      0,
+      0.5
+     ],
+     "fala": "See how scaling out works in a trend. The position is entered, price rises, and passes P25. The first part is taken, and the stop moves to the entry. Then price reaches P50, and the second part is taken. The rest keeps running, and now the green line is what holds the position. While price stays on the right side of the line, the trade continues. When the line is crossed by a close, you exit with what remains. Notice that, in this case, the rest of the trade carries no risk, because the stop is already at the entry."
+    },
+    {
+     "id": "v2-14",
+     "tipo": "capitulo",
+     "cap": "04 · When not to enter",
+     "numero": "04",
+     "titulo": "When not to enter",
+     "sub": "The cases where the guide says wait",
+     "fala": "Fourth chapter: when not to enter. This part matters just as much as the others."
+    },
+    {
+     "id": "v2-15",
+     "tipo": "checklist",
+     "cap": "04 · When not to enter",
+     "kicker": "Let it go when",
+     "titulo": "Five situations",
+     "itens": [
+      "The line flips several times in a row, in a sideways market",
+      "The first target sits against a recent top or bottom",
+      "The higher timeframe says the opposite",
+      "The entry is too far from the line",
+      "The lot is fixed, not calculated by risk"
+     ],
+     "fala": "The guide lists five situations where you do not enter. First: the line flips several times in a row, because the market is sideways. Every signal looks good, but none has room to run. Second: the first target sits against a recent top or bottom. Third: the higher timeframe says the opposite. Fourth: the entry is too far from the line, which makes the risk too large. And fifth: you use a fixed lot, instead of a lot calculated by risk. Any one of these situations is enough to let the flip pass."
+    },
+    {
+     "id": "v2-16",
+     "tipo": "grafico",
+     "cap": "04 · When not to enter",
+     "kicker": "Sideways market",
+     "titulo": "Flips in a row, no direction",
+     "cenario": "falha",
+     "seed": 11,
+     "base": [
+      "cores"
+     ],
+     "camadas": [
+      "sinal"
+     ],
+     "ate": [
+      0.7,
+      0.95
+     ],
+     "zoom": [
+      0,
+      0
+     ],
+     "fala": "This is the case that tricks people the most. The line changes colour, changes again, and flips back. Each flip looks like a signal, and each one makes you want to get in. But the market is sideways, and none of the moves has room to run to the first target. The guide is clear: with the line flipping several times in a row, stay out. If necessary, wait for the market to choose a direction. A chart with many signals in a row is not a chart full of opportunities. Often, it is a chart with no direction."
+    },
+    {
+     "id": "v2-17",
+     "tipo": "capitulo",
+     "cap": "05 · When it fails",
+     "numero": "05",
+     "titulo": "When it fails",
+     "sub": "The line turns against you",
+     "fala": "Fifth chapter: what to do when the idea fails."
+    },
+    {
+     "id": "v2-18",
+     "tipo": "grafico",
+     "cap": "05 · When it fails",
+     "kicker": "Stop",
+     "titulo": "The line closes on the other side",
+     "cenario": "falha",
+     "seed": 7,
+     "base": [
+      "cores"
+     ],
+     "camadas": [
+      "sinal",
+      "plano"
+     ],
+     "ate": [
+      0.62,
+      0.9
+     ],
+     "zoom": [
+      0,
+      0
+     ],
+     "fala": "See what happens when the idea fails. You enter a buy, price rises a little, and then starts to fall. The line is still green, but price is getting close to it. Then a candle closes on the other side of the line. At that moment, the trend is over, and the signal is no longer valid. You exit at the stop. The loss is the distance from the entry to the line, and that distance was already calculated, with the right lot, before you entered. There is no surprise, no improvisation, and no doubt about whether you should have got out."
+    },
+    {
+     "id": "v2-19",
+     "tipo": "pontos",
+     "cap": "05 · When it fails",
+     "kicker": "Log",
+     "titulo": "The journal in R",
+     "itens": [
+      "Date, gold, timeframe and direction",
+      "Entry, stop and targets reached",
+      "Result in R, not in money",
+      "Did you follow the plan? Yes or no"
+     ],
+     "fala": "After each trade, whether it went well or badly, log it in a journal. Write down the date, gold, the timeframe and the direction. Write down the entry, the stop, and which targets were reached. Measure the result in R, because R is comparable from trade to trade, and money is not. And answer the most important question: did you follow the plan? After a few dozen trades, the journal tells you where the guide works best for you, and where the mistake lies in execution rather than in the strategy."
+    },
+    {
+     "id": "v2-20",
+     "tipo": "capitulo",
+     "cap": "06 · Routine",
+     "numero": "06",
+     "titulo": "A fifteen-minute routine",
+     "sub": "Consistency beats intensity",
+     "fala": "Sixth chapter: the daily routine."
+    },
+    {
+     "id": "v2-21",
+     "tipo": "checklist",
+     "cap": "06 · Routine",
+     "kicker": "Every day",
+     "titulo": "Fifteen minutes, five steps",
+     "itens": [
+      "Check the economic calendar for the day",
+      "Open gold on the fifteen-minute and one-hour charts",
+      "Check the colour of the line on both timeframes",
+      "Review open signals and orders",
+      "Update the journal"
+     ],
+     "fala": "The routine fits in fifteen minutes. First, you check the economic calendar for the day, to see whether high-impact news is coming. Second, you open gold on the fifteen-minute and one-hour charts. Third, you check the colour of the line on both timeframes, and whether they agree. Fourth, you review the signals and open orders, and apply the management we have seen. Fifth, you update the journal. For the rest of the day, the scanner works for you. You do not need to be glued to the screen. You need to be consistent."
+    },
+    {
+     "id": "v2-22",
+     "tipo": "pontos",
+     "cap": "Resumo",
+     "kicker": "Pocket checklist",
+     "titulo": "The complete GoldKiller process",
+     "itens": [
+      "Flip closed, on the other side of the line",
+      "Room up to P25 and P50",
+      "Higher timeframe in favour",
+      "Size calculated by risk",
+      "Stop to entry early, partials at P25 and P50"
+     ],
+     "fala": "To finish, the pocket checklist. Flip closed, on the other side of the line. Room up to P25 and P50. Higher timeframe in your favour. Size calculated by risk. And, after the entry, stop to entry early, with partials at P25 and P50. If you follow these steps every time, even on days when it is tedious, you are ahead of many people who trade without a process. There are no guarantees in this list, but there is discipline, and discipline is the part that depends on you."
+    },
+    {
+     "id": "v2-23",
+     "tipo": "aviso",
+     "cap": "",
+     "titulo": "GoldKiller Bootcamp complete",
+     "sub": "morethanmoney.pt",
+     "texto": "Educational content. Not financial advice. Trading forex, indices, metals and crypto involves high risk, and you can lose part or all of your capital. The charts in this video are illustrative. Past results do not guarantee future results.",
+     "fala": "Educational content, not financial advice. Trading carries risk, and you can lose money. Define your risk before each entry and practise on a demo account. See you next time.",
+     "respiro": 4
+    }
+   ]
+  }
+ ]
+}
