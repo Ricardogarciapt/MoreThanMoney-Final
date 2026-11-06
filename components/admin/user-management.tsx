@@ -48,6 +48,7 @@ import dynamic from "next/dynamic"
 const ContasDoUtilizador = dynamic(() => import("./contas-do-utilizador"), { ssr: false })
 const ContaModalFunded = dynamic(() => import("./mtmfunded-conta-modal"), { ssr: false })
 import type { UserManagement } from "@/lib/admin-types"
+import PeriodosGratisAdmin from "@/components/admin/periodos-gratis-admin"
 import {
   isSubscriptionCategory,
   subscriptionStatusLabel,
@@ -772,6 +773,9 @@ export default function UserManagementComponent({
             </Badge>
           )}
         </div>
+
+        {/* ── Trial 3 dias (sem cartão) e campanha 90 dias: datas de fim, prorrogar, cancelar ── */}
+        <PeriodosGratisAdmin />
 
         {/* ── Filtros ── */}
         <div className="grid gap-3 rounded-xl border border-gray-700/80 bg-gray-900/40 p-4 sm:grid-cols-2 lg:grid-cols-5">

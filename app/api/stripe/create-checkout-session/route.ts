@@ -8,7 +8,7 @@ import { buildStripeReturnUrl } from '@/lib/site-url'
 import { isIosAppRequest, IOS_IAP_REQUIRED } from '@/lib/is-native-request'
 import { COOKIE_ATRIBUICAO, normalizar as normalizarAgente } from '@/lib/agentes/atribuicao'
 import { registarConsentimentoDaCompra } from '@/lib/captacao-consentimento-registo'
-import { CUPAO_INTRO_PREMIUM, DIAS_TRIAL_PREMIUM, recolhaCompleta } from '@/lib/stripe-checkout-premium'
+import { CUPAO_INTRO_PREMIUM, ORIGEM_TRIAL, paramsTrialSemCartao, recolhaCompleta } from '@/lib/stripe-checkout-premium'
 
 const supabaseAdmin = getSupabaseAdmin()
 
@@ -66,7 +66,7 @@ export async function POST(request: NextRequest) {
     // Obter ou criar customer Stripe
     const { data: profile } = await supabaseAdmin
       .from('profiles')
-      .select('stripe_customer_id, email, full_name, phone, mlm_sponsor_username, subscription_platform, subscription_status, member_category, stripe_subscription_id')
+      .select('stripe_customer_id, email, full_name, phone, mlm_sponsor_username, subscription_platform, subscription_status, member_category, stripe_subscription_id, inactive_reason')
       .eq('id', user.id)
       .single()
 
@@ -98,7 +98,7 @@ export async function POST(request: NextRequest) {
         .eq('id', user.id)
     }
 
-    const cancelPath = '/scanner'
+    const cancelPath = profile?.inactive_reason === 'trial_sem_pagamento' ? '/ativar-premium' : '/scanner'
 
     // O código do agente que trouxe esta pessoa, lido do cookie (ver o metadata, abaixo).
     const agenteCodigo = normalizarAgente(request.cookies.get(COOKIE_ATRIBUICAO)?.value)
@@ -130,18 +130,21 @@ export async function POST(request: NextRequest) {
     }
 
     // Premium mensal para quem nunca foi Premium: duas portas (lib/stripe-checkout-premium.ts).
-    //   trial → 3 dias sem cobrança, cartão obrigatório, depois 65€/mês;
+    //   trial → 3 dias sem cobrança e SEM cartão, depois 65€/mês (ativa em /ativar-premium);
     //   já    → 1º mês a 35€ (desconto único), depois 65€/mês.
     // Quem renova depois de uma pausa (já teve subscrição) paga o preço normal, sem trial.
-    const primeiraVezPremium = planId === 'premium_monthly' && profile?.subscription_status !== 'active' &&
+    // Quem já gastou o período grátis (trial 3 dias / campanha 90 dias) ativa a 65 €/mês, sem
+    // novo trial nem desconto de entrada — é a página /ativar-premium.
+    const gastouPeriodoGratis = profile?.inactive_reason === 'trial_sem_pagamento'
+    const primeiraVezPremium = !gastouPeriodoGratis && planId === 'premium_monthly' && profile?.subscription_status !== 'active' &&
       profile?.member_category !== 'premium' && profile?.member_category !== 'vip'
     const isTrial = primeiraVezPremium && trial === true && !profile?.stripe_subscription_id
     if (mode === 'subscription') {
       Object.assign(sessionParams, recolhaCompleta(isTrial), { payment_method_collection: 'always' })
     }
     if (isTrial) {
-      sessionParams.subscription_data = { trial_period_days: DIAS_TRIAL_PREMIUM }
-      sessionParams.metadata = { ...sessionParams.metadata, is_trial: '1' }
+      Object.assign(sessionParams, paramsTrialSemCartao())
+      sessionParams.metadata = { ...sessionParams.metadata, is_trial: '1', periodo_gratis: ORIGEM_TRIAL }
     } else if (primeiraVezPremium) {
       sessionParams.discounts = [{ coupon: CUPAO_INTRO_PREMIUM }]
     }
