@@ -18,6 +18,7 @@ for est in $ESTS; do
       rm -f "$out"
       if nice -n 10 node video/bootcamp/render.mjs "$est" "$i" "$lang"; then
         touch "$out.v3"
+        node video/bootcamp/youtube-meta.mjs "$est" "$i" "$lang"
         d=$(ffprobe -v error -show_entries format=duration -of csv=p=0 "$out" | cut -d. -f1)
         echo "FEITO $out ${d}s $(du -h "$out" | cut -f1) $(date +%H:%M)"
       else
