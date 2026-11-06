@@ -11,6 +11,7 @@
  * `verificarTexto` antes de chegar ao ecrã. Puro e sem dependências, para a guarda
  * `regras.check.ts` o provar sem rede.
  */
+import { verificarPtPt } from '@/lib/pt-pt'
 
 /** Nomes que não aparecem. Nem para dizer mal — o ângulo anti-MLM fala do modelo, não de empresas. */
 export const NOMES_PROIBIDOS = ['Jifu', 'Golden Era', 'Trendwave', 'Trend Wave', 'KillShot', 'Kill Shot'] as const
@@ -40,7 +41,7 @@ export const NOMES_INTOCAVEIS = [
 export const DISCLAIMER_PT = 'Conteúdo educativo. Não constitui consultoria financeira. Resultados não garantidos.'
 export const DISCLAIMER_EN = 'Educational content. Not financial advice. Results are not guaranteed.'
 
-export type Problema = { tipo: 'nome_proibido' | 'taxa_acerto' | 'promessa'; trecho: string }
+export type Problema = { tipo: 'nome_proibido' | 'taxa_acerto' | 'promessa' | 'brasileirismo'; trecho: string }
 
 const escapar = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
 
@@ -80,6 +81,8 @@ export function verificarTexto(texto: string): Problema[] {
     const m = t.match(re)
     if (m) out.push({ tipo: 'promessa', trecho: m[0] })
   }
+  // Português de Portugal: o que `corrigirPtPt` não troca sozinho (você, a gente, «Me diz»…).
+  for (const b of verificarPtPt(t)) out.push({ tipo: 'brasileirismo', trecho: `${b.trecho} (${b.sugestao})` })
   return out
 }
 

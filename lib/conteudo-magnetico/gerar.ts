@@ -7,6 +7,7 @@
  * nunca se esconde o problema, e o ecrã não deixa publicar sem o ver.
  */
 import { chamarIAGratis } from '@/lib/ia/chamar'
+import { corrigirObjectoPtPt } from '@/lib/pt-pt'
 import { blocoFramework } from '@/lib/framework-mtm'
 import { MARCAS, type Formato, type Marca } from './marcas'
 import { LIMITES, OBJECTIVOS, TONS, normalizarGuiao, type Guiao, type Objectivo, type Tom } from './guiao'
@@ -99,7 +100,8 @@ export async function gerarGuiao(p: PedidoGuiao): Promise<ResultadoGuiao> {
       preferencia: 'qualidade',
       timeoutMs: 45_000,
     })
-    const guiao = normalizarGuiao(parse(r.texto), base)
+    // Trocas seguras de PT-BR para PT-PT antes da verificação (celular → telemóvel, Comente → Comenta…).
+    const guiao = corrigirObjectoPtPt(normalizarGuiao(parse(r.texto), base)).valor
     const avisos = verificarObjecto(guiao)
     ultimo = { guiao, avisos, fornecedor: r.fornecedor, modelo: r.modelo }
     if (avisos.length === 0) return ultimo
