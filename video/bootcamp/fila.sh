@@ -1,4 +1,5 @@
 #!/bin/bash
+exec < /dev/null  # ffmpeg/node sem terminal: evita «suspended (tty output)» quando corre em segundo plano
 # Fila completa dos bootcamps (corre no Mac, na raiz do worktree).
 # Uso: nohup caffeinate -dims bash video/bootcamp/fila.sh > ~/bootcamp-fila.log 2>&1 &
 # Ver progresso: tail -f ~/bootcamp-fila.log
