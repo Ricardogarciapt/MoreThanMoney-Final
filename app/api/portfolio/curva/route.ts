@@ -43,8 +43,15 @@ export async function GET() {
       contas: contas.map((c) => {
         const curva = porConta.get(String(c.id)) ?? []
         const ultimo = curva[curva.length - 1]
-        const contribuido = Number(c.sim_saldo ?? ultimo?.contribuido ?? 0)
-        const valor = Number(c.sim_equity ?? ultimo?.valor ?? 0)
+        /**
+         * O ÚLTIMO PONTO DA CURVA primeiro, e só depois as colunas da conta. A 05/11/2026 a página
+         * mostrava 0 % nas duas contas: o motor da VPS (bundle antigo, sem o filtro
+         * `conta_portefolio`) reescreve `sim_equity` com o saldo a cada hora. A curva só é escrita
+         * pela reconstituição e pelo cron semanal do DCA (/api/cron/portefolio-dca), por isso é ela
+         * a fonte que não mente.
+         */
+        const contribuido = Number(ultimo?.contribuido ?? c.sim_saldo ?? 0)
+        const valor = Number(ultimo?.valor ?? c.sim_equity ?? 0)
         const m = (c.metricas ?? {}) as Record<string, unknown>
         return {
           chave: String(c.mt5_login),

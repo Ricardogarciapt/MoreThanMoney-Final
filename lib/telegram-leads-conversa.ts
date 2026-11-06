@@ -26,6 +26,7 @@ import { MIN_DEPOSIT } from '@/lib/broker/deposito-minimo'
 import { REGRAS_CASA, peneira } from '@/lib/marketing/regras'
 import { DISCLAIMER } from '@/lib/telegram-leads-posts'
 import { blocoFramework } from '@/lib/framework-mtm'
+import { CHAVE_CONFIG as CHAVE_COMUNIDADE, lerConfig as lerConfigComunidade } from '@/lib/telegram-comunidade'
 
 type Supa = ReturnType<typeof getSupabaseAdmin>
 
@@ -151,10 +152,15 @@ const escapar = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').re
  */
 export async function conversarNoGrupoDeLeads(db: Supa, m: MensagemDoGrupo): Promise<{ respondeu: boolean; motivo?: string }> {
   try {
-    const { data: rows } = await db.from('site_settings').select('key, value').in('key', ['telegram_leads_group_id', CHAVE_INTERRUPTOR])
+    const { data: rows } = await db.from('site_settings').select('key, value').in('key', ['telegram_leads_group_id', CHAVE_INTERRUPTOR, CHAVE_COMUNIDADE])
     const grupo = (rows?.find((r) => r.key === 'telegram_leads_group_id')?.value as { chat_id?: string } | null)?.chat_id
-    if (!grupo || String(m.chat.id) !== String(grupo)) return { respondeu: false, motivo: 'outro grupo' }
-    if ((rows?.find((r) => r.key === CHAVE_INTERRUPTOR)?.value as { ligado?: boolean } | null)?.ligado === false) return { respondeu: false, motivo: 'desligado' }
+    // MTM Chat (05/11): o mesmo bot conversa lá, com interruptor próprio (`telegram_comunidade.conversa`).
+    const comunidade = lerConfigComunidade(rows?.find((r) => r.key === CHAVE_COMUNIDADE)?.value)
+    const ehComunidade = comunidade.conversa && comunidade.chat_id != null && String(m.chat.id) === comunidade.chat_id
+    if (!ehComunidade) {
+      if (!grupo || String(m.chat.id) !== String(grupo)) return { respondeu: false, motivo: 'outro grupo' }
+      if ((rows?.find((r) => r.key === CHAVE_INTERRUPTOR)?.value as { ligado?: boolean } | null)?.ligado === false) return { respondeu: false, motivo: 'desligado' }
+    }
 
     const bot = MTMCOPY_BOT_USERNAME()
     const dono = process.env.TELEGRAM_ADMIN_CHAT_ID?.trim() || null
