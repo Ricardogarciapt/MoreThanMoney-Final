@@ -12,15 +12,26 @@ export const maxDuration = 20
  *
  * GET  ?motor=vps  → reclama o próximo trabalho e devolve-o com um URL ASSINADO para subir o MP4
  *                    directamente ao Storage (um reel passa os 4,5 MB que a Vercel aceita num corpo).
+ * GET  ?lista=1   → os últimos 30 trabalhos (para a app local), sem reclamar nada.
  * POST {id, estado:'pronto'|'erro', erro?} → fecha o trabalho.
+ * POST {id, estado:'cancelar'} → apaga um trabalho que ainda está na fila (ou falhou).
  */
 const BUCKET = 'uploads'
 const caminho = (id: string) => `conteudo-magnetico/${id}.mp4`
 
 export async function GET(request: NextRequest) {
   if (!ehMotor(request)) return NextResponse.json({ erro: 'não autorizado' }, { status: 401 })
-  const motor = (request.nextUrl.searchParams.get('motor') || 'motor').slice(0, 40)
   const db = getSupabaseAdmin()
+  // ?lista=1 — a app local mostra a fila sem reclamar nada.
+  if (request.nextUrl.searchParams.get('lista')) {
+    const { data } = await db
+      .from('conteudo_magnetico_renders')
+      .select('id, estado, video_url, erro, motor, tentativas, criado_em, iniciado_em, terminado_em, capa:guiao->laminas->0->>titulo')
+      .order('criado_em', { ascending: false })
+      .limit(30)
+    return NextResponse.json({ ok: true, renders: data ?? [] })
+  }
+  const motor = (request.nextUrl.searchParams.get('motor') || 'motor').slice(0, 40)
   const { data, error } = await db.rpc('conteudo_magnetico_reclamar', { p_motor: motor })
   if (error) return NextResponse.json({ erro: error.message }, { status: 500 })
   const job = Array.isArray(data) ? data[0] : data
@@ -40,6 +51,10 @@ export async function POST(request: NextRequest) {
   const id = String(b.id || '')
   if (!/^[0-9a-f-]{36}$/i.test(id)) return NextResponse.json({ erro: 'id inválido' }, { status: 400 })
   const db = getSupabaseAdmin()
+  if (b.estado === 'cancelar') {
+    const { data } = await db.from('conteudo_magnetico_renders').delete().eq('id', id).in('estado', ['na_fila', 'erro']).select('id')
+    return NextResponse.json({ ok: !!data?.length })
+  }
   if (b.estado === 'pronto') {
     const { data } = db.storage.from(BUCKET).getPublicUrl(caminho(id))
     await db
