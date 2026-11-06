@@ -8,7 +8,7 @@ import { fileURLToPath, pathToFileURL } from 'node:url'
 const { chromium } = createRequire(import.meta.url)('playwright')
 const DIR = path.dirname(fileURLToPath(import.meta.url)), RAIZ = path.join(DIR, '../..')
 const est = process.argv[2], slug = process.argv[3] || est
-const b = await chromium.launch(), p = await b.newPage({ viewport: { width: 1280, height: 720 } })
+const b = await chromium.launch().catch(() => chromium.launch({ channel: 'chrome' })), p = await b.newPage({ viewport: { width: 1280, height: 720 } })
 const out = path.join(DIR, 'saida', est); fs.mkdirSync(out, { recursive: true })
 for (const lang of ['pt', 'en']) {
   const f = path.join(DIR, 'guioes', `${est}.${lang}.json`); if (!fs.existsSync(f)) continue
