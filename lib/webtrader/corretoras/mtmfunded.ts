@@ -44,7 +44,7 @@ export function adaptadorMtmFunded(conta: Conta, modo: ModoSessao): AdaptadorCor
       return {
         saldo: e.estado.saldo, equity: e.estado.equity, margem: e.estado.margem, margemLivre: e.estado.margemLivre,
         nivelMargem: e.estado.nivelMargemPct ?? null,
-        flutuante: e.estado.flutuante, moeda: 'USD',
+        flutuante: e.estado.flutuante, credito: null, moeda: 'USD',
       }
     }),
 
