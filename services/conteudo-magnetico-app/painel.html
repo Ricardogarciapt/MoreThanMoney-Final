@@ -1,0 +1,219 @@
+<!doctype html>
+<html lang="pt-PT">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>MTM Conteúdo</title>
+<style>
+  :root {
+    --ouro: #D2A63C; --ouro2: #E9C46A; --fundo: #0b0b0d; --painel: #141417; --linha: #26262b;
+    --texto: #f2efe8; --suave: #9b978e; --ok: #4ade80; --mal: #f87171;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--fundo); color: var(--texto); font: 15px/1.5 -apple-system, BlinkMacSystemFont, "Inter", system-ui, sans-serif; }
+  header { display: flex; align-items: center; gap: 12px; padding: 18px 24px; border-bottom: 1px solid var(--linha); }
+  header img { height: 34px; }
+  header h1 { font-size: 18px; margin: 0; letter-spacing: .02em; }
+  header h1 span { color: var(--ouro); }
+  main { display: grid; gap: 16px; padding: 20px 24px 40px; grid-template-columns: repeat(auto-fit, minmax(340px, 1fr)); max-width: 1280px; margin: 0 auto; }
+  section { background: var(--painel); border: 1px solid var(--linha); border-radius: 14px; padding: 16px 18px; min-width: 0; }
+  section.largo { grid-column: 1 / -1; }
+  h2 { font-size: 13px; text-transform: uppercase; letter-spacing: .12em; color: var(--ouro2); margin: 0 0 12px; }
+  .linha { display: flex; justify-content: space-between; align-items: center; gap: 10px; padding: 7px 0; border-bottom: 1px solid #1d1d21; }
+  .linha:last-child { border-bottom: 0; }
+  .ok { color: var(--ok); } .mal { color: var(--mal); } .suave { color: var(--suave); font-size: 13px; }
+  button { background: var(--ouro); color: #111; border: 0; border-radius: 9px; padding: 8px 14px; font-weight: 700; cursor: pointer; font-size: 14px; }
+  button:hover { background: var(--ouro2); }
+  button.linha-b { background: transparent; color: var(--ouro2); border: 1px solid #3a3326; }
+  button.linha-b:hover { border-color: var(--ouro); }
+  button:disabled { opacity: .45; cursor: default; }
+  input, select, textarea { width: 100%; background: #0e0e10; color: var(--texto); border: 1px solid var(--linha); border-radius: 9px; padding: 8px 10px; font: inherit; }
+  textarea { min-height: 150px; font: 12px/1.4 ui-monospace, Menlo, monospace; }
+  label { display: block; font-size: 13px; color: var(--suave); margin: 10px 0 4px; }
+  pre { background: #0a0a0c; border: 1px solid var(--linha); border-radius: 10px; padding: 10px; height: 260px; overflow: auto; font: 12px/1.45 ui-monospace, Menlo, monospace; color: #cfcabe; white-space: pre-wrap; margin: 0; }
+  .pilula { display: inline-block; padding: 2px 9px; border-radius: 99px; font-size: 12px; font-weight: 600; border: 1px solid var(--linha); }
+  .pilula.ouro { color: #111; background: var(--ouro); border-color: var(--ouro); }
+  .acoes { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 12px; }
+  .fila-item { display: grid; grid-template-columns: 1fr auto; gap: 6px 10px; padding: 9px 0; border-bottom: 1px solid #1d1d21; }
+  .fila-item:last-child { border-bottom: 0; }
+  a { color: var(--ouro2); }
+  .vazio { color: var(--suave); font-size: 14px; padding: 8px 0; }
+  @media (max-width: 420px) { main { padding: 14px 16px; } header { padding: 14px 16px; } }
+</style>
+</head>
+<body>
+<header>
+  <img src="/logo.png" alt="" onerror="this.remove()">
+  <h1>MTM <span>Conteúdo</span> · motor local</h1>
+</header>
+<main>
+  <section>
+    <h2>Motor de vídeo</h2>
+    <div class="linha"><span>Estado</span><span id="motor-estado" class="pilula">…</span></div>
+    <div class="linha"><span>Site</span><span id="motor-site" class="suave">…</span></div>
+    <p class="suave">Faz os vídeos que pedes em «Gerar vídeo» no site, um de cada vez, com prioridade baixa para não pesar no Mac.</p>
+    <div class="acoes">
+      <button id="b-ligar">Ligar</button>
+      <button id="b-desligar" class="linha-b">Desligar</button>
+    </div>
+  </section>
+
+  <section>
+    <h2>O que está instalado</h2>
+    <div id="deps"></div>
+    <div class="acoes">
+      <button class="linha-b" data-instalar="ffmpeg">Instalar ffmpeg</button>
+      <button class="linha-b" data-instalar="voz">Instalar vozes grátis</button>
+    </div>
+  </section>
+
+  <section class="largo">
+    <h2>Fila do site</h2>
+    <div id="fila"><div class="vazio">A carregar…</div></div>
+  </section>
+
+  <section>
+    <h2>Registo</h2>
+    <pre id="log"></pre>
+  </section>
+
+  <section>
+    <h2>Render local (sem fila)</h2>
+    <p class="suave">Cola o guião em JSON (como sai do site ou do MCP: <code>{guiao, marca, fundo_url}</code>). O vídeo vai para <span id="saidas"></span>.</p>
+    <textarea id="guiao" placeholder='{"guiao": {...}, "marca": {"id": "morethanmoney"}}'></textarea>
+    <div class="acoes">
+      <button id="b-local">Fazer vídeo</button>
+      <button id="b-pasta" class="linha-b">Abrir pasta</button>
+    </div>
+    <div id="ficheiros" style="margin-top:10px"></div>
+  </section>
+
+  <section>
+    <h2>Ligações ao Claude</h2>
+    <div id="ligacoes"></div>
+    <p class="suave">Liga ao Claude Code deste Mac o MCP do site (guiões, peças, vídeos) e o ArtCraft MCP (imagens e clips), para os usares juntos.</p>
+    <div class="acoes"><button id="b-claude">Ligar ao Claude</button></div>
+  </section>
+
+  <section>
+    <h2>Definições</h2>
+    <label>Site</label><input id="c-site">
+    <label>CRON_SECRET (chave do motor) <span id="s-cron" class="suave"></span></label><input id="c-cron" type="password" placeholder="deixa vazio para manter">
+    <label>MCP_TOKEN (MCP do site) <span id="s-mcp" class="suave"></span></label><input id="c-mcp" type="password" placeholder="deixa vazio para manter">
+    <label>Chave Pexels (b-roll grátis, opcional) <span id="s-pexels" class="suave"></span></label><input id="c-pexels" type="password" placeholder="deixa vazio para manter">
+    <label>Voz</label>
+    <select id="c-voz">
+      <option value="pt-PT-DuarteNeural">Duarte (pt-PT, masculina)</option>
+      <option value="pt-PT-RaquelNeural">Raquel (pt-PT, feminina)</option>
+      <option value="pt-BR-AntonioNeural">António (pt-BR)</option>
+      <option value="en-US-GuyNeural">Guy (inglês)</option>
+    </select>
+    <label>Pasta de música livre de direitos (opcional)</label><input id="c-musica" placeholder="/Users/…/Music/MTM">
+    <label>Threads do ffmpeg</label><input id="c-threads" type="number" min="1" max="6">
+    <label style="display:flex;gap:8px;align-items:center;color:var(--texto)"><input id="c-arrancar" type="checkbox" style="width:auto"> Ligar o motor quando a app abre</label>
+    <div class="acoes"><button id="b-gravar">Gravar</button></div>
+  </section>
+</main>
+<script>
+const TOKEN = '__MTM_TOKEN__'
+const $ = (id) => document.getElementById(id)
+async function api(caminho, dados) {
+  const r = await fetch(caminho, {
+    method: dados ? 'POST' : 'GET',
+    headers: { 'x-mtm-token': TOKEN, 'content-type': 'application/json' },
+    body: dados ? JSON.stringify(dados) : undefined,
+  })
+  const j = await r.json().catch(() => ({}))
+  if (!r.ok) throw new Error(j.erro || 'HTTP ' + r.status)
+  return j
+}
+const esc = (s) => String(s ?? '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]))
+const marca = (v, ok = 'instalado', mal = 'em falta') => v ? `<span class="ok">✓ ${esc(typeof v === 'string' ? v : ok)}</span>` : `<span class="mal">✗ ${mal}</span>`
+const ESTADOS = { na_fila: 'Na fila', a_render: 'A montar', pronto: 'Pronto', erro: 'Falhou' }
+
+async function estado() {
+  const e = await api('/api/estado')
+  const c = e.config
+  $('motor-estado').textContent = e.motor.ligado ? 'Ligado' : 'Desligado'
+  $('motor-estado').className = 'pilula' + (e.motor.ligado ? ' ouro' : '')
+  $('motor-site').textContent = c.site
+  $('saidas').textContent = e.saidas
+  const d = e.deps
+  $('deps').innerHTML = [
+    ['Node', d.node], ['ffmpeg', d.ffmpeg && 'instalado'], ['ffprobe', d.ffprobe && 'instalado'],
+    ['Voz edge-tts (grátis)', d.edge_tts], ['Voz gTTS (reserva)', d.gtts], ['Motor (motor.mjs)', d.motor_js],
+    ['Homebrew', d.brew && 'instalado'], ['pip3', d.pip && 'instalado'],
+  ].map(([n, v]) => `<div class="linha"><span>${n}</span>${marca(v)}</div>`).join('')
+  $('ligacoes').innerHTML = [
+    ['Claude Code', d.claude && 'instalado'],
+    ['MCP do site (MCP_TOKEN)', c.mcp_token && 'definido', 'falta o token'],
+    ['ArtCraft MCP (compilado)', d.artcraft_bin && 'pronto', 'por compilar'],
+    ['Cookies do ArtCraft', d.artcraft_cred && 'colados', 'em falta'],
+  ].map(([n, v, m]) => `<div class="linha"><span>${n}</span>${marca(v, 'ok', m || 'em falta')}</div>`).join('')
+  $('b-ligar').disabled = e.motor.ligado || !c.cron_secret || e.render_local
+  $('b-desligar').disabled = !e.motor.ligado
+  $('b-local').disabled = e.render_local || e.motor.ligado
+  if (!$('c-site').value) {
+    $('c-site').value = c.site; $('c-voz').value = c.voz; $('c-musica').value = c.musica_dir || ''
+    $('c-threads').value = c.threads; $('c-arrancar').checked = !!c.arrancar_motor
+  }
+  $('s-cron').textContent = c.cron_secret ? '· definido' : '· em falta'
+  $('s-mcp').textContent = c.mcp_token ? '· definido' : '· em falta'
+  $('s-pexels').textContent = c.pexels ? '· definida' : ''
+}
+async function fila() {
+  try {
+    const j = await api('/api/fila')
+    const r = j.renders || []
+    $('fila').innerHTML = r.length ? r.map((x) => `
+      <div class="fila-item">
+        <div><strong>${esc(x.capa || '(sem título)')}</strong><div class="suave">${new Date(x.criado_em).toLocaleString('pt-PT')}${x.motor ? ' · ' + esc(x.motor) : ''}${x.erro ? ' · ' + esc(x.erro) : ''}</div></div>
+        <div style="text-align:right">
+          <span class="pilula${x.estado === 'pronto' ? ' ouro' : ''}">${ESTADOS[x.estado] || x.estado}</span>
+          ${x.video_url ? `<div><a href="${esc(x.video_url)}" target="_blank" rel="noreferrer">ver vídeo</a></div>` : ''}
+          ${x.estado === 'na_fila' || x.estado === 'erro' ? `<div><button class="linha-b" data-cancelar="${esc(x.id)}" style="margin-top:6px;padding:4px 10px;font-size:12px">Tirar</button></div>` : ''}
+        </div>
+      </div>`).join('') : '<div class="vazio">A fila está vazia.</div>'
+  } catch (e) {
+    $('fila').innerHTML = `<div class="vazio">${esc(e.message)}</div>`
+  }
+}
+async function log() {
+  const j = await api('/api/log')
+  const pre = $('log')
+  const fim = pre.scrollTop + pre.clientHeight >= pre.scrollHeight - 20
+  pre.textContent = j.linhas.join('\n')
+  if (fim) pre.scrollTop = pre.scrollHeight
+}
+async function ficheiros() {
+  const j = await api('/api/ficheiros')
+  $('ficheiros').innerHTML = j.ficheiros.map((f) => `<div class="linha"><a href="/video?t=${TOKEN}&n=${encodeURIComponent(f.nome)}" target="_blank">${esc(f.nome)}</a><span class="suave">${(f.bytes / 1e6).toFixed(1)} MB</span></div>`).join('')
+}
+const aviso = (e) => alert(e.message || e)
+
+$('b-ligar').onclick = () => api('/api/motor', { acao: 'ligar' }).then((j) => j.ok || aviso(j.erro)).then(estado).catch(aviso)
+$('b-desligar').onclick = () => api('/api/motor', { acao: 'desligar' }).then(() => setTimeout(estado, 800)).catch(aviso)
+document.querySelectorAll('[data-instalar]').forEach((b) => (b.onclick = () => api('/api/instalar', { qual: b.dataset.instalar }).catch(aviso)))
+$('fila').onclick = (ev) => {
+  const id = ev.target?.dataset?.cancelar
+  if (!id || !confirm('Tirar este vídeo da fila?')) return
+  api('/api/fila/cancelar', { id }).then(fila).catch(aviso)
+}
+$('b-local').onclick = () => {
+  let g
+  try { g = JSON.parse($('guiao').value) } catch { return alert('O JSON não é válido.') }
+  api('/api/local', { guiao: g }).then((j) => j.ok ? estado() : aviso(j.erro)).catch(aviso)
+}
+$('b-pasta').onclick = () => api('/api/abrir-pasta', {}).catch(aviso)
+$('b-claude').onclick = () => api('/api/claude', {}).then((j) => alert(j.feito.map((f) => `${f.mcp}: ${f.resultado}`).join('\n'))).then(estado).catch(aviso)
+$('b-gravar').onclick = () => api('/api/config', {
+  site: $('c-site').value, voz: $('c-voz').value, musica_dir: $('c-musica').value, threads: Number($('c-threads').value),
+  arrancar_motor: $('c-arrancar').checked, cron_secret: $('c-cron').value, mcp_token: $('c-mcp').value, pexels: $('c-pexels').value,
+}).then(() => { ['c-cron', 'c-mcp', 'c-pexels'].forEach((i) => ($(i).value = '')); estado(); fila() }).catch(aviso)
+
+estado().catch(aviso); fila(); log(); ficheiros()
+setInterval(() => { estado().catch(() => {}); log().catch(() => {}); ficheiros().catch(() => {}) }, 4000)
+setInterval(fila, 15000)
+</script>
+</body>
+</html>

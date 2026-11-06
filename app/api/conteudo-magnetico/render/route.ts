@@ -77,3 +77,21 @@ export async function GET(request: NextRequest) {
     .limit(10)
   return NextResponse.json({ ok: true, renders: data ?? [] })
 }
+
+/** DELETE ?id= — tira da fila (ou apaga um que falhou). Só os do próprio; um vídeo a montar ou pronto fica. */
+export async function DELETE(request: NextRequest) {
+  const quem = await quemPede(request)
+  if (!quem) return NextResponse.json({ erro: 'Sessão necessária' }, { status: 401 })
+  const id = request.nextUrl.searchParams.get('id') || ''
+  if (!/^[0-9a-f-]{36}$/i.test(id)) return NextResponse.json({ erro: 'id inválido' }, { status: 400 })
+  const { data, error } = await getSupabaseAdmin()
+    .from('conteudo_magnetico_renders')
+    .delete()
+    .eq('id', id)
+    .eq('user_id', quem.userId)
+    .in('estado', ['na_fila', 'erro'])
+    .select('id')
+  if (error) return NextResponse.json({ erro: error.message }, { status: 500 })
+  if (!data?.length) return NextResponse.json({ erro: 'Não está na fila (ou não é teu).' }, { status: 409 })
+  return NextResponse.json({ ok: true })
+}

@@ -131,6 +131,15 @@ export default function PainelConteudoMagnetico() {
     })()
   }, [])
 
+  const cancelarRender = useCallback(async (id: string) => {
+    if (!window.confirm('Tirar este vídeo da fila?')) return
+    const r = await fetch(`/api/conteudo-magnetico/render?id=${encodeURIComponent(id)}`, {
+      method: 'DELETE',
+      headers: await authHeaders(),
+    }).catch(() => null)
+    if (r?.ok) setRenders((lista) => lista.filter((x) => x.id !== id))
+  }, [])
+
   const carregarRenders = useCallback(async () => {
     try {
       const r = await fetch('/api/conteudo-magnetico/render', { cache: 'no-store', headers: await authHeaders() })
@@ -586,7 +595,18 @@ export default function PainelConteudoMagnetico() {
                           {r.estado === 'na_fila' ? 'Na fila' : r.estado === 'a_render' ? 'A montar o vídeo…' : `Falhou: ${r.erro ?? ''}`}
                         </div>
                       )}
-                      <p className="mt-2 text-xs text-white/35">{new Date(r.criado_em).toLocaleString('pt-PT')}</p>
+                      <div className="mt-2 flex items-center justify-between gap-2">
+                        <p className="text-xs text-white/35">{new Date(r.criado_em).toLocaleString('pt-PT')}</p>
+                        {(r.estado === 'na_fila' || r.estado === 'erro') && (
+                          <button
+                            type="button"
+                            onClick={() => cancelarRender(r.id)}
+                            className="text-xs text-white/45 underline-offset-2 hover:text-red-300 hover:underline"
+                          >
+                            {r.estado === 'na_fila' ? 'Tirar da fila' : 'Apagar'}
+                          </button>
+                        )}
+                      </div>
                     </div>
                   ))}
                 </div>
