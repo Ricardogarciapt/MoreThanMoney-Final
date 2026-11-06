@@ -7,9 +7,9 @@
  * Instagram (mtm_automacoes), para quem comenta receber a mensagem certa. A IA não escolhe a
  * palavra: um comentário que não dispara nada é um seguidor deixado à espera.
  */
-import type { Perfil } from './tipos'
+import type { Educador, Perfil } from './tipos'
 
-export type Tema = { slug: string; tema: string; area: string; palavraChave?: string; oQue?: string }
+export type Tema = { slug: string; tema: string; area: string; palavraChave?: string; oQue?: string; educador?: Educador }
 
 export const TEMAS_RICARDO: Tema[] = [
   { slug: 'medo-de-perder', tema: 'O medo de ficar de fora (FOMO) e como deixar de perseguir o preço', area: 'psicologia' },
@@ -52,6 +52,10 @@ export const TEMAS_MTM: Tema[] = [
   { slug: 'conta-propria', tema: 'Porque o teu dinheiro deve estar sempre numa conta em teu nome', area: 'rota corretora', palavraChave: 'QUERO', oQue: 'o passo a passo da rota corretora' },
   { slug: 'grupos-sinais', tema: 'Grupos de sinais: como avaliar um antes de seguir', area: 'copytrading', palavraChave: 'GRUPO', oQue: 'como funcionam os nossos grupos' },
   { slug: 'sensei', tema: 'Automatizar regras com um EA: o que um robô de trading faz e não faz', area: 'estratégias', palavraChave: 'ESTRATEGIA', oQue: 'o guia das estratégias' },
+  // Área dos educadores/academias: capa e fecho com a fotografia do educador (pedido do Ricardo, 06/11).
+  { slug: 'edu-ricardo-metais', tema: 'Ricardo Garcia ensina: como olhar para o ouro e o forex com regras simples de leitura e risco', area: 'academia Forex e metais', palavraChave: 'ESTRATEGIA', oQue: 'o guia das estratégias', educador: 'ricardo' },
+  { slug: 'edu-ruben-cripto', tema: 'Ruben Pereira ensina: cripto com cabeça, DCA, custódia e os erros de quem começa', area: 'academia Criptomoedas', palavraChave: 'CRIPTO', oQue: 'o conteúdo de cripto do Ruben', educador: 'ruben' },
+  { slug: 'edu-maria-faceless', tema: 'Maria Costa ensina: criar uma marca digital sem mostrar a cara (faceless), passo a passo', area: 'academia Faceless Marketing', palavraChave: 'FACELESS', oQue: 'o conteúdo da Maria sobre faceless', educador: 'maria' },
   { slug: 'primeiro-passo', tema: 'O primeiro passo na MTM: da curiosidade à primeira operação com risco controlado', area: 'começar', palavraChave: 'COMEÇAR', oQue: 'o plano para começar' },
 ]
 

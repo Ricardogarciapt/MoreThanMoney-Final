@@ -10,6 +10,11 @@
  */
 export type Perfil = 'ricardo' | 'mtm'
 
+/** Educadores da casa que aparecem (com a fotografia deles) nos carrosséis MTM da área das academias. */
+export type Educador = 'ricardo' | 'ruben' | 'maria'
+export const EDUCADOR_NOME: Record<Educador, string> = { ricardo: 'Ricardo Garcia', ruben: 'Ruben Pereira', maria: 'Maria Costa' }
+export const EDUCADOR_AREA: Record<Educador, string> = { ricardo: 'Forex e metais', ruben: 'Criptomoedas', maria: 'Faceless Marketing' }
+
 export type Lamina = {
   /** Linha pequena, na cor da marca (teal no Ricardo, ouro na MTM). */
   linha: string
@@ -30,6 +35,8 @@ export type Carrossel = {
   palavraChave?: string
   /** Legenda completa, já com CTA e aviso educativo. */
   legenda: string
+  /** Só MTM, área dos educadores/academias: a capa e o fecho levam a fotografia deste educador. */
+  educador?: Educador
 }
 
 export const ARROBA: Record<Perfil, string> = { ricardo: '@ricardogarciapt', mtm: '@morethanmoney.pt' }
