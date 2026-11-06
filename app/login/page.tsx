@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react'
 import { useSearchParams } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
-import { determinePostLoginRedirect, safeInternalRedirectPath } from '@/lib/role-redirect'
+import { determinePostLoginRedirect, periodoGratisTerminou, safeInternalRedirectPath } from '@/lib/role-redirect'
 import { loadMemberProfile } from '@/lib/member-profile'
 import { isRegisteredMember } from '@/lib/member-access'
 import { needsAccessRevalidation } from '@/lib/access-migration'
@@ -78,6 +78,10 @@ export default function LoginPage() {
     }
     if (needsAccessRevalidation(profile)) {
       window.location.replace('/access-migration')
+      return
+    }
+    if (periodoGratisTerminou(profile)) {
+      window.location.replace('/ativar-premium')
       return
     }
     if (!isRegisteredMember(profile)) {

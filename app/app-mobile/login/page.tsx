@@ -2,8 +2,8 @@
 
 import { useState, useEffect } from 'react'
 import { supabase } from '@/lib/supabase'
-import { determinePostLoginRedirect } from '@/lib/role-redirect'
-import { loadRegisteredMemberProfile } from '@/lib/member-profile'
+import { determinePostLoginRedirect, periodoGratisTerminou } from '@/lib/role-redirect'
+import { loadMemberProfile, loadRegisteredMemberProfile } from '@/lib/member-profile'
 import { needsAccessRevalidation } from '@/lib/access-migration'
 import { buildOAuthCallbackUrl, REGISTER_NOT_FOUND_MESSAGE } from '@/lib/oauth-flow'
 import { Button } from '@/components/ui/button'
@@ -44,6 +44,12 @@ export default function AppMobileLoginPage() {
       return
     }
     if (!profile) {
+      // Período grátis terminado sem pagamento: a conta existe, falta ativar o Premium.
+      const bruto = await loadMemberProfile(supabase, userId).catch(() => null)
+      if (periodoGratisTerminou(bruto)) {
+        window.location.replace('/ativar-premium')
+        return
+      }
       await rejectUnknownUser()
       return
     }

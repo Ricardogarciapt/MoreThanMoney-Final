@@ -44,6 +44,8 @@ export const MODULOS_GESTAO: readonly ModuloGestao[] = [
     vistas: [{ id: 'assistente', nome: 'Assistente' }, { id: 'estudio', nome: 'Estúdio' }, { id: 'marca', nome: 'Marca' }, { id: 'rascunhos', nome: 'Rascunhos' }] },
   { slug: 'cupoes', nome: 'Cupões', grupo: 'Comercial', exige: 'bo.gestao_comercial',
     descricao: 'Códigos de desconto, limites, validade e utilização.' },
+  { slug: 'periodos-gratis', nome: 'Trial e campanha 90 dias', grupo: 'Comercial', exige: 'bo.gestao_comercial',
+    descricao: 'Quem está no trial de 3 dias ou na campanha 90 dias, a data de fim, quem já pagou e quem ficou bloqueado. Prorrogar ou cancelar.' },
   { slug: 'agentes', nome: 'Agentes IA', grupo: 'Inteligência', exige: 'bo.dono',
     descricao: 'O CEO e os sub-agentes: estado, juízos com motivo, pausar/retomar/parar, saldo e tetos de gasto, ritmos e horas, e ordens por chat.',
     vistas: [{ id: 'painel', nome: 'Painel de trabalho' }, { id: 'arvore', nome: 'Árvore e estado' }, { id: 'orcamento', nome: 'Orçamento' }, { id: 'programacao', nome: 'Programações' }, { id: 'ordens', nome: 'Ordens' }] },

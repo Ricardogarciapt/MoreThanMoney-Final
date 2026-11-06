@@ -14,8 +14,9 @@ Quatro rotas para a mesma casa. Os preços vivem em `lib/escada-precos.ts`; aqui
 | Rota | O que é | Onde vive no código |
 |---|---|---|
 | **Rota corretora (PU Prime, IB)** | Conta própria aberta pelo nosso link, financiada com o depósito mínimo. O dinheiro é do cliente. Enquanto financiada, desbloqueia o Premium. | `MIN_DEPOSIT` (`lib/broker`), validação em `lib/telegram-broker-gate.ts`, `lib/acesso-estrategias.ts` |
-| **Membro** | Subscrição directa, para quem quer manter a corretora actual. | `PRECO_MEMBRO`, `lib/entitlements.ts` |
-| **Premium** | Acesso completo. Experimenta-se `TRIAL_DAYS` dias sem cartão no registo. | `PRECO_PREMIUM`, `lib/trial-access.ts` |
+| **Membro** | Subscrição directa, para quem quer manter a corretora actual. Paga logo no registo, sem trial. | `PRECO_MEMBRO`, `lib/entitlements.ts` |
+| **Premium** | Acesso completo. O trial é só do Premium: `TRIAL_DAYS` dias sem cartão e sem cobrança. No fim, o acesso fecha em `/ativar-premium` até a pessoa ativar os 65 €/mês. | `PRECO_PREMIUM`, `lib/stripe-checkout-premium.ts`, `lib/periodos-gratis.ts` |
+| **Campanha 90 dias** | Cupão `90DAYSPREVIOUSXP` para quem vem de outras plataformas de educação digital (nunca nomeadas). Membro durante 90 dias, sem cobrança; no fim passa a Premium a 65 €/mês. O MTM Auto paga-se à parte. | `CUPAO_CAMPANHA_90D`, `lib/stripe-checkout-premium.ts` |
 | **MTM Funded** | Desafios e torneios em conta **simulada**; o topo é um Patrocínio de Desempenho. **Não é prop firm**: a MTM não custodia nem executa capital de clientes. | `docs/mtm-funded-fase1-spec.md`, `/mtmfunded` |
 
 O degrau anual (`NOME_DEGRAU_TOPO`, hoje Elite) continua na escada; o framework não o tira.

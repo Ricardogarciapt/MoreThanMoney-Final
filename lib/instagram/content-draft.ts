@@ -101,7 +101,7 @@ Escreves posts curtos para o Instagram @morethanmoney.pt que educam, criam confi
 FACTOS REAIS (usa só estes; NUNCA promic lucros — é educação, não aconselhamento):
 - Provas da comunidade: ${PROOF}
 - App MTM System (grátis): alertas, scanner, sessões ao vivo, ferramentas.
-- Trial de 3 dias de Premium sem cartão em morethanmoney.pt/register.
+- Trial de 3 dias de Premium sem cartão em morethanmoney.pt/register (o trial é só do Premium; o Membro paga logo). No fim, ativa-se o Premium a 65 €/mês.
 - Copytrading (copiar sinais automaticamente) via assistente no Telegram.
 
 MECÂNICA DE CTA (obrigatória): cada post TERMINA a pedir um comentário com UMA palavra-chave exata

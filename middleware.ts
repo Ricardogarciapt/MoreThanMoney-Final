@@ -447,7 +447,7 @@ export async function middleware(request: NextRequest) {
       const pedidoPerfil = getSupabase()
         .from("profiles")
         .select(
-          "id, email, user_type, member_category, is_active, subscription_plan, subscription_platform, subscription_status, stripe_subscription_id, subscription_expires_at, trial_expires_at, trial_expired, profile_data"
+          "id, email, user_type, member_category, is_active, inactive_reason, subscription_plan, subscription_platform, subscription_status, stripe_subscription_id, subscription_expires_at, trial_expires_at, trial_expired, profile_data"
         )
         .eq("id", memberUser.id)
         .maybeSingle() as unknown as Promise<{ data: unknown; error: unknown }>
@@ -481,6 +481,14 @@ export async function middleware(request: NextRequest) {
         // No iOS nativo não se envia para Stripe (compliance) — segue o fluxo normal.
         if (requiresActivation(memberProfile) && !iosNative) {
           return NextResponse.redirect(new URL(activationRedirectPath(), request.url))
+        }
+        // Período grátis (trial 3 dias / campanha 90 dias) acabou sem pagamento: página que abre
+        // o checkout Stripe dos 65 €/mês. Ver lib/periodos-gratis.ts.
+        if (
+          (memberProfile as { inactive_reason?: string | null } | null)?.inactive_reason === "trial_sem_pagamento" &&
+          !iosNative
+        ) {
+          return NextResponse.redirect(new URL("/ativar-premium", request.url))
         }
         if (isExpiredTrial(memberProfile) && !iosNative) {
           return NextResponse.redirect(new URL("/upgrade?from=trial", request.url))

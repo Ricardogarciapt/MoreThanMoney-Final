@@ -18,6 +18,7 @@ import {
   type SuperficieFramework,
 } from './framework-mtm'
 import { TRIAL_DAYS } from './trial-access'
+import { CUPAO_CAMPANHA_90D, DIAS_CAMPANHA_90D } from './stripe-checkout-premium'
 
 const falhas: string[] = []
 const teste = (nome: string, condicao: boolean) => { if (!condicao) falhas.push(nome) }
@@ -33,7 +34,9 @@ teste('não chama «desleal» a ninguém', !/desleal/i.test(tudo))
 
 // 2. Sem números de negócio escritos à mão. Só a versão, a duração do trial (de TRIAL_DAYS) e a
 //    numeração dos passos do setter.
-const semPermitidos = tudo.replaceAll(FRAMEWORK_VERSAO, '').replaceAll(`${TRIAL_DAYS} dias`, '').replace(/^\d\. /gm, '')
+const semPermitidos = tudo.replaceAll(FRAMEWORK_VERSAO, '').replaceAll(`${TRIAL_DAYS} dias`, '')
+  // A campanha: o cupão e a duração vêm de lib/stripe-checkout-premium.ts, não são escritos à mão.
+  .replaceAll(CUPAO_CAMPANHA_90D, '').replaceAll(`${DIAS_CAMPANHA_90D} dias`, '').replace(/^\d\. /gm, '')
 teste('nenhum número escrito à mão (preço, %, pips, €)', !/\d/.test(semPermitidos))
 teste('nenhum símbolo de moeda', !/[€$]/.test(semPermitidos))
 
