@@ -16,13 +16,13 @@ const caps = fs.existsSync(capsF) ? fs.readFileSync(capsF, 'utf8').trim() : ''
 
 // playlists por estratégia (lib/estrategias-mtm.ts); null = criar
 const lib = fs.readFileSync(path.join(DIR, '../../lib/estrategias-mtm.ts'), 'utf8')
-const bloco = lib.split('slug: "' + est + '"')[1] || ''
+const bloco = lib.split('slug: "' + (G.playlist || est) + '"')[1] || ''
 const pl = (bloco.match(/playlist: \{ pt: (null|"[^"]+"), en: (null|"[^"]+") \}/) || [])
 const playlist = (lang === 'pt' ? pl[1] : pl[2] || 'null').replace(/"/g, '')
 
 const PT = {
-  titulo: `${V.rotulo.replace('·', '· Módulo')} · ${V.titulo} | MoreThanMoney`,
-  intro: `Módulo ${nv} de ${N} do Bootcamp ${G.estrategia}: ${V.titulo}. Aula narrada por Ricardo Garcia, com gráficos ilustrativos (não são resultados reais) para aprenderes a ler a estratégia e a montar um plano com risco definido.`,
+  titulo: G.serie ? `${G.estrategia} ${nv}/${N} · ${V.titulo} | MoreThanMoney` : `${V.rotulo.replace('·', '· Módulo')} · ${V.titulo} | MoreThanMoney`,
+  intro: G.serie ? `Vídeo ${nv} de ${N} das Estratégias MTM sobre o ${G.estrategia}: ${V.titulo}.` : `Módulo ${nv} de ${N} do Bootcamp ${G.estrategia}: ${V.titulo}. Aula narrada por Ricardo Garcia, com gráficos ilustrativos (não são resultados reais) para aprenderes a ler a estratégia e a montar um plano com risco definido.`,
   capitulos: 'Capítulos',
   bloco: `▬▬▬▬ Começa aqui ▬▬▬▬
 🚀 Regista-te no MTM (3 dias de Premium grátis): https://www.morethanmoney.pt/l/registo
@@ -35,8 +35,8 @@ const PT = {
   tags: ['MoreThanMoney', 'Ricardo Garcia', G.estrategia, 'bootcamp', 'trading', 'TradingView', 'gestão de risco', 'educação financeira'],
 }
 const EN = {
-  titulo: `${V.rotulo.replace('·', '· Module')} · ${V.titulo} | MoreThanMoney`,
-  intro: `Module ${nv} of ${N} of the ${G.estrategia} Bootcamp: ${V.titulo}. Narrated by Ricardo Garcia, with illustrative charts (not real results) so you learn to read the strategy and build a plan with defined risk.`,
+  titulo: G.serie ? `${G.estrategia} ${nv}/${N} · ${V.titulo} | MoreThanMoney` : `${V.rotulo.replace('·', '· Module')} · ${V.titulo} | MoreThanMoney`,
+  intro: G.serie ? `Video ${nv} of ${N} of MTM Strategies on ${G.estrategia}: ${V.titulo}.` : `Module ${nv} of ${N} of the ${G.estrategia} Bootcamp: ${V.titulo}. Narrated by Ricardo Garcia, with illustrative charts (not real results) so you learn to read the strategy and build a plan with defined risk.`,
   capitulos: 'Chapters',
   bloco: `▬▬▬▬ Start here ▬▬▬▬
 🚀 Join MTM (3 days of Premium free): https://www.morethanmoney.pt/l/start

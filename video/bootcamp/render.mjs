@@ -67,9 +67,12 @@ const de = Number(arg('de') || 0), ate = Number(arg('ate') || total)
 const browser = await chromium.launch().catch(() => chromium.launch({ channel: 'chrome' }))
 const page = await browser.newPage({ viewport: { width: 1920, height: 1080 } })
 await page.goto('file://' + path.join(DIR, 'cenas.html'))
+// gráfico fiel ao Pine da estratégia, quando existe (video/bootcamp/<motor>.js)
+const motorJs = path.join(DIR, `${G.motor || est}.js`)
+if (fs.existsSync(motorJs)) await page.addScriptTag({ path: motorJs })
 const cenas = Object.fromEntries(V.cenas.map(c => [c.id, c]))
 await page.evaluate(([tl, leg, dados, tot]) => { window.TOTAL = tot; window.iniciar(tl, leg, dados) },
-  [TL, process.argv.includes('--legendas'), { cenas, ui: G.ui, cores: G.cores, marca: `${G.marca} · ${V.rotulo}`, nome: G.estrategia, plano: G.plano, est, lang }, total])
+  [TL, process.argv.includes('--legendas'), { cenas, ui: G.ui, cores: G.cores, marca: `${G.marca} · ${V.rotulo}`, nome: G.estrategia, plano: G.plano, est, motor: G.motor || est, lang }, total])
 await page.evaluate(() => document.fonts.ready)
 await page.waitForTimeout(400)
 
