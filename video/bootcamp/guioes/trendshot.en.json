@@ -37,14 +37,7 @@
   ]
  ],
  "plano": {
-  "warning": false,
-  "slAtr": 1,
-  "alvos": [
-   2
-  ],
-  "rotulos": [
-   "Target"
-  ]
+  "nota": "O desenho do plano vem de trendshot.js (SL automático; TP 30/50/100/150 %)."
  },
  "videos": [
   {
@@ -139,7 +132,8 @@
       "medias",
       "cores",
       "estrutura",
-      "poc"
+      "poc",
+      "estrelas"
      ],
      "camadas": [
       "sinal",
@@ -154,7 +148,7 @@
       0.5
      ],
      "rotulo": "20/50 crossover",
-     "fala": "This is the chart with everything on, for a buy. One note I'll make just once in this bootcamp: the charts you see are illustrative. They're there to explain the reading. They are not real results or market history. Now, what you can see. The two exponential averages, the red twenty and the blue fifty, which cross to give the signal. The coloured background, which shows the direction. The horizontal lines, which are the automatic support and resistance structure. The dotted gold line, which is the POC. And the triangle, which marks the crossover. The plan lines appear afterwards. We'll go through each element on its own, because each one answers a different question."
+     "fala": "This is the chart with everything switched on, in a buy. One note I'll say only once in this bootcamp: the charts you see are illustrative. They explain the reading. They are not real results or market history. Now, what you see. The two exponential moving averages, the red twenty and the blue fifty, which cross to give the signal. The thicker orange line is the 238 average. Behind the price, the histogram columns, blue or red, and the candles that turn blue in an uptrend. The green and red horizontal lines are the automatic structure, R1 and S1. The thin orange line extending to the right is the POC. And the blue triangle marks the cross. Right after it, the indicator draws the trade box, with the entry, the stop and four targets. Let's look at each element on its own."
     },
     {
      "id": "v1-08",
@@ -163,12 +157,12 @@
      "kicker": "The signal",
      "titulo": "The 20/50 crossover",
      "itens": [
-      "Red 20 average crosses above blue 50: blue triangle, buy",
+      "Red 20 crosses above the blue 50: blue triangle, buy",
       "Crosses below: red triangle, sell",
-      "Each switch marks a short change of direction",
-      "The crossover is the trigger, not the decision"
+      "Only inside the Trade Clock: 08:00 to 21:00, chart time",
+      "The cross is the trigger, not the decision"
      ],
-     "fala": "The signal comes from the crossing of two exponential averages. The red one, at twenty, and the blue one, at fifty. When the red crosses above the blue, a blue triangle appears: that's a buy signal. When it crosses below, a red triangle appears: that's a sell signal. Each switch marks a short change of direction, which is why the system works in minutes. But notice a line from the guide worth keeping: the crossover is the trigger, not the decision. The triangle tells you something has changed. It doesn't tell you to enter. The decision only exists after the confirmations, and those are what we'll learn in the second video."
+     "fala": "The signal comes from the cross of two exponential moving averages. The red twenty and the blue fifty. When the red crosses above the blue, a blue triangle appears above the candle: that's a buy signal. When it crosses below, a red triangle appears: that's a sell signal. There's one detail in the indicator itself you should know: the triangles only appear inside the Trade Clock, from eight in the morning to nine at night, chart time. Outside that window the averages still cross, but TrendShot doesn't mark a signal. And keep this line from the guide: the cross is the trigger, not the decision. The triangle tells you something changed. The decision only exists after the confirmations, which you'll learn in the second video."
     },
     {
      "id": "v1-09",
@@ -194,7 +188,7 @@
       0.5
      ],
      "rotulo": "Red background",
-     "fala": "The background histogram shows the direction. It's blue while the 20 average sits above the 50, which is an uptrend. When the 20 drops below the 50, the background turns red, which is a downtrend. With a blue background you look for buys. With a red background you look for sells. The guide asks you to hold the trade while the colour doesn't change. Here, the colour is your patience gauge. When the background changes colour, the underlying direction has changed, and that matters far more than a single candle's move. Notice that this chart is a sell, with a red background and the averages in the downtrend position."
+     "fala": "The background histogram shows direction. It's made of columns that rise up to the averages: blue while the twenty is above the fifty, red when it's below. And there's a second visual cue: with the twenty above the fifty, the candles themselves turn blue. With a blue background and blue candles, you look for buys. With a red background, you look for sells. The guide asks you to hold the trade while the colour doesn't change. Here, colour is your patience ruler. When the background changes colour, the underlying direction changed, and that counts far more than a single candle. Notice this chart is a sell: red columns, normal candles and the red triangle at the cross."
     },
     {
      "id": "v1-10",
@@ -212,12 +206,12 @@
      "kicker": "The stars",
      "titulo": "Warnings that move with the price",
      "itens": [
-      "Yellow: a small pullback",
-      "Blue: a deeper pullback, without changing the trend",
-      "Red in an uptrend, green in a downtrend: a possible turn",
-      "If price moves above a star, it wants to continue"
+      "Small yellow dot: short pullback (3-bar pivot)",
+      "Blue star: deeper pullback, trend unchanged (10-bar pivot)",
+      "Large star, red at a top, green at a bottom: possible reversal",
+      "They only appear once confirmed: the indicator waits for the next candles"
      ],
-     "fala": "The stars are reversal warnings. They move with the price until they settle. A yellow star points to a small pullback. A blue one points to a deeper pullback, but one that doesn't change the trend. And a red star, in an uptrend, or a green one, in a downtrend, points to a possible turn in the trend. There's a simple reading rule: if the price moves through a star, it's because it wants to continue in that direction. The star is a warning about the move, not an order. Later you'll see that the guide treats it as an order to protect, not an order to exit. That difference matters."
+     "fala": "Stars are reversal warnings, and the indicator draws them in three sizes. The smallest is a yellow dot: it marks a short pullback, a three-bar top or bottom. The blue star marks a deeper pullback, ten bars, that doesn't change the trend. And the large star, red at a top or green at a bottom, appears when the pivot is twenty-five bars and the move was at least one ATR: that's the possible reversal warning. One important detail: stars only appear once confirmed, because the indicator needs the following candles to know it really was a top. That's why a star is a warning about the move, not an order. Later you'll see how the guide uses it to protect the trade."
     },
     {
      "id": "v1-12",
@@ -230,7 +224,8 @@
      "base": [
       "medias",
       "cores",
-      "poc"
+      "poc",
+      "estrelas"
      ],
      "camadas": [
       "sinal"
@@ -253,12 +248,12 @@
      "kicker": "Automatic structure",
      "titulo": "Resistances and supports that move",
      "itens": [
-      "Green lines above the price are resistances",
-      "Red lines below the price are supports",
-      "Breakout: the line turns red and becomes support",
+      "R1 above price turns red: it's resistance",
+      "S1 below price turns green: it's support",
+      "Break: the line changes colour and swaps role",
       "The retest is often where averages and structure work together"
      ],
-     "fala": "The market structure is drawn automatically. Green lines above the price are resistances, and red lines below it are supports. When the price breaks a resistance, the line turns red and starts working as a support. The retest of that line is often a place where the averages and the structure work together. This helps you see where the price may stall, and where it may find support. It isn't a guarantee that it stalls, but it's one of the pieces that tells you whether the path to the target is clear or whether there are obstacles ahead."
+     "fala": "Market structure is drawn automatically, with two lines: R1 and S1. The indicator finds them at twenty-five-bar tops and bottoms, with a move of at least one ATR. The colours tell you each line's role relative to price. A line above price turns red: it's resistance. A line below price turns green: it's support. When price breaks a resistance and closes above it, the line turns green and starts working as support. The retest of that line is often where the averages and the structure work together. It's no guarantee price stops there, but it tells you whether the path to the target is clear or has obstacles ahead."
     },
     {
      "id": "v1-14",
@@ -276,12 +271,12 @@
      "kicker": "The last elements",
      "titulo": "Four supporting pieces",
      "itens": [
-      "Trend table: the direction across several timeframes",
-      "Orange line: the 238 average",
-      "Dotted gold line: the POC, the level with the most volume",
-      "Corner of the chart: Good Volume or Low Volume"
+      "Trend table: Up or Down from M1 to D, and price above or below the POC",
+      "Thick orange line: the 238 average",
+      "Thin orange line to the right: the POC of the last 50 candles",
+      "Red Low Volume label when volume drops below half its average"
      ],
-     "fala": "The trend table shows the direction across several timeframes at once. The orange line is the 238 average. On the one-minute chart, it matches the fifty average of the five-minute chart. It's your longer context. The dotted gold line is the POC, the level with the most volume traded. And the corner shows Good Volume or Low Volume. The guide says the system performs better with liquidity and fast moves. With Low Volume, trading isn't forbidden, but the moves tend to be shorter. Notice that these pieces don't give you a signal. They give you context, and that context is what you'll use in the confirmations."
+     "fala": "At the top of the chart is the trend table. The first row shows Up or Down across several timeframes, from one minute to daily, in blue or red. The second row shows whether price is above or below the POC on fifteen minutes, thirty minutes and one hour. The thick orange line is the 238 average. On the one-minute chart it equals the fifty average on the five-minute chart: it's your longest context. The thin orange line extending to the right is the POC, the price with the most volume over the last fifty candles. And in the right corner a red Low Volume label appears when the candle's volume drops below half its average. No label means volume is normal. Notice these pieces don't give signals. They give context, and that context is what you use in the confirmations."
     },
     {
      "id": "v1-15b",
@@ -309,7 +304,8 @@
      "base": [
       "medias",
       "cores",
-      "estrutura"
+      "estrutura",
+      "estrelas"
      ],
      "camadas": [],
      "ate": [
@@ -321,7 +317,7 @@
       0.5
      ],
      "rotulo": "Low Volume · sideways",
-     "fala": "Look at this example. The arrows alternate from one side to the other, the histogram changes colour several times, and the averages are tangled. This is consolidation. The guide is clear: these signals are not taken. There's no wave to catch. And notice the corner: Low Volume. Many people get in here because the chart seems to be giving signals all the time, and that's exactly the mistake. A triangle in a market without direction is just another mark on the screen. Stay out, and let the next crossover with a clear direction be your target."
+     "fala": "Look at this example. The triangles flip one way and the other, the histogram changes colour several times and the averages are tangled. That's consolidation. The guide is clear: you don't take these signals. There's no wave to catch. And look at the corner: the red Low Volume label appears. Many people enter here because the chart seems to be signalling all the time, and that's exactly the mistake. A triangle in a directionless market is just another mark on the screen. Stay out, and let the next cross with a clear direction be your goal."
     },
     {
      "id": "v1-17",
@@ -330,12 +326,12 @@
      "kicker": "Common reading mistakes",
      "titulo": "What beginners get wrong",
      "itens": [
-      "Treating every yellow star as an exit",
+      "Treating every yellow dot as an exit",
       "Entering a zone of tangled averages",
       "Reading only one timeframe and ignoring the table",
       "Confusing a protection star with an exit order"
      ],
-     "fala": "Before we close this video, the most common reading mistakes. First, treating every yellow star as an exit. The guide says they appear often and tend to be only pullbacks. Second, entering a zone of tangled averages, where signals alternate from one side to the other. Third, reading only one timeframe and ignoring the trend table. And fourth, confusing a protection star with an exit order. A reversal star asks you to protect the trade. It doesn't tell you to leave. Write these mistakes in your journal when you see them, because they're the ones that cost the most to people who are learning."
+     "fala": "Before we close this video, the most common reading mistakes. First, treating every yellow dot as an exit. The guide says they appear often and tend to be only pullbacks. Second, entering a zone of tangled averages, where signals alternate from one side to the other. Third, reading only one timeframe and ignoring the trend table. And fourth, confusing a protection star with an exit order. A reversal star asks you to protect the trade. It doesn't tell you to leave. Write these mistakes in your journal when you see them, because they're the ones that cost the most to people who are learning."
     },
     {
      "id": "v1-18",
@@ -370,12 +366,12 @@
      "titulo": "From reading to decision",
      "itens": [
       "The four confirmations, in order",
-      "Entry on the crossover triangle",
-      "Stop on the other side of the two averages",
-      "Target at 1:2, and managing the stars",
+      "Entry at the close of the cross candle",
+      "Automatic stop or at the previous structure",
+      "The indicator's four targets and managing stars",
       "When not to enter, and the routine"
      ],
-     "fala": "Welcome to the second video of the TrendShot Bootcamp. In the first you learned to read the chart. Now we move on to the decision. We'll go through the four confirmations, in order, and only then the entry on the crossover triangle. Then the stop, on the other side of the two averages, and the target, which the guide sets at at least double the stop. We'll also look at how to manage the trade when a reversal star appears, when not to enter, and a simple routine for your session. The system is fast. Your preparation has to be even calmer."
+     "fala": "Welcome to the second video of the TrendShot Bootcamp. In the first one you learned to read the chart. Now we move to the decision. We'll go through the four confirmations, in order, and only then the entry, at the close of the cross candle. Then the stop the indicator draws, automatic or at the previous structure, and the four targets in the trade box. We'll also see how to manage the trade when a reversal star appears, when not to enter, and a simple routine for your session. The system is fast. Your preparation has to be even calmer."
     },
     {
      "id": "v2-02",
@@ -393,12 +389,12 @@
      "kicker": "Before you accept a signal",
      "titulo": "Four confirmations",
      "itens": [
-      "Trend on two timeframes above",
-      "238 average behind the price",
-      "POC behind the price, or room to it",
-      "Good Volume"
+      "Trend: Up on the higher timeframes, in the table",
+      "238 average behind price",
+      "POC behind price: Above in a buy, Below in a sell",
+      "No Low Volume label"
      ],
-     "fala": "Before you accept a signal, pass four confirmations. The first is the trend. Look at the two timeframes above yours, and want the same direction on all three. The second is the 238 average. On a buy, the orange line has to be below the price. On a sell, above it. The third is the POC. On a buy, it has to be below the price. On a sell, above. If it isn't behind you yet, confirm there's enough room before it, and factor it into the target. The fourth is Good Volume. The guide says the system performs better with liquidity and fast moves. And here's the final rule: if any one of these confirmations fails, let it go. A weak signal you missed costs nothing."
+     "fala": "Before accepting a signal, go through four confirmations. The first is trend. Look at the table and confirm the same direction on the timeframes above yours. The second is the 238 average. In a buy, the thick orange line must be below price. In a sell, above. The third is the POC. In a buy, price must be above it, and the table shows Above. In a sell, below, and it shows Below. If the POC is still ahead, make sure there's room to reach it and factor it into the targets. The fourth is volume: the red Low Volume label must not be showing. The guide says the system works best with liquidity and fast moves. And the final rule: if any of these confirmations fails, let it pass. A weak signal missed costs nothing."
     },
     {
      "id": "v2-04",
@@ -412,7 +408,8 @@
       "medias",
       "cores",
       "estrutura",
-      "poc"
+      "poc",
+      "tabela"
      ],
      "camadas": [
       "sinal",
@@ -427,7 +424,7 @@
       0.5
      ],
      "rotulo": "4 of 4",
-     "fala": "Let's apply the four confirmations to a buy. The blue triangle marks the red twenty crossing above the fifty. The background is blue, and the table shows the same direction on the two timeframes above. The 238 average, the orange line, is below the price. The POC, the dotted gold line, is also below. And the corner shows Good Volume. Four out of four. Notice something: the confirmations don't guarantee the move continues. They tell you the context is on your side right now. The decision to enter is still a step you take with the plan and the risk already calculated."
+     "fala": "Let's apply the four confirmations to a buy. The blue triangle marks the twenty crossing above the fifty. The background and candles are blue, and the table shows Up on the higher timeframes. The 238 average, the thick orange line, is below price. The POC, the thin orange line, is also below, and the table shows Above. And there's no Low Volume label in the corner. Four out of four. Notice one thing: confirmations don't guarantee the move continues. They tell you the context is on your side right now. Entering is still a step you take with the plan and the risk already worked out."
     },
     {
      "id": "v2-05",
@@ -457,30 +454,30 @@
      "tipo": "plano",
      "cap": "02 · Entry, stop and target",
      "kicker": "The plan levels",
-     "titulo": "Entry, stop and 1:2 target",
+     "titulo": "Entry, stop and four targets",
      "linhas": [
       [
        "Entry",
-       "on the 20/50 crossover triangle",
+       "close of the 20/50 cross candle",
        "entrada"
       ],
       [
-       "Stop",
-       "on the other side of the two averages",
+       "Automatic stop",
+       "100 pips (200 on gold), or at the previous structure",
        "sl"
       ],
       [
-       "Target",
-       "at least double the stop",
+       "TP1 · TP2",
+       "30% and 50% of the stop distance (60% on gold)",
        "tp"
       ],
       [
-       "Guide example",
-       "stop of 25 pips, target of 50 pips",
-       "warning"
+       "TP3 · TP4",
+       "100% and 150% of the stop distance",
+       "tp"
       ]
      ],
-     "fala": "There are three levels, plus an example from the guide. The entry is on the crossover triangle, once you've passed the confirmations. The stop sits on the other side of the two averages, the red and the blue. Notice it isn't a fixed distance. It's where the reading of the crossover stops making sense. The target is at least double the stop, which means a risk of one to two. The guide's example is a stop of twenty-five pips and a target of fifty. The POC and the earlier large stars help you refine the target. And before you send the order, calculate the position size using the risk you've decided on. The system draws the plan, but you define the lot size."
+     "fala": "When there's a cross, TrendShot draws the trade box for twenty candles. The entry is the close of the cross candle, after you've passed the confirmations. The stop can be automatic: one hundred pips on most pairs and indices, two hundred on gold. Or it can sit at the previous structure, the support or resistance the move came from. There are four targets, measured from the stop distance. TP1 sits at thirty percent, TP2 at fifty, or sixty on gold, TP3 at one hundred percent and TP4 at one hundred and fifty. The green zone runs from the entry to the last target, the red one from the entry to the stop. And before you send the order, size the position with the risk you decided. The indicator draws the plan, but the lot size is yours."
     },
     {
      "id": "v2-08",
@@ -489,13 +486,13 @@
      "kicker": "Step by step",
      "titulo": "From triangle to order",
      "itens": [
-      "Read the direction: histogram colour and table",
-      "Wait for the 20/50 crossover triangle",
-      "Check there are no stars or resistances ahead",
-      "Pass all four confirmations",
-      "Stop, 1:2 target and size, then the order"
+      "Read the direction: histogram, candle colour and table",
+      "Wait for the 20/50 cross triangle inside the Trade Clock",
+      "Check there are no stars or resistance just ahead",
+      "Pass the four confirmations",
+      "Stop, box targets and size, and only then the order"
      ],
-     "fala": "Let's put the sequence in order. One: read the direction, using the histogram colour and the trend table. Two: wait for the 20/50 crossover triangle. Three: confirm there are no stars or resistances blocking the path just ahead. Four: pass all four confirmations, and only enter if every one is met. Five: set the stop on the other side of the two averages, the target at at least double the distance, and the position size. Only then does the order go to your broker. If any step fails, the trade doesn't exist, however fast the move looks."
+     "fala": "Let's put the sequence in order. One: read the direction, from the histogram colour, the candles and the table. Two: wait for the cross triangle, inside the Trade Clock. Three: check there are no stars or resistance right ahead blocking the path. Four: pass the four confirmations, and only enter if they're all met. Five: use the stop and targets from the trade box and size the position. Only then does the order go to the broker. If any step fails, the trade doesn't exist, however fast the move looks."
     },
     {
      "id": "v2-08b",
@@ -504,12 +501,12 @@
      "kicker": "Refining the target",
      "titulo": "Where the target meets obstacles",
      "itens": [
-      "Look for the POC ahead, and factor it in",
-      "Earlier large stars help refine the target",
-      "Confirm the target fits before the next resistance",
-      "Don't move the target mid-trade without a reason from the plan"
+      "Look for the POC and R1 or S1 ahead of the entry",
+      "Earlier large stars mark where the move already stalled",
+      "Check which of the four targets fit before the obstacle",
+      "Don't change the plan mid-trade without a reason from the plan"
      ],
-     "fala": "The target has to be at least double the stop, but the guide also asks you to look at the path. Look for the POC ahead of your entry. If it sits on the path, factor it in, because the price may hesitate there. Earlier large stars help you refine the target, because they mark places where the move had already stalled. And confirm the target fits before the next resistance. If it doesn't fit, the risk-to-target relationship is worse than the plan assumed, and that's a reason to let the trade go. Finally, a rule of discipline: don't move the target mid-trade without a reason that comes from the plan. Moving a target out of hope is the shortest route to a confusing journal."
+     "fala": "The trade box gives you four targets, but the guide also asks you to look at the path. Look for the POC and the structure line ahead of your entry. If they're in the way, price may hesitate there. Earlier large stars help you read the path, because they mark places where the move had already stalled. Check which of the four targets fit before that obstacle. If not even the first one fits, the trade is worse than the plan expected, and that's a reason to let it pass. Finally, a discipline rule: don't change the plan mid-trade without a reason that comes from the plan. Moving a target out of hope is the shortest road to a messy journal."
     },
     {
      "id": "v2-09",
@@ -545,7 +542,8 @@
      "base": [
       "medias",
       "cores",
-      "estrutura"
+      "estrutura",
+      "estrelas"
      ],
      "camadas": [
       "sinal",
@@ -594,12 +592,12 @@
      "kicker": "Time windows",
      "titulo": "When volume tends to fade",
      "itens": [
-      "The hours are Lisbon time, in winter",
-      "Avoid 16:00 to 17:30",
-      "Avoid 20:45 to midnight, and 04:00 to 06:30",
-      "Check your clock: the hours shift with daylight saving"
+      "The indicator only marks signals from 08:00 to 21:00, chart time",
+      "Inside that window, the guide avoids 16:00 to 17:30 (Lisbon, winter)",
+      "And from 20:45 onwards",
+      "Check your clock: time shifts with daylight saving"
      ],
-     "fala": "The guide lists windows to avoid, outside the periods of highest volume. The hours are Lisbon time, in winter. Avoid four in the afternoon to half past five. Avoid quarter to nine at night until midnight. And avoid four to half past six in the morning. Always check your own clock, because the time difference between countries changes through the year, and a window read wrongly is a window used wrongly. Notice that this isn't a magic rule. It's a way of not trading during the moments when the movement tends to be slower or more irregular, and of being present when the system works best."
+     "fala": "The indicator already has its own clock: the Trade Clock only lets triangles appear from eight in the morning to nine at night, chart time. Inside that window, the guide lists periods to avoid, when volume tends to dry up. The times are Lisbon time, in winter. Avoid four to five thirty in the afternoon. And avoid from eight forty-five in the evening onwards, and also the early hours, from four to six thirty. Always check your clock and the time set on the chart, because time differences shift through the year. This isn't a magic rule. It's a way of not trading when the move tends to be slower or more erratic."
     },
     {
      "id": "v2-15",
@@ -610,11 +608,11 @@
      "itens": [
       "Check the direction on the timeframes above",
       "Check the background histogram and the 238 average",
-      "Check the POC and the corner: Good Volume or Low Volume",
+      "Check the POC in the table and whether Low Volume shows",
       "Check the time and the windows to avoid",
       "Note each signal and what happened"
      ],
-     "fala": "The routine before a session is short. First, you check the direction on the timeframes above, using the table. Second, you look at the background histogram and the 238 average, which tell you the context on each side. Third, you check the POC and the corner of the chart, to see whether there's Good Volume or Low Volume. Fourth, you confirm the time, and whether you're in one of the windows to avoid. And fifth, when signals appear, you note each one in the journal, with what happened. During the session, your job is to follow the process, and not react to every triangle. TrendShot gives you many signals. You don't need all of them."
+     "fala": "The routine before a session is short. First, you check the direction on the timeframes above, using the table. Second, you look at the background histogram and the 238 average, which tell you the context on each side. Third, you check the POC and the corner of the chart, to see whether the red Low Volume label shows. Fourth, you confirm the time, and whether you're in one of the windows to avoid. And fifth, when signals appear, you note each one in the journal, with what happened. During the session, your job is to follow the process, and not react to every triangle. TrendShot gives you many signals. You don't need all of them."
     },
     {
      "id": "v2-16",
@@ -637,7 +635,7 @@
      "cap": "Closing",
      "texto": "The crossover warns. <span class='ouro'>You confirm.</span>",
      "autor": "Ricardo Garcia · MoreThanMoney",
-     "fala": "We've reached the end of the TrendShot Bootcamp. Remember the essentials: the crossover is the trigger, and the trend gives the direction. You only enter when the four confirmations are met, with the stop and the target at one to two and the size calculated. And when a reversal star appears, you protect, you don't close out of fear. Do the exercises, practise on a demo account, and write your journal from the very first signal. If you have questions, bring your cases to the community and to the live sessions at MoreThanMoney. I'm Ricardo Garcia. See you next time."
+     "fala": "We've reached the end of the TrendShot Bootcamp. Remember the essentials: the cross is the trigger, and the trend gives the direction. You only enter when the four confirmations are met, with the stop and targets from the trade box and the size worked out. And when a reversal star appears, you protect, you don't close out of fear. Do the exercises, practise on a demo account, and keep a journal from the first signal. If you have questions, bring your cases to the community and to the MoreThanMoney live sessions. I'm Ricardo Garcia. See you next time."
     },
     {
      "id": "v2-18",
@@ -651,5 +649,6 @@
     }
    ]
   }
- ]
+ ],
+ "motor": "trendshot"
 }

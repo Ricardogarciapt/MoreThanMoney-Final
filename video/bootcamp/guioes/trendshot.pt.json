@@ -37,14 +37,7 @@
   ]
  ],
  "plano": {
-  "warning": false,
-  "slAtr": 1,
-  "alvos": [
-   2
-  ],
-  "rotulos": [
-   "Alvo"
-  ]
+  "nota": "O desenho do plano vem de trendshot.js (SL automático; TP 30/50/100/150 %)."
  },
  "videos": [
   {
@@ -139,7 +132,8 @@
       "medias",
       "cores",
       "estrutura",
-      "poc"
+      "poc",
+      "estrelas"
      ],
      "camadas": [
       "sinal",
@@ -154,7 +148,7 @@
       0.5
      ],
      "rotulo": "Cruzamento 20/50",
-     "fala": "Este é o gráfico com tudo ligado, numa compra. Uma nota que digo uma só vez neste bootcamp: os gráficos que vês são ilustrativos. Servem para explicar a leitura. Não são resultados reais nem histórico de mercado. Agora, o que vês. As duas médias exponenciais, a vermelha de vinte e a azul de cinquenta, que se cruzam para dar o sinal. O fundo colorido, que mostra a direção. As linhas horizontais, que são a estrutura automática de suportes e resistências. A linha dourada tracejada, que é o POC. E o triângulo, que marca o cruzamento. As linhas do plano aparecem depois. Vamos ver cada elemento separadamente, porque cada um responde a uma pergunta diferente."
+     "fala": "Este é o gráfico com tudo ligado, numa compra. Uma nota que digo uma só vez neste bootcamp: os gráficos que vês são ilustrativos. Servem para explicar a leitura. Não são resultados reais nem histórico de mercado. Agora, o que vês. As duas médias exponenciais, a vermelha de vinte e a azul de cinquenta, que se cruzam para dar o sinal. A laranja, mais grossa, é a média 238. Por trás, as colunas do histograma, azuis ou vermelhas, e as velas que ficam azuis quando a tendência é de alta. As linhas horizontais verdes e vermelhas são a estrutura automática, o R1 e o S1. A linha laranja fina, que segue para a direita, é o POC. E o triângulo azul marca o cruzamento. Logo a seguir o indicador desenha a caixa do plano, com a entrada, o stop e quatro alvos. Vamos ver cada elemento separadamente."
     },
     {
      "id": "v1-08",
@@ -165,10 +159,10 @@
      "itens": [
       "Média vermelha de 20 cruza para cima da azul de 50: triângulo azul, compra",
       "Cruza para baixo: triângulo vermelho, venda",
-      "Cada troca marca uma mudança curta de direção",
+      "Só aparece dentro do Trade Clock: das 08:00 às 21:00, hora do gráfico",
       "O cruzamento é o gatilho, não a decisão"
      ],
-     "fala": "O sinal nasce do cruzamento de duas médias exponenciais. A vermelha, de vinte, e a azul, de cinquenta. Quando a vermelha cruza para cima da azul, aparece um triângulo azul: é um sinal de compra. Quando cruza para baixo, aparece um triângulo vermelho: é um sinal de venda. Cada troca marca uma mudança curta de direção, e é por isso que o sistema trabalha em minutos. Mas repara numa frase do guia que vale a pena guardar: o cruzamento é o gatilho, não a decisão. O triângulo diz-te que algo mudou. Não diz que deves entrar. A decisão só existe depois das confirmações, e são elas que vamos aprender no segundo vídeo."
+     "fala": "O sinal nasce do cruzamento de duas médias exponenciais. A vermelha, de vinte, e a azul, de cinquenta. Quando a vermelha cruza para cima da azul, aparece um triângulo azul por cima da vela: é um sinal de compra. Quando cruza para baixo, aparece um triângulo vermelho: é um sinal de venda. Há um pormenor do próprio indicador que convém saberes: os triângulos só aparecem dentro do Trade Clock, das oito da manhã às nove da noite, na hora do gráfico. Fora dessa janela as médias continuam a cruzar, mas o TrendShot não marca sinal. E guarda esta frase do guia: o cruzamento é o gatilho, não a decisão. O triângulo diz-te que algo mudou. A decisão só existe depois das confirmações, que vamos aprender no segundo vídeo."
     },
     {
      "id": "v1-09",
@@ -194,7 +188,7 @@
       0.5
      ],
      "rotulo": "Fundo vermelho",
-     "fala": "O histograma de fundo mostra a direção. Está azul enquanto a média de vinte está acima da de cinquenta, e é tendência de alta. Quando a de vinte passa abaixo da de cinquenta, o fundo fica vermelho, e é tendência de baixa. Com fundo azul, procuras compras. Com fundo vermelho, procuras vendas. E o guia pede que segures a operação enquanto a cor não muda. Aqui, a cor é a tua régua de paciência. Quando o fundo muda de cor, a direção de fundo mudou, e isso conta muito mais do que um movimento isolado de uma vela. Repara que este gráfico é uma venda, com o fundo vermelho e as médias na posição de baixa."
+     "fala": "O histograma de fundo mostra a direção. São colunas que sobem até às médias: azuis enquanto a média de vinte está acima da de cinquenta, vermelhas quando está abaixo. E há um segundo sinal visual: com a vinte acima da cinquenta, as próprias velas ficam azuis. Com fundo e velas azuis, procuras compras. Com fundo vermelho, procuras vendas. O guia pede que segures a operação enquanto a cor não muda. Aqui, a cor é a tua régua de paciência. Quando o fundo muda de cor, a direção de fundo mudou, e isso conta muito mais do que uma vela isolada. Repara que este gráfico é uma venda: colunas vermelhas, velas normais e o triângulo vermelho no cruzamento."
     },
     {
      "id": "v1-10",
@@ -212,12 +206,12 @@
      "kicker": "As estrelas",
      "titulo": "Avisos que se movem com o preço",
      "itens": [
-      "Amarela: recuo pequeno",
-      "Azul: recuo mais fundo, sem mudar a tendência",
-      "Vermelha numa subida, verde numa descida: possível viragem",
-      "Se o preço passa por cima de uma estrela, quer continuar"
+      "Ponto amarelo pequeno: recuo curto (pivot de 3 velas)",
+      "Estrela azul: recuo mais fundo, sem mudar a tendência (pivot de 10)",
+      "Estrela grande vermelha num topo, verde num fundo: possível viragem",
+      "Só aparecem depois de confirmadas: o indicador espera as velas seguintes"
      ],
-     "fala": "As estrelas são avisos de reversão. Movem-se com o preço até se fixarem. Uma estrela amarela indica um recuo pequeno. Uma azul indica um recuo mais fundo, mas que não muda a tendência. E uma estrela vermelha, numa subida, ou uma verde, numa descida, indica possível viragem da tendência. Há uma regra de leitura simples: se o preço passa por cima de uma estrela, é porque quer continuar nessa direção. A estrela é um aviso sobre o movimento, não uma ordem. Mais à frente vais ver que o guia a trata como ordem de proteção, e não como ordem de saída. Essa diferença é importante."
+     "fala": "As estrelas são avisos de reversão, e o indicador desenha-as em três tamanhos. O mais pequeno é um ponto amarelo: marca um recuo curto, um topo ou fundo de três velas. A estrela azul marca um recuo mais fundo, de dez velas, mas que não muda a tendência. E a estrela grande, vermelha num topo ou verde num fundo, aparece quando o pivot é de vinte e cinco velas e o movimento foi de pelo menos um ATR: é o aviso de possível viragem. Um pormenor importante: as estrelas só aparecem depois de confirmadas, porque o indicador precisa das velas seguintes para saber que aquilo foi mesmo um topo. Por isso a estrela é um aviso sobre o movimento, não uma ordem. Mais à frente vais ver como o guia a usa para proteger a operação."
     },
     {
      "id": "v1-12",
@@ -230,7 +224,8 @@
      "base": [
       "medias",
       "cores",
-      "poc"
+      "poc",
+      "estrelas"
      ],
      "camadas": [
       "sinal"
@@ -253,12 +248,12 @@
      "kicker": "Estrutura automática",
      "titulo": "Resistências e suportes que se movem",
      "itens": [
-      "Linhas verdes acima do preço são resistências",
-      "Linhas vermelhas abaixo do preço são suportes",
-      "Rompimento: a linha passa a vermelha e vira suporte",
+      "R1 acima do preço fica vermelho: é resistência",
+      "S1 abaixo do preço fica verde: é suporte",
+      "Rompimento: a linha muda de cor e troca de papel",
       "O reteste costuma ser onde médias e estrutura trabalham juntas"
      ],
-     "fala": "A estrutura de mercado é desenhada automaticamente. As linhas verdes acima do preço são resistências, e as vermelhas abaixo são suportes. Quando o preço rompe uma resistência, a linha passa a vermelha e passa a funcionar como suporte. O reteste dessa linha costuma ser um sítio onde as médias e a estrutura trabalham juntas. Isto ajuda-te a ver onde o preço pode travar, e onde pode encontrar apoio. Não é uma garantia de que trava, mas é uma das peças que te diz se o caminho até ao alvo está limpo ou se há obstáculos à frente."
+     "fala": "A estrutura de mercado é desenhada automaticamente, com duas linhas: o R1 e o S1. O indicador encontra-as em topos e fundos de vinte e cinco velas, com um movimento de pelo menos um ATR. As cores dizem-te o papel de cada linha em relação ao preço. Uma linha acima do preço fica vermelha: é resistência. Uma linha abaixo do preço fica verde: é suporte. Quando o preço rompe uma resistência e fecha por cima, a linha passa a verde e passa a funcionar como suporte. O reteste dessa linha costuma ser um sítio onde as médias e a estrutura trabalham juntas. Não é garantia de que o preço trava, mas diz-te se o caminho até ao alvo está limpo ou se há obstáculos à frente."
     },
     {
      "id": "v1-14",
@@ -276,12 +271,12 @@
      "kicker": "Os últimos elementos",
      "titulo": "Quatro peças de apoio",
      "itens": [
-      "Tabela de tendência: a direção em vários timeframes",
-      "Linha laranja: a média 238",
-      "Linha dourada tracejada: o POC, o nível com mais volume",
-      "Canto do gráfico: Good Volume ou Low Volume"
+      "Tabela de tendência: Up ou Down de M1 a D, e o preço acima ou abaixo do POC",
+      "Linha laranja grossa: a média 238",
+      "Linha laranja fina para a direita: o POC das últimas 50 velas",
+      "Etiqueta vermelha Low Volume quando o volume cai para metade da média"
      ],
-     "fala": "A tabela de tendência mostra a direção em vários timeframes, de uma só vez. A linha laranja é a média 238. No gráfico de um minuto, equivale à média de cinquenta do gráfico de cinco. Ela é o teu apoio de contexto mais longo. A linha dourada tracejada é o POC, o nível com mais volume negociado. E no canto aparece Good Volume ou Low Volume. O guia diz que o sistema rende mais com liquidez e movimentos rápidos. Com Low Volume não é proibido operar, mas os movimentos tendem a ser mais curtos. Repara que estas peças não dão sinal. Dão contexto, e é esse contexto que vais usar nas confirmações."
+     "fala": "No topo do gráfico está a tabela de tendência. A primeira linha mostra Up ou Down em vários timeframes, do um minuto ao diário, a azul ou a vermelho. A segunda mostra se o preço está acima ou abaixo do POC em quinze minutos, trinta minutos e uma hora. A linha laranja grossa é a média 238. No gráfico de um minuto equivale à média de cinquenta do gráfico de cinco: é o teu contexto mais longo. A linha laranja fina que segue para a direita é o POC, o preço com mais volume nas últimas cinquenta velas. E no canto direito aparece uma etiqueta vermelha, Low Volume, quando o volume da vela cai para menos de metade da média. Sem etiqueta, o volume está normal. Repara que estas peças não dão sinal. Dão contexto, e é esse contexto que vais usar nas confirmações."
     },
     {
      "id": "v1-15b",
@@ -309,7 +304,8 @@
      "base": [
       "medias",
       "cores",
-      "estrutura"
+      "estrutura",
+      "estrelas"
      ],
      "camadas": [],
      "ate": [
@@ -321,7 +317,7 @@
       0.5
      ],
      "rotulo": "Low Volume · lateral",
-     "fala": "Vê este exemplo. As setas alternam para um lado e para o outro, o histograma troca de cor várias vezes, e as médias estão emboladas. Isto é consolidação. O guia é claro: não se tomam estes sinais. Não há onda para apanhar. E repara no canto: Low Volume. Muitas pessoas entram aqui porque o gráfico parece estar sempre a dar sinais, e é exatamente esse o erro. Um triângulo num mercado sem direção é só mais uma marca no ecrã. Fica de fora, e deixa o próximo cruzamento com direção clara ser o teu objetivo."
+     "fala": "Vê este exemplo. Os triângulos alternam para um lado e para o outro, o histograma troca de cor várias vezes e as médias estão emboladas. Isto é consolidação. O guia é claro: não se tomam estes sinais. Não há onda para apanhar. E repara no canto: aparece a etiqueta vermelha Low Volume. Muitas pessoas entram aqui porque o gráfico parece estar sempre a dar sinais, e é exatamente esse o erro. Um triângulo num mercado sem direção é só mais uma marca no ecrã. Fica de fora, e deixa o próximo cruzamento com direção clara ser o teu objetivo."
     },
     {
      "id": "v1-17",
@@ -330,12 +326,12 @@
      "kicker": "Erros de leitura",
      "titulo": "O que os principiantes fazem mal",
      "itens": [
-      "Tratar cada estrela amarela como saída",
+      "Tratar cada ponto amarelo como saída",
       "Entrar numa zona de médias enroladas",
       "Ler só um timeframe e ignorar a tabela",
       "Confundir estrela de proteção com ordem de saída"
      ],
-     "fala": "Antes de fechar este vídeo, os erros de leitura mais comuns. Primeiro, tratar cada estrela amarela como saída. O guia diz que aparecem muitas vezes e que costumam ser só recuos. Segundo, entrar numa zona de médias enroladas, onde os sinais alternam para um lado e para o outro. Terceiro, ler só um timeframe e ignorar a tabela de tendência. E quarto, confundir a estrela de proteção com uma ordem de saída. A estrela de reversão pede-te que protejas a operação. Não te manda sair. Escreve estes erros no diário quando os vires, porque são eles que mais custam a quem está a aprender."
+     "fala": "Antes de fechar este vídeo, os erros de leitura mais comuns. Primeiro, tratar cada ponto amarelo como saída. O guia diz que aparecem muitas vezes e que costumam ser só recuos. Segundo, entrar numa zona de médias enroladas, onde os sinais alternam para um lado e para o outro. Terceiro, ler só um timeframe e ignorar a tabela de tendência. E quarto, confundir a estrela de proteção com uma ordem de saída. A estrela de reversão pede-te que protejas a operação. Não te manda sair. Escreve estes erros no diário quando os vires, porque são eles que mais custam a quem está a aprender."
     },
     {
      "id": "v1-18",
@@ -370,12 +366,12 @@
      "titulo": "Da leitura à decisão",
      "itens": [
       "As quatro confirmações, por ordem",
-      "Entrada no triângulo do cruzamento",
-      "Stop do outro lado das duas médias",
-      "Alvo a 1:2 e gestão das estrelas",
+      "Entrada no fecho da vela do cruzamento",
+      "Stop automático ou na estrutura anterior",
+      "Os quatro alvos do indicador e a gestão das estrelas",
       "Quando não entrar, e a rotina"
      ],
-     "fala": "Bem-vindo ao segundo vídeo do Bootcamp TrendShot. No primeiro aprendeste a ler o gráfico. Agora passamos à decisão. Vamos ver as quatro confirmações, por ordem, e só depois a entrada no triângulo do cruzamento. Depois, o stop, do outro lado das duas médias, e o alvo, que o guia fixa em pelo menos o dobro do stop. Vamos ver também como gerir a operação quando aparece uma estrela de reversão, quando não entrar, e uma rotina simples para a tua sessão. O sistema é rápido. A tua preparação tem de ser ainda mais calma."
+     "fala": "Bem-vindo ao segundo vídeo do Bootcamp TrendShot. No primeiro aprendeste a ler o gráfico. Agora passamos à decisão. Vamos ver as quatro confirmações, por ordem, e só depois a entrada, no fecho da vela do cruzamento. Depois, o stop que o indicador desenha, automático ou na estrutura anterior, e os quatro alvos da caixa do plano. Vamos ver também como gerir a operação quando aparece uma estrela de reversão, quando não entrar, e uma rotina simples para a tua sessão. O sistema é rápido. A tua preparação tem de ser ainda mais calma."
     },
     {
      "id": "v2-02",
@@ -393,12 +389,12 @@
      "kicker": "Antes de aceitar um sinal",
      "titulo": "Quatro confirmações",
      "itens": [
-      "Tendência em dois timeframes acima",
+      "Tendência: Up nos timeframes acima, na tabela",
       "Média 238 atrás do preço",
-      "POC atrás do preço, ou espaço até ele",
-      "Good Volume"
+      "POC atrás do preço: linha Above numa compra, Below numa venda",
+      "Sem a etiqueta Low Volume"
      ],
-     "fala": "Antes de aceitar um sinal, passa por quatro confirmações. A primeira é a tendência. Olha para dois timeframes acima do teu, e quer a mesma direção nos três. A segunda é a média 238. Numa compra, a linha laranja tem de estar abaixo do preço. Numa venda, acima. A terceira é o POC. Numa compra, tem de estar abaixo do preço. Numa venda, acima. Se ainda não estiver atrás de ti, confirma que há espaço suficiente até ele, e tem-no em conta no alvo. A quarta é o Good Volume. O guia diz que o sistema rende mais com liquidez e movimentos rápidos. Repara na regra final: se alguma destas confirmações falhar, deixa passar. Um sinal fraco perdido não custa nada."
+     "fala": "Antes de aceitar um sinal, passa por quatro confirmações. A primeira é a tendência. Olha para a tabela e confirma a mesma direção nos timeframes acima do teu. A segunda é a média 238. Numa compra, a linha laranja grossa tem de estar abaixo do preço. Numa venda, acima. A terceira é o POC. Numa compra, o preço tem de estar acima dele, e a tabela mostra Above. Numa venda, abaixo, e mostra Below. Se o POC ainda estiver à frente, confirma que há espaço até ele e tem-no em conta nos alvos. A quarta é o volume: não pode estar a etiqueta vermelha Low Volume. O guia diz que o sistema rende mais com liquidez e movimentos rápidos. E a regra final: se alguma destas confirmações falhar, deixa passar. Um sinal fraco perdido não custa nada."
     },
     {
      "id": "v2-04",
@@ -412,7 +408,8 @@
       "medias",
       "cores",
       "estrutura",
-      "poc"
+      "poc",
+      "tabela"
      ],
      "camadas": [
       "sinal",
@@ -427,7 +424,7 @@
       0.5
      ],
      "rotulo": "4 de 4",
-     "fala": "Vamos aplicar as quatro confirmações a uma compra. O triângulo azul marca o cruzamento da média de vinte sobre a de cinquenta. O fundo está azul, e a tabela mostra a mesma direção nos dois timeframes acima. A média 238, a laranja, está abaixo do preço. O POC, o tracejado dourado, também está abaixo. E o canto mostra Good Volume. Quatro em quatro. Repara numa coisa: as confirmações não garantem que o movimento continua. Dizem-te que o contexto está do teu lado neste momento. A decisão de entrar continua a ser um passo que dás com o plano e o risco já calculados."
+     "fala": "Vamos aplicar as quatro confirmações a uma compra. O triângulo azul marca o cruzamento da média de vinte sobre a de cinquenta. O fundo e as velas estão azuis, e a tabela mostra Up nos timeframes acima. A média 238, a laranja grossa, está abaixo do preço. O POC, a linha laranja fina, também está abaixo, e a tabela mostra Above. E não há etiqueta de Low Volume no canto. Quatro em quatro. Repara numa coisa: as confirmações não garantem que o movimento continua. Dizem-te que o contexto está do teu lado neste momento. A decisão de entrar continua a ser um passo que dás com o plano e o risco já calculados."
     },
     {
      "id": "v2-05",
@@ -457,30 +454,30 @@
      "tipo": "plano",
      "cap": "02 · Entrada, stop e alvo",
      "kicker": "Os níveis do plano",
-     "titulo": "Entrada, stop e alvo 1:2",
+     "titulo": "Entrada, stop e quatro alvos",
      "linhas": [
       [
        "Entrada",
-       "no triângulo do cruzamento 20/50",
+       "fecho da vela do cruzamento 20/50",
        "entrada"
       ],
       [
-       "Stop",
-       "do outro lado das duas médias",
+       "Stop automático",
+       "100 pips (200 no ouro), ou na estrutura anterior",
        "sl"
       ],
       [
-       "Alvo",
-       "pelo menos o dobro do stop",
+       "TP1 · TP2",
+       "30 % e 50 % da distância do stop (60 % no ouro)",
        "tp"
       ],
       [
-       "Exemplo do guia",
-       "stop de 25 pips, alvo de 50 pips",
-       "warning"
+       "TP3 · TP4",
+       "100 % e 150 % da distância do stop",
+       "tp"
       ]
      ],
-     "fala": "Os níveis são três, mais um exemplo do guia. A entrada é no triângulo do cruzamento, depois de passares as confirmações. O stop fica do outro lado das duas médias, a vermelha e a azul. Repara que não é uma distância fixa. É onde a leitura do cruzamento deixa de fazer sentido. O alvo é pelo menos o dobro do stop, ou seja, um risco de um para dois. O exemplo do guia é um stop de vinte e cinco pips e um alvo de cinquenta. O POC e as estrelas grandes anteriores ajudam-te a afinar o alvo. E antes de enviares a ordem, calcula o tamanho da posição com o risco que decidiste. O sistema desenha o plano, mas o lote é tu que defines."
+     "fala": "Quando há um cruzamento, o TrendShot desenha a caixa do plano durante vinte velas. A entrada é o fecho da vela do cruzamento, depois de passares as confirmações. O stop pode ser automático: cem pips na maioria dos pares e índices, duzentos no ouro. Ou pode ficar na estrutura anterior, no suporte ou resistência de onde o movimento saiu. Os alvos são quatro e medem-se pela distância do stop. O TP1 fica a trinta por cento, o TP2 a cinquenta, ou sessenta no ouro, o TP3 a cem por cento e o TP4 a cento e cinquenta. A zona verde vai da entrada ao último alvo, e a vermelha da entrada ao stop. E antes de enviares a ordem, calcula o tamanho da posição com o risco que decidiste. O indicador desenha o plano, mas o lote é tu que defines."
     },
     {
      "id": "v2-08",
@@ -489,13 +486,13 @@
      "kicker": "Passo a passo",
      "titulo": "Do triângulo à ordem",
      "itens": [
-      "Lê a direção: cor do histograma e tabela",
-      "Espera o triângulo do cruzamento 20/50",
+      "Lê a direção: cor do histograma, das velas e tabela",
+      "Espera o triângulo do cruzamento 20/50 no Trade Clock",
       "Confirma que não há estrelas nem resistências à frente",
       "Passa as quatro confirmações",
-      "Stop, alvo 1:2 e tamanho, e só depois a ordem"
+      "Stop, alvos da caixa e tamanho, e só depois a ordem"
      ],
-     "fala": "Vamos pôr a sequência em ordem. Um: lês a direção, pela cor do histograma e pela tabela de tendência. Dois: esperas o triângulo do cruzamento 20/50. Três: confirmas que logo a seguir não há estrelas nem resistências a bloquear o caminho. Quatro: passas as quatro confirmações, e só entras se todas estiverem cumpridas. Cinco: defines o stop do outro lado das duas médias, o alvo a pelo menos o dobro da distância, e o tamanho da posição. Só depois disto a ordem segue para a corretora. Se algum passo falhar, a operação não existe, por mais rápido que o movimento pareça."
+     "fala": "Vamos pôr a sequência em ordem. Um: lês a direção, pela cor do histograma, das velas e pela tabela. Dois: esperas o triângulo do cruzamento, dentro do Trade Clock. Três: confirmas que logo a seguir não há estrelas nem resistências a bloquear o caminho. Quatro: passas as quatro confirmações, e só entras se todas estiverem cumpridas. Cinco: usas o stop e os alvos da caixa do plano e calculas o tamanho da posição. Só depois disto a ordem segue para a corretora. Se algum passo falhar, a operação não existe, por mais rápido que o movimento pareça."
     },
     {
      "id": "v2-08b",
@@ -504,12 +501,12 @@
      "kicker": "Afinar o alvo",
      "titulo": "Onde o alvo encontra obstáculos",
      "itens": [
-      "Procura o POC à frente, e tem-no em conta",
-      "Estrelas grandes anteriores ajudam a afinar o alvo",
-      "Confirma que o alvo cabe antes da próxima resistência",
-      "Não mudes o alvo a meio da operação sem uma razão do plano"
+      "Procura o POC e o R1 ou S1 à frente da entrada",
+      "Estrelas grandes anteriores marcam onde o movimento já travou",
+      "Confirma quais dos quatro alvos cabem antes do obstáculo",
+      "Não mudes o plano a meio da operação sem uma razão do plano"
      ],
-     "fala": "O alvo tem de ser pelo menos o dobro do stop, mas o guia também pede que olhes para o caminho. Procura o POC à frente da tua entrada. Se ele está no caminho, tem-no em conta, porque o preço pode hesitar ali. As estrelas grandes anteriores ajudam-te a afinar o alvo, porque marcam sítios onde o movimento já tinha travado. E confirma que o alvo cabe antes da próxima resistência. Se não cabe, a relação risco e alvo fica pior do que o plano previa, e isso é um motivo para deixar passar. Por fim, uma regra de disciplina: não mudes o alvo a meio da operação, sem uma razão que venha do plano. Mudar um alvo por esperança é o caminho mais curto para um diário confuso."
+     "fala": "A caixa do plano dá-te quatro alvos, mas o guia também pede que olhes para o caminho. Procura o POC e a linha de estrutura à frente da tua entrada. Se estão no caminho, o preço pode hesitar ali. As estrelas grandes anteriores ajudam-te a ler o caminho, porque marcam sítios onde o movimento já tinha travado. Confirma quais dos quatro alvos cabem antes desse obstáculo. Se nem o primeiro cabe, a operação fica pior do que o plano previa, e isso é um motivo para deixar passar. Por fim, uma regra de disciplina: não mudes o plano a meio da operação sem uma razão que venha do plano. Mudar um alvo por esperança é o caminho mais curto para um diário confuso."
     },
     {
      "id": "v2-09",
@@ -545,7 +542,8 @@
      "base": [
       "medias",
       "cores",
-      "estrutura"
+      "estrutura",
+      "estrelas"
      ],
      "camadas": [
       "sinal",
@@ -594,12 +592,12 @@
      "kicker": "Janelas de horário",
      "titulo": "Quando o volume costuma fugir",
      "itens": [
-      "As horas são as de Lisboa, no inverno",
-      "Evita das 16:00 às 17:30",
-      "Evita das 20:45 à meia-noite, e das 04:00 às 06:30",
+      "O indicador só marca sinais das 08:00 às 21:00, hora do gráfico",
+      "Dentro dessa janela, o guia evita das 16:00 às 17:30 (Lisboa, inverno)",
+      "E das 20:45 em diante",
       "Confirma o relógio: a hora muda com a mudança de hora"
      ],
-     "fala": "O guia indica janelas a evitar, fora dos períodos de maior volume. As horas são as de Lisboa, no inverno. Evita das dezasseis às dezassete e meia. Evita das vinte horas e quarenta e cinco à meia-noite. E evita das quatro às seis e meia da manhã. Vê sempre o teu relógio, porque a diferença de horas entre países muda ao longo do ano, e uma janela mal lida é uma janela mal usada. Repara que isto não é uma regra mágica. É uma forma de não operar nos momentos em que o movimento costuma ser mais lento ou mais irregular, e de estares presente quando o sistema trabalha melhor."
+     "fala": "O próprio indicador já tem um relógio: o Trade Clock só deixa aparecer triângulos das oito da manhã às nove da noite, na hora do gráfico. Dentro dessa janela, o guia indica períodos a evitar, quando o volume costuma fugir. As horas são as de Lisboa, no inverno. Evita das dezasseis às dezassete e meia. E evita das vinte horas e quarenta e cinco em diante, e também a madrugada, das quatro às seis e meia. Vê sempre o teu relógio e a hora configurada no gráfico, porque a diferença de horas muda ao longo do ano. Isto não é uma regra mágica. É uma forma de não operar quando o movimento costuma ser mais lento ou irregular."
     },
     {
      "id": "v2-15",
@@ -610,11 +608,11 @@
      "itens": [
       "Ver a direção nos timeframes acima",
       "Ver o histograma de fundo e a média 238",
-      "Ver o POC e o canto: Good Volume ou Low Volume",
+      "Ver o POC na tabela e se há a etiqueta Low Volume",
       "Ver a hora e as janelas a evitar",
       "Anotar cada sinal e o que aconteceu"
      ],
-     "fala": "A rotina antes da sessão é curta. Primeiro, vês a direção nos timeframes acima, pela tabela. Segundo, olhas para o histograma de fundo e para a média 238, que te dizem o contexto de cada lado. Terceiro, vês o POC e o canto do gráfico, para saber se há Good Volume ou Low Volume. Quarto, confirmas a hora, e se estás numa das janelas a evitar. E quinto, quando há sinais, anotas cada um no diário, com o que aconteceu. Durante a sessão, a tua tarefa é seguir o processo, e não reagir a cada triângulo. O TrendShot dá-te muitos sinais. Não precisas de todos."
+     "fala": "A rotina antes da sessão é curta. Primeiro, vês a direção nos timeframes acima, pela tabela. Segundo, olhas para o histograma de fundo e para a média 238, que te dizem o contexto de cada lado. Terceiro, vês o POC e o canto do gráfico, para saber se aparece a etiqueta vermelha Low Volume. Quarto, confirmas a hora, e se estás numa das janelas a evitar. E quinto, quando há sinais, anotas cada um no diário, com o que aconteceu. Durante a sessão, a tua tarefa é seguir o processo, e não reagir a cada triângulo. O TrendShot dá-te muitos sinais. Não precisas de todos."
     },
     {
      "id": "v2-16",
@@ -637,7 +635,7 @@
      "cap": "Fecho",
      "texto": "O cruzamento avisa. <span class='ouro'>Tu confirmas.</span>",
      "autor": "Ricardo Garcia · MoreThanMoney",
-     "fala": "Chegámos ao fim do Bootcamp TrendShot. Lembra-te do essencial: o cruzamento é o gatilho, e a tendência dá a direção. Só entras quando as quatro confirmações estão cumpridas, com o stop e o alvo a um para dois e o tamanho calculado. E quando aparece uma estrela de reversão, proteges, não fechas por medo. Faz os exercícios, treina em conta de demonstração, e escreve o diário desde o primeiro sinal. Se tiveres dúvidas, traz os teus casos para a comunidade e para as sessões ao vivo da MoreThanMoney. Eu sou o Ricardo Garcia. Até à próxima."
+     "fala": "Chegámos ao fim do Bootcamp TrendShot. Lembra-te do essencial: o cruzamento é o gatilho, e a tendência dá a direção. Só entras quando as quatro confirmações estão cumpridas, com o stop e os alvos da caixa do plano e o tamanho calculado. E quando aparece uma estrela de reversão, proteges, não fechas por medo. Faz os exercícios, treina em conta de demonstração, e escreve o diário desde o primeiro sinal. Se tiveres dúvidas, traz os teus casos para a comunidade e para as sessões ao vivo da MoreThanMoney. Eu sou o Ricardo Garcia. Até à próxima."
     },
     {
      "id": "v2-18",
@@ -651,5 +649,6 @@
     }
    ]
   }
- ]
+ ],
+ "motor": "trendshot"
 }

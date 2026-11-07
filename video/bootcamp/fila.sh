@@ -5,12 +5,18 @@ exec < /dev/null  # ffmpeg/node sem terminal: evita «suspended (tty output)» q
 # Ver progresso: tail -f ~/bootcamp-fila.log
 # Pode ser relançada a qualquer momento: salta vídeos já feitos (marcador .v3 (versão do motor)).
 cd "$(dirname "$0")/../.." || exit 1
-ESTS="defy mtm-scanner sensei golden-zone momentum trendshot supernova sniper-pro quantum goldkiller aurum-flow premium-scanner"
+# Só se desenham estratégias com gráfico fiel ao Pine (video/bootcamp/<est>.js ou "motor" no guião).
+# As outras ficam à espera do motor (pedido do Ricardo a 07/11: vídeos o mais próximos possível do código).
+ESTS="trendshot defy-explica defy mtm-scanner sensei golden-zone momentum supernova sniper-pro quantum goldkiller aurum-flow premium-scanner"
 DEST="$HOME/Documents/youtube-upload-mtm"
 git pull --ff-only origin claude/project-thread-piyxkj || true
 # vídeos já feitos a 1,10× passam a 1,03× sem novo render
 node video/bootcamp/ajustar-velocidade.mjs || echo "ERRO ajuste"
+# 07/11: TrendShot e DEFY passam a gráfico fiel ao indicador; os já publicados são substituídos (uma só vez)
+node video/bootcamp/publicar-youtube.mjs --refazer trendshot defy --tag fiel1 || echo "ERRO refazer"
 for est in $ESTS; do
+  motor=$(node -e "console.log(require('./video/bootcamp/guioes/$est.pt.json').motor||'$est')")
+  if [ ! -f "video/bootcamp/$motor.js" ]; then echo "=== $est: à espera do gráfico fiel ($motor.js) ==="; continue; fi
   n=$(node -e "console.log(require('./video/bootcamp/guioes/$est.pt.json').videos.length)")
   echo "=== $est ($n vídeos) $(date +%H:%M) ==="
   node video/bootcamp/voz.mjs "$est" all pt en || { echo "ERRO voz $est"; continue; }

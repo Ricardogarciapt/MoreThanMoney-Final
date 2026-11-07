@@ -56,6 +56,9 @@ html,body { width:1920px; height:1080px; overflow:hidden; background:var(--carva
 <div id="barra"></div>
 <div id="vinheta"></div>
 <script src="sim/sim-bundle.js" onerror="window.SIMMTM=null"></script>
+<!-- gráficos fiéis ao Pine de cada indicador (window.MOTORES[slug]); sem motor usa-se o gráfico genérico -->
+<script src="motor-base.js"></script>
+<!-- o render.mjs junta aqui o <motor>.js da estratégia (ex.: trendshot.js, defy.js) -->
 <script>
 // ---------------------------------------------------------------- utilidades
 const clamp=(x,a=0,b=1)=>Math.max(a,Math.min(b,x))
@@ -160,6 +163,8 @@ function grafico(r,o){
 // Painel que mostra a estratégia a «trabalhar» enquanto a aula fala: a simulação 3D da landing
 // (components/scanner/sim) quando existe para o slug, senão o gráfico do motor a desenhar em ciclo.
 const SLUG_SIM={goldkiller:'gold-killer'}
+let MOTOR=null
+const graficoM=(r,o)=>MOTOR?MOTOR.grafico(r,o,el):grafico(r,o)
 let SIM=null, simPedido=null
 function simIniciar(est,lang){
   const S=window.SIMMTM, slug=SLUG_SIM[est]||est
@@ -190,7 +195,7 @@ function lado(r,rect,o={}){
   if(SIM) return (k,peso)=>{ if(!simPedido||peso>simPedido.peso) simPedido={rect,k,peso,...o} }
   if(o.fundo) return ()=>{}
   // sem simulação: o gráfico do próprio motor a desenhar em ciclo, com as camadas da estratégia
-  const G=grafico(r,{cenario:['compra','venda','tendencia'][rect.seed%3||0],seed:11+(rect.seed||0),w:rect.w,h:rect.h,top:rect.y,left:rect.x})
+  const G=graficoM(r,{cenario:['compra','venda','tendencia'][rect.seed%3||0],seed:11+(rect.seed||0),w:rect.w,h:rect.h,top:rect.y,left:rect.x})
   G.wrap.style.zIndex=2
   return k=>{ const ciclo=14, kk=(k%ciclo)/ciclo, vis={...DEFAULT_VIS}; vis.sinal=out((kk-.62)/.08); vis.plano=out((kk-.7)/.1)
     G.desenha(vis,lerp(.35,1,ease(Math.min(1,kk/.85))),0); G.wrap.style.opacity=out(k/.8)
@@ -230,15 +235,15 @@ const TIPOS={
     b.innerHTML=`<div class="kicker">${s.kicker||''}</div><div class="h2" style="margin:18px 0 26px">${s.titulo}</div>`
     const its=(s.itens||[]).map(t=>{ const e=el('div','item',`<span class="check"></span><span>${t}</span>`,{fontSize:'34px',padding:'16px 0'}); b.append(e); return e })
     r.append(b); return (k,d,f,peso)=>{ sl(k,peso); entra(b.firstChild,k/.8); entra(b.children[1],(k-.2)/.8); const span=Math.max(1,(f||d)-1.5); its.forEach((e,i)=>{ const kk=k-1-i*span/its.length; entra(e,kk/.6,20); const c=e.firstChild; const on=kk>.5; c.style.background=on?'var(--ouro)':'transparent'; c.textContent=on?'✓':'' }) } },
-  grafico(r,s){ const G=grafico(r,{cenario:s.cenario,seed:s.seed,rotulo:s.rotulo,estrelas:s.estrelas})
+  grafico(r,s){ const G=graficoM(r,{cenario:s.cenario,seed:s.seed,rotulo:s.rotulo,estrelas:s.estrelas})
     const tit=el('div','abs',`<span class="kicker">${s.kicker||''}</span><div style="font:700 40px Inter;margin-top:8px">${s.titulo||''}</div>`,{left:'180px',top:'110px'}); r.append(tit)
     const base=s.base||[], novas=s.camadas||[], [a0,a1]=s.ate||[1,1], [z0,z1]=s.zoom||[0,0]
     return (k,d,f)=>{ entra(tit,k/.8); const vis={}; base.forEach(x=>vis[x]=1); const span=Math.max(1,(f||d)*.8)
       novas.forEach((x,i)=>vis[x]=out((k-.8-i*span/Math.max(1,novas.length))/1.2))
       const kk=ease(k/Math.max(1,d)); G.desenha(vis,lerp(a0,a1,kk),lerp(z0,z1,kk))
       const rx=lerp(s.rx??14,0,out(k/3)), ry=lerp(s.ry??-12,-2,out(k/3)); G.wrap.style.transform=`rotateX(${rx}deg) rotateY(${ry}deg) scale(${lerp(.92,1,out(k/3))})`; G.wrap.style.opacity=out(k/.8) } },
-  camadas3d(r,s){ const nomes=s.itens||[], cam=['bandas','niveis','nuvem','sinal'], ps=[]
-    nomes.forEach((nm,i)=>{ const G=grafico(r,{cenario:'compra',seed:s.seed||7,w:1100,h:560,top:300}); const vis={}; vis[cam[i%4]]=1; if(cam[i%4]==='sinal'){vis.plano=1} G.desenha(vis,1,0); G.wrap.style.background='rgba(13,12,10,.55)'
+  camadas3d(r,s){ const nomes=s.itens||[], cam=s.camadas||(MOTOR&&MOTOR.camadas3d)||['bandas','niveis','nuvem','sinal'], ps=[]
+    nomes.forEach((nm,i)=>{ const G=graficoM(r,{cenario:'compra',seed:s.seed||7,w:1100,h:560,top:300,transparente:true}); const vis={}; vis[cam[i%cam.length]]=1; if(cam[i%cam.length]==='sinal'){vis.plano=1} G.desenha(vis,1,0); G.wrap.style.background='rgba(13,12,10,.55)'
       const lab=el('div','abs',nm,{left:'-330px',top:'230px',width:'300px',textAlign:'right',font:'700 34px Inter',color:'var(--ouro2)'}); G.wrap.style.overflow='visible'; G.wrap.append(lab); ps.push(G) })
     const tit=el('div','abs',`<div class="kicker">${s.kicker||''}</div><div class="h2" style="margin-top:12px;font-size:64px">${s.titulo||''}</div>`,{left:'160px',top:'110px'}); r.append(tit)
     return (k,d)=>{ entra(tit,k/.8); const sep=out(k/2.5)*(1-ease(prog(k,d-4,d-1)))
@@ -271,7 +276,8 @@ const TIPOS={
 const montadas={}
 window.iniciar=(tl,legendas,dados)=>{ window.NOME=dados.nome||''; window.PLANO=dados.plano||{}; window.TL=tl; window.LEG=legendas; window.T=dados.ui||{}; if(dados.cores) COR=dados.cores
   document.getElementById('marcaTxt').textContent=dados.marca||'MoreThanMoney · Bootcamp'
-  simIniciar(dados.est,dados.lang||'pt')
+  MOTOR=(window.MOTORES||{})[dados.motor||dados.est]||null
+  if(MOTOR) (MOTOR.camadasLado||[]).forEach(x=>DEFAULT_VIS[x]=1); else simIniciar(dados.est,dados.lang||'pt')
   for(const id in dados.cenas){ const s=dados.cenas[id]; if(s.tipo==='grafico') [...(s.base||[]),...(s.camadas||[])].forEach(x=>{ if(!['sinal','plano','setas','toque','volume'].includes(x)) DEFAULT_VIS[x]=1 }) }
   for(const c of tl){ const r=el('div','cena'); palco.append(r); const s=dados.cenas[c.id]; montadas[c.id]={r,u:TIPOS[s.tipo](r,s),c,s} } }
 window.renderAt=t=>{ let leg=''
