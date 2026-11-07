@@ -11,6 +11,7 @@ import { validarMenu } from '@/lib/telegram/menu-bot'
 import { gravarMenu, lerMenu } from '@/lib/telegram/menu-bot-servidor'
 import { validarPedido } from '@/lib/telegram/grupos-novos'
 import { FERRAMENTAS_CONTEUDO } from '@/lib/conteudo-magnetico/mcp'
+import { FERRAMENTAS_PUBLICO_VIRTUAL } from '@/lib/publico-virtual/mcp'
 
 /**
  * As ferramentas que o sistema MTM expõe — a mesma camada que o painel usa.
@@ -389,6 +390,7 @@ export const FERRAMENTAS: Ferramenta[] = [
 
   // MTM Conteúdo Magnético — liga-se a MCPs de imagem/vídeo (ver lib/conteudo-magnetico/mcp.ts).
   ...FERRAMENTAS_CONTEUDO,
+  ...FERRAMENTAS_PUBLICO_VIRTUAL,
 ]
 
 export function ferramentaPorNome(nome: string): Ferramenta | undefined {
