@@ -95,7 +95,7 @@ export function drawCard(canvas, sim, card, progress = 1, lang = 'pt') {
   for (const z of sim.zones || []) {
     if (!pick(L, z, 'zones')) continue
     const rev = z.reveal ?? z.i0
-    if (rev > cur || z.i1 < a || z.i0 > b) continue
+    if (rev > cur || z.i1 < a || z.i0 > b || (z.to != null && z.to <= cur)) continue
     const x0 = X(Math.max(a, z.i0)), x1 = X(Math.min(b, z.i1, cur))
     if (x1 <= x0) continue
     ctx.fillStyle = z.color

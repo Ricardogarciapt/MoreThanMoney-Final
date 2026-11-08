@@ -161,10 +161,10 @@ export const SCANNER_LANDINGS: ScannerLanding[] = [
     videoEn: "/scanners/golden-zone/apresentacao-en.mp4",
     posterEn: "/scanners/golden-zone/poster-en.jpg",
     title: ["O ouro reage nos níveis.", "A zona diz-te onde esperar."],
-    sub: "Níveis psicológicos de 5 em 5 $, visto amarelo quando a tendência confirma, e o plano completo só quando o preço recua à zona de ação.",
+    sub: "Níveis psicológicos de 5 em 5 $, visto amarelo quando a tendência confirma, e o plano completo no fecho da vela seguinte.",
     markets: ["Ouro (XAUUSD)", "5 minutos", "Scalping", "TradingView"],
     description:
-      "A Golden Zone não te manda correr atrás do preço. Desenha os níveis psicológicos de 5 em 5 $ no ouro e, quando uma vela fecha para lá de um nível a favor da tendência das médias de 50 e 200, marca o visto amarelo e a caixa de 1 $ centrada nesse nível. A zona de ação é a aresta do lado do preço. Só quando o preço recua a essa zona é que o scanner dá os parâmetros da posição: invalidação a 1,5 $ (150 pontos), Saída 1 a +1,5 $ e Saída 2 a +3 $, escritos na linha com o preço. Ao tocar a Saída 1 aparece a bandeira branca; a Saída 2 ou a invalidação fecham o plano, e o visto seguinte limpa o gráfico. Quem decide se entra és tu, depois das quatro confirmações do guia.",
+      "A Golden Zone não te manda correr atrás do preço. Desenha os níveis psicológicos de 5 em 5 $ no ouro e, quando uma vela fecha para lá de um nível a favor da tendência das médias de 50 e 200, marca o visto amarelo e a caixa de 1 $ centrada nesse nível. A zona de ação é a aresta do lado do preço. No fecho da vela seguinte o scanner dá os parâmetros da posição: invalidação a 1,5 $ (150 pontos), Saída 1 a +1,5 $ e Saída 2 a +3 $, escritos na linha com o preço. A entrada é tua, com uma ordem limite na zona quando o preço recua. Ao tocar a Saída 1 aparece a bandeira branca; a Saída 2 ou a invalidação fecham o plano, e o visto seguinte limpa o gráfico. Quem decide se entra és tu, depois das quatro confirmações do guia.",
     metaDescription:
       "Golden Zone by MTM: scalping de ouro em 5 minutos no TradingView, com níveis psicológicos, zona de ação, Saída 1 e Saída 2 e invalidação a 150 pontos. 50€ por semestre ou 350€ vitalício.",
   },
@@ -334,22 +334,22 @@ const EN: Record<string, NonNullable<ScannerLanding["en"]>> = {
   },
   goldenzone: {
     title: ["Gold reacts at the levels.", "The zone tells you where to wait."],
-    sub: "Psychological levels every 5 $, a yellow check when the trend confirms, and the full plan only when price pulls back to the zone of action.",
+    sub: "Psychological levels every 5 $, a yellow check when the trend confirms, and the full plan on the close of the next candle.",
     markets: ["Gold (XAUUSD)", "5 minutes", "Scalping", "TradingView"],
     description:
-      "Golden Zone does not send you chasing price. It draws the psychological levels every 5 $ in gold and, when a candle closes beyond a level with the trend of the 50 and 200 averages, it marks the yellow check and the 1 $ box centred on that level. The zone of action is the edge on the price side. Only when price pulls back to that zone does the scanner give the parameters: invalidation 1.5 $ away (150 points), Exit 1 at +1.5 $ and Exit 2 at +3 $, written on the line with the price. When Exit 1 is touched the white flag appears; Exit 2 or the invalidation close the plan, and the next check clears the chart. You decide whether to enter, after the four confirmations of the guide.",
+      "Golden Zone does not send you chasing price. It draws the psychological levels every 5 $ in gold and, when a candle closes beyond a level with the trend of the 50 and 200 averages, it marks the yellow check and the 1 $ box centred on that level. The zone of action is the edge on the price side. On the close of the next candle the scanner gives the parameters: invalidation 1.5 $ away (150 points), Exit 1 at +1.5 $ and Exit 2 at +3 $, written on the line with the price. The entry is yours, with a limit order in the zone when price pulls back. When Exit 1 is touched the white flag appears; Exit 2 or the invalidation close the plan, and the next check clears the chart. You decide whether to enter, after the four confirmations of the guide.",
     features: [
       "Ten black psychological lines around price (5 $ in gold; automatic step in other markets), the only fixed lines",
       "Yellow check and zone box when the candle crosses the level with the trend (EMA 50/200)",
-      "Zone of action, invalidation, Exit 1 and Exit 2 written on the line, with the price, only after the pullback",
+      "Zone of action, invalidation, Exit 1 and Exit 2 written on the line, with the price, on the close of the next candle",
       "White flag at Exit 1; Exit 2 or the invalidation close the plan; the next check clears the chart",
       "Stats table (signals, plans, Exits and invalidations), off by default",
     ],
     specs: [
       "1 $ zone centred on the level; stop at 3 × half zone (1.5 $ = 150 points in gold), adjustable",
-      "20-bar offset for the lines and for how long the zone waits for the pullback",
+      "Lines from the check candle, extended 20 bars ahead while the idea is open, frozen at the close",
       "Your own colours for the zone of action, Exit 1, Exit 2 and invalidation; the chart only shows the 5 $ lines and the active position",
-      "JSON alerts per event (check, plan, Exit 1, Exit 2, invalidation), ready for webhooks",
+      "JSON alerts per event (check, plan, Exit 1, Exit 2, invalidation) with the same id, plus simple alerts for each, ready for webhooks",
       "Built for XAUUSD on 5 minutes; educational tool, it does not place orders",
     ],
     metaDescription: "Golden Zone by MTM: gold scalping on 5 minutes on TradingView, with psychological levels, zone of action, Exit 1 and Exit 2 and a 150-point invalidation. €50 per six months or €350 lifetime.",

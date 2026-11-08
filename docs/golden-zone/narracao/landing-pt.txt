@@ -1,7 +1,7 @@
 Esta é a Golden Zone, o scanner de scalping de ouro da MoreThanMoney, agora com código da casa.
 O gráfico começa pelos níveis psicológicos: linhas de cinco em cinco dólares, dez à volta do preço. É aí que o ouro costuma reagir.
 Quando uma vela fecha para lá de um nível a favor da tendência, aparece o visto amarelo e a caixa de um dólar centrada nesse nível. A zona de ação é a aresta do lado do preço. Ainda não há plano.
-Só quando o preço recua à zona de ação é que o scanner dá os parâmetros: invalidação a cento e cinquenta pontos, Saída um a mais um dólar e meio, Saída dois a mais três. Ao tocar a Saída um aparece a bandeira branca. A Saída dois ou a invalidação fecham o plano, e o visto seguinte limpa o gráfico.
+No fecho da vela seguinte o scanner dá os parâmetros: invalidação a cento e cinquenta pontos, Saída um a mais um dólar e meio, Saída dois a mais três. A entrada é tua, com uma ordem limite na zona quando o preço recua. Ao tocar a Saída um aparece a bandeira branca. A Saída dois ou a invalidação fecham o plano, e o visto seguinte limpa o gráfico.
 Quem decide se entra és tu, depois das quatro confirmações: tendência, suporte e resistência, padrão de vela e desequilíbrios. Cada evento sai por alerta, pronto para webhook.
 Pensada para o ouro no gráfico de cinco minutos.
 Vê a demonstração em morethanmoney ponto pt barra scanner barra golden zone.

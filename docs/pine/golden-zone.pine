@@ -9,27 +9,28 @@
 // ─────────────────────────────────────────────────────────────────────────────
 // GOLDEN ZONE by MTM — scalping de ouro em 5 minutos: níveis psicológicos, zona de ação e plano
 //
-// PRINCÍPIOS (código próprio da casa):
+// O QUE SE DESENHA (segue o guia da estratégia, docs/educador golden-zone-guia.pdf):
 //  1. Níveis psicológicos: linhas pretas de 5 em 5 $ no ouro (4060, 4065, 4070 …), as únicas linhas fixas
 //     do gráfico. Passo automático por mercado, ou fixo no input. Mostram-se N linhas à volta do preço.
-//  2. Zona: caixa amarela de 1 $ centrada no nível (4069,50 – 4070,50). A ZONA DE AÇÃO é a aresta
-//     do lado do preço (compra: 4070,50 · venda: 4069,50); a outra aresta é a ponta da zona.
-//  3. Visto ✓: quando uma vela fecha para lá da zona de ação, a favor da tendência (EMA 50 vs 200),
-//     o scanner confirma a tendência: desenha o visto amarelo sobre a vela e a caixa da zona.
-//     Ainda não há plano. Cada visto novo apaga o anterior.
-//  4. Recuo: quando o preço volta à zona de ação, o scanner dá os parâmetros da posição —
-//     Invalidation zone a 1,5 $ (150 pontos) da zona, Exit 1 a +1,5 $ e Exit 2 a +3 $:
+//  2. Visto amarelo ✓ e caixa amarela: quando uma vela atravessa um nível a favor da tendência (EMA 50 vs 200)
+//     e fecha para lá da zona, aparece o visto sobre a vela e a caixa de 1 $ centrada no nível
+//     (4069,50 – 4070,50). A ZONA DE AÇÃO é a aresta do lado do preço (compra: 4070,50 · venda: 4069,50).
+//     O visto é um aviso: ainda não há plano.
+//  3. Plano completo: no fecho da vela seguinte ao visto surgem as linhas com o preço escrito —
+//     Invalidation zone a 1,5 $ (150 pontos) da zona de ação, Exit 1 a +1,5 $ e Exit 2 a +3 $:
 //     compra em 4070,50 → invalidação 4069,00 · Exit 1 4072,00 · Exit 2 4073,50.
-//  5. Bandeira branca: aparece quando o preço toca o Exit 1 (ou a invalidação). O Exit 2 ou a
-//     invalidação fecham o plano: a caixa e as linhas vão da vela do visto até à vela do fecho e ficam
-//     assim até ao visto seguinte, que limpa o gráfico.
+//     As linhas e a caixa começam na vela do visto e acompanham a ideia; a entrada é do trader
+//     (ordem limite dentro da zona, quando o preço recua).
+//  4. Bandeira branca: o preço tocou o Exit 1 (ou a invalidação). O Exit 2 ou a invalidação fecham a
+//     ideia: a caixa e as linhas param na vela do fecho e ficam assim até ao visto seguinte.
+//  5. Cada visto novo apaga TUDO o que era do anterior (caixa, visto, bandeira, linhas, etiquetas).
 //  6. Tabela de estatísticas (desligada por omissão): sinais, planos, Exit 1, Exit 2, invalidações.
 //
 // ALERTAS / WEBHOOK MTM: Adicionar alerta → condição «Any alert() function call»,
 // «Once Per Bar Close», Webhook URL:
 //   https://www.morethanmoney.pt/api/webhooks/tradingview?strategy=goldenzone&secret=<secret>
-// Eventos JSON: signal (visto), plan (níveis), exit1, exit2, invalidation. Também há
-// «Golden Zone Compra» / «Golden Zone Venda» / «Golden Zone Plano» para alertas simples.
+// Eventos JSON: signal (visto), plan (níveis), exit1 (bandeira), exit2, invalidation.
+// Alertas simples (seguimento do trade): Golden Zone Compra · Venda · Plano · Exit 1 · Exit 2 · Invalidação.
 // Conteúdo educativo, não constitui consultoria financeira.
 // ─────────────────────────────────────────────────────────────────────────────
 indicator("Golden Zone by MTM", shorttitle="Golden Zone by MTM", overlay=true, max_lines_count=100, max_labels_count=100, max_boxes_count=50)
@@ -59,7 +60,7 @@ colZone    = input.color(#787B86, "Zone of action", group=gDisp)
 colExit1   = input.color(#4CAF50, "Exit 1", group=gDisp)
 colExit2   = input.color(#4CAF50, "Exit 2", group=gDisp)
 colInval   = input.color(#E57373, "Invalidation zone", group=gDisp)
-offset     = input.int(20, "Offset", minval=1, maxval=200, group=gDisp, tooltip="Velas para a direita das linhas do plano e validade da zona à espera do recuo. As cores e o offset deste grupo são só da posição activa.")
+offset     = input.int(20, "Offset", minval=1, maxval=200, group=gDisp, tooltip="Velas para a direita da última vela até onde as linhas do plano se prolongam enquanto a ideia está aberta. As cores e o offset deste grupo são só da posição activa.")
 
 gMtm       = "MTM"
 stepIn     = input.float(0.0, "Psychological step (0 = auto)", minval=0.0, step=0.5, group=gMtm, tooltip="Distância entre níveis. 0 = automático: 5 $ no ouro; noutros mercados, um passo proporcional ao preço.")
@@ -71,7 +72,7 @@ chave      = input.string("GOLDENZONE", "strategy (chave no webhook)", group=gMt
 // ════════════════════════════════════════════════════════════════
 // PARÂMETROS INTERNOS
 // ════════════════════════════════════════════════════════════════
-const int   BOX_W   = 1            // largura inicial da caixa da zona; cresce com a ideia até ao fecho
+const int   BOX_W   = 6            // largura mínima da caixa da zona (velas); cresce com a ideia até ao fecho
 const color C_CHECK = #F5D90A      // visto amarelo
 const color C_FLAG  = #FFFFFF      // bandeira branca
 
@@ -119,38 +120,31 @@ trendDn = not useTrend or ema50 < ema200
 lvlBelow = math.floor(close / step) * step
 lvlAbove = math.ceil(close / step) * step
 
-// visto: a vela fecha para lá da zona de ação do nível que acabou de passar
-// a vela atravessa a zona inteira: vinha de fora da zona (lado contrário) e fecha para lá da zona de ação
+// visto: a vela atravessa a zona inteira do nível (vinha do lado contrário) e fecha para lá da zona de ação, a favor da tendência
 sigBuy  = trendUp and close > lvlBelow + half and close[1] < lvlBelow - half and lvlBelow > 0
 sigSell = trendDn and close < lvlAbove - half and close[1] > lvlAbove + half
 
 // ════════════════════════════════════════════════════════════════
 // ESTADO DO SINAL (um de cada vez; o novo apaga o anterior)
 // ════════════════════════════════════════════════════════════════
-var int   dir      = 0        // +1 compra · −1 venda · 0 sem sinal
-var float level    = na       // nível psicológico
-var float zAction  = na       // zona de ação (aresta do lado do preço)
-var float zTip     = na       // ponta da zona
-var float inval    = na
-var float exit1    = na
-var float exit2    = na
-var int   sigBar   = na
-var bool  hasPlan  = false
-var bool  e1Hit    = false
-var bool  closed   = false
+var int    dir     = 0        // +1 compra · −1 venda · 0 sem sinal
+var float  level   = na       // nível psicológico
+var float  zAction = na       // zona de ação (aresta do lado do preço)
+var float  inval   = na
+var float  exit1   = na
+var float  exit2   = na
+var int    sigBar  = na
+var bool   hasPlan = false
+var bool   e1Hit   = false
+var bool   closed  = false
 var string sigId   = ""
 
-var box   zoneBox  = na
-var label checkLbl = na
-var label flagLbl  = na
-var line  lZone    = na
-var line  lInval   = na
-var line  lExit1   = na
-var line  lExit2   = na
-var label tZone    = na
-var label tInval   = na
-var label tExit1   = na
-var label tExit2   = na
+// desenhos da posição activa — tudo em arrays para o visto seguinte limpar mesmo tudo
+var box[]   dBoxes  = array.new<box>()
+var label[] dLabels = array.new<label>()
+var line[]  dLines  = array.new<line>()      // ordem: zona, invalidação, Exit 1, Exit 2
+var label[] dTexts  = array.new<label>()     // etiquetas das linhas, na mesma ordem
+var bool    hasFlag = false
 
 // estatísticas
 var int nSignals = 0
@@ -159,34 +153,28 @@ var int nExit1   = 0
 var int nExit2   = 0
 var int nInval   = 0
 
-f_clear() =>
-    box.delete(zoneBox)
-    label.delete(checkLbl)
-    label.delete(flagLbl)
-    line.delete(lZone)
-    line.delete(lInval)
-    line.delete(lExit1)
-    line.delete(lExit2)
-    label.delete(tZone)
-    label.delete(tInval)
-    label.delete(tExit1)
-    label.delete(tExit2)
+f_limpar() =>
+    while array.size(dBoxes) > 0
+        box.delete(array.pop(dBoxes))
+    while array.size(dLabels) > 0
+        label.delete(array.pop(dLabels))
+    while array.size(dLines) > 0
+        line.delete(array.pop(dLines))
+    while array.size(dTexts) > 0
+        label.delete(array.pop(dTexts))
 
-// linhas do plano: começam na vela do visto (a marcação) e acompanham a ideia até ao fecho
-f_level(float p, color c) =>
-    ln = line.new(sigBar, p, bar_index + offset, p, color=c, width=1, extend=extend.right)
-    lb = label.new(bar_index + offset, p, "", style=label.style_none, textcolor=c, size=size.small)
-    [ln, lb]
+// as linhas do plano começam na vela do visto; x2 acompanha a última vela + offset enquanto a ideia está aberta
+f_nivel(float p, color c, string txt) =>
+    array.push(dLines, line.new(sigBar, p, bar_index + offset, p, color=c, width=1))
+    array.push(dTexts, label.new(bar_index + offset, p, txt, style=label.style_none, textcolor=c, size=size.small))
 
-// fecho da ideia: as arestas param na vela do fecho
-f_freeze() =>
-    for ln in array.from(lZone, lInval, lExit1, lExit2)
-        if not na(ln)
-            line.set_extend(ln, extend.none)
-            line.set_x2(ln, bar_index)
-    for lb in array.from(tZone, tInval, tExit1, tExit2)
-        if not na(lb)
-            label.set_x(lb, bar_index)
+f_estender(int x2) =>
+    for ln in dLines
+        line.set_x2(ln, x2)
+    for lb in dTexts
+        label.set_x(lb, x2)
+    for bx in dBoxes
+        box.set_right(bx, math.max(x2, sigBar + BOX_W))
 
 bool newSignal = false
 bool newPlan   = false
@@ -194,7 +182,39 @@ bool hitExit1  = false
 bool hitExit2  = false
 bool hitInval  = false
 
-// 1) acompanhar o plano aberto
+// 1) visto novo (apaga o anterior)
+if sigBuy or sigSell
+    f_limpar()
+    dir     := sigBuy ? 1 : -1
+    level   := sigBuy ? lvlBelow : lvlAbove
+    zAction := level + dir * half
+    inval   := zAction - dir * risk
+    exit1   := zAction + dir * risk
+    exit2   := zAction + dir * risk * 2
+    sigBar  := bar_index
+    hasPlan := false
+    e1Hit   := false
+    closed  := false
+    hasFlag := false
+    newSignal := true
+    nSignals += 1
+    sigId := str.tostring(time, "yyMMddHHmm") + (dir > 0 ? "B" : "S")
+    if showZones
+        array.push(dBoxes, box.new(bar_index, level + half, bar_index + BOX_W, level - half, border_color=zoneBorder, bgcolor=zoneFill, border_width=1))
+    array.push(dLabels, label.new(bar_index, dir > 0 ? high + half * 2 : low - half * 2, "✔", style=label.style_none, textcolor=C_CHECK, size=size.large))
+
+// 2) plano completo: no fecho da vela seguinte ao visto
+if dir != 0 and not hasPlan and not newSignal and bar_index == sigBar + 1
+    hasPlan := true
+    newPlan := true
+    nPlans += 1
+    bool pt = lblLang == "PT"
+    f_nivel(zAction, colZone,  (pt ? "Zona de ação: " : "Zone of action: ") + f_fmt(zAction))
+    f_nivel(inval,   colInval, (pt ? "Invalidação: "  : "Invalidation zone: ") + f_fmt(inval))
+    f_nivel(exit1,   colExit1, (pt ? "Saída 1: " : "Exit 1: ") + f_fmt(exit1))
+    f_nivel(exit2,   colExit2, (pt ? "Saída 2: " : "Exit 2: ") + f_fmt(exit2))
+
+// 3) seguimento do trade: Exit 1 → bandeira; Exit 2 ou invalidação fecham a ideia
 if dir != 0 and hasPlan and not closed
     if dir > 0
         if not e1Hit and high >= exit1
@@ -216,71 +236,11 @@ if dir != 0 and hasPlan and not closed
         else if high >= inval
             closed := true
             hitInval := true
-
-// 2) recuo à zona de ação → parâmetros da posição
-if dir != 0 and not hasPlan and bar_index > sigBar
-    bool touched = dir > 0 ? low <= zAction : high >= zAction
-    if touched
-        hasPlan := true
-        newPlan := true
-        nPlans += 1
-    else if bar_index > sigBar + offset or (dir > 0 ? high >= exit2 : low <= exit2)
-        // a zona esperou «offset» velas sem recuo, ou o preço foi à Saída 2 sem recuar: o sinal expira sem trade
-        dir := 0
-        f_clear()
-
-// 3) visto novo (apaga o anterior)
-if sigBuy or sigSell
-    f_clear()
-    dir     := sigBuy ? 1 : -1
-    level   := sigBuy ? lvlBelow : lvlAbove
-    zAction := level + dir * half
-    zTip    := level - dir * half
-    inval   := zAction - dir * risk
-    exit1   := zAction + dir * risk
-    exit2   := zAction + dir * risk * 2
-    sigBar  := bar_index
-    hasPlan := false
-    e1Hit   := false
-    closed  := false
-    newSignal := true
-    nSignals += 1
-    sigId := str.tostring(time, "yyMMddHHmm") + (dir > 0 ? "B" : "S")
-
-// ════════════════════════════════════════════════════════════════
-// DESENHO
-// ════════════════════════════════════════════════════════════════
-if dir != 0 and not closed and not na(zoneBox) and not newSignal
-    box.set_right(zoneBox, bar_index)
-if (hitExit2 or hitInval) and not newSignal
-    f_freeze()
-
-if newSignal
-    if showZones
-        zoneBox := box.new(bar_index, level + half, bar_index + BOX_W, level - half, border_color=zoneBorder, bgcolor=zoneFill, border_width=1)
-    checkLbl := label.new(bar_index, dir > 0 ? high + risk : low - risk, "✔", style=label.style_none, textcolor=C_CHECK, size=size.large)
-
-if newPlan
-    [a, b] = f_level(zAction, colZone)
-    lZone := a
-    tZone := b
-    [c, d] = f_level(inval, colInval)
-    lInval := c
-    tInval := d
-    [e, f] = f_level(exit1, colExit1)
-    lExit1 := e
-    tExit1 := f
-    [g, h] = f_level(exit2, colExit2)
-    lExit2 := g
-    tExit2 := h
-    bool pt = lblLang == "PT"
-    label.set_text(tZone,  (pt ? "Zona de ação: " : "Zone of action: ") + f_fmt(zAction))
-    label.set_text(tInval, (pt ? "Invalidação: " : "Invalidation zone: ") + f_fmt(inval))
-    label.set_text(tExit1, (pt ? "Saída 1: " : "Exit 1: ") + f_fmt(exit1))
-    label.set_text(tExit2, (pt ? "Saída 2: " : "Exit 2: ") + f_fmt(exit2))
-
-if (hitExit1 or hitInval) and na(flagLbl) and dir != 0
-    flagLbl := label.new(bar_index, dir > 0 ? high : low, "", style=label.style_flag, color=C_FLAG, size=size.small, yloc=dir > 0 ? yloc.abovebar : yloc.belowbar)
+    if (hitExit1 or hitInval) and not hasFlag
+        hasFlag := true
+        array.push(dLabels, label.new(bar_index, dir > 0 ? high : low, "", style=label.style_flag, color=C_FLAG, size=size.small, yloc=dir > 0 ? yloc.abovebar : yloc.belowbar))
+    // a caixa e as linhas acompanham a ideia; no fecho param na vela do fecho
+    f_estender(closed ? bar_index : bar_index + offset)
 
 if hitExit1
     nExit1 += 1
@@ -291,7 +251,7 @@ if hitInval
 
 // níveis psicológicos à volta do preço (redesenhados na última vela)
 // (as únicas linhas fixas do gráfico; as EMAs do filtro de tendência não se desenham)
-var line[]  psyLines = array.new<line>()
+var line[] psyLines = array.new<line>()
 if barstate.islast
     while array.size(psyLines) > 0
         line.delete(array.pop(psyLines))
@@ -299,7 +259,7 @@ if barstate.islast
         int halfN = math.max(1, psyCount / 2)
         for k = -halfN to halfN
             float p = lvlBelow + k * step
-            array.push(psyLines, line.new(bar_index - 500, p, bar_index + offset, p, color=psyCol, width=1, extend=extend.both))
+            array.push(psyLines, line.new(bar_index - 1, p, bar_index, p, color=psyCol, width=1, extend=extend.both))
 
 // tabela de estatísticas
 var table st = na
@@ -323,7 +283,7 @@ if showTable and barstate.islast
     table.cell(st, 1, 5, wr, text_color=tblTxt, text_size=sz)
 
 // ════════════════════════════════════════════════════════════════
-// ALERTAS
+// ALERTAS — o sinal e o seguimento do mesmo trade (mesmo id)
 // ════════════════════════════════════════════════════════════════
 f_json(string ev) =>
     '{"strategy":"' + chave + '","event":"' + ev + '","id":"' + sigId + '","symbol":"' + syminfo.ticker + '","tf":"' + timeframe.period + '","side":"' + (dir > 0 ? "buy" : "sell") + '","level":' + f_fmt(level) + ',"zone":' + f_fmt(zAction) + ',"invalidation":' + f_fmt(inval) + ',"exit1":' + f_fmt(exit1) + ',"exit2":' + f_fmt(exit2) + ',"price":' + f_fmt(close) + ',"time":"' + str.tostring(time) + '"}'
@@ -339,6 +299,9 @@ if hitExit2
 if hitInval
     alert(f_json("invalidation"), alert.freq_once_per_bar_close)
 
-alertcondition(sigBuy,  "Golden Zone Compra", "Golden Zone: visto de compra em {{ticker}} {{interval}}")
-alertcondition(sigSell, "Golden Zone Venda",  "Golden Zone: visto de venda em {{ticker}} {{interval}}")
-alertcondition(newPlan, "Golden Zone Plano",  "Golden Zone: plano desenhado em {{ticker}} {{interval}}")
+alertcondition(sigBuy,   "Golden Zone Compra",      "Golden Zone: visto de compra em {{ticker}} {{interval}}")
+alertcondition(sigSell,  "Golden Zone Venda",       "Golden Zone: visto de venda em {{ticker}} {{interval}}")
+alertcondition(newPlan,  "Golden Zone Plano",       "Golden Zone: plano desenhado em {{ticker}} {{interval}} (zona, invalidação, Exit 1, Exit 2)")
+alertcondition(hitExit1, "Golden Zone Exit 1",      "Golden Zone: Exit 1 tocado em {{ticker}} {{interval}} — bandeira branca")
+alertcondition(hitExit2, "Golden Zone Exit 2",      "Golden Zone: Exit 2 tocado em {{ticker}} {{interval}} — ideia fechada")
+alertcondition(hitInval, "Golden Zone Invalidação", "Golden Zone: invalidação tocada em {{ticker}} {{interval}} — ideia fechada")

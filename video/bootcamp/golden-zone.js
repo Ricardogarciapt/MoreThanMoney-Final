@@ -2,11 +2,12 @@
 // Fiel ao Pine da casa (docs/pine/golden-zone.pine, 08/11/2026): níveis psicológicos de 5 em 5 $ (linhas cinzentas);
 // quando uma vela atravessa um nível a favor da tendência e fecha para lá da zona de ação, aparece o visto amarelo
 // sobre a vela e a caixa amarela de 1 $ centrada no nível (compra em 4070: caixa 4069,50–4070,50, zona de ação
-// 4070,50). Ainda não há plano. Só quando o preço RECUA à zona de ação surgem as linhas, com o preço escrito:
-// Invalidação (−1,5 $ = 150 pontos, vermelha), Zona de ação (cinzenta), Saída 1 (+1,5 $) e Saída 2 (+3 $), a verde.
+// 4070,50). Ainda não há plano. No FECHO DA VELA SEGUINTE surgem as linhas, com o preço escrito, a começar na vela
+// do visto: Invalidação (−1,5 $ = 150 pontos, vermelha), Zona de ação (cinzenta), Saída 1 (+1,5 $) e Saída 2 (+3 $), a verde.
 // A caixa e as linhas vão da vela do visto até à vela do fecho da ideia e ficam até ao visto seguinte.
 // A bandeira branca aparece quando o preço toca a Saída 1 (ou a invalidação). Saída 2 ou invalidação fecham o plano.
-// Sem recuo em 20 velas a zona expira; se o preço for à Saída 2 sem recuar, não houve trade. Cada visto novo apaga o anterior.
+// A entrada é do trader (ordem limite na zona, quando o preço recua); se o preço for à Saída 2 sem recuar, não houve
+// trade (bandeira sem entrada). Cada visto novo apaga o anterior.
 // Camadas extra só do vídeo: medias (EMA 50/200 da 1.ª confirmação), niveis (suporte/resistência do passado,
 // a roxo), ordem (ordem limite a meio da zona + stop para lá da mecha mais extrema). Mercado sintético.
 ;(function (G) {
@@ -14,7 +15,7 @@
   const C = { fundo: '#131722', grelha: 'rgba(42,46,57,.55)', eixo: '#787B86', velaUp: '#089981', velaDn: '#F23645',
     visto: '#F5D90A', caixa: 'rgba(245,217,10,.16)', caixaBorda: 'rgba(245,217,10,.75)', saida: '#4CAF50', zona: '#9598A1', inval: '#F23645',
     ema50: '#2962FF', ema200: '#FF9800', sr: 'rgba(156,39,176,.22)', srBorda: 'rgba(186,104,200,.8)', ordem: '#E9C46A', marca: '#D2A63C' }
-  const AQUEC = 300, STEP = 5, HALF = 0.5, RISCO = 1.5, CX_W = 6, ESPERA = 20
+  const AQUEC = 300, STEP = 5, HALF = 0.5, RISCO = 1.5, CX_W = 6
 
   // XAUUSD em M5 (ATR ≈ 1,6 $). O impulso (choque) é a vela do sinal; o resto decide o desfecho.
   const ROTEIROS = {
@@ -40,19 +41,16 @@
       if (!compra && !venda) continue
       const d = compra ? 1 : -1, nivel = compra ? lb : la, zona = meio(nivel + d * HALF)
       const s = { i, d, nivel, zona, ponta: zona - d * 2 * HALF, inval: zona - d * RISCO, s1: zona + d * RISCO, s2: zona + 2 * d * RISCO }
-      // o plano aparece quando o preço recua à zona de ação (fill); depois: Saída 1 → bandeira; Saída 2 ou invalidação fecham
+      // o plano aparece no fecho da vela seguinte (plano = i+1); o recuo à zona (fill) é a entrada do trader;
+      // depois: Saída 1 → bandeira; Saída 2 ou invalidação fecham. Saída 2 sem recuo = sem trade.
       let fill = null, fim = null, res = 'aberto', s1Bar = null
-      for (let j = i + 1; j < Math.min(N, i + 1 + 120); j++) { const x = c[j]
-        if (fill == null) {
-          if (d > 0 ? x.l <= zona : x.h >= zona) { fill = j; if (d > 0 ? x.l <= s.inval : x.h >= s.inval) { fim = j; res = 'sl'; break } continue }
-          if (d > 0 ? x.h >= s.s2 : x.l <= s.s2) { fim = j; res = 'sem'; break }
-          if (j > i + ESPERA) { fim = j; res = 'expirou'; break }
-        } else {
-          if (s1Bar == null && (d > 0 ? x.h >= s.s1 : x.l <= s.s1)) s1Bar = j
-          if (d > 0 ? x.h >= s.s2 : x.l <= s.s2) { fim = j; res = 's2'; break }
-          if (d > 0 ? x.l <= s.inval : x.h >= s.inval) { fim = j; res = 'sl'; break }
-        } }
-      Object.assign(s, { fill, fim: fim ?? N, res, s1Bar, bandeira: s1Bar ?? (res === 'sl' ? fim : null) })
+      const plano = i + 1
+      for (let j = plano; j < Math.min(N, i + 1 + 120); j++) { const x = c[j]
+        if (fill == null && (d > 0 ? x.l <= zona : x.h >= zona)) fill = j
+        if (s1Bar == null && (d > 0 ? x.h >= s.s1 : x.l <= s.s1)) s1Bar = j
+        if (d > 0 ? x.h >= s.s2 : x.l <= s.s2) { fim = j; res = fill == null ? 'sem' : 's2'; break }
+        if (d > 0 ? x.l <= s.inval : x.h >= s.inval) { fim = j; res = 'sl'; break } }
+      Object.assign(s, { plano, fill, fim: fim ?? N, res, s1Bar, bandeira: s1Bar ?? (res === 'sl' ? fim : null) })
       sinais.push(s); ativo = s
     }
     return sinais
@@ -98,7 +96,7 @@
       const J = M.janela(D, ate, zoom), ult = J.ult
       // cada sinal novo apaga o anterior: só o último até «ult»
       const s = [...D.sinais].reverse().find(x => x.i <= ult && x.i >= J.iniV)
-      const temPlano = s && s.fill != null && ult >= s.fill
+      const temPlano = s && ult >= s.plano
       let hi = -Infinity, lo = Infinity; for (let i = J.iniV; i <= ult; i++) { hi = Math.max(hi, D.c[i].h); lo = Math.min(lo, D.c[i].l) }
       if ((vis.plano || vis.sinal) && s) [s.nivel + HALF, s.nivel - HALF, ...(temPlano && vis.plano ? [s.inval, s.s2] : [])].forEach(x => { hi = Math.max(hi, x); lo = Math.min(lo, x) })
       const T = M.tela(g, W, H, esc, J, hi + .6, lo - .6, CT, 26), { X, Y, F } = T

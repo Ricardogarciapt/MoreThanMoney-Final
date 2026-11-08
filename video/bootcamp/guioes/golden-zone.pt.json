@@ -171,7 +171,7 @@
       "Saída 1 e Saída 2: os alvos, a verde",
       "Invalidação: o stop, a vermelho. A bandeira branca marca o fim"
      ],
-     "fala": "Vamos por partes. Primeiro, o visto amarelo. Aparece sobre a vela do sinal, acompanhado da caixa amarela, que é a zona de ação. O visto é um aviso, não é a vela de entrada. Quer dizer apenas que o scanner encontrou uma configuração que merece atenção. Ainda faltam os parâmetros, e não há trade nenhum. Segundo, a zona de ação. É a área onde, em teoria, colocas a tua ordem limite, à espera que o preço volte. Repara que a zona é uma caixa e não uma linha, porque o preço raramente respeita um valor exato. Terceiro, as saídas. Quando o preço recua à zona de ação, surgem a Saída 1 e a Saída 2, os dois alvos, a verde. E a invalidação, a vermelho, que é o nível onde a ideia deixa de fazer sentido. Sem estes três níveis não há trade. Quarto, a bandeira branca. Aparece quando o preço toca a Saída 1, ou a invalidação. Quando aparece, o trade terminou: pagou, ou perdeu. Com a bandeira à vista, já não se entra. A bandeira é uma informação de fecho. Diz-te que o momento passou."
+     "fala": "Vamos por partes. Primeiro, o visto amarelo. Aparece sobre a vela do sinal, acompanhado da caixa amarela, que é a zona de ação. O visto é um aviso, não é a vela de entrada. Quer dizer apenas que o scanner encontrou uma configuração que merece atenção. Ainda faltam os parâmetros, e não há trade nenhum. Segundo, a zona de ação. É a área onde, em teoria, colocas a tua ordem limite, à espera que o preço volte. Repara que a zona é uma caixa e não uma linha, porque o preço raramente respeita um valor exato. Terceiro, as saídas. Quando fecha a vela de cinco minutos seguinte, surgem a Saída 1 e a Saída 2, os dois alvos, a verde. E a invalidação, a vermelho, que é o nível onde a ideia deixa de fazer sentido. Sem estes três níveis não há trade. Quarto, a bandeira branca. Aparece quando o preço toca a Saída 1, ou a invalidação. Quando aparece, o trade terminou: pagou, ou perdeu. Com a bandeira à vista, já não se entra. A bandeira é uma informação de fecho. Diz-te que o momento passou."
     },
     {
      "id": "v1-10",
@@ -218,11 +218,11 @@
      "titulo": "Do visto ao plano",
      "itens": [
       "O visto aparece sobre a vela do sinal",
-      "Esperas que o preço recue à zona de ação",
+      "Esperas que a vela seguinte feche: só aí há plano",
       "Só então surgem as saídas e a invalidação",
       "Sem plano completo não há trade"
      ],
-     "fala": "A sequência é sempre a mesma, e a ordem importa. Primeiro, aparece o visto amarelo, sobre a vela do sinal. Nesse momento ainda não tens nada para executar. Segundo, esperas que o preço recue à zona de ação. Só nesse recuo é que surgem a Saída 1, a Saída 2 e a invalidação. Antes disso, o que tens é um aviso. Terceiro, lês todos os níveis, e só depois olhas para as confirmações. A tentação é ir direto ao visto e começar a imaginar a entrada. O guia pede outra ordem: primeiro a leitura, depois a validação, e só depois o plano. Quando te habituas a esta sequência, deixas de agir por impulso. Se o preço ainda não recuou à zona, não há plano para ler e não há decisão para tomar. Este pormenor parece pequeno, mas é ele que separa quem espera de quem se antecipa."
+     "fala": "A sequência é sempre a mesma, e a ordem importa. Primeiro, aparece o visto amarelo, sobre a vela do sinal. Nesse momento ainda não tens nada para executar. Segundo, esperas que a vela de cinco minutos seguinte feche. Só nesse fecho é que surgem a Saída 1, a Saída 2 e a invalidação. Antes disso, o que tens é um aviso. Terceiro, lês todos os níveis, e só depois olhas para as confirmações. A tentação é ir direto ao visto e começar a imaginar a entrada. O guia pede outra ordem: primeiro a leitura, depois a validação, e só depois o plano. Quando te habituas a esta sequência, deixas de agir por impulso. Se a vela seguinte ainda não fechou, não há plano para ler e não há decisão para tomar. Este pormenor parece pequeno, mas é ele que separa quem espera de quem se antecipa."
     },
     {
      "id": "v1-13",
@@ -231,13 +231,13 @@
      "kicker": "Leitura rápida",
      "titulo": "Cinco perguntas ao gráfico",
      "itens": [
-      "Há visto amarelo e o preço já recuou à zona?",
+      "Há visto amarelo e a vela seguinte já fechou?",
       "A caixa amarela fica sobre a vela do sinal?",
       "Estão desenhadas Saída 1, Saída 2 e invalidação?",
       "Há bandeira branca no gráfico?",
       "Estás a olhar para o sinal atual, e não para um antigo?"
      ],
-     "fala": "Antes de olhar para as confirmações, cinco perguntas rápidas. Há visto amarelo, e o preço já recuou à zona de ação? A caixa amarela está sobre a vela do sinal? Estão desenhadas a Saída 1, a Saída 2 e a invalidação? Há bandeira branca no gráfico, ou seja, um trade que já terminou? E estás a olhar para o sinal atual, e não para um que já foi apagado pelo seguinte? Se a resposta a qualquer uma destas perguntas for não, pára aí. Não há trade para analisar. Só quando as cinco respostas estiverem certas é que avanças para a validação."
+     "fala": "Antes de olhar para as confirmações, cinco perguntas rápidas. Há visto amarelo, e a vela seguinte já fechou? A caixa amarela está sobre a vela do sinal? Estão desenhadas a Saída 1, a Saída 2 e a invalidação? Há bandeira branca no gráfico, ou seja, um trade que já terminou? E estás a olhar para o sinal atual, e não para um que já foi apagado pelo seguinte? Se a resposta a qualquer uma destas perguntas for não, pára aí. Não há trade para analisar. Só quando as cinco respostas estiverem certas é que avanças para a validação."
     },
     {
      "id": "v1-14",
@@ -405,13 +405,13 @@
      "kicker": "Passo a passo",
      "titulo": "Da leitura à ordem",
      "itens": [
-      "Espera que o preço recue à zona de ação",
+      "Espera pelo fecho da vela seguinte e lê os níveis",
       "Valida as quatro confirmações",
       "Coloca a ordem limite dentro da zona",
       "Stop para lá da mecha mais extrema",
       "Calcula o tamanho antes de enviar"
      ],
-     "fala": "Vamos pôr isto em sequência, com o ritmo do guia. Um: espera que o preço recue à zona de ação, depois do visto. Dois: valida as quatro confirmações. Se a tendência estiver contra o sinal, deixa-o passar, e não há mais nada a fazer. Três: coloca uma ordem limite dentro da zona de ação. Não é uma ordem a mercado. Queres que o preço volte à zona e te encontre lá. Quatro: o stop. Põe-no para lá da invalidação e da mecha mais extrema das velas anteriores. Cinco: confirma os alvos, a Saída 1 e a Saída 2. E seis, o mais importante, antes de enviar a ordem: calcula o tamanho da posição em função da tua conta e do risco que decidiste. Um sinal que é bom no gráfico, mas que não cabe no teu risco, não é um trade para ti. Só depois de tudo isto é que a ordem segue para o mercado."
+     "fala": "Vamos pôr isto em sequência, com o ritmo do guia. Um: espera pelo fecho da vela de cinco minutos seguinte ao visto e lê os níveis: zona de ação, Saída 1, Saída 2 e invalidação. Dois: valida as quatro confirmações. Se a tendência estiver contra o sinal, deixa-o passar, e não há mais nada a fazer. Três: coloca uma ordem limite dentro da zona de ação. Não é uma ordem a mercado. Queres que o preço volte à zona e te encontre lá. Quatro: o stop. Põe-no para lá da invalidação e da mecha mais extrema das velas anteriores. Cinco: confirma os alvos, a Saída 1 e a Saída 2. E seis, o mais importante, antes de enviar a ordem: calcula o tamanho da posição em função da tua conta e do risco que decidiste. Um sinal que é bom no gráfico, mas que não cabe no teu risco, não é um trade para ti. Só depois de tudo isto é que a ordem segue para o mercado."
     },
     {
      "id": "v2-08",
@@ -472,7 +472,7 @@
      "tipo": "grafico",
      "cap": "03 · Quando não entrar",
      "kicker": "Quando a zona não volta",
-     "titulo": "A zona expira, sem entrada",
+     "titulo": "Foi à Saída 2 sem voltar: sem entrada",
      "cenario": "falha",
      "seed": 7,
      "base": [
