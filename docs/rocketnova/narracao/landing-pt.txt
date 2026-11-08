@@ -1,0 +1,7 @@
+Este é o RocketNova, o scanner da MoreThanMoney que descola com a tendência e leva o plano a bordo.
+O RocketNova lê três médias: vinte, cinquenta e duzentos e trinta e oito. O sinal nasce quando a rápida cruza a lenta e a vela fecha.
+Mas o cruzamento sozinho não chega. Só há sinal com uma estrela de lançamento recente: um mínimo de swing para a compra, um máximo para a venda. A Rocket Candle, o pulso de volatilidade e o Trade Clock dizem-te se há força, volatilidade e sessão.
+E o plano fica no gráfico: entrada, stop e quatro alvos. Depois do primeiro alvo o stop passa para a entrada, e um sinal contrário fecha a trade. Tudo por alertas.
+Funciona em forex, ouro, índices e cripto, em qualquer timeframe.
+Vê a demonstração em morethanmoney ponto pt barra scanner barra rocketnova.
+Conteúdo educativo. Não é aconselhamento financeiro e os resultados não são garantidos.

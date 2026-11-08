@@ -774,6 +774,106 @@ function defy() {
   }, warm)
 }
 
+// ───────────────────────── RocketNova ─────────────────────────
+// EMA 20/50/238 com sinal no cruzamento confirmado, mas só com uma «estrela de lançamento» recente
+// (mínimo de swing para a compra, máximo para a venda; Depth/Deviation/Backstep). Rocket Candle
+// (corpo >= 1,2 ATR a fechar no extremo), pulso de volatilidade (ATR contra a média) e Trade Clock.
+// Plano fixo na vela do sinal: Entry, SL e TP1–TP4 (30 %, 50 %, 100 % e 150 % do stop); depois do
+// TP1 o stop passa para a entrada; um sinal contrário fecha a trade.
+function rocketNova() {
+  const warm = 260
+  const cs = makeCandles(57, 2386, [
+    { len: 190, drift: 0.0001, vol: 0.0015 }, { len: 60, drift: -0.0007, vol: 0.0016 },
+    { len: 22, drift: -0.0013, vol: 0.0018 }, { len: 46, drift: 0.0017, vol: 0.0015 }, { len: 26, drift: 0.0001, vol: 0.0014 },
+    { len: 28, drift: -0.0016, vol: 0.0017 }, { len: 44, drift: 0.0015, vol: 0.0015 },
+  ])
+  const close = cs.map((b) => b.c)
+  const f = ema(close, 20), s = ema(close, 50), L = ema(close, 238)
+  const atr = atrOf(cs, 14)
+  const atrAvg = sma(atr, 100)
+  const vAvg = sma(cs.map((b) => b.v), 20)
+  // Estrelas: pivots com Depth 34 à esquerda e Backstep 8 à direita; Deviation 1,3 ATR face à estrela contrária.
+  const depth = 34, back = 8
+  const stars = []
+  let lastHi = NaN, lastLo = NaN
+  for (let i = depth; i < cs.length - back; i++) {
+    const left = cs.slice(i - depth, i), right = cs.slice(i + 1, i + 1 + back)
+    const isH = cs[i].h > Math.max(...left.map((b) => b.h), ...right.map((b) => b.h))
+    const isL = cs[i].l < Math.min(...left.map((b) => b.l), ...right.map((b) => b.l))
+    const dev = atr[i] * 1.3
+    if (isH && (isNaN(lastLo) || cs[i].h - lastLo >= dev)) { stars.push({ i, reveal: i + back, price: cs[i].h, up: false }); lastHi = cs[i].h }
+    if (isL && (isNaN(lastHi) || lastHi - cs[i].l >= dev)) { stars.push({ i, reveal: i + back, price: cs[i].l, up: true }); lastLo = cs[i].l }
+  }
+  const rocket = cs.map((b, i) => {
+    const body = Math.abs(b.c - b.o), rng = b.h - b.l
+    return rng > 0 && body >= atr[i] * 1.2 && (b.c > b.o ? b.h - b.c : b.c - b.l) <= rng * 0.3
+  })
+  const starOk = (i, up) => stars.some((st) => st.up === up && st.reveal <= i && i - st.reveal <= 40)
+  const markers = stars.map((st) => ({ i: st.reveal, price: st.price, text: '✦', color: st.up ? GREEN : RED, up: st.up, small: true }))
+  const groups = []
+  let open = null
+  for (let i = warm - 20; i < cs.length; i++) {
+    const up = f[i] > s[i] && f[i - 1] <= s[i - 1]
+    const dn = f[i] < s[i] && f[i - 1] >= s[i - 1]
+    if (!up && !dn) continue
+    if (!starOk(i, up)) continue
+    const dir = up ? 1 : -1
+    if (open && open.dir !== dir) open.exit = i // sinal contrário fecha a trade anterior
+    markers.push({ i, price: up ? cs[i].l : cs[i].h, text: up ? 'BUY' : 'SELL', color: up ? GREEN : RED, up })
+    const e = close[i], R = atr[i] * 1.6
+    const sl = e - dir * R
+    // Primeira vela que toca o TP1: o stop passa para a entrada.
+    let hit = null
+    for (let k = i + 1; k < cs.length; k++) if (dir > 0 ? cs[k].h >= e + R * 0.3 : cs[k].l <= e - R * 0.3) { hit = k; break }
+    const g = {
+      i0: i,
+      dir,
+      items: [
+        { price: e, color: GOLD_L, label: 'Entrada' },
+        { price: sl, color: RED, label: 'SL', to: hit ?? undefined },
+        ...(hit ? [{ price: e, color: GOLD_L, label: 'SL em BE', from: hit }] : []),
+        { price: e + dir * R * 0.3, color: GREEN, label: 'TP1' },
+        { price: e + dir * R * 0.5, color: GREEN, label: 'TP2' },
+        { price: e + dir * R * 1.0, color: GREEN, label: 'TP3' },
+        { price: e + dir * R * 1.5, color: GREEN, label: 'TP4' },
+      ],
+    }
+    groups.push(g)
+    open = g
+  }
+  const rows = [
+    { label: 'EMA 20 acima da 50', states: cs.map((_, i) => (f[i] > s[i] ? 'Alta' : 'Baixa')) },
+    { label: 'Estrela de lançamento', states: cs.map((_, i) => (starOk(i, f[i] > s[i]) ? 'ok' : '–')) },
+    { label: 'Rocket Candle', states: cs.map((_, i) => (rocket.slice(Math.max(0, i - 4), i + 1).some(Boolean) ? 'ok' : '–')) },
+    { label: 'Volatility Pulse', states: cs.map((_, i) => (atr[i] >= atrAvg[i] * 1.3 ? 'Alta' : atr[i] <= atrAvg[i] * 0.7 ? 'Baixa' : 'Normal')) },
+    { label: 'Trade Clock', states: cs.map((b, i) => (b.v < vAvg[i] * 0.5 ? 'Low Volume' : 'Good Volume')) },
+  ]
+  const first = groups.find((g) => g.i0 >= warm)
+  const firstStar = markers.find((m) => m.small && m.i >= warm)
+  return trim({
+    name: 'RocketNova',
+    candles: cs,
+    rocket,
+    lines: [
+      { name: 'EMA 20', color: RED, width: 0.05, z: 0.22, pts: f },
+      { name: 'EMA 50', color: BLUE, width: 0.05, z: 0.23, pts: s },
+      { name: 'EMA 238', color: '#ff9a3c', width: 0.07, z: 0.24, pts: L },
+    ],
+    zones: [],
+    markers,
+    groups,
+    panel: { title: 'RocketNova', rows },
+    captions: [
+      { i: warm, text: 'EMAs de 20, 50 e 238: a tendência em três horizontes' },
+      ...(firstStar ? [{ i: firstStar.i, text: 'As estrelas marcam os máximos e mínimos de swing: a rampa de lançamento' }] : []),
+      ...(first ? [{ i: first.i0, text: 'Cruzamento confirmado com estrela recente: sinal RocketNova' }] : []),
+      ...(first ? [{ i: first.i0 + 3, text: 'Entrada, stop e TP1 a TP4 fixos na vela do sinal' }] : []),
+      ...(first ? [{ i: first.i0 + 9, text: 'TP1 tocado: o stop passa para a entrada' }] : []),
+    ],
+    legend: [{ color: RED, label: 'EMA 20' }, { color: BLUE, label: 'EMA 50' }, { color: '#ff9a3c', label: 'EMA 238' }],
+  }, warm)
+}
+
 // ───────────────────────── Cartões de pontos-chave ─────────────────────────
 // Texto de cada cartão (vem do código Pine) e, à parte, o recorte da simulação que o ilustra.
 export const CARD_TEXT = {
@@ -825,6 +925,13 @@ export const CARD_TEXT = {
     { title: 'Confirmações e estrelas', text: 'Cada leitura soma um ponto. +6 dá uma estrela, +8 duas, +10 três. Com vela dourada, é King Idea.' },
     { title: 'Entrada, Warning e stop', text: 'Entrada no fecho ou a 50 % da vela. O Warning é o extremo da vela de sinal e o stop fica 1 ATR para lá.' },
     { title: 'Alvos em R', text: 'TP1, TP2 e TP3 a 1R, 2R e 3R, com a distância em pips. Há modos para scalp e para swing.' },
+  ],
+  rocketnova: [
+    { title: 'Três médias, um cruzamento', text: 'EMA 20, 50 e 238. O sinal nasce quando a rápida cruza a lenta e a vela fecha, nunca antes.' },
+    { title: 'Estrela de lançamento', text: 'Máximos e mínimos de swing por Depth, Deviation e Backstep. A compra exige uma estrela de mínimo recente; a venda, uma de máximo.' },
+    { title: 'Rocket Candle e pulso', text: 'A vela de impulso pinta-se de amarelo. O Volatility Pulse compara o ATR com a média e o Trade Clock mostra sessão e volume.' },
+    { title: 'Entrada, stop e quatro alvos', text: 'Stop fixo (100 pips, 200 no ouro) ou na última estrela. TP1 a TP4 a 30 %, 50 %, 100 % e 150 % do stop.' },
+    { title: 'Gestão por alertas', text: 'Depois do TP1 o stop passa para a entrada. Um sinal contrário fecha a trade. Tudo sai por webhook com o mesmo id.' },
   ],
 }
 
@@ -916,6 +1023,19 @@ const CARD_VIEWS = {
       { win: around(g.i0, 8, 26, N), layers: { candles: true, groups: true, markers: true }, group: g },
     ]
   },
+  rocketnova: (s) => {
+    const N = s.candles.length
+    const sig = s.markers.filter((m) => !m.small)
+    const g = s.groups[s.groups.length - 1]
+    const be = g.items.find((it) => it.from != null)
+    return [
+      { win: [0, N - 1], layers: { candles: true, dimCandles: true, lines: ['EMA 20', 'EMA 50', 'EMA 238'] } },
+      { win: around(sig[0]?.i ?? 50, 46, 10, N), layers: { candles: true, markers: true, lines: ['EMA 20', 'EMA 50'] } },
+      { win: [Math.max(0, N - 90), N - 1], layers: { candles: true, dimCandles: true, panel: true } },
+      { win: around(g.i0, 8, 24, N), layers: { candles: true, groups: true, markers: (m) => !m.small }, group: { ...g, items: g.items.filter((it) => it.from == null).map((it) => ({ ...it, to: undefined })) } },
+      { win: around(be?.from ?? g.i0 + 4, 10, 18, N), layers: { candles: true, groups: true }, group: g },
+    ]
+  },
 }
 
 /** Cartões de pontos-chave de um scanner: texto + recorte da simulação. */
@@ -925,7 +1045,7 @@ export function scannerCards(slug) {
   return CARD_TEXT[slug].map((t, k) => ({ ...t, ...views[k] }))
 }
 
-const BUILDERS = { 'gold-killer': goldKiller, 'mtm-scanner': mtmScanner, 'aurum-flow': aurumFlow, trendshot: trendShot, sensei, 'premium-scanner': premiumScanner, defy }
+const BUILDERS = { 'gold-killer': goldKiller, 'mtm-scanner': mtmScanner, 'aurum-flow': aurumFlow, trendshot: trendShot, sensei, 'premium-scanner': premiumScanner, defy, rocketnova: rocketNova }
 const cache = {}
 /** Simulação de um scanner pelo slug da landing. */
 export function simulate(slug) {

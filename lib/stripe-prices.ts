@@ -16,6 +16,9 @@ const PRICE_ENV_KEYS: Record<string, string> = {
   // DEFY by MTM (05/11/2026): mesma tabela dos outros scanners.
   defy_semestral: 'STRIPE_PRICE_DEFY_SEMESTRAL',
   defy_lifetime: 'STRIPE_PRICE_DEFY_LIFETIME',
+  // RocketNova by MTM (08/11/2026): mesma tabela do GoldKiller (50 € semestral / 350 € vitalício).
+  rocketnova_semestral: 'STRIPE_PRICE_ROCKETNOVA_SEMESTRAL',
+  rocketnova_lifetime: 'STRIPE_PRICE_ROCKETNOVA_LIFETIME',
   // MTM Premium Scanner (27/10/2026): só vitalício, 1250 €. Incluído no Premium.
   premium_scanner_lifetime: 'STRIPE_PRICE_PREMIUM_SCANNER_LIFETIME',
   mtm_scanner_monthly: 'STRIPE_PRICE_MTM_SCANNER_MONTHLY',
