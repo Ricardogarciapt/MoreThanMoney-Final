@@ -24,7 +24,7 @@ import { CHAVE_AUTO_PUBLICAR, lerAutoPublicar } from "@/lib/agentes/social-agent
 import { lerInterruptor } from "@/lib/carrossel-diario/interruptor"
 
 export const dynamic = "force-dynamic"
-export const maxDuration = 60
+export const maxDuration = 300
 
 const MAX_PER_RUN = 4
 const MAX_ATTEMPTS = 3
@@ -36,6 +36,16 @@ export async function GET(request: NextRequest) {
 
   const supabase = getSupabaseAdmin()
   const nowIso = new Date().toISOString()
+
+  // Uma ronda que morreu a meio (timeout) deixa a linha em «publishing» para sempre. Passados
+  // 15 minutos sem mexer, volta a «approved» e entra nesta mesma ronda. A tentativa já foi contada,
+  // por isso ao fim de MAX_ATTEMPTS acaba em «failed» em vez de rodar sem fim.
+  await supabase
+    .from("social_scheduled_posts")
+    .update({ status: "approved", error: "retomado: a ronda anterior não terminou", updated_at: nowIso })
+    .eq("status", "publishing")
+    .lt("updated_at", new Date(Date.now() - 15 * 60_000).toISOString())
+    .lt("attempts", MAX_ATTEMPTS)
 
   // Elegíveis: aprovados cuja hora chegou, ou já em processamento (ex.: Reels em encoding).
   const { data: due, error } = await supabase
