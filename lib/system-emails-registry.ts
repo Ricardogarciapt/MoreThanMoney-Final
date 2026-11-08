@@ -275,7 +275,7 @@ export function renderSystemEmailHtml(
         'Scanner GoldKiller',
         data.username,
         data.siteUrl,
-        linksDoPlano('goldkiller_semestral'),
+        linksDoPlano('goldkiller_lifetime'),
       )
       break
     case 'vision_announcement':

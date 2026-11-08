@@ -96,4 +96,4 @@ Conteúdo educativo, não constitui consultoria financeira. Não executa ordens 
 - Quantum by MTM: https://www.tradingview.com/script/JxLihEk6/
 - Quantum Oscillator by MTM: https://www.tradingview.com/script/HLrwD3QG/
 
-Os links vão no email de acesso pós-compra (lib/scanners/links-tradingview.ts). Falta o `PUB;…` de cada um para o widget do scanner mobile (`lib/scanners/estudos.ts`).
+Os links vão no email de acesso pós-compra só nas compras vitalícias (lib/scanners/links-tradingview.ts). Falta o `PUB;…` de cada um para o widget do scanner mobile (`lib/scanners/estudos.ts`).

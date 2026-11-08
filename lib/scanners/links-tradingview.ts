@@ -3,7 +3,8 @@
  *
  * O acesso aos scanners é por convite (invite-only): o cliente dá o username, o admin acrescenta-o ao
  * script e, a partir daí, o script aparece em «Indicadores → Os Meus Scripts». Estes links levam-no
- * directamente à página de cada script, para o adicionar ao gráfico sem procurar.
+ * directamente à página de cada script, para o adicionar ao gráfico sem procurar — só nas compras
+ * vitalícias (regra do dono, 08/11/2026).
  *
  * Chaves: o planId do Stripe (lookup_key) ou a chave do scanner no catálogo. Um scanner pode ter mais
  * do que um script (o Quantum tem o painel de preço e o oscilador).
@@ -33,8 +34,18 @@ export function scannerDoPlano(planId: string | null | undefined): string | null
   return m ? m[1] : null
 }
 
-/** Links a mandar no email de acesso para um planId; vazio quando ainda não há script publicado registado. */
+/** O plano é vitalício (`*_lifetime` / `*_vitalicio`)? */
+export function planoVitalicio(planId: string | null | undefined): boolean {
+  return /_(lifetime|vitalicio)$/.test(String(planId ?? '').toLowerCase().trim())
+}
+
+/**
+ * Links a mandar no email de acesso para um planId. Regra do dono (08/11/2026): a página do script só
+ * se entrega nas compras VITALÍCIAS; no semestral o cliente recebe o convite e encontra o script em
+ * «Os Meus Scripts». Vazio também quando ainda não há script publicado registado.
+ */
 export function linksDoPlano(planId: string | null | undefined): readonly LinkScriptTradingView[] {
+  if (!planoVitalicio(planId)) return []
   const s = scannerDoPlano(planId)
   return (s && LINKS_SCRIPTS_POR_SCANNER[s]) || []
 }
