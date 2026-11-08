@@ -1,5 +1,6 @@
 {
  "estrategia": "Quantum",
+ "motor": "quantum",
  "marca": "MoreThanMoney",
  "cores": {
   "bull": "#3B7DDD",
