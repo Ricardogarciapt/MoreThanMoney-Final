@@ -19,6 +19,9 @@ const PRICE_ENV_KEYS: Record<string, string> = {
   // RocketNova by MTM (08/11/2026): mesma tabela do GoldKiller (50 € semestral / 350 € vitalício).
   rocketnova_semestral: 'STRIPE_PRICE_ROCKETNOVA_SEMESTRAL',
   rocketnova_lifetime: 'STRIPE_PRICE_ROCKETNOVA_LIFETIME',
+  // SniperPro by MTM (08/11/2026): código da casa (docs/pine/sniperpro*.pine), mesma tabela.
+  sniperpro_semestral: 'STRIPE_PRICE_SNIPERPRO_SEMESTRAL',
+  sniperpro_lifetime: 'STRIPE_PRICE_SNIPERPRO_LIFETIME',
   // MTM Premium Scanner (27/10/2026): só vitalício, 1250 €. Incluído no Premium.
   premium_scanner_lifetime: 'STRIPE_PRICE_PREMIUM_SCANNER_LIFETIME',
   mtm_scanner_monthly: 'STRIPE_PRICE_MTM_SCANNER_MONTHLY',

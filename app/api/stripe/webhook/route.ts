@@ -59,6 +59,8 @@ import {
   planoDaSubscricao,
 } from '@/lib/marketplace/subscricao-stripe'
 
+import { scriptTradingViewDoPlano } from '@/lib/scanners/scripts-tradingview'
+
 // Nomes amigáveis dos scanners por planId (para o email de instruções TradingView)
 const SCANNER_PLAN_NAMES: Record<string, string> = {
   goldkiller_semestral: 'Scanner Gold Killer (Semestral)',
@@ -71,6 +73,8 @@ const SCANNER_PLAN_NAMES: Record<string, string> = {
   defy_lifetime: 'DEFY by MTM (Vitalício)',
   rocketnova_semestral: 'RocketNova by MTM (Semestral)',
   rocketnova_lifetime: 'RocketNova by MTM (Vitalício)',
+  sniperpro_semestral: 'SniperPro by MTM (Semestral)',
+  sniperpro_lifetime: 'SniperPro by MTM (Vitalício)',
   premium_scanner_lifetime: 'MTM Premium Scanner (Vitalício)',
   mtm_scanner_monthly: 'Scanner MTM V3.4 (Mensal)',
   mtm_scanner_semestral: 'Scanner MTM V3.4 (Semestral)',
@@ -351,7 +355,8 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
           guestEmail,
           'Trader',
           SCANNER_PLAN_NAMES[planId],
-          tvUsername
+          tvUsername,
+          scriptTradingViewDoPlano(planId),
         )
       } catch (err) {
         console.error('Erro ao enviar email de scanner (guest):', err)
@@ -385,7 +390,8 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
           profile.email,
           profile.full_name || 'Trader',
           SCANNER_PLAN_NAMES[planId],
-          tvUsername
+          tvUsername,
+          scriptTradingViewDoPlano(planId),
         )
       }
 

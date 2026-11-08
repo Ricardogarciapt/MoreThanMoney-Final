@@ -41,7 +41,8 @@ export const scannerStudies: Record<ScannerKey, string[]> = {
   RocketNova: ["PUB;f2e9cd6359e946e99e6b843429ae6592"],
   // SniperPro by MTM (08/11/2026): versão própria em docs/pine/sniperpro.pine (painel de preço: bandas,
   // trend screener, nuvem Kalman, pivots e níveis-chave) + docs/pine/sniperpro-asst.pine (painel inferior).
-  // Quando o Ricardo publicar os dois estudos, trocar estes ids pelos PUB novos (2 em vez de 5).
+  // Publicado a 08/11/2026: https://br.tradingview.com/script/1v31p5j3/ (ver lib/scanners/scripts-tradingview.ts).
+  // Falta o PUB do estudo publicado para trocar estes ids (2 em vez de 5).
   Winzone: [
     "PUB;6c003d30b2154ef3a31074d5c703954f",
     "PUB;e6adb5e5246c43f4a8dcffde5c98db4e",

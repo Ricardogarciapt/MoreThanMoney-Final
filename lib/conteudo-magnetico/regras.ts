@@ -30,6 +30,7 @@ export const NOMES_INTOCAVEIS = [
   'TrendShot',
   'DEFY',
   'RocketNova',
+  'SniperPro',
   'Aurum Flow',
   'Tap to Trade',
   'WebTrader',

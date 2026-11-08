@@ -20,6 +20,7 @@ const SCANNER_LIFETIME_PLANS = new Set([
   'trendshot_lifetime',
   'defy_lifetime',
   'rocketnova_lifetime',
+  'sniperpro_lifetime',
 ])
 
 export async function POST(request: NextRequest) {

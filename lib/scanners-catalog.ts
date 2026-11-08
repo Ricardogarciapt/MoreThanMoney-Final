@@ -215,6 +215,33 @@ export const SCANNERS: ScannerData[] = [
     ],
   },
   {
+    key: "sniperpro",
+    name: "SniperPro by MTM",
+    subtitle: "Bandas · Trend Screener · Nuvem Kalman · Pivots",
+    image: "/scanners/sniperpro/poster.jpg",
+    badge: "Novo",
+    description:
+      "O SniperPro junta num só estudo o que antes eram cinco: bandas de exaustão a 1.5, 2 e 2.5 desvios, um trend screener com onze médias adaptativas e a tabela Bullish/Bearish · Trending/Consolidating/Pulling Back · força, uma nuvem Kalman que pinta as velas, Supertrend, Parabolic SAR, etiquetas de exaustão por volume, pivots S1–S7 / R1–R7 e níveis-chave com brilho. O painel inferior SniperPro Asst lê o momento com um RSI alisado, bandas de retest e divergências.",
+    features: [
+      "Bandas da média de 55 do (H+L)/2 a 1.5, 2 e 2.5 desvios, com a zona de exaustão preenchida",
+      "Trend Screener: onze VIDYA de Fibonacci (8 a 987) e tabela de tendência, estado e força",
+      "Nuvem Kalman 5/13 com velas coloridas; Supertrend que se esbate e Parabolic SAR",
+      "Pivots clássicos S1–S7 / R1–R7 com etiquetas e níveis-chave com brilho",
+      "Sinais «+N» no cruzamento Kalman com vela válida e votos de quatro ferramentas de tendência",
+    ],
+    techSpecs: [
+      "Etiquetas «Vol: N%» de exaustão por volume nos pivots (densidade de Gauss)",
+      "Painel inferior SniperPro Asst: Exp-RSI, canal de regressão, retest, reversal e divergências",
+      "Alertas JSON com entrada, stop (Supertrend 10/3) e alvos a 1R, 2R e 3R, prontos para webhook",
+      "Forex, ouro, índices e cripto, em qualquer timeframe; cada secção liga-se e desliga-se",
+      "Ferramenta educativa: não executa ordens nem garante resultados",
+    ],
+    products: [
+      { id: "sp-semestral", label: "Semestral", price: "50€", priceNote: "6 meses de acesso", planId: "sniperpro_semestral" },
+      { id: "sp-lifetime", label: "Vitalício", price: "350€", priceNote: "Pagamento único", planId: "sniperpro_lifetime", highlight: true },
+    ],
+  },
+  {
     key: "sensei",
     name: "MTM Sensei",
     subtitle: "Inteligência Artificial Avançada",
