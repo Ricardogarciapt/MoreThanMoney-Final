@@ -90,3 +90,10 @@ Quantum is invite-only. To request access, send a private message to this accoun
 O Quantum é um seguidor de tendência que entra em recuos. Lê o mercado em três tempos: confirma a direção com a linha primária, a seta de fase e o painel de força por timeframe; espera que o preço recue e que o oscilador entre na zona da direção; e só então dá o sinal de entrada, um triângulo de recuo, um ponto de onda ou os dois na mesma vela. Traz ainda a estrutura (HH, HL, LH, LL e linhas de tendência), as bandas de volatilidade e os máximos e mínimos das sessões de Nova Iorque, Londres e Ásia. Alertas com entrada, stop e alvo, prontos para webhook.
 
 Conteúdo educativo, não constitui consultoria financeira. Não executa ordens nem garante resultados.
+
+## Scripts publicados (08/11/2026)
+
+- Quantum by MTM: https://www.tradingview.com/script/JxLihEk6/
+- Quantum Oscillator by MTM: https://www.tradingview.com/script/HLrwD3QG/
+
+Os links vão no email de acesso pós-compra (lib/scanners/links-tradingview.ts). Falta o `PUB;…` de cada um para o widget do scanner mobile (`lib/scanners/estudos.ts`).

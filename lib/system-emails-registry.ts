@@ -18,6 +18,7 @@ import {
   welcomeEmailTemplate,
   adminBroadcastEmailTemplate,
 } from './email-templates'
+import { linksDoPlano } from './scanners/links-tradingview'
 import { CALENDLY_ONBOARDING_URL, SKOOL_FAST_START_URL } from './fast-start-journey'
 import { getSiteUrl } from './mail-transport'
 
@@ -274,6 +275,7 @@ export function renderSystemEmailHtml(
         'Scanner GoldKiller',
         data.username,
         data.siteUrl,
+        linksDoPlano('goldkiller_semestral'),
       )
       break
     case 'vision_announcement':
