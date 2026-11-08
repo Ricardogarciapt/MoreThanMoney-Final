@@ -141,6 +141,18 @@ export const SCANNER_LANDINGS: ScannerLanding[] = [
       "DEFY by MTM: bandas de exaustão, níveis-chave e confirmações com estrelas no TradingView, com entrada, Warning, stop e três alvos. 50€ por semestre ou 350€ vitalício.",
   },
   {
+    slug: "sniperpro",
+    key: "sniperpro",
+    poster: "/scanners/sniperpro/poster.jpg",
+    title: ["Cinco leituras.", "Um só gráfico."],
+    sub: "Bandas de exaustão, trend screener com tabela, nuvem Kalman, pivots e níveis-chave num só estudo, com o painel SniperPro Asst a ler o momento.",
+    markets: ["Forex", "Ouro (XAUUSD)", "Índices", "Cripto"],
+    description:
+      "O SniperPro lê o mercado em camadas. As bandas de 55 períodos dizem onde o preço está esticado. O trend screener corre onze médias adaptativas, de 8 a 987, e resume-as numa tabela: tendência, estado e força. A nuvem Kalman pinta as velas a favor ou contra. Os pivots e os níveis-chave marcam onde o preço reagiu antes. Quando o filtro curto cruza o longo numa vela válida e a maioria das ferramentas de tendência concorda, sai um sinal com pontuação e o plano por alerta: entrada, stop e três alvos.",
+    metaDescription:
+      "SniperPro by MTM: bandas de exaustão, trend screener com tabela, nuvem Kalman, pivots e níveis-chave no TradingView, com o painel SniperPro Asst. 50€ por semestre ou 350€ vitalício.",
+  },
+  {
     slug: "rocketnova",
     key: "rocketnova",
     video: "/scanners/rocketnova/apresentacao.mp4",
@@ -152,6 +164,21 @@ export const SCANNER_LANDINGS: ScannerLanding[] = [
       "O RocketNova junta a leitura de tendência das EMAs 20, 50 e 238 com a estrutura do preço: um sinal só nasce quando a média rápida cruza a lenta e há uma estrela de lançamento recente, um mínimo de swing para a compra ou um máximo para a venda. A Rocket Candle marca a vela de impulso, o Volatility Pulse diz se o ATR está acima do normal e o Trade Clock mostra se estás dentro da sessão e com volume. Entrada, stop e TP1 a TP4 ficam fixos na vela do sinal; depois do TP1 o stop passa para a entrada e um sinal contrário fecha a trade.",
     metaDescription:
       "RocketNova by MTM: EMAs 20/50/238, estrelas de lançamento, Rocket Candle e gestão da trade no TradingView, com entrada, stop e quatro alvos. 50€ por semestre ou 350€ vitalício.",
+  },
+  {
+    slug: "quantum",
+    key: "quantum",
+    video: "/scanners/quantum/apresentacao.mp4",
+    poster: "/scanners/quantum/poster.jpg",
+    videoEn: "/scanners/quantum/apresentacao-en.mp4",
+    posterEn: "/scanners/quantum/poster-en.jpg",
+    title: ["A tendência confirma-se primeiro.", "O recuo dá a entrada."],
+    sub: "Linha primária, seta de fase e painel de força por timeframe. Depois o recuo à fita, o oscilador na zona e o triângulo ou o ponto que dão a entrada.",
+    markets: ["Forex", "Ouro (XAUUSD)", "Índices", "Cripto"],
+    description:
+      "O Quantum lê o mercado em três tempos. Primeiro confirma a direção: a linha primária (média de 269 com brilho) fica azul com o preço por cima e vermelha por baixo, a seta grande marca o início da fase e o painel de força dá uma pontuação de 0 a 100 com uma seta por timeframe, de M1 a W1. Depois espera o recuo: o preço volta à fita das EMAs 8 e 21 e o oscilador Stoch RSI entra na zona da direção. Só então dá a entrada, um triângulo de recuo, um ponto de onda ou os dois na mesma vela, numa vela da cor da direção. A estrutura (HH, HL, LH, LL e linhas de tendência), as bandas de volatilidade e os máximos e mínimos das sessões completam a leitura. Stop para lá do extremo do recuo e alvo com o dobro do risco, por alertas.",
+    metaDescription:
+      "Quantum by MTM: seguidor de tendência com entradas em recuo no TradingView, com linha primária, painel de força por timeframe, oscilador e sinais de entrada. 50€ por semestre ou 350€ vitalício.",
   },
   {
     slug: "sensei",
@@ -280,6 +307,14 @@ const EN: Record<string, NonNullable<ScannerLanding["en"]>> = {
     ],
     metaDescription: "DEFY by MTM: exhaustion bands, key levels and confirmations with stars on TradingView, with entry, Warning, stop and three targets. €50 per six months or €350 lifetime.",
   },
+  sniperpro: {
+    title: ["Five readings.", "One chart."],
+    sub: "Exhaustion bands, a trend screener with its table, a Kalman cloud, pivots and key levels in one study, with the SniperPro Asst panel reading momentum.",
+    markets: ["Forex", "Gold (XAUUSD)", "Indices", "Crypto"],
+    description:
+      "SniperPro reads the market in layers. The 55-period bands show where price is stretched. The trend screener runs eleven adaptive averages, from 8 to 987, and sums them up in a table: bias, state and strength. The Kalman cloud colours the candles with or against the trend. Pivots and key levels mark where price has reacted before. When the short filter crosses the long one on a valid candle and most trend tools agree, a scored signal prints and the plan goes out by alert: entry, stop and three targets.",
+    metaDescription: "SniperPro by MTM: exhaustion bands, trend screener with table, Kalman cloud, pivots and key levels on TradingView, with the SniperPro Asst panel. €50 per six months or €350 lifetime.",
+  },
   rocketnova: {
     title: ["Lift off with the trend.", "With the plan on board."],
     sub: "Three averages, launch stars, the Rocket Candle and a volatility pulse. Every signal comes with entry, stop and four targets, and the management follows by alerts.",
@@ -301,6 +336,28 @@ const EN: Record<string, NonNullable<ScannerLanding["en"]>> = {
       "Forex, gold, indices and crypto; educational tool, it does not place orders",
     ],
     metaDescription: "RocketNova by MTM: 20/50/238 EMAs, launch stars, Rocket Candle and trade management on TradingView, with entry, stop and four targets. €50 per six months or €350 lifetime.",
+  },
+  quantum: {
+    title: ["The trend confirms first.", "The pullback gives the entry."],
+    sub: "Primary line, phase arrow and a strength panel per timeframe. Then the pullback to the ribbon, the oscillator in the zone and the triangle or dot that give the entry.",
+    markets: ["Forex", "Gold (XAUUSD)", "Indices", "Crypto"],
+    description:
+      "Quantum reads the market in three steps. First it confirms the direction: the primary line (a 269 average with a glow) turns blue with price above and red below, the large arrow marks the start of the phase and the strength panel gives a score from 0 to 100 with an arrow per timeframe, from M1 to W1. Then it waits for the pullback: price returns to the 8 and 21 EMA ribbon and the Stoch RSI enters the zone of the direction. Only then it gives the entry, a pullback triangle, a wave dot or both on the same candle, in a candle of the direction colour. Structure (HH, HL, LH, LL and trend lines), volatility bands and session highs and lows complete the read. Stop beyond the extreme of the pullback and a target at twice the risk, by alerts.",
+    features: [
+      "Primary line of 269 (EMA, SMA, WMA, HMA, RMA or VWMA), blue or red by phase, with a glow",
+      "Large phase arrow and a strength panel with a 0–100 score and arrows from M1 to W1",
+      "Pullback triangles (ribbon touch and close in favour) and wave dots (Stoch RSI leaving the zone)",
+      "HH/HL/LH/LL structure, trend lines through pivots and 2σ and 3σ volatility bands",
+      "New York, London and Asia session highs and lows, with labels",
+    ],
+    specs: [
+      "Stoch RSI 14 / %K 5 / smoothing 1 and 1, 80 and 20 zones, phase by a 260 EMA",
+      "21-bar swing for the labels and a 13-bar lookback for the trend lines",
+      "Signals on 5, 15 and 30 minutes switchable one by one; other timeframes always on",
+      "JSON alerts with entry, stop beyond the pullback, target at 2R and score, ready for webhooks",
+      "Forex, gold, indices and crypto; educational tool, it does not place orders",
+    ],
+    metaDescription: "Quantum by MTM: trend following with pullback entries on TradingView, with a primary line, strength panel per timeframe, oscillator and entry signals. €50 per six months or €350 lifetime.",
   },
   sensei: {
     title: ["Many readings.", "One confluence."],

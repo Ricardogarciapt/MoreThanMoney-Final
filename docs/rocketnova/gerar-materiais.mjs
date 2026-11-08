@@ -233,24 +233,27 @@ async function video(b, lang) {
 <div style="font:400 120px/1 Anton;color:#E9C46A">ROCKETNOVA by MTM</div><div style="font:800 40px Inter;color:#f3ede1;margin:26px 0 18px">${T.cta}</div>
 <div style="font:500 22px Inter;color:#8a877f;max-width:1100px">${T.aviso}</div></div>`)
   const p = await page(html, W, H, b, 1)
-  const ABRE = 3.0, CENA = 6.2, FIM = 4.0
-  const total = ABRE + 5 * CENA + FIM
+  // RN_TEMPOS='{"abre":s,"cenas":[s×5],"fim":s}' estica as cenas à narração (docs/rocketnova/narracao/montar.mjs)
+  const TEMPOS = process.env.RN_TEMPOS ? JSON.parse(process.env.RN_TEMPOS) : { abre: 3.0, cenas: [6.2, 6.2, 6.2, 6.2, 6.2], fim: 4.0 }
+  const ABRE = TEMPOS.abre, FIM = TEMPOS.fim, CENAS = TEMPOS.cenas
+  const INI = CENAS.reduce((a, c, i) => (a.push(a[i] + c), a), [ABRE])
+  const total = INI[5] + FIM
   const N = Math.round(total * FPS)
   const mp4 = path.join(OUT, `apresentacao${lang === 'en' ? '-en' : ''}.mp4`)
   const ff = spawn('ffmpeg', ['-y', '-v', 'error', '-f', 'image2pipe', '-framerate', String(FPS), '-c:v', 'mjpeg', '-i', '-', '-c:v', 'libx264', '-pix_fmt', 'yuv420p', '-crf', '21', '-preset', 'medium', '-movflags', '+faststart', mp4])
   const write = (buf) => new Promise((r) => (ff.stdin.write(buf) ? r() : ff.stdin.once('drain', r)))
   for (let n = 0; n < N; n++) {
     const t = n / FPS
-    await p.evaluate(([t, ABRE, CENA, FIM, total, lang, cenas]) => {
+    await p.evaluate(([t, ABRE, INI, CENAS, FIM, total, lang, cenas]) => {
       const abre = document.getElementById('abre'), fim = document.getElementById('fim'), cap = document.getElementById('cap')
       abre.style.opacity = t < ABRE - 0.4 ? '1' : '0'
       fim.style.opacity = t > total - FIM ? '1' : '0'
-      const k = Math.min(4, Math.max(0, Math.floor((t - ABRE) / CENA)))
-      const u = Math.max(0, Math.min(1, ((t - ABRE) - k * CENA) / (CENA * 0.8)))
+      let k = 0; while (k < 4 && t >= INI[k + 1]) k++
+      const u = Math.max(0, Math.min(1, (t - INI[k]) / (CENAS[k] * 0.8)))
       const e = 1 - Math.pow(1 - u, 2.2)
       window.draw('#c', k, e, lang)
       cap.textContent = cenas[k]
-    }, [t, ABRE, CENA, FIM, total, lang, T.cenas])
+    }, [t, ABRE, INI, CENAS, FIM, total, lang, T.cenas])
     const buf = await p.screenshot({ type: 'jpeg', quality: 90 })
     await write(buf)
     if (n % 150 === 0) console.log(lang, 'frame', n, '/', N)
@@ -262,7 +265,7 @@ async function video(b, lang) {
 }
 
 const b = await chromium.launch({ args: ['--allow-file-access-from-files'] })
-for (const lang of ['pt', 'en']) {
+for (const lang of (process.env.RN_LANG ? [process.env.RN_LANG] : ['pt', 'en'])) {
   if (what === 'all' || what === 'poster') await poster(b, lang)
   if (what === 'all' || what === 'capa') await capa(b, lang)
   if (what === 'all' || what === 'guia') await guia(b, lang)

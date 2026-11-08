@@ -5,6 +5,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import Stripe from 'stripe'
 import { getSupabaseAdmin } from '@/lib/supabase-admin-client'
 import { sendScannerAccessEmail, sendMTMcopierSetupNotification } from '@/lib/email-service'
+import { linksDoPlano } from '@/lib/scanners/links-tradingview'
 import { sanitizeEnv } from '@/lib/env-sanitize'
 import { createMailTransporter, mailFrom, prepareBrandedEmailHtml, brandedMailAttachments } from '@/lib/mail-transport'
 import {
@@ -58,7 +59,6 @@ import {
   ehSubscricaoDeMarketplace,
   planoDaSubscricao,
 } from '@/lib/marketplace/subscricao-stripe'
-import { linkTradingViewDoPlano } from '@/lib/scanners-tradingview'
 
 // Nomes amigáveis dos scanners por planId (para o email de instruções TradingView)
 const SCANNER_PLAN_NAMES: Record<string, string> = {
@@ -72,6 +72,10 @@ const SCANNER_PLAN_NAMES: Record<string, string> = {
   defy_lifetime: 'DEFY by MTM (Vitalício)',
   rocketnova_semestral: 'RocketNova by MTM (Semestral)',
   rocketnova_lifetime: 'RocketNova by MTM (Vitalício)',
+  quantum_semestral: 'Quantum by MTM (Semestral)',
+  quantum_lifetime: 'Quantum by MTM (Vitalício)',
+  sniperpro_semestral: 'SniperPro by MTM (Semestral)',
+  sniperpro_lifetime: 'SniperPro by MTM (Vitalício)',
   premium_scanner_lifetime: 'MTM Premium Scanner (Vitalício)',
   mtm_scanner_monthly: 'Scanner MTM V3.4 (Mensal)',
   mtm_scanner_semestral: 'Scanner MTM V3.4 (Semestral)',
@@ -353,7 +357,7 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
           'Trader',
           SCANNER_PLAN_NAMES[planId],
           tvUsername,
-          linkTradingViewDoPlano(planId),
+          linksDoPlano(planId),
         )
       } catch (err) {
         console.error('Erro ao enviar email de scanner (guest):', err)
@@ -388,7 +392,7 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
           profile.full_name || 'Trader',
           SCANNER_PLAN_NAMES[planId],
           tvUsername,
-          linkTradingViewDoPlano(planId),
+          linksDoPlano(planId),
         )
       }
 

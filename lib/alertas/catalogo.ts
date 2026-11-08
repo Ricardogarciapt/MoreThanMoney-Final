@@ -64,6 +64,7 @@ export function chaveDeSubscricao(valor: unknown): ScannerKey | null {
   if (n === 'premiumscanner' || n === 'mtmpremiumscanner' || n === 'mtmautopremiumii') return 'premiumscanner'
   if (n === 'defy' || n === 'mtmautodefy') return 'defy'
   if (n === 'rocketnova' || n === 'mtmautorocketnova') return 'rocketnova'
+  if (n === 'quantum' || n === 'mtmautoquantum' || n === 'quantumbymtm') return 'quantum'
   if (n === 'premium' || n === 'mtmautopremium' || n === 'mtmpremium') return 'premium'
   if (n === 'aurum' || n === 'aurumflow' || n === 'mtmaurumflow' || n === 'mtmaurumflowcripto') return 'aurum'
   return null
