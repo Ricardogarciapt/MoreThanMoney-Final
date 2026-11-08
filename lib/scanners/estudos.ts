@@ -88,6 +88,8 @@ export const ESTUDOS_WEBTRADER = [
   { chave: "PremiumScanner", rotulo: "Premium Scanner", alerta: "premiumscanner", acesso: "PremiumScanner", curto: "PS", cor: "#E9C46A" },
   // RocketNova (08/11): as setas dos sinais por webhook; o estudo publicado entra quando existir.
   { chave: "RocketNova", rotulo: "RocketNova", alerta: "rocketnova", acesso: "RocketNova", curto: "RN", cor: "#D2A63C" },
+  // Quantum by MTM (08/11): as setas dos sinais por webhook; o estudo publicado troca o de terceiros quando existir.
+  { chave: "Sinergy", rotulo: "Quantum", alerta: "quantum", acesso: "Quantum", curto: "QT", cor: "#3B7DDD" },
 ] as const
 
 export type EstudoWebtrader = (typeof ESTUDOS_WEBTRADER)[number]

@@ -5,6 +5,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import Stripe from 'stripe'
 import { getSupabaseAdmin } from '@/lib/supabase-admin-client'
 import { sendScannerAccessEmail, sendMTMcopierSetupNotification } from '@/lib/email-service'
+import { linksDoPlano } from '@/lib/scanners/links-tradingview'
 import { sanitizeEnv } from '@/lib/env-sanitize'
 import { createMailTransporter, mailFrom, prepareBrandedEmailHtml, brandedMailAttachments } from '@/lib/mail-transport'
 import {
@@ -353,7 +354,8 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
           guestEmail,
           'Trader',
           SCANNER_PLAN_NAMES[planId],
-          tvUsername
+          tvUsername,
+          linksDoPlano(planId),
         )
       } catch (err) {
         console.error('Erro ao enviar email de scanner (guest):', err)
@@ -387,7 +389,8 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
           profile.email,
           profile.full_name || 'Trader',
           SCANNER_PLAN_NAMES[planId],
-          tvUsername
+          tvUsername,
+          linksDoPlano(planId),
         )
       }
 
