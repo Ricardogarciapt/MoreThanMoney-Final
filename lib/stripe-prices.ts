@@ -22,6 +22,9 @@ const PRICE_ENV_KEYS: Record<string, string> = {
   // Quantum by MTM (08/11/2026): mesma tabela (50 € semestral / 350 € vitalício).
   quantum_semestral: 'STRIPE_PRICE_QUANTUM_SEMESTRAL',
   quantum_lifetime: 'STRIPE_PRICE_QUANTUM_LIFETIME',
+  // Golden Zone by MTM (08/11/2026): mesma tabela (50 € semestral / 350 € vitalício).
+  goldenzone_semestral: 'STRIPE_PRICE_GOLDENZONE_SEMESTRAL',
+  goldenzone_lifetime: 'STRIPE_PRICE_GOLDENZONE_LIFETIME',
   // MTM Premium Scanner (27/10/2026): só vitalício, 1250 €. Incluído no Premium.
   premium_scanner_lifetime: 'STRIPE_PRICE_PREMIUM_SCANNER_LIFETIME',
   mtm_scanner_monthly: 'STRIPE_PRICE_MTM_SCANNER_MONTHLY',

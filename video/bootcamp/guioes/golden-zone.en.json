@@ -171,7 +171,7 @@
       "Exit 1 and Exit 2: the targets, in green",
       "Invalidation: the stop, in red. The white flag marks the end"
      ],
-     "fala": "Let's go piece by piece. First, the yellow tick. It appears over the signal candle, together with the yellow box, which is the action zone. The tick is a warning, not the entry candle. It only means the scanner found a setup that deserves attention. The parameters are still missing, and there's no trade yet. Second, the action zone. This is the area where, in theory, you place your limit order and wait for the price to return. Notice that the zone is a box, not a line, because the price rarely respects one exact value. Third, the exits. When the next five-minute candle closes after the tick, Exit 1 and Exit 2 appear, the two targets, in green. And the invalidation, in red, which is the level where the idea stops making sense. Without these three levels there's no trade. It isn't optional, it's the rule. Fourth, the white flag. When it appears, the trade is over. It may have won, it may have lost, or the price may have reached the targets without returning to the zone. With the flag in view, you don't enter. The flag is a closing piece of information. It tells you the moment has passed."
+     "fala": "Let's go piece by piece. First, the yellow tick. It appears over the signal candle, together with the yellow box, which is the action zone. The tick is a warning, not the entry candle. It only means the scanner found a setup that deserves attention. The parameters are still missing, and there's no trade yet. Second, the action zone. This is the area where, in theory, you place your limit order and wait for the price to return. Notice that the zone is a box, not a line, because the price rarely respects one exact value. Third, the exits. When the price pulls back to the action zone, Exit 1 and Exit 2 appear, the two targets, in green. And the invalidation, in red, which is the level where the idea stops making sense. Without these three levels there's no trade. It isn't optional, it's the rule. Fourth, the white flag. It appears when the price touches Exit 1, or the invalidation. When it appears, the trade is over: it paid, or it lost. With the flag in view, you don't enter. The flag is a closing piece of information. It tells you the moment has passed."
     },
     {
      "id": "v1-10",
@@ -218,11 +218,11 @@
      "titulo": "From the tick to the plan",
      "itens": [
       "The tick appears over the signal candle",
-      "You wait for the next five-minute candle to close",
+      "You wait for the price to pull back to the action zone",
       "Only then do the exits and invalidation appear",
       "No complete plan, no trade"
      ],
-     "fala": "The sequence is always the same, and the order matters. First, the yellow tick appears over the signal candle. At that moment you have nothing to execute yet. Second, you wait for the next five-minute candle to close. Only at that close do Exit 1, Exit 2 and the invalidation appear. Before that, what you have is a warning. Third, you read all the levels, and only then look at the confirmations. The temptation is to jump straight to the tick and start imagining the entry. The guide asks for a different order: first the reading, then the validation, and only then the plan. Once you get used to this sequence, you stop acting on impulse. If the candle hasn't closed yet, there's no plan to read and no decision to make. This detail seems small, but it's what separates someone who waits from someone who gets ahead of the chart."
+     "fala": "The sequence is always the same, and the order matters. First, the yellow tick appears over the signal candle. At that moment you have nothing to execute yet. Second, you wait for the price to pull back to the action zone. Only on that pullback do Exit 1, Exit 2 and the invalidation appear. Before that, what you have is a warning. Third, you read all the levels, and only then look at the confirmations. The temptation is to jump straight to the tick and start imagining the entry. The guide asks for a different order: first the reading, then the validation, and only then the plan. Once you get used to this sequence, you stop acting on impulse. If the price hasn't pulled back to the zone yet, there's no plan to read and no decision to make. This detail seems small, but it's what separates someone who waits from someone who gets ahead of the chart."
     },
     {
      "id": "v1-13",
@@ -231,13 +231,13 @@
      "kicker": "Quick read",
      "titulo": "Five questions to ask the chart",
      "itens": [
-      "Is there a yellow tick, and has the next candle closed?",
+      "Is there a yellow tick, and has the price pulled back to the zone?",
       "Is the yellow box over the signal candle?",
       "Are Exit 1, Exit 2 and the invalidation drawn?",
       "Is there a white flag on the chart?",
       "Are you looking at the current signal, not an old one?"
      ],
-     "fala": "Before you look at the confirmations, five quick questions. Is there a yellow tick, and has the next candle closed? Is the yellow box over the signal candle? Are Exit 1, Exit 2 and the invalidation drawn? Is there a white flag on the chart, meaning a trade that has already finished? And are you looking at the current signal, not one that the next signal has already erased? If the answer to any of these is no, stop there. There's no trade to analyse. Only when all five answers are right do you move on to validation."
+     "fala": "Before you look at the confirmations, five quick questions. Is there a yellow tick, and has the price pulled back to the zone? Is the yellow box over the signal candle? Are Exit 1, Exit 2 and the invalidation drawn? Is there a white flag on the chart, meaning a trade that has already finished? And are you looking at the current signal, not one that the next signal has already erased? If the answer to any of these is no, stop there. There's no trade to analyse. Only when all five answers are right do you move on to validation."
     },
     {
      "id": "v1-14",
@@ -405,13 +405,13 @@
      "kicker": "Step by step",
      "titulo": "From reading to order",
      "itens": [
-      "Wait for the close of the candle after the tick",
+      "Wait for the price to pull back to the action zone",
       "Validate the four confirmations",
       "Place the limit order inside the zone",
       "Stop beyond the most extreme wick",
       "Calculate the size before sending"
      ],
-     "fala": "Let's put this in sequence, at the guide's pace. One: wait for the five-minute candle after the tick to close. Two: validate the four confirmations. If the trend is against the signal, let it go, and there's nothing more to do. Three: place a limit order inside the action zone. It isn't a market order. You want the price to come back to the zone and find you there. Four: the stop. Put it beyond the invalidation and beyond the most extreme wick of the previous candles. Five: confirm the targets, Exit 1 and Exit 2. And six, the most important, before you send the order: calculate the position size based on your account and the risk you decided on. A signal that looks good on the chart, but doesn't fit your risk, isn't a trade for you. Only after all of this does the order go to the market."
+     "fala": "Let's put this in sequence, at the guide's pace. One: wait for the price to pull back to the action zone, after the tick. Two: validate the four confirmations. If the trend is against the signal, let it go, and there's nothing more to do. Three: place a limit order inside the action zone. It isn't a market order. You want the price to come back to the zone and find you there. Four: the stop. Put it beyond the invalidation and beyond the most extreme wick of the previous candles. Five: confirm the targets, Exit 1 and Exit 2. And six, the most important, before you send the order: calculate the position size based on your account and the risk you decided on. A signal that looks good on the chart, but doesn't fit your risk, isn't a trade for you. Only after all of this does the order go to the market."
     },
     {
      "id": "v2-08",
@@ -472,7 +472,7 @@
      "tipo": "grafico",
      "cap": "03 · When not to enter",
      "kicker": "When the zone doesn't come back",
-     "titulo": "White flag, no entry",
+     "titulo": "The zone expires, no entry",
      "cenario": "falha",
      "seed": 7,
      "base": [
@@ -492,8 +492,8 @@
       0,
       0.5
      ],
-     "rotulo": "White flag",
-     "fala": "Look at this example. There's a yellow tick, there's a zone, and there's a plan. But the price rises beyond Exit 2 and never returns to the action zone. At no point was an entry possible, because the price never came back. The scanner marks the white flag. The trade is over, with no entry, no gain and no loss. This is one of the most useful situations for a beginner, because it shows that not every signal has an entry. Some people find this frustrating, and that's understandable. But notice: if you had chased the price, you would have entered far from the zone, with a stop that no longer made sense. Not entering was consistent with the process, even if it didn't feel that way. Record in your journal that there was a signal and no trade."
+     "rotulo": "No entry",
+     "fala": "Look at this example. There's a yellow tick and there's a zone. But the price rises beyond Exit 2 and never returns to the action zone. At no point was an entry possible, because the price never came back. The plan never appeared and the scanner removes the zone. The signal is over, with no entry, no gain and no loss. This is one of the most useful situations for a beginner, because it shows that not every signal has an entry. Some people find this frustrating, and that's understandable. But notice: if you had chased the price, you would have entered far from the zone, with a stop that no longer made sense. Not entering was consistent with the process, even if it didn't feel that way. Record in your journal that there was a signal and no trade."
     },
     {
      "id": "v2-12",

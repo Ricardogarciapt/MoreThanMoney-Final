@@ -215,6 +215,33 @@ export const SCANNERS: ScannerData[] = [
     ],
   },
   {
+    key: "goldenzone",
+    name: "Golden Zone by MTM",
+    subtitle: "Níveis psicológicos · Zona de ação · Saída 1 e 2 · Ouro em 5 minutos",
+    image: "/scanners/golden-zone/poster.jpg",
+    badge: "Novo",
+    description:
+      "A Golden Zone é o scanner de scalping de ouro da MTM, com código da casa. Desenha os níveis psicológicos de 5 em 5 $ e, quando uma vela fecha para lá de um nível a favor da tendência, marca o visto amarelo e a zona de 1 $ centrada nesse nível. Só quando o preço recua à zona de ação é que dá os parâmetros da posição: invalidação a 1,5 $ (150 pontos), Saída 1 a +1,5 $ e Saída 2 a +3 $. Ao tocar a Saída 1 aparece a bandeira branca. Cada visto novo apaga o anterior, por isso acompanha-se ao vivo no gráfico de 5 minutos.",
+    features: [
+      "Dez linhas psicológicas à volta do preço (5 $ no ouro; passo automático noutros mercados)",
+      "Visto amarelo e caixa da zona quando a vela atravessa o nível a favor da tendência (EMA 50/200)",
+      "Zona de ação, invalidação, Saída 1 e Saída 2 escritas na linha, com o preço, só depois do recuo",
+      "Bandeira branca na Saída 1; Saída 2 ou invalidação fecham o plano; o visto seguinte limpa o gráfico",
+      "Tabela de estatísticas (sinais, planos, Saídas e invalidações), desligada por omissão",
+    ],
+    techSpecs: [
+      "Zona de 1 $ centrada no nível; stop a 3 × meia zona (1,5 $ = 150 pontos no ouro), ajustável",
+      "Offset de 20 velas para as linhas e para a validade da zona à espera do recuo",
+      "Cores da zona de ação, Saída 1, Saída 2 e invalidação à tua escolha; EMAs 50/200 opcionais",
+      "Alertas JSON por evento (visto, plano, Saída 1, Saída 2, invalidação), prontos para webhook",
+      "Pensado para o XAUUSD em 5 minutos; ferramenta educativa, não executa ordens",
+    ],
+    products: [
+      { id: "gz-semestral", label: "Semestral", price: "50€", priceNote: "6 meses de acesso", planId: "goldenzone_semestral" },
+      { id: "gz-lifetime", label: "Vitalício", price: "350€", priceNote: "Pagamento único", planId: "goldenzone_lifetime", highlight: true },
+    ],
+  },
+  {
     key: "quantum",
     name: "Quantum by MTM",
     subtitle: "Tendência · Recuo · Oscilador · Painel de força",

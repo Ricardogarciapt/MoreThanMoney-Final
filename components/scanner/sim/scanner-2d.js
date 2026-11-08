@@ -186,7 +186,8 @@ export function drawCard(canvas, sim, card, progress = 1, lang = 'pt') {
   // Marcadores.
   for (const m of sim.markers || []) {
     if (!L.markers || m.i > cur || m.i < a || m.i > b) continue
-    pill(ctx, X(m.i), Y(m.price) + (m.up ? 14 : -14), T(m.text), m.color, { fg: '#fff', size: m.small ? 9 : 10, align: 'center' })
+    if (m.to != null && m.to <= cur) continue
+    pill(ctx, X(m.i), Y(m.price) + (m.up ? 14 : -14), T(m.text), m.color, { fg: m.fg || '#fff', size: m.small ? 9 : 10, align: 'center' })
   }
 
   // Painel (tabela de tendência ou confirmações).

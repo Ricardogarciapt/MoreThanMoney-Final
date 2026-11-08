@@ -29,6 +29,8 @@ export type ScannerKey = (typeof scannerOrder)[number]
 
 // Scanners MTM
 export const scannerStudies: Record<ScannerKey, string[]> = {
+  // Golden Zone by MTM (08/11/2026): código próprio em docs/pine/golden-zone.pine. O id abaixo ainda é o
+  // estudo antigo — trocar pelo PUB do script da casa (invite-only) quando o Ricardo o publicar.
   GoldenZone: ["PUB;0b373fb0e6634a73bc8b838cf0690725"],
   Momentum: ["PUB;00ec48baf0ee43f0a43e1658bb54cdab", "PUB;38080827cf244587b5e7dbb9f272db0a"],
   // v2 (29/09/2026): só o motor de rompimento. O de reversão media −0,200R por trade com um
