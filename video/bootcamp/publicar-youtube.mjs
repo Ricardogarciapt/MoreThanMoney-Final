@@ -108,12 +108,6 @@ function ficha(txt) { const sec = n => (txt.split(`\n${n}\n`)[1] || '').split(/\
 
 let pend = 0
 try {
-  // vídeos substituídos (--refazer): apagar do canal
-  for (const id of [...(pub._apagar || [])]) {
-    const r = await fetch(`${API}/videos?id=${id}`, { method: 'DELETE', headers: H })
-    if (r.ok || r.status === 404) { pub._apagar = pub._apagar.filter(x => x !== id); grava(); console.log(`apagado do YouTube: ${id}`) }
-    else await chk(r, 'apagar vídeo')
-  }
   // nomes das playlists pedidos nos guiões
   for (const f of fs.readdirSync(path.join(DIR, 'guioes')).filter(f => /\.pt\.json$/.test(f))) {
     const est = f.replace('.pt.json', '')
@@ -166,6 +160,13 @@ try {
       pend--
     }
   }
+  // vídeos substituídos (--refazer): só se apagam do canal depois de os novos estarem todos publicados
+  if (pend === 0) for (const id of [...(pub._apagar || [])]) {
+    const r = await fetch(`${API}/videos?id=${id}`, { method: 'DELETE', headers: H })
+    if (r.ok || r.status === 404) { pub._apagar = pub._apagar.filter(x => x !== id); grava(); console.log(`apagado do YouTube: ${id}`) }
+    else await chk(r, 'apagar vídeo')
+  }
+  else if ((pub._apagar || []).length) console.log(`${pub._apagar.length} vídeo(s) antigos por apagar: esperam que os novos subam`)
 } catch (e) {
   if (e instanceof Quota) { console.log('QUOTA do YouTube esgotada por hoje; retoma amanhã sozinho.'); process.exit(3) }
   throw e
