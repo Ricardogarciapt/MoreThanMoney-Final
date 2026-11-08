@@ -12,7 +12,7 @@ Golden Zone by MTM
 Golden Zone by MTM is a gold scalping tool for the 5-minute chart. It does not chase price: it marks the
 level where price broke out and waits for the pullback.
 
-**Psychological levels.** Lines every 5 $ in gold (automatic step in other markets), ten around price.
+**Psychological levels.** Black lines every 5 $ in gold (automatic step in other markets), ten around price. They are the only fixed lines on the chart; every other line belongs to the active position.
 
 **Check and zone.** When a candle closes beyond a level with the trend (EMA 50 over EMA 200 for buys, under
 for sells), a yellow check appears above the candle together with a 1 $ box centred on the level. The
@@ -27,9 +27,9 @@ A new check clears the previous drawings, so the tool is followed live.
 
 **Stats table** (off by default): signals, plans, Exit 1 / Exit 2 hits, invalidations and Exit 1 rate.
 
-**Inputs:** psychological lines (count, colour, optional box lines), zone colours, stats table (position,
-size), colours of the zone of action, Exit 1, Exit 2 and invalidation, offset (20), psychological step
-(0 = auto), stop distance in half zones (3 = 1.5 $ in gold), trend filter and optional EMAs.
+**Inputs:** psychological lines (count, colour), zone colours, stats table (position, size), colours of
+the zone of action, Exit 1, Exit 2 and invalidation and offset (20) for the active position, psychological
+step (0 = auto), stop distance in half zones (3 = 1.5 $ in gold) and the trend filter (the EMAs are not drawn).
 
 **Alerts.** Create one alert with *Any alert() function call*, once per bar close. Each event goes out as
 JSON (`signal`, `plan`, `exit1`, `exit2`, `invalidation`) with the level, zone, invalidation, Exit 1 and

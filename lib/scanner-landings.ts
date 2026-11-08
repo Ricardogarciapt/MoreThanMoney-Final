@@ -339,7 +339,7 @@ const EN: Record<string, NonNullable<ScannerLanding["en"]>> = {
     description:
       "Golden Zone does not send you chasing price. It draws the psychological levels every 5 $ in gold and, when a candle closes beyond a level with the trend of the 50 and 200 averages, it marks the yellow check and the 1 $ box centred on that level. The zone of action is the edge on the price side. Only when price pulls back to that zone does the scanner give the parameters: invalidation 1.5 $ away (150 points), Exit 1 at +1.5 $ and Exit 2 at +3 $, written on the line with the price. When Exit 1 is touched the white flag appears; Exit 2 or the invalidation close the plan, and the next check clears the chart. You decide whether to enter, after the four confirmations of the guide.",
     features: [
-      "Ten psychological lines around price (5 $ in gold; automatic step in other markets)",
+      "Ten black psychological lines around price (5 $ in gold; automatic step in other markets), the only fixed lines",
       "Yellow check and zone box when the candle crosses the level with the trend (EMA 50/200)",
       "Zone of action, invalidation, Exit 1 and Exit 2 written on the line, with the price, only after the pullback",
       "White flag at Exit 1; Exit 2 or the invalidation close the plan; the next check clears the chart",
@@ -348,7 +348,7 @@ const EN: Record<string, NonNullable<ScannerLanding["en"]>> = {
     specs: [
       "1 $ zone centred on the level; stop at 3 × half zone (1.5 $ = 150 points in gold), adjustable",
       "20-bar offset for the lines and for how long the zone waits for the pullback",
-      "Your own colours for the zone of action, Exit 1, Exit 2 and invalidation; optional 50/200 EMAs",
+      "Your own colours for the zone of action, Exit 1, Exit 2 and invalidation; the chart only shows the 5 $ lines and the active position",
       "JSON alerts per event (check, plan, Exit 1, Exit 2, invalidation), ready for webhooks",
       "Built for XAUUSD on 5 minutes; educational tool, it does not place orders",
     ],

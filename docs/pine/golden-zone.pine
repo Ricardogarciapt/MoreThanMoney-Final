@@ -10,8 +10,8 @@
 // GOLDEN ZONE by MTM — scalping de ouro em 5 minutos: níveis psicológicos, zona de ação e plano
 //
 // PRINCÍPIOS (código próprio da casa):
-//  1. Níveis psicológicos: linhas de 5 em 5 $ no ouro (4060, 4065, 4070 …). Passo automático
-//     por mercado, ou fixo no input. Mostram-se N linhas à volta do preço.
+//  1. Níveis psicológicos: linhas pretas de 5 em 5 $ no ouro (4060, 4065, 4070 …), as únicas linhas fixas
+//     do gráfico. Passo automático por mercado, ou fixo no input. Mostram-se N linhas à volta do preço.
 //  2. Zona: caixa amarela de 1 $ centrada no nível (4069,50 – 4070,50). A ZONA DE AÇÃO é a aresta
 //     do lado do preço (compra: 4070,50 · venda: 4069,50); a outra aresta é a ponta da zona.
 //  3. Visto ✓: quando uma vela fecha para lá da zona de ação, a favor da tendência (EMA 50 vs 200),
@@ -37,11 +37,9 @@ indicator("Golden Zone by MTM", shorttitle="Golden Zone by MTM", overlay=true, m
 // INPUTS (a mesma disposição do scanner de referência)
 // ════════════════════════════════════════════════════════════════
 gPsy       = "PSYCHOLOGICAL LEVELS"
-showPsy    = input.bool(true,  "Show psychological lines", group=gPsy)
-showPsyBox = input.bool(false, "Show psychological box lines", group=gPsy, tooltip="Linhas finas nas arestas de cada zona (nível ± meia zona).")
+showPsy    = input.bool(true,  "Show psychological lines", group=gPsy, tooltip="As únicas linhas fixas do gráfico: uma em cada nível de 5 $ do ouro, a preto.")
 psyCount   = input.int(10, "Psychological line count", minval=2, maxval=40, group=gPsy, tooltip="Número de níveis à volta do preço (metade acima, metade abaixo).")
-psyCol     = input.color(#787B86, "Psychological line color", inline="pc", group=gPsy)
-psyBoxCol  = input.color(#787B86, "", inline="pc", group=gPsy)
+psyCol     = input.color(#000000, "Psychological line color", group=gPsy)
 
 gZone      = "ZONE"
 showZones  = input.bool(true, "Show zones", inline="z", group=gZone)
@@ -60,13 +58,12 @@ colZone    = input.color(#787B86, "Zone of action", group=gDisp)
 colExit1   = input.color(#4CAF50, "Exit 1", group=gDisp)
 colExit2   = input.color(#4CAF50, "Exit 2", group=gDisp)
 colInval   = input.color(#E57373, "Invalidation zone", group=gDisp)
-offset     = input.int(20, "Offset", minval=1, maxval=200, group=gDisp, tooltip="Velas para a direita das linhas do plano e validade da zona à espera do recuo.")
+offset     = input.int(20, "Offset", minval=1, maxval=200, group=gDisp, tooltip="Velas para a direita das linhas do plano e validade da zona à espera do recuo. As cores e o offset deste grupo são só da posição activa.")
 
 gMtm       = "MTM"
 stepIn     = input.float(0.0, "Psychological step (0 = auto)", minval=0.0, step=0.5, group=gMtm, tooltip="Distância entre níveis. 0 = automático: 5 $ no ouro; noutros mercados, um passo proporcional ao preço.")
 riskMult   = input.float(3.0, "Stop distance (× half zone)", minval=1.0, step=0.5, group=gMtm, tooltip="Com a zona de 1 $ (meia zona 0,5 $), 3 × 0,5 = 1,5 $ = 150 pontos: invalidação a −1,5 $, Exit 1 a +1,5 $, Exit 2 a +3 $.")
-useTrend   = input.bool(true, "Trend filter (EMA 50 / 200)", group=gMtm, tooltip="Compras só com a EMA 50 acima da 200; vendas só com a 50 abaixo da 200.")
-showEma    = input.bool(false, "Show EMA 50 / 200", group=gMtm)
+useTrend   = input.bool(true, "Trend filter (EMA 50 / 200)", group=gMtm, tooltip="Compras só com a EMA 50 acima da 200; vendas só com a 50 abaixo da 200. As médias não se desenham: no gráfico só há as linhas de 5 $ e a posição activa.")
 lblLang    = input.string("EN", "Labels language", options=["EN", "PT"], group=gMtm, tooltip="EN: Zone of action / Exit 1 / Exit 2 / Invalidation zone · PT: Zona de ação / Saída 1 / Saída 2 / Invalidação.")
 chave      = input.string("GOLDENZONE", "strategy (chave no webhook)", group=gMtm)
 
@@ -276,25 +273,16 @@ if hitInval
     nInval += 1
 
 // níveis psicológicos à volta do preço (redesenhados na última vela)
+// (as únicas linhas fixas do gráfico; as EMAs do filtro de tendência não se desenham)
 var line[]  psyLines = array.new<line>()
-var line[]  psyBoxes = array.new<line>()
 if barstate.islast
     while array.size(psyLines) > 0
         line.delete(array.pop(psyLines))
-    while array.size(psyBoxes) > 0
-        line.delete(array.pop(psyBoxes))
-    if showPsy or showPsyBox
+    if showPsy
         int halfN = math.max(1, psyCount / 2)
         for k = -halfN to halfN
             float p = lvlBelow + k * step
-            if showPsy
-                array.push(psyLines, line.new(bar_index - 500, p, bar_index + offset, p, color=psyCol, width=1, extend=extend.both))
-            if showPsyBox
-                array.push(psyBoxes, line.new(bar_index - 500, p + half, bar_index + offset, p + half, color=color.new(psyBoxCol, 60), width=1, style=line.style_dotted, extend=extend.both))
-                array.push(psyBoxes, line.new(bar_index - 500, p - half, bar_index + offset, p - half, color=color.new(psyBoxCol, 60), width=1, style=line.style_dotted, extend=extend.both))
-
-plot(showEma ? ema50 : na,  "EMA 50",  color=#2962FF, linewidth=1)
-plot(showEma ? ema200 : na, "EMA 200", color=#FF9800, linewidth=1)
+            array.push(psyLines, line.new(bar_index - 500, p, bar_index + offset, p, color=psyCol, width=1, extend=extend.both))
 
 // tabela de estatísticas
 var table st = na
