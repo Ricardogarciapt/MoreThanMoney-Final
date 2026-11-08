@@ -1,5 +1,6 @@
 {
  "estrategia": "Sniper Pro",
+ "motor": "sniper-pro",
  "marca": "MoreThanMoney",
  "cores": {
   "bull": "#2A7BE4",
@@ -145,7 +146,7 @@
      "kicker": "Golden candle",
      "titulo": "The golden candle and the arrow",
      "cenario": "venda",
-     "seed": 11,
+     "seed": 7,
      "base": ["cores"],
      "camadas": ["niveis", "sinal"],
      "ate": [0.55, 0.66],
@@ -332,7 +333,7 @@
      "kicker": "Full sequence",
      "titulo": "A sell with a plus eight",
      "cenario": "venda",
-     "seed": 11,
+     "seed": 7,
      "base": ["cores", "niveis"],
      "camadas": ["medias", "sinal", "plano"],
      "ate": [0.45, 0.7],
