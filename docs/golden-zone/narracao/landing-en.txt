@@ -1,7 +1,7 @@
 This is Golden Zone, the MoreThanMoney gold scalping scanner, now with our own code.
 The chart starts with the psychological levels: lines every five dollars, ten around price. That is where gold tends to react.
 When a candle closes beyond a level with the trend, the yellow check and the one-dollar box centred on that level appear. The zone of action is the edge on the price side. There is no plan yet.
-On the close of the next candle the scanner gives the parameters: invalidation one hundred and fifty points away, Exit one at plus one and a half dollars, Exit two at plus three. The entry is yours, with a limit order in the zone when price pulls back. When Exit one is touched the white flag appears. Exit two or the invalidation close the plan, and the next check clears the chart.
+On the close of the next candle the scanner gives the parameters: invalidation one hundred and fifty points away, Exit one at plus one and a half dollars, Exit two at plus three. The entry is yours, with a limit order in the zone when price pulls back. When Exit one is touched the gold flag appears. Exit two or the invalidation close the plan, and the next check clears the chart.
 You decide whether to enter, after the four confirmations: trend, support and resistance, candle pattern and imbalances. Every event goes out as an alert, ready for webhooks.
 Built for gold on the five-minute chart.
 See the demo at morethanmoney dot pt slash en slash scanner slash golden zone.

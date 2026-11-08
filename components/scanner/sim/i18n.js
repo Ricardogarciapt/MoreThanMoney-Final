@@ -36,7 +36,7 @@ const EN = {
   'Níveis psicológicos de 5 em 5 $ no ouro, em 5 minutos': 'Psychological levels every 5 $ in gold, on 5 minutes',
   'A vela fecha para lá do nível, a favor da tendência: visto amarelo e zona de 1 $': 'The candle closes beyond the level, with the trend: yellow check and a 1 $ zone',
   'No fecho da vela seguinte, o plano: invalidação a 1,5 $, Saída 1 a +1,5 $ e Saída 2 a +3 $': 'On the close of the next candle, the plan: invalidation 1.5 $ away, Exit 1 at +1.5 $ and Exit 2 at +3 $',
-  'Saída 1 tocada: a bandeira branca marca o trade pago': 'Exit 1 touched: the white flag marks the paid trade',
+  'Saída 1 tocada: a bandeira dourada marca o trade pago': 'Exit 1 touched: the gold flag marks the paid trade',
   'Saída 2: o plano fecha; o visto seguinte limpa o gráfico': 'Exit 2: the plan closes; the next check clears the chart',
   'Visto e zona': 'Check and zone', 'Saída 1 e Saída 2': 'Exit 1 and Exit 2', 'Invalidação': 'Invalidation', 'Níveis psicológicos': 'Psychological levels',
   'Zona de ação': 'Zone of action', 'Saída 1': 'Exit 1', 'Saída 2': 'Exit 2', 'Zona': 'Zone',
@@ -159,7 +159,7 @@ export const CARD_TEXT_EN = {
     { title: 'Psychological levels', text: 'Lines every 5 $ in gold (4060, 4065, 4070). Ten around price. That is where price tends to react and where every zone is born.' },
     { title: 'Yellow check and zone', text: 'When a candle closes beyond the level with the trend (EMA 50 over 200), the check and the 1 $ yellow box centred on the level appear. The zone of action is the edge on the price side.' },
     { title: 'Plan on the next candle', text: 'When the candle after the check closes, the parameters appear: invalidation 1.5 $ away (150 points), Exit 1 at +1.5 $ and Exit 2 at +3 $. The entry is yours: a limit order in the zone, when price pulls back.' },
-    { title: 'Exit 1 and white flag', text: 'When Exit 1 is touched the white flag appears: the trade paid. Exit 2 or the invalidation close the plan, and the next check clears the chart.' },
+    { title: 'Exit 1 and gold flag', text: 'When Exit 1 is touched the gold flag appears: the trade paid. Exit 2 or the invalidation close the plan, and the next check clears the chart.' },
     { title: 'Confirmations and alerts', text: 'Trend, support and resistance, candle pattern and imbalances, in the order of the guide. Every event (check, plan, Exit 1, Exit 2, invalidation) goes out as a JSON alert for webhooks.' },
   ],
   quantum: [

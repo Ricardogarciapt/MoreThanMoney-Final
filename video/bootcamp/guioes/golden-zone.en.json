@@ -68,7 +68,7 @@
       "Video 1 · What the strategy is and how to read the chart",
       "Video 2 · Confirmations, entry, plan and routine"
      ],
-     "fala": "The bootcamp has two videos. In the first, you'll understand what the Golden Zone is, which market and which chart it was designed for, and what each element the scanner draws means: the yellow tick, the action zone, the exits, the invalidation and the white flag. In the second video we get into the decision process: the four confirmations, the limit order, the stop, managing the trade, when not to enter, and a simple routine for your day. I suggest you watch the videos in order, and don't skip ahead to the entry part before you understand the chart."
+     "fala": "The bootcamp has two videos. In the first, you'll understand what the Golden Zone is, which market and which chart it was designed for, and what each element the scanner draws means: the yellow tick, the action zone, the exits, the invalidation and the gold flag. In the second video we get into the decision process: the four confirmations, the limit order, the stop, managing the trade, when not to enter, and a simple routine for your day. I suggest you watch the videos in order, and don't skip ahead to the entry part before you understand the chart."
     },
     {
      "id": "v1-03",
@@ -169,9 +169,9 @@
       "Yellow tick: a warning on the signal candle",
       "Action zone: the yellow box where you wait for the price",
       "Exit 1 and Exit 2: the targets, in green",
-      "Invalidation: the stop, in red. The white flag marks the end"
+      "Invalidation: the stop, in red. The gold flag marks the end"
      ],
-     "fala": "Let's go piece by piece. First, the yellow tick. It appears over the signal candle, together with the yellow box, which is the action zone. The tick is a warning, not the entry candle. It only means the scanner found a setup that deserves attention. The parameters are still missing, and there's no trade yet. Second, the action zone. This is the area where, in theory, you place your limit order and wait for the price to return. Notice that the zone is a box, not a line, because the price rarely respects one exact value. Third, the exits. When the next five-minute candle closes, Exit 1 and Exit 2 appear, the two targets, in green. And the invalidation, in red, which is the level where the idea stops making sense. Without these three levels there's no trade. It isn't optional, it's the rule. Fourth, the white flag. It appears when the price touches Exit 1, or the invalidation. When it appears, the trade is over: it paid, or it lost. With the flag in view, you don't enter. The flag is a closing piece of information. It tells you the moment has passed."
+     "fala": "Let's go piece by piece. First, the yellow tick. It appears over the signal candle, together with the yellow box, which is the action zone. The tick is a warning, not the entry candle. It only means the scanner found a setup that deserves attention. The parameters are still missing, and there's no trade yet. Second, the action zone. This is the area where, in theory, you place your limit order and wait for the price to return. Notice that the zone is a box, not a line, because the price rarely respects one exact value. Third, the exits. When the next five-minute candle closes, Exit 1 and Exit 2 appear, the two targets, in green. And the invalidation, in red, which is the level where the idea stops making sense. Without these three levels there's no trade. It isn't optional, it's the rule. Fourth, the gold flag. It appears when the price touches Exit 1, or the invalidation. When it appears, the trade is over: it paid, or it lost. With the flag in view, you don't enter. The flag is a closing piece of information. It tells you the moment has passed."
     },
     {
      "id": "v1-10",
@@ -234,10 +234,10 @@
       "Is there a yellow tick, and has the next candle closed?",
       "Is the yellow box over the signal candle?",
       "Are Exit 1, Exit 2 and the invalidation drawn?",
-      "Is there a white flag on the chart?",
+      "Is there a gold flag on the chart?",
       "Are you looking at the current signal, not an old one?"
      ],
-     "fala": "Before you look at the confirmations, five quick questions. Is there a yellow tick, and has the next candle closed? Is the yellow box over the signal candle? Are Exit 1, Exit 2 and the invalidation drawn? Is there a white flag on the chart, meaning a trade that has already finished? And are you looking at the current signal, not one that the next signal has already erased? If the answer to any of these is no, stop there. There's no trade to analyse. Only when all five answers are right do you move on to validation."
+     "fala": "Before you look at the confirmations, five quick questions. Is there a yellow tick, and has the next candle closed? Is the yellow box over the signal candle? Are Exit 1, Exit 2 and the invalidation drawn? Is there a gold flag on the chart, meaning a trade that has already finished? And are you looking at the current signal, not one that the next signal has already erased? If the answer to any of these is no, stop there. There's no trade to analyse. Only when all five answers are right do you move on to validation."
     },
     {
      "id": "v1-14",
@@ -250,9 +250,9 @@
       "Reading a sell as a buy with the colours swapped",
       "Looking at a signal from hours ago, already erased",
       "Drawing more lines than the chart needs",
-      "Giving weight to a trade that already has a white flag"
+      "Giving weight to a trade that already has a gold flag"
      ],
-     "fala": "Before we close this video, the most common reading mistakes. First, entering on the yellow tick without waiting for the plan. The tick is a warning, and a warning is not an order. Second, reading a sell as a buy with the colours swapped. We've already seen that's not enough. Third, looking at a signal from a few hours ago, which has already been erased by the next one, and treating it as if it were still alive. Fourth, drawing more lines than the chart needs. The Golden Zone already shows you the essentials, and extra lines only pull your attention away from the zone. And fifth, giving weight to a trade that already has a white flag. Once the flag appears, the matter is closed. Write it in the journal and wait for the next signal."
+     "fala": "Before we close this video, the most common reading mistakes. First, entering on the yellow tick without waiting for the plan. The tick is a warning, and a warning is not an order. Second, reading a sell as a buy with the colours swapped. We've already seen that's not enough. Third, looking at a signal from a few hours ago, which has already been erased by the next one, and treating it as if it were still alive. Fourth, drawing more lines than the chart needs. The Golden Zone already shows you the essentials, and extra lines only pull your attention away from the zone. And fifth, giving weight to a trade that already has a gold flag. Once the flag appears, the matter is closed. Write it in the journal and wait for the next signal."
     },
     {
      "id": "v1-14b",
@@ -264,9 +264,9 @@
       "Keep the Golden Zone on one five-minute gold chart",
       "Find ten yellow ticks in the history, without trading",
       "For each one, note whether the plan appeared",
-      "Note how many ended with a white flag"
+      "Note how many ended with a gold flag"
      ],
-     "fala": "Before the second video, a simple exercise. Pick a gold chart, on the XAUUSD pair, on five minutes, and keep the strategy running on that one only. Then, look back through the history for ten moments when a yellow tick appeared. For each one, note two things: whether the plan ever appeared, and whether the price came back to the action zone before reaching the exits or the white flag. Don't trade. Only observe and note. This exercise trains your eye to see what the strategy actually shows, and in the second video you'll understand why this reading matters so much."
+     "fala": "Before the second video, a simple exercise. Pick a gold chart, on the XAUUSD pair, on five minutes, and keep the strategy running on that one only. Then, look back through the history for ten moments when a yellow tick appeared. For each one, note two things: whether the plan ever appeared, and whether the price came back to the action zone before reaching the exits or the gold flag. Don't trade. Only observe and note. This exercise trains your eye to see what the strategy actually shows, and in the second video you'll understand why this reading matters so much."
     },
     {
      "id": "v1-15",
@@ -460,12 +460,12 @@
      "itens": [
       "On the yellow tick candle, still without a plan",
       "Against the trend of the 50 and 200 averages",
-      "After the white flag",
+      "After the gold flag",
       "Price already past Exit 2 without returning to the zone",
       "Imbalances to fill near the stop",
       "Stop tight only against the wick of the signal candle"
      ],
-     "fala": "The guide has a clear list of when not to enter, and it's the part people forget most. First: on the yellow tick candle. There's still no plan, and a tick is not an order. Second: against the trend of the 50 and 200 averages. If the 50 is below the 200, you're not looking for buys, however nice the tick looks. Third: after the white flag. The trade is over, and entering now means entering a different trade, with no plan. Fourth: when the price has already passed Exit 2 without returning to the zone. You're late, and in that case there's no entry. Fifth: imbalances to fill near the stop. If the price path is full of gaps, your protection is weaker. And sixth: a stop tight only against the wick of the signal candle. A stop like that is too tight, and the guide has already warned you what happens in those cases. If any of these situations is on the chart, you don't have a trade. You don't have to justify it to anyone. That's the process working."
+     "fala": "The guide has a clear list of when not to enter, and it's the part people forget most. First: on the yellow tick candle. There's still no plan, and a tick is not an order. Second: against the trend of the 50 and 200 averages. If the 50 is below the 200, you're not looking for buys, however nice the tick looks. Third: after the gold flag. The trade is over, and entering now means entering a different trade, with no plan. Fourth: when the price has already passed Exit 2 without returning to the zone. You're late, and in that case there's no entry. Fifth: imbalances to fill near the stop. If the price path is full of gaps, your protection is weaker. And sixth: a stop tight only against the wick of the signal candle. A stop like that is too tight, and the guide has already warned you what happens in those cases. If any of these situations is on the chart, you don't have a trade. You don't have to justify it to anyone. That's the process working."
     },
     {
      "id": "v2-11",
@@ -529,10 +529,10 @@
       "Time, direction and whether there was a yellow tick",
       "The four confirmations, yes or no",
       "If you entered: where, the stop and the size",
-      "Result: Exit 1, Exit 2, stop or white flag",
+      "Result: Exit 1, Exit 2, stop or gold flag",
       "Did you follow the process? What did you learn?"
      ],
-     "fala": "The journal is the part that turns a strategy into learning. For each signal, record the time, the direction, and whether there was a yellow tick. Then the four confirmations, one by one, with yes or no. If you entered, record where the order in the zone went, the stop, and the position size. Then the result: did it reach Exit 1, Exit 2, the stop, or did the white flag arrive before any entry? And finally, two questions worth answering honestly. Did you follow the process? And what did you learn from this signal? After a few weeks, the journal tells you where you're being consistent and where you're improvising. It doesn't give you magic answers. It gives you the pattern of your own behaviour, written by you."
+     "fala": "The journal is the part that turns a strategy into learning. For each signal, record the time, the direction, and whether there was a yellow tick. Then the four confirmations, one by one, with yes or no. If you entered, record where the order in the zone went, the stop, and the position size. Then the result: did it reach Exit 1, Exit 2, the stop, or did the gold flag arrive before any entry? And finally, two questions worth answering honestly. Did you follow the process? And what did you learn from this signal? After a few weeks, the journal tells you where you're being consistent and where you're improvising. It doesn't give you magic answers. It gives you the pattern of your own behaviour, written by you."
     },
     {
      "id": "v2-15",

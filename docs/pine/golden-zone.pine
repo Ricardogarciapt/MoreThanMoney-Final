@@ -21,7 +21,7 @@
 //     compra em 4070,50 → invalidação 4069,00 · Exit 1 4072,00 · Exit 2 4073,50.
 //     As linhas e a caixa começam na vela do visto e acompanham a ideia; a entrada é do trader
 //     (ordem limite dentro da zona, quando o preço recua).
-//  4. Bandeira branca: o preço tocou o Exit 1 (ou a invalidação). O Exit 2 ou a invalidação fecham a
+//  4. Bandeira dourada: o preço tocou o Exit 1 (ou a invalidação). O Exit 2 ou a invalidação fecham a
 //     ideia: a caixa e as linhas param na vela do fecho e ficam assim até ao visto seguinte.
 //  5. Cada visto novo apaga TUDO o que era do anterior (caixa, visto, bandeira, linhas, etiquetas).
 //  6. Tabela de estatísticas (desligada por omissão): sinais, planos, Exit 1, Exit 2, invalidações.
@@ -60,6 +60,7 @@ colZone    = input.color(#787B86, "Zone of action", group=gDisp)
 colExit1   = input.color(#4CAF50, "Exit 1", group=gDisp)
 colExit2   = input.color(#4CAF50, "Exit 2", group=gDisp)
 colInval   = input.color(#E57373, "Invalidation zone", group=gDisp)
+colFlag    = input.color(#D2A63C, "Flag (Exit 1 / invalidation)", group=gDisp, tooltip="Bandeira dourada MTM: as etiquetas do Pine não têm contorno, por isso a bandeira é dourada para se ver em fundos claros e escuros.")
 offset     = input.int(20, "Offset", minval=1, maxval=200, group=gDisp, tooltip="Velas para a direita da última vela até onde as linhas do plano se prolongam enquanto a ideia está aberta. As cores e o offset deste grupo são só da posição activa.")
 
 gMtm       = "MTM"
@@ -74,7 +75,6 @@ chave      = input.string("GOLDENZONE", "strategy (chave no webhook)", group=gMt
 // ════════════════════════════════════════════════════════════════
 const int   BOX_W   = 6            // largura mínima da caixa da zona (velas); cresce com a ideia até ao fecho
 const color C_CHECK = #F5D90A      // visto amarelo
-const color C_FLAG  = #FFFFFF      // bandeira branca
 
 // passo automático: 5 $ no ouro (preço ~4000 → magnitude 1000 → 1000/200)
 f_step() =>
@@ -238,7 +238,7 @@ if dir != 0 and hasPlan and not closed
             hitInval := true
     if (hitExit1 or hitInval) and not hasFlag
         hasFlag := true
-        array.push(dLabels, label.new(bar_index, dir > 0 ? high : low, "", style=label.style_flag, color=C_FLAG, size=size.small, yloc=dir > 0 ? yloc.abovebar : yloc.belowbar))
+        array.push(dLabels, label.new(bar_index, dir > 0 ? high : low, "", style=label.style_flag, color=colFlag, size=size.small, yloc=dir > 0 ? yloc.abovebar : yloc.belowbar))
     // a caixa e as linhas acompanham a ideia; no fecho param na vela do fecho
     f_estender(closed ? bar_index : bar_index + offset)
 
@@ -302,6 +302,6 @@ if hitInval
 alertcondition(sigBuy,   "Golden Zone Compra",      "Golden Zone: visto de compra em {{ticker}} {{interval}}")
 alertcondition(sigSell,  "Golden Zone Venda",       "Golden Zone: visto de venda em {{ticker}} {{interval}}")
 alertcondition(newPlan,  "Golden Zone Plano",       "Golden Zone: plano desenhado em {{ticker}} {{interval}} (zona, invalidação, Exit 1, Exit 2)")
-alertcondition(hitExit1, "Golden Zone Exit 1",      "Golden Zone: Exit 1 tocado em {{ticker}} {{interval}} — bandeira branca")
+alertcondition(hitExit1, "Golden Zone Exit 1",      "Golden Zone: Exit 1 tocado em {{ticker}} {{interval}} — bandeira dourada")
 alertcondition(hitExit2, "Golden Zone Exit 2",      "Golden Zone: Exit 2 tocado em {{ticker}} {{interval}} — ideia fechada")
 alertcondition(hitInval, "Golden Zone Invalidação", "Golden Zone: invalidação tocada em {{ticker}} {{interval}} — ideia fechada")

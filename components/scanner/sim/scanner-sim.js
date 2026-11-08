@@ -993,7 +993,7 @@ function quantum() {
 // Scalping de ouro em 5 minutos (docs/pine/golden-zone.pine). Níveis psicológicos de 5 em 5 $;
 // zona de 1 $ centrada no nível; o visto amarelo aparece quando a vela fecha para lá da zona de ação
 // a favor da tendência (EMA 50/200); no fecho da vela seguinte surgem Invalidação (−1,5 $), Saída 1 (+1,5 $)
-// e Saída 2 (+3 $), com as linhas a começar na vela do visto. Bandeira branca na Saída 1. Cada visto novo apaga o anterior.
+// e Saída 2 (+3 $), com as linhas a começar na vela do visto. Bandeira dourada na Saída 1. Cada visto novo apaga o anterior.
 function goldenZone() {
   const warm = 220
   const STEP = 5, HALF = 0.5, RISK = 1.5
@@ -1014,9 +1014,9 @@ function goldenZone() {
       let broke = false, planned = false
       if (sig && sig.plan != null && !sig.closed && i > sig.plan) {
         const d = sig.dir
-        if (sig.e1Hit == null && (d > 0 ? c.h >= sig.e1 : c.l <= sig.e1)) { sig.e1Hit = i; markers.push({ i, price: d > 0 ? c.h : c.l, text: '⚑', color: '#ffffff', fg: '#111', up: d > 0, small: true, kind: 'flag' }) }
+        if (sig.e1Hit == null && (d > 0 ? c.h >= sig.e1 : c.l <= sig.e1)) { sig.e1Hit = i; markers.push({ i, price: d > 0 ? c.h : c.l, text: '⚑', color: GOLD_L, fg: '#111', up: d > 0, small: true, kind: 'flag' }) }
         if (d > 0 ? c.h >= sig.e2 : c.l <= sig.e2) sig.closed = i
-        else if (d > 0 ? c.l <= sig.inval : c.h >= sig.inval) { sig.closed = i; if (sig.e1Hit == null) markers.push({ i, price: d > 0 ? c.l : c.h, text: '⚑', color: '#ffffff', fg: '#111', up: d < 0, small: true, kind: 'flag' }) }
+        else if (d > 0 ? c.l <= sig.inval : c.h >= sig.inval) { sig.closed = i; if (sig.e1Hit == null) markers.push({ i, price: d > 0 ? c.l : c.h, text: '⚑', color: GOLD_L, fg: '#111', up: d < 0, small: true, kind: 'flag' }) }
         // a caixa e as linhas acompanham a ideia desde o visto até ao fecho
         if (sig.closed != null) { sig.zoneBox.i1 = i; sig.group.items.forEach((it) => (it.until = it.until ?? i)) } else sig.zoneBox.i1 = i
       }
@@ -1031,9 +1031,9 @@ function goldenZone() {
           { price: sig.e2, color: GREEN, label: 'Saída 2', from: sig.i },
         ] }
         groups.push(sig.group)
-        if (d > 0 ? c.h >= sig.e1 : c.l <= sig.e1) { sig.e1Hit = i; markers.push({ i, price: d > 0 ? c.h : c.l, text: '⚑', color: '#ffffff', fg: '#111', up: d > 0, small: true, kind: 'flag' }) }
+        if (d > 0 ? c.h >= sig.e1 : c.l <= sig.e1) { sig.e1Hit = i; markers.push({ i, price: d > 0 ? c.h : c.l, text: '⚑', color: GOLD_L, fg: '#111', up: d > 0, small: true, kind: 'flag' }) }
         if (d > 0 ? c.h >= sig.e2 : c.l <= sig.e2) sig.closed = i
-        else if (d > 0 ? c.l <= sig.inval : c.h >= sig.inval) { sig.closed = i; if (sig.e1Hit == null) markers.push({ i, price: d > 0 ? c.l : c.h, text: '⚑', color: '#ffffff', fg: '#111', up: d < 0, small: true, kind: 'flag' }) }
+        else if (d > 0 ? c.l <= sig.inval : c.h >= sig.inval) { sig.closed = i; if (sig.e1Hit == null) markers.push({ i, price: d > 0 ? c.l : c.h, text: '⚑', color: GOLD_L, fg: '#111', up: d < 0, small: true, kind: 'flag' }) }
         if (sig.closed != null) sig.group.items.forEach((it) => (it.until = i))
         sig.zoneBox.i1 = i
       }
@@ -1094,7 +1094,7 @@ function goldenZone() {
       { i: warm, text: 'Níveis psicológicos de 5 em 5 $ no ouro, em 5 minutos' },
       ...(s ? [{ i: s.i, text: 'A vela fecha para lá do nível, a favor da tendência: visto amarelo e zona de 1 $' }] : []),
       ...(s && s.plan != null ? [{ i: s.plan, text: 'No fecho da vela seguinte, o plano: invalidação a 1,5 $, Saída 1 a +1,5 $ e Saída 2 a +3 $' }] : []),
-      ...(s && s.e1Hit != null ? [{ i: s.e1Hit, text: 'Saída 1 tocada: a bandeira branca marca o trade pago' }] : []),
+      ...(s && s.e1Hit != null ? [{ i: s.e1Hit, text: 'Saída 1 tocada: a bandeira dourada marca o trade pago' }] : []),
       ...(s && s.closed != null ? [{ i: s.closed, text: 'Saída 2: o plano fecha; o visto seguinte limpa o gráfico' }] : []),
     ],
     legend: [{ color: GOLD_L, label: 'Visto e zona' }, { color: GREEN, label: 'Saída 1 e Saída 2' }, { color: RED, label: 'Invalidação' }, { color: GREY, label: 'Níveis psicológicos' }],
@@ -1165,7 +1165,7 @@ export const CARD_TEXT = {
     { title: 'Níveis psicológicos', text: 'Linhas de 5 em 5 $ no ouro (4060, 4065, 4070). Dez à volta do preço. É nelas que o preço costuma reagir e é delas que nasce cada zona.' },
     { title: 'Visto amarelo e zona', text: 'Quando uma vela fecha para lá do nível a favor da tendência (EMA 50 sobre a 200), aparece o visto e a caixa amarela de 1 $ centrada no nível. A zona de ação é a aresta do lado do preço.' },
     { title: 'Plano na vela seguinte', text: 'No fecho da vela seguinte ao visto surgem os parâmetros: invalidação a 1,5 $ (150 pontos), Saída 1 a +1,5 $ e Saída 2 a +3 $. A entrada é tua: ordem limite na zona, quando o preço recua.' },
-    { title: 'Saída 1 e bandeira branca', text: 'Ao tocar a Saída 1 aparece a bandeira branca: o trade pagou. A Saída 2 ou a invalidação fecham o plano, e o visto seguinte limpa o gráfico.' },
+    { title: 'Saída 1 e bandeira dourada', text: 'Ao tocar a Saída 1 aparece a bandeira dourada: o trade pagou. A Saída 2 ou a invalidação fecham o plano, e o visto seguinte limpa o gráfico.' },
     { title: 'Confirmações e alertas', text: 'Tendência, suporte e resistência, padrão de vela e desequilíbrios, pela ordem do guia. Cada evento (visto, plano, Saída 1, Saída 2, invalidação) sai por alerta JSON para webhook.' },
   ],
   quantum: [

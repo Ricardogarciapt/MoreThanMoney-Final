@@ -5,7 +5,7 @@
 // 4070,50). Ainda não há plano. No FECHO DA VELA SEGUINTE surgem as linhas, com o preço escrito, a começar na vela
 // do visto: Invalidação (−1,5 $ = 150 pontos, vermelha), Zona de ação (cinzenta), Saída 1 (+1,5 $) e Saída 2 (+3 $), a verde.
 // A caixa e as linhas vão da vela do visto até à vela do fecho da ideia e ficam até ao visto seguinte.
-// A bandeira branca aparece quando o preço toca a Saída 1 (ou a invalidação). Saída 2 ou invalidação fecham o plano.
+// A bandeira dourada aparece quando o preço toca a Saída 1 (ou a invalidação). Saída 2 ou invalidação fecham o plano.
 // A entrada é do trader (ordem limite na zona, quando o preço recua); se o preço for à Saída 2 sem recuar, não houve
 // trade (bandeira sem entrada). Cada visto novo apaga o anterior.
 // Camadas extra só do vídeo: medias (EMA 50/200 da 1.ª confirmação), niveis (suporte/resistência do passado,
@@ -118,10 +118,10 @@
         ;[[TXT.s2, s.s2, C.saida], [TXT.s1, s.s1, C.saida], [TXT.zona, s.zona, C.zona], [TXT.inval, s.inval, C.inval]].forEach(([t, p, cor]) => {
           const y = Y(p); g.strokeStyle = cor; g.lineWidth = 1.3 * esc; g.beginPath(); g.moveTo(x0, y); g.lineTo(xr, y); g.stroke()
           g.font = F(600, 14); g.fillStyle = cor; g.textAlign = 'right'; g.fillText(`${t}: ${p.toFixed(3)}`, Math.max(x0 + 230 * esc, xr - 150 * esc), y - 6 * esc); g.textAlign = 'left' })
-        // bandeira branca: o preço tocou a Saída 1 (ou a invalidação)
+        // bandeira dourada: o preço tocou a Saída 1 (ou a invalidação)
         if (s.bandeira != null && s.bandeira <= ult) { const v = D.c[s.bandeira], x = X(s.bandeira), y = (s.d > 0 ? Y(v.h) - 40 * esc : Y(v.l) + 12 * esc)
-          g.strokeStyle = '#fff'; g.lineWidth = 2 * esc; g.beginPath(); g.moveTo(x, y); g.lineTo(x, y + 28 * esc); g.stroke()
-          g.fillStyle = '#fff'; g.beginPath(); g.moveTo(x, y); g.lineTo(x + 18 * esc, y + 3 * esc); g.lineTo(x + 15 * esc, y + 8 * esc); g.lineTo(x + 18 * esc, y + 13 * esc); g.lineTo(x, y + 13 * esc); g.closePath(); g.fill() }
+          g.strokeStyle = C.marca; g.lineWidth = 2 * esc; g.beginPath(); g.moveTo(x, y); g.lineTo(x, y + 28 * esc); g.stroke()
+          g.fillStyle = C.marca; g.beginPath(); g.moveTo(x, y); g.lineTo(x + 18 * esc, y + 3 * esc); g.lineTo(x + 15 * esc, y + 8 * esc); g.lineTo(x + 18 * esc, y + 13 * esc); g.lineTo(x, y + 13 * esc); g.closePath(); g.fill() }
         g.globalAlpha = 1 }
       if (temPlano && vis.ordem) { g.globalAlpha = vis.ordem; const m = s.nivel, x0 = X(s.i + 1), x1 = X(s.i + CX_W + 10)
         g.strokeStyle = C.ordem; g.lineWidth = 2.2 * esc; g.setLineDash([8 * esc, 5 * esc]); g.beginPath(); g.moveTo(x0, Y(m)); g.lineTo(x1, Y(m)); g.stroke(); g.setLineDash([])

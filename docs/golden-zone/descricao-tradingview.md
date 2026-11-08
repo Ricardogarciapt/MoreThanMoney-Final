@@ -23,7 +23,7 @@ line with the price, with the lines starting at the check candle: *Invalidation 
 +3 $. Example: zone 4070.50 → invalidation 4069.00, Exit 1 4072.00, Exit 2 4073.50. The entry is yours: a limit
 order inside the zone when price pulls back.
 
-**White flag.** When Exit 1 is touched the white flag appears. Exit 2 or the invalidation close the plan:
+**Gold flag.** When Exit 1 is touched the gold flag appears. Exit 2 or the invalidation close the plan:
 the box and the lines stop at the closing candle. A new check clears every drawing of the previous one, so the
 tool is followed live.
 
@@ -47,7 +47,7 @@ preço: marca o nível que o preço rompeu e desenha o plano para esperares pelo
 
 Níveis psicológicos de 5 em 5 $ · visto amarelo e zona de 1 $ no rompimento a favor da tendência (EMA
 50/200) · plano completo no fecho da vela seguinte: invalidação a 1,5 $ (150 pontos), Saída 1 a +1,5 $ e
-Saída 2 a +3 $ · bandeira branca na Saída 1 · tabela de estatísticas opcional · alertas JSON por evento e
+Saída 2 a +3 $ · bandeira dourada na Saída 1 · tabela de estatísticas opcional · alertas JSON por evento e
 alertas simples de seguimento (Plano, Exit 1, Exit 2, Invalidação), prontos para webhook.
 
 Conteúdo educativo, não constitui consultoria financeira. Não executa ordens nem garante resultados.
