@@ -60,7 +60,7 @@
     const F = (peso, px, fam = 'Inter') => `${peso} ${Math.round(px * esc)}px ${fam}`
     g.clearRect(0, 0, W, H); g.fillStyle = cores.fundo; g.fillRect(0, 0, W, H)
     const passos = [.0005, .001, .0025, .005, .01, .025, .05, .1, .25, .5, 1, 2.5, 5, 10, 25, 50, 100, 250, 500, 1000]
-    const passo = passos.find(s => (hi - lo) / s < 9) || 1000, dec = passo < .01 ? 5 : passo < 1 ? 2 : passo < 10 ? 1 : 2
+    const passo = passos.find(s => (hi - lo) / s < 9) || 1000, dec = passo < .01 ? 5 : passo < 1 ? 2 : passo < 10 ? 1 : passo >= 500 ? 0 : 2
     g.font = F(500, 15, 'JetBrains Mono'); g.textAlign = 'left'; g.lineWidth = 1
     for (let p = Math.ceil(lo / passo) * passo; p < hi; p += passo) { const y = Y(p); g.strokeStyle = cores.grelha; g.beginPath(); g.moveTo(0, y); g.lineTo(largura, y); g.stroke(); g.fillStyle = cores.eixo; g.fillText(fmt(p, dec), largura + 8, y + 5) }
     return { ax, topo, base, largura, nb, X, Y, bw, F, hi, lo, dec,

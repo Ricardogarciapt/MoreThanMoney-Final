@@ -1,5 +1,6 @@
 {
  "estrategia": "Aurum Flow",
+ "motor": "aurum-flow",
  "marca": "MoreThanMoney",
  "cores": {
   "bull": "#2F9E8F",
