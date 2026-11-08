@@ -124,7 +124,9 @@ try {
       console.log(`playlist renomeada: ${p.snippet.title} → ${novo}`); p.snippet.title = novo }
   }
   // corrigir a ordem das playlists que já têm vídeos nossos (os primeiros entraram no topo por engano)
-  for (const pl of new Set(Object.values(pub).map(v => v && v.playlist).filter(Boolean))) await arrumar(pl)
+  // playlists sem ordenação manual não aceitam posição: ficam como estão (os vídeos novos entram no fim)
+  for (const pl of new Set(Object.values(pub).map(v => v && v.playlist).filter(Boolean))) {
+    try { await arrumar(pl) } catch (e) { if (e instanceof Quota || !/manualSortRequired/.test(String(e.message))) throw e; console.log(`playlist ${pl}: ordenação não manual, não reordenada`) } }
   for (const est of fs.existsSync(SAIDA) ? fs.readdirSync(SAIDA).filter(d => fs.statSync(path.join(SAIDA, d)).isDirectory()) : []) {
     const files = fs.readdirSync(path.join(SAIDA, est)).filter(f => /-\d+-(pt|en)\.mp4$/.test(f)).sort()
     for (const f of files) {
