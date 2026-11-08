@@ -53,6 +53,8 @@ const PACKS_CONHECIDOS = [
   'trendshot_lifetime',
   'defy_semestral',
   'defy_lifetime',
+  'rocketnova_semestral',
+  'rocketnova_lifetime',
   'premium_scanner_lifetime',
 ]
 

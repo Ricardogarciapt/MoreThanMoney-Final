@@ -17,6 +17,9 @@ const SCANNER_LIFETIME_PLANS = new Set([
   'aurumflow_lifetime',
   'mtm_scanner_lifetime',
   'scanners_lifetime',
+  'trendshot_lifetime',
+  'defy_lifetime',
+  'rocketnova_lifetime',
 ])
 
 export async function POST(request: NextRequest) {

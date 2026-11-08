@@ -188,6 +188,33 @@ export const SCANNERS: ScannerData[] = [
     ],
   },
   {
+    key: "rocketnova",
+    name: "RocketNova by MTM",
+    subtitle: "Médias · Estrelas · Rocket Candle · Gestão da trade",
+    image: "/scanners/rocketnova/poster.jpg",
+    badge: "Novo",
+    description:
+      "O RocketNova lê a tendência com três médias (20, 50 e 238) e só dispara no cruzamento confirmado quando há uma estrela de lançamento: um mínimo recente de swing para a compra, um máximo para a venda. A Rocket Candle, o pulso de volatilidade e o Trade Clock dizem-te se o mercado tem força e horas para a ideia. O plano fica fixo na vela do sinal e a gestão sai por alertas: TP1 a TP4, stop, stop na entrada e saída por sinal contrário.",
+    features: [
+      "EMA 20, 50 e 238 com sinal no cruzamento confirmado no fecho da vela",
+      "Estrelas de máximo e mínimo por Depth, Deviation e Backstep (34 / 13 / 8)",
+      "Rocket Candle: a vela de impulso pintada de amarelo, com filtro opcional",
+      "Volatility Pulse (ATR contra a média) e Trade Clock com Good / Low Volume",
+      "Entrada, stop e TP1 a TP4 fixos na vela, com stop na entrada depois do TP1",
+    ],
+    techSpecs: [
+      "Stop fixo em pontos (modo auto: 100 pips, 200 no ouro) ou na última estrela",
+      "Alvos a 30 %, 50 %, 100 % e 150 % do stop (60 % no TP2 do ouro)",
+      "Sessão de negociação configurável (08:00 a 21:00 por omissão)",
+      "Alertas JSON com a entrada e os seguimentos da mesma trade, prontos para webhook",
+      "Forex, ouro, índices e cripto; ferramenta educativa, não executa ordens",
+    ],
+    products: [
+      { id: "rn-semestral", label: "Semestral", price: "50€", priceNote: "6 meses de acesso", planId: "rocketnova_semestral" },
+      { id: "rn-lifetime", label: "Vitalício", price: "350€", priceNote: "Pagamento único", planId: "rocketnova_lifetime", highlight: true },
+    ],
+  },
+  {
     key: "sensei",
     name: "MTM Sensei",
     subtitle: "Inteligência Artificial Avançada",

@@ -29,6 +29,7 @@ export const NOMES_INTOCAVEIS = [
   'Sensei Scalp',
   'TrendShot',
   'DEFY',
+  'RocketNova',
   'Aurum Flow',
   'Tap to Trade',
   'WebTrader',

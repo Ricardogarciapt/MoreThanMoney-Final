@@ -37,6 +37,8 @@ export function planLabel(planId: string): string {
     trendshot_lifetime: 'TrendShot by MTM (Vitalício)',
     defy_semestral: 'DEFY by MTM (Semestral)',
     defy_lifetime: 'DEFY by MTM (Vitalício)',
+    rocketnova_semestral: 'RocketNova by MTM (Semestral)',
+    rocketnova_lifetime: 'RocketNova by MTM (Vitalício)',
     premium_scanner_lifetime: 'MTM Premium Scanner (Vitalício)',
     mtm_scanner_semestral: 'Scanner MTM V3.4 (Semestral)',
     mtm_scanner_monthly: 'Scanner MTM V3.4 (Mensal)',

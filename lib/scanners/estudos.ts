@@ -37,8 +37,8 @@ export const scannerStudies: Record<ScannerKey, string[]> = {
   AurumFlow: ["PUB;7a37672ce0bf426eb038be265b6b4aba"],
   TrendShot:["PUB;be1c60d3c15249e4b609bb40a4412d1f"],
   // RocketNova by MTM (08/11/2026): substitui o Supernova com código próprio — docs/pine/rocketnova.pine.
-  // Fica sem estudo até o Ricardo publicar o Pine no TradingView e colar aqui o «PUB;…».
-  RocketNova: [],
+  // Estudo publicado (invite-only) pelo Ricardo a 08/11/2026.
+  RocketNova: ["PUB;f2e9cd6359e946e99e6b843429ae6592"],
   Winzone: [
     "PUB;6c003d30b2154ef3a31074d5c703954f",
     "PUB;e6adb5e5246c43f4a8dcffde5c98db4e",
