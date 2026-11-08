@@ -5,7 +5,8 @@
 // Uso (no Mac, na raiz do worktree): node video/bootcamp/publicar-youtube.mjs
 //   --refazer <est> [<est>…] --tag <t>   apaga os vídeos já publicados dessas estratégias (no YouTube, na próxima
 //                                         passagem com credenciais) e limpa os marcadores para a fila os voltar a fazer;
-//                                         com --tag só corre uma vez por estratégia (marcador saida/.refeito-<est>-<t>)
+//                                         com --tag só corre uma vez por estratégia (marcador saida/.refeito-<est>-<t>);
+//                                         --so <regex> limita aos ficheiros cujo nome bate (ex.: '-2-' = só o vídeo 2)
 //   Os títulos "tituloPlaylist" dos guiões são aplicados às playlists (ex.: «Estratégias MTM - Defy»).
 // Credenciais YOUTUBE_CLIENT_ID / _SECRET / _REFRESH_TOKEN (as mesmas do videocliper), lidas do ambiente,
 // de $MTM_ENV ou dos .env.local vizinhos. Sai com código 3 quando a quota diária do YouTube acaba.
@@ -30,14 +31,15 @@ const parte = f => { const m = f.match(/^bootcamp-(.+)-(\d+)-(pt|en)\.mp4$/); re
 const iR = process.argv.indexOf('--refazer')
 if (iR > 0) {
   const iT = process.argv.indexOf('--tag'), tag = iT > 0 ? (process.argv[iT + 1] || '') : ''
-  const ests = process.argv.slice(iR + 1).filter(a => !a.startsWith('--') && a !== tag)
+  const iS = process.argv.indexOf('--so'), so = iS > 0 ? new RegExp(process.argv[iS + 1] || '.') : null
+  const ests = process.argv.slice(iR + 1, Math.min(...[iT, iS].filter(i => i > iR).concat(process.argv.length)))
   pub._apagar = pub._apagar || []
   for (const est of ests) {
     const marca = path.join(SAIDA, `.refeito-${est}-${tag}`)
     if (tag && fs.existsSync(marca)) { console.log(`refazer ${est}: já feito (${tag})`); continue }
     const dir = path.join(SAIDA, est); let n = 0
     for (const f of fs.existsSync(dir) ? fs.readdirSync(dir) : []) {
-      if (!/\.mp4$/.test(f)) continue
+      if (!/\.mp4$/.test(f) || (so && !so.test(f))) continue
       const mp4 = path.join(dir, f), id = pub[f]?.id || (fs.existsSync(mp4 + '.yt') && fs.readFileSync(mp4 + '.yt', 'utf8').trim())
       if (id) { pub._apagar.push(id); n++ }
       delete pub[f]

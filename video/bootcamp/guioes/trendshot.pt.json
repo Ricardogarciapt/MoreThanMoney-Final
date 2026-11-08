@@ -561,6 +561,49 @@
      "fala": "Vê este exemplo de uma compra. A operação está a correr a favor, e aparece uma estrela vermelha no caminho. É o aviso de que o movimento pode estar a perder força. A ação do guia é proteger: passar o stop para a entrada, ou para lucro. Se o preço continuar, a operação continua protegida. Se o preço virar, a proteção já está feita, e o resultado fica muito mais perto de zero do que estaria. Em todos os casos, a decisão estava tomada antes da estrela aparecer. Não houve pânico, houve um plano."
     },
     {
+     "id": "v2-11b",
+     "tipo": "pontos",
+     "cap": "03 · Gerir a operação",
+     "kicker": "Posição aberta",
+     "titulo": "Gerir sem improvisar",
+     "itens": [
+      "TP1: tira uma parte e passa o stop para a entrada",
+      "TP2: tira outra parte e sobe o stop para o TP1",
+      "O resto segue com trailing pela EMA 20",
+      "Fecha o resto quando uma vela fecha do outro lado da EMA 20"
+     ],
+     "fala": "Agora, a gestão de uma posição que já está aberta. O plano do TrendShot dá-te quatro alvos, a trinta, cinquenta, cem e cento e cinquenta por cento do stop. Uma forma simples de os usar é esta. No primeiro alvo, tiras uma parte e passas o stop para a entrada. A partir daí, o risco da operação fica perto de zero. No segundo alvo, tiras outra parte e sobes o stop para o primeiro alvo. O que sobra fica a correr com trailing: o stop acompanha a linha vermelha, a EMA 20, e só fechas o resto quando uma vela fechar do outro lado dela."
+    },
+    {
+     "id": "v2-11c",
+     "tipo": "grafico",
+     "cap": "03 · Gerir a operação",
+     "kicker": "Gestão no gráfico",
+     "titulo": "Parciais, stop na entrada e trailing",
+     "cenario": "tendencia",
+     "seed": 21,
+     "base": [
+      "medias",
+      "cores",
+      "estrelas"
+     ],
+     "camadas": [
+      "sinal",
+      "plano",
+      "gestao"
+     ],
+     "ate": [
+      0.32,
+      0.95
+     ],
+     "zoom": [
+      0.5,
+      0.5
+     ],
+     "rotulo": "Gestão · parciais e trailing",
+     "fala": "Vê isto no gráfico. A compra entra no triângulo azul, com o stop lá em baixo, a vermelho. O preço toca no primeiro alvo: sai uma parte, e o stop passa para a entrada, a linha roxa. Toca no segundo: sai outra parte, e o stop sobe para o primeiro alvo. Daqui em diante, a linha dourada é o trailing, e sobe com a EMA 20. O preço passa o terceiro e o quarto alvo, e o resto continua a correr. Só quando uma vela fecha abaixo da EMA 20 é que fechas o que sobra. Não precisaste de adivinhar o topo. O plano fez o trabalho."
+    },
+    {
      "id": "v2-12",
      "tipo": "capitulo",
      "cap": "04 · Quando não entrar",
