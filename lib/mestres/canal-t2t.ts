@@ -19,6 +19,7 @@ export const CANAL_POR_FONTE_MTM: Record<string, string> = {
   premiumscanner: 'sinais-premium-ii',
   defy: 'sinais-defy',
   rocketnova: 'sinais-rocketnova',
+  quantum: 'sinais-quantum',
 }
 
 /** Os três de antes (05/10): só valem quando nenhum provider reclama o canal. */

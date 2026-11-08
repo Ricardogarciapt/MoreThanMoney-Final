@@ -99,7 +99,7 @@ export function linkDeRetoma(c: Pick<CheckoutAbandonado, 'origem' | 'produto'>):
   if (c.origem === 'marketplace_leads') return linkAssinado(`/marketplace/${encodeURIComponent(c.produto)}`, AG.EMAIL)
   const plano = c.produto.toLowerCase()
   if (plano.startsWith('mtmcopy')) return linkAssinado('/mtmcopy', AG.EMAIL)
-  if (/^(goldkiller|aurumflow|trendshot|defy|rocketnova|sniperpro|mtm_scanner|scanners)/.test(plano)) return linkAssinado('/scanner', AG.EMAIL)
+  if (/^(goldkiller|aurumflow|trendshot|defy|rocketnova|quantum|sniperpro|mtm_scanner|scanners)/.test(plano)) return linkAssinado('/scanner', AG.EMAIL)
   return linkAssinado('/upgrade', AG.EMAIL)
 }
 
@@ -117,6 +117,8 @@ const NOME_DO_PLANO: Record<string, string> = {
   defy_semestral: 'DEFY (semestral)',
   rocketnova_lifetime: 'RocketNova (vitalício)',
   rocketnova_semestral: 'RocketNova (semestral)',
+  quantum_lifetime: 'Quantum (vitalício)',
+  quantum_semestral: 'Quantum (semestral)',
   sniperpro_lifetime: 'SniperPro (vitalício)',
   sniperpro_semestral: 'SniperPro (semestral)',
   premium_scanner_lifetime: 'Premium Scanner (vitalício)',

@@ -19,6 +19,9 @@ const PRICE_ENV_KEYS: Record<string, string> = {
   // RocketNova by MTM (08/11/2026): mesma tabela do GoldKiller (50 € semestral / 350 € vitalício).
   rocketnova_semestral: 'STRIPE_PRICE_ROCKETNOVA_SEMESTRAL',
   rocketnova_lifetime: 'STRIPE_PRICE_ROCKETNOVA_LIFETIME',
+  // Quantum by MTM (08/11/2026): mesma tabela (50 € semestral / 350 € vitalício).
+  quantum_semestral: 'STRIPE_PRICE_QUANTUM_SEMESTRAL',
+  quantum_lifetime: 'STRIPE_PRICE_QUANTUM_LIFETIME',
   // SniperPro by MTM (08/11/2026): código da casa (docs/pine/sniperpro*.pine), mesma tabela.
   sniperpro_semestral: 'STRIPE_PRICE_SNIPERPRO_SEMESTRAL',
   sniperpro_lifetime: 'STRIPE_PRICE_SNIPERPRO_LIFETIME',

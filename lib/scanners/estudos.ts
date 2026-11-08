@@ -41,8 +41,8 @@ export const scannerStudies: Record<ScannerKey, string[]> = {
   RocketNova: ["PUB;f2e9cd6359e946e99e6b843429ae6592"],
   // SniperPro by MTM (08/11/2026): versão própria em docs/pine/sniperpro.pine (painel de preço: bandas,
   // trend screener, nuvem Kalman, pivots e níveis-chave) + docs/pine/sniperpro-asst.pine (painel inferior).
-  // Publicado a 08/11/2026: https://br.tradingview.com/script/1v31p5j3/ (ver lib/scanners/scripts-tradingview.ts).
-  // Falta o PUB do estudo publicado para trocar estes ids (2 em vez de 5).
+  // Publicado a 08/11/2026: https://br.tradingview.com/script/1v31p5j3/ (link de entrega em lib/scanners/links-tradingview.ts).
+  // Decisão do dono (08/11/2026): o WebTrader continua com estes estudos; não se trocam os ids.
   Winzone: [
     "PUB;6c003d30b2154ef3a31074d5c703954f",
     "PUB;e6adb5e5246c43f4a8dcffde5c98db4e",
@@ -92,6 +92,8 @@ export const ESTUDOS_WEBTRADER = [
   { chave: "PremiumScanner", rotulo: "Premium Scanner", alerta: "premiumscanner", acesso: "PremiumScanner", curto: "PS", cor: "#E9C46A" },
   // RocketNova (08/11): as setas dos sinais por webhook; o estudo publicado entra quando existir.
   { chave: "RocketNova", rotulo: "RocketNova", alerta: "rocketnova", acesso: "RocketNova", curto: "RN", cor: "#D2A63C" },
+  // Quantum by MTM (08/11): as setas dos sinais por webhook; o estudo publicado troca o de terceiros quando existir.
+  { chave: "Sinergy", rotulo: "Quantum", alerta: "quantum", acesso: "Quantum", curto: "QT", cor: "#3B7DDD" },
 ] as const
 
 export type EstudoWebtrader = (typeof ESTUDOS_WEBTRADER)[number]

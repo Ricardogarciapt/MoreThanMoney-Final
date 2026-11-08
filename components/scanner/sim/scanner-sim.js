@@ -874,6 +874,121 @@ function rocketNova() {
   }, warm)
 }
 
+// ───────────────────────── Quantum ─────────────────────────
+// Seguidor de tendência com entradas em recuo (docs/pine/mtm-quantum.pine). Linha primária (EMA 269)
+// azul/vermelha pela fase (duas velas do mesmo lado); seta grande na viragem; fita EMA 8/21; triângulo
+// de recuo (toque na fita + fecho a favor); ponto de onda (Stoch RSI 14/5 a sair da zona 20/80 na
+// direção da fase); bandas 2σ/3σ; painel de força (score 0–100). Gestão MTM: stop para lá do extremo
+// do recuo, alvo a 2R.
+function rsiOf(src, len) {
+  const up = src.map((x, i) => (i === 0 ? 0 : Math.max(0, x - src[i - 1])))
+  const dn = src.map((x, i) => (i === 0 ? 0 : Math.max(0, src[i - 1] - x)))
+  const au = rma(up, len), ad = rma(dn, len)
+  return au.map((u, i) => (ad[i] === 0 ? 100 : 100 - 100 / (1 + u / ad[i])))
+}
+function quantum() {
+  const warm = 300
+  const cs = makeCandles(41, 1.6475, [
+    { len: 150, drift: 0.00004, vol: 0.0009 }, { len: 100, drift: 0.00022, vol: 0.0009 },
+    { len: 50, drift: 0.0006, vol: 0.0009 }, { len: 14, drift: -0.0007, vol: 0.001 }, { len: 34, drift: 0.0006, vol: 0.0009 },
+    { len: 12, drift: -0.0008, vol: 0.001 }, { len: 30, drift: 0.0006, vol: 0.0009 },
+    { len: 50, drift: -0.0008, vol: 0.0011 }, { len: 12, drift: 0.0007, vol: 0.001 }, { len: 36, drift: -0.0007, vol: 0.001 },
+  ])
+  const close = cs.map((b) => b.c)
+  const prim = ema(close, 269)
+  const e8 = ema(close, 8), e21 = ema(close, 21)
+  const rsi = rsiOf(close, 14)
+  const k = rsi.map((_, i) => { const w = rsi.slice(Math.max(0, i - 4), i + 1); const lo = Math.min(...w), hi = Math.max(...w); return hi === lo ? 50 : ((rsi[i] - lo) / (hi - lo)) * 100 })
+  const bbB = sma(close, 20), bbD = stdev(close, 20)
+  const bb1U = bbB.map((b, i) => b + 2 * bbD[i]), bb1L = bbB.map((b, i) => b - 2 * bbD[i])
+  const bb2U = bbB.map((b, i) => b + 3 * bbD[i]), bb2L = bbB.map((b, i) => b - 3 * bbD[i])
+  // Fase: duas velas seguidas do mesmo lado da linha primária.
+  const fase = []
+  let f = 0
+  for (let i = 0; i < cs.length; i++) {
+    if (i > 0 && close[i] > prim[i] && close[i - 1] > prim[i - 1]) f = 1
+    if (i > 0 && close[i] < prim[i] && close[i - 1] < prim[i - 1]) f = -1
+    fase.push(f)
+  }
+  // Painel de força: quatro «timeframes» aproximados por pares de médias mais longas.
+  const pares = [[8, 21], [21, 55], [34, 89], [55, 144]].map(([a, b]) => [ema(close, a), ema(close, b)])
+  const score = cs.map((_, i) => Math.round(50 + (50 / pares.length) * pares.reduce((s, [fa, sl]) => s + (close[i] > fa[i] ? 0.5 : -0.5) + (fa[i] > sl[i] ? 0.5 : -0.5), 0)))
+  const touchUp = (i) => cs[i].l <= e21[i] || cs[i - 1].l <= e21[i - 1]
+  const touchDn = (i) => cs[i].h >= e21[i] || cs[i - 1].h >= e21[i - 1]
+  const markers = []
+  const groups = []
+  let lastEntry = -99
+  for (let i = 2; i < cs.length; i++) {
+    const bull = fase[i] === 1, bear = fase[i] === -1
+    if (bull && fase[i - 1] !== 1) markers.push({ i, price: cs[i].l, text: '▲ Fase', color: BLUE, up: true })
+    if (bear && fase[i - 1] !== -1) markers.push({ i, price: cs[i].h, text: '▼ Fase', color: RED, up: false })
+    const pbUp = bull && touchUp(i) && close[i] > e8[i] && close[i] > cs[i].o
+    const pbDn = bear && touchDn(i) && close[i] < e8[i] && close[i] < cs[i].o
+    const dotUp = bull && k[i] > 20 && k[i - 1] <= 20
+    const dotDn = bear && k[i] < 80 && k[i - 1] >= 80
+    if (pbUp) markers.push({ i, price: cs[i].l, text: '▲', color: BLUE, up: true, small: true, kind: 'tri' })
+    if (pbDn) markers.push({ i, price: cs[i].h, text: '▼', color: RED, up: false, small: true, kind: 'tri' })
+    if (dotUp) markers.push({ i, price: cs[i].l, text: '●', color: BLUE, up: true, small: true, kind: 'dot' })
+    if (dotDn) markers.push({ i, price: cs[i].h, text: '●', color: RED, up: false, small: true, kind: 'dot' })
+    const entUp = (pbUp || dotUp) && score[i] > 60
+    const entDn = (pbDn || dotDn) && score[i] <= 40
+    if ((entUp || entDn) && i - lastEntry >= 14) {
+      const dir = entUp ? 1 : -1
+      const e = close[i]
+      const sl = dir > 0 ? Math.min(...cs.slice(i - 9, i + 1).map((b) => b.l)) : Math.max(...cs.slice(i - 9, i + 1).map((b) => b.h))
+      const R = Math.abs(e - sl)
+      groups.push({ i0: i, dir, forte: dir > 0 ? pbUp && dotUp : pbDn && dotDn, items: [
+        { price: e, color: GOLD_L, label: 'Entrada' },
+        { price: sl, color: RED, label: 'SL' },
+        { price: e + dir * R * 2, color: GREEN, label: 'Alvo 2R' },
+      ] })
+      lastEntry = i
+    }
+  }
+  const primUp = prim.map((v, i) => (fase[i] === 1 ? v : null))
+  const primDn = prim.map((v, i) => (fase[i] === -1 ? v : null))
+  const rows = [
+    { label: 'Fase', states: fase.map((v) => (v === 1 ? 'Alta' : v === -1 ? 'Baixa' : '–')) },
+    { label: 'Score', states: score.map((v) => (v > 60 ? 'Alta' : v <= 40 ? 'Baixa' : '–')) },
+    { label: 'Recuo à fita', states: cs.map((_, i) => (i > 1 && (fase[i] === 1 ? touchUp(i) : fase[i] === -1 ? touchDn(i) : false) ? 'ok' : '–')) },
+    { label: 'Oscilador na zona', states: k.map((v, i) => ((fase[i] === 1 && v <= 20) || (fase[i] === -1 && v >= 80) ? 'ok' : '–')) },
+    { label: 'Sinal de entrada', states: cs.map((_, i) => (markers.some((m) => m.small && m.i === i) ? 'ok' : '–')) },
+  ]
+  const flip = markers.find((m) => !m.small && m.i >= warm)
+  const first = groups.find((g) => g.i0 >= warm)
+  const forte = groups.find((g) => g.i0 >= warm && g.forte) || first
+  const espacar = (lista) => [...lista].sort((a, b) => a.i - b.i).reduce((acc, c) => [...acc, { ...c, i: acc.length ? Math.max(c.i, acc[acc.length - 1].i + 3) : c.i }], [])
+  return trim({
+    name: 'Quantum',
+    candles: cs,
+    lines: [
+      { name: 'Linha primária alta', color: BLUE, width: 0.08, z: 0.22, pts: primUp },
+      { name: 'Linha primária baixa', color: RED, width: 0.08, z: 0.22, pts: primDn },
+      { name: 'EMA 8', color: GOLD_L, width: 0.03, z: 0.23, pts: e8 },
+      { name: 'EMA 21', color: GOLD, width: 0.03, z: 0.23, pts: e21 },
+      { name: 'Banda superior', color: GREY, width: 0.03, z: 0.2, pts: bb1U },
+      { name: 'Banda inferior', color: GREY, width: 0.03, z: 0.2, pts: bb1L },
+    ],
+    areas: [
+      { upper: bb2U, lower: bb1U, color: GREY, opacity: 0.12, z: 0.05 },
+      { upper: bb1L, lower: bb2L, color: GREY, opacity: 0.12, z: 0.05 },
+    ],
+    zones: [],
+    markers,
+    groups,
+    panel: { title: 'Força', rows },
+    captions: espacar([
+      { i: warm, text: 'Linha primária: azul com o preço por cima, vermelha por baixo' },
+      ...(flip ? [{ i: flip.i, text: 'A seta de fase marca o início da tendência' }] : []),
+      ...(first ? [{ i: first.i0 - 4, text: 'O preço recua à fita e o oscilador entra na zona da direção' }] : []),
+      ...(first ? [{ i: first.i0, text: 'Triângulo de recuo ou ponto de onda na cor da direção: a entrada' }] : []),
+      ...(first ? [{ i: first.i0 + 2, text: 'Stop para lá do extremo do recuo e alvo a 2R' }] : []),
+      ...(forte && forte !== first ? [{ i: forte.i0, text: 'Triângulo e ponto na mesma vela: a entrada mais forte' }] : []),
+    ]),
+    legend: [{ color: BLUE, label: 'Fase de alta' }, { color: RED, label: 'Fase de baixa' }, { color: GOLD, label: 'Fita 8/21' }],
+  }, warm)
+}
+
 // ───────────────────────── Cartões de pontos-chave ─────────────────────────
 // Texto de cada cartão (vem do código Pine) e, à parte, o recorte da simulação que o ilustra.
 export const CARD_TEXT = {
@@ -932,6 +1047,13 @@ export const CARD_TEXT = {
     { title: 'Rocket Candle e pulso', text: 'A vela de impulso pinta-se de amarelo. O Volatility Pulse compara o ATR com a média e o Trade Clock mostra sessão e volume.' },
     { title: 'Entrada, stop e quatro alvos', text: 'Stop fixo (100 pips, 200 no ouro) ou na última estrela. TP1 a TP4 a 30 %, 50 %, 100 % e 150 % do stop.' },
     { title: 'Gestão por alertas', text: 'Depois do TP1 o stop passa para a entrada. Um sinal contrário fecha a trade. Tudo sai por webhook com o mesmo id.' },
+  ],
+  quantum: [
+    { title: 'Linha primária e fase', text: 'Uma média longa (269) com brilho. Azul com o preço por cima, vermelha por baixo. Duas velas do mesmo lado mudam a fase e a seta grande marca o início.' },
+    { title: 'Painel de força', text: 'Uma pontuação de 0 a 100 e uma seta por timeframe, de M1 a W1. Compra acima de 60, venda a 40 ou menos, 45 a 50 é neutro.' },
+    { title: 'O recuo', text: 'O preço volta à fita (EMA 8 e 21) e o oscilador Stoch RSI entra na zona da direção: azul em baixo na compra, vermelha em cima na venda.' },
+    { title: 'Triângulo e ponto', text: 'O triângulo nasce quando a vela fecha de volta a favor depois do toque na fita. O ponto nasce quando o oscilador sai da zona. Os dois na mesma vela é a entrada mais forte.' },
+    { title: 'Gestão MTM', text: 'Stop para lá do extremo das últimas velas do recuo e alvo com pelo menos o dobro do risco. Os alertas saem por webhook com entrada, stop, alvo e score.' },
   ],
 }
 
@@ -1036,6 +1158,18 @@ const CARD_VIEWS = {
       { win: around(be?.from ?? g.i0 + 4, 10, 18, N), layers: { candles: true, groups: true }, group: g },
     ]
   },
+  quantum: (s) => {
+    const N = s.candles.length
+    const flip = s.markers.find((m) => !m.small)
+    const g = s.groups.find((x) => x.forte) || s.groups[s.groups.length - 1]
+    return [
+      { win: [0, N - 1], layers: { candles: true, dimCandles: true, lines: ['Linha primária alta', 'Linha primária baixa'], markers: (m) => !m.small } },
+      { win: around(flip?.i ?? 40, 30, 40, N), layers: { candles: true, dimCandles: true, panel: true, lines: ['Linha primária alta', 'Linha primária baixa'] } },
+      { win: around(g.i0, 30, 8, N), layers: { candles: true, lines: ['EMA 8', 'EMA 21', 'Banda superior', 'Banda inferior'], areas: true, markers: (m) => m.kind === 'dot' } },
+      { win: around(g.i0, 16, 10, N), layers: { candles: true, lines: ['EMA 8', 'EMA 21'], markers: (m) => m.small } },
+      { win: around(g.i0, 8, 24, N), layers: { candles: true, groups: true, markers: (m) => m.small }, group: g },
+    ]
+  },
 }
 
 /** Cartões de pontos-chave de um scanner: texto + recorte da simulação. */
@@ -1045,7 +1179,7 @@ export function scannerCards(slug) {
   return CARD_TEXT[slug].map((t, k) => ({ ...t, ...views[k] }))
 }
 
-const BUILDERS = { 'gold-killer': goldKiller, 'mtm-scanner': mtmScanner, 'aurum-flow': aurumFlow, trendshot: trendShot, sensei, 'premium-scanner': premiumScanner, defy, rocketnova: rocketNova }
+const BUILDERS = { 'gold-killer': goldKiller, 'mtm-scanner': mtmScanner, 'aurum-flow': aurumFlow, trendshot: trendShot, sensei, 'premium-scanner': premiumScanner, defy, rocketnova: rocketNova, quantum }
 const cache = {}
 /** Simulação de um scanner pelo slug da landing. */
 export function simulate(slug) {

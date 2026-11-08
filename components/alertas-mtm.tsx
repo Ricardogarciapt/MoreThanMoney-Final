@@ -161,6 +161,7 @@ const STRATEGY_STUDIES: Record<string, string[]> = {
   PremiumScanner: scannerStudies.PremiumScanner,
   Defy: scannerStudies.Defy,
   RocketNova: scannerStudies.RocketNova,
+  Quantum: scannerStudies.Sinergy,
 }
 const DEFAULT_STUDIES = STRATEGY_STUDIES.MTMScanner
 
@@ -174,6 +175,7 @@ function studiesForStrategy(strategy: string | null): string[] {
   if (norm.includes("goldkiller") || (norm.includes("gold") && norm.includes("kill"))) return STRATEGY_STUDIES.Goldkiller
   if (norm.includes("defy")) return STRATEGY_STUDIES.Defy
   if (norm.includes("rocketnova")) return STRATEGY_STUDIES.RocketNova
+  if (norm.includes("quantum")) return STRATEGY_STUDIES.Quantum
   if (norm.includes("premiumscanner")) return STRATEGY_STUDIES.PremiumScanner // antes do genérico: o nome contém "scanner"
   if (norm.includes("scanner") || norm.includes("mtmscanner")) return STRATEGY_STUDIES.MTMScanner
   return DEFAULT_STUDIES

@@ -16,6 +16,7 @@ import { calcularMTMScanner } from '@/lib/estudos/mtmscanner'
 import { calcularSensei } from '@/lib/estudos/sensei'
 import { calcularTrendShot } from '@/lib/estudos/trendshot/motor'
 import type { Vela } from '@/lib/estudos/comum/velas'
+import { ema } from '@/lib/estudos/comum/ta'
 import { ESTUDOS_WEBTRADER } from '@/lib/scanners/estudos'
 
 export type ChaveGrafico =
@@ -26,6 +27,7 @@ export type ChaveGrafico =
   | 'premium-scanner'
   | 'defy'
   | 'rocketnova'
+  | 'quantum'
   | 'aurum'
   | 'perps'
   | 'premium'
@@ -63,6 +65,8 @@ const MARCAS: Record<ChaveGrafico, MarcaEstrategia> = {
   defy: { chave: 'defy', nome: 'MTM Auto DEFY', cor: '#8E44EC' },
   // RocketNova (08/11): as mesmas EMAs 20/50 do TrendShot (motor partilhado), na cor da marca.
   rocketnova: { chave: 'rocketnova', nome: 'MTM Auto RocketNova', cor: '#D2A63C' },
+  // Quantum by MTM (08/11): a linha primária (EMA 269) e a fita 8/21 do Pine, no azul da marca.
+  quantum: { chave: 'quantum', nome: 'MTM Auto Quantum', cor: '#3B7DDD' },
   aurum: { chave: 'aurum', nome: 'MTM Aurum Flow Cripto', cor: '#F59E0B' },
   perps: { chave: 'perps', nome: 'MTM Perps', cor: '#FB923C' },
   // Fontes sem indicador próprio (27/10): o gráfico leva só a marca e as linhas da trade.
@@ -82,6 +86,7 @@ export function marcaDaEstrategia(estrategia: string | null | undefined, alertNa
   const t = `${e} ${a}`
   if (/\bdefy\b/.test(t)) return MARCAS.defy
   if (/rocket\s*nova/.test(t)) return MARCAS.rocketnova
+  if (/quantum/.test(t)) return MARCAS.quantum
   if (/premium[\s-]*(scanner|ii)/.test(t)) return MARCAS['premium-scanner']
   if (/trend\s*shot/.test(t)) return MARCAS.trendshot
   if (/gold\s*killer/.test(t)) return MARCAS.goldkiller
@@ -127,6 +132,15 @@ export function linhasDaEstrategia(marca: MarcaEstrategia, velas: Vela[], simbol
         return [
           { nome: 'EMA 20', cor, valores: r.emaRapida, espessura: 2.2 },
           { nome: 'EMA 50', cor: clarear(cor), valores: r.emaLenta, espessura: 2 },
+        ]
+      })
+    case 'quantum':
+      return seguro(() => {
+        const fecho = velas.map((v) => v.c)
+        return [
+          { nome: 'EMA 269', cor, valores: ema(fecho, 269), espessura: 2.4 },
+          { nome: 'EMA 21', cor: clarear(cor), valores: ema(fecho, 21), espessura: 1.8 },
+          { nome: 'EMA 8', cor: clarear(cor, 0.65), valores: ema(fecho, 8), espessura: 1.4 },
         ]
       })
     case 'goldkiller':

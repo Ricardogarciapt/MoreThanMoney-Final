@@ -107,14 +107,15 @@ export async function sendScannerAccessEmail(
   userName: string,
   scannerName: string,
   tradingviewUsername: string,
-  scriptUrl?: string | null,
+  /** Links dos scripts (lib/scanners/links-tradingview.ts → linksDoPlano(planId)). */
+  scriptLinks: readonly { nome: string; url: string }[] = [],
 ) {
   const siteUrl = getSiteUrl()
   try {
     await sendHtmlMail(
       userEmail,
       `🔓 Acesso ao ${scannerName} — instruções TradingView`,
-      scannerAccessEmailTemplate(userName, scannerName, tradingviewUsername, siteUrl, scriptUrl),
+      scannerAccessEmailTemplate(userName, scannerName, tradingviewUsername, siteUrl, scriptLinks),
     )
     return { success: true }
   } catch (error) {

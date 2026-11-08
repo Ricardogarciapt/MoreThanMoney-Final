@@ -214,6 +214,14 @@ export function resolvedRocketnovaChatId(): string | null {
   return normalizeEnvChatId(readEnv(['TELEGRAM_CHANNEL_ROCKETNOVA', 'TELEGRAM_ROCKETNOVA_CHAT_ID']))
 }
 
+/**
+ * Grupo Telegram do Quantum by MTM (08/11/2026): ainda não existe — só sai espelho quando
+ * TELEGRAM_CHANNEL_QUANTUM estiver definido. Só DESTINO do espelho do chat `sinais-quantum`.
+ */
+export function resolvedQuantumChatId(): string | null {
+  return normalizeEnvChatId(readEnv(['TELEGRAM_CHANNEL_QUANTUM', 'TELEGRAM_QUANTUM_CHAT_ID']))
+}
+
 /** O título é de um grupo MTM Auto Premium II (destino, nunca fonte)? */
 export function tituloPremiumII(title: string | null | undefined): boolean {
   // Também o grupo do DEFY (04/11): destino do espelho, nunca fonte.

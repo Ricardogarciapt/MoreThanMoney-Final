@@ -20,6 +20,7 @@ const SCANNER_LIFETIME_PLANS = new Set([
   'trendshot_lifetime',
   'defy_lifetime',
   'rocketnova_lifetime',
+  'quantum_lifetime',
   'sniperpro_lifetime',
 ])
 
