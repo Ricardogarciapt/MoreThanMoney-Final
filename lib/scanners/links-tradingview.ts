@@ -26,6 +26,8 @@ export const LINKS_SCRIPTS_POR_SCANNER: Record<string, readonly LinkScriptTradin
   // SniperPro by MTM (08/11/2026): painel de preço publicado pelo Ricardo; o Asst junta-se quando for publicado.
   sniperpro: [{ nome: 'SniperPro by MTM', url: 'https://br.tradingview.com/script/1v31p5j3/' }],
   goldkiller: [{ nome: 'MTM Gold Killer', url: 'https://www.tradingview.com/script/fhpIupC5-MTM-Gold-Killer-V2-1/' }],
+  // RocketNova by MTM (08/11/2026): link dado pelo Ricardo para a entrega da compra vitalícia.
+  rocketnova: [{ nome: 'RocketNova by MTM', url: 'https://br.tradingview.com/script/86b78YOM/' }],
 }
 
 /** O scanner de um planId do Stripe (`quantum_semestral` → `quantum`, `goldkiller_lifetime` → `goldkiller`). */
