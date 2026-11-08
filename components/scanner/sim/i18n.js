@@ -65,6 +65,16 @@ const EN = {
   'Entrada, stop e TP1 a TP4 fixos na vela do sinal': 'Entry, stop and TP1 to TP4 fixed on the signal candle',
   'Estrela de lançamento': 'Launch star', 'Rocket Candle': 'Rocket Candle', 'Volatility Pulse': 'Volatility Pulse', 'Trade Clock': 'Trade Clock',
   'EMA 20 acima da 50': 'EMA 20 above 50', 'Normal': 'Normal',
+  // Quantum
+  'Linha primária: azul com o preço por cima, vermelha por baixo': 'Primary line: blue with price above, red below',
+  'A seta de fase marca o início da tendência': 'The phase arrow marks the start of the trend',
+  'O preço recua à fita e o oscilador entra na zona da direção': 'Price pulls back to the ribbon and the oscillator enters the zone of the direction',
+  'Triângulo de recuo ou ponto de onda na cor da direção: a entrada': 'Pullback triangle or wave dot in the colour of the direction: the entry',
+  'Stop para lá do extremo do recuo e alvo a 2R': 'Stop beyond the extreme of the pullback and target at 2R',
+  'Triângulo e ponto na mesma vela: a entrada mais forte': 'Triangle and dot on the same candle: the strongest entry',
+  'Fase': 'Phase', 'Score': 'Score', 'Recuo à fita': 'Pullback to ribbon', 'Oscilador na zona': 'Oscillator in zone', 'Sinal de entrada': 'Entry signal',
+  'Força': 'Strength', 'Alvo 2R': 'Target 2R', '▲ Fase': '▲ Phase', '▼ Fase': '▼ Phase',
+  'Fase de alta': 'Bullish phase', 'Fase de baixa': 'Bearish phase', 'Fita 8/21': '8/21 ribbon',
 }
 
 const RULES = [[/^Rompimento da caixa (.+) a favor da tendência$/, (m) => `Breakout of the ${m[1]} box with the trend`]]
@@ -135,5 +145,12 @@ export const CARD_TEXT_EN = {
     { title: 'Rocket Candle and pulse', text: 'The impulse candle turns yellow. The Volatility Pulse compares ATR with its average and the Trade Clock shows session and volume.' },
     { title: 'Entry, stop and four targets', text: 'Fixed stop (100 pips, 200 on gold) or on the last star. TP1 to TP4 at 30%, 50%, 100% and 150% of the stop.' },
     { title: 'Management by alerts', text: 'After TP1 the stop moves to entry. An opposite signal closes the trade. Everything goes out by webhook with the same id.' },
+  ],
+  quantum: [
+    { title: 'Primary line and phase', text: 'A long average (269) with a glow. Blue with price above, red below. Two candles on the same side change the phase and the large arrow marks the start.' },
+    { title: 'Strength panel', text: 'A score from 0 to 100 and an arrow per timeframe, from M1 to W1. Buy above 60, sell at 40 or less, 45 to 50 is neutral.' },
+    { title: 'The pullback', text: 'Price returns to the ribbon (8 and 21 EMAs) and the Stoch RSI enters the zone of the direction: blue below for a buy, red above for a sell.' },
+    { title: 'Triangle and dot', text: 'The triangle is born when the candle closes back in favour after touching the ribbon. The dot is born when the oscillator leaves the zone. Both on the same candle is the strongest entry.' },
+    { title: 'MTM management', text: 'Stop beyond the extreme of the last pullback candles and a target of at least twice the risk. Alerts go out by webhook with entry, stop, target and score.' },
   ],
 }

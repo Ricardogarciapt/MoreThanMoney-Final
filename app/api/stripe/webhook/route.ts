@@ -71,6 +71,8 @@ const SCANNER_PLAN_NAMES: Record<string, string> = {
   defy_lifetime: 'DEFY by MTM (Vitalício)',
   rocketnova_semestral: 'RocketNova by MTM (Semestral)',
   rocketnova_lifetime: 'RocketNova by MTM (Vitalício)',
+  quantum_semestral: 'Quantum by MTM (Semestral)',
+  quantum_lifetime: 'Quantum by MTM (Vitalício)',
   premium_scanner_lifetime: 'MTM Premium Scanner (Vitalício)',
   mtm_scanner_monthly: 'Scanner MTM V3.4 (Mensal)',
   mtm_scanner_semestral: 'Scanner MTM V3.4 (Semestral)',
