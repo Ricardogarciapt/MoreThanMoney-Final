@@ -57,6 +57,8 @@ const PACKS_CONHECIDOS = [
   'rocketnova_lifetime',
   'quantum_semestral',
   'quantum_lifetime',
+  'sniperpro_semestral',
+  'sniperpro_lifetime',
   'premium_scanner_lifetime',
 ]
 
