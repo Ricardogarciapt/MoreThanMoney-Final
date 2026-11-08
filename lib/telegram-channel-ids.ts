@@ -206,10 +206,18 @@ export function resolvedDefyChatId(): string | null {
   return normalizeEnvChatId(readEnv(['TELEGRAM_CHANNEL_DEFY', 'TELEGRAM_DEFY_CHAT_ID'])) ?? DEFY_TELEGRAM_CHAT_ID
 }
 
+/**
+ * Grupo Telegram do RocketNova (08/11/2026): ainda não existe — só sai espelho quando
+ * TELEGRAM_CHANNEL_ROCKETNOVA estiver definido. Só DESTINO do espelho do chat `sinais-rocketnova`.
+ */
+export function resolvedRocketnovaChatId(): string | null {
+  return normalizeEnvChatId(readEnv(['TELEGRAM_CHANNEL_ROCKETNOVA', 'TELEGRAM_ROCKETNOVA_CHAT_ID']))
+}
+
 /** O título é de um grupo MTM Auto Premium II (destino, nunca fonte)? */
 export function tituloPremiumII(title: string | null | undefined): boolean {
   // Também o grupo do DEFY (04/11): destino do espelho, nunca fonte.
-  return /premium\s*(ii|2)\b|\bdefy\b/i.test(String(title ?? ''))
+  return /premium\s*(ii|2)\b|\bdefy\b|rocket\s*nova/i.test(String(title ?? ''))
 }
 
 /** Canal Telegram dos Perpétuos Cripto. Env se definido; senão o chatId canónico; null se ambos vazios

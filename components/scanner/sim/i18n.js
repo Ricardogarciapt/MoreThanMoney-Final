@@ -58,6 +58,13 @@ const EN = {
   'Toque na banda interior': 'Inner band touch', 'Toque na banda média': 'Mid band touch', 'Toque na banda exterior': 'Outer band touch',
   'Nível-chave por perto': 'Key level nearby', 'Vela forte a favor': 'Strong candle in favour', 'Volume acima da média': 'Volume above average',
   'Momento a virar': 'Momentum turning', 'Rejeição com pavio': 'Wick rejection',
+  // RocketNova
+  'EMAs de 20, 50 e 238: a tendência em três horizontes': '20, 50 and 238 EMAs: the trend on three horizons',
+  'As estrelas marcam os máximos e mínimos de swing: a rampa de lançamento': 'Stars mark the swing highs and lows: the launch pad',
+  'Cruzamento confirmado com estrela recente: sinal RocketNova': 'Confirmed cross with a recent star: RocketNova signal',
+  'Entrada, stop e TP1 a TP4 fixos na vela do sinal': 'Entry, stop and TP1 to TP4 fixed on the signal candle',
+  'Estrela de lançamento': 'Launch star', 'Rocket Candle': 'Rocket Candle', 'Volatility Pulse': 'Volatility Pulse', 'Trade Clock': 'Trade Clock',
+  'EMA 20 acima da 50': 'EMA 20 above 50', 'Normal': 'Normal',
 }
 
 const RULES = [[/^Rompimento da caixa (.+) a favor da tendência$/, (m) => `Breakout of the ${m[1]} box with the trend`]]
@@ -121,5 +128,12 @@ export const CARD_TEXT_EN = {
     { title: 'Confirmations and stars', text: 'Each reading adds a point. +6 gives one star, +8 two, +10 three. With a gold candle it is a King Idea.' },
     { title: 'Entry, Warning and stop', text: 'Entry on the close or at 50% of the candle. The Warning is the signal candle extreme and the stop sits 1 ATR beyond it.' },
     { title: 'Targets in R', text: 'TP1, TP2 and TP3 at 1R, 2R and 3R, with the distance in pips. There are modes for scalps and swings.' },
+  ],
+  rocketnova: [
+    { title: 'Three averages, one cross', text: '20, 50 and 238 EMAs. The signal is born when the fast one crosses the slow one and the candle closes, never before.' },
+    { title: 'Launch star', text: 'Swing highs and lows by Depth, Deviation and Backstep. A buy needs a recent low star; a sell, a high star.' },
+    { title: 'Rocket Candle and pulse', text: 'The impulse candle turns yellow. The Volatility Pulse compares ATR with its average and the Trade Clock shows session and volume.' },
+    { title: 'Entry, stop and four targets', text: 'Fixed stop (100 pips, 200 on gold) or on the last star. TP1 to TP4 at 30%, 50%, 100% and 150% of the stop.' },
+    { title: 'Management by alerts', text: 'After TP1 the stop moves to entry. An opposite signal closes the trade. Everything goes out by webhook with the same id.' },
   ],
 }

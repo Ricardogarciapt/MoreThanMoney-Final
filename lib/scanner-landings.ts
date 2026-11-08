@@ -141,6 +141,19 @@ export const SCANNER_LANDINGS: ScannerLanding[] = [
       "DEFY by MTM: bandas de exaustão, níveis-chave e confirmações com estrelas no TradingView, com entrada, Warning, stop e três alvos. 50€ por semestre ou 350€ vitalício.",
   },
   {
+    slug: "rocketnova",
+    key: "rocketnova",
+    video: "/scanners/rocketnova/apresentacao.mp4",
+    poster: "/scanners/rocketnova/poster.jpg",
+    title: ["Descola com a tendência.", "Com o plano a bordo."],
+    sub: "Três médias, estrelas de lançamento, Rocket Candle e pulso de volatilidade. Cada sinal chega com entrada, stop e quatro alvos, e a gestão segue por alertas.",
+    markets: ["Forex", "Ouro (XAUUSD)", "Índices", "Cripto"],
+    description:
+      "O RocketNova junta a leitura de tendência das EMAs 20, 50 e 238 com a estrutura do preço: um sinal só nasce quando a média rápida cruza a lenta e há uma estrela de lançamento recente, um mínimo de swing para a compra ou um máximo para a venda. A Rocket Candle marca a vela de impulso, o Volatility Pulse diz se o ATR está acima do normal e o Trade Clock mostra se estás dentro da sessão e com volume. Entrada, stop e TP1 a TP4 ficam fixos na vela do sinal; depois do TP1 o stop passa para a entrada e um sinal contrário fecha a trade.",
+    metaDescription:
+      "RocketNova by MTM: EMAs 20/50/238, estrelas de lançamento, Rocket Candle e gestão da trade no TradingView, com entrada, stop e quatro alvos. 50€ por semestre ou 350€ vitalício.",
+  },
+  {
     slug: "sensei",
     video: "/scanners/sensei/apresentacao.mp4",
     poster: "/scanners/sensei/poster.jpg",
@@ -266,6 +279,28 @@ const EN: Record<string, NonNullable<ScannerLanding["en"]>> = {
       "Educational tool: it does not place orders or guarantee results",
     ],
     metaDescription: "DEFY by MTM: exhaustion bands, key levels and confirmations with stars on TradingView, with entry, Warning, stop and three targets. €50 per six months or €350 lifetime.",
+  },
+  rocketnova: {
+    title: ["Lift off with the trend.", "With the plan on board."],
+    sub: "Three averages, launch stars, the Rocket Candle and a volatility pulse. Every signal comes with entry, stop and four targets, and the management follows by alerts.",
+    markets: ["Forex", "Gold (XAUUSD)", "Indices", "Crypto"],
+    description:
+      "RocketNova pairs the trend read of the 20, 50 and 238 EMAs with price structure: a signal is only born when the fast average crosses the slow one and there is a recent launch star, a swing low for a buy or a swing high for a sell. The Rocket Candle marks the impulse candle, the Volatility Pulse tells you whether ATR is above normal and the Trade Clock shows whether you are inside the session and with volume. Entry, stop and TP1 to TP4 stay fixed on the signal candle; after TP1 the stop moves to entry and an opposite signal closes the trade.",
+    features: [
+      "20, 50 and 238 EMAs with the signal on a cross confirmed at candle close",
+      "High and low stars by Depth, Deviation and Backstep (34 / 13 / 8)",
+      "Rocket Candle: the impulse candle painted yellow, with an optional filter",
+      "Volatility Pulse (ATR against its average) and a Trade Clock with Good / Low Volume",
+      "Entry, stop and TP1 to TP4 fixed on the candle, with the stop moved to entry after TP1",
+    ],
+    specs: [
+      "Fixed stop in points (auto mode: 100 pips, 200 on gold) or on the last star",
+      "Targets at 30%, 50%, 100% and 150% of the stop (60% for TP2 on gold)",
+      "Configurable trading session (08:00 to 21:00 by default)",
+      "JSON alerts with the entry and the follow-ups of the same trade, ready for webhooks",
+      "Forex, gold, indices and crypto; educational tool, it does not place orders",
+    ],
+    metaDescription: "RocketNova by MTM: 20/50/238 EMAs, launch stars, Rocket Candle and trade management on TradingView, with entry, stop and four targets. €50 per six months or €350 lifetime.",
   },
   sensei: {
     title: ["Many readings.", "One confluence."],

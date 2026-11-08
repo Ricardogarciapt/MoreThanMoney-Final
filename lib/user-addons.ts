@@ -14,6 +14,8 @@ export const SCANNER_ADDON_PLANS = [
   { id: 'trendshot_lifetime', label: 'TrendShot Vitalício', recurring: false },
   { id: 'defy_semestral', label: 'DEFY Semestral', recurring: false },
   { id: 'defy_lifetime', label: 'DEFY Vitalício', recurring: false },
+  { id: 'rocketnova_semestral', label: 'RocketNova Semestral', recurring: false },
+  { id: 'rocketnova_lifetime', label: 'RocketNova Vitalício', recurring: false },
   { id: 'premium_scanner_lifetime', label: 'Premium Scanner Vitalício', recurring: false },
   { id: 'mtm_scanner_semestral', label: 'MTM Scanner Semestral', recurring: false },
 ] as const
