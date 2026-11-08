@@ -18,7 +18,7 @@
  */
 import { getSupabaseAdmin } from '@/lib/supabase-admin-client'
 import { claimSignalOnce } from '@/lib/mtmcopy/premium-single'
-import { resolvedPremiumIIChatId, resolvedDefyChatId } from '@/lib/telegram-channel-ids'
+import { resolvedPremiumIIChatId, resolvedDefyChatId, resolvedRocketnovaChatId } from '@/lib/telegram-channel-ids'
 
 const TG_TOKEN = () => (process.env.TELEGRAM_AIBOT_TOKEN || '').trim()
 const JANELA_MS = 30 * 60_000
@@ -30,6 +30,8 @@ export const ESPELHOS: Array<{ canal: string; telegram: () => string | null }> =
   { canal: 'sinais-premium-ii', telegram: resolvedPremiumIIChatId },
   // DEFY (04/11): grupo «MoreThanMoney Defy Signals».
   { canal: 'sinais-defy', telegram: resolvedDefyChatId },
+  // RocketNova (08/11): só com TELEGRAM_CHANNEL_ROCKETNOVA definido.
+  { canal: 'sinais-rocketnova', telegram: resolvedRocketnovaChatId },
 ]
 
 interface Mensagem {

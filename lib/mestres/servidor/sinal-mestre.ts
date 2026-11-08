@@ -75,6 +75,11 @@ export const ESTRATEGIA_DO_WEBHOOK: Record<string, AlvoDaFonte> = {
    */
   defy: { slug: 'mtm-auto-defy', comentario: 'MTM Auto DEFY' },
   /**
+   * MTM Auto RocketNova (08/11, pedido do dono): alertas do indicador RocketNova (?strategy=rocketnova).
+   * Sem linha em mestres_estrategias nada abre — começa em sombra, como as outras estratégias novas.
+   */
+  rocketnova: { slug: 'mtm-auto-rocketnova', comentario: 'MTM Auto RocketNova' },
+  /**
    * MTM Auto Edge (26/10, pedido do dono): estratégia individual, alimentada pelo pv-relay com os 2
    * top traders do canal PrimeVerse (lib/mestres/edge-pv.ts). Cada ENTRY HIT é uma trade — a chave é
    * o id da mensagem do SETUP (`tg:<id>`), que é também o que os seguimentos do trader citam.
