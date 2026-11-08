@@ -232,19 +232,22 @@ async function createCarouselContainer(
   caption: string,
   token: string,
 ): Promise<{ parentId: string; childIds: string[] }> {
-  const childIds: string[] = []
-  for (const url of urls.slice(0, 10)) {
-    const isVideo = /\.(mp4|mov)(\?|$)/i.test(url)
-    const params: Record<string, string> = { is_carousel_item: "true" }
-    if (isVideo) {
-      params.media_type = "VIDEO"
-      params.video_url = url
-    } else {
-      params.image_url = url
-    }
-    const j = await graphPost(igId, "media", params, token)
-    childIds.push(j.id as string)
-  }
+  // Os filhos criam-se em paralelo: um a um, 8 lâminas passavam dos 60 s do cron e a ronda
+  // morria a meio (08/11: os dois carrosséis diários ficaram presos em «publishing»).
+  const childIds: string[] = await Promise.all(
+    urls.slice(0, 10).map(async (url) => {
+      const isVideo = /\.(mp4|mov)(\?|$)/i.test(url)
+      const params: Record<string, string> = { is_carousel_item: "true" }
+      if (isVideo) {
+        params.media_type = "VIDEO"
+        params.video_url = url
+      } else {
+        params.image_url = url
+      }
+      const j = await graphPost(igId, "media", params, token)
+      return j.id as string
+    }),
+  )
   const parent = await graphPost(
     igId,
     "media",
