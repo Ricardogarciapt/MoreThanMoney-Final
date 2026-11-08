@@ -274,7 +274,7 @@ const TIPOS={
 
 // ---------------------------------------------------------------- linha do tempo
 const montadas={}
-window.iniciar=(tl,legendas,dados)=>{ window.NOME=dados.nome||''; window.PLANO=dados.plano||{}; window.TL=tl; window.LEG=legendas; window.T=dados.ui||{}; if(dados.cores) COR=dados.cores
+window.iniciar=(tl,legendas,dados)=>{ window.NOME=dados.nome||''; window.LANG=dados.lang||'pt'; window.PLANO=dados.plano||{}; window.TL=tl; window.LEG=legendas; window.T=dados.ui||{}; if(dados.cores) COR=dados.cores
   document.getElementById('marcaTxt').textContent=dados.marca||'MoreThanMoney · Bootcamp'
   MOTOR=(window.MOTORES||{})[dados.motor||dados.est]||null
   if(MOTOR) (MOTOR.camadasLado||[]).forEach(x=>DEFAULT_VIS[x]=1); else simIniciar(dados.est,dados.lang||'pt')

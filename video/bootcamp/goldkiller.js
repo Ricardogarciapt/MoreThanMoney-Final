@@ -65,7 +65,7 @@
     const cv = el('canvas'); cv.width = W; cv.height = H; wrap.append(cv); r.append(wrap)
     const g = cv.getContext('2d'), D = serie(o.cenario || 'compra', o.seed || 7), esc = Math.max(.62, Math.min(1, W / 1560))
     const CT = o.transparente ? { ...C, fundo: 'rgba(19,23,34,.45)' } : C
-    let lang = 'pt'; try { lang = (typeof dados !== 'undefined' && dados.lang) || 'pt' } catch (e) {}
+    const lang = G.LANG || 'pt'
     function desenha(vis0, ate, zoom) {
       const vis = { ...(vis0 || {}) }; if (vis.cores) vis.centro = Math.max(vis.centro || 0, vis.cores); if (vis.setas) vis.sinal = Math.max(vis.sinal || 0, vis.setas)
       const J = M.janela(D, ate, zoom), ult = J.ult
