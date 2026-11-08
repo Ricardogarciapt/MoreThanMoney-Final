@@ -22,6 +22,9 @@ const PRICE_ENV_KEYS: Record<string, string> = {
   // Quantum by MTM (08/11/2026): mesma tabela (50 € semestral / 350 € vitalício).
   quantum_semestral: 'STRIPE_PRICE_QUANTUM_SEMESTRAL',
   quantum_lifetime: 'STRIPE_PRICE_QUANTUM_LIFETIME',
+  // SniperPro by MTM (08/11/2026): código da casa (docs/pine/sniperpro*.pine), mesma tabela.
+  sniperpro_semestral: 'STRIPE_PRICE_SNIPERPRO_SEMESTRAL',
+  sniperpro_lifetime: 'STRIPE_PRICE_SNIPERPRO_LIFETIME',
   // Golden Zone by MTM (08/11/2026): mesma tabela (50 € semestral / 350 € vitalício).
   goldenzone_semestral: 'STRIPE_PRICE_GOLDENZONE_SEMESTRAL',
   goldenzone_lifetime: 'STRIPE_PRICE_GOLDENZONE_LIFETIME',

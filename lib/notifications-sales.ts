@@ -41,6 +41,8 @@ export function planLabel(planId: string): string {
     rocketnova_lifetime: 'RocketNova by MTM (Vitalício)',
     quantum_semestral: 'Quantum by MTM (Semestral)',
     quantum_lifetime: 'Quantum by MTM (Vitalício)',
+    sniperpro_semestral: 'SniperPro by MTM (Semestral)',
+    sniperpro_lifetime: 'SniperPro by MTM (Vitalício)',
     goldenzone_semestral: 'Golden Zone by MTM (Semestral)',
     goldenzone_lifetime: 'Golden Zone by MTM (Vitalício)',
     premium_scanner_lifetime: 'MTM Premium Scanner (Vitalício)',

@@ -141,6 +141,18 @@ export const SCANNER_LANDINGS: ScannerLanding[] = [
       "DEFY by MTM: bandas de exaustão, níveis-chave e confirmações com estrelas no TradingView, com entrada, Warning, stop e três alvos. 50€ por semestre ou 350€ vitalício.",
   },
   {
+    slug: "sniperpro",
+    key: "sniperpro",
+    poster: "/scanners/sniperpro/poster.jpg",
+    title: ["Cinco leituras.", "Um só gráfico."],
+    sub: "Bandas de exaustão, trend screener com tabela, nuvem Kalman, pivots e níveis-chave num só estudo, com o painel SniperPro Asst a ler o momento.",
+    markets: ["Forex", "Ouro (XAUUSD)", "Índices", "Cripto"],
+    description:
+      "O SniperPro lê o mercado em camadas. As bandas de 55 períodos dizem onde o preço está esticado. O trend screener corre onze médias adaptativas, de 8 a 987, e resume-as numa tabela: tendência, estado e força. A nuvem Kalman pinta as velas a favor ou contra. Os pivots e os níveis-chave marcam onde o preço reagiu antes. Quando o filtro curto cruza o longo numa vela válida e a maioria das ferramentas de tendência concorda, sai um sinal com pontuação e o plano por alerta: entrada, stop e três alvos.",
+    metaDescription:
+      "SniperPro by MTM: bandas de exaustão, trend screener com tabela, nuvem Kalman, pivots e níveis-chave no TradingView, com o painel SniperPro Asst. 50€ por semestre ou 350€ vitalício.",
+  },
+  {
     slug: "rocketnova",
     key: "rocketnova",
     video: "/scanners/rocketnova/apresentacao.mp4",
@@ -309,6 +321,14 @@ const EN: Record<string, NonNullable<ScannerLanding["en"]>> = {
       "Educational tool: it does not place orders or guarantee results",
     ],
     metaDescription: "DEFY by MTM: exhaustion bands, key levels and confirmations with stars on TradingView, with entry, Warning, stop and three targets. €50 per six months or €350 lifetime.",
+  },
+  sniperpro: {
+    title: ["Five readings.", "One chart."],
+    sub: "Exhaustion bands, a trend screener with its table, a Kalman cloud, pivots and key levels in one study, with the SniperPro Asst panel reading momentum.",
+    markets: ["Forex", "Gold (XAUUSD)", "Indices", "Crypto"],
+    description:
+      "SniperPro reads the market in layers. The 55-period bands show where price is stretched. The trend screener runs eleven adaptive averages, from 8 to 987, and sums them up in a table: bias, state and strength. The Kalman cloud colours the candles with or against the trend. Pivots and key levels mark where price has reacted before. When the short filter crosses the long one on a valid candle and most trend tools agree, a scored signal prints and the plan goes out by alert: entry, stop and three targets.",
+    metaDescription: "SniperPro by MTM: exhaustion bands, trend screener with table, Kalman cloud, pivots and key levels on TradingView, with the SniperPro Asst panel. €50 per six months or €350 lifetime.",
   },
   rocketnova: {
     title: ["Lift off with the trend.", "With the plan on board."],
