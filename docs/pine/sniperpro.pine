@@ -270,8 +270,7 @@ kfBull = kS >= kL
 kfC = kfBull ? kfUpC : kfDnC
 pKS = plot(kfOn ? kS : na, "Short Kalman", color=kfC, linewidth=1)
 pKL = plot(kfOn ? kL : na, "Long Kalman",  color=kfC, linewidth=1)
-plot(kfOn and kfGlow ? kS : na, "Glow Short", color=color.new(kfC, 80), linewidth=4)
-plot(kfOn and kfGlow ? kL : na, "Glow Long",  color=color.new(kfC, 80), linewidth=4)
+plot(kfOn and kfGlow ? kS : na, "Glow", color=color.new(kfC, 80), linewidth=4)
 fill(pKS, pKL, color=kfOn ? color.new(kfC, kfFill) : na, title="Sniper Cloud")
 barcolor(kfCandle ? (kfBull ? kfCUp : kfCDn) : na, title="Bar Color")
 
@@ -484,21 +483,20 @@ r6 = r5 + pRg
 s6 = s5 - pRg
 r7 = r6 + pRg
 s7 = s6 - pRg
-f_pv(float lvl, int n) => pvOn and n <= pvLevels and not newPeriod ? lvl : na
-plot(f_pv(r1, 1), "R1", color=pvRC, linewidth=pvWidth, style=plot.style_linebr)
-plot(f_pv(r2, 2), "R2", color=pvRC, linewidth=pvWidth, style=plot.style_linebr)
-plot(f_pv(r3, 3), "R3", color=pvRC, linewidth=pvWidth, style=plot.style_linebr)
-plot(f_pv(r4, 4), "R4", color=pvRC, linewidth=pvWidth, style=plot.style_linebr)
-plot(f_pv(r5, 5), "R5", color=pvRC, linewidth=pvWidth, style=plot.style_linebr)
-plot(f_pv(r6, 6), "R6", color=pvRC, linewidth=pvWidth, style=plot.style_linebr)
-plot(f_pv(r7, 7), "R7", color=pvRC, linewidth=pvWidth, style=plot.style_linebr)
-plot(f_pv(s1, 1), "S1", color=pvSC, linewidth=pvWidth, style=plot.style_linebr)
-plot(f_pv(s2, 2), "S2", color=pvSC, linewidth=pvWidth, style=plot.style_linebr)
-plot(f_pv(s3, 3), "S3", color=pvSC, linewidth=pvWidth, style=plot.style_linebr)
-plot(f_pv(s4, 4), "S4", color=pvSC, linewidth=pvWidth, style=plot.style_linebr)
-plot(f_pv(s5, 5), "S5", color=pvSC, linewidth=pvWidth, style=plot.style_linebr)
-plot(f_pv(s6, 6), "S6", color=pvSC, linewidth=pvWidth, style=plot.style_linebr)
-plot(f_pv(s7, 7), "S7", color=pvSC, linewidth=pvWidth, style=plot.style_linebr)
+rsLv = array.from(r1, r2, r3, r4, r5, r6, r7)
+ssLv = array.from(s1, s2, s3, s4, s5, s6, s7)
+
+// Linhas desenhadas (não contam para o limite de plots): um segmento por período
+var array<line> pvCur = array.new<line>()
+if pvOn
+    if newPeriod or array.size(pvCur) == 0
+        array.clear(pvCur)
+        for i = 0 to pvLevels - 1
+            array.push(pvCur, line.new(bar_index, array.get(rsLv, i), bar_index, array.get(rsLv, i), color=pvRC, width=pvWidth))
+            array.push(pvCur, line.new(bar_index, array.get(ssLv, i), bar_index, array.get(ssLv, i), color=pvSC, width=pvWidth))
+    else
+        for ln in pvCur
+            line.set_x2(ln, bar_index)
 
 var array<label> pvLabels = array.new<label>()
 if pvOn and pvLbl and barstate.islast
@@ -506,13 +504,11 @@ if pvOn and pvLbl and barstate.islast
         label.delete(lb)
     array.clear(pvLabels)
     int x = pvPos == "Left" ? bar_index - 25 : bar_index + 2
-    array<float> rs = array.from(r1, r2, r3, r4, r5, r6, r7)
-    array<float> ss = array.from(s1, s2, s3, s4, s5, s6, s7)
     for i = 0 to pvLevels - 1
-        string pr = pvPrice ? " " + str.tostring(array.get(rs, i), format.mintick) : ""
-        string ps = pvPrice ? " " + str.tostring(array.get(ss, i), format.mintick) : ""
-        array.push(pvLabels, label.new(x, array.get(rs, i), "R" + str.tostring(i + 1) + pr, style=label.style_none, textcolor=pvRC, size=size.small))
-        array.push(pvLabels, label.new(x, array.get(ss, i), "S" + str.tostring(i + 1) + ps, style=label.style_none, textcolor=pvSC, size=size.small))
+        string pr = pvPrice ? " " + str.tostring(array.get(rsLv, i), format.mintick) : ""
+        string ps = pvPrice ? " " + str.tostring(array.get(ssLv, i), format.mintick) : ""
+        array.push(pvLabels, label.new(x, array.get(rsLv, i), "R" + str.tostring(i + 1) + pr, style=label.style_none, textcolor=pvRC, size=size.small))
+        array.push(pvLabels, label.new(x, array.get(ssLv, i), "S" + str.tostring(i + 1) + ps, style=label.style_none, textcolor=pvSC, size=size.small))
 
 // ════════════════════════════════════════════════════════════════
 // 9. NÍVEIS-CHAVE
