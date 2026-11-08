@@ -32,6 +32,7 @@ export const NOMES_INTOCAVEIS = [
   'RocketNova',
   'Quantum',
   'SniperPro',
+  'Golden Zone',
   'Aurum Flow',
   'Tap to Trade',
   'WebTrader',

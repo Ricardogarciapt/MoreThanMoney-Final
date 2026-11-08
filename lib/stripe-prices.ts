@@ -25,6 +25,9 @@ const PRICE_ENV_KEYS: Record<string, string> = {
   // SniperPro by MTM (08/11/2026): código da casa (docs/pine/sniperpro*.pine), mesma tabela.
   sniperpro_semestral: 'STRIPE_PRICE_SNIPERPRO_SEMESTRAL',
   sniperpro_lifetime: 'STRIPE_PRICE_SNIPERPRO_LIFETIME',
+  // Golden Zone by MTM (08/11/2026): mesma tabela (50 € semestral / 350 € vitalício).
+  goldenzone_semestral: 'STRIPE_PRICE_GOLDENZONE_SEMESTRAL',
+  goldenzone_lifetime: 'STRIPE_PRICE_GOLDENZONE_LIFETIME',
   // MTM Premium Scanner (27/10/2026): só vitalício, 1250 €. Incluído no Premium.
   premium_scanner_lifetime: 'STRIPE_PRICE_PREMIUM_SCANNER_LIFETIME',
   mtm_scanner_monthly: 'STRIPE_PRICE_MTM_SCANNER_MONTHLY',

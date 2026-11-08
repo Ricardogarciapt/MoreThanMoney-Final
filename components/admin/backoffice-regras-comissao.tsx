@@ -59,6 +59,8 @@ const PACKS_CONHECIDOS = [
   'quantum_lifetime',
   'sniperpro_semestral',
   'sniperpro_lifetime',
+  'goldenzone_semestral',
+  'goldenzone_lifetime',
   'premium_scanner_lifetime',
 ]
 

@@ -95,7 +95,7 @@ export function drawCard(canvas, sim, card, progress = 1, lang = 'pt') {
   for (const z of sim.zones || []) {
     if (!pick(L, z, 'zones')) continue
     const rev = z.reveal ?? z.i0
-    if (rev > cur || z.i1 < a || z.i0 > b) continue
+    if (rev > cur || z.i1 < a || z.i0 > b || (z.to != null && z.to <= cur)) continue
     const x0 = X(Math.max(a, z.i0)), x1 = X(Math.min(b, z.i1, cur))
     if (x1 <= x0) continue
     ctx.fillStyle = z.color
@@ -169,12 +169,13 @@ export function drawCard(canvas, sim, card, progress = 1, lang = 'pt') {
       if (it.from != null && it.from > cur) continue
       if (it.to != null && it.to <= cur) continue
       const xs = X(Math.max(a, it.from ?? grp.i0))
+      const xe = it.until != null ? Math.min(x1, X(Math.min(b, it.until))) : x1
       ctx.strokeStyle = it.color
       ctx.lineWidth = 1.5
-      ctx.beginPath(); ctx.moveTo(xs, Y(it.price)); ctx.lineTo(x1, Y(it.price)); ctx.stroke()
+      ctx.beginPath(); ctx.moveTo(xs, Y(it.price)); ctx.lineTo(xe, Y(it.price)); ctx.stroke()
       ctx.fillStyle = it.color
       ctx.globalAlpha = 0.06
-      ctx.fillRect(xs, Math.min(Y(it.price), Y(entry)), x1 - xs, Math.abs(Y(it.price) - Y(entry)))
+      ctx.fillRect(xs, Math.min(Y(it.price), Y(entry)), xe - xs, Math.abs(Y(it.price) - Y(entry)))
       ctx.globalAlpha = 1
       labels.push({ y: Y(it.price), it })
     }
@@ -186,7 +187,8 @@ export function drawCard(canvas, sim, card, progress = 1, lang = 'pt') {
   // Marcadores.
   for (const m of sim.markers || []) {
     if (!L.markers || m.i > cur || m.i < a || m.i > b) continue
-    pill(ctx, X(m.i), Y(m.price) + (m.up ? 14 : -14), T(m.text), m.color, { fg: '#fff', size: m.small ? 9 : 10, align: 'center' })
+    if (m.to != null && m.to <= cur) continue
+    pill(ctx, X(m.i), Y(m.price) + (m.up ? 14 : -14), T(m.text), m.color, { fg: m.fg || '#fff', size: m.small ? 9 : 10, align: 'center' })
   }
 
   // Painel (tabela de tendência ou confirmações).

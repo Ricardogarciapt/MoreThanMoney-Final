@@ -1057,6 +1057,7 @@ const PLANOS_SCANNER: Record<string, Record<string, string>> = {
   rocketnova: { semestral: 'rocketnova_semestral', vitalicio: 'rocketnova_lifetime' },
   quantum: { semestral: 'quantum_semestral', vitalicio: 'quantum_lifetime' },
   sniperpro: { semestral: 'sniperpro_semestral', vitalicio: 'sniperpro_lifetime' },
+  'golden-zone': { semestral: 'goldenzone_semestral', vitalicio: 'goldenzone_lifetime' },
   'premium-scanner': { vitalicio: 'premium_scanner_lifetime' },
   pack: { mensal: 'scanners_monthly' },
 }

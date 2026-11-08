@@ -68,7 +68,7 @@
       "Vídeo 1 · O que é a estratégia e como se lê o gráfico",
       "Vídeo 2 · Confirmações, entrada, plano e rotina"
      ],
-     "fala": "O bootcamp tem dois vídeos. No primeiro, vais perceber o que é a Golden Zone, para que mercado e em que gráfico foi pensada, e o que significa cada elemento que o scanner desenha: o visto amarelo, a zona de ação, as saídas, a invalidação e a bandeira branca. No segundo vídeo entramos no processo de decisão: as quatro confirmações, a ordem limite, o stop, a gestão do trade, quando não entrar e uma rotina simples para o teu dia. Sugiro que vejas os vídeos por ordem, e que não saltes para a parte da entrada sem perceberes o gráfico primeiro."
+     "fala": "O bootcamp tem dois vídeos. No primeiro, vais perceber o que é a Golden Zone, para que mercado e em que gráfico foi pensada, e o que significa cada elemento que o scanner desenha: o visto amarelo, a zona de ação, as saídas, a invalidação e a bandeira dourada. No segundo vídeo entramos no processo de decisão: as quatro confirmações, a ordem limite, o stop, a gestão do trade, quando não entrar e uma rotina simples para o teu dia. Sugiro que vejas os vídeos por ordem, e que não saltes para a parte da entrada sem perceberes o gráfico primeiro."
     },
     {
      "id": "v1-03",
@@ -169,9 +169,9 @@
       "Visto amarelo: um aviso sobre a vela do sinal",
       "Zona de ação: a caixa amarela onde esperas o preço",
       "Saída 1 e Saída 2: os alvos, a verde",
-      "Invalidação: o stop, a vermelho. A bandeira branca marca o fim"
+      "Invalidação: o stop, a vermelho. A bandeira dourada marca o fim"
      ],
-     "fala": "Vamos por partes. Primeiro, o visto amarelo. Aparece sobre a vela do sinal, acompanhado da caixa amarela, que é a zona de ação. O visto é um aviso, não é a vela de entrada. Quer dizer apenas que o scanner encontrou uma configuração que merece atenção. Ainda faltam os parâmetros, e não há trade nenhum. Segundo, a zona de ação. É a área onde, em teoria, colocas a tua ordem limite, à espera que o preço volte. Repara que a zona é uma caixa e não uma linha, porque o preço raramente respeita um valor exato. Terceiro, as saídas. Quando fecha a vela de cinco minutos seguinte ao visto, surgem a Saída 1 e a Saída 2, os dois alvos, a verde. E a invalidação, a vermelho, que é o nível onde a ideia deixa de fazer sentido. Sem estes três níveis não há trade. Quarto, a bandeira branca. Quando aparece, o trade terminou. Pode ter ganho, pode ter perdido, ou o preço pode ter ido aos alvos sem voltar à zona. Com a bandeira à vista, já não se entra. A bandeira é uma informação de fecho. Diz-te que o momento passou."
+     "fala": "Vamos por partes. Primeiro, o visto amarelo. Aparece sobre a vela do sinal, acompanhado da caixa amarela, que é a zona de ação. O visto é um aviso, não é a vela de entrada. Quer dizer apenas que o scanner encontrou uma configuração que merece atenção. Ainda faltam os parâmetros, e não há trade nenhum. Segundo, a zona de ação. É a área onde, em teoria, colocas a tua ordem limite, à espera que o preço volte. Repara que a zona é uma caixa e não uma linha, porque o preço raramente respeita um valor exato. Terceiro, as saídas. Quando fecha a vela de cinco minutos seguinte, surgem a Saída 1 e a Saída 2, os dois alvos, a verde. E a invalidação, a vermelho, que é o nível onde a ideia deixa de fazer sentido. Sem estes três níveis não há trade. Quarto, a bandeira dourada. Aparece quando o preço toca a Saída 1, ou a invalidação. Quando aparece, o trade terminou: pagou, ou perdeu. Com a bandeira à vista, já não se entra. A bandeira é uma informação de fecho. Diz-te que o momento passou."
     },
     {
      "id": "v1-10",
@@ -218,11 +218,11 @@
      "titulo": "Do visto ao plano",
      "itens": [
       "O visto aparece sobre a vela do sinal",
-      "Esperas pelo fecho da vela de cinco minutos seguinte",
+      "Esperas que a vela seguinte feche: só aí há plano",
       "Só então surgem as saídas e a invalidação",
       "Sem plano completo não há trade"
      ],
-     "fala": "A sequência é sempre a mesma, e a ordem importa. Primeiro, aparece o visto amarelo, sobre a vela do sinal. Nesse momento ainda não tens nada para executar. Segundo, esperas pelo fecho da vela de cinco minutos seguinte. Só nesse fecho é que surgem a Saída 1, a Saída 2 e a invalidação. Antes disso, o que tens é um aviso. Terceiro, lês todos os níveis, e só depois olhas para as confirmações. A tentação é ir direto ao visto e começar a imaginar a entrada. O guia pede outra ordem: primeiro a leitura, depois a validação, e só depois o plano. Quando te habituas a esta sequência, deixas de agir por impulso. Se a vela ainda não fechou, não há plano para ler e não há decisão para tomar. Este pormenor parece pequeno, mas é ele que separa quem espera de quem se antecipa."
+     "fala": "A sequência é sempre a mesma, e a ordem importa. Primeiro, aparece o visto amarelo, sobre a vela do sinal. Nesse momento ainda não tens nada para executar. Segundo, esperas que a vela de cinco minutos seguinte feche. Só nesse fecho é que surgem a Saída 1, a Saída 2 e a invalidação. Antes disso, o que tens é um aviso. Terceiro, lês todos os níveis, e só depois olhas para as confirmações. A tentação é ir direto ao visto e começar a imaginar a entrada. O guia pede outra ordem: primeiro a leitura, depois a validação, e só depois o plano. Quando te habituas a esta sequência, deixas de agir por impulso. Se a vela seguinte ainda não fechou, não há plano para ler e não há decisão para tomar. Este pormenor parece pequeno, mas é ele que separa quem espera de quem se antecipa."
     },
     {
      "id": "v1-13",
@@ -234,10 +234,10 @@
       "Há visto amarelo e a vela seguinte já fechou?",
       "A caixa amarela fica sobre a vela do sinal?",
       "Estão desenhadas Saída 1, Saída 2 e invalidação?",
-      "Há bandeira branca no gráfico?",
+      "Há bandeira dourada no gráfico?",
       "Estás a olhar para o sinal atual, e não para um antigo?"
      ],
-     "fala": "Antes de olhar para as confirmações, cinco perguntas rápidas. Há visto amarelo, e a vela seguinte já fechou? A caixa amarela está sobre a vela do sinal? Estão desenhadas a Saída 1, a Saída 2 e a invalidação? Há bandeira branca no gráfico, ou seja, um trade que já terminou? E estás a olhar para o sinal atual, e não para um que já foi apagado pelo seguinte? Se a resposta a qualquer uma destas perguntas for não, pára aí. Não há trade para analisar. Só quando as cinco respostas estiverem certas é que avanças para a validação."
+     "fala": "Antes de olhar para as confirmações, cinco perguntas rápidas. Há visto amarelo, e a vela seguinte já fechou? A caixa amarela está sobre a vela do sinal? Estão desenhadas a Saída 1, a Saída 2 e a invalidação? Há bandeira dourada no gráfico, ou seja, um trade que já terminou? E estás a olhar para o sinal atual, e não para um que já foi apagado pelo seguinte? Se a resposta a qualquer uma destas perguntas for não, pára aí. Não há trade para analisar. Só quando as cinco respostas estiverem certas é que avanças para a validação."
     },
     {
      "id": "v1-14",
@@ -250,9 +250,9 @@
       "Ler a venda como uma compra com as cores trocadas",
       "Olhar para um sinal de horas atrás, já apagado",
       "Desenhar mais linhas do que o gráfico precisa",
-      "Dar importância a um trade que já tem bandeira branca"
+      "Dar importância a um trade que já tem bandeira dourada"
      ],
-     "fala": "Antes de fechar este vídeo, os erros de leitura mais comuns. Primeiro, entrar no visto amarelo sem esperar pelo plano. O visto é um aviso, e um aviso não é uma ordem. Segundo, ler a venda como uma compra com as cores trocadas. Já vimos que não chega. Terceiro, olhar para um sinal de há horas, que já foi apagado pelo seguinte, e tratá-lo como se ainda estivesse vivo. Quarto, desenhar mais linhas do que o gráfico precisa. A Golden Zone já te mostra o essencial, e linhas a mais só tiram atenção à zona. E quinto, dar importância a um trade que já tem bandeira branca. Quando a bandeira aparece, o assunto está arrumado. Vai para o diário e espera pelo próximo sinal."
+     "fala": "Antes de fechar este vídeo, os erros de leitura mais comuns. Primeiro, entrar no visto amarelo sem esperar pelo plano. O visto é um aviso, e um aviso não é uma ordem. Segundo, ler a venda como uma compra com as cores trocadas. Já vimos que não chega. Terceiro, olhar para um sinal de há horas, que já foi apagado pelo seguinte, e tratá-lo como se ainda estivesse vivo. Quarto, desenhar mais linhas do que o gráfico precisa. A Golden Zone já te mostra o essencial, e linhas a mais só tiram atenção à zona. E quinto, dar importância a um trade que já tem bandeira dourada. Quando a bandeira aparece, o assunto está arrumado. Vai para o diário e espera pelo próximo sinal."
     },
     {
      "id": "v1-14b",
@@ -264,9 +264,9 @@
       "Deixa a Golden Zone num só gráfico de ouro, em cinco minutos",
       "Procura dez vistos amarelos no histórico, sem operar",
       "Para cada um, anota se o plano apareceu",
-      "Anota quantos acabaram com bandeira branca"
+      "Anota quantos acabaram com bandeira dourada"
      ],
-     "fala": "Antes do segundo vídeo, um exercício simples. Escolhe um gráfico de ouro, no par XAUUSD, em cinco minutos, e deixa a estratégia ligada só nesse. Depois, procura no histórico dez momentos em que apareceu um visto amarelo. Para cada um, anota duas coisas: se o plano chegou a aparecer, e se o preço voltou à zona de ação antes de chegar às saídas ou à bandeira branca. Não operes. Só observas e anotas. Este exercício treina o olho para aquilo que a estratégia realmente mostra, e no segundo vídeo vais perceber porque é que esta leitura importa tanto."
+     "fala": "Antes do segundo vídeo, um exercício simples. Escolhe um gráfico de ouro, no par XAUUSD, em cinco minutos, e deixa a estratégia ligada só nesse. Depois, procura no histórico dez momentos em que apareceu um visto amarelo. Para cada um, anota duas coisas: se o plano chegou a aparecer, e se o preço voltou à zona de ação antes de chegar às saídas ou à bandeira dourada. Não operes. Só observas e anotas. Este exercício treina o olho para aquilo que a estratégia realmente mostra, e no segundo vídeo vais perceber porque é que esta leitura importa tanto."
     },
     {
      "id": "v1-15",
@@ -405,13 +405,13 @@
      "kicker": "Passo a passo",
      "titulo": "Da leitura à ordem",
      "itens": [
-      "Espera pelo fecho da vela seguinte ao visto",
+      "Espera pelo fecho da vela seguinte e lê os níveis",
       "Valida as quatro confirmações",
       "Coloca a ordem limite dentro da zona",
       "Stop para lá da mecha mais extrema",
       "Calcula o tamanho antes de enviar"
      ],
-     "fala": "Vamos pôr isto em sequência, com o ritmo do guia. Um: espera pelo fecho da vela de cinco minutos seguinte ao visto. Dois: valida as quatro confirmações. Se a tendência estiver contra o sinal, deixa-o passar, e não há mais nada a fazer. Três: coloca uma ordem limite dentro da zona de ação. Não é uma ordem a mercado. Queres que o preço volte à zona e te encontre lá. Quatro: o stop. Põe-no para lá da invalidação e da mecha mais extrema das velas anteriores. Cinco: confirma os alvos, a Saída 1 e a Saída 2. E seis, o mais importante, antes de enviar a ordem: calcula o tamanho da posição em função da tua conta e do risco que decidiste. Um sinal que é bom no gráfico, mas que não cabe no teu risco, não é um trade para ti. Só depois de tudo isto é que a ordem segue para o mercado."
+     "fala": "Vamos pôr isto em sequência, com o ritmo do guia. Um: espera pelo fecho da vela de cinco minutos seguinte ao visto e lê os níveis: zona de ação, Saída 1, Saída 2 e invalidação. Dois: valida as quatro confirmações. Se a tendência estiver contra o sinal, deixa-o passar, e não há mais nada a fazer. Três: coloca uma ordem limite dentro da zona de ação. Não é uma ordem a mercado. Queres que o preço volte à zona e te encontre lá. Quatro: o stop. Põe-no para lá da invalidação e da mecha mais extrema das velas anteriores. Cinco: confirma os alvos, a Saída 1 e a Saída 2. E seis, o mais importante, antes de enviar a ordem: calcula o tamanho da posição em função da tua conta e do risco que decidiste. Um sinal que é bom no gráfico, mas que não cabe no teu risco, não é um trade para ti. Só depois de tudo isto é que a ordem segue para o mercado."
     },
     {
      "id": "v2-08",
@@ -460,19 +460,19 @@
      "itens": [
       "Na vela do visto amarelo, ainda sem plano",
       "Contra a tendência das médias de 50 e 200",
-      "Depois da bandeira branca",
+      "Depois da bandeira dourada",
       "Preço já passou a Saída 2 sem voltar à zona",
       "Desequilíbrios por preencher perto do stop",
       "Stop encostado só à mecha da vela do sinal"
      ],
-     "fala": "O guia tem uma lista clara de quando não entrar, e é a parte que mais se esquece. Primeiro: na vela do visto amarelo. Ainda não há plano, e um visto não é uma ordem. Segundo: contra a tendência das médias de cinquenta e duzentos. Se a média de cinquenta está abaixo da de duzentos, não procuras compras, por mais bonito que o visto pareça. Terceiro: depois da bandeira branca. O trade já acabou, e entrar agora é entrar noutro trade, sem plano. Quarto: quando o preço já passou a Saída 2 sem voltar à zona. Chegaste tarde, e nesse caso não há entrada. Quinto: com desequilíbrios por preencher perto do stop. Se o caminho do preço está cheio de vazios, a tua proteção fica mais fraca. E sexto: com o stop encostado só à mecha da vela do sinal. Um stop assim é justo demais, e o guia já te avisou do que acontece nesses casos. Se alguma destas situações estiver no gráfico, não tens trade. Não tens de o justificar a ninguém. É o processo a funcionar."
+     "fala": "O guia tem uma lista clara de quando não entrar, e é a parte que mais se esquece. Primeiro: na vela do visto amarelo. Ainda não há plano, e um visto não é uma ordem. Segundo: contra a tendência das médias de cinquenta e duzentos. Se a média de cinquenta está abaixo da de duzentos, não procuras compras, por mais bonito que o visto pareça. Terceiro: depois da bandeira dourada. O trade já acabou, e entrar agora é entrar noutro trade, sem plano. Quarto: quando o preço já passou a Saída 2 sem voltar à zona. Chegaste tarde, e nesse caso não há entrada. Quinto: com desequilíbrios por preencher perto do stop. Se o caminho do preço está cheio de vazios, a tua proteção fica mais fraca. E sexto: com o stop encostado só à mecha da vela do sinal. Um stop assim é justo demais, e o guia já te avisou do que acontece nesses casos. Se alguma destas situações estiver no gráfico, não tens trade. Não tens de o justificar a ninguém. É o processo a funcionar."
     },
     {
      "id": "v2-11",
      "tipo": "grafico",
      "cap": "03 · Quando não entrar",
      "kicker": "Quando a zona não volta",
-     "titulo": "Bandeira branca, sem entrada",
+     "titulo": "Foi à Saída 2 sem voltar: sem entrada",
      "cenario": "falha",
      "seed": 7,
      "base": [
@@ -492,8 +492,8 @@
       0,
       0.5
      ],
-     "rotulo": "Bandeira branca",
-     "fala": "Vê este exemplo. Há visto amarelo, há zona e há plano. Mas o preço sobe para lá da Saída 2 e não volta à zona de ação. Não houve nenhum momento em que a entrada fosse possível, porque o preço nunca voltou lá. O scanner marca a bandeira branca. O trade terminou, sem entrada, sem ganho e sem perda. Esta é uma das situações mais úteis para um principiante, porque mostra que nem todo o sinal tem uma entrada. Há quem fique frustrado com isto, e é compreensível. Mas repara: se tivesses entrado a correr atrás do preço, terias entrado longe da zona, com um stop que já não fazia sentido. Não entrar foi coerente com o processo, mesmo que não parecesse. Regista no diário que houve sinal e que não houve trade."
+     "rotulo": "Sem entrada",
+     "fala": "Vê este exemplo. Há visto amarelo e há zona. Mas o preço sobe para lá da Saída 2 e não volta à zona de ação. Não houve nenhum momento em que a entrada fosse possível, porque o preço nunca voltou lá. O plano nunca chegou a aparecer e o scanner apaga a zona. O sinal terminou, sem entrada, sem ganho e sem perda. Esta é uma das situações mais úteis para um principiante, porque mostra que nem todo o sinal tem uma entrada. Há quem fique frustrado com isto, e é compreensível. Mas repara: se tivesses entrado a correr atrás do preço, terias entrado longe da zona, com um stop que já não fazia sentido. Não entrar foi coerente com o processo, mesmo que não parecesse. Regista no diário que houve sinal e que não houve trade."
     },
     {
      "id": "v2-12",
@@ -529,10 +529,10 @@
       "Hora, direção e se havia visto amarelo",
       "As quatro confirmações, com sim ou não",
       "Se entraste: onde, o stop e o tamanho",
-      "Resultado: Saída 1, Saída 2, stop ou bandeira branca",
+      "Resultado: Saída 1, Saída 2, stop ou bandeira dourada",
       "Seguiste o processo? O que aprendeste?"
      ],
-     "fala": "O diário é a parte que transforma uma estratégia em aprendizagem. Para cada sinal, regista a hora, a direção e se houve visto amarelo. Depois, as quatro confirmações, uma a uma, com sim ou não. Se entraste, regista onde foi a ordem na zona, o stop e o tamanho da posição. Depois, o resultado: foi à Saída 1, à Saída 2, ao stop, ou a bandeira branca chegou antes de haver entrada. E por fim, duas perguntas que vale a pena responder com honestidade. Seguiste o processo? E o que aprendeste com este sinal? Ao fim de algumas semanas, o diário diz-te onde estás a ser consistente e onde estás a improvisar. Não te dá respostas mágicas. Dá-te o padrão do teu comportamento, escrito por ti."
+     "fala": "O diário é a parte que transforma uma estratégia em aprendizagem. Para cada sinal, regista a hora, a direção e se houve visto amarelo. Depois, as quatro confirmações, uma a uma, com sim ou não. Se entraste, regista onde foi a ordem na zona, o stop e o tamanho da posição. Depois, o resultado: foi à Saída 1, à Saída 2, ao stop, ou a bandeira dourada chegou antes de haver entrada. E por fim, duas perguntas que vale a pena responder com honestidade. Seguiste o processo? E o que aprendeste com este sinal? Ao fim de algumas semanas, o diário diz-te onde estás a ser consistente e onde estás a improvisar. Não te dá respostas mágicas. Dá-te o padrão do teu comportamento, escrito por ti."
     },
     {
      "id": "v2-15",

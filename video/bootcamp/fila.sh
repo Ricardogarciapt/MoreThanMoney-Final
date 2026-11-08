@@ -16,8 +16,8 @@ node video/bootcamp/ajustar-velocidade.mjs || echo "ERRO ajuste"
 node video/bootcamp/publicar-youtube.mjs --refazer trendshot defy --tag fiel1 || echo "ERRO refazer"
 # 08/11: o vídeo 2 do TrendShot ganha a cena de gestão da posição aberta (parciais, stop na entrada, trailing)
 node video/bootcamp/publicar-youtube.mjs --refazer trendshot --tag gestao1 --so '-2-' || echo "ERRO refazer"
-# 08/11: Golden Zone passa a gráfico fiel ao scanner; os vídeos antigos ficam no YouTube até o Ricardo dar OK
-node video/bootcamp/publicar-youtube.mjs --refazer golden-zone --tag fiel1 --manter || echo "ERRO refazer"
+# 08/11: Golden Zone passa a gráfico fiel ao scanner da casa (níveis de 5 $, plano após o recuo, bandeira na Saída 1); os vídeos antigos ficam no YouTube até o Ricardo dar OK
+node video/bootcamp/publicar-youtube.mjs --refazer golden-zone --tag fiel3 --manter || echo "ERRO refazer"
 # 08/11: Sniper Pro e Quantum já têm gráfico fiel (#173) mas os vídeos eram do motor genérico; refazem-se (os antigos ficam no YouTube até o Ricardo dar OK)
 node video/bootcamp/publicar-youtube.mjs --refazer sniper-pro quantum --tag fiel1 --manter || echo "ERRO refazer"
 for est in $ESTS; do

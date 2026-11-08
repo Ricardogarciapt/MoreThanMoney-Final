@@ -28,6 +28,8 @@ export const LINKS_SCRIPTS_POR_SCANNER: Record<string, readonly LinkScriptTradin
   goldkiller: [{ nome: 'MTM Gold Killer', url: 'https://www.tradingview.com/script/fhpIupC5-MTM-Gold-Killer-V2-1/' }],
   // RocketNova by MTM (08/11/2026): link dado pelo Ricardo para a entrega da compra vitalícia.
   rocketnova: [{ nome: 'RocketNova by MTM', url: 'https://br.tradingview.com/script/86b78YOM/' }],
+  // Golden Zone by MTM (08/11/2026): script invite-only publicado pelo Ricardo (docs/pine/golden-zone.pine).
+  goldenzone: [{ nome: 'Golden Zone by MTM', url: 'https://www.tradingview.com/script/GOiBzAoB-Golden-Zone-by-MTM/' }],
 }
 
 /** O scanner de um planId do Stripe (`quantum_semestral` → `quantum`, `goldkiller_lifetime` → `goldkiller`). */
