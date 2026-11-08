@@ -14,6 +14,7 @@ const hms = s => new Date(s * 1000).toISOString().slice(11, 23)
 const ms = s => new Date(s * 1000).toISOString().slice(14, 19)
 
 for (const est of fs.existsSync(SAIDA) ? fs.readdirSync(SAIDA) : []) {
+  if (!fs.statSync(path.join(SAIDA, est)).isDirectory()) continue
   for (const f of fs.readdirSync(path.join(SAIDA, est))) {
     if (!f.endsWith('.mp4')) continue
     const mp4 = path.join(SAIDA, est, f)

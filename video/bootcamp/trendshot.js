@@ -68,8 +68,20 @@
     if (cl.length < 30) return D.eL[fim] < D.c[fim].c
     const f = M.ema(cl, FAST), s = M.ema(cl, SLOW); return f[f.length - 1] > s[s.length - 1] }
 
+  // gestão da posição aberta (vídeo): parcial no TP1 com stop na entrada, parcial no TP2 com stop no TP1,
+  // depois trailing pela EMA 20 do indicador até uma vela fechar do outro lado; TP3/TP4 marcados se tocados.
+  function gestao(D, t) { const d = t.dir, stop = [], hits = [null, null, null, null]; let s = t.sl, out = null
+    for (let j = t.i; j < D.N; j++) { const v = D.c[j]
+      if (j > t.i) { if (d > 0 ? v.l <= s : v.h >= s) { out = j; stop[j] = s; break }
+        t.tp.forEach((p, k) => { if (hits[k] == null && (d > 0 ? v.h >= p : v.l <= p)) hits[k] = j })
+        if (hits[1] != null && j > hits[1] && (d > 0 ? v.c < D.eF[j] : v.c > D.eF[j])) { out = j; stop[j] = s; break } }
+      if (hits[0] != null) s = d > 0 ? Math.max(s, t.entry) : Math.min(s, t.entry)
+      if (hits[1] != null) s = d > 0 ? Math.max(s, t.tp[0], j > hits[1] ? D.eF[j] : -Infinity) : Math.min(s, t.tp[0], j > hits[1] ? D.eF[j] : Infinity)
+      stop[j] = s }
+    return { stop, hits, tp1: hits[0], tp2: hits[1], out } }
+
   // camadas aceites: medias, cores (histograma + velas azuis), estrutura (R1/S1), poc, estrelas, sinal (triângulos),
-  // plano (caixa Entry/TP/SL), tabela. Sinónimos do motor genérico: niveis→estrutura, setas→sinal, bandas→medias.
+  // plano (caixa Entry/TP/SL), gestao (posição aberta: parciais, stop na entrada, trailing), tabela. Sinónimos do motor genérico: niveis→estrutura, setas→sinal, bandas→medias.
   function grafico(r, o, el) {
     const W = o.w || 1560, H = o.h || 780
     const wrap = el('div', 'carta3d cartao', null, { left: (o.left ?? (1920 - W) / 2) + 'px', top: (o.top || 200) + 'px', width: W + 'px', height: H + 'px', overflow: 'hidden', background: o.transparente ? 'transparent' : C.fundo })
@@ -107,6 +119,23 @@
         ;[['Entry', tr.entry, C.entry], ['TP1', tr.tp[0], C.tp], ['TP2', tr.tp[1], C.tp], ['TP3', tr.tp[2], C.tp], ['TP4', tr.tp[3], C.tp], ['SL', tr.sl, C.sl]].forEach(([t, p, cor]) => {
           const y = Y(p); g.strokeStyle = cor; g.lineWidth = 1.5 * esc; g.beginPath(); g.moveTo(x1, y); g.lineTo(x2, y); g.stroke(); T.etiqueta(`${t}: ${M.fmt(p)}`, x2 + 2, y, cor, '#fff', 14) })
         g.globalAlpha = 1 }
+      if (vis.gestao && tr) { const G2 = gestao(D, tr), en = G.LANG === 'en', d = tr.dir
+        g.globalAlpha = vis.gestao; const fim = Math.min(ult, G2.out ?? ult)
+        // stop vivo: SL → entrada (TP1) → TP1 (TP2) → trailing pela EMA 20
+        g.lineWidth = 2.5 * esc; g.setLineDash([7 * esc, 5 * esc])
+        for (let j = tr.i + 1; j <= fim; j++) { const a = G2.stop[j - 1] ?? G2.stop[j], b = G2.stop[j]; g.strokeStyle = j <= G2.tp1 ? C.sl : j <= G2.tp2 ? C.entry : '#E9C46A'
+          g.beginPath(); g.moveTo(X(j - 1), Y(a)); g.lineTo(X(j - 1) + (X(j) - X(j - 1)) * .5, Y(a)); g.lineTo(X(j - 1) + (X(j) - X(j - 1)) * .5, Y(b)); g.lineTo(X(j), Y(b)); g.stroke() }
+        g.setLineDash([])
+        const ponto = (j, p, cor) => { g.fillStyle = cor; g.beginPath(); g.arc(X(j), Y(p), 5.5 * esc, 0, 7); g.fill(); g.strokeStyle = '#fff'; g.lineWidth = 1.5 * esc; g.stroke() }
+        G2.hits.forEach((j, k) => { if (j == null || j > ult) return; ponto(j, tr.tp[k], C.tp)
+          if (k >= 2) { g.font = F(700, 13); g.fillStyle = C.tp; g.textAlign = 'center'; g.fillText(`TP${k + 1} ✓`, X(j), Y(tr.tp[k]) - d * 14 * esc + (d < 0 ? 10 * esc : 0)); g.textAlign = 'left' } })
+        const b1 = en ? ['TP1 · partial', 'SL → entry'] : ['TP1 · parcial', 'SL → entrada'], b2 = en ? ['TP2 · partial', 'SL → TP1'] : ['TP2 · parcial', 'SL → TP1']
+        if (G2.tp1 != null && G2.tp1 <= ult) { const v = D.c[G2.tp1]; T.balao(b1, X(G2.tp1), d > 0 ? Y(v.l) + 8 * esc : Y(v.h) - 8 * esc, C.entry, '#fff', d > 0, 14) }
+        if (G2.tp2 != null && G2.tp2 <= ult) { const v = D.c[G2.tp2]; T.balao(b2, X(G2.tp2), d > 0 ? Y(v.h) - 8 * esc : Y(v.l) + 8 * esc, C.tp, '#fff', d < 0, 14) }
+        if (G2.tp2 != null && G2.tp2 + 24 <= fim) { const j = G2.tp2 + 24; T.etiqueta('Trailing · EMA 20', X(j) + 4, Y(G2.stop[j]) + d * 22 * esc, '#E9C46A', '#131722', 13) }
+        if (G2.out != null && G2.out <= ult) { const v = D.c[G2.out]; ponto(G2.out, v.c, '#E9C46A')
+          T.balao(en ? ['Rest closed', d > 0 ? 'close below EMA 20' : 'close above EMA 20'] : ['Fecho do resto', d > 0 ? 'vela fecha abaixo da EMA 20' : 'vela fecha acima da EMA 20'], X(G2.out), d > 0 ? Y(v.l) + 8 * esc : Y(v.h) - 8 * esc, '#E9C46A', '#131722', d > 0, 14) }
+        g.globalAlpha = 1 }
       g.restore()
       { const v = D.c[ult]; T.preco(v.c, vis.cores && D.up[ult] ? C.up : (v.c >= v.o ? C.velaUp : C.velaDn)) }
       if (vis.tabela) { const tfs = [['M1', .2], ['M5', 1], ['M15', 3], ['M30', 6], ['H4', 48], ['D', 288]]
@@ -127,5 +156,5 @@
     return { wrap, desenha, D }
   }
 
-  G.MOTORES.trendshot = { grafico, serie, poc, camadas3d: ['medias', 'cores', 'estrutura', 'sinal'], camadasLado: ['medias', 'cores', 'estrutura', 'poc', 'estrelas', 'tabela'] }
+  G.MOTORES.trendshot = { grafico, serie, poc, gestao, camadas3d: ['medias', 'cores', 'estrutura', 'sinal'], camadasLado: ['medias', 'cores', 'estrutura', 'poc', 'estrelas', 'tabela'] }
 })(typeof window !== 'undefined' ? window : globalThis)

@@ -561,6 +561,49 @@
      "fala": "Look at this example of a buy. The trade is running in your favour, and a red star appears on the path. It's a warning that the move may be losing strength. The guide's action is to protect: move the stop to the entry, or into profit. If the price keeps going, the trade stays protected. If the price turns, the protection is already in place, and the result is much closer to zero than it would otherwise have been. In every case, the decision was made before the star appeared. There was no panic, there was a plan."
     },
     {
+     "id": "v2-11b",
+     "tipo": "pontos",
+     "cap": "03 · Managing the trade",
+     "kicker": "Open position",
+     "titulo": "Manage without improvising",
+     "itens": [
+      "TP1: take a part off and move the stop to entry",
+      "TP2: take another part off and raise the stop to TP1",
+      "The rest runs with a trailing stop on the EMA 20",
+      "Close the rest when a candle closes on the other side of the EMA 20"
+     ],
+     "fala": "Now, managing a position that is already open. The TrendShot plan gives you four targets, at thirty, fifty, one hundred and one hundred and fifty percent of the stop. A simple way to use them is this. At the first target, you take a part off and move the stop to the entry. From there, the trade's risk is close to zero. At the second target, you take another part off and raise the stop to the first target. What's left keeps running with a trailing stop: the stop follows the red line, the EMA 20, and you only close the rest when a candle closes on the other side of it."
+    },
+    {
+     "id": "v2-11c",
+     "tipo": "grafico",
+     "cap": "03 · Managing the trade",
+     "kicker": "Management on the chart",
+     "titulo": "Partials, stop at entry and trailing",
+     "cenario": "tendencia",
+     "seed": 21,
+     "base": [
+      "medias",
+      "cores",
+      "estrelas"
+     ],
+     "camadas": [
+      "sinal",
+      "plano",
+      "gestao"
+     ],
+     "ate": [
+      0.32,
+      0.95
+     ],
+     "zoom": [
+      0.5,
+      0.5
+     ],
+     "rotulo": "Management · partials and trailing",
+     "fala": "Look at it on the chart. The buy enters on the blue triangle, with the stop down below, in red. Price touches the first target: a part comes off, and the stop moves to the entry, the purple line. It touches the second: another part comes off, and the stop rises to the first target. From here on, the gold line is the trailing stop, and it climbs with the EMA 20. Price passes the third and fourth targets, and the rest keeps running. Only when a candle closes below the EMA 20 do you close what's left. You didn't need to guess the top. The plan did the work."
+    },
+    {
      "id": "v2-12",
      "tipo": "capitulo",
      "cap": "04 · When not to enter",
