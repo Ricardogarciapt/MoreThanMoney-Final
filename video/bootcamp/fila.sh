@@ -16,7 +16,8 @@ node video/bootcamp/ajustar-velocidade.mjs || echo "ERRO ajuste"
 node video/bootcamp/publicar-youtube.mjs --refazer trendshot defy --tag fiel1 || echo "ERRO refazer"
 for est in $ESTS; do
   motor=$(node -e "console.log(require('./video/bootcamp/guioes/$est.pt.json').motor||'$est')")
-  if [ ! -f "video/bootcamp/$motor.js" ]; then echo "=== $est: à espera do gráfico fiel ($motor.js) ==="; continue; fi
+  # sem gráfico fiel: só acaba as estratégias que já tinham vídeos feitos (decisão do Ricardo 07/11: os já feitos ficam)
+  if [ ! -f "video/bootcamp/$motor.js" ] && ! ls video/bootcamp/saida/$est/*.v3 >/dev/null 2>&1; then echo "=== $est: à espera do gráfico fiel ($motor.js) ==="; continue; fi
   n=$(node -e "console.log(require('./video/bootcamp/guioes/$est.pt.json').videos.length)")
   echo "=== $est ($n vídeos) $(date +%H:%M) ==="
   node video/bootcamp/voz.mjs "$est" all pt en || { echo "ERRO voz $est"; continue; }

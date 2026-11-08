@@ -1,5 +1,6 @@
 {
  "estrategia": "GoldKiller",
+ "motor": "goldkiller",
  "marca": "MoreThanMoney",
  "cores": {
   "bull": "#22A06B",
@@ -48,22 +49,6 @@
    "T P três"
   ],
   [
-   "P25",
-   "P vinte e cinco"
-  ],
-  [
-   "P50",
-   "P cinquenta"
-  ],
-  [
-   "P75",
-   "P setenta e cinco"
-  ],
-  [
-   "P90",
-   "P noventa"
-  ],
-  [
    "BUY",
    "bai"
   ],
@@ -74,6 +59,26 @@
   [
    "UTC",
    "U T C"
+  ],
+  [
+   "Gain 100",
+   "Gain cem"
+  ],
+  [
+   "Gain 90",
+   "Gain noventa"
+  ],
+  [
+   "Gain 75",
+   "Gain setenta e cinco"
+  ],
+  [
+   "Gain 50",
+   "Gain cinquenta"
+  ],
+  [
+   "Drawdown 50",
+   "Drawdown cinquenta"
   ]
  ],
  "plano": {
@@ -85,9 +90,9 @@
    3
   ],
   "rotulos": [
-   "P25",
-   "P50",
-   "P75"
+   "Gain 50th",
+   "Gain 75th",
+   "Gain 100th"
   ]
  },
  "videos": [
@@ -108,9 +113,9 @@
      "id": "v1-01",
      "tipo": "frase",
      "cap": "Boas-vindas",
-     "texto": "A tendência dá o lado. <span class='ouro'>A viragem</span> dá o sinal.",
+     "texto": "O motor dá o lado. <span class='ouro'>A viragem</span> dá o sinal.",
      "autor": "Ricardo Garcia · MoreThanMoney",
-     "fala": "Olá, sou o Ricardo Garcia, e este é o Bootcamp GoldKiller da MoreThanMoney. Antes de começarmos, uma ideia que vai atravessar os dois vídeos: um scanner não decide por ti. O que o GoldKiller faz é desenhar, no gráfico do ouro, uma linha que diz de que lado está a tendência, marcar a viragem com um sinal e mostrar até onde o preço costuma ir a teu favor e contra ti. Ler isso é uma competência. Executar bem é outra. Este bootcamp cobre as duas, com calma, e sem prometer nada que o gráfico não mostre."
+     "fala": "Olá, sou o Ricardo Garcia, e este é o Bootcamp GoldKiller da MoreThanMoney. Antes de começarmos, uma ideia que vai atravessar os dois vídeos: um scanner não decide por ti. O que o GoldKiller faz é seguir a tendência do ouro com um cálculo que corre por baixo do gráfico, marcar cada viragem com um sinal, e desenhar até onde o preço costuma ir a teu favor e contra ti, a partir da entrada. Ler isso é uma competência. Executar bem é outra. Este bootcamp cobre as duas, com calma, e sem prometer nada que o gráfico não mostre."
     },
     {
      "id": "v1-02",
@@ -122,7 +127,7 @@
       "Vídeo 1 · O que é e como se lê cada elemento",
       "Vídeo 2 · Confirmações, entrada, gestão e rotina"
      ],
-     "fala": "O bootcamp tem dois vídeos. Neste primeiro, vamos ao que é a estratégia e a cada elemento do gráfico: a linha SuperTrend, a viragem com os sinais de compra e venda, e os níveis por percentil. No segundo vídeo entramos no processo: as confirmações antes de aceitar uma viragem, a entrada, o stop, a saída por partes, os casos em que não entras, e uma rotina simples para o dia a dia. Sugiro que vejas os dois por ordem. O segundo faz pouco sentido sem o primeiro, porque cada regra de gestão usa uma leitura que aprendes aqui."
+     "fala": "O bootcamp tem dois vídeos. Neste primeiro, vamos ao que é a estratégia e a cada elemento do gráfico: o motor de tendência, a viragem com os sinais BUY e SELL, a linha central da entrada, e os níveis Gain e Drawdown. No segundo vídeo entramos no processo: as confirmações antes de aceitar uma viragem, a entrada, o stop, os três alvos, os casos em que não entras, e uma rotina simples para o dia a dia. Sugiro que vejas os dois por ordem, porque cada regra do segundo usa uma leitura que aprendes aqui."
     },
     {
      "id": "v1-03",
@@ -140,12 +145,12 @@
      "kicker": "Em poucas palavras",
      "titulo": "Um scanner para o ouro",
      "itens": [
-      "Segue a tendência do XAUUSD com uma linha SuperTrend",
-      "Quinze minutos como referência, uma hora e quatro horas para swing",
-      "Guarda os ganhos e os drawdowns das pernas anteriores",
+      "Segue a tendência do XAUUSD com um SuperTrend calculado por baixo",
+      "Quinze minutos como referência, uma hora para confirmar",
+      "Guarda até onde foram as pernas anteriores, a favor e contra",
       "É uma ferramenta de análise: não executa ordens"
      ],
-     "fala": "O GoldKiller é o scanner da casa para o ouro, o par XAUUSD. Segue a tendência com uma linha SuperTrend, e não tenta adivinhar topos nem fundos. Em cada viragem da linha, o scanner guarda o ganho máximo e o drawdown máximo das pernas anteriores do preço, e desenha esses valores como níveis a partir da entrada. O guia usa o gráfico de quinze minutos como referência, e sugere o gráfico de uma hora e o de quatro horas para leituras de swing. Duas coisas para não esqueceres desde já: é um estilo de seguimento de tendência, e é uma ferramenta de análise. Quem decide e quem executa és tu."
+     "fala": "O GoldKiller é o scanner da casa para o ouro, o par XAUUSD. Segue a tendência com um SuperTrend, e não tenta adivinhar topos nem fundos. Uma particularidade: esse SuperTrend não aparece desenhado. Trabalha por baixo, e só se vê o resultado dele, que é a viragem. Em cada viragem, o scanner guarda até onde foi a perna que acabou, a favor e contra, e usa essa memória para desenhar os níveis da perna nova a partir da entrada. O gráfico de referência é o de quinze minutos, e o de uma hora serve para confirmar. E não te esqueças: é uma ferramenta de análise. Quem decide e quem executa és tu."
     },
     {
      "id": "v1-05",
@@ -156,10 +161,9 @@
      "cenario": "tendencia",
      "seed": 7,
      "base": [
-      "cores",
+      "centro",
       "niveis",
-      "sinal",
-      "setas"
+      "sinal"
      ],
      "camadas": [],
      "ate": [
@@ -170,74 +174,74 @@
       0,
       0
      ],
-     "fala": "Este é o aspecto do gráfico com tudo ligado. À primeira vista parece muita coisa, mas daqui a uns minutos vais ler cada elemento em segundos. Vês a linha a acompanhar o preço, as velas coloridas, as viragens com os sinais, e os níveis horizontais à direita das entradas. Antes de avançarmos, uma nota sobre todos os gráficos deste bootcamp: são ilustrativos, desenhados para explicar o funcionamento da estratégia. Não são histórico real de mercado, nem resultados de nenhuma operação. Vamos agora ler uma camada de cada vez."
+     "fala": "Este é o aspecto do gráfico com tudo ligado, exatamente como no TradingView. Vês a linha cinzenta, que é a linha central da entrada, os degraus verdes dos níveis Gain, os degraus vermelhos dos níveis Drawdown, as zonas sombreadas entre eles, e as etiquetas BUY e SELL nas viragens. À direita, na escala de preços, aparece o valor de cada nível. Antes de avançarmos, uma nota sobre todos os gráficos deste bootcamp: são ilustrativos, desenhados para explicar o funcionamento da estratégia. Não são histórico real de mercado, nem resultados de nenhuma operação. Vamos agora ler uma camada de cada vez."
     },
     {
      "id": "v1-06",
      "tipo": "capitulo",
-     "cap": "02 · A linha SuperTrend",
+     "cap": "02 · O motor de tendência",
      "numero": "02",
-     "titulo": "A linha SuperTrend",
-     "sub": "A tendência, desenhada no gráfico",
-     "fala": "Segundo capítulo: a linha que dá a tendência."
+     "titulo": "O motor de tendência",
+     "sub": "O SuperTrend que não se vê",
+     "fala": "Segundo capítulo: o motor que decide a tendência."
     },
     {
      "id": "v1-07",
      "tipo": "pontos",
-     "cap": "02 · A linha SuperTrend",
+     "cap": "02 · O motor de tendência",
      "kicker": "Como é calculada",
      "titulo": "Três ingredientes",
      "itens": [
       "A volatilidade média das últimas dez velas, o ATR",
       "Três vezes essa distância, afastada do preço",
-      "Um preço suavizado, que pesa mais o fecho da vela",
-      "Verde por baixo do preço: subida. Vermelha por cima: descida"
+      "Um preço que pesa o fecho a dobrar: máximo, mínimo e duas vezes o fecho",
+      "O indicador não o desenha: só mostra a viragem"
      ],
-     "fala": "A linha mede a volatilidade média das últimas dez velas, o ATR, e fica a três vezes essa distância do preço. Não é calculada sobre o preço cru de cada vela. Usa um preço suavizado, que pesa mais o fecho. O resultado é uma linha que acompanha o preço e que, enquanto a tendência se mantém, não recua contra a operação. Numa subida, a linha sobe por degraus, por baixo das velas. Numa descida, desce por cima delas. Só muda de lado quando o preço a atravessa com uma vela fechada. Esta é a grande vantagem de uma linha destas: em vez de discutires com cada vela, tens uma referência única para a tendência."
+     "fala": "O motor é um SuperTrend com três ingredientes. Mede a volatilidade média das últimas dez velas, o ATR. Afasta-se três vezes essa distância do preço. E não usa o preço cru: usa uma média do máximo, do mínimo e do fecho contado duas vezes, por isso pesa mais o fecho. Numa subida, a referência sobe por degraus por baixo das velas. Numa descida, desce por cima delas. Só muda de lado quando o preço a atravessa. Aqui está o pormenor importante: no GoldKiller esta linha não é desenhada. Vou mostrá-la tracejada só para perceberes de onde vem a viragem. No teu gráfico, não a vais ver."
     },
     {
      "id": "v1-08",
      "tipo": "grafico",
-     "cap": "02 · A linha SuperTrend",
+     "cap": "02 · O motor de tendência",
      "kicker": "Leitura 1",
-     "titulo": "A linha acompanha o preço",
+     "titulo": "O motor por baixo do preço",
      "cenario": "compra",
      "seed": 7,
      "base": [],
      "camadas": [
-      "cores"
+      "motor"
      ],
      "ate": [
       0.5,
-      0.7
+      0.75
      ],
      "zoom": [
       0,
       0
      ],
-     "fala": "Vê a linha numa tendência de subida. Está verde e fica por baixo do preço. Repara que ela sobe com o preço, degrau a degrau, e que as velas recuam de vez em quando, mas a linha não recua com elas. Isso é o que dá ao GoldKiller a sua disciplina. Uma linha verde por baixo do preço diz-te que a tendência de subida ainda está viva. Não te diz que o preço vai continuar a subir. Diz-te que o lado comprador tem a iniciativa, e é só isso que a linha afirma. Quando a linha ficar do outro lado, a leitura muda, mesmo que a tua opinião não tenha mudado."
+     "fala": "Aqui está o motor, tracejado, numa descida e depois numa subida. Repara que ele acompanha o preço por degraus e não recua quando as velas respiram. Enquanto está por cima do preço, a tendência é de descida. Quando o preço o atravessa, passa para baixo, e a tendência muda para subida. Repito, porque é a dúvida mais comum: esta linha tracejada é uma ajuda deste vídeo. O indicador calcula-a, mas não a desenha. O que ele desenha é a consequência: a viragem, a nova entrada e os níveis."
     },
     {
      "id": "v1-09",
      "tipo": "comparar",
-     "cap": "02 · A linha SuperTrend",
-     "kicker": "As cores",
-     "titulo": "O que cada cor te diz",
+     "cap": "02 · O motor de tendência",
+     "kicker": "As leituras",
+     "titulo": "O que o motor te diz",
      "cartoes": [
       {
-       "t": "Verde",
-       "d": "Por baixo do preço: tendência de subida."
+       "t": "Por baixo do preço",
+       "d": "Tendência de subida. O lado comprador tem a iniciativa."
       },
       {
-       "t": "Vermelha",
-       "d": "Por cima do preço: tendência de descida."
+       "t": "Por cima do preço",
+       "d": "Tendência de descida. O lado vendedor tem a iniciativa."
       },
       {
-       "t": "Mudança de cor",
-       "d": "Acontece com a vela fechada. É aí que nasce o sinal."
+       "t": "Muda de lado",
+       "d": "É a viragem. É aí que nasce o BUY ou o SELL."
       }
      ],
-     "fala": "Três leituras para guardar. A cor verde, por baixo do preço, marca a tendência de subida. A cor vermelha, por cima do preço, marca a tendência de descida. E a mudança de cor é o momento que importa, porque só acontece com a vela fechada, e é aí que o scanner decide se há sinal. Uma regra prática: não olhes para a cor a meio de uma vela e tires conclusões. Espera pelo fecho. A linha pode mudar de cor várias vezes durante a formação de uma vela, e só a última leitura conta. Um exercício útil: abre o gráfico de quinze minutos e conta quantas vezes a cor muda numa semana normal. Esse número diz-te muito sobre o tipo de mercado que estás a ver, e vais precisar dele no segundo vídeo, quando falarmos de mercados laterais."
+     "fala": "Três leituras para guardar. Com o motor por baixo do preço, a tendência é de subida. Com o motor por cima, é de descida. E o momento que importa é a mudança de lado, porque é aí que nasce o sinal. Como não vês o motor, vais reconhecer a mudança por três coisas que aparecem ao mesmo tempo: a etiqueta BUY ou SELL, a linha central que salta para o novo preço de entrada, e os níveis que trocam de lado. Um exercício útil: abre o gráfico de quinze minutos e conta quantas viragens há numa semana normal. Esse número diz-te muito sobre o tipo de mercado que estás a ver, e vais precisar dele no segundo vídeo."
     },
     {
      "id": "v1-10",
@@ -258,7 +262,7 @@
      "seed": 7,
      "base": [],
      "camadas": [
-      "cores",
+      "motor",
       "sinal"
      ],
      "ate": [
@@ -269,7 +273,7 @@
       0,
       0
      ],
-     "fala": "Aqui está uma viragem. A linha estava vermelha, por cima do preço, e a tendência era de descida. Depois o preço subiu e fechou do outro lado da linha. A linha muda para verde, por baixo do preço, e aparece o sinal BUY. É uma compra. Se o movimento fosse o contrário, de verde para vermelha, apareceria um SELL, e seria uma venda. Repara que o sinal nasce com a vela fechada. Antes disso, aquilo que vês é apenas uma possibilidade, e não um sinal. O scanner espera pelo fecho, e tu também devias esperar."
+     "fala": "Aqui está uma viragem. O motor estava por cima do preço, e a tendência era de descida. Depois o preço subiu e atravessou-o. O motor passa para baixo, e aparece a etiqueta verde BUY, por baixo da vela. É uma compra. Se fosse ao contrário, aparecia uma etiqueta vermelha SELL, por cima da vela, e seria uma venda. O sinal pertence à vela onde a viragem aconteceu. Enquanto essa vela está aberta, a viragem pode aparecer e desaparecer. O alerta do scanner, e a tua decisão, contam com a vela fechada."
     },
     {
      "id": "v1-12",
@@ -278,32 +282,32 @@
      "kicker": "Regras da viragem",
      "titulo": "Só com a vela fechada",
      "itens": [
-      "Vermelha para verde: compra, BUY",
-      "Verde para vermelha: venda, SELL",
-      "A vela do sinal tem de fechar do outro lado da linha",
+      "Motor passa para baixo do preço: BUY, compra",
+      "Motor passa para cima do preço: SELL, venda",
+      "Na viragem, a linha central salta para o fecho dessa vela",
       "Durante a vela, nada está confirmado"
      ],
-     "fala": "Vamos resumir as regras da viragem. De vermelha para verde, compra. De verde para vermelha, venda. Em ambos os casos, o sinal só existe quando a vela de sinal fecha do outro lado da linha. Até lá, a leitura é provisória. Este ponto parece óbvio, mas é onde mais gente se engana. Vê a vela a subir, sente a vontade de entrar, e entra antes do fecho. Depois, a vela fecha de outra maneira, e a ideia desaparece. Quem espera pelo fecho perde algumas entradas, e é verdade. Em troca, não entra em sinais que nunca chegaram a existir."
+     "fala": "Vamos resumir as regras da viragem. Quando o motor passa para baixo do preço, é BUY, compra. Quando passa para cima, é SELL, venda. Na mesma vela, a linha central salta para o fecho, que passa a ser a entrada da perna nova. E nada disto está confirmado enquanto a vela não fecha. Este ponto parece óbvio, mas é onde mais gente se engana: vê a vela a mexer, entra antes do fecho, e a viragem desaparece. Quem espera pelo fecho perde algumas entradas. Em troca, não entra em sinais que nunca chegaram a existir."
     },
     {
      "id": "v1-13",
      "tipo": "capitulo",
-     "cap": "04 · Os níveis por percentil",
+     "cap": "04 · Gain e Drawdown",
      "numero": "04",
-     "titulo": "Os níveis por percentil",
-     "sub": "Alvos e drawdowns a partir da entrada",
-     "fala": "Quarto capítulo, e a terceira leitura: os níveis por percentil."
+     "titulo": "Os níveis Gain e Drawdown",
+     "sub": "A memória das pernas anteriores",
+     "fala": "Quarto capítulo, e a terceira leitura: a linha central e os níveis Gain e Drawdown."
     },
     {
      "id": "v1-14",
      "tipo": "grafico",
-     "cap": "04 · Os níveis por percentil",
+     "cap": "04 · Gain e Drawdown",
      "kicker": "Leitura 3",
      "titulo": "Alvos em verde, drawdowns em vermelho",
      "cenario": "compra",
      "seed": 7,
      "base": [
-      "cores"
+      "centro"
      ],
      "camadas": [
       "niveis",
@@ -317,54 +321,54 @@
       0,
       0
      ],
-     "fala": "A partir de cada viragem, o scanner desenha dois conjuntos de linhas. As linhas verdes são alvos: P25, P50, P75 e P90. As linhas vermelhas são drawdowns, ou seja, até onde o preço costuma descer contra a entrada. Os valores vêm das pernas anteriores do próprio preço. Ao contrário de uma média, não são uma previsão: são uma contagem do passado. O P50, por exemplo, é o nível a que chegou metade das pernas anteriores. Quanto mais alto o percentil, menos vezes o preço lá chegou. Por isso, o P90 é um alvo ambicioso, que só foi atingido nas pernas mais fortes."
+     "fala": "A partir de cada viragem, o scanner desenha três coisas. A linha cinzenta é a linha central: o fecho da vela da viragem, ou seja, a entrada. Os degraus verdes são os níveis Gain: até onde as pernas anteriores foram a favor. Os degraus vermelhos são os níveis Drawdown: até onde foram contra. Os valores vêm das pernas anteriores do próprio preço, em percentagem da entrada de cada uma. Não são uma previsão: são uma contagem do passado, aplicada à entrada de agora. Repara que só mudam numa viragem. Entre viragens, ficam parados, em degrau."
     },
     {
      "id": "v1-15",
      "tipo": "comparar",
-     "cap": "04 · Os níveis por percentil",
+     "cap": "04 · Gain e Drawdown",
      "kicker": "Os quatro níveis",
-     "titulo": "P25, P50, P75, P90",
+     "titulo": "Gain 50, 75, 90 e 100",
      "cartoes": [
       {
-       "t": "P25",
-       "d": "Um quarto das pernas anteriores chegou até aqui. O primeiro alvo."
+       "t": "Gain 50",
+       "d": "O nível do meio das pernas anteriores. É o TP1 dos alertas."
       },
       {
-       "t": "P50",
-       "d": "Metade das pernas anteriores chegou até aqui. O segundo alvo."
+       "t": "Gain 75 e 90",
+       "d": "Mais longe. Menos pernas lá chegaram. O 75 é o TP2."
       },
       {
-       "t": "P75 e P90",
-       "d": "Mais longe. Chegaram menos pernas, por isso são alvos mais exigentes."
+       "t": "Gain 100",
+       "d": "O mais exigente, só das pernas fortes. É o TP3."
       }
      ],
-     "fala": "Os quatro níveis verdes têm uma lógica crescente. O P25 é o primeiro alvo de referência: um quarto das pernas anteriores chegou até lá. O P50 é o segundo: metade chegou. O P75 e o P90 ficam mais longe, e foram alcançados por menos pernas, o que os torna alvos mais exigentes. Não precisas de decorar as percentagens. Basta lembrares a regra: quanto mais longe, menos vezes o preço lá chegou. Quando estás a decidir o que fazer com uma posição aberta, essa regra vale mais do que qualquer número isolado."
+     "fala": "Com a configuração da casa, o gráfico mostra quatro níveis de cada lado: o 50, o 75, o 90 e o 100. Os números são percentis das pernas anteriores, encolhidos a oitenta por cento para ficarem realistas. O Gain 50 é o nível do meio, e é o primeiro alvo dos alertas, o TP1. O Gain 75 e o Gain 90 ficam mais longe, e o 75 é o TP2. O Gain 100 é o mais exigente, alcançado só pelas pernas mais fortes, e é o TP3. Não precisas de decorar as contas. Basta a regra: quanto mais longe, menos vezes o preço lá chegou."
     },
     {
      "id": "v1-16",
      "tipo": "pontos",
-     "cap": "04 · Os níveis por percentil",
+     "cap": "04 · Gain e Drawdown",
      "kicker": "Drawdowns",
      "titulo": "As linhas vermelhas",
      "itens": [
-      "Calculadas a partir das pernas anteriores do preço",
+      "Calculados a partir das pernas anteriores, contra a entrada",
       "Mostram até onde o preço costuma andar contra ti",
-      "Ajudam a perceber quanto espaço existe antes de um obstáculo",
-      "Não substituem a linha SuperTrend como referência de stop"
+      "O Drawdown 50 é o stop dos alertas",
+      "As zonas sombreadas ficam mais fortes perto da linha central"
      ],
-     "fala": "As linhas vermelhas são os drawdowns. Calculam-se da mesma maneira que os alvos, mas a partir das quedas das pernas anteriores. Mostram-te até onde o preço costuma andar contra a entrada, antes de voltar a seguir o seu caminho. Servem para dois efeitos práticos: perceber o risco que estás a aceitar, e dimensionar a tua posição com uma ideia realista do espaço. Imagina que estás numa compra e que a vermelha mais próxima fica a uma certa distância abaixo do preço. Essa distância não te diz que o preço vai lá parar. Diz-te quanto movimento contra ti já aconteceu, em muitas pernas, antes de o preço voltar. É uma informação de contexto, que te ajuda a não ficares surpreendido quando o mercado respira. Atenção, porém. O stop do GoldKiller não é o drawdown. Como vamos ver no segundo vídeo, o stop fica do outro lado da linha SuperTrend. Os drawdowns servem para contextualizar, não para mudar o stop."
+     "fala": "Os degraus vermelhos são os Drawdowns. Calculam-se da mesma maneira que os Gains, mas a partir do movimento contra a entrada em cada perna anterior. Mostram-te até onde o preço costuma andar contra ti antes de seguir o seu caminho. E aqui há uma ligação direta com o resto do bootcamp: o Drawdown 50 é o stop que os alertas do GoldKiller enviam. Não é um número inventado. É o recuo típico das pernas anteriores, aplicado à entrada de agora. Um pormenor visual: as zonas sombreadas enchem todas até à linha central, e por isso ficam mais fortes perto dela. Quanto mais escuro, mais níveis se sobrepõem."
     },
     {
      "id": "v1-17",
      "tipo": "grafico",
-     "cap": "04 · Os níveis por percentil",
+     "cap": "04 · Gain e Drawdown",
      "kicker": "Na prática",
      "titulo": "Uma tendência que não para",
      "cenario": "tendencia",
-     "seed": 21,
+     "seed": 7,
      "base": [
-      "cores"
+      "centro"
      ],
      "camadas": [
       "niveis"
@@ -377,7 +381,7 @@
       0,
       0
      ],
-     "fala": "Vamos a um exemplo que mostra o limite dos níveis. Nesta tendência forte, o preço passa o P50, passa o P75 e continua. Os níveis não são paredes. Não é verdade que o preço para sempre num alvo verde, nem que volta sempre ao vermelho. São uma referência estatística, desenhada a partir do passado e a partir da entrada. A utilidade deles está em duas coisas: dizer-te quanto espaço tens antes de um obstáculo, e ajudar-te a decidir onde sair por partes. Não os tomes como promessas. São pontos de referência para uma decisão que continuas a tomar tu."
+     "fala": "Vamos a um exemplo que mostra o limite dos níveis. Nesta tendência forte, o preço passa o Gain 50, passa o Gain 75, o 90, o 100, e continua. Os níveis não são paredes. Não é verdade que o preço para sempre num degrau verde, nem que volta sempre ao vermelho. São uma referência estatística, desenhada a partir do passado e a partir da entrada. A utilidade deles está em duas coisas: dizer-te quanto espaço há até cada alvo, e dar-te um stop que respeita o recuo normal do ouro. Não os tomes como promessas."
     },
     {
      "id": "v1-18",
@@ -386,12 +390,12 @@
      "kicker": "Resumo do módulo 1",
      "titulo": "O que tens de saber ler",
      "itens": [
-      "Linha SuperTrend: de que lado está a tendência",
-      "Viragem: BUY e SELL só com a vela fechada",
-      "Níveis verdes: alvos por percentil a partir da entrada",
-      "Níveis vermelhos: drawdowns, para contexto, não para o stop"
+      "O motor decide o lado, mas não se vê",
+      "Viragem: BUY ou SELL, com a vela fechada",
+      "Linha central: a entrada da perna atual",
+      "Gain 50, 75 e 100: os três alvos. Drawdown 50: o stop"
      ],
-     "fala": "Resumindo o primeiro vídeo. A linha SuperTrend diz-te de que lado está a tendência. A viragem, com a vela fechada, dá o sinal, de compra ou de venda. Os níveis verdes são alvos por percentil, calculados a partir da entrada. E os níveis vermelhos são drawdowns, que servem para contexto. Lê sempre as quatro peças juntas, e não uma de cada vez, porque é na combinação delas que o gráfico ganha sentido."
+     "fala": "Resumindo o primeiro vídeo. O motor SuperTrend decide de que lado está a tendência, mas não aparece no gráfico. A viragem, com a vela fechada, dá o sinal, BUY ou SELL. A linha central cinzenta marca a entrada da perna atual. E os níveis dão-te o plano: Gain 50, 75 e 100 são os três alvos, e o Drawdown 50 é o stop. Lê sempre as peças juntas, porque é na combinação delas que o gráfico ganha sentido."
     },
     {
      "id": "v1-19",
@@ -400,12 +404,12 @@
      "kicker": "Antes do vídeo 2",
      "titulo": "O teu trabalho de casa",
      "itens": [
-      "Põe o GoldKiller só no ouro e num timeframe de quinze minutos",
-      "Liga uma camada de cada vez e identifica cinco viragens",
-      "Para cada viragem, anota o que a linha fez nas velas seguintes",
+      "Põe o GoldKiller no ouro, no gráfico de quinze minutos",
+      "Procura cinco viragens no histórico",
+      "Para cada uma, anota se chegou primeiro ao Gain 50 ou ao Drawdown 50",
       "Não operes ainda: só observa"
      ],
-     "fala": "Antes de passares ao segundo vídeo, um exercício simples. Escolhe o ouro e o gráfico de quinze minutos, e não mudes nenhum dos dois durante o exercício. Liga uma camada de cada vez. Procura no histórico cinco viragens e, para cada uma, anota o que a linha fez nas velas seguintes. Subiu? Caiu? Chegou ao P25 ou ao P50? Tudo isto sem operar. Este exercício treina o teu olho melhor do que qualquer explicação, porque te obriga a ver o gráfico como ele realmente se comporta."
+     "fala": "Antes de passares ao segundo vídeo, um exercício simples. Escolhe o ouro e o gráfico de quinze minutos, e não mudes nenhum dos dois durante o exercício. Procura no histórico cinco viragens e, para cada uma, anota o que aconteceu a seguir. O preço chegou primeiro ao Gain 50 ou ao Drawdown 50? Passou o Gain 75? Tudo isto sem operar. Este exercício treina o teu olho melhor do que qualquer explicação, porque te obriga a ver o gráfico como ele realmente se comporta."
     },
     {
      "id": "v1-20",
@@ -441,11 +445,11 @@
      "itens": [
       "As quatro confirmações antes de aceitar uma viragem",
       "Entrada, stop e tamanho pelo risco",
-      "Saída por partes e stop para a entrada",
+      "Três alvos e stop para a entrada",
       "Quando não entrar",
       "Uma rotina de quinze minutos"
      ],
-     "fala": "Bem-vindo ao segundo vídeo do Bootcamp GoldKiller. No primeiro aprendeste a ler a linha, a viragem e os níveis por percentil. Agora vamos usar essas leituras para tomar decisões. Vamos ver as quatro confirmações que o guia pede antes de aceitar uma viragem, como entrar e onde colocar o stop, como sair por partes, quando é melhor não entrar, e como organizar uma rotina curta para todos os dias. É o vídeo mais prático. Tem um ritmo mais lento, porque cada regra depende da anterior."
+     "fala": "Bem-vindo ao segundo vídeo do Bootcamp GoldKiller. No primeiro aprendeste a ler a viragem, a linha central e os níveis Gain e Drawdown. Agora vamos usar essas leituras para tomar decisões. Vamos ver as quatro confirmações antes de aceitar uma viragem, a entrada e o stop que o alerta te dá, como gerir os três alvos, quando é melhor não entrar, e como organizar uma rotina curta para todos os dias. É o vídeo mais prático, e cada regra depende da anterior."
     },
     {
      "id": "v2-02",
@@ -463,12 +467,12 @@
      "kicker": "Regra de ouro",
      "titulo": "Quatro antes de aceitar",
      "itens": [
-      "A viragem está fechada, do outro lado da linha",
-      "Há espaço até ao P25 e ao P50",
-      "O timeframe acima concorda: a linha tem a mesma cor",
-      "O tamanho está calculado pelo risco"
+      "A viragem está fechada, com BUY ou SELL",
+      "Há espaço livre até ao Gain 50",
+      "O gráfico de uma hora concorda: o último sinal é no mesmo sentido",
+      "O tamanho está calculado pelo risco até ao Drawdown 50"
      ],
-     "fala": "O guia pede quatro confirmações, e a regra é simples: se alguma falhar, espera pela próxima viragem. A primeira é a viragem fechada. A vela do sinal já fechou do outro lado da linha. A segunda é o espaço. Não pode haver um topo ou um fundo recente entre a entrada e o P25 ou o P50, porque nesse caso o primeiro alvo fica colado a um obstáculo. A terceira é o timeframe acima. No gráfico de uma hora, a linha tem de ter a mesma cor. A quarta é o tamanho. A distância até à linha muda de dia para dia, por isso o lote também tem de mudar. Só quando as quatro estão cumpridas é que a viragem merece a tua atenção."
+     "fala": "Antes de aceitar uma viragem, quatro confirmações. Se alguma falhar, espera pela próxima. A primeira é a viragem fechada: a vela do sinal já fechou e a etiqueta ficou. A segunda é o espaço: não pode haver um topo ou um fundo recente entre a entrada e o Gain 50, porque nesse caso o primeiro alvo fica atrás de um obstáculo. A terceira é o gráfico de uma hora: o último sinal lá tem de ser no mesmo sentido. A quarta é o tamanho: a distância até ao Drawdown 50 muda de viragem para viragem, por isso o lote também tem de mudar. Só com as quatro é que a viragem merece a tua atenção."
     },
     {
      "id": "v2-04",
@@ -479,7 +483,7 @@
      "cenario": "compra",
      "seed": 7,
      "base": [
-      "cores"
+      "centro"
      ],
      "camadas": [
       "niveis",
@@ -493,7 +497,7 @@
       0,
       0
      ],
-     "fala": "Vamos ler uma viragem de compra com as quatro confirmações à vista. A vela de sinal já fechou do outro lado da linha, e o BUY aparece. À frente da entrada, o caminho até ao P25 está limpo: não há nenhum topo recente a bloquear. O P50 fica mais acima, com espaço livre. Quanto ao timeframe de cima, a linha também está verde, o que dá o alinhamento que procuras. Só falta a quarta confirmação, que é tratada no cálculo do lote, e que vamos ver a seguir. Repara como a leitura é mecânica. Não há opinião a meio. Ou as confirmações estão lá, ou não estão."
+     "fala": "Vamos ler uma viragem de compra com as confirmações à vista. A vela do sinal fechou, e o BUY ficou. A linha central marca a entrada. À frente, o caminho até ao Gain 50 está limpo: não há nenhum topo recente a bloquear. Os outros degraus verdes ficam mais acima, com espaço. Por baixo, o Drawdown 50 mostra o recuo típico das pernas anteriores, que vai ser o stop. Quanto ao gráfico de uma hora, imagina que o último sinal lá também foi um BUY: está alinhado. Falta só o lote, que vemos a seguir. Repara como a leitura é mecânica. Ou as confirmações estão lá, ou não estão."
     },
     {
      "id": "v2-05",
@@ -502,19 +506,19 @@
      "kicker": "O espaço",
      "titulo": "Espaço até ao primeiro alvo",
      "itens": [
-      "Procura um topo ou fundo recente entre a entrada e o P25 e o P50",
-      "Se houver um, o primeiro alvo fica colado a ele",
+      "Procura um topo ou fundo recente entre a entrada e o Gain 50",
+      "Se houver um, o TP1 fica atrás dele",
       "Não é proibido entrar, mas o caminho fica curto",
       "Compara sempre a entrada com os níveis desenhados"
      ],
-     "fala": "O espaço merece mais atenção, porque é a confirmação que mais gente salta. A pergunta é simples: entre o preço onde entras e o P25, existe um topo ou fundo recente? Se existir, é exatamente onde o preço costuma parar. O teu primeiro alvo fica então colado a esse obstáculo, e o movimento a favor fica curto demais para compensar o risco. Nesse caso, o guia pede-te para deixares passar. Não é uma proibição absoluta, mas é um sinal claro para seres mais exigente. Faz a comparação com os níveis desenhados antes de cada entrada, e não depois."
+     "fala": "O espaço merece mais atenção, porque é a confirmação que mais gente salta. A pergunta é simples: entre o preço de entrada e o Gain 50, existe um topo ou um fundo recente? Se existir, é exatamente onde o preço costuma parar. O primeiro alvo fica atrás desse obstáculo, e o movimento a favor arrisca-se a morrer antes. Nesse caso, sê mais exigente, ou deixa passar. Não é uma proibição absoluta, mas é um aviso claro. Faz a comparação com os níveis desenhados antes de cada entrada, e não depois."
     },
     {
      "id": "v2-06",
      "tipo": "comparar",
      "cap": "01 · Confirmações",
      "kicker": "Timeframe acima",
-     "titulo": "Duas janelas, a mesma cor",
+     "titulo": "Duas janelas, o mesmo sentido",
      "cartoes": [
       {
        "t": "Quinze minutos",
@@ -522,14 +526,14 @@
       },
       {
        "t": "Uma hora",
-       "d": "O timeframe acima. A linha tem de ter a mesma cor."
+       "d": "O último BUY ou SELL tem de apontar para o mesmo lado."
       },
       {
        "t": "Concordam",
        "d": "Só então a viragem ganha força. Se discordam, espera."
       }
      ],
-     "fala": "O timeframe acima é a confirmação que mais protege de ideias contra a corrente. Lês a viragem no gráfico de quinze minutos, mas olhas também para o gráfico de uma hora. Se a linha de uma hora tem a mesma cor, as duas janelas concordam, e a viragem tem mais peso. Se discordam, o guia diz-te que é melhor esperar. Não tentes ganhar a discussão entre as janelas. Escolhe a que concorda com a viragem, ou deixa passar."
+     "fala": "O gráfico de cima é a confirmação que mais protege de ideias contra a corrente. Lês a viragem no gráfico de quinze minutos, mas olhas também para o de uma hora, com o mesmo indicador. Se o último sinal na hora aponta para o mesmo lado, as duas janelas concordam, e a viragem tem mais peso. Se discordam, é melhor esperar. Não tentes ganhar a discussão entre as janelas. Escolhe a que concorda com a viragem, ou deixa passar."
     },
     {
      "id": "v2-07",
@@ -548,8 +552,8 @@
      "titulo": "Entrar no fecho ou na abertura seguinte",
      "linhas": [
       [
-       "Entrada principal",
-       "Fecho da vela do sinal",
+       "Entrada",
+       "Fecho da vela do sinal, a linha central",
        "entrada"
       ],
       [
@@ -559,22 +563,22 @@
       ],
       [
        "Não persigas",
-       "Se o preço já correu muito",
+       "Se o preço já correu para longe da linha central",
        "warning"
       ]
      ],
-     "fala": "Depois de confirmares, há duas formas de entrar, ambas previstas no guia. A primeira é no fecho da vela do sinal. A segunda é na abertura da vela seguinte. Em qualquer dos casos, o princípio é o mesmo: não persigas o preço. Se a vela já correu muito desde a viragem, a entrada fica longe da linha, e o risco fica grande demais para o alvo disponível. O guia é claro: nesse caso, deixa passar. Entrar tarde num movimento que já correu é uma das formas mais comuns de transformar uma boa leitura num mau resultado."
+     "fala": "Depois de confirmares, entras. O alerta do GoldKiller usa como entrada o fecho da vela do sinal, que é exatamente a linha central cinzenta. Na prática, a alternativa é a abertura da vela seguinte, que costuma estar ao lado. Em qualquer dos casos, não persigas o preço. Se já correu muito para longe da linha central, o stop fica longe e o primeiro alvo fica perto, e a conta deixa de compensar. Nesse caso, deixa passar. Entrar tarde num movimento que já correu é uma das formas mais comuns de transformar uma boa leitura num mau resultado."
     },
     {
      "id": "v2-09",
      "tipo": "grafico",
      "cap": "02 · Entrada e stop",
      "kicker": "Stop",
-     "titulo": "O stop do outro lado da linha",
+     "titulo": "O stop no Drawdown 50",
      "cenario": "compra",
      "seed": 7,
      "base": [
-      "cores"
+      "centro"
      ],
      "camadas": [
       "sinal",
@@ -588,7 +592,7 @@
       0,
       0
      ],
-     "fala": "O stop fica do outro lado da linha. Numa compra, isso quer dizer abaixo da linha verde, que está por baixo do preço. A lógica é esta: a linha representa a tendência, e se o preço fecha do outro lado dela, a tendência acabou, e o sinal deixa de ser válido. Por isso, o stop não é um número arbitrário. É um facto do gráfico. Vê no desenho a entrada, o stop e os alvos. A distância entre a entrada e o stop é o teu risco, e é sobre ela que vais calcular o tamanho da posição, como vamos ver a seguir."
+     "fala": "Aqui está o plano completo, tal como o alerta o envia. Entrada na linha central. Stop no Drawdown 50. TP1 no Gain 50, TP2 no Gain 75 e TP3 no Gain 100. A lógica do stop é esta: o Drawdown 50 é o recuo típico das pernas anteriores. Se o preço vai além dele logo depois da viragem, está a comportar-se de forma diferente do normal, e a ideia deixa de valer. Por isso, o stop não é um número arbitrário. É um facto do gráfico. A distância entre a entrada e o stop é o teu risco, e é sobre ela que calculas o tamanho da posição."
     },
     {
      "id": "v2-10",
@@ -597,21 +601,21 @@
      "kicker": "Tamanho",
      "titulo": "O lote muda, o risco não",
      "itens": [
-      "A distância até à linha muda de dia para dia",
+      "A distância até ao Drawdown 50 muda de viragem para viragem",
       "Calcula o lote para arriscar só a percentagem que definiste",
       "Se a distância muda, o lote tem de mudar também",
       "Lote fixo: o risco passa a depender da volatilidade do dia"
      ],
-     "fala": "Vamos ao tamanho da posição, que é onde muitos traders se perdem. A distância entre a entrada e a linha muda de dia para dia, porque a linha depende da volatilidade recente. Se usares sempre o mesmo lote, o teu risco em dinheiro muda de ideia para ideia, sem que o percebas. O guia pede o contrário. Define a percentagem da conta que estás disposto a perder numa operação, e calcula o lote de forma que esse valor corresponda ao stop que o gráfico mostra. Assim, a distância muda, o lote acompanha-a, e o risco fica igual. É essa igualdade que faz a diferença ao longo de muitas operações."
+     "fala": "Vamos ao tamanho da posição, que é onde muitos traders se perdem. A distância entre a entrada e o Drawdown 50 muda de viragem para viragem, porque depende das pernas anteriores e do preço de agora. Se usares sempre o mesmo lote, o teu risco em dinheiro muda de ideia para ideia, sem que o percebas. Faz o contrário. Define a percentagem da conta que estás disposto a perder numa operação, e calcula o lote para que esse valor corresponda ao stop do gráfico. Assim, a distância muda, o lote acompanha-a, e o risco fica igual."
     },
     {
      "id": "v2-11",
      "tipo": "capitulo",
      "cap": "03 · Saídas por partes",
      "numero": "03",
-     "titulo": "Saídas por partes",
-     "sub": "P25, P50 e a linha como guia",
-     "fala": "Terceiro capítulo: como sair, por partes, e como proteger a posição."
+     "titulo": "Três alvos",
+     "sub": "Gain 50, Gain 75 e Gain 100",
+     "fala": "Terceiro capítulo: como sair por partes nos três alvos, e como proteger a posição."
     },
     {
      "id": "v2-12",
@@ -620,27 +624,27 @@
      "kicker": "Gestão",
      "titulo": "Quatro passos depois da entrada",
      "itens": [
-      "Quando o preço avança a teu favor, passa o stop para a entrada",
-      "Sai uma parte no P25",
-      "Sai outra parte no P50",
-      "O resto segue a linha até ao P75 ou P90, ou até um fecho do outro lado"
+      "Sai uma parte no TP1, o Gain 50",
+      "Passa o stop para a entrada",
+      "Sai outra parte no TP2, o Gain 75",
+      "O resto vai ao TP3, o Gain 100, ou sai na viragem contrária"
      ],
-     "fala": "Depois de entrares, a gestão segue quatro passos. Primeiro, quando o preço avança a teu favor, passas o stop para o ponto de entrada. A partir daí, a operação deixa de poder dar prejuízo. Segundo, sais com uma parte no P25. Terceiro, sais com outra parte no P50. E quarto, o resto da posição segue com o stop a acompanhar a linha SuperTrend, até ao P75 ou ao P90, ou até a linha ser atravessada por um fecho do outro lado. O guia não fixa as percentagens de cada parte. Essa escolha é tua, e deve ficar escrita no teu plano antes de entrares."
+     "fala": "Depois de entrares, a gestão segue quatro passos. Primeiro, sais com uma parte no TP1, o Gain 50. Segundo, passas o stop para a entrada, e a partir daí a operação deixa de poder dar prejuízo. Terceiro, sais com outra parte no TP2, o Gain 75. E quarto, o resto vai até ao TP3, o Gain 100, ou sai antes, se aparecer a viragem contrária, porque essa viragem diz que a perna acabou. As percentagens de cada parte são escolha tua, e devem ficar escritas no teu plano antes de entrares."
     },
     {
      "id": "v2-13",
      "tipo": "grafico",
      "cap": "03 · Saídas por partes",
      "kicker": "Na prática",
-     "titulo": "Parciais e linha a seguir",
+     "titulo": "Os três alvos numa tendência",
      "cenario": "tendencia",
-     "seed": 21,
+     "seed": 7,
      "base": [
-      "cores"
+      "centro"
      ],
      "camadas": [
       "niveis",
-      "setas"
+      "sinal"
      ],
      "ate": [
       0.5,
@@ -650,7 +654,7 @@
       0,
       0.5
      ],
-     "fala": "Vê como as saídas por partes funcionam numa tendência. A posição entra, o preço sobe, e passa o P25. Sai a primeira parte, e o stop vai para a entrada. Depois o preço chega ao P50, e sai a segunda parte. O resto continua, e agora a linha verde é que segura a posição. Enquanto o preço se mantém do lado certo da linha, a operação continua. Quando a linha é atravessada por um fecho, sai-se pelo que resta. Repara que, neste caso, o resto da operação não tem risco, porque o stop já está na entrada."
+     "fala": "Vê como as saídas por partes funcionam numa tendência. A posição entra na viragem, e o preço sobe. Passa o Gain 50: sai a primeira parte, e o stop vai para a entrada. Chega ao Gain 75: sai a segunda parte. Continua até ao Gain 100, e sai o resto. Repara que os degraus ficaram parados durante toda a subida, porque só mudam na próxima viragem. E repara que depois do TP1 o resto da operação já não tinha risco, porque o stop estava na entrada."
     },
     {
      "id": "v2-14",
@@ -668,13 +672,13 @@
      "kicker": "Deixa passar quando",
      "titulo": "Cinco situações",
      "itens": [
-      "A linha vira várias vezes seguidas, num mercado lateral",
-      "O primeiro alvo está colado a um topo ou fundo recente",
-      "O timeframe acima diz o contrário",
-      "A entrada está muito longe da linha",
+      "Viragens seguidas, umas atrás das outras, num mercado lateral",
+      "Um topo ou fundo recente antes do Gain 50",
+      "O gráfico de uma hora diz o contrário",
+      "A entrada já está muito longe da linha central",
       "O lote é fixo, e não calculado pelo risco"
      ],
-     "fala": "O guia enumera cinco situações em que não entras. Primeira: a linha vira várias vezes seguidas, porque o mercado está lateral. Cada sinal parece bom, mas nenhum tem espaço para correr. Segunda: o primeiro alvo está colado a um topo ou fundo recente. Terceira: o timeframe acima diz o contrário. Quarta: a entrada está muito longe da linha, o que faz o risco ficar grande demais. E quinta: usas um lote fixo, em vez de um lote calculado pelo risco. Qualquer uma destas situações basta para deixares a viragem passar."
+     "fala": "Há cinco situações em que não entras. Primeira: as viragens aparecem umas atrás das outras, porque o mercado está lateral. Cada sinal parece bom, mas nenhum tem espaço para correr. Segunda: há um topo ou fundo recente antes do Gain 50. Terceira: o gráfico de uma hora diz o contrário. Quarta: a entrada já está muito longe da linha central, e o risco fica grande demais. E quinta: usas um lote fixo, em vez de um lote calculado pelo risco. Qualquer uma destas situações basta para deixares a viragem passar."
     },
     {
      "id": "v2-16",
@@ -682,10 +686,10 @@
      "cap": "04 · Quando não entrar",
      "kicker": "Mercado lateral",
      "titulo": "Viragens seguidas, sem direção",
-     "cenario": "falha",
+     "cenario": "lateral",
      "seed": 11,
      "base": [
-      "cores"
+      "centro"
      ],
      "camadas": [
       "sinal"
@@ -698,7 +702,7 @@
       0,
       0
      ],
-     "fala": "Este é o caso que mais engana. A linha vira de cor, vira outra vez, e volta a virar. Cada viragem parece um sinal, e cada uma dá vontade de entrar. Mas o mercado está lateral, e nenhum dos movimentos tem espaço para correr até ao primeiro alvo. O guia é claro: com a linha a virar várias vezes seguidas, fica de fora. Se for preciso, espera que o mercado escolha uma direção. Um gráfico com muitos sinais seguidos não é um gráfico cheio de oportunidades. É, muitas vezes, um gráfico sem direção."
+     "fala": "Este é o caso que mais engana. Aparece um BUY, depois um SELL, outro BUY, outro SELL. A linha central salta de um lado para o outro a cada viragem. Cada sinal dá vontade de entrar. Mas o mercado está lateral, e nenhum dos movimentos tem espaço para chegar ao Gain 50 antes da viragem seguinte. Com viragens seguidas, fica de fora, e espera que o mercado escolha uma direção. Um gráfico com muitos sinais seguidos não é um gráfico cheio de oportunidades. É, muitas vezes, um gráfico sem direção."
     },
     {
      "id": "v2-17",
@@ -706,7 +710,7 @@
      "cap": "05 · Quando falha",
      "numero": "05",
      "titulo": "Quando falha",
-     "sub": "A linha vira contra ti",
+     "sub": "O preço passa o Drawdown 50",
      "fala": "Quinto capítulo: o que fazer quando a ideia falha."
     },
     {
@@ -714,11 +718,11 @@
      "tipo": "grafico",
      "cap": "05 · Quando falha",
      "kicker": "Stop",
-     "titulo": "A linha fecha do outro lado",
+     "titulo": "O preço passa o Drawdown 50",
      "cenario": "falha",
-     "seed": 7,
+     "seed": 21,
      "base": [
-      "cores"
+      "centro"
      ],
      "camadas": [
       "sinal",
@@ -732,7 +736,7 @@
       0,
       0
      ],
-     "fala": "Vê o que acontece quando a ideia falha. Entras numa compra, o preço sobe um pouco, e depois começa a descer. A linha ainda está verde, mas o preço aproxima-se dela. Até que uma vela fecha do outro lado da linha. Nesse momento, a tendência acabou, e o sinal deixou de ser válido. Sais no stop. A perda é a distância da entrada até à linha, e essa distância já estava calculada, com o lote certo, antes de entrares. Não há surpresa, não há improviso, e não há dúvida sobre se devias ter saído."
+     "fala": "Vê o que acontece quando a ideia falha. Entras na compra, o preço sobe um pouco, e depois começa a descer. Volta à linha central, passa-a, e chega ao Drawdown 50. Sais no stop. Pouco depois, aparece o SELL: o motor virou, e a perna de compra acabou de vez. A perda é a distância da entrada até ao Drawdown 50, e essa distância já estava calculada, com o lote certo, antes de entrares. Não há surpresa, não há improviso, e não há dúvida sobre se devias ter saído."
     },
     {
      "id": "v2-19",
@@ -766,11 +770,11 @@
      "itens": [
       "Ver o calendário económico do dia",
       "Abrir o ouro nos gráficos de quinze minutos e de uma hora",
-      "Verificar a cor da linha nos dois tempos",
-      "Rever os sinais e as ordens abertas",
+      "Ver o último sinal nos dois tempos e se concordam",
+      "Rever as ordens abertas, os alvos e o stop",
       "Atualizar o diário"
      ],
-     "fala": "A rotina cabe em quinze minutos. Primeiro, vês o calendário económico do dia, para saberes se há notícias de alto impacto. Segundo, abres o ouro nos gráficos de quinze minutos e de uma hora. Terceiro, verificas a cor da linha nos dois tempos, e se estão de acordo. Quarto, revês os sinais e as ordens abertas, e aplicas a gestão que vimos. Quinto, atualizas o diário. O resto do dia, o scanner trabalha por ti. Não precisas de estar colado ao ecrã. Precisas de ser consistente."
+     "fala": "A rotina cabe em quinze minutos. Primeiro, vês o calendário económico do dia, para saberes se há notícias de alto impacto. Segundo, abres o ouro nos gráficos de quinze minutos e de uma hora. Terceiro, vês o último sinal nos dois tempos, e se estão de acordo. Quarto, revês as ordens abertas, os alvos atingidos e onde está o stop. Quinto, atualizas o diário. O resto do dia, o scanner trabalha por ti. Não precisas de estar colado ao ecrã. Precisas de ser consistente."
     },
     {
      "id": "v2-22",
@@ -779,13 +783,13 @@
      "kicker": "Checklist de bolso",
      "titulo": "O processo GoldKiller completo",
      "itens": [
-      "Viragem fechada, do outro lado da linha",
-      "Espaço até ao P25 e ao P50",
-      "Timeframe acima a favor",
-      "Tamanho calculado pelo risco",
-      "Stop para a entrada cedo, parciais no P25 e no P50"
+      "Viragem fechada, BUY ou SELL",
+      "Espaço livre até ao Gain 50",
+      "Gráfico de uma hora a favor",
+      "Tamanho calculado pelo risco até ao Drawdown 50",
+      "TP1, stop para a entrada, TP2, e o resto ao TP3"
      ],
-     "fala": "Para fechar, a checklist de bolso. Viragem fechada, do outro lado da linha. Espaço até ao P25 e ao P50. Timeframe acima a favor. Tamanho calculado pelo risco. E, depois da entrada, stop para a entrada cedo, com parciais no P25 e no P50. Se seguires estes passos sempre, mesmo nos dias em que é aborrecido, estás à frente de muita gente que opera sem processo. Não há garantias nesta lista, mas há disciplina, e a disciplina é a parte que depende de ti."
+     "fala": "Para fechar, a checklist de bolso. Viragem fechada, BUY ou SELL. Espaço livre até ao Gain 50. Gráfico de uma hora a favor. Tamanho calculado pelo risco até ao Drawdown 50. E, depois da entrada: TP1, stop para a entrada, TP2, e o resto ao TP3 ou até à viragem contrária. Se seguires estes passos sempre, mesmo nos dias em que é aborrecido, estás à frente de muita gente que opera sem processo. Não há garantias nesta lista, mas há disciplina, e a disciplina é a parte que depende de ti."
     },
     {
      "id": "v2-23",

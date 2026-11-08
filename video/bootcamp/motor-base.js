@@ -64,7 +64,7 @@
     g.font = F(500, 15, 'JetBrains Mono'); g.textAlign = 'left'; g.lineWidth = 1
     for (let p = Math.ceil(lo / passo) * passo; p < hi; p += passo) { const y = Y(p); g.strokeStyle = cores.grelha; g.beginPath(); g.moveTo(0, y); g.lineTo(largura, y); g.stroke(); g.fillStyle = cores.eixo; g.fillText(fmt(p, dec), largura + 8, y + 5) }
     return { ax, topo, base, largura, nb, X, Y, bw, F, hi, lo, dec,
-      horas(D) { for (let i = J.iniV; i < J.fimV; i++) if (D.c[i] && D.c[i].t % 60 === 0) { const x = X(i); g.strokeStyle = cores.grelha; g.beginPath(); g.moveTo(x, topo); g.lineTo(x, base); g.stroke(); g.fillStyle = cores.eixo; g.textAlign = 'center'; g.fillText(hhmm(D.c[i].t), x, H - 10 * esc); g.textAlign = 'left' }
+      horas(D) { let xa = -1e9; for (let i = J.iniV; i < J.fimV; i++) if (D.c[i] && D.c[i].t % 60 === 0) { const x = X(i); if (x - xa < 64 * esc) continue; xa = x; g.strokeStyle = cores.grelha; g.beginPath(); g.moveTo(x, topo); g.lineTo(x, base); g.stroke(); g.fillStyle = cores.eixo; g.textAlign = 'center'; g.fillText(hhmm(D.c[i].t), x, H - 10 * esc); g.textAlign = 'left' }
         g.strokeStyle = '#2A2E39'; g.beginPath(); g.moveTo(largura, 0); g.lineTo(largura, H); g.moveTo(0, base); g.lineTo(W, base); g.stroke() },
       clip() { g.save(); g.beginPath(); g.rect(0, 0, largura, base); g.clip() },
       linha(arr, cor, a, w = 2, i0 = J.iniV, i1 = J.ult, tracejado) { if (!a) return; g.globalAlpha = a; g.strokeStyle = cor; g.lineWidth = w * esc; if (tracejado) g.setLineDash([7 * esc, 6 * esc]); g.beginPath(); let on = false
