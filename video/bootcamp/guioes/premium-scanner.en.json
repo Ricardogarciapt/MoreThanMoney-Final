@@ -1,5 +1,6 @@
 {
  "estrategia": "Premium Scanner",
+ "motor": "premium-scanner",
  "marca": "MoreThanMoney",
  "cores": {
   "bull": "#2F80ED",
@@ -767,7 +768,7 @@
      "cap": "04 · When not to enter",
      "kicker": "Up to the third target",
      "titulo": "When the trend keeps going",
-     "cenario": "compra",
+     "cenario": "tendencia",
      "seed": 21,
      "base": [
       "cores"
