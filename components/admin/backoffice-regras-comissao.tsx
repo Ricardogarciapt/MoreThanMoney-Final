@@ -55,6 +55,8 @@ const PACKS_CONHECIDOS = [
   'defy_lifetime',
   'rocketnova_semestral',
   'rocketnova_lifetime',
+  'quantum_semestral',
+  'quantum_lifetime',
   'premium_scanner_lifetime',
 ]
 

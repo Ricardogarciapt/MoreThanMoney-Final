@@ -1,0 +1,65 @@
+//@version=6
+// ─────────────────────────────────────────────────────────────────────────────
+// MTM Quantum · Oscilador — painel inferior (código próprio da MoreThanMoney)
+//
+// Stoch RSI (RSI 14 · %K 5 · suavização 1/1) com zonas de recuo: a faixa 80–100 a
+// vermelho (zona de venda) e 0–20 a azul (zona de compra). O fundo do painel toma a
+// cor da fase (preço acima/abaixo da EMA 260). Um triângulo nasce quando o oscilador
+// SAI da zona da direção: △ ao sair da zona azul numa fase de compra, ▽ ao sair da
+// zona vermelha numa fase de venda. Lê-se com o «MTM Quantum» do painel de preço.
+// Conteúdo educativo, não constitui consultoria financeira.
+// ─────────────────────────────────────────────────────────────────────────────
+indicator("MTM Quantum · Oscilador", "MTM Quantum Osc", overlay=false)
+
+cBlue = #3B7DDD
+cRed  = #E0474C
+cGrey = #B2B5BE
+
+gTF = "TIMEFRAMES"
+show5  = input.bool(true, "Show 5 mins", group=gTF, tooltip="Mostra os triângulos quando o gráfico está em 5 minutos.")
+show15 = input.bool(true, "Show 15 mins", group=gTF)
+show30 = input.bool(true, "Show 30 mins", group=gTF)
+
+gO = "OSCILADOR"
+rsiLen = input.int(14, "RSI Length", minval=2, group=gO)
+emaLen = input.int(260, "EMA Length", minval=2, group=gO, tooltip="Define a fase (fundo do painel e direção dos triângulos).")
+kLen   = input.int(5, "%K Length", minval=1, group=gO)
+kSm    = input.int(1, "%K Smoothing", minval=1, group=gO)
+dSm    = input.int(1, "%D Smoothing", minval=1, group=gO)
+topLvl = input.float(80, "Top Line", minval=50, maxval=100, group=gO)
+botLvl = input.float(20, "Bottom Line", minval=0, maxval=50, group=gO)
+upLim  = input.float(100, "Upper Zone Limit", group=gO)
+loLim  = input.float(0, "Lower Zone Limit", group=gO)
+showBg = input.bool(true, "Plots Background", group=gO)
+bgTr   = input.int(92, "Background Transparency", minval=0, maxval=100, group=gO)
+
+tfOk = timeframe.period == "5" ? show5 : timeframe.period == "15" ? show15 : timeframe.period == "30" ? show30 : true
+
+rsi  = ta.rsi(close, rsiLen)
+k    = ta.sma(ta.stoch(rsi, rsi, rsi, kLen), kSm)
+d    = ta.sma(k, dSm)
+bias = ta.ema(close, emaLen)
+bull = close > bias
+bear = close < bias
+
+buyArr  = tfOk and bull and ta.crossover(k, botLvl)
+sellArr = tfOk and bear and ta.crossunder(k, topLvl)
+
+pK  = plot(k, "%K", color=cGrey, linewidth=1)
+pD  = plot(d, "%D", color=color.new(cGrey, 60), linewidth=1, display=display.none)
+pT  = plot(topLvl, "Top Line", color=cRed, linewidth=1)
+pB  = plot(botLvl, "Bottom Line", color=cBlue, linewidth=1)
+pU  = plot(upLim, "Upper Zone Limit", color=cRed, linewidth=1)
+pL  = plot(loLim, "Lower Zone Limit", color=cBlue, linewidth=1)
+
+fill(pT, pU, color=color.new(cRed, 75), title="Shaded Overbought")
+fill(pB, pL, color=color.new(cBlue, 75), title="Shaded Oversold")
+fill(pK, pT, color=k > topLvl ? color.new(#787B86, 70) : na, title="Upper Band Gap Fill")
+fill(pK, pB, color=k < botLvl ? color.new(#787B86, 70) : na, title="Lower Band Gap Fill")
+bgcolor(showBg ? (bull ? color.new(cBlue, bgTr) : bear ? color.new(cRed, bgTr) : na) : na, title="Plots Background")
+
+plotshape(buyArr,  "Buy Arrow",  shape.triangleup,   location.bottom, color=color.new(cBlue, 0), size=size.tiny)
+plotshape(sellArr, "Sell Arrow", shape.triangledown, location.top,    color=color.new(cRed, 0),  size=size.tiny)
+
+alertcondition(buyArr,  "Quantum Osc Compra", "Quantum: oscilador saiu da zona de compra em {{ticker}}")
+alertcondition(sellArr, "Quantum Osc Venda",  "Quantum: oscilador saiu da zona de venda em {{ticker}}")

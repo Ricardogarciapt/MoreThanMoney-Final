@@ -215,6 +215,33 @@ export const SCANNERS: ScannerData[] = [
     ],
   },
   {
+    key: "quantum",
+    name: "Quantum by MTM",
+    subtitle: "Tendência · Recuo · Oscilador · Painel de força",
+    image: "/scanners/quantum/poster.jpg",
+    badge: "Novo",
+    description:
+      "O Quantum é um seguidor de tendência que entra em recuos. A linha primária (média de 269 com brilho) e a seta de fase dizem a direção; o painel de força dá uma pontuação de 0 a 100 e uma seta por timeframe, de M1 a W1. Depois espera-se o recuo: o preço volta à fita das EMAs 8 e 21 e o oscilador entra na zona da direção. A entrada é um triângulo de recuo, um ponto de onda ou os dois na mesma vela. Traz ainda HH/HL/LH/LL, linhas de tendência, bandas de volatilidade e os máximos e mínimos das sessões.",
+    features: [
+      "Linha primária de 269 (EMA, SMA, WMA, HMA, RMA ou VWMA) azul ou vermelha pela fase, com brilho",
+      "Seta grande de fase e painel de força com score 0–100 e setas M1 a W1",
+      "Triângulos de recuo (toque na fita 8/21 e fecho a favor) e pontos de onda (Stoch RSI a sair da zona)",
+      "Estrutura HH/HL/LH/LL, linhas de tendência pelos pivots e bandas de volatilidade 2σ e 3σ",
+      "Máximos e mínimos das sessões de Nova Iorque, Londres e Ásia, com etiquetas",
+    ],
+    techSpecs: [
+      "Oscilador Stoch RSI 14 / %K 5 / suavização 1 e 1, zonas 80 e 20, fase pela EMA 260",
+      "Swing de 21 velas para as etiquetas e lookback de 13 para as linhas de tendência",
+      "Sinais em 5, 15 e 30 minutos ligáveis um a um; outros timeframes sempre activos",
+      "Alertas JSON com entrada, stop para lá do recuo, alvo a 2R e score, prontos para webhook",
+      "Forex, ouro, índices e cripto; ferramenta educativa, não executa ordens",
+    ],
+    products: [
+      { id: "qt-semestral", label: "Semestral", price: "50€", priceNote: "6 meses de acesso", planId: "quantum_semestral" },
+      { id: "qt-lifetime", label: "Vitalício", price: "350€", priceNote: "Pagamento único", planId: "quantum_lifetime", highlight: true },
+    ],
+  },
+  {
     key: "sensei",
     name: "MTM Sensei",
     subtitle: "Inteligência Artificial Avançada",
