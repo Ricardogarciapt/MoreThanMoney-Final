@@ -6,6 +6,7 @@
 //   --refazer <est> [<est>…] --tag <t>   apaga os vídeos já publicados dessas estratégias (no YouTube, na próxima
 //                                         passagem com credenciais) e limpa os marcadores para a fila os voltar a fazer;
 //                                         com --tag só corre uma vez por estratégia (marcador saida/.refeito-<est>-<t>);
+//                                         --manter não apaga os antigos (ids em _pendente);
 //                                         --so <regex> limita aos ficheiros cujo nome bate (ex.: '-2-' = só o vídeo 2)
 //   Os títulos "tituloPlaylist" dos guiões são aplicados às playlists (ex.: «Estratégias MTM - Defy»).
 // Credenciais YOUTUBE_CLIENT_ID / _SECRET / _REFRESH_TOKEN (as mesmas do videocliper), lidas do ambiente,
@@ -34,6 +35,8 @@ if (iR > 0) {
   const iS = process.argv.indexOf('--so'), so = iS > 0 ? new RegExp(process.argv[iS + 1] || '.') : null
   const ests = process.argv.slice(iR + 1, Math.min(...[iT, iS].filter(i => i > iR).concat(process.argv.length)))
   pub._apagar = pub._apagar || []
+  // --manter: os vídeos antigos ficam no YouTube (ids guardados em _pendente até o Ricardo dar OK para apagar)
+  const manter = process.argv.includes('--manter'); pub._pendente = pub._pendente || []
   for (const est of ests) {
     const marca = path.join(SAIDA, `.refeito-${est}-${tag}`)
     if (tag && fs.existsSync(marca)) { console.log(`refazer ${est}: já feito (${tag})`); continue }
@@ -41,12 +44,12 @@ if (iR > 0) {
     for (const f of fs.existsSync(dir) ? fs.readdirSync(dir) : []) {
       if (!/\.mp4$/.test(f) || (so && !so.test(f))) continue
       const mp4 = path.join(dir, f), id = pub[f]?.id || (fs.existsSync(mp4 + '.yt') && fs.readFileSync(mp4 + '.yt', 'utf8').trim())
-      if (id) { pub._apagar.push(id); n++ }
+      if (id) { (manter ? pub._pendente : pub._apagar).push(id); n++ }
       delete pub[f]
       for (const x of [mp4, mp4 + '.yt', mp4 + '.v3']) fs.rmSync(x, { force: true })
     }
     if (tag) fs.writeFileSync(marca, new Date().toISOString())
-    console.log(`refazer ${est}: ${n} vídeo(s) do YouTube para apagar, marcadores limpos`)
+    console.log(`refazer ${est}: ${n} vídeo(s) do YouTube ${manter ? 'mantidos (à espera de OK para apagar)' : 'para apagar'}, marcadores limpos`)
   }
   grava(); process.exit(0)
 }
