@@ -61,15 +61,23 @@ Quantum is an educational analysis tool. It does not place orders and does not g
 ## Script 2 · Título
 Quantum Oscillator by MTM
 
-## Descrição (colar tal como está)
+## Descrição (colar tal como está; versão simples, aceite pelo TradingView)
 
-The lower panel of Quantum. A Stochastic RSI (RSI 14, %K 5, smoothing 1 and 1) with the pullback zones shaded: 80 to 100 in red (sell zone) and 0 to 20 in blue (buy zone). The background takes the colour of the phase, read from a 260-period EMA on the chart. A triangle prints when the oscillator leaves the zone of the direction: up when it crosses above 20 in a bullish phase, down when it crosses below 80 in a bearish phase. Read it together with "Quantum by MTM" on the price panel: the oscillator must be inside the zone of the direction before an entry, and leaving it is the wave signal.
+Quantum Oscillator by MTM is the lower panel of the Quantum trend-following system.
 
-Settings: timeframes where triangles are shown, RSI length, EMA length for the phase, %K length and smoothing, %D smoothing, top and bottom lines, zone limits, background and its transparency.
+It is a Stochastic RSI with RSI length 14, K length 5 and smoothing 1 and 1. Two zones are shaded on the panel. The zone from 80 to 100 is red and marks the sell pullback zone. The zone from 0 to 20 is blue and marks the buy pullback zone.
 
-Alerts: "Quantum Osc Buy" and "Quantum Osc Sell" conditions.
+The background of the panel shows the phase of the market. The phase comes from a 260-period EMA on the chart. Blue means price is above the average and red means price is below it.
 
-Educational analysis tool. It does not place orders and does not guarantee results. This is not financial advice.
+A triangle prints when the oscillator leaves the zone of the direction. An up triangle prints when the oscillator crosses above 20 during a bullish phase. A down triangle prints when the oscillator crosses below 80 during a bearish phase.
+
+Use it together with the Quantum by MTM script on the price panel. Before an entry the oscillator must be inside the zone of the direction. Leaving that zone is the wave signal that confirms the pullback is over.
+
+Settings include the timeframes where triangles are shown, the RSI length, the EMA length for the phase, the K length and smoothing, the D smoothing, the top and bottom lines, the zone limits and the background transparency.
+
+Alerts are available for the buy triangle and the sell triangle.
+
+This is an educational analysis tool. It does not place orders and does not guarantee results. It is not financial advice.
 
 ## Author's instructions (sugestão, para os dois)
 
