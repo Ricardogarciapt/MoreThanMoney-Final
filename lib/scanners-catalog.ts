@@ -14,6 +14,7 @@ export interface ScannerData {
   key: string
   name: string
   subtitle: string
+  /** Imagem principal: render nosso (public/scanners/<slug>/render-N.jpg, gerado por docs/scanners/gerar-prints.mjs). Nunca capturas de terceiros. */
   image: string
   description: string
   features: string[]
@@ -28,7 +29,8 @@ export const SCANNERS: ScannerData[] = [
     key: "goldkiller",
     name: "MTM Gold Killer V2.1",
     subtitle: "Análise Técnica Avançada",
-    image: "https://s3.tradingview.com/snapshots/x/X7SREOsm.png",
+    image: "/scanners/gold-killer/render-3.jpg",
+    gallery: ["/scanners/gold-killer/render-1.jpg", "/scanners/gold-killer/render-2.jpg", "/scanners/gold-killer/render-3.jpg", "/scanners/gold-killer/sinal.png"],
     badge: "Best Seller",
     description:
       "Um indicador avançado que combina técnicas estatísticas robustas, filtros de suavização personalizados e lógica de tendência baseada em SuperTrend para mapear oportunidades de trade com níveis de risco e recompensa claramente definidos.",
@@ -55,7 +57,8 @@ export const SCANNERS: ScannerData[] = [
     key: "aurumflow",
     name: "MTM Aurum Flow Cripto",
     subtitle: "Perpétuos Cripto · Tendência",
-    image: "/aurum-flow-preview.png",
+    image: "/scanners/aurum-flow/render-3.jpg",
+    gallery: ["/scanners/aurum-flow/render-1.jpg", "/scanners/aurum-flow/render-2.jpg", "/scanners/aurum-flow/render-3.jpg"],
     badge: "Novo",
     description:
       "O scanner de perpétuos cripto da MTM (otimizado para 1H). Só opera a favor da tendência (stack DEMA) com confirmação de momentum e entrega um plano completo e estático por sinal — entrada, stop e 3 alvos — com distâncias em % e cálculo de alavancagem e custo para o tamanho da tua conta.",
@@ -82,7 +85,8 @@ export const SCANNERS: ScannerData[] = [
     key: "mtm-scanner",
     name: "Scanner MTM V3.4",
     subtitle: "Market Structures and ATR",
-    image: "https://s3.tradingview.com/snapshots/z/ZPM47fOg.png",
+    image: "/scanners/mtm-scanner/render-3.jpg",
+    gallery: ["/scanners/mtm-scanner/render-1.jpg", "/scanners/mtm-scanner/render-2.jpg", "/scanners/mtm-scanner/render-3.jpg", "/scanners/mtm-scanner/sinal.png"],
     description:
       "Scanner avançado de estruturas de mercado com cálculo automático de ATR, sinais de entrada e saída optimizados e compatibilidade com múltiplos timeframes.",
     features: [
@@ -108,8 +112,8 @@ export const SCANNERS: ScannerData[] = [
     key: "trendshot",
     name: "TrendShot by MTM",
     subtitle: "Tendência · Estrutura · Risco/Retorno",
-    image: "/scanners/trendshot-xauusd.png",
-    gallery: ["/scanners/trendshot-xauusd.png", "/scanners/trendshot-us30.png", "/scanners/trendshot-sp500.png"],
+    image: "/scanners/trendshot/render-3.jpg",
+    gallery: ["/scanners/trendshot/render-1.jpg", "/scanners/trendshot/render-2.jpg", "/scanners/trendshot/render-3.jpg", "/scanners/trendshot/sinal.png", "/scanners/trendshot-xauusd.png", "/scanners/trendshot-us30.png", "/scanners/trendshot-sp500.png"],
     badge: "Novo",
     description:
       "Indicador multifuncional de análise técnica que junta seguimento de tendência, análise multi-timeframe, níveis de preço por volume e projeções automáticas de risco/retorno — uma leitura estruturada do mercado diretamente no teu gráfico do TradingView. Para Forex, Ouro (XAUUSD), índices e cripto.",
@@ -136,8 +140,8 @@ export const SCANNERS: ScannerData[] = [
     key: "premium-scanner",
     name: "MTM Premium Scanner",
     subtitle: "Ouro · Zonas de recuo por sessão",
-    image: "/scanners/premium-scanner.png",
-    gallery: ["/scanners/premium-scanner.png", "/scanners/premium-scanner-ny.png", "/scanners/premium-scanner-asia.png"],
+    image: "/scanners/premium-scanner/render-3.jpg",
+    gallery: ["/scanners/premium-scanner/render-1.jpg", "/scanners/premium-scanner/render-2.jpg", "/scanners/premium-scanner/render-3.jpg", "/scanners/premium-scanner.png", "/scanners/premium-scanner-ny.png", "/scanners/premium-scanner-asia.png"],
     badge: "Novo",
     description:
       "O scanner das sessões de ouro da MTM. Em Londres, Nova Iorque e Ásia lê a direção do movimento e desenha logo a zona de entrada em recuo, o stop e os alvos, com a mesma geometria dos sinais Premium da casa. Assenta no método de zonas de recuo por sessão, usado por traders de topo em todo o mundo e por vários programas de IB nos seus sinais de ouro.",
@@ -164,7 +168,8 @@ export const SCANNERS: ScannerData[] = [
     key: "defy",
     name: "DEFY by MTM",
     subtitle: "Bandas de exaustão · Confirmações · Estrelas",
-    image: "/scanners/defy/poster.jpg",
+    image: "/scanners/defy/render-3.jpg",
+    gallery: ["/scanners/defy/render-1.jpg", "/scanners/defy/render-2.jpg", "/scanners/defy/render-3.jpg"],
     badge: "Novo",
     description:
       "O DEFY lê a estrutura do mercado com bandas de exaustão, níveis-chave, uma nuvem de tendência e uma pontuação de confirmações. Quando há confirmações suficientes, marca a ideia com estrelas e desenha o plano completo no gráfico: entrada, Warning, stop e três alvos.",
@@ -191,7 +196,8 @@ export const SCANNERS: ScannerData[] = [
     key: "rocketnova",
     name: "RocketNova by MTM",
     subtitle: "Médias · Estrelas · Rocket Candle · Gestão da trade",
-    image: "/scanners/rocketnova/poster.jpg",
+    image: "/scanners/rocketnova/render-3.jpg",
+    gallery: ["/scanners/rocketnova/render-1.jpg", "/scanners/rocketnova/render-2.jpg", "/scanners/rocketnova/render-3.jpg"],
     badge: "Novo",
     description:
       "O RocketNova lê a tendência com três médias (20, 50 e 238) e só dispara no cruzamento confirmado quando há uma estrela de lançamento: um mínimo recente de swing para a compra, um máximo para a venda. A Rocket Candle, o pulso de volatilidade e o Trade Clock dizem-te se o mercado tem força e horas para a ideia. O plano fica fixo na vela do sinal e a gestão sai por alertas: TP1 a TP4, stop, stop na entrada e saída por sinal contrário.",
@@ -218,7 +224,8 @@ export const SCANNERS: ScannerData[] = [
     key: "quantum",
     name: "Quantum by MTM",
     subtitle: "Tendência · Recuo · Oscilador · Painel de força",
-    image: "/scanners/quantum/poster.jpg",
+    image: "/scanners/quantum/render-3.jpg",
+    gallery: ["/scanners/quantum/render-1.jpg", "/scanners/quantum/render-2.jpg", "/scanners/quantum/render-3.jpg"],
     badge: "Novo",
     description:
       "O Quantum é um seguidor de tendência que entra em recuos. A linha primária (média de 269 com brilho) e a seta de fase dizem a direção; o painel de força dá uma pontuação de 0 a 100 e uma seta por timeframe, de M1 a W1. Depois espera-se o recuo: o preço volta à fita das EMAs 8 e 21 e o oscilador entra na zona da direção. A entrada é um triângulo de recuo, um ponto de onda ou os dois na mesma vela. Traz ainda HH/HL/LH/LL, linhas de tendência, bandas de volatilidade e os máximos e mínimos das sessões.",
@@ -245,7 +252,8 @@ export const SCANNERS: ScannerData[] = [
     key: "sensei",
     name: "MTM Sensei",
     subtitle: "Inteligência Artificial Avançada",
-    image: "/MTM%20Sensei%20Preview.png",
+    image: "/scanners/sensei/render-3.jpg",
+    gallery: ["/scanners/sensei/render-1.jpg", "/scanners/sensei/render-2.jpg", "/scanners/sensei/render-3.jpg", "/scanners/sensei/sinal.png"],
     badge: "Novo",
     description:
       "O scanner mais sofisticado da MTM. O Sensei usa inteligência artificial para identificar confluências entre múltiplas metodologias — Smart Money, Goldenzone, SR MTM e TrendShot — gerando sinais de alta precisão para traders profissionais.",

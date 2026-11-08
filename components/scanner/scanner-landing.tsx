@@ -98,7 +98,10 @@ export function ScannerLandingView({
   const buy = (product: ScannerProduct = mainPlan) =>
     setCheckout({ product, name: product === PACK ? "Pack Scanners" : scanner.name })
   const buyLabel = plans.length ? u.wantIt(scanner.name.replace(/^MTM /, "")) : u.wantPack
-  const gallery = scanner.gallery?.length ? scanner.gallery : [scanner.image]
+  // Renders nossos têm versão EN (render-N-en.jpg); as capturas próprias são as mesmas nas duas línguas.
+  const imagemNaLingua = (src: string) => (lang === "en" && /\/render-\d\.jpg$/.test(src) ? src.replace(/\.jpg$/, "-en.jpg") : src)
+  const gallery = (scanner.gallery?.length ? scanner.gallery : [scanner.image]).map(imagemNaLingua)
+  const legenda = (src: string) => (/\/render-\d(-en)?\.jpg$/.test(src) ? u.renderShot : u.realShot)
   const cardTitles = (((lang === "en" ? CARD_TEXT_EN : CARD_TEXT) as Record<string, { title: string }[]>)[landing.slug] ?? []).map((c) => c.title)
   const goTo = (id: string) => document.getElementById(id)?.scrollIntoView({ behavior: "smooth", block: "start" })
 
@@ -213,7 +216,7 @@ export function ScannerLandingView({
                 </>
               ) : (
                 // eslint-disable-next-line @next/next/no-img-element
-                <img src={scanner.image} alt={u.chartAlt(scanner.name)} />
+                <img src={imagemNaLingua(scanner.image)} alt={u.chartAlt(scanner.name)} />
               )}
             </div>
           </div>
@@ -279,7 +282,7 @@ export function ScannerLandingView({
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img src={src} alt={u.shotAlt(scanner.name, i + 1)} loading="lazy" />
                 </div>
-                <figcaption>{u.realShot}</figcaption>
+                <figcaption>{legenda(src)}</figcaption>
               </figure>
             ))}
           </div>
