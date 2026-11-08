@@ -58,6 +58,7 @@ import {
   ehSubscricaoDeMarketplace,
   planoDaSubscricao,
 } from '@/lib/marketplace/subscricao-stripe'
+import { linkTradingViewDoPlano } from '@/lib/scanners-tradingview'
 
 // Nomes amigáveis dos scanners por planId (para o email de instruções TradingView)
 const SCANNER_PLAN_NAMES: Record<string, string> = {
@@ -351,7 +352,8 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
           guestEmail,
           'Trader',
           SCANNER_PLAN_NAMES[planId],
-          tvUsername
+          tvUsername,
+          linkTradingViewDoPlano(planId),
         )
       } catch (err) {
         console.error('Erro ao enviar email de scanner (guest):', err)
@@ -385,7 +387,8 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
           profile.email,
           profile.full_name || 'Trader',
           SCANNER_PLAN_NAMES[planId],
-          tvUsername
+          tvUsername,
+          linkTradingViewDoPlano(planId),
         )
       }
 

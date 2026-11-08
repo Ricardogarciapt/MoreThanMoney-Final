@@ -1309,6 +1309,8 @@ export const scannerAccessEmailTemplate = (
   scannerName: string,
   tradingviewUsername: string,
   siteUrl: string,
+  /** Página do script no TradingView, quando a conhecemos (lib/scanners-tradingview.ts). */
+  scriptUrl?: string | null,
 ) => {
   const content = `
     ${headerComponent('🔓 Acesso Confirmado!', scannerName, '✅')}
@@ -1346,11 +1348,14 @@ export const scannerAccessEmailTemplate = (
       {
         icon: '3️⃣',
         title: 'Adiciona ao gráfico',
-        description: 'Indicadores → Os Meus Scripts → invite-only scripts.',
+        description: scriptUrl
+          ? 'Abre a página do indicador (botão abaixo) e carrega em «Adicionar aos indicadores favoritos» → depois Indicadores → Favoritos.'
+          : 'Indicadores → Os Meus Scripts → invite-only scripts.',
       },
     ])}
     
-    ${buttonComponent('Ver os meus scanners', `${siteUrl}/scanner`)}
+    ${scriptUrl ? buttonComponent('Abrir o indicador no TradingView', scriptUrl) : ''}
+    ${buttonComponent('Ver os meus scanners', `${siteUrl}/scanner`, scriptUrl ? 'secondary' : 'primary')}
   `
 
   return baseTemplate(content, `Acesso ao ${scannerName}`, siteUrl)
