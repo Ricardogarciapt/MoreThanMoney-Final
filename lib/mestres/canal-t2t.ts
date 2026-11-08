@@ -18,6 +18,7 @@ export const CANAL_POR_FONTE_MTM: Record<string, string> = {
   mtmscanner: 'trade-ideas-setup',
   premiumscanner: 'sinais-premium-ii',
   defy: 'sinais-defy',
+  rocketnova: 'sinais-rocketnova',
 }
 
 /** Os três de antes (05/10): só valem quando nenhum provider reclama o canal. */

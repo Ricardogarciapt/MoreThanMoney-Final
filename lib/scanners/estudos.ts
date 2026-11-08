@@ -15,7 +15,7 @@ export const scannerOrder = [
   "Momentum",
   "AurumFlow",
   "TrendShot",
-  "Supernova",
+  "RocketNova",
   "Winzone",
   "Sinergy",
   "Goldkiller",
@@ -36,7 +36,9 @@ export const scannerStudies: Record<ScannerKey, string[]> = {
   // negativo. Ver docs/aurum-orb-vs-smc.md. O id anterior era 4ca56ac1…
   AurumFlow: ["PUB;7a37672ce0bf426eb038be265b6b4aba"],
   TrendShot:["PUB;be1c60d3c15249e4b609bb40a4412d1f"],
-  Supernova: ["PUB;c16bafd7d0874182a1415648ec3ed7b8"],
+  // RocketNova by MTM (08/11/2026): substitui o Supernova com código próprio — docs/pine/rocketnova.pine.
+  // Fica sem estudo até o Ricardo publicar o Pine no TradingView e colar aqui o «PUB;…».
+  RocketNova: [],
   Winzone: [
     "PUB;6c003d30b2154ef3a31074d5c703954f",
     "PUB;e6adb5e5246c43f4a8dcffde5c98db4e",
@@ -59,7 +61,7 @@ export const scannerLabels: Record<ScannerKey, string> = {
   Momentum: "Momentum",
   AurumFlow: "MTM Aurum Flow Cripto",
   TrendShot: "TrendShot",
-  Supernova: "Supernova",
+  RocketNova: "RocketNova",
   Winzone: "Sniper Pro",
   Sinergy: "Quantum",
   Goldkiller: "GoldKiller",
@@ -84,6 +86,8 @@ export const ESTUDOS_WEBTRADER = [
   { chave: "TrendShot", rotulo: "TrendShot", alerta: "trendshot", acesso: "TrendShot", curto: "TS", cor: "#38BDF8" },
   // Premium Scanner (27/10): só cálculo local (os alertas dele ficam em sombra, sem setas por webhook).
   { chave: "PremiumScanner", rotulo: "Premium Scanner", alerta: "premiumscanner", acesso: "PremiumScanner", curto: "PS", cor: "#E9C46A" },
+  // RocketNova (08/11): as setas dos sinais por webhook; o estudo publicado entra quando existir.
+  { chave: "RocketNova", rotulo: "RocketNova", alerta: "rocketnova", acesso: "RocketNova", curto: "RN", cor: "#D2A63C" },
 ] as const
 
 export type EstudoWebtrader = (typeof ESTUDOS_WEBTRADER)[number]

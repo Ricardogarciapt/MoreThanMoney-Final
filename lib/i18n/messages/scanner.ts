@@ -4,7 +4,7 @@ import type { Lang } from "@/lib/i18n/config"
  * Namespace `scanner.*` — strings estáticas da UI do scanner mobile/scanner-access
  * (components/mobile/scanner-mobile.tsx). `pt` é a fonte; restantes traduções fiéis.
  * Termos de marca/estratégia mantêm-se: MTM, TradingView, Snapshot, Forex,
- * Commodities, Golden Zone, Kill Shot, Momentum, Supernova, Sniper Pro, Quantum,
+ * Commodities, Golden Zone, Kill Shot, Momentum, RocketNova, Sniper Pro, Quantum,
  * GoldKiller, Sensei, Share chart, ⌥S. Símbolos/tickers não são traduzidos.
  */
 export const SCANNER_MESSAGES: Partial<Record<Lang, Record<string, string>>> = {
