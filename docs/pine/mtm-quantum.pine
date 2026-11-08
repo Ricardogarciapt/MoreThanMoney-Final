@@ -1,0 +1,348 @@
+//@version=6
+// ─────────────────────────────────────────────────────────────────────────────
+// MTM Quantum — painel de preço (código próprio da MoreThanMoney)
+//
+// Seguidor de tendência com entradas em recuo. O gráfico lê-se em três tempos:
+//  1. Tendência — a seta grande de FASE (MacroPhase) marca o início; a LINHA PRIMÁRIA
+//     (média de 269, com brilho) fica azul com o preço por cima e vermelha com o preço
+//     por baixo; o painel MASTERSTRENGTH dá uma pontuação 0–100 e uma seta por timeframe
+//     (M1…W1). Compra com score > 60, venda com score ≤ 40, 45–50 é neutro.
+//  2. Recuo — o preço volta à fita (EMA 8/21) e o oscilador (Stoch RSI, no painel
+//     «MTM Quantum · Oscilador») entra na zona da direção.
+//  3. Entrada — TRIÂNGULO de recuo (MicroPullback) e/ou PONTO (MicroWave) na cor da
+//     direção, numa vela dessa cor. Os dois na mesma vela, com o preço na banda de
+//     volatilidade, é a entrada mais forte.
+//
+// Também desenha: máximos/mínimos das sessões de Nova Iorque, Londres e Ásia; etiquetas
+// HH / HL / LH / LL (swing 21); linhas de tendência pelos últimos pivots (lookback 13);
+// bandas de volatilidade (BB1 2σ e BB2 3σ, preenchidas a cinzento); velas azul/vermelho.
+//
+// GESTÃO (regra MTM, a fonte não define stop nem alvos): stop para lá do último mínimo
+// do recuo (compra) ou do último máximo (venda); alvo com pelo menos o dobro do risco.
+//
+// ALERTAS / WEBHOOK MTM: Adicionar alerta → condição «Any alert() function call»,
+// «Once Per Bar Close», Webhook URL:
+//   https://www.morethanmoney.pt/api/webhooks/tradingview?strategy=quantum&secret=<secret>
+// Sai um JSON por entrada (triângulo e/ou ponto na direção da fase, com score a favor).
+// Conteúdo educativo, não constitui consultoria financeira.
+// ─────────────────────────────────────────────────────────────────────────────
+indicator("MTM Quantum", "MTM Quantum", overlay=true, max_lines_count=500, max_labels_count=500, max_bars_back=500)
+
+cBlue = #3B7DDD
+cRed  = #E0474C
+cGrey = #9598A1
+
+// ═══════════ SESSÕES ═══════════
+gS = "SESSÕES"
+showNY   = input.bool(true, "Show New York Session", group=gS)
+showLDN  = input.bool(true, "Show London Session", group=gS)
+showASIA = input.bool(true, "Show Asia Session", group=gS)
+sesNY    = input.session("0800-1700", "New York", group=gS)
+sesLDN   = input.session("0300-1200", "London", group=gS)
+sesASIA  = input.session("1900-0300", "Asia", group=gS)
+tzSes    = input.string("America/New_York", "Fuso horário das sessões", group=gS)
+sesCol   = input.color(color.new(#B2B5BE, 20), "Cor das linhas", group=gS)
+sesLblCol= input.color(#B2B5BE, "Cor das etiquetas", group=gS)
+
+// ═══════════ TIMEFRAMES ═══════════
+gTF = "TIMEFRAMES"
+show5  = input.bool(true, "Show 5 mins", group=gTF, tooltip="Mostra os sinais quando o gráfico está em 5 minutos.")
+show15 = input.bool(true, "Show 15 mins", group=gTF)
+show30 = input.bool(true, "Show 30 mins", group=gTF)
+showBarColor = input.bool(true, "Show Bar Color", group=gTF)
+showCandles  = input.bool(true, "Show Plot Candles", group=gTF, tooltip="Velas azul/vermelho por cima das do gráfico, na cor da fase.")
+
+// ═══════════ LINHA PRIMÁRIA ═══════════
+gP = "LINHA PRIMÁRIA"
+mainLen  = input.int(269, "Main EMA Length", minval=2, group=gP)
+mainType = input.string("EMA", "Main EMA Type", options=["EMA", "SMA", "WMA", "HMA", "RMA", "VWMA"], group=gP)
+baseW    = input.int(2, "Base Line Width", minval=1, maxval=10, group=gP)
+glowW    = input.int(8, "Glow Line Width", minval=1, maxval=20, group=gP)
+
+// ═══════════ ESTRUTURA ═══════════
+gE = "ESTRUTURA"
+showHL    = input.bool(true, "Show High Low Lines", inline="hl", group=gE)
+hlColHi   = input.color(cBlue, "", inline="hl", group=gE)
+hlColLo   = input.color(cRed, "", inline="hl", group=gE)
+hlW       = input.int(2, "", minval=1, maxval=5, inline="hl", group=gE)
+showHLLbl = input.bool(true, "Show High Low Labels", group=gE)
+swingLen  = input.int(21, "Swing Length", minval=2, group=gE, tooltip="Pivots que dão as etiquetas HH / HL / LH / LL.")
+pivotLen  = input.int(13, "Pivot Lookback Period", minval=2, group=gE, tooltip="Pivots que desenham as linhas de tendência (máximos a azul, mínimos a vermelho).")
+showMacro = input.bool(false, "Show Macro lines", group=gE, tooltip="Recta de regressão das últimas N velas, na cor da inclinação.")
+macroLen  = input.int(160, "Macro length", minval=10, group=gE)
+
+// ═══════════ BANDAS DE VOLATILIDADE ═══════════
+gB = "BANDAS DE VOLATILIDADE"
+bbLen  = input.int(20, "BB Length", minval=2, group=gB)
+bbM1   = input.float(2.0, "BB1 Multiplier", minval=0.1, step=0.1, group=gB)
+bbM2   = input.float(3.0, "BB2 Multiplier", minval=0.1, step=0.1, group=gB)
+bbCol  = input.color(color.new(#787B86, 40), "Band Color", group=gB)
+bbFill = input.int(82, "Fill Transparency", minval=0, maxval=100, group=gB)
+
+// ═══════════ OSCILADOR (MicroWave) ═══════════
+gO = "OSCILADOR (MicroWave)"
+rsiLen = input.int(14, "RSI Length", minval=2, group=gO)
+kLen   = input.int(5, "%K Length", minval=1, group=gO)
+kSm    = input.int(1, "%K Smoothing", minval=1, group=gO)
+osTop  = input.float(80, "Top Line", minval=50, maxval=100, group=gO)
+osBot  = input.float(20, "Bottom Line", minval=0, maxval=50, group=gO)
+
+// ═══════════ MASTERSTRENGTH ═══════════
+gM = "MASTERSTRENGTH"
+showTable = input.bool(true, "Show Panel", group=gM)
+tablePos  = input.string("Top Right", "Position", options=["Top Right", "Top Left", "Bottom Right", "Bottom Left"], group=gM)
+msFast    = input.int(21, "Fast Length", minval=2, group=gM)
+msSlow    = input.int(55, "Slow Length", minval=3, group=gM)
+
+// ═══════════ WEBHOOK ═══════════
+gW = "WEBHOOK MTM"
+chave      = input.string("QUANTUM", "strategy (chave no webhook)", group=gW)
+slLookback = input.int(10, "Stop: velas do recuo", minval=2, group=gW, tooltip="O stop fica para lá do mínimo (compra) ou máximo (venda) destas últimas velas.")
+rrAlvo     = input.float(2.0, "Alvo (× risco)", minval=0.5, step=0.5, group=gW)
+needScore  = input.bool(true, "Só alertar com score a favor", group=gW, tooltip="Compra com score > 60 e venda com score ≤ 40.")
+
+// ─────────────────────────────────────────────────────────────────────────────
+// CÁLCULOS
+// ─────────────────────────────────────────────────────────────────────────────
+f_ma(float src, simple int len, simple string t) =>
+    switch t
+        "SMA"  => ta.sma(src, len)
+        "WMA"  => ta.wma(src, len)
+        "HMA"  => ta.hma(src, len)
+        "RMA"  => ta.rma(src, len)
+        "VWMA" => ta.vwma(src, len)
+        => ta.ema(src, len)
+
+tfOk = timeframe.period == "5" ? show5 : timeframe.period == "15" ? show15 : timeframe.period == "30" ? show30 : true
+
+prim  = f_ma(close, mainLen, mainType)
+ema8  = ta.ema(close, 8)
+ema13 = ta.ema(close, 13)
+ema21 = ta.ema(close, 21)
+
+// Fase: duas velas seguidas do mesmo lado da linha primária
+var int fase = 0
+if close > prim and close[1] > prim[1]
+    fase := 1
+if close < prim and close[1] < prim[1]
+    fase := -1
+bull = fase == 1
+bear = fase == -1
+flipUp = tfOk and bull and fase[1] != 1
+flipDn = tfOk and bear and fase[1] != -1
+
+primCol = bull ? cBlue : bear ? cRed : cGrey
+
+// Oscilador (igual ao do painel inferior)
+rsi = ta.rsi(close, rsiLen)
+kOs = ta.sma(ta.stoch(rsi, rsi, rsi, kLen), kSm)
+
+// Sinais
+touchUp = low <= ema21 or low[1] <= ema21[1]
+touchDn = high >= ema21 or high[1] >= ema21[1]
+pbUp  = tfOk and bull and touchUp and close > ema8 and close > open      // MicroPullback compra
+pbDn  = tfOk and bear and touchDn and close < ema8 and close < open      // MicroPullback venda
+dotUp = tfOk and bull and ta.crossover(kOs, osBot)                        // MicroWave compra
+dotDn = tfOk and bear and ta.crossunder(kOs, osTop)                       // MicroWave venda
+arrUp = tfOk and bull and ta.crossover(close, ema8)                       // MicroArrow compra
+arrDn = tfOk and bear and ta.crossunder(close, ema8)                      // MicroArrow venda
+
+// Bandas
+bbBasis = ta.sma(close, bbLen)
+bbDev   = ta.stdev(close, bbLen)
+bb1U = bbBasis + bbM1 * bbDev
+bb1L = bbBasis - bbM1 * bbDev
+bb2U = bbBasis + bbM2 * bbDev
+bb2L = bbBasis - bbM2 * bbDev
+
+// Macro
+macro = ta.linreg(close, macroLen, 0)
+
+// MasterStrength: força por timeframe (−1 … +1)
+f_forca() =>
+    float f = ta.ema(close, msFast)
+    float s = ta.ema(close, msSlow)
+    (close > f ? 0.5 : -0.5) + (f > s ? 0.5 : -0.5)
+
+s1  = request.security(syminfo.tickerid, "1",   f_forca(), lookahead=barmerge.lookahead_off)
+s5  = request.security(syminfo.tickerid, "5",   f_forca(), lookahead=barmerge.lookahead_off)
+s15 = request.security(syminfo.tickerid, "15",  f_forca(), lookahead=barmerge.lookahead_off)
+s30 = request.security(syminfo.tickerid, "30",  f_forca(), lookahead=barmerge.lookahead_off)
+s60 = request.security(syminfo.tickerid, "60",  f_forca(), lookahead=barmerge.lookahead_off)
+s4h = request.security(syminfo.tickerid, "240", f_forca(), lookahead=barmerge.lookahead_off)
+sD  = request.security(syminfo.tickerid, "D",   f_forca(), lookahead=barmerge.lookahead_off)
+sW  = request.security(syminfo.tickerid, "W",   f_forca(), lookahead=barmerge.lookahead_off)
+media = (nz(s1) + nz(s5) + nz(s15) + nz(s30) + nz(s60) + nz(s4h) + nz(sD) + nz(sW)) / 8
+score = math.round(50 + 50 * media)
+
+// ─────────────────────────────────────────────────────────────────────────────
+// DESENHO
+// ─────────────────────────────────────────────────────────────────────────────
+// Linha primária com brilho
+plot(prim, "EMA 269 Glow", color=color.new(primCol, 78), linewidth=glowW)
+plot(prim, "EMA 269 Base", color=primCol, linewidth=baseW)
+plot(ema8,  "EMA 8",  color=color.new(cBlue, 30), display=display.none)
+plot(ema13, "EMA 13", color=color.new(cBlue, 50), display=display.none)
+
+// Macro
+macroCol = macro > macro[1] ? cBlue : cRed
+plot(showMacro ? macro : na, "Macro Line", color=color.new(macroCol, 30), linewidth=1)
+
+// Bandas
+pU1 = plot(bb1U, "BB1 Upper", color=bbCol, linewidth=1)
+pL1 = plot(bb1L, "BB1 Lower", color=bbCol, linewidth=1)
+pU2 = plot(bb2U, "BB2 Upper", color=color.new(bbCol, 70), linewidth=1)
+pL2 = plot(bb2L, "BB2 Lower", color=color.new(bbCol, 70), linewidth=1)
+fill(pU1, pU2, color=color.new(#787B86, bbFill), title="Upper Band Fill")
+fill(pL1, pL2, color=color.new(#787B86, bbFill), title="Lower Band Fill")
+
+// Velas e cor das barras
+candCol = bull ? cBlue : bear ? cRed : cGrey
+plotcandle(showCandles ? open : na, showCandles ? high : na, showCandles ? low : na, showCandles ? close : na, "PlotCandle", color=candCol, wickcolor=color.new(cGrey, 20), bordercolor=candCol)
+barcolor(showBarColor ? candCol : na, title="Bar Color")
+
+// Sinais
+plotshape(flipUp, "Phase Arrow Up",   shape.triangleup,   location.belowbar, color=color.new(cBlue, 10), size=size.large)
+plotshape(flipDn, "Phase Arrow Down", shape.triangledown, location.abovebar, color=color.new(cRed, 10),  size=size.large)
+plotshape(arrUp, "Buy Arrow",  shape.arrowup,   location.belowbar, color=color.new(cBlue, 30), size=size.tiny)
+plotshape(arrDn, "Sell Arrow", shape.arrowdown, location.abovebar, color=color.new(cRed, 30),  size=size.tiny)
+plotshape(pbUp, "Pullback Triangle Up",   shape.triangleup,   location.belowbar, color=color.new(cBlue, 0), size=size.small)
+plotshape(pbDn, "Pullback Triangle Down", shape.triangledown, location.abovebar, color=color.new(cRed, 0),  size=size.small)
+plotshape(dotUp, "Blue Flip Dot", shape.circle, location.belowbar, color=color.new(cBlue, 20), size=size.tiny)
+plotshape(dotDn, "Red Flip Dot",  shape.circle, location.abovebar, color=color.new(cRed, 20),  size=size.tiny)
+
+// Etiquetas HH / HL / LH / LL
+ph = ta.pivothigh(high, swingLen, swingLen)
+pl = ta.pivotlow(low, swingLen, swingLen)
+var float lastPH = na
+var float lastPL = na
+if not na(ph)
+    if showHLLbl
+        label.new(bar_index - swingLen, ph, ph > nz(lastPH, ph - 1) ? "HH" : "LH", style=label.style_label_down, color=color.new(color.black, 100), textcolor=hlColHi, size=size.small)
+    lastPH := ph
+if not na(pl)
+    if showHLLbl
+        label.new(bar_index - swingLen, pl, pl < nz(lastPL, pl + 1) ? "LL" : "HL", style=label.style_label_up, color=color.new(color.black, 100), textcolor=hlColLo, size=size.small)
+    lastPL := pl
+
+// Linhas de tendência pelos dois últimos pivots (lookback 13)
+tph = ta.pivothigh(high, pivotLen, pivotLen)
+tpl = ta.pivotlow(low, pivotLen, pivotLen)
+var int   hB1 = na
+var float hP1 = na
+var int   lB1 = na
+var float lP1 = na
+var line  lnHi = na
+var line  lnLo = na
+if not na(tph)
+    int b = bar_index - pivotLen
+    if showHL and not na(hB1)
+        line.delete(lnHi)
+        lnHi := line.new(hB1, hP1, b, tph, color=hlColHi, width=hlW, extend=extend.right)
+    hB1 := b
+    hP1 := tph
+if not na(tpl)
+    int b = bar_index - pivotLen
+    if showHL and not na(lB1)
+        line.delete(lnLo)
+        lnLo := line.new(lB1, lP1, b, tpl, color=hlColLo, width=hlW, extend=extend.right)
+    lB1 := b
+    lP1 := tpl
+
+// Sessões: máximo e mínimo, com a linha a prolongar-se até à sessão seguinte
+type Ses
+    line  hi
+    line  lo
+    label lhi
+    label llo
+    float h
+    float l
+
+f_ses(bool on, string s, string nome, Ses st) =>
+    bool inS = on and not na(time(timeframe.period, s, tzSes))
+    if inS and not inS[1]
+        st.h := high
+        st.l := low
+        st.hi := line.new(bar_index, high, bar_index, high, color=sesCol, width=1)
+        st.lo := line.new(bar_index, low, bar_index, low, color=sesCol, width=1)
+        st.lhi := label.new(bar_index, high, nome + " HIGH", style=label.style_label_left, color=color.new(color.black, 100), textcolor=sesLblCol, size=size.tiny)
+        st.llo := label.new(bar_index, low, nome + " LOW", style=label.style_label_left, color=color.new(color.black, 100), textcolor=sesLblCol, size=size.tiny)
+    else if inS
+        st.h := math.max(st.h, high)
+        st.l := math.min(st.l, low)
+        line.set_y1(st.hi, st.h)
+        line.set_y1(st.lo, st.l)
+        label.set_y(st.lhi, st.h)
+        label.set_y(st.llo, st.l)
+    if not na(st.hi)
+        line.set_xy2(st.hi, bar_index, st.h)
+        line.set_xy2(st.lo, bar_index, st.l)
+        label.set_x(st.lhi, bar_index)
+        label.set_x(st.llo, bar_index)
+    inS
+
+var Ses ny   = Ses.new()
+var Ses ldn  = Ses.new()
+var Ses asia = Ses.new()
+f_ses(showNY,   sesNY,   "NY",   ny)
+f_ses(showLDN,  sesLDN,  "LDN",  ldn)
+f_ses(showASIA, sesASIA, "ASIA", asia)
+
+// Painel MasterStrength
+f_pos(string p) =>
+    switch p
+        "Top Left"     => position.top_left
+        "Bottom Right" => position.bottom_right
+        "Bottom Left"  => position.bottom_left
+        => position.top_right
+
+var table painel = table.new(f_pos(tablePos), 9, 2, border_width=1, frame_color=color.new(color.black, 0), border_color=color.new(color.black, 0))
+f_cell(int col, string nome, float s) =>
+    bool up = s > 0
+    table.cell(painel, col, 0, nome, bgcolor=#1C2B4A, text_color=#C8CCD4, text_size=size.small)
+    table.cell(painel, col, 1, s == 0 ? "–" : up ? "↑" : "↓", bgcolor=#0F1A2E, text_color=s == 0 ? cGrey : up ? cBlue : cRed, text_size=size.small)
+
+if showTable and barstate.islast
+    color scoreBg = score > 50 ? #1E5BB8 : score < 45 ? #A8262C : #3A3F4A
+    table.cell(painel, 0, 0, "SCORE", bgcolor=#1C2B4A, text_color=#C8CCD4, text_size=size.small)
+    table.cell(painel, 0, 1, str.tostring(score), bgcolor=scoreBg, text_color=color.white, text_size=size.large)
+    f_cell(1, "M1",  s1)
+    f_cell(2, "M5",  s5)
+    f_cell(3, "M15", s15)
+    f_cell(4, "M30", s30)
+    f_cell(5, "H1",  s60)
+    f_cell(6, "H4",  s4h)
+    f_cell(7, "D",   sD)
+    f_cell(8, "W",   sW)
+
+// ─────────────────────────────────────────────────────────────────────────────
+// ALERTAS
+// ─────────────────────────────────────────────────────────────────────────────
+alertcondition(flipUp, "Quantum Fase Compra", "Quantum: fase de COMPRA em {{ticker}} a {{close}}")
+alertcondition(flipDn, "Quantum Fase Venda",  "Quantum: fase de VENDA em {{ticker}} a {{close}}")
+alertcondition(pbUp or dotUp, "Quantum Compra", "Quantum: entrada de COMPRA em {{ticker}} a {{close}}")
+alertcondition(pbDn or dotDn, "Quantum Venda",  "Quantum: entrada de VENDA em {{ticker}} a {{close}}")
+
+scoreOkUp = not needScore or score > 60
+scoreOkDn = not needScore or score <= 40
+entUp = (pbUp or dotUp) and scoreOkUp
+entDn = (pbDn or dotDn) and scoreOkDn
+
+slUp = ta.lowest(low, slLookback)
+slDn = ta.highest(high, slLookback)
+
+f_json(int d) =>
+    float e  = close
+    float sl = d == 1 ? slUp : slDn
+    float r  = math.abs(e - sl)
+    float tp = d == 1 ? e + rrAlvo * r : e - rrAlvo * r
+    string forte = (d == 1 ? pbUp and dotUp : pbDn and dotDn) ? "pullback+wave" : (d == 1 ? pbUp : pbDn) ? "pullback" : "wave"
+    '{"strategy":"' + chave + '","event":"entry","id":"' + str.tostring(time) + '","ticker":"' + syminfo.ticker +
+     '","exchange":"' + syminfo.prefix + '","action":"' + (d == 1 ? "buy" : "sell") + '","price":' + str.tostring(e) +
+     ',"entry":' + str.tostring(e) + ',"sl":' + str.tostring(sl) + ',"tp1":' + str.tostring(tp) +
+     ',"score":' + str.tostring(score) + ',"signal":"' + forte + '","timeframe":"' + timeframe.period + '"}'
+
+if entUp
+    alert(f_json(1), alert.freq_once_per_bar_close)
+if entDn
+    alert(f_json(-1), alert.freq_once_per_bar_close)
