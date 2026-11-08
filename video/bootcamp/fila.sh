@@ -7,7 +7,7 @@ exec < /dev/null  # ffmpeg/node sem terminal: evita «suspended (tty output)» q
 cd "$(dirname "$0")/../.." || exit 1
 # Só se desenham estratégias com gráfico fiel ao Pine (video/bootcamp/<est>.js ou "motor" no guião).
 # As outras ficam à espera do motor (pedido do Ricardo a 07/11: vídeos o mais próximos possível do código).
-ESTS="trendshot defy-explica defy mtm-scanner sensei golden-zone momentum supernova sniper-pro quantum goldkiller aurum-flow premium-scanner"
+ESTS="trendshot defy-explica defy mtm-scanner sensei golden-zone momentum rocketnova sniper-pro quantum goldkiller aurum-flow premium-scanner"
 DEST="$HOME/Documents/youtube-upload-mtm"
 git pull --ff-only origin claude/project-thread-piyxkj || true
 # vídeos já feitos a 1,10× passam a 1,03× sem novo render
