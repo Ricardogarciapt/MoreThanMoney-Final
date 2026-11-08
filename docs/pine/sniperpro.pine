@@ -1,0 +1,545 @@
+// ════════════════════════════════════════════════════════════════════════════
+// © Ricardo Garcia (RicardoGarciaPT) / MoreThanMoney. All rights reserved.
+// This software and source code are the intellectual property of
+// Ricardo Garcia (RicardoGarciaPT) and his company MoreThanMoney.
+// Copying, redistribution, resale, modification or reuse of this code, in whole
+// or in part, without the written authorization of the owner is prohibited.
+// ════════════════════════════════════════════════════════════════════════════
+//@version=6
+// ─────────────────────────────────────────────────────────────────────────────
+// SNIPERPRO by MTM — painel de preço num só estudo: bandas, trend screener, nuvem
+// Kalman, Supertrend, Parabolic SAR, exaustão por volume, pivots e níveis-chave.
+// Faz par com «SniperPro Asst by MTM» (painel inferior).
+//
+// SECÇÕES (cada uma liga-se e desliga-se nos inputs)
+//  1. Bandas: média de 55 do (H+L)/2 com 1.5 / 2 / 2.5 desvios. A nuvem entre o 2.º
+//     e o 3.º desvio é a zona de exaustão (laranja em cima, azul em baixo).
+//  2. Trend Screener: VIDYA (média adaptativa pelo CMO de 9 ou pelo rácio de desvios)
+//     em 11 comprimentos de Fibonacci (8 … 987). A tabela resume a tendência
+//     (Bullish / Bearish), o estado (Trending / Consolidating / Pulling Back) e a
+//     força (Very Strong … Very Weak) pelo alinhamento dos comprimentos.
+//     Desenham-se as VIDYA 55 (cor pela inclinação), 233 (roxo) e 987 (dourado).
+//  3. Nuvem Kalman: dois filtros de Kalman (5 e 13). Nuvem azul quando o curto está
+//     acima do longo, laranja quando está abaixo; as velas pintam-se do mesmo modo.
+//  4. Supertrend (2 / 1) que se esbate quando o preço se afasta; Parabolic SAR em cruzes.
+//  5. Exaustão por volume (KDE): em cada pivot, a densidade de Gauss do Exp-RSI nos
+//     pivots anteriores, pesada pelo volume relativo. Acima do limiar sai «Vol: N%».
+//  6. Sinais: cruzamento dos filtros Kalman + vela válida (corpo/amplitude, corpo em
+//     pips) + votos de tendência (Supertrend 10/3, HalfTrend, Ichimoku, PSAR). A
+//     etiqueta «+N» é a pontuação (votos a favor + divergência + exaustão).
+//  7. Pivots clássicos S1–S7 / R1–R7 (timeframe automático: D em M15 e abaixo, W até
+//     H4, M em diário, 12M acima).
+//  8. Níveis-chave: os N pivots de preço mais recentes, com brilho laranja acima do
+//     preço e azul abaixo.
+//
+// ALERTAS / WEBHOOK MTM: Adicionar alerta → condição «Any alert() function call»,
+// «Once Per Bar Close», Webhook URL:
+//   https://www.morethanmoney.pt/api/webhooks/tradingview?strategy=sniperpro&secret=<secret>
+// Cada sinal sai em JSON com entry, sl (Supertrend 10/3) e tp1–tp3 (1R, 2R, 3R).
+// Também há «SniperPro Compra» / «SniperPro Venda» para alertas simples.
+// Conteúdo educativo, não constitui consultoria financeira.
+// ─────────────────────────────────────────────────────────────────────────────
+indicator("SniperPro by MTM", shorttitle="SniperPro by MTM", overlay=true, max_lines_count=500, max_labels_count=500, max_boxes_count=500, max_bars_back=1000)
+
+cUp   = #4F5BFF
+cDn   = #E8603C
+cGrey = #9598A1
+chave = "sniperpro"
+
+// ════════════════════════════════════════════════════════════════
+// INPUTS
+// ════════════════════════════════════════════════════════════════
+gBB     = "BANDAS"
+bbOn    = input.bool(true, "Show Bands", group=gBB)
+bbSrc   = input.source(hl2, "Source", group=gBB)
+bbLen   = input.int(55, "Length", minval=2, group=gBB)
+bbSd1   = input.float(1.5, "StdDev", minval=0.1, step=0.1, group=gBB)
+bbSd2   = input.float(2,   "StdDev", minval=0.1, step=0.1, group=gBB)
+bbSd3   = input.float(2.5, "StdDev", minval=0.1, step=0.1, group=gBB)
+bbUpC   = input.color(#C0392B, "Upper Band Color", group=gBB)
+bbDnC   = input.color(#2B48C0, "Lower Band Color", group=gBB)
+bbDash  = input.bool(false, "Dashed", group=gBB)
+bbTransp= input.bool(true,  "Transp", group=gBB)
+
+gTS     = "TREND SCREENER"
+tsOn    = input.bool(true, "Show Trend Screener", group=gTS)
+tsSrc   = input.source(close, "Source", group=gTS)
+tsFixed = input.bool(true, "Fixed CMO Length (9)?", group=gTS)
+tsCmo   = input.bool(true, "Calculation Method: CMO/StDev?", group=gTS)
+tsL1    = input.int(8,   "Length 8",   minval=1, group=gTS)
+tsL2    = input.int(13,  "Length 13",  minval=1, group=gTS)
+tsL3    = input.int(21,  "Length 21",  minval=1, group=gTS)
+tsL4    = input.int(34,  "Length 34",  minval=1, group=gTS)
+tsL5    = input.int(55,  "Length 55",  minval=1, group=gTS)
+tsL6    = input.int(89,  "Length 89",  minval=1, group=gTS)
+tsL7    = input.int(144, "Length 144", minval=1, group=gTS)
+tsL8    = input.int(233, "Length 233", minval=1, group=gTS)
+tsL9    = input.int(377, "Length 377", minval=1, group=gTS)
+tsL10   = input.int(610, "Length 610", minval=1, group=gTS)
+tsL11   = input.int(987, "Length 987", minval=1, group=gTS)
+tsTblUp = input.color(#2B48C0, "Table Colors", inline="tc", group=gTS)
+tsTblDn = input.color(#C0392B, "", inline="tc", group=gTS)
+tsShowTbl = input.bool(true, "Show Table", group=gTS)
+
+gKF     = "NUVEM KALMAN"
+kfOn    = input.bool(true, "Show Cloud", group=gKF)
+kfShort = input.int(5,  "Short_len", minval=1, group=gKF)
+kfLong  = input.int(13, "Long_len",  minval=2, group=gKF)
+kfUpC   = input.color(#4F5BFF, "", inline="kc", group=gKF)
+kfDnC   = input.color(#E8603C, "", inline="kc", group=gKF)
+kfGlow  = input.bool(false, "Enable Glow", inline="kc", group=gKF)
+kfFill  = input.int(66, "Sniper Arrow Cloud Fill", minval=0, maxval=100, group=gKF)
+kfCandle= input.bool(true, "Candle Color", group=gKF)
+kfCUp   = input.color(#4F5BFF, "Up", inline="cc", group=gKF)
+kfCDn   = input.color(#E8603C, "Dn", inline="cc", group=gKF)
+
+gST2    = "SUPERTREND (NUVEM)"
+st2On   = input.bool(true, "Show SuperTrend", group=gST2)
+st2Len  = input.int(2, "ATR Length", minval=1, group=gST2)
+st2Mult = input.float(1, "ATR Multiplier", minval=0.1, step=0.1, group=gST2)
+st2OpMax= input.int(99, "SuperTrend Max Opacity", minval=0, maxval=100, group=gST2, tooltip="Opacidade quando o preço está colado ao Supertrend.")
+st2OpMin= input.int(53, "SuperTrend Min Opacity", minval=0, maxval=100, group=gST2, tooltip="Opacidade quando o preço está a um ATR ou mais.")
+
+gKDE    = "KDE"
+kdeOn   = input.bool(true, "Show KDE Labels", group=gKDE)
+kdeBw   = input.float(0.1, "Bandwidth", minval=0.01, maxval=1, step=0.01, group=gKDE, tooltip="Largura do núcleo de Gauss, em fracção da escala 0–1 do RSI.")
+kdeBins = input.int(100, "Nº Bins", minval=10, maxval=500, group=gKDE, tooltip="Quantos pivots anteriores entram na densidade.")
+kdeThr  = input.float(33, "KDE Threshold %", minval=0, maxval=100, group=gKDE, tooltip="Só sai etiqueta acima desta probabilidade.")
+rvolLen = input.int(25, "Relative Volume Length", minval=1, group=gKDE, tooltip="Volume da vela contra a média deste comprimento.")
+kdeAct  = input.bool(true, "Enable Activation Threshold", group=gKDE, tooltip="Desligado, sai etiqueta em todos os pivots.")
+kdeBullC= input.color(#E8603C, "Bullish Break", inline="kd", group=gKDE)
+kdeBearC= input.color(#4F5BFF, "Bearish Break", inline="kd", group=gKDE)
+kdeTxtC = input.color(#F2E33C, "Text", inline="kd", group=gKDE)
+kdeLbl  = input.bool(true, "KDE Labels", group=gKDE)
+
+gRS     = "EXP-RSI"
+rsiLen  = input.int(5,     "Exp-RSI Length", minval=1, group=gRS)
+smooth  = input.float(0.1, "Exponential Smoothing Factor", minval=0.01, maxval=1, step=0.01, group=gRS)
+emaLen  = input.int(200,   "EMA Period (larger more accurate band : 200 is good )", minval=10, group=gRS)
+lrBars  = input.int(5,     "Linear Regression bars", minval=2, group=gRS)
+devB    = input.float(1.5, "Channel Multiplier (1.5 Dev)", minval=0.1, step=0.1, group=gRS)
+
+gST     = "SUPERTREND (VOTO)"
+stLen   = input.int(10,  "ATR Length", minval=1, group=gST)
+stFac   = input.float(3, "Factor", minval=0.1, step=0.1, group=gST)
+gHT     = "HALFTREND"
+htAmp   = input.int(2,   "Amplitude", minval=1, group=gHT)
+htDev   = input.float(2, "Channel Deviation", minval=0.1, step=0.1, group=gHT)
+gIC     = "ICHIMOKU CLOUD"
+icConv  = input.int(5,  "Conversion Periods", minval=1, group=gIC)
+icBase  = input.int(26, "Base Periods", minval=1, group=gIC)
+icLag   = input.int(52, "Lagging Span 2 Periods", minval=1, group=gIC)
+icDisp  = input.int(26, "Displacement", minval=1, group=gIC)
+gPS     = "PARABOLIC SAR"
+psOn    = input.bool(true, "Show Parabolic SAR", group=gPS)
+psStart = input.float(0.02, "Start", minval=0.001, step=0.01, group=gPS)
+psInc   = input.float(0.02, "Increment", minval=0.001, step=0.01, group=gPS)
+psMax   = input.float(0.2,  "Max value", minval=0.01, step=0.01, group=gPS)
+
+gDV     = "DIVERGÊNCIAS E SINAIS"
+bearHi1 = input.float(65, "Bearish Divergence High RSI 1", minval=0, maxval=100, group=gDV)
+bearHi2 = input.float(50, "Bearish Divergence High RSI 2", minval=0, maxval=100, group=gDV)
+bullLo1 = input.float(35, "Bullish Divergence Low RSI 1", minval=0, maxval=100, group=gDV)
+bullLo2 = input.float(50, "Bullish Divergence Low RSI 2", minval=0, maxval=100, group=gDV)
+divBull = input.color(#4F5BFF, "Divergence Colors", inline="dc", group=gDV)
+divBear = input.color(#E8603C, "", inline="dc", group=gDV)
+minBody = input.float(39, "Minimum Body-to-Range Ratio (%)", minval=0, maxval=100, group=gDV)
+minPips = input.float(5,  "Minimum Body Size (Pips) for HTF", minval=0, group=gDV, tooltip="Só se aplica em H1 e acima.")
+sigOn   = input.bool(true, "Show Signals", group=gDV)
+
+gPV     = "PIVOTS"
+pvOn    = input.bool(true, "Show Pivots", group=gPV)
+pvTf    = input.string("Auto", "Pivots Timeframe", options=["Auto", "D", "W", "M", "12M"], group=gPV)
+pvLbl   = input.bool(true, "Show Labels", group=gPV)
+pvPrice = input.bool(true, "Show Prices", group=gPV)
+pvPos   = input.string("Left", "Labels Position", options=["Left", "Right"], group=gPV)
+pvWidth = input.int(1, "Line Width", minval=1, maxval=4, group=gPV)
+pvLevels= input.int(7, "Levels (S1…Sn / R1…Rn)", minval=1, maxval=7, group=gPV)
+pvSC    = input.color(#4F5BFF, "S", inline="pc", group=gPV)
+pvRC    = input.color(#E8603C, "R", inline="pc", group=gPV)
+
+gKL     = "KEY LEVELS"
+klOn    = input.bool(true, "Show Key Levels", group=gKL)
+klN     = input.int(10, "Number of Levels", minval=1, maxval=30, group=gKL)
+klC     = input.color(#787B86, "Line Color", group=gKL)
+klW     = input.int(1, "Line Width", minval=1, maxval=4, group=gKL)
+klAbove = input.color(#E8603C, "Glow Color Above Price", group=gKL)
+klBelow = input.color(#4F5BFF, "Glow Color Below Price", group=gKL)
+klOp    = input.int(90, "Glow Opacity", minval=0, maxval=100, group=gKL)
+klSize  = input.int(10, "Glow Size", minval=1, maxval=100, group=gKL, tooltip="Altura do brilho em % de meio ATR(14).")
+klPiv   = input.int(15, "Pivot Length", minval=2, group=gKL)
+
+// ════════════════════════════════════════════════════════════════
+// 1. BANDAS
+// ════════════════════════════════════════════════════════════════
+bbMid = ta.sma(bbSrc, bbLen)
+bbDev = ta.stdev(bbSrc, bbLen)
+u1 = bbMid + bbSd1 * bbDev
+d1 = bbMid - bbSd1 * bbDev
+u2 = bbMid + bbSd2 * bbDev
+d2 = bbMid - bbSd2 * bbDev
+u3 = bbMid + bbSd3 * bbDev
+d3 = bbMid - bbSd3 * bbDev
+bbStyle = bbDash ? plot.style_linebr : plot.style_line
+bbT     = bbTransp ? 60 : 0
+pU1 = plot(bbOn ? u1 : na, "Upper BB",  color=color.new(bbUpC, bbT), style=bbStyle)
+pD1 = plot(bbOn ? d1 : na, "Lower BB",  color=color.new(bbDnC, bbT), style=bbStyle)
+plot(bbOn ? bbMid : na, "Midline BB", color=color.new(cGrey, 50), style=plot.style_circles, linewidth=1)
+pU2 = plot(bbOn ? u2 : na, "Upper BB2", color=color.new(bbUpC, bbT), style=bbStyle)
+pD2 = plot(bbOn ? d2 : na, "Lower BB2", color=color.new(bbDnC, bbT), style=bbStyle)
+pU3 = plot(bbOn ? u3 : na, "Upper BB3", color=color.new(bbUpC, bbT), style=bbStyle)
+pD3 = plot(bbOn ? d3 : na, "Lower BB3", color=color.new(bbDnC, bbT), style=bbStyle)
+fill(pU2, pU3, color=color.new(bbUpC, bbTransp ? 45 : 20), title="Exaustão em cima")
+fill(pD2, pD3, color=color.new(bbDnC, bbTransp ? 45 : 20), title="Exaustão em baixo")
+
+// ════════════════════════════════════════════════════════════════
+// 2. TREND SCREENER (VIDYA)
+// ════════════════════════════════════════════════════════════════
+f_vidya(float src, int len) =>
+    int   kLen = tsFixed ? 9 : len
+    float kc   = math.abs(ta.cmo(src, kLen)) / 100
+    float ks   = math.min(1, nz(ta.stdev(src, kLen) / ta.stdev(src, len), 1))
+    float k    = tsCmo ? kc : ks
+    float a    = 2.0 / (len + 1)
+    var float v = na
+    v := na(v[1]) ? src : v[1] + a * k * (src - v[1])
+    v
+
+v1  = f_vidya(tsSrc, tsL1)
+v2  = f_vidya(tsSrc, tsL2)
+v3  = f_vidya(tsSrc, tsL3)
+v4  = f_vidya(tsSrc, tsL4)
+v5  = f_vidya(tsSrc, tsL5)
+v6  = f_vidya(tsSrc, tsL6)
+v7  = f_vidya(tsSrc, tsL7)
+v8  = f_vidya(tsSrc, tsL8)
+v9  = f_vidya(tsSrc, tsL9)
+v10 = f_vidya(tsSrc, tsL10)
+v11 = f_vidya(tsSrc, tsL11)
+
+f_above(float v) => na(v) ? 0 : close > v ? 1 : -1
+tsNet = f_above(v1) + f_above(v2) + f_above(v3) + f_above(v4) + f_above(v5) + f_above(v6) + f_above(v7) + f_above(v8) + f_above(v9) + f_above(v10) + f_above(v11)
+tsBull = tsNet >= 0
+tsAbs  = math.abs(tsNet)
+tsStrength = tsAbs >= 10 ? "Very Strong" : tsAbs >= 8 ? "Strong" : tsAbs >= 5 ? "Neutral" : tsAbs >= 3 ? "Weak" : "Very Weak"
+// Estado: curto, médio e preço alinhados = Trending; preço contra o curto mas a favor do longo = Pulling Back; resto = Consolidating
+tsState = (tsBull and close > v5 and v5 > v8) or (not tsBull and close < v5 and v5 < v8) ? "Trending" : (tsBull and close < v5 and close > v8) or (not tsBull and close > v5 and close < v8) ? "Pulling Back" : "Consolidating"
+
+plot(tsOn ? v5 : na,  "VIDYA 55",  color=v5 >= v5[1] ? tsTblUp : tsTblDn, linewidth=1)
+plot(tsOn ? v8 : na,  "VIDYA 233", color=#9B59B6, linewidth=1)
+plot(tsOn ? v11 : na, "Trend Line", color=#D2A63C, linewidth=1)
+
+var table tbl = table.new(position.top_center, 5, 3, bgcolor=color.new(#000000, 30), border_width=1, border_color=#2A2E39)
+var bool tblMerged = false
+if tsOn and tsShowTbl and barstate.islast
+    color biasC = tsBull ? tsTblUp : tsTblDn
+    color dim   = #1E222D
+    table.cell(tbl, 0, 0, tsBull ? "Bullish" : "Bearish", bgcolor=biasC, text_color=color.white, text_size=size.small)
+    string st1 = tsState
+    table.cell(tbl, 0, 1, "Trending",      bgcolor=st1 == "Trending" ? biasC : dim, text_color=color.white, text_size=size.small)
+    table.cell(tbl, 1, 1, "Consolidating", bgcolor=st1 == "Consolidating" ? color.new(cGrey, 30) : dim, text_color=color.white, text_size=size.small)
+    table.cell(tbl, 3, 1, "Pulling Back",  bgcolor=st1 == "Pulling Back" ? biasC : dim, text_color=color.white, text_size=size.small)
+    table.cell(tbl, 0, 2, "Very Strong", bgcolor=tsStrength == "Very Strong" ? biasC : dim, text_color=color.white, text_size=size.small)
+    table.cell(tbl, 1, 2, "Strong",      bgcolor=tsStrength == "Strong" ? biasC : dim, text_color=color.white, text_size=size.small)
+    table.cell(tbl, 2, 2, "Neutral",     bgcolor=tsStrength == "Neutral" ? biasC : dim, text_color=color.white, text_size=size.small)
+    table.cell(tbl, 3, 2, "Weak",        bgcolor=tsStrength == "Weak" ? biasC : dim, text_color=color.white, text_size=size.small)
+    table.cell(tbl, 4, 2, "Very Weak",   bgcolor=tsStrength == "Very Weak" ? biasC : dim, text_color=color.white, text_size=size.small)
+    if not tblMerged
+        table.merge_cells(tbl, 0, 0, 4, 0)
+        table.merge_cells(tbl, 1, 1, 2, 1)
+        table.merge_cells(tbl, 3, 1, 4, 1)
+        tblMerged := true
+
+// ════════════════════════════════════════════════════════════════
+// 3. NUVEM KALMAN
+// ════════════════════════════════════════════════════════════════
+f_kalman(float src, int len) =>
+    var float est = na
+    var float p   = 1.0
+    float q = 2.0 / len
+    float r = 1.0
+    float pp = p + q
+    float g  = pp / (pp + r)
+    est := na(est[1]) ? src : est[1] + g * (src - est[1])
+    p := (1 - g) * pp
+    est
+
+kS = f_kalman(close, kfShort)
+kL = f_kalman(close, kfLong)
+kfBull = kS >= kL
+kfC = kfBull ? kfUpC : kfDnC
+pKS = plot(kfOn ? kS : na, "Short Kalman", color=kfC, linewidth=1)
+pKL = plot(kfOn ? kL : na, "Long Kalman",  color=kfC, linewidth=1)
+plot(kfOn and kfGlow ? kS : na, "Glow Short", color=color.new(kfC, 80), linewidth=4)
+plot(kfOn and kfGlow ? kL : na, "Glow Long",  color=color.new(kfC, 80), linewidth=4)
+fill(pKS, pKL, color=kfOn ? color.new(kfC, kfFill) : na, title="Sniper Cloud")
+barcolor(kfCandle ? (kfBull ? kfCUp : kfCDn) : na, title="Bar Color")
+
+// ════════════════════════════════════════════════════════════════
+// 4. SUPERTREND QUE SE ESBATE + PARABOLIC SAR
+// ════════════════════════════════════════════════════════════════
+[st2, st2Dir] = ta.supertrend(st2Mult, st2Len)
+atr14  = ta.atr(14)
+dist   = math.min(1, math.abs(close - st2) / atr14)
+st2Op  = st2OpMax - (st2OpMax - st2OpMin) * dist
+plot(st2On ? st2 : na, "SuperTrend", color=color.new(st2Dir < 0 ? cUp : cDn, 100 - int(st2Op)), style=plot.style_linebr, linewidth=2)
+
+sar = ta.sar(psStart, psInc, psMax)
+plot(psOn ? sar : na, "ParabolicSAR", color=color.new(color.white, 20), style=plot.style_cross, linewidth=1)
+
+// ════════════════════════════════════════════════════════════════
+// 5. EXP-RSI, VOTOS DE TENDÊNCIA E DIVERGÊNCIAS
+// ════════════════════════════════════════════════════════════════
+rsiRaw = ta.rsi(close, rsiLen)
+var float xr = na
+xr := na(xr[1]) ? rsiRaw : xr[1] + smooth * (rsiRaw - xr[1])
+rBase = ta.ema(xr, emaLen)
+rSd   = ta.stdev(xr, emaLen)
+rUp   = rBase + devB * rSd
+rDn   = rBase - devB * rSd
+
+[stLine, stDir] = ta.supertrend(stFac, stLen)
+voteST = stDir < 0 ? 1 : -1
+
+htHi  = ta.highest(high, htAmp)[1]
+htLo  = ta.lowest(low, htAmp)[1]
+htHma = ta.sma(high, htAmp)
+htLma = ta.sma(low, htAmp)
+var int   htTrend = 0
+var float htMaxLo = na
+var float htMinHi = na
+htMaxLo := na(htMaxLo) ? low : htMaxLo
+htMinHi := na(htMinHi) ? high : htMinHi
+if htTrend == 0
+    htMaxLo := math.max(htMaxLo, htLo)
+    if htHma < htMaxLo and close < low[1]
+        htTrend := 1
+        htMinHi := htHi
+else
+    htMinHi := math.min(htMinHi, htHi)
+    if htLma > htMinHi and close > high[1]
+        htTrend := 0
+        htMaxLo := htLo
+voteHT = htTrend == 0 ? 1 : -1
+
+icC  = math.avg(ta.highest(high, icConv), ta.lowest(low, icConv))
+icB  = math.avg(ta.highest(high, icBase), ta.lowest(low, icBase))
+icA  = math.avg(icC, icB)
+icL2 = math.avg(ta.highest(high, icLag), ta.lowest(low, icLag))
+cloudTop = math.max(icA[icDisp - 1], icL2[icDisp - 1])
+cloudBot = math.min(icA[icDisp - 1], icL2[icDisp - 1])
+voteIC = close > cloudTop ? 1 : close < cloudBot ? -1 : (icC >= icB ? 1 : -1)
+votePS = close > sar ? 1 : -1
+
+// Divergências do Exp-RSI
+ph = ta.pivothigh(xr, lrBars, lrBars)
+pl = ta.pivotlow(xr, lrBars, lrBars)
+var float lastPhRsi = na
+var float lastPhPx  = na
+var float lastPlRsi = na
+var float lastPlPx  = na
+bearDiv = false
+bullDiv = false
+if not na(ph)
+    float pxH = high[lrBars]
+    if not na(lastPhRsi) and pxH > lastPhPx and ph < lastPhRsi and lastPhRsi >= bearHi1 and ph >= bearHi2
+        bearDiv := true
+    lastPhRsi := ph
+    lastPhPx  := pxH
+if not na(pl)
+    float pxL = low[lrBars]
+    if not na(lastPlRsi) and pxL < lastPlPx and pl > lastPlRsi and lastPlRsi <= bullLo1 and pl <= bullLo2
+        bullDiv := true
+    lastPlRsi := pl
+    lastPlPx  := pxL
+plotshape(sigOn and bearDiv ? high[lrBars] : na, "Bearish Divergence", style=shape.circle, location=location.absolute, color=divBear, size=size.tiny, offset=-lrBars)
+plotshape(sigOn and bullDiv ? low[lrBars]  : na, "Bullish Divergence", style=shape.circle, location=location.absolute, color=divBull, size=size.tiny, offset=-lrBars)
+var int lastDiv = 0
+var int lastDivBar = na
+if bearDiv
+    lastDiv := -1
+    lastDivBar := bar_index
+if bullDiv
+    lastDiv := 1
+    lastDivBar := bar_index
+
+// ════════════════════════════════════════════════════════════════
+// 6. KDE — exaustão por volume nos pivots
+// ════════════════════════════════════════════════════════════════
+rvol = volume / math.max(ta.sma(volume, rvolLen), 1e-10)
+pvH  = ta.pivothigh(high, lrBars, lrBars)
+pvL  = ta.pivotlow(low, lrBars, lrBars)
+var array<float> kdeHi = array.new<float>()
+var array<float> kdeLo = array.new<float>()
+var array<float> kdeHiW = array.new<float>()
+var array<float> kdeLoW = array.new<float>()
+
+// Probabilidade = densidade de Gauss do valor actual entre as amostras, pesada pelo volume relativo
+f_kde(array<float> xs, array<float> ws, float x) =>
+    float num = 0.0
+    float den = 0.0
+    if array.size(xs) > 0
+        for i = 0 to array.size(xs) - 1
+            float z = (x - array.get(xs, i)) / kdeBw
+            float k = math.exp(-0.5 * z * z)
+            float w = array.get(ws, i)
+            num += k * w
+            den += w
+    den > 0 ? num / den * 100 : na
+
+f_push(array<float> xs, array<float> ws, float x, float w) =>
+    array.push(xs, x)
+    array.push(ws, w)
+    if array.size(xs) > kdeBins
+        array.shift(xs)
+        array.shift(ws)
+
+kdeHot = false
+if kdeOn and not na(pvH)
+    float xv = xr[lrBars] / 100
+    float rv = rvol[lrBars]
+    float pr = f_kde(kdeHi, kdeHiW, xv)
+    f_push(kdeHi, kdeHiW, xv, rv)
+    if not na(pr) and (pr >= kdeThr or not kdeAct)
+        kdeHot := true
+        if kdeLbl
+            label.new(bar_index - lrBars, high[lrBars], "Vol: " + str.tostring(pr, "#.#") + "%", style=label.style_label_down, color=color.new(kdeBearC, 100), textcolor=kdeTxtC, size=size.small)
+if kdeOn and not na(pvL)
+    float xv = xr[lrBars] / 100
+    float rv = rvol[lrBars]
+    float pr = f_kde(kdeLo, kdeLoW, xv)
+    f_push(kdeLo, kdeLoW, xv, rv)
+    if not na(pr) and (pr >= kdeThr or not kdeAct)
+        kdeHot := true
+        if kdeLbl
+            label.new(bar_index - lrBars, low[lrBars], "Vol: " + str.tostring(pr, "#.#") + "%", style=label.style_label_up, color=color.new(kdeBullC, 100), textcolor=kdeTxtC, size=size.small)
+var int lastHotBar = na
+if kdeHot
+    lastHotBar := bar_index
+
+// ════════════════════════════════════════════════════════════════
+// 7. SINAIS
+// ════════════════════════════════════════════════════════════════
+body    = math.abs(close - open)
+rng     = math.max(high - low, syminfo.mintick)
+pipSize = syminfo.mintick * (syminfo.type == "forex" ? 10 : 1)
+isHTF   = timeframe.in_seconds() >= 3600
+bodyOk  = body / rng * 100 >= minBody and (not isHTF or body / pipSize >= minPips)
+votes   = voteST + voteHT + voteIC + votePS
+crossUp = ta.crossover(kS, kL)
+crossDn = ta.crossunder(kS, kL)
+recentDiv = not na(lastDivBar) and bar_index - lastDivBar <= 3 * lrBars
+recentHot = not na(lastHotBar) and bar_index - lastHotBar <= 3 * lrBars
+buy  = sigOn and crossUp and bodyOk and close > open and votes >= 2
+sell = sigOn and crossDn and bodyOk and close < open and votes <= -2
+scoreBuy  = (voteST > 0 ? 1 : 0) + (voteHT > 0 ? 1 : 0) + (voteIC > 0 ? 1 : 0) + (votePS > 0 ? 1 : 0) + (recentDiv and lastDiv > 0 ? 1 : 0) + (recentHot ? 1 : 0)
+scoreSell = (voteST < 0 ? 1 : 0) + (voteHT < 0 ? 1 : 0) + (voteIC < 0 ? 1 : 0) + (votePS < 0 ? 1 : 0) + (recentDiv and lastDiv < 0 ? 1 : 0) + (recentHot ? 1 : 0)
+
+if buy
+    label.new(bar_index, low, "+" + str.tostring(scoreBuy), style=label.style_label_up, color=cUp, textcolor=color.white, size=size.small)
+if sell
+    label.new(bar_index, high, "+" + str.tostring(scoreSell), style=label.style_label_down, color=cDn, textcolor=color.white, size=size.small)
+
+f_json(int d) =>
+    string act   = d == 1 ? "buy" : "sell"
+    float entry  = close
+    float sl     = d == 1 ? math.min(stLine, low) : math.max(stLine, high)
+    float r      = math.abs(entry - sl)
+    float tp1    = d == 1 ? entry + r : entry - r
+    float tp2    = d == 1 ? entry + 2 * r : entry - 2 * r
+    float tp3    = d == 1 ? entry + 3 * r : entry - 3 * r
+    '{"strategy":"' + chave + '","event":"entry","id":"' + str.tostring(time) + '","source":"sniperpro","ticker":"' + syminfo.ticker +
+     '","exchange":"' + syminfo.prefix + '","action":"' + act + '","side":"' + act + '","timeframe":"' + timeframe.period +
+     '","entry":' + str.tostring(entry) + ',"sl":' + str.tostring(sl) +
+     ',"tp1":' + str.tostring(tp1) + ',"tp2":' + str.tostring(tp2) + ',"tp3":' + str.tostring(tp3) +
+     ',"score":' + str.tostring(d == 1 ? scoreBuy : scoreSell) + ',"trend":"' + (tsBull ? "bullish" : "bearish") + '","state":"' + str.lower(tsState) +
+     '","strength":"' + str.lower(tsStrength) + '","tf":"' + timeframe.period + '"}'
+
+if buy
+    alert(f_json(1), alert.freq_once_per_bar_close)
+if sell
+    alert(f_json(-1), alert.freq_once_per_bar_close)
+alertcondition(buy,  "SniperPro Compra", "SniperPro: compra em {{ticker}} {{interval}} a {{close}}")
+alertcondition(sell, "SniperPro Venda",  "SniperPro: venda em {{ticker}} {{interval}} a {{close}}")
+
+// ════════════════════════════════════════════════════════════════
+// 8. PIVOTS CLÁSSICOS
+// ════════════════════════════════════════════════════════════════
+pvTfRes = pvTf != "Auto" ? pvTf : timeframe.isseconds ? "D" : timeframe.isintraday and timeframe.multiplier <= 15 ? "D" : timeframe.isintraday and timeframe.multiplier <= 240 ? "W" : timeframe.isdaily ? "M" : "12M"
+[pH, pL, pC] = request.security(syminfo.tickerid, pvTfRes, [high[1], low[1], close[1]], lookahead=barmerge.lookahead_on)
+newPeriod = ta.change(time(pvTfRes)) != 0
+pp  = (pH + pL + pC) / 3
+pRg = pH - pL
+r1 = 2 * pp - pL
+s1 = 2 * pp - pH
+r2 = pp + pRg
+s2 = pp - pRg
+r3 = pH + 2 * (pp - pL)
+s3 = pL - 2 * (pH - pp)
+r4 = r3 + pRg
+s4 = s3 - pRg
+r5 = r4 + pRg
+s5 = s4 - pRg
+r6 = r5 + pRg
+s6 = s5 - pRg
+r7 = r6 + pRg
+s7 = s6 - pRg
+f_pv(float lvl, int n) => pvOn and n <= pvLevels and not newPeriod ? lvl : na
+plot(f_pv(r1, 1), "R1", color=pvRC, linewidth=pvWidth, style=plot.style_linebr)
+plot(f_pv(r2, 2), "R2", color=pvRC, linewidth=pvWidth, style=plot.style_linebr)
+plot(f_pv(r3, 3), "R3", color=pvRC, linewidth=pvWidth, style=plot.style_linebr)
+plot(f_pv(r4, 4), "R4", color=pvRC, linewidth=pvWidth, style=plot.style_linebr)
+plot(f_pv(r5, 5), "R5", color=pvRC, linewidth=pvWidth, style=plot.style_linebr)
+plot(f_pv(r6, 6), "R6", color=pvRC, linewidth=pvWidth, style=plot.style_linebr)
+plot(f_pv(r7, 7), "R7", color=pvRC, linewidth=pvWidth, style=plot.style_linebr)
+plot(f_pv(s1, 1), "S1", color=pvSC, linewidth=pvWidth, style=plot.style_linebr)
+plot(f_pv(s2, 2), "S2", color=pvSC, linewidth=pvWidth, style=plot.style_linebr)
+plot(f_pv(s3, 3), "S3", color=pvSC, linewidth=pvWidth, style=plot.style_linebr)
+plot(f_pv(s4, 4), "S4", color=pvSC, linewidth=pvWidth, style=plot.style_linebr)
+plot(f_pv(s5, 5), "S5", color=pvSC, linewidth=pvWidth, style=plot.style_linebr)
+plot(f_pv(s6, 6), "S6", color=pvSC, linewidth=pvWidth, style=plot.style_linebr)
+plot(f_pv(s7, 7), "S7", color=pvSC, linewidth=pvWidth, style=plot.style_linebr)
+
+var array<label> pvLabels = array.new<label>()
+if pvOn and pvLbl and barstate.islast
+    for lb in pvLabels
+        label.delete(lb)
+    array.clear(pvLabels)
+    int x = pvPos == "Left" ? bar_index - 25 : bar_index + 2
+    array<float> rs = array.from(r1, r2, r3, r4, r5, r6, r7)
+    array<float> ss = array.from(s1, s2, s3, s4, s5, s6, s7)
+    for i = 0 to pvLevels - 1
+        string pr = pvPrice ? " " + str.tostring(array.get(rs, i), format.mintick) : ""
+        string ps = pvPrice ? " " + str.tostring(array.get(ss, i), format.mintick) : ""
+        array.push(pvLabels, label.new(x, array.get(rs, i), "R" + str.tostring(i + 1) + pr, style=label.style_none, textcolor=pvRC, size=size.small))
+        array.push(pvLabels, label.new(x, array.get(ss, i), "S" + str.tostring(i + 1) + ps, style=label.style_none, textcolor=pvSC, size=size.small))
+
+// ════════════════════════════════════════════════════════════════
+// 9. NÍVEIS-CHAVE
+// ════════════════════════════════════════════════════════════════
+klH = ta.pivothigh(high, klPiv, klPiv)
+klL = ta.pivotlow(low, klPiv, klPiv)
+var array<float> klPx  = array.new<float>()
+var array<int>   klBar = array.new<int>()
+var array<line>  klLines = array.new<line>()
+var array<box>   klBoxes = array.new<box>()
+if klOn and (not na(klH) or not na(klL))
+    array.push(klPx, not na(klH) ? klH : klL)
+    array.push(klBar, bar_index - klPiv)
+    if array.size(klPx) > klN
+        array.shift(klPx)
+        array.shift(klBar)
+if klOn and barstate.islast and array.size(klPx) > 0
+    for ln in klLines
+        line.delete(ln)
+    for bx in klBoxes
+        box.delete(bx)
+    array.clear(klLines)
+    array.clear(klBoxes)
+    float h = atr14 / 2 * klSize / 100
+    for i = 0 to array.size(klPx) - 1
+        float px = array.get(klPx, i)
+        int   b0 = array.get(klBar, i)
+        color gc = px >= close ? klAbove : klBelow
+        array.push(klLines, line.new(b0, px, bar_index, px, color=klC, width=klW, extend=extend.right))
+        array.push(klBoxes, box.new(b0, px + h, bar_index, px - h, border_color=color.new(gc, 100), bgcolor=color.new(gc, klOp), extend=extend.right))

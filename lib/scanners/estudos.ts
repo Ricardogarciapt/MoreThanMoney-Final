@@ -39,6 +39,9 @@ export const scannerStudies: Record<ScannerKey, string[]> = {
   // RocketNova by MTM (08/11/2026): substitui o Supernova com código próprio — docs/pine/rocketnova.pine.
   // Estudo publicado (invite-only) pelo Ricardo a 08/11/2026.
   RocketNova: ["PUB;f2e9cd6359e946e99e6b843429ae6592"],
+  // SniperPro by MTM (08/11/2026): versão própria em docs/pine/sniperpro.pine (painel de preço: bandas,
+  // trend screener, nuvem Kalman, pivots e níveis-chave) + docs/pine/sniperpro-asst.pine (painel inferior).
+  // Quando o Ricardo publicar os dois estudos, trocar estes ids pelos PUB novos (2 em vez de 5).
   Winzone: [
     "PUB;6c003d30b2154ef3a31074d5c703954f",
     "PUB;e6adb5e5246c43f4a8dcffde5c98db4e",

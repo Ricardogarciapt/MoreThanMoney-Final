@@ -1,0 +1,210 @@
+// ════════════════════════════════════════════════════════════════════════════
+// © Ricardo Garcia (RicardoGarciaPT) / MoreThanMoney. All rights reserved.
+// This software and source code are the intellectual property of
+// Ricardo Garcia (RicardoGarciaPT) and his company MoreThanMoney.
+// Copying, redistribution, resale, modification or reuse of this code, in whole
+// or in part, without the written authorization of the owner is prohibited.
+// ════════════════════════════════════════════════════════════════════════════
+//@version=6
+// ─────────────────────────────────────────────────────────────────────────────
+// SNIPERPRO ASST by MTM — painel inferior: Exp-RSI, bandas dinâmicas, direcção da
+// tendência e divergências. Faz par com «SniperPro by MTM» (painel de preço).
+//
+// COMO LER
+//  1. Exp-RSI: RSI curto (5) alisado exponencialmente (factor 0.1). Desenha-se como
+//     vela (azul a subir, laranja a descer) e com os pontos do valor anterior.
+//  2. MOM-LRC: canal de regressão linear do Exp-RSI nas últimas N velas — o momento.
+//  3. Bandas de retest: EMA(200) do Exp-RSI ± 1.0 e ± 1.5 desvios. Tocar na banda de
+//     cima é «Bearish Retest», na de baixo «Bullish Retest». As zonas extremas
+//     (Bearish / Bullish Reversal) são ± 4 desvios, limitadas a 0–100.
+//  4. Trend Direction: quatro votos (Supertrend, HalfTrend, Ichimoku, Parabolic SAR)
+//     desenhados a pontilhado em 51 (a favor da compra) ou 49 (a favor da venda).
+//  5. Divergências: máximos do preço mais altos com máximos do Exp-RSI mais baixos
+//     (bearish, com o RSI acima dos limiares) e o espelho para bullish. Marcadas
+//     com um círculo e a letra D.
+//
+// ALERTAS: «SniperPro Asst Divergência Bullish» / «… Bearish» (alertcondition).
+// Conteúdo educativo, não constitui consultoria financeira.
+// ─────────────────────────────────────────────────────────────────────────────
+indicator("SniperPro Asst by MTM", shorttitle="SniperPro Asst by MTM", overlay=false, max_labels_count=500, max_lines_count=100)
+
+// ════════════════════════════════════════════════════════════════
+// INPUTS
+// ════════════════════════════════════════════════════════════════
+rsiLen  = input.int(5,     "Exp-RSI Length", minval=1)
+smooth  = input.float(0.1, "Exponential Smoothing Factor", minval=0.01, maxval=1, step=0.01)
+emaLen  = input.int(200,   "EMA Period (larger more accurate band : 200 is good )", minval=10)
+lrBars  = input.int(5,     "Linear Regression bars", minval=2)
+chMult  = input.float(2,   "Channel Multiplier", minval=0.1, step=0.1)
+devA    = input.float(1,   "Channel Multiplier (1.0 Dev)", minval=0.1, step=0.1)
+devB    = input.float(1.5, "Channel Multiplier (1.5 Dev)", minval=0.1, step=0.1)
+
+gST   = "SUPERTREND"
+stLen = input.int(10,  "ATR Length", minval=1, group=gST)
+stFac = input.float(3, "Factor", minval=0.1, step=0.1, group=gST)
+
+gHT   = "HALFTREND"
+htAmp = input.int(2,   "Amplitude", minval=1, group=gHT)
+htDev = input.float(2, "Channel Deviation", minval=0.1, step=0.1, group=gHT)
+
+gIC    = "ICHIMOKU CLOUD"
+icConv = input.int(5,  "Conversion Periods", minval=1, group=gIC)
+icBase = input.int(26, "Base Periods", minval=1, group=gIC)
+icLag  = input.int(52, "Lagging Span 2 Periods", minval=1, group=gIC)
+icDisp = input.int(26, "Displacement", minval=1, group=gIC)
+
+gPS     = "PARABOLIC SAR"
+psStart = input.float(0.02, "PS_Start", minval=0.001, step=0.01, group=gPS)
+psInc   = input.float(0.02, "PS_Increment", minval=0.001, step=0.01, group=gPS)
+psMax   = input.float(0.2,  "Max Value", minval=0.01, step=0.01, group=gPS)
+
+bearHi1 = input.float(65, "Bearish Divergence High RSI 1", minval=0, maxval=100)
+bearHi2 = input.float(50, "Bearish Divergence High RSI 2", minval=0, maxval=100)
+bullLo1 = input.float(35, "Bullish Divergence Low RSI 1", minval=0, maxval=100)
+bullLo2 = input.float(50, "Bullish Divergence Low RSI 2", minval=0, maxval=100)
+divBull = input.color(#4F5BFF, "Divergence Colors", inline="dc")
+divBear = input.color(#E8603C, "", inline="dc")
+
+cUp   = #4F5BFF
+cDn   = #E8603C
+cGrey = #9598A1
+
+// ════════════════════════════════════════════════════════════════
+// EXP-RSI
+// ════════════════════════════════════════════════════════════════
+rsiRaw = ta.rsi(close, rsiLen)
+var float xr = na
+xr := na(xr[1]) ? rsiRaw : xr[1] + smooth * (rsiRaw - xr[1])
+rising = xr >= xr[1]
+
+// Canal de regressão linear (momento)
+lrMid   = ta.linreg(xr, lrBars, 0)
+lrDev   = ta.stdev(xr - lrMid, lrBars)
+lrcUp   = lrMid + chMult * lrDev
+lrcDn   = lrMid - chMult * lrDev
+
+// Bandas de retest e zonas de reversão
+base   = ta.ema(xr, emaLen)
+sd     = ta.stdev(xr, emaLen)
+upA    = base + devA * sd
+dnA    = base - devA * sd
+upB    = base + devB * sd
+dnB    = base - devB * sd
+revUp  = math.min(100, base + 4 * sd)
+revDn  = math.max(0,   base - 4 * sd)
+
+// ════════════════════════════════════════════════════════════════
+// VOTOS DE TENDÊNCIA
+// ════════════════════════════════════════════════════════════════
+[stLine, stDir] = ta.supertrend(stFac, stLen)
+voteST = stDir < 0 ? 1 : -1
+
+// HalfTrend (versão própria): médias curtas de máximos/mínimos contra os extremos
+htHi  = ta.highest(high, htAmp)[1]
+htLo  = ta.lowest(low, htAmp)[1]
+htHma = ta.sma(high, htAmp)
+htLma = ta.sma(low, htAmp)
+var int   htTrend = 0
+var float htMaxLo = na
+var float htMinHi = na
+htMaxLo := na(htMaxLo) ? low : htMaxLo
+htMinHi := na(htMinHi) ? high : htMinHi
+if htTrend == 0
+    htMaxLo := math.max(htMaxLo, htLo)
+    if htHma < htMaxLo and close < low[1]
+        htTrend := 1
+        htMinHi := htHi
+else
+    htMinHi := math.min(htMinHi, htHi)
+    if htLma > htMinHi and close > high[1]
+        htTrend := 0
+        htMaxLo := htLo
+voteHT = htTrend == 0 ? 1 : -1
+
+// Ichimoku: preço contra a nuvem (deslocada)
+icC   = math.avg(ta.highest(high, icConv), ta.lowest(low, icConv))
+icB   = math.avg(ta.highest(high, icBase), ta.lowest(low, icBase))
+icA   = math.avg(icC, icB)
+icL2  = math.avg(ta.highest(high, icLag), ta.lowest(low, icLag))
+cloudTop = math.max(icA[icDisp - 1], icL2[icDisp - 1])
+cloudBot = math.min(icA[icDisp - 1], icL2[icDisp - 1])
+voteIC = close > cloudTop ? 1 : close < cloudBot ? -1 : (icC >= icB ? 1 : -1)
+
+// Parabolic SAR
+sar = ta.sar(psStart, psInc, psMax)
+votePS = close > sar ? 1 : -1
+
+score = voteST + voteHT + voteIC + votePS
+
+// ════════════════════════════════════════════════════════════════
+// DIVERGÊNCIAS
+// ════════════════════════════════════════════════════════════════
+ph = ta.pivothigh(xr, lrBars, lrBars)
+pl = ta.pivotlow(xr, lrBars, lrBars)
+var float lastPhRsi = na
+var float lastPhPx  = na
+var float lastPlRsi = na
+var float lastPlPx  = na
+bearDiv = false
+bullDiv = false
+if not na(ph)
+    float pxH = high[lrBars]
+    if not na(lastPhRsi) and pxH > lastPhPx and ph < lastPhRsi and lastPhRsi >= bearHi1 and ph >= bearHi2
+        bearDiv := true
+    lastPhRsi := ph
+    lastPhPx  := pxH
+if not na(pl)
+    float pxL = low[lrBars]
+    if not na(lastPlRsi) and pxL < lastPlPx and pl > lastPlRsi and lastPlRsi <= bullLo1 and pl <= bullLo2
+        bullDiv := true
+    lastPlRsi := pl
+    lastPlPx  := pxL
+
+// ════════════════════════════════════════════════════════════════
+// DESENHO
+// ════════════════════════════════════════════════════════════════
+plot(xr[1], "Previous Value", color=color.new(cGrey, 40), style=plot.style_circles, linewidth=1)
+plot(lrcUp, "MOM-LRC Upper", color=color.new(cDn, 30), linewidth=1)
+plot(lrcDn, "MOM-LRC Lower", color=color.new(cUp, 30), linewidth=1)
+plot(upA, "Upper Band (1.0 Dev)", color=color.new(cDn, 50), display=display.none)
+plot(dnA, "Lower Band (1.0 Dev)", color=color.new(cUp, 50), display=display.none)
+plot(upB, "Upper Band (1.5 Dev)", color=color.new(cDn, 20))
+plot(dnB, "Lower Band (1.5 Dev)", color=color.new(cUp, 20))
+pRevUp = plot(revUp, "Bearish Reversal", color=color.new(cDn, 30), linewidth=4)
+pRevDn = plot(revDn, "Bullish Reversal", color=color.new(cUp, 30), linewidth=4)
+
+// Direcção da tendência (4 votos a pontilhado em 51 / 49)
+plot(voteST > 0 ? 51 : 49, "Trend · Supertrend", color=voteST > 0 ? cUp : cDn, style=plot.style_circles, linewidth=1)
+plot(voteHT > 0 ? 51 : 49, "Trend · HalfTrend",  color=voteHT > 0 ? cUp : cDn, style=plot.style_circles, linewidth=1)
+plot(voteIC > 0 ? 51 : 49, "Trend · Ichimoku",   color=voteIC > 0 ? cUp : cDn, style=plot.style_circles, linewidth=1)
+plot(votePS > 0 ? 51 : 49, "Trend · PSAR",       color=votePS > 0 ? cUp : cDn, style=plot.style_circles, linewidth=1)
+plot(50, "Trend Direction", color=score > 0 ? color.new(cUp, 40) : score < 0 ? color.new(cDn, 40) : color.new(cGrey, 40), style=plot.style_circles, linewidth=1)
+
+// Divergências
+plotshape(bearDiv ? xr : na, "Bearish Signal", style=shape.circle, location=location.absolute, color=divBear, size=size.tiny)
+plotshape(bullDiv ? xr : na, "Bullish Signal", style=shape.circle, location=location.absolute, color=divBull, size=size.tiny)
+plotchar(bearDiv ? revUp - 4 : na, "Bearish D", "D", location=location.absolute, color=#F2C94C, size=size.tiny)
+plotchar(bullDiv ? revDn + 4 : na, "Bullish D", "D", location=location.absolute, color=#F2C94C, size=size.tiny)
+
+// Exp-RSI como vela
+plotcandle(xr[1], math.max(xr, xr[1]), math.min(xr, xr[1]), xr, "PlotCandle", color=rising ? cUp : cDn, wickcolor=rising ? cUp : cDn, bordercolor=rising ? cUp : cDn)
+
+// Etiquetas na escala
+if barstate.islast
+    var label lbRevUp = label.new(bar_index, revUp, "Bearish Reversal", style=label.style_label_left, color=cDn, textcolor=color.white, size=size.small)
+    var label lbUpB   = label.new(bar_index, upB,   "Bearish Retest",   style=label.style_label_left, color=cDn, textcolor=color.white, size=size.small)
+    var label lbTD    = label.new(bar_index, 50,    "Trend Direction",  style=label.style_label_left, color=#2A2E39, textcolor=color.white, size=size.small)
+    var label lbDnB   = label.new(bar_index, dnB,   "Bullish Retest",   style=label.style_label_left, color=cUp, textcolor=color.white, size=size.small)
+    var label lbRevDn = label.new(bar_index, revDn, "Bullish Reversal", style=label.style_label_left, color=cUp, textcolor=color.white, size=size.small)
+    for lb in array.from(lbRevUp, lbUpB, lbTD, lbDnB, lbRevDn)
+        label.set_x(lb, bar_index + 3)
+    label.set_y(lbRevUp, revUp)
+    label.set_y(lbUpB, upB)
+    label.set_y(lbDnB, dnB)
+    label.set_y(lbRevDn, revDn)
+
+// ════════════════════════════════════════════════════════════════
+// ALERTAS
+// ════════════════════════════════════════════════════════════════
+alertcondition(bullDiv, "SniperPro Asst Divergência Bullish", "SniperPro Asst: divergência bullish em {{ticker}} {{interval}}")
+alertcondition(bearDiv, "SniperPro Asst Divergência Bearish", "SniperPro Asst: divergência bearish em {{ticker}} {{interval}}")
