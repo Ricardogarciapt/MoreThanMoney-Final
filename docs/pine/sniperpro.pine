@@ -486,29 +486,29 @@ s7 = s6 - pRg
 rsLv = array.from(r1, r2, r3, r4, r5, r6, r7)
 ssLv = array.from(s1, s2, s3, s4, s5, s6, s7)
 
-// Linhas desenhadas (não contam para o limite de plots): um segmento por período
-var array<line> pvCur = array.new<line>()
+// Linhas e etiquetas desenhadas (não contam para o limite de plots): um segmento por período,
+// etiqueta R1…R7 / S1…S7 com preço no início do segmento (Left) ou a seguir ao preço (Right)
+var array<line>  pvCur = array.new<line>()
+var array<label> pvLbls = array.new<label>()
+f_pvTxt(string pre, int i, float lvl) => pre + str.tostring(i + 1) + (pvPrice ? " " + str.tostring(lvl, format.mintick) : "")
 if pvOn
     if newPeriod or array.size(pvCur) == 0
         array.clear(pvCur)
+        array.clear(pvLbls)
         for i = 0 to pvLevels - 1
-            array.push(pvCur, line.new(bar_index, array.get(rsLv, i), bar_index, array.get(rsLv, i), color=pvRC, width=pvWidth))
-            array.push(pvCur, line.new(bar_index, array.get(ssLv, i), bar_index, array.get(ssLv, i), color=pvSC, width=pvWidth))
+            float rv = array.get(rsLv, i)
+            float sv = array.get(ssLv, i)
+            array.push(pvCur, line.new(bar_index, rv, bar_index, rv, color=pvRC, width=pvWidth))
+            array.push(pvCur, line.new(bar_index, sv, bar_index, sv, color=pvSC, width=pvWidth))
+            if pvLbl
+                array.push(pvLbls, label.new(bar_index, rv, f_pvTxt("R", i, rv), style=pvPos == "Left" ? label.style_label_right : label.style_label_left, color=color.new(pvRC, 85), textcolor=pvRC, size=size.small))
+                array.push(pvLbls, label.new(bar_index, sv, f_pvTxt("S", i, sv), style=pvPos == "Left" ? label.style_label_right : label.style_label_left, color=color.new(pvSC, 85), textcolor=pvSC, size=size.small))
     else
         for ln in pvCur
             line.set_x2(ln, bar_index)
-
-var array<label> pvLabels = array.new<label>()
-if pvOn and pvLbl and barstate.islast
-    for lb in pvLabels
-        label.delete(lb)
-    array.clear(pvLabels)
-    int x = pvPos == "Left" ? bar_index - 25 : bar_index + 2
-    for i = 0 to pvLevels - 1
-        string pr = pvPrice ? " " + str.tostring(array.get(rsLv, i), format.mintick) : ""
-        string ps = pvPrice ? " " + str.tostring(array.get(ssLv, i), format.mintick) : ""
-        array.push(pvLabels, label.new(x, array.get(rsLv, i), "R" + str.tostring(i + 1) + pr, style=label.style_none, textcolor=pvRC, size=size.small))
-        array.push(pvLabels, label.new(x, array.get(ssLv, i), "S" + str.tostring(i + 1) + ps, style=label.style_none, textcolor=pvSC, size=size.small))
+        if pvPos == "Right"
+            for lb in pvLbls
+                label.set_x(lb, bar_index + 1)
 
 // ════════════════════════════════════════════════════════════════
 // 9. NÍVEIS-CHAVE
