@@ -4,6 +4,7 @@
 // sobre a vela e a caixa amarela de 1 $ centrada no nível (compra em 4070: caixa 4069,50–4070,50, zona de ação
 // 4070,50). Ainda não há plano. Só quando o preço RECUA à zona de ação surgem as linhas, com o preço escrito:
 // Invalidação (−1,5 $ = 150 pontos, vermelha), Zona de ação (cinzenta), Saída 1 (+1,5 $) e Saída 2 (+3 $), a verde.
+// A caixa e as linhas vão da vela do visto até à vela do fecho da ideia e ficam até ao visto seguinte.
 // A bandeira branca aparece quando o preço toca a Saída 1 (ou a invalidação). Saída 2 ou invalidação fecham o plano.
 // Sem recuo em 20 velas a zona expira; se o preço for à Saída 2 sem recuar, não houve trade. Cada visto novo apaga o anterior.
 // Camadas extra só do vídeo: medias (EMA 50/200 da 1.ª confirmação), niveis (suporte/resistência do passado,
@@ -112,13 +113,13 @@
       if (vis.medias) { T.linha(D.e50, C.ema50, vis.medias, 2); T.linha(D.e200, C.ema200, vis.medias, 2.5) }
       for (let i = J.iniV; i <= ult; i++) { const v = D.c[i]; T.vela(v, i, v.c >= v.o ? C.velaUp : C.velaDn) }
       if (s && vis.sinal) { g.globalAlpha = vis.sinal; const v = D.c[s.i]
-        const x0 = X(s.i) - T.bw, x1 = X(s.i + CX_W), y0 = Y(s.nivel + HALF), y1 = Y(s.nivel - HALF)
+        const x0 = X(s.i) - T.bw, x1 = X(Math.min(ult, s.fim)) + T.bw, y0 = Y(s.nivel + HALF), y1 = Y(s.nivel - HALF)
         g.fillStyle = C.caixa; g.fillRect(x0, y0, x1 - x0, y1 - y0); g.strokeStyle = C.caixaBorda; g.lineWidth = 1.2 * esc; g.strokeRect(x0, y0, x1 - x0, y1 - y0)
         g.font = F(800, 30); g.fillStyle = C.visto; g.textAlign = 'center'; g.fillText('✓', X(s.i), s.d > 0 ? Y(v.h + RISCO) : Y(v.l - RISCO) + 24 * esc); g.textAlign = 'left'; g.globalAlpha = 1 }
-      if (temPlano && vis.plano) { g.globalAlpha = vis.plano; const x0 = X(s.fill), xr = T.largura - 8 * esc
+      if (temPlano && vis.plano) { g.globalAlpha = vis.plano; const x0 = X(s.i), xr = s.fim <= ult ? X(s.fim) + T.bw : T.largura - 8 * esc
         ;[[TXT.s2, s.s2, C.saida], [TXT.s1, s.s1, C.saida], [TXT.zona, s.zona, C.zona], [TXT.inval, s.inval, C.inval]].forEach(([t, p, cor]) => {
           const y = Y(p); g.strokeStyle = cor; g.lineWidth = 1.3 * esc; g.beginPath(); g.moveTo(x0, y); g.lineTo(xr, y); g.stroke()
-          g.font = F(600, 14); g.fillStyle = cor; g.textAlign = 'right'; g.fillText(`${t}: ${p.toFixed(3)}`, xr - 150 * esc, y - 6 * esc); g.textAlign = 'left' })
+          g.font = F(600, 14); g.fillStyle = cor; g.textAlign = 'right'; g.fillText(`${t}: ${p.toFixed(3)}`, Math.max(x0 + 230 * esc, xr - 150 * esc), y - 6 * esc); g.textAlign = 'left' })
         // bandeira branca: o preço tocou a Saída 1 (ou a invalidação)
         if (s.bandeira != null && s.bandeira <= ult) { const v = D.c[s.bandeira], x = X(s.bandeira), y = (s.d > 0 ? Y(v.h) - 40 * esc : Y(v.l) + 12 * esc)
           g.strokeStyle = '#fff'; g.lineWidth = 2 * esc; g.beginPath(); g.moveTo(x, y); g.lineTo(x, y + 28 * esc); g.stroke()

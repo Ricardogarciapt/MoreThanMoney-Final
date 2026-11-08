@@ -125,7 +125,7 @@ function trim(sim, warm) {
     zones: (sim.zones || []).filter((z) => z.i1 > warm).map((z) => ({ ...z, i0: Math.max(0, cut(z.i0)), i1: Math.min(N - 1, cut(z.i1)), reveal: Math.max(0, cut(z.reveal ?? z.i0)) })),
     segments: (sim.segments || []).filter((s) => keep(s.i1)).map((s) => ({ ...s, i0: Math.max(0, cut(s.i0)), i1: cut(s.i1) })),
     markers: (sim.markers || []).filter((m) => keep(m.i)).map((m) => ({ ...m, i: cut(m.i), to: m.to != null ? cut(m.to) : undefined })),
-    groups: (sim.groups || []).filter((g) => keep(g.i0)).map((g) => ({ ...g, i0: cut(g.i0), items: g.items.map((it) => ({ ...it, from: it.from != null ? cut(it.from) : undefined, to: it.to != null ? cut(it.to) : undefined })) })),
+    groups: (sim.groups || []).filter((g) => keep(g.i0)).map((g) => ({ ...g, i0: cut(g.i0), items: g.items.map((it) => ({ ...it, from: it.from != null ? cut(it.from) : undefined, to: it.to != null ? cut(it.to) : undefined, until: it.until != null ? cut(it.until) : undefined })) })),
     alertGroups: (sim.alertGroups || []).filter((g) => keep(g.i0)).map((g) => ({ ...g, i0: cut(g.i0) })),
     panel: sim.panel ? { ...sim.panel, rows: sim.panel.rows.map((r) => ({ ...r, states: r.states.slice(warm) })) } : undefined,
     captions: (sim.captions || []).filter((c) => c.i >= warm).map((c) => ({ ...c, i: cut(c.i) })).sort((a, b) => a.i - b.i),
@@ -1017,19 +1017,21 @@ function goldenZone() {
         if (sig.e1Hit == null && (d > 0 ? c.h >= sig.e1 : c.l <= sig.e1)) { sig.e1Hit = i; markers.push({ i, price: d > 0 ? c.h : c.l, text: '⚑', color: '#ffffff', fg: '#111', up: d > 0, small: true, kind: 'flag' }) }
         if (d > 0 ? c.h >= sig.e2 : c.l <= sig.e2) sig.closed = i
         else if (d > 0 ? c.l <= sig.inval : c.h >= sig.inval) { sig.closed = i; if (sig.e1Hit == null) markers.push({ i, price: d > 0 ? c.l : c.h, text: '⚑', color: '#ffffff', fg: '#111', up: d < 0, small: true, kind: 'flag' }) }
+        // a caixa e as linhas acompanham a ideia desde o visto até ao fecho
+        if (sig.closed != null) { sig.zoneBox.i1 = i; sig.group.items.forEach((it) => (it.until = it.until ?? i)) } else sig.zoneBox.i1 = i
       }
       if (sig && sig.plan == null && i > sig.i) {
         const d = sig.dir
         if (d > 0 ? c.l <= sig.zone : c.h >= sig.zone) {
           sig.plan = i; pulled = true
           sig.group = { i0: i, dir: d, items: [
-            { price: sig.zone, color: GREY, label: 'Zona de ação' },
-            { price: sig.inval, color: RED, label: 'Invalidação' },
-            { price: sig.e1, color: GREEN, label: 'Saída 1' },
-            { price: sig.e2, color: GREEN, label: 'Saída 2' },
+            { price: sig.zone, color: GREY, label: 'Zona de ação', from: sig.i },
+            { price: sig.inval, color: RED, label: 'Invalidação', from: sig.i },
+            { price: sig.e1, color: GREEN, label: 'Saída 1', from: sig.i },
+            { price: sig.e2, color: GREEN, label: 'Saída 2', from: sig.i },
           ] }
           groups.push(sig.group)
-        } else if (i > sig.i + 20) { sig.expired = i; sig = null }
+        } else if (i > sig.i + 20) { sig.expired = i; sig = null } else sig.zoneBox.i1 = i
       }
       if (i > 0) {
         const lb = Math.floor(c.c / STEP) * STEP, la = Math.ceil(c.c / STEP) * STEP
@@ -1037,10 +1039,10 @@ function goldenZone() {
         const sigSell = !up && c.c < la - HALF && close[i - 1] > la + HALF
         if (sigBuy || sigSell) {
           const d = sigBuy ? 1 : -1, level = sigBuy ? lb : la
-          if (sig) { sig.end = i; if (sig.group) sig.group.items.forEach((it) => (it.to = i)); sig.zoneBox.i1 = Math.min(sig.zoneBox.i1, i); markers.filter((m) => m.i >= sig.i && m.i < i).forEach((m) => (m.to = i)) }
+          if (sig) { sig.end = i; if (sig.group) sig.group.items.forEach((it) => (it.to = Math.min(it.to ?? i, i))); sig.zoneBox.i1 = Math.min(sig.zoneBox.i1, i); markers.filter((m) => m.i >= sig.i && m.i < i).forEach((m) => (m.to = i)) }
           const zone = r2(level + d * HALF)
           sig = { i, dir: d, level, zone, inval: r2(zone - d * RISK), e1: r2(zone + d * RISK), e2: r2(zone + d * RISK * 2), plan: null, e1Hit: null, closed: null }
-          sig.zoneBox = { i0: i, i1: i + 6, top: level + HALF, bot: level - HALF, color: GOLD_L, opacity: 0.3, reveal: i, label: 'Zona' }
+          sig.zoneBox = { i0: i, i1: i + 1, top: level + HALF, bot: level - HALF, color: GOLD_L, opacity: 0.3, reveal: i, label: 'Zona' }
           zones.push(sig.zoneBox)
           markers.push({ i, price: d > 0 ? c.h + 1.2 : c.l - 1.2, text: '✓', color: GOLD_L, fg: '#111', up: d > 0, kind: 'check' })
           sigs.push(sig); broke = true

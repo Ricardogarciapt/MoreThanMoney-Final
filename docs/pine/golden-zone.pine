@@ -21,7 +21,8 @@
 //     Invalidation zone a 1,5 $ (150 pontos) da zona, Exit 1 a +1,5 $ e Exit 2 a +3 $:
 //     compra em 4070,50 → invalidação 4069,00 · Exit 1 4072,00 · Exit 2 4073,50.
 //  5. Bandeira branca: aparece quando o preço toca o Exit 1 (ou a invalidação). O Exit 2 ou a
-//     invalidação fecham o plano; o visto seguinte limpa o gráfico.
+//     invalidação fecham o plano: a caixa e as linhas vão da vela do visto até à vela do fecho e ficam
+//     assim até ao visto seguinte, que limpa o gráfico.
 //  6. Tabela de estatísticas (desligada por omissão): sinais, planos, Exit 1, Exit 2, invalidações.
 //
 // ALERTAS / WEBHOOK MTM: Adicionar alerta → condição «Any alert() function call»,
@@ -70,7 +71,7 @@ chave      = input.string("GOLDENZONE", "strategy (chave no webhook)", group=gMt
 // ════════════════════════════════════════════════════════════════
 // PARÂMETROS INTERNOS
 // ════════════════════════════════════════════════════════════════
-const int   BOX_W   = 6            // largura da caixa da zona (velas)
+const int   BOX_W   = 1            // largura inicial da caixa da zona; cresce com a ideia até ao fecho
 const color C_CHECK = #F5D90A      // visto amarelo
 const color C_FLAG  = #FFFFFF      // bandeira branca
 
@@ -171,10 +172,21 @@ f_clear() =>
     label.delete(tExit1)
     label.delete(tExit2)
 
+// linhas do plano: começam na vela do visto (a marcação) e acompanham a ideia até ao fecho
 f_level(float p, color c) =>
-    ln = line.new(bar_index, p, bar_index + offset, p, color=c, width=1, extend=extend.right)
+    ln = line.new(sigBar, p, bar_index + offset, p, color=c, width=1, extend=extend.right)
     lb = label.new(bar_index + offset, p, "", style=label.style_none, textcolor=c, size=size.small)
     [ln, lb]
+
+// fecho da ideia: as arestas param na vela do fecho
+f_freeze() =>
+    for ln in array.from(lZone, lInval, lExit1, lExit2)
+        if not na(ln)
+            line.set_extend(ln, extend.none)
+            line.set_x2(ln, bar_index)
+    for lb in array.from(tZone, tInval, tExit1, tExit2)
+        if not na(lb)
+            label.set_x(lb, bar_index)
 
 bool newSignal = false
 bool newPlan   = false
@@ -238,6 +250,11 @@ if sigBuy or sigSell
 // ════════════════════════════════════════════════════════════════
 // DESENHO
 // ════════════════════════════════════════════════════════════════
+if dir != 0 and not closed and not na(zoneBox) and not newSignal
+    box.set_right(zoneBox, bar_index)
+if (hitExit2 or hitInval) and not newSignal
+    f_freeze()
+
 if newSignal
     if showZones
         zoneBox := box.new(bar_index, level + half, bar_index + BOX_W, level - half, border_color=zoneBorder, bgcolor=zoneFill, border_width=1)

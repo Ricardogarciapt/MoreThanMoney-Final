@@ -169,12 +169,13 @@ export function drawCard(canvas, sim, card, progress = 1, lang = 'pt') {
       if (it.from != null && it.from > cur) continue
       if (it.to != null && it.to <= cur) continue
       const xs = X(Math.max(a, it.from ?? grp.i0))
+      const xe = it.until != null ? Math.min(x1, X(Math.min(b, it.until))) : x1
       ctx.strokeStyle = it.color
       ctx.lineWidth = 1.5
-      ctx.beginPath(); ctx.moveTo(xs, Y(it.price)); ctx.lineTo(x1, Y(it.price)); ctx.stroke()
+      ctx.beginPath(); ctx.moveTo(xs, Y(it.price)); ctx.lineTo(xe, Y(it.price)); ctx.stroke()
       ctx.fillStyle = it.color
       ctx.globalAlpha = 0.06
-      ctx.fillRect(xs, Math.min(Y(it.price), Y(entry)), x1 - xs, Math.abs(Y(it.price) - Y(entry)))
+      ctx.fillRect(xs, Math.min(Y(it.price), Y(entry)), xe - xs, Math.abs(Y(it.price) - Y(entry)))
       ctx.globalAlpha = 1
       labels.push({ y: Y(it.price), it })
     }
