@@ -1291,9 +1291,10 @@ export default function ScannerMobile({
         />
 
         {/* Preço da corretora (WebSocket do motor): o TradingView só dá as velas, o número é nosso.
-            Fica sob a barra do TradingView e à esquerda da escala de preços; não apanha toques. */}
+            Fica sob a barra do TradingView e à esquerda da escala de preços; não apanha toques.
+            No telemóvel fica escondido (tapava o título do gráfico). */}
         {widgetLoaded && !error && (
-          <PrecoVivoScanner symbol={selectedSymbol} className="absolute left-2 top-12 z-10" />
+          <PrecoVivoScanner symbol={selectedSymbol} className="absolute left-2 top-12 z-10 hidden md:block" />
         )}
 
         {!widgetLoaded && !error && (
