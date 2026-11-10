@@ -4,10 +4,13 @@
 // (o AG-OPERADOR aprova). Fala só com https://www.morethanmoney.pt/api/estudio/motor.
 //
 // Edição base (sempre, sem custo): corta o silêncio do início, enquadra em 1080x1920,
-// 30 fps, som normalizado a -14 LUFS, H.264 com faststart. Se ESTUDIO_EDIT_CMD estiver definido,
-// corre esse comando em vez da edição base, com {in} {out} {guiao} substituídos (ex.: um
-// `claude -p` com a skill /video-edit). Um trabalho de cada vez e com prioridade baixa: o Mac
-// não aguenta mais de 2 processos pesados.
+// 30 fps, som normalizado a -14 LUFS, H.264 com faststart. Os ATIVOS que o Ricardo ligou ao guião
+// (separador «Ativos» do /estudio) entram por cima do take no segmento certo — tempos estimados pelo
+// número de palavras de cada fala — e um áudio carregado vira música de fundo baixa.
+// Se ESTUDIO_EDIT_CMD estiver definido, corre esse comando primeiro, com {in} {out} {guiao}
+// substituídos (o guião JSON leva os ativos já descarregados em `ativos[].ficheiro`); se falhar,
+// cai para a edição base. Um trabalho de cada vez e com prioridade baixa: o Mac não aguenta mais
+// de 2 processos pesados.
 //
 // Variáveis: CRON_SECRET e/ou LMS_CAPTION_WORKER_SECRET (pelo menos um), MTM_SITE (omissão https://www.morethanmoney.pt),
 //            ESTUDIO_EDIT_CMD (opcional), ESTUDIO_INTERVALO_S (omissão 120).
@@ -20,7 +23,9 @@ const SITE = (process.env.MTM_SITE || 'https://www.morethanmoney.pt').replace(/\
 const SEGREDO = process.env.CRON_SECRET?.trim()
 const INTERVALO = Math.max(30, Number(process.env.ESTUDIO_INTERVALO_S) || 120) * 1000
 const SEGREDO_WORKER = process.env.LMS_CAPTION_WORKER_SECRET?.trim()
-if (!SEGREDO && !SEGREDO_WORKER) { console.error('Falta CRON_SECRET ou LMS_CAPTION_WORKER_SECRET'); process.exit(1) }
+// Importado (testes) não arranca o ciclo nem exige segredos.
+const principal = import.meta.url === `file://${process.argv[1]}`
+if (principal && !SEGREDO && !SEGREDO_WORKER) { console.error('Falta CRON_SECRET ou LMS_CAPTION_WORKER_SECRET'); process.exit(1) }
 
 const auth = {
   ...(SEGREDO ? { authorization: `Bearer ${SEGREDO}` } : {}),
@@ -37,16 +42,107 @@ function correr(cmd, args, opts = {}) {
   })
 }
 
-async function edicaoBase(entrada, saida) {
-  const filtroVideo = 'scale=1080:1920:force_original_aspect_ratio=increase,crop=1080:1920,fps=30,format=yuv420p'
-  const filtroAudio = 'loudnorm=I=-14:TP=-1.5:LRA=11'
+const ENQUADRAR = 'scale=1080:1920:force_original_aspect_ratio=increase,crop=1080:1920,fps=30,format=yuv420p'
+
+/** Onde cada ativo visual entra: [{ ficheiro, tipo, ini, fim }] em segundos do vídeo final. */
+export function planoAtivos(segmentos, ativos, duracao) {
+  const visuais = ativos.filter((a) => a.tipo === 'imagem' || a.tipo === 'video')
+  if (!visuais.length || !(duracao > 1)) return []
+  const pesos = segmentos.length ? segmentos.map((s) => Math.max(1, String(s.fala || '').split(/\s+/).filter(Boolean).length)) : [1]
+  const total = pesos.reduce((a, b) => a + b, 0)
+  let t = 0
+  const janelas = pesos.map((p) => { const ini = t; t += (p / total) * duracao; return { ini, fim: t } })
+  const ocupado = new Set()
+  const plano = []
+  const por = (a, i) => {
+    const j = janelas[i]
+    const ini = j.ini + 0.3
+    const fim = Math.min(j.fim, ini + 3.5)
+    if (fim - ini < 0.8) return
+    ocupado.add(i)
+    plano.push({ ficheiro: a.ficheiro, tipo: a.tipo, ini: +ini.toFixed(2), fim: +fim.toFixed(2) })
+  }
+  // 1) os que o Ricardo ligou a um momento; 2) os soltos vão para os segmentos de b-roll/cartão
+  //    livres, depois para qualquer segmento livre que não seja o gancho nem o fecho.
+  for (const a of visuais) if (Number.isInteger(a.segmento) && a.segmento < janelas.length && !ocupado.has(a.segmento)) por(a, a.segmento)
+  const livres = () => janelas.map((_, i) => i).filter((i) => !ocupado.has(i))
+  for (const a of visuais.filter((x) => !Number.isInteger(x.segmento) || x.segmento >= janelas.length)) {
+    const l = livres()
+    const broll = l.filter((i) => ['b_roll', 'cartao'].includes(segmentos[i]?.visual))
+    const meio = l.filter((i) => i > 0 && i < janelas.length - 1)
+    const i = broll[0] ?? meio[0]
+    if (i === undefined) break
+    por(a, i)
+  }
+  return plano.sort((x, y) => x.ini - y.ini)
+}
+
+function duracaoDe(ficheiro) {
+  return new Promise((ok) => {
+    const p = spawn('ffprobe', ['-v', 'error', '-show_entries', 'format=duration', '-of', 'csv=p=0', ficheiro], { stdio: ['ignore', 'pipe', 'ignore'] })
+    let out = ''
+    p.stdout.on('data', (d) => { out += d })
+    p.on('exit', () => ok(Number(out.trim()) || 0))
+  })
+}
+
+export async function edicaoBase(entrada, saida, guiao = {}) {
   // Corta o silêncio do início (até ao primeiro som) nos dois fluxos de uma vez, com -ss.
   const inicio = await primeiroSom(entrada)
-  await correr('nice', ['-n', '15', 'ffmpeg', '-y', '-hide_banner', '-loglevel', 'error', '-threads', '2',
-    ...(inicio > 0.2 ? ['-ss', String(Math.max(0, inicio - 0.15))] : []),
-    '-i', entrada, '-vf', filtroVideo, '-af', filtroAudio,
+  const corte = inicio > 0.2 ? Math.max(0, inicio - 0.15) : 0
+  const duracao = Math.max(0, (await duracaoDe(entrada)) - corte)
+  const ativos = Array.isArray(guiao.ativos) ? guiao.ativos.filter((a) => a.ficheiro) : []
+  const plano = planoAtivos(Array.isArray(guiao.segmentos) ? guiao.segmentos : [], ativos, duracao)
+  const musica = ativos.find((a) => a.tipo === 'audio')
+
+  const args = ['-y', '-hide_banner', '-loglevel', 'error', '-threads', '2', ...(corte ? ['-ss', String(corte)] : []), '-i', entrada]
+  const filtros = [`[0:v]${ENQUADRAR}[v0]`, '[0:a]loudnorm=I=-14:TP=-1.5:LRA=11[a0]']
+  let n = 1
+  let ultimo = 'v0'
+  plano.forEach((p, k) => {
+    if (p.tipo === 'imagem') args.push('-loop', '1', '-t', String(p.fim - p.ini + 0.5), '-i', p.ficheiro)
+    else args.push('-i', p.ficheiro)
+    filtros.push(`[${n}:v]${ENQUADRAR},setpts=PTS-STARTPTS+${p.ini}/TB[o${k}]`)
+    filtros.push(`[${ultimo}][o${k}]overlay=eof_action=pass:enable='between(t,${p.ini},${p.fim})'[v${k + 1}]`)
+    ultimo = `v${k + 1}`
+    n++
+  })
+  let audio = 'a0'
+  if (musica) {
+    args.push('-stream_loop', '-1', '-i', musica.ficheiro)
+    filtros.push(`[${n}:a]volume=-18dB,aresample=48000[mu]`, '[a0][mu]amix=inputs=2:duration=first:dropout_transition=0:normalize=0[am]')
+    audio = 'am'
+    n++
+  }
+  args.push('-filter_complex', filtros.join(';'), '-map', `[${ultimo}]`, '-map', `[${audio}]`,
+    ...(duracao > 0 ? ['-t', duracao.toFixed(2)] : []),
     '-c:v', 'libx264', '-preset', 'medium', '-crf', '20', '-c:a', 'aac', '-b:a', '160k', '-ar', '48000',
-    '-movflags', '+faststart', saida])
+    '-movflags', '+faststart', saida)
+  await correr('nice', ['-n', '15', 'ffmpeg', ...args])
+  return { ativos_usados: plano.length + (musica ? 1 : 0) }
+}
+
+/** Descarrega os ativos do trabalho para a pasta; HEIC passa a JPG (o ffmpeg não lê HEIC). */
+async function descarregarAtivos(lista, pasta) {
+  const out = []
+  for (const [i, a] of (lista || []).entries()) {
+    try {
+      const r = await fetch(a.url)
+      if (!r.ok) throw new Error(`HTTP ${r.status}`)
+      const ext = (a.mime || '').split('/')[1]?.replace('quicktime', 'mov').replace('mpeg', 'mp3').replace('x-m4a', 'm4a') || 'bin'
+      let ficheiro = join(pasta, `ativo-${i}.${ext}`)
+      await writeFile(ficheiro, Buffer.from(await r.arrayBuffer()))
+      if (/heic|heif/.test(ext)) {
+        const jpg = join(pasta, `ativo-${i}.jpg`)
+        await correr('sips', ['-s', 'format', 'jpeg', ficheiro, '--out', jpg])
+        ficheiro = jpg
+      }
+      out.push({ tipo: a.tipo, nome: a.nome, segmento: a.segmento, ficheiro })
+    } catch (e) {
+      log('ativo ignorado', a.nome, e.message)
+    }
+  }
+  return out
 }
 
 function primeiroSom(entrada) {
@@ -77,14 +173,22 @@ async function umTrabalho() {
     const d = await fetch(t.bruto_url)
     if (!d.ok) throw new Error(`descarga ${d.status}`)
     await writeFile(entrada, Buffer.from(await d.arrayBuffer()))
-    await writeFile(guiao, JSON.stringify({ marca: t.marca, ...t.guiao }, null, 2))
+    const ativos = await descarregarAtivos(t.ativos, pasta)
+    const dadosGuiao = { marca: t.marca, ...t.guiao, ativos }
+    await writeFile(guiao, JSON.stringify(dadosGuiao, null, 2))
+    if (ativos.length) log('ativos', ativos.length)
 
+    let feito = false
     if (process.env.ESTUDIO_EDIT_CMD) {
       const cmd = process.env.ESTUDIO_EDIT_CMD.replaceAll('{in}', entrada).replaceAll('{out}', saida).replaceAll('{guiao}', guiao)
-      await correr('nice', ['-n', '15', '/bin/zsh', '-lc', cmd])
-    } else {
-      await edicaoBase(entrada, saida)
+      try {
+        await correr('nice', ['-n', '15', '/bin/zsh', '-lc', cmd])
+        feito = true
+      } catch (e) {
+        log('edição avançada falhou, sigo com a base:', e.message)
+      }
     }
+    if (!feito) await edicaoBase(entrada, saida, dadosGuiao)
 
     const corpo = await readFile(saida)
     const s = await fetch(t.subir_url, { method: 'PUT', headers: { 'content-type': 'video/mp4', 'x-upsert': 'true' }, body: corpo })
@@ -100,7 +204,7 @@ async function umTrabalho() {
   return true
 }
 
-for (;;) {
+while (principal) {
   try {
     while (await umTrabalho()) { /* esvaziar a fila, um de cada vez */ }
   } catch (e) {

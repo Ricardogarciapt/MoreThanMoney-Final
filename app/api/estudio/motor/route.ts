@@ -20,6 +20,8 @@ export const dynamic = 'force-dynamic'
  * GET  → reclama o take «escolhido» mais antigo (passa a 'a_editar') e devolve: URL assinado para
  *        descarregar o bruto, o guião (texto, legenda, palavra-chave, marca) e um URL assinado para
  *        subir o MP4 editado no bucket público `uploads` (o Instagram precisa de URL público).
+ *        Inclui os segmentos do guião e os ATIVOS ligados à peça (fotos/vídeos/áudios do separador
+ *        «Ativos»), cada um com URL assinado de 1 h.
  * POST { id, ok, erro? } → fecha o trabalho. Com ok: estado 'editado' e o reel entra na fila do
  *        Instagram como RASCUNHO (o AG-OPERADOR aprova pelas regras da casa). Sem ok: volta a
  *        'escolhido' com a nota do erro.
@@ -71,6 +73,33 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ erro: 'Não consegui preparar os URLs.' }, { status: 500 })
   }
 
+  // Ativos que o Ricardo ligou a este guião (separador «Ativos» do /estudio), com URL de 1 h.
+  const { data: ativosBrutos } = cand.peca_id
+    ? await db
+        .from('estudio_ativos')
+        .select('tipo, nome, segmento, caminho, mime')
+        .eq('peca_id', cand.peca_id)
+        .eq('estado', 'pronto')
+        .order('criado_em', { ascending: true })
+        .limit(30)
+    : { data: [] as { tipo: string; nome: string; segmento: number | null; caminho: string; mime: string }[] }
+  const listaAtivos = ativosBrutos ?? []
+  const urlsAtivos = listaAtivos.length
+    ? (await db.storage.from('estudio').createSignedUrls(listaAtivos.map((a) => a.caminho), 3600)).data ?? []
+    : []
+  const ativos = listaAtivos
+    .map((a, i) => ({ tipo: a.tipo, nome: a.nome, segmento: a.segmento, mime: a.mime, url: urlsAtivos[i]?.signedUrl ?? null }))
+    .filter((a) => a.url)
+  const segmentos = Array.isArray(g.reel?.segmentos)
+    ? g.reel.segmentos.map((s: any) => ({
+        fala: s.fala ?? '',
+        texto_ecra: s.texto_ecra ?? null,
+        visual: s.visual ?? null,
+        b_roll_busca: s.b_roll_busca ?? null,
+        zoom: s.zoom ?? null,
+      }))
+    : []
+
   return NextResponse.json({
     ok: true,
     trabalho: {
@@ -85,8 +114,10 @@ export async function GET(request: NextRequest) {
         palavra_chave: g.palavra_chave ?? null,
         legenda: g.legenda ?? null,
         hashtags: Array.isArray(g.hashtags) ? g.hashtags : [],
-        falas: Array.isArray(g.reel?.segmentos) ? g.reel.segmentos.map((s: any) => s.fala) : [],
+        falas: segmentos.map((s: { fala: string }) => s.fala),
+        segmentos,
       },
+      ativos,
     },
   })
 }
@@ -144,7 +175,7 @@ export async function POST(request: NextRequest) {
 
   await db
     .from('estudio_gravacoes')
-    .update({ estado: 'editado', editado_url: url, notas: postId ? `fila IG: ${postId}` : null })
+    .update({ estado: 'editado', editado_url: url, post_id: postId, notas: postId ? `fila IG: ${postId}` : null })
     .eq('id', t.id)
   return NextResponse.json({ ok: true, editado_url: url, post_id: postId })
 }
