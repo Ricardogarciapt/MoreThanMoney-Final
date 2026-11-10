@@ -6,11 +6,7 @@ import { corrigirPtPt } from '@/lib/pt-pt'
 import { normalizarCortes, normalizarEstilo } from '@/lib/estudio/texto'
 
 // O editor do Mac entra com o CRON_SECRET ou, como o cortador, com o segredo dos workers.
-function autorizado(request: NextRequest): boolean {
-  if (ehMotor(request)) return true
-  const w = process.env.LMS_CAPTION_WORKER_SECRET?.trim()
-  return !!w && request.headers.get('x-caption-secret') === w
-}
+const autorizado = (request: NextRequest): boolean => ehMotor(request)
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'

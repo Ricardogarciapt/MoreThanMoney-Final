@@ -29,7 +29,11 @@ export async function quemPede(request: Request): Promise<Quem | null> {
 export const RENDERS_POR_DIA_MEMBRO = 2
 
 /** O segredo do motor de render (o mesmo CRON_SECRET dos crons). */
+// Os motores fora da Vercel entram com o CRON_SECRET ou, como o cortador e o editor do Mac,
+// com o segredo dos workers (x-caption-secret = LMS_CAPTION_WORKER_SECRET).
 export function ehMotor(request: Request): boolean {
   const s = process.env.CRON_SECRET?.trim()
-  return !!s && request.headers.get('authorization') === `Bearer ${s}`
+  if (s && request.headers.get('authorization') === `Bearer ${s}`) return true
+  const w = process.env.LMS_CAPTION_WORKER_SECRET?.trim()
+  return !!w && request.headers.get('x-caption-secret') === w
 }
