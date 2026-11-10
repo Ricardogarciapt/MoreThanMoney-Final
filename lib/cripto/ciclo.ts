@@ -13,13 +13,14 @@ import { chamarIAGratis } from '../ia/chamar'
 import { vantagemPorCombo, lerRegua } from '../agentes/trader-disciplina'
 import { candidatosMeme, dadosRug, fundingBybit, livroBybit, perpsVolateis, snapshotsDex, titulosDoAtivo, titulosNoticias, velasBybit, type CandidatoMeme } from './fontes'
 import { passarCarteiras } from './espertas'
+import { emParalelo } from './paralelo'
 import { ePump, gatilhoCarteira, gatilhoMeme, naCurva, retratoDeSnapshot } from './memes'
 import { PREFIXO_SEM_IA, decisaoSemIA, guardar, iaEmBaixo, lerLimites, type EstadoConta, type VantagemGatilho } from './guarda'
 import { detectarGatilho, pareceresNumericos, retratoDeVelas } from './indicadores'
 import { ESTUDOS_SCALP, REGIME_PADRAO, eScalp, gatilhosScalp, type TipoScalp } from './scalp'
 import { inicioDaSessao, motivoDeFecho, planoVarredura, pnlUsd, precoComEscorregamento } from './papel'
 import { LIMIARES_RUG, LIMIARES_RUG_PUMP, avaliarRug } from './rug'
-import { decisaoTrader, parecerApoio, parecerContexto, type ChamarIA } from './subagentes'
+import { IA_INDISPONIVEL, decisaoTrader, parecerApoio, parecerContexto, type ChamarIA } from './subagentes'
 import type { DecisaoIA, Gatilho, Modo, Parecer, PosicaoAberta, Retrato, Vela } from './tipos'
 
 export const CHAVE_CONFIG = 'agente_cripto'
@@ -194,24 +195,25 @@ export async function correrAgenteCripto(db: SupabaseClient, ia: ChamarIA = cham
   const comScalp = cfg.scalp && modoDoMercado(cfg, 'perp') === 'papel'
   const volateis = comScalp && cfg.scalpVolateis > 0 ? await perpsVolateis(cfg.scalpVolateis) : []
   const regime = cfg.scalpRegimeK > 0 ? { ...REGIME_PADRAO, k: cfg.scalpRegimeK } : null
-  for (const symbol of [...new Set([...cfg.perps, ...volateis])]) {
+  // Cada perp pede 4 coisas à Bybit; 4 perps de cada vez (era tudo em fila: ~68 s por passagem).
+  const porPerp = await emParalelo([...new Set([...cfg.perps, ...volateis])], 4, async (symbol): Promise<Candidato[]> => {
     try {
       const fixo = cfg.perps.includes(symbol)
-      const velas = await velasBybit(symbol)
-      const [livro, funding] = await Promise.all([livroBybit(symbol), fundingBybit(symbol)])
+      // 600 velas no scalping: a EMA 238 do TrendShot e a janela de 200 do regime precisam de história.
+      const [velas, livro, funding, vs] = await Promise.all([
+        velasBybit(symbol), livroBybit(symbol), fundingBybit(symbol), comScalp ? velasBybit(symbol, 600, cfg.scalpTf) : Promise.resolve([] as Vela[]),
+      ])
       const r = retratoDeVelas({ ativo: symbol, mercado: 'perp', id: symbol, velas5m: velas, livro, fundingPct: funding, agora })
-      if (!r) continue
+      if (!r) return []
       const g = fixo ? detectarGatilho(r, velas) : null
-      if (g) candidatos.push({ r, g, velas, social: [] })
-      if (comScalp) {
-        // 600 velas: a EMA 238 do TrendShot e a janela de 200 do regime precisam de história.
-        const vs = await velasBybit(symbol, 600, cfg.scalpTf)
-        for (const gs of gatilhosScalp(r, vs, cfg.estudosScalp, regime)) candidatos.push({ r, g: gs, velas, social: [] })
-      }
+      const scalps = comScalp ? gatilhosScalp(r, vs, cfg.estudosScalp, regime) : []
+      return [...(g ? [g] : []), ...scalps].map((x) => ({ r, g: x, velas, social: [] }))
     } catch (e) {
       res.erros.push(`scanner ${symbol}: ${String((e as Error)?.message ?? e).slice(0, 120)}`)
+      return []
     }
-  }
+  })
+  candidatos.push(...porPerp.flat())
   // Memecoins: retrato da DexScreener (sem velas) → gatilho → filtro de rug. O rug custa 2 pedidos
   // por token (RugCheck + cotação de venda na Jupiter), por isso só os MAX_RUG mais fortes o pagam.
   const comGatilho = memes
@@ -230,16 +232,18 @@ export async function correrAgenteCripto(db: SupabaseClient, ia: ChamarIA = cham
       if (g && !comGatilho.some((x) => x.m.mint === snap.mint) && comGatilho.length < MAX_RUG_POR_PASSAGEM + 2) comGatilho.push({ m: snap, r, g })
     }
   }
-  for (const { m, r, g } of comGatilho) {
+  const comRug = await emParalelo(comGatilho, 3, async ({ m, r, g }): Promise<Candidato | null> => {
     try {
       const pumpGraduado = g.tipo === 'pump-graduado' || (ePump(m) && !naCurva(m) && (m.idadeHoras ?? 99) <= 6)
       const rug = avaliarRug(await dadosRug(m), pumpGraduado ? LIMIARES_RUG_PUMP : LIMIARES_RUG)
       r.rug = rug
-      candidatos.push({ r, g, velas: [], social: m.social, rugParecer: { agente: 'filtro-rug', favor: rug.aprovado ? 0.3 : -1, nota: rug.aprovado ? 'Passou o filtro de scam/rug.' : rug.motivos.join(' '), veto: !rug.aprovado } })
+      return { r, g, velas: [], social: m.social, rugParecer: { agente: 'filtro-rug', favor: rug.aprovado ? 0.3 : -1, nota: rug.aprovado ? 'Passou o filtro de scam/rug.' : rug.motivos.join(' '), veto: !rug.aprovado } }
     } catch (e) {
       res.erros.push(`scanner ${m.simbolo}: ${String((e as Error)?.message ?? e).slice(0, 120)}`)
+      return null
     }
-  }
+  })
+  candidatos.push(...comRug.filter((x): x is Candidato => x != null))
   res.gatilhos = candidatos.length
   if (!candidatos.length) {
     await fecharSessoes()
@@ -279,17 +283,20 @@ export async function correrAgenteCripto(db: SupabaseClient, ia: ChamarIA = cham
 
     let decisao: DecisaoIA | null = null
     let fornecedor: string | null = null
+    let traderEmBaixo = false
     // Veto de código já decidido: não se gasta IA com um token que o filtro de rug chumbou.
     if (!pareceres.some((p) => p.veto)) {
       usados++
-      pareceres.push(await parecerContexto(ia, c.r, titulosDoAtivo(titulos, c.r.ativo), c.social))
+      pareceres.push(await parecerContexto(ia, c.r, titulosDoAtivo(titulos, c.r.ativo), c.social, c.g.lado))
       const iaComFornecedor: ChamarIA = async (p) => {
         const out = await ia(p)
         fornecedor = `${out.fornecedor}/${out.modelo}`
         return out
       }
       if (!pareceres.some((p) => p.veto)) {
-        decisao = await decisaoTrader(iaComFornecedor, c.r, c.g, pareceres)
+        const d = await decisaoTrader(iaComFornecedor, c.r, c.g, pareceres)
+        traderEmBaixo = d === IA_INDISPONIVEL
+        decisao = d === IA_INDISPONIVEL ? null : d
         if (decisao && decisao.action !== 'HOLD' && decisao.action !== 'ERROR') pareceres.push(await parecerApoio(ia, c.r, c.g, decisao, pareceres))
       }
     }
@@ -298,7 +305,8 @@ export async function correrAgenteCripto(db: SupabaseClient, ia: ChamarIA = cham
     // IA em baixo (notícias/apoio sem resposta, ou trader sem JSON) e mais nenhum veto: em PAPEL decide
     // o código; no real não (decisaoSemIA devolve null).
     let tipoMedido: string = c.g.tipo
-    if (!pareceres.some((p) => p.veto && !iaEmBaixo(p)) && (!decisao || pareceres.some(iaEmBaixo))) {
+    // Só quando a IA NÃO RESPONDEU: uma resposta mal formatada é tratada como HOLD (holdSolto) ou recusa.
+    if (!pareceres.some((p) => p.veto && !iaEmBaixo(p)) && (traderEmBaixo || pareceres.some(iaEmBaixo))) {
       const d = decisaoSemIA(c.g, modo, limites)
       if (d) {
         decisao = d

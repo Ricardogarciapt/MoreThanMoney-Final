@@ -11,8 +11,9 @@ import { LIMITES_PADRAO, PREFIXO_SEM_IA, decisaoSemIA, guardar, iaEmBaixo, lerLi
 import { atr, desequilibrioLivro, detectarGatilho, retratoDeVelas, rsi } from './indicadores'
 import { inicioDaSessao, motivoDeFecho, planoVarredura, pnlUsd } from './papel'
 import { LIMIARES_RUG_PUMP, avaliarRug } from './rug'
-import { decisaoTrader, parecerApoio, parecerContexto, type ChamarIA } from './subagentes'
+import { IA_INDISPONIVEL, decisaoTrader, parecerApoio, parecerContexto, type ChamarIA } from './subagentes'
 import { lerConfig, modoDoMercado } from './ciclo'
+import { emParalelo } from './paralelo'
 import { eScalp, emRegime, gatilhosScalp, simularScalp, sinaisScalp } from './scalp'
 import { gatilhoCarteira, gatilhoMeme, retratoDeSnapshot } from './memes'
 import { compradoresCedo, comprasDaTransacao, estadoDaCarteira, pontuar, retornoPct } from './carteiras'
@@ -209,15 +210,43 @@ const iaQue = (texto: string): ChamarIA => async () => ({ texto, fornecedor: 'gr
 const iaQueFalha: ChamarIA = async () => { throw new Error('429') }
 async function sub() {
   teste('trader: prosa em vez de JSON = null', (await decisaoTrader(iaQue('compra já'), retrato, gatilho, [])) === null)
-  teste('trader: JSON válido passa', (await decisaoTrader(iaQue(JSON.stringify(decisao())), retrato, gatilho, []))?.action === 'LONG_PERP')
+  const dv = await decisaoTrader(iaQue(JSON.stringify(decisao())), retrato, gatilho, [])
+  teste('trader: JSON válido passa', dv !== null && dv !== IA_INDISPONIVEL && dv.action === 'LONG_PERP')
   teste('trader: alavancagem 10 fora do esquema = null', (await decisaoTrader(iaQue(JSON.stringify(decisao({ execution_details: { leverage: 10, max_slippage_pct: 1 } }))), retrato, gatilho, [])) === null)
+  teste('trader: IA em baixo = indisponível (não é HOLD nem trade)', (await decisaoTrader(iaQueFalha, retrato, gatilho, [])) === IA_INDISPONIVEL)
+  const holdComZeros = '{"action":"HOLD","rationale":{"technical_trigger":"volume fraco","confidence_score":0.4},"risk_check":{"stop_loss_price":0,"take_profit_price":0,"is_within_safety_limits":true}}'
+  const h = await decisaoTrader(iaQue(holdComZeros), retrato, gatilho, [])
+  teste('trader: HOLD com SL 0 continua a ser HOLD (antes virava «sem JSON» e abria sem IA)', h !== null && h !== IA_INDISPONIVEL && h.action === 'HOLD')
+  const cercado = '```json\n' + JSON.stringify(decisao()) + '\n```'
+  const dc = await decisaoTrader(iaQue(cercado), retrato, gatilho, [])
+  teste('trader: JSON dentro de ```json``` passa', dc !== null && dc !== IA_INDISPONIVEL && dc.action === 'LONG_PERP')
   teste('apoio: IA em baixo = veto', (await parecerApoio(iaQueFalha, retrato, gatilho, decisao(), [])).veto === true)
   teste('apoio: discorda = veto', (await parecerApoio(iaQue('{"concorda":false,"motivo":"funding alto"}'), retrato, gatilho, decisao(), [])).veto === true)
   teste('notícias: IA em baixo = veto', (await parecerContexto(iaQueFalha, retrato, [], [])).veto === true)
+  const hack = '{"sentimento":-0.8,"evento_de_risco":true,"nota":"hack na Binance"}'
+  teste('notícias: hack trava o long', (await parecerContexto(iaQue(hack), retrato, [], [], 'long')).veto === true)
+  const ps = await parecerContexto(iaQue(hack), retrato, [], [], 'short')
+  teste('notícias: hack (negativo) não trava o short e conta a favor dele', ps.veto === false && ps.favor > 0)
+  teste('notícias: evento positivo continua a travar o short', (await parecerContexto(iaQue('{"sentimento":0.6,"evento_de_risco":true,"nota":"ETF aprovado"}'), retrato, [], [], 'short')).veto === true)
   teste('notícias: evento de risco = veto', (await parecerContexto(iaQue('{"sentimento":0,"evento_de_risco":true,"nota":"hack"}'), retrato, [], [])).veto === true)
 }
 
-sub().then(() => {
+async function paralelo() {
+  let ativos = 0
+  let pico = 0
+  const r = await emParalelo([5, 1, 4, 2, 3], 2, async (x) => {
+    ativos++
+    pico = Math.max(pico, ativos)
+    await new Promise((ok) => setTimeout(ok, x * 3))
+    ativos--
+    return x * 10
+  })
+  teste('paralelo: resultados na ordem dos itens', r.join() === '50,10,40,20,30')
+  teste('paralelo: nunca mais do que n ao mesmo tempo', pico === 2)
+  teste('paralelo: lista vazia', (await emParalelo([], 3, async (x) => x)).length === 0)
+}
+
+paralelo().then(sub).then(() => {
   if (falhas.length) {
     console.error(`✗ ${falhas.length} falha(s):\n  - ${falhas.join('\n  - ')}`)
     process.exit(1)
