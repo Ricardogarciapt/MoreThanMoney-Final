@@ -37,6 +37,12 @@ import path from 'node:path'
 
 const SITE = (process.env.SITE_URL || 'https://www.morethanmoney.pt').replace(/\/+$/, '')
 const SEGREDO = process.env.CRON_SECRET || ''
+// No Mac o CRON_SECRET é o do cortador; o site aceita também o segredo dos workers.
+const SEGREDO_WORKER = process.env.LMS_CAPTION_WORKER_SECRET || ''
+const AUTH = {
+  ...(SEGREDO ? { authorization: `Bearer ${SEGREDO}` } : {}),
+  ...(SEGREDO_WORKER ? { 'x-caption-secret': SEGREDO_WORKER } : {}),
+}
 const MOTOR = process.env.MOTOR_NOME || os.hostname()
 const THREADS = String(process.env.FFMPEG_THREADS || '2')
 const VOZ = process.env.TTS_VOZ || 'pt-PT-DuarteNeural'
@@ -93,7 +99,7 @@ async function falar(texto, destino) {
 async function cartao(trabalho, seg, i, destino) {
   const r = await fetch(`${SITE}/api/conteudo-magnetico/imagem`, {
     method: 'POST',
-    headers: { authorization: `Bearer ${SEGREDO}`, 'content-type': 'application/json' },
+    headers: { ...AUTH, 'content-type': 'application/json' },
     body: JSON.stringify({
       formato: 'reel',
       marcaResolvida: trabalho.marca,
@@ -364,7 +370,7 @@ export async function render(trabalho, saida) {
 async function api(metodo, corpo) {
   const r = await fetch(`${SITE}/api/conteudo-magnetico/motor?motor=${encodeURIComponent(MOTOR)}`, {
     method: metodo,
-    headers: { authorization: `Bearer ${SEGREDO}`, 'content-type': 'application/json' },
+    headers: { ...AUTH, 'content-type': 'application/json' },
     body: corpo ? JSON.stringify(corpo) : undefined,
     signal: AbortSignal.timeout(30_000),
   })
@@ -409,7 +415,7 @@ async function principal() {
     log(`feito: ${args[2] || 'saida.mp4'} (${r.duracao.toFixed(1)}s)`)
     return
   }
-  if (!SEGREDO) throw new Error('falta CRON_SECRET')
+  if (!SEGREDO && !SEGREDO_WORKER) throw new Error('falta CRON_SECRET ou LMS_CAPTION_WORKER_SECRET')
   if (args.includes('--uma')) {
     await umTrabalho()
     return
