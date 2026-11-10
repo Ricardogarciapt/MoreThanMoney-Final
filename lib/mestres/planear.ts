@@ -103,6 +103,8 @@ export interface RotaDesejada {
   modo_lote: LoteDaRota['modo_lote']
   valor: number
   lote_max: number | null
+  /** risco máximo por trade da conta de destino (%); null = sem tecto → regra antiga do lote mínimo */
+  risco_max_pct: number | null
   copiar_sl: boolean
   copiar_tp: boolean
   filtro_simbolos: string[]
@@ -200,6 +202,11 @@ export function planearRotasDaEstrategia(p: {
   lotesForcados?: Record<string, number>
   /** utilizadores SEM direito ao MTM Auto (só pesa nos seguidores por grupo Telegram) */
   semDireito?: Set<string>
+  /**
+   * utilizadores com direito ao MTM Auto mas SEM acesso a ESTA estratégia (lib/acesso-estrategias:
+   * Premium II só Premium/corretora validada, Edge só PU Prime validada) → user_id → motivo.
+   */
+  semAcesso?: Map<string, string>
 }): { rotas: RotaDesejada[]; ignorados: Ignorado[] } {
   const e = p.estrategia
   const origemChave = `mtmfunded:${e.contaMestreId.toLowerCase()}`
@@ -227,6 +234,8 @@ export function planearRotasDaEstrategia(p: {
       ignorados.push({ ref, motivo: porGrupo ? 'grupo Telegram sem direito ao MTM Auto (a execução directa também não abria)' : 'sem direito ao MTM Auto (subscrição cancelada ou expirada)' })
       continue
     }
+    const semAcessoSite = p.semAcesso?.get(l.user_id)
+    if (semAcessoSite) { ignorados.push({ ref, motivo: semAcessoSite }); continue }
     const plataforma = plataformaSite(l)
     if (!plataforma) { ignorados.push({ ref, motivo: 'conta MTM Funded (segue pelo espelho simulado)' }); continue }
     if (l.mt5_status === 'disconnected') { ignorados.push({ ref, motivo: 'ligação desligada' }); continue }
@@ -255,6 +264,8 @@ export function planearRotasDaEstrategia(p: {
       // `mtmauto_subscriptions.ativo` é o que a pessoa escolheu; o DIREITO é o que ela paga. Uma
       // subscrição que ficou `ativo=true` depois de o pagamento cair não pode abrir ordens.
       if (p.semDireito?.has(s.user_id)) { ignorados.push({ ref: refSub, motivo: 'sem direito ao MTM Auto (subscrição cancelada ou expirada)' }); continue }
+      const semAcessoAuto = p.semAcesso?.get(s.user_id)
+      if (semAcessoAuto) { ignorados.push({ ref: refSub, motivo: semAcessoAuto }); continue }
       if (!conta) { ignorados.push({ ref: refSub, motivo: 'subscrição sem conta real' }); continue }
       const ref = `auto:${conta.id}`
       const plataforma = plataformaAuto(conta)
@@ -294,6 +305,7 @@ export interface RotaExistente {
   copiar_tp: boolean
   filtro_simbolos: string[] | null
   max_abertas: number | null
+  risco_max_pct?: number | string | null
   pausada_motivo: string | null
   copiar_parciais?: boolean
   copiar_modificacoes?: boolean
@@ -326,6 +338,7 @@ export function planoDeEscrita(desejadas: RotaDesejada[], existentes: RotaExiste
     if (r.copiar_tp !== d.copiar_tp) patch.copiar_tp = d.copiar_tp
     if (!iguaisArr(r.filtro_simbolos, d.filtro_simbolos)) patch.filtro_simbolos = d.filtro_simbolos
     if ((r.max_abertas ?? null) !== (d.max_abertas ?? null)) patch.max_abertas = d.max_abertas
+    if (r.risco_max_pct !== undefined && (r.risco_max_pct == null ? null : Number(r.risco_max_pct)) !== (d.risco_max_pct ?? null)) patch.risco_max_pct = d.risco_max_pct ?? null
     if ((r.pausada_motivo ?? null) !== d.pausada_motivo) patch.pausada_motivo = d.pausada_motivo
     // F3: os interruptores do cliente mudam as flags da rota na sincronização seguinte
     if (r.copiar_parciais != null && r.copiar_parciais !== d.copiar_parciais) patch.copiar_parciais = d.copiar_parciais

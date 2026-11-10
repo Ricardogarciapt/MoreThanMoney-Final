@@ -25,6 +25,12 @@ export interface LoteDaRota {
   copiar_tp: boolean
   filtro_simbolos: string[]
   max_abertas: number | null
+  /**
+   * Risco máximo por trade da CONTA (mtmauto_accounts.risco_max_pct · mtmcopy_connections.max_risk_percent),
+   * em %. É o tecto que o motor usa para decidir se pode subir ao mínimo da corretora num símbolo
+   * de mínimo 0,1/1 (índices) — ver calcularLote. null = sem tecto conhecido → regra antiga.
+   */
+  risco_max_pct: number | null
   /** de onde veio a regra (para o admin e para o registo) */
   origem: string
 }
@@ -69,6 +75,7 @@ export function loteDaLigacaoSite(l: LigacaoSite, opts: { idsCopyFactory?: strin
   const semStops = PROP_SEM_STOPS_NA_CORRETORA.has(String(l.prop_firm_type ?? '').toLowerCase())
   const base = {
     lote_max: null,
+    risco_max_pct: pos(l.max_risk_percent),
     copiar_sl: semStops ? false : l.copy_sl !== false,
     copiar_tp: semStops ? false : l.copy_tp !== false,
     filtro_simbolos: Array.isArray(l.symbols_whitelist) ? l.symbols_whitelist.map((s) => String(s).toUpperCase().trim()).filter(Boolean) : [],
@@ -148,6 +155,7 @@ export function loteDaSubscricaoAuto(s: SubscricaoAuto, c: ContaAuto, opts: { lo
   const semStops = PROP_SEM_STOPS_NA_CORRETORA.has(String(c.prop_firm ?? c.preset ?? '').toLowerCase())
   const base = {
     lote_max: null,
+    risco_max_pct: pos(c.risco_max_pct),
     copiar_sl: semStops ? false : c.copiar_sl !== false,
     copiar_tp: semStops ? false : c.copiar_tp !== false,
     filtro_simbolos: filtro,

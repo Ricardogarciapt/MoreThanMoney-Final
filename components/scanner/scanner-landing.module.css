@@ -363,3 +363,10 @@
 @keyframes fade { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: none; } }
 @keyframes stageIn { from { opacity: 0; transform: translateY(60px) scale(0.96); } to { opacity: 1; transform: none; } }
 @keyframes marquee { to { transform: translateX(-50%); } }
+
+/* Guia da estratégia */
+.guia { display: grid; gap: clamp(24px, 4vw, 56px); align-items: center; }
+@media (min-width: 860px) { .guia { grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr); } }
+.guiaCapa { width: 100%; border-radius: var(--r-out); border: 1px solid var(--border); background: var(--surface); }
+.guiaTexto { display: grid; gap: 20px; justify-items: start; }
+.guiaTexto p { color: var(--text-2); margin: 0; max-width: 52ch; }

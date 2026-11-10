@@ -9,7 +9,17 @@ import { isIosAppRequest, IOS_IAP_REQUIRED } from '@/lib/is-native-request'
 import type Stripe from 'stripe'
 import { COOKIE_ATRIBUICAO, normalizar as normalizarAgente } from '@/lib/agentes/atribuicao'
 import { registarConsentimentoDaCompra } from '@/lib/captacao-consentimento-registo'
-import { CUPAO_INTRO_PREMIUM, DIAS_TRIAL_PREMIUM, pareceCupao, recolhaCompleta } from '@/lib/stripe-checkout-premium'
+import {
+  CUPAO_INTRO_PREMIUM,
+  PLANO_DURANTE_CAMPANHA,
+  ORIGEM_CAMPANHA_90D,
+  ORIGEM_TRIAL,
+  ehCupaoCampanha90d,
+  pareceCupao,
+  paramsCampanha90d,
+  paramsTrialSemCartao,
+  recolhaCompleta,
+} from '@/lib/stripe-checkout-premium'
 
 /**
  * POST /api/stripe/register-checkout
@@ -42,11 +52,15 @@ export async function POST(request: NextRequest) {
     const descontinuado = recusaPlanoDescontinuado(planId)
     if (descontinuado) return NextResponse.json(descontinuado, { status: 410 })
 
-    // Premium mensal tem duas portas (ver lib/stripe-checkout-premium.ts):
-    // trial de 3 dias COM cartão e depois 65€/mês, ou ativar já com o 1º mês a 35€.
-    const isTrial = trial === true && planId === 'premium_monthly' && !couponCode
+    // Campanha 90 dias (cupão 90DAYSPREVIOUSXP): o preço é o do Premium, com 90 dias grátis e
+    // Membro durante o período. Sobrepõe-se ao plano que vier do formulário.
+    const isCampanha90d = ehCupaoCampanha90d(couponCode)
 
-    const priceId = requireStripePriceId(planId)
+    // Premium mensal tem duas portas (ver lib/stripe-checkout-premium.ts):
+    // trial de 3 dias SEM cartão e depois 65€/mês, ou ativar já com o 1º mês a 35€.
+    const isTrial = !isCampanha90d && trial === true && planId === 'premium_monthly' && !couponCode
+
+    const priceId = requireStripePriceId(isCampanha90d ? 'premium_monthly' : planId)
     const stripe = getStripeClient()
     const origin = getSiteOrigin()
 
@@ -65,18 +79,21 @@ export async function POST(request: NextRequest) {
       mode: 'subscription',
       line_items: [{ price: priceId, quantity: 1 }],
       success_url: buildStripeReturnUrl('/success', {
-        plan: planId,
+        plan: isCampanha90d ? PLANO_DURANTE_CAMPANHA : planId,
         reg_token: regToken || '',
         new_user: '1',
       }),
       cancel_url: buildStripeReturnUrl('/register', {}, { includeSessionPlaceholder: false }),
-      // Morada, telemóvel e a nota de porque é que o cartão é obrigatório.
+      // Morada, telemóvel e a nota de porque é que o cartão é obrigatório (no trial: só a nota).
       ...recolhaCompleta(isTrial),
       payment_method_collection: 'always',
+      ...(isTrial ? paramsTrialSemCartao() : {}),
+      ...(isCampanha90d ? paramsCampanha90d() : {}),
       metadata: {
         pending_registration: 'true',
         reg_token: regToken || '',
-        plan: planId,
+        // Na campanha a conta nasce Membro: o provisionamento lê o plano daqui.
+        plan: isCampanha90d ? PLANO_DURANTE_CAMPANHA : planId,
         // QUEM TROUXE ESTA COMPRA. Vem do cookie que `components/agentes/captura-atribuicao.tsx`
         // escreve a partir do `?ag=` do link, e viaja no metadata para o webhook o poder gravar no
         // livro de vendas (`vendas_vendas.agente_codigo`, migração 170). Lê-se do cookie e não do
@@ -93,14 +110,12 @@ export async function POST(request: NextRequest) {
         sponsor_username: sponsorUsername || '',
         coupon_code: couponCode,
         is_trial: isTrial ? '1' : '',
+        periodo_gratis: isCampanha90d ? ORIGEM_CAMPANHA_90D : isTrial ? ORIGEM_TRIAL : '',
       },
     }
 
-    if (isTrial) {
-      // 3 dias grátis (sem cobrança) → depois 65€/mês. Sem cupão: o desconto é de quem ativa já.
-      // Cartão obrigatório para poder cobrar ao fim dos 3 dias.
-      sessionParams.subscription_data = { trial_period_days: DIAS_TRIAL_PREMIUM }
-    } else if (couponCode) {
+    // Trial e campanha já trazem o subscription_data (paramsTrialSemCartao / paramsCampanha90d).
+    if (!isTrial && !isCampanha90d && couponCode) {
       const promoId = await resolveStripePromotionCode(couponCode)
       if (promoId) {
         sessionParams.discounts = [{ promotion_code: promoId }]
@@ -131,7 +146,7 @@ export async function POST(request: NextRequest) {
 
     // Ativar já o Premium mensal: 1º mês a 35€, renova a 65€ — também quando o cupão escrito
     // não deu desconto nenhum (um cupão inválido não pode sair mais caro do que nenhum).
-    if (!isTrial && planId === 'premium_monthly' && !sessionParams.discounts && !sessionParams.subscription_data) {
+    if (!isTrial && !isCampanha90d && planId === 'premium_monthly' && !sessionParams.discounts && !sessionParams.subscription_data) {
       sessionParams.discounts = [{ coupon: CUPAO_INTRO_PREMIUM }]
     }
 

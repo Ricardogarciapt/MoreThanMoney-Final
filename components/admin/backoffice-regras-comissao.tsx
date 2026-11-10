@@ -51,6 +51,16 @@ const PACKS_CONHECIDOS = [
   'scanners_semestral',
   'trendshot_semestral',
   'trendshot_lifetime',
+  'defy_semestral',
+  'defy_lifetime',
+  'rocketnova_semestral',
+  'rocketnova_lifetime',
+  'quantum_semestral',
+  'quantum_lifetime',
+  'sniperpro_semestral',
+  'sniperpro_lifetime',
+  'goldenzone_semestral',
+  'goldenzone_lifetime',
   'premium_scanner_lifetime',
 ]
 

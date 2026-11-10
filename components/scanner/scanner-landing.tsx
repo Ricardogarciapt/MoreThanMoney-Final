@@ -8,10 +8,11 @@
 
 import { useEffect, useRef, useState } from "react"
 import Link from "next/link"
-import { Unbounded } from "next/font/google"
-import { ArrowUpRight, ArrowDown, Asterisk, BellRing, Check, Layers, Play, Plus, Ruler, Target, Volume2, VolumeX, X as XIcon } from "lucide-react"
+import { unbounded } from "@/lib/fonts/unbounded"
+import { ArrowUpRight, ArrowDown, Asterisk, BellRing, Check, Download, Layers, Play, Plus, Ruler, Target, Volume2, VolumeX, X as XIcon } from "lucide-react"
 import type { ScannerData, ScannerProduct } from "@/lib/scanners-catalog"
 import type { ScannerLanding } from "@/lib/scanner-landings"
+import { ESTRATEGIAS_MTM, capaEstrategia } from "@/lib/estrategias-mtm"
 import { CheckoutModal } from "@/components/scanner/checkout-modal"
 import { ScannerChart3D } from "@/components/scanner/scanner-chart-3d"
 import { ScannerKeyCards } from "@/components/scanner/scanner-key-cards"
@@ -21,7 +22,7 @@ import { UI, priceFor, type Lang } from "@/components/scanner/landing-i18n"
 import { useScrollProgress } from "@/components/scanner/use-scroll-progress"
 import s from "./scanner-landing.module.css"
 
-const display = Unbounded({ subsets: ["latin"], weight: ["600", "800"], display: "swap" })
+const display = unbounded
 
 // Igual ao pack da página /scanner (35 €/mês, só mensal desde 23/10/2026).
 const PACK: ScannerProduct = {
@@ -70,6 +71,8 @@ export function ScannerLandingView({
 }) {
   const u = UI[lang]
   const L = lang === "en" && landing.en ? { ...landing, ...landing.en } : landing
+  // A landing usa "gold-killer"; a sala das estratégias usa "goldkiller".
+  const guia = ESTRATEGIAS_MTM.find((e) => e.slug === landing.slug.replace(/-/g, "") || e.slug === landing.slug) ?? null
   const P = (x: string) => priceFor(lang, x)
   const base = lang === "en" ? "/en" : ""
   const videoSrc = lang === "en" ? landing.videoEn ?? landing.video : landing.video
@@ -95,7 +98,10 @@ export function ScannerLandingView({
   const buy = (product: ScannerProduct = mainPlan) =>
     setCheckout({ product, name: product === PACK ? "Pack Scanners" : scanner.name })
   const buyLabel = plans.length ? u.wantIt(scanner.name.replace(/^MTM /, "")) : u.wantPack
-  const gallery = scanner.gallery?.length ? scanner.gallery : [scanner.image]
+  // Renders nossos têm versão EN (render-N-en.jpg); as capturas próprias são as mesmas nas duas línguas.
+  const imagemNaLingua = (src: string) => (lang === "en" && /\/render-\d\.jpg$/.test(src) ? src.replace(/\.jpg$/, "-en.jpg") : src)
+  const gallery = (scanner.gallery?.length ? scanner.gallery : [scanner.image]).map(imagemNaLingua)
+  const legenda = (src: string) => (/\/render-\d(-en)?\.jpg$/.test(src) ? u.renderShot : u.realShot)
   const cardTitles = (((lang === "en" ? CARD_TEXT_EN : CARD_TEXT) as Record<string, { title: string }[]>)[landing.slug] ?? []).map((c) => c.title)
   const goTo = (id: string) => document.getElementById(id)?.scrollIntoView({ behavior: "smooth", block: "start" })
 
@@ -210,7 +216,7 @@ export function ScannerLandingView({
                 </>
               ) : (
                 // eslint-disable-next-line @next/next/no-img-element
-                <img src={scanner.image} alt={u.chartAlt(scanner.name)} />
+                <img src={imagemNaLingua(scanner.image)} alt={u.chartAlt(scanner.name)} />
               )}
             </div>
           </div>
@@ -276,7 +282,7 @@ export function ScannerLandingView({
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img src={src} alt={u.shotAlt(scanner.name, i + 1)} loading="lazy" />
                 </div>
-                <figcaption>{u.realShot}</figcaption>
+                <figcaption>{legenda(src)}</figcaption>
               </figure>
             ))}
           </div>
@@ -346,6 +352,24 @@ export function ScannerLandingView({
           </ul>
         </div>
       </section>
+
+      {/* GUIA DA ESTRATÉGIA (05/11, pedido do Ricardo: o PDF de cada estratégia na própria landing) */}
+      {guia && (
+        <section className={s.section}>
+          <div className={`${s.container} ${s.guia} ${s.reveal}`}>
+            <img src={capaEstrategia(guia.slug, lang)} alt="" className={s.guiaCapa} loading="lazy" />
+            <div className={s.guiaTexto}>
+              <h2 className={`${display.className} ${s.sectionTitle}`}>
+                {lang === "en" ? "The strategy" : "O guia da"} <span className={s.gold}>{lang === "en" ? "guide." : "estratégia."}</span>
+              </h2>
+              <p>{guia.resumo[lang]}</p>
+              <a href={guia.guia[lang]} target="_blank" rel="noopener" className={s.btnGlass}>
+                <Download size={18} /> {lang === "en" ? "Download the PDF guide" : "Descarregar o guia em PDF"}
+              </a>
+            </div>
+          </div>
+        </section>
+      )}
 
       {/* PREÇO */}
       <section ref={priceRef} className={s.section} id="comprar">

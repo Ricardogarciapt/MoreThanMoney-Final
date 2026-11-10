@@ -1,0 +1,676 @@
+{
+ "estrategia": "Momentum",
+ "marca": "MoreThanMoney",
+ "cores": {
+  "bull": "#22C55E",
+  "bear": "#EF4444"
+ },
+ "ui": {
+  "nivel": "Level",
+  "compra": "Buy",
+  "venda": "Sell",
+  "entrada": "Entry",
+  "tp1": "Exit 1",
+  "tp2": "Exit 2",
+  "tp3": "Exit 3"
+ },
+ "pronuncia": [
+  [
+   "XAUUSD",
+   "gold dollar"
+  ],
+  [
+   "RSI",
+   "R S I"
+  ],
+  [
+   "TradingView",
+   "Trading View"
+  ]
+ ],
+ "plano": {
+  "warning": false,
+  "slAtr": 1,
+  "alvos": [
+   1,
+   2,
+   3,
+   4,
+   5
+  ],
+  "rotulos": [
+   "Exit 1",
+   "Exit 2",
+   "Exit 3",
+   "Exit 4",
+   "Exit 5"
+  ]
+ },
+ "videos": [
+  {
+   "rotulo": "Bootcamp Momentum · 1/2",
+   "titulo": "What Momentum is and how to read it",
+   "cenas": [
+    {
+     "id": "v1-00",
+     "tipo": "abertura",
+     "kicker": "Bootcamp MTM · Module 1 of 2",
+     "titulo": "Momentum",
+     "sub": "What it is and how to read the chart",
+     "rodape": "morethanmoney.pt",
+     "semVoz": 5
+    },
+    {
+     "id": "v1-01",
+     "tipo": "frase",
+     "cap": "Welcome",
+     "texto": "Colour shows the direction. <span class='ouro'>The score shows the quality.</span>",
+     "autor": "Ricardo Garcia · MoreThanMoney",
+     "fala": "Hi, I'm Ricardo Garcia, and this is the Momentum Bootcamp from MoreThanMoney. It's two videos. In this first one we'll look at what Momentum is and how to read each piece of the chart. Momentum works with colours. Green means buy, red means sell. But colour on its own isn't enough. Each signal brings together five confirmations, and it's the sum of them that tells you how strong the idea is. We'll go slowly, one piece at a time, because that's how you learn to read the chart without getting lost."
+    },
+    {
+     "id": "v1-02",
+     "tipo": "pontos",
+     "cap": "Welcome",
+     "kicker": "The bootcamp plan",
+     "titulo": "Two videos, one process",
+     "itens": [
+      "Video 1 · The indicator and each piece of the chart",
+      "Video 2 · Scoring, plan, management and routine"
+     ],
+     "fala": "The bootcamp has two videos. In the first, we'll see what Momentum draws on the chart, which markets and timeframes it works on, and how to read the cloud, the moving average, the volume and the RSI. In the second, we get into the decision: the five confirmations and the score, the plan with entry, exits and invalidation, how to refine an entry when the space is large, when not to enter, and a routine for your day. Watch the videos in order. Each one builds on the one before."
+    },
+    {
+     "id": "v1-03",
+     "tipo": "capitulo",
+     "cap": "01 · What Momentum is",
+     "numero": "01",
+     "titulo": "What Momentum is",
+     "sub": "Direction-following, by colour",
+     "fala": "Chapter one: so what exactly is Momentum?"
+    },
+    {
+     "id": "v1-04",
+     "tipo": "pontos",
+     "cap": "01 · What Momentum is",
+     "kicker": "In a few words",
+     "titulo": "An indicator on the chart",
+     "itens": [
+      "It draws an indicator directly on the chart",
+      "Green is buy, red is sell",
+      "It brings together five pieces, each worth one point",
+      "It also draws the entry, the exits and the invalidation"
+     ],
+     "fala": "Momentum is the MoreThanMoney scanner that draws an indicator directly on the chart. It works with colours: green to buy, red to sell. The indicator brings together five pieces: the cloud, the position of the cloud, an exponential moving average, the volume and the RSI. Each one is worth one point, and the total tells you the quality of the signal. Besides the signal, the scanner draws the plan: the entry, the exits, which are the targets, and the invalidation, which is the stop. The position size and the risk are calculated by you, based on your account. The scanner gives you the reading. The decision about how much to risk is yours."
+    },
+    {
+     "id": "v1-04b",
+     "tipo": "pontos",
+     "cap": "01 · What Momentum is",
+     "kicker": "Why five pieces",
+     "titulo": "Each piece answers a different question",
+     "itens": [
+      "The cloud and the average give the direction",
+      "The position of the cloud shows the direction is on the right side",
+      "The volume shows whether the direction has participation",
+      "The RSI shows which zone of the move we're in"
+     ],
+     "fala": "Why five pieces and not one? Because each one answers a different question. The cloud and the moving average answer the direction question: where is the move pointing? The position of the cloud answers another question, which is whether that direction sits on the right side of the candles, because the right colour on the wrong side doesn't mean the same thing. The volume answers a participation question: does the direction have movement behind it, or is it just one isolated candle? And the RSI answers a zone question: which part of the move are we in, and is the momentum turning or continuing? When one piece answers its question in your favour, it earns a point. When all of them do, you have a complete reading. No single piece decides for you."
+    },
+    {
+     "id": "v1-05",
+     "tipo": "pontos",
+     "cap": "01 · What Momentum is",
+     "kicker": "Where and when",
+     "titulo": "Markets and timeframes",
+     "itens": [
+      "Forex, crypto, indices and commodities",
+      "The guide's examples are on gold, XAUUSD",
+      "Intraday: 1 hour, 30 and 15 minutes",
+      "Scalping: 1 and 5 minutes. Larger charts for longer trades"
+     ],
+     "fala": "Momentum works on forex, crypto, indices and commodities. The guide's examples are on gold, on the XAUUSD pair. As for timing, the guide points to the one-hour, thirty-minute and fifteen-minute charts as the most consistent for this style, which is mainly intraday. For scalping, the guide points to the one-minute and five-minute charts. And for trades that last days or months, you move up to the four-hour chart and even the weekly. Choose one market and one timeframe, and keep them for the first few weeks. Switching charts every hour only muddies the reading."
+    },
+    {
+     "id": "v1-06",
+     "tipo": "checklist",
+     "cap": "01 · What Momentum is",
+     "kicker": "Before you start",
+     "titulo": "What you need",
+     "itens": [
+      "A demo account with your broker",
+      "Access to the Momentum scanner, through MoreThanMoney",
+      "A chart with the volume panel and the RSI panel",
+      "A notebook or sheet for your journal",
+      "Access to an economic news calendar"
+     ],
+     "fala": "Before we go on, here's what you need for this bootcamp. A demo account with your broker, because everything should be practised without real money first. Access to the Momentum scanner, through MoreThanMoney. A chart with the volume panel and the RSI panel switched on, which are essential parts of the reading. A notebook or a spreadsheet for your journal. And a news calendar, because the guide asks you to follow the news, which can change the direction of the market."
+    },
+    {
+     "id": "v1-07",
+     "tipo": "capitulo",
+     "cap": "02 · Reading the chart",
+     "numero": "02",
+     "titulo": "Reading the chart, piece by piece",
+     "sub": "Cloud, average, volume and RSI",
+     "fala": "Chapter two: how to read the chart, piece by piece."
+    },
+    {
+     "id": "v1-08",
+     "tipo": "grafico",
+     "cap": "02 · Reading the chart",
+     "kicker": "First look",
+     "titulo": "A buy with everything on",
+     "cenario": "compra",
+     "seed": 7,
+     "base": [
+      "nuvem",
+      "medias",
+      "cores",
+      "volume"
+     ],
+     "camadas": [
+      "sinal",
+      "plano"
+     ],
+     "ate": [
+      0.7,
+      0.7
+     ],
+     "zoom": [
+      0,
+      0.5
+     ],
+     "rotulo": "Buy · 5 of 5",
+     "fala": "This is the chart with everything on, for a buy. One note before we continue: the charts in this bootcamp are illustrative. They're there to explain the reading. They are not real results or market history. Now, what you can see. The green cloud, below the candles, which shows the underlying direction is up. The exponential moving average, also green and below the candles. The volume, in green, in the middle panel. And the plan lines, which appear once the candle closes. We'll look at each of these pieces separately, because the reading only works when you know what each colour means."
+    },
+    {
+     "id": "v1-09",
+     "tipo": "pontos",
+     "cap": "02 · Reading the chart",
+     "kicker": "The plan levels",
+     "titulo": "Entry, exits and invalidation",
+     "itens": [
+      "Blue line: the entry, Entry",
+      "Orange lines: the exits, from Exit 1 to Exit 5",
+      "Red line: the invalidation, your stop",
+      "On a sell, the exits sit below and the invalidation above"
+     ],
+     "fala": "Let's go through the plan levels. The blue line is the entry, the Entry. The orange lines are the exits, from Exit 1 to Exit 5, which are the targets. The red line is the invalidation, your stop. On a buy, the exits sit above the entry and the invalidation sits below. On a sell, everything is reversed: the exits sit below the entry and the invalidation above. The reading rule is always the same. You look at where you win, where you're wrong, and where the entry sits in between. If the invalidation is on the wrong side of the entry, you're reading the chart backwards. Always confirm which side each line is on before you move on."
+    },
+    {
+     "id": "v1-10",
+     "tipo": "grafico",
+     "cap": "02 · Reading the chart",
+     "kicker": "The same reasoning, for a sell",
+     "titulo": "Red cloud and average",
+     "cenario": "venda",
+     "seed": 11,
+     "base": [
+      "nuvem",
+      "medias",
+      "cores",
+      "volume"
+     ],
+     "camadas": [
+      "sinal",
+      "plano"
+     ],
+     "ate": [
+      0.6,
+      1
+     ],
+     "zoom": [
+      0,
+      0.5
+     ],
+     "rotulo": "Sell · 4 of 5",
+     "fala": "Now a sell. The cloud is red and above the candles, and the moving average is also red and sits above them. The volume shows red in the middle panel. These three readings agree, and that's what you're looking for. Notice that colour on its own isn't enough. A red cloud in the wrong place, for example below the candles on a sell, doesn't count as a confirmation. The right colour in the wrong position adds no points. It's a common beginner mistake to look at the colour and stop there. Momentum asks you to see the colour, the side and the direction all at once."
+    },
+    {
+     "id": "v1-11",
+     "tipo": "capitulo",
+     "cap": "03 · Cloud, average and boxes",
+     "numero": "03",
+     "titulo": "Cloud, average and lilac boxes",
+     "sub": "The channel of the move",
+     "fala": "Chapter three: the cloud, the moving average and the lilac boxes."
+    },
+    {
+     "id": "v1-12",
+     "tipo": "pontos",
+     "cap": "03 · Cloud, average and boxes",
+     "kicker": "How to read it",
+     "titulo": "The channel in three readings",
+     "itens": [
+      "Green cloud below the candles in an uptrend",
+      "Red cloud above the candles in a downtrend",
+      "Moving average in the colour of the direction, on the right side",
+      "Lilac box over the candles: the market is in a range"
+     ],
+     "fala": "The green cloud sits below the candles in an uptrend, and the red cloud sits above them in a downtrend. The exponential moving average follows the same logic: green and below the candles on a buy, red and above them on a sell. Then there are the lilac boxes. When they appear over the candles, the guide says the market is in a range, meaning sideways. There's no clear direction, and that's where you don't enter. Notice that a lilac box isn't a buy or a sell signal. It's a sign that the market isn't pulling in any direction, and Momentum wasn't designed for that kind of movement."
+    },
+    {
+     "id": "v1-12b",
+     "tipo": "pontos",
+     "cap": "03 · Cloud, average and boxes",
+     "kicker": "Common reading mistakes",
+     "titulo": "What beginners get wrong",
+     "itens": [
+      "Looking only at the colour, not at the side",
+      "Entering inside a lilac box",
+      "Ignoring the volume because the candle colour looks good",
+      "Switching timeframe when the idea doesn't appear"
+     ],
+     "fala": "Before we go on, the most common reading mistakes. First, looking only at the colour and forgetting the side. We've already seen that a green cloud above the candles, on a buy, doesn't count as a confirmation. Second, entering inside a lilac box, thinking the market is about to turn. The guide says the opposite: that's where you stay out. Third, ignoring the volume because the candle colour looks good. Volume is one of the five pieces, and each one is worth a point. Fourth, switching timeframe whenever the idea doesn't appear. If you change charts to find a signal, you're hunting for the signal and you've stopped following the process. Write the mistake in your journal when it happens. That's how you stop repeating it."
+    },
+    {
+     "id": "v1-13",
+     "tipo": "grafico",
+     "cap": "03 · Cloud, average and boxes",
+     "kicker": "Range: stay out",
+     "titulo": "Lilac boxes over the candles",
+     "cenario": "tendencia",
+     "seed": 21,
+     "base": [
+      "nuvem",
+      "medias",
+      "cores",
+      "volume"
+     ],
+     "camadas": [],
+     "ate": [
+      0.3,
+      1
+     ],
+     "zoom": [
+      0,
+      0
+     ],
+     "rotulo": "Lilac box · out",
+     "fala": "Look at this chart. The price touches the top and the bottom again and again, with no clear direction. The lilac boxes mark those touches. The cloud changes colour and the average hovers around the price without pulling away. The volume alternates in colour, with no clear direction. In this kind of move, the guide is clear: stay out. You don't buy and you don't sell. Many beginners get into trouble exactly here, because the chart seems to be giving signals all the time. But a signal in a market without direction is just noise, and your patience is the best tool you have in these moments."
+    },
+    {
+     "id": "v1-14",
+     "tipo": "capitulo",
+     "cap": "04 · Volume and RSI",
+     "numero": "04",
+     "titulo": "Volume and RSI",
+     "sub": "The panels underneath",
+     "fala": "Chapter four: the volume and RSI panels."
+    },
+    {
+     "id": "v1-15",
+     "tipo": "pontos",
+     "cap": "04 · Volume and RSI",
+     "kicker": "The two panels",
+     "titulo": "Volume and RSI",
+     "itens": [
+      "Volume as a histogram: green for buy, red for sell",
+      "RSI at the top: the overbought zone, in pink",
+      "RSI at the bottom: the oversold zone, in green",
+      "The volume colour has to match the direction"
+     ],
+     "fala": "The middle panel shows the volume as a histogram. Green when the direction is a buy, red when it's a sell. On a sell, you want red. On a buy, you want green. The bottom panel is the RSI. The overbought zone sits at the top, in pink, and the oversold zone sits at the bottom, in green. For Momentum, what matters is the RSI crossing in the right zone: on a sell, the lines dropping out of the red zone; on a buy, rising out of the green zone. You don't need to be an RSI expert to use this. You need to know where it is, and whether it's on the side of your idea."
+    },
+    {
+     "id": "v1-16",
+     "tipo": "pontos",
+     "cap": "Exercise",
+     "kicker": "Before the second video",
+     "titulo": "Your homework",
+     "itens": [
+      "Pick one market and one timeframe, and keep them",
+      "Read the cloud, the average, the volume and the RSI, one at a time",
+      "Mark ten lilac boxes and watch what the price does",
+      "Note how often the volume colour matched the direction"
+     ],
+     "fala": "Before the second video, an exercise. Pick one market and one timeframe, and keep them for the exercise. Then read the cloud, the average, the volume and the RSI, one at a time, the way we did here. Find ten lilac boxes in the history and watch what the price did next. Don't trade. Only observe. And note how many times the volume colour matched the direction of the cloud and the average. In the second video we'll turn these readings into a score."
+    },
+    {
+     "id": "v1-17",
+     "tipo": "aviso",
+     "cap": "",
+     "titulo": "Until module 2",
+     "sub": "Scoring, plan and routine",
+     "texto": "Educational content. This is not financial advice. Trading forex, crypto, indices and commodities carries high risk, and you can lose part or all of your capital. The charts in this video are illustrative. Past results do not guarantee future results. Practise first on a demo account and define your risk before every entry.",
+     "fala": "Remember: this is educational content, not financial advice. Trading carries risk and you can lose money. Practise first on a demo account. See you in the second video.",
+     "respiro": 4
+    }
+   ]
+  },
+  {
+   "rotulo": "Bootcamp Momentum · 2/2",
+   "titulo": "Scoring, plan and routine",
+   "cenas": [
+    {
+     "id": "v2-00",
+     "tipo": "abertura",
+     "kicker": "Bootcamp MTM · Module 2 of 2",
+     "titulo": "Momentum",
+     "sub": "Scoring, plan and routine",
+     "rodape": "morethanmoney.pt",
+     "semVoz": 5
+    },
+    {
+     "id": "v2-01",
+     "tipo": "pontos",
+     "cap": "Welcome",
+     "kicker": "In this video",
+     "titulo": "From reading to decision",
+     "itens": [
+      "The five confirmations, one by one",
+      "The score: A+, B and C",
+      "Entry, exits, invalidation and size",
+      "Refining the entry when the space is large",
+      "When not to enter, and a routine"
+     ],
+     "fala": "Welcome to the second video of the Momentum Bootcamp. In the first you learned to read each piece of the chart. Now we move on to the decision. We'll go through the five confirmations, one by one, and how to add up the points. Then the plan, with the entry, the exits, the invalidation and the position size. We'll also see how to refine an entry when the distance to the stop is too big for your account. And at the end, when not to enter, and a simple routine. The score organises the reading. You're the one who decides, and the decision always starts with the risk."
+    },
+    {
+     "id": "v2-02",
+     "tipo": "capitulo",
+     "cap": "01 · The confirmations",
+     "numero": "01",
+     "titulo": "The five confirmations",
+     "sub": "One by one, yes or no",
+     "fala": "Chapter one: the five confirmations, one by one."
+    },
+    {
+     "id": "v2-03",
+     "tipo": "pontos",
+     "cap": "01 · The confirmations",
+     "kicker": "Before you enter",
+     "titulo": "Answer yes or no to each",
+     "itens": [
+      "Cloud present and the right colour",
+      "Cloud position: above on a sell, below on a buy",
+      "Moving average: right colour and right side",
+      "Volume in the colour of the direction",
+      "RSI crossing in the right zone"
+     ],
+     "fala": "Before you enter, answer yes or no to each of the five questions. First: is the cloud present, and is it the right colour? Red for a sell, green for a buy. No cloud, no signal. Second: is the cloud on the right side? On a sell, it sits above the candles. On a buy, below them. Third: does the moving average have the right colour and sit on the right side of the candles? Fourth: does the volume histogram have the colour of the direction? Red on a sell, green on a buy. And fifth: is the RSI crossing in the right zone? On a sell, the lines in the red zone crossing down. On a buy, in the green zone crossing up. Each yes is worth one point. Nothing more."
+    },
+    {
+     "id": "v2-04",
+     "tipo": "pontuacao",
+     "cap": "01 · The confirmations",
+     "kicker": "Each yes adds one",
+     "titulo": "The count",
+     "inicio": 0,
+     "itens": [
+      "Cloud",
+      "Cloud position",
+      "Moving average",
+      "Volume",
+      "RSI"
+     ],
+     "fala": "Let's add it up. Start at zero, and go up one point for each confirmation that lines up. The cloud, first. Then the cloud position, which is a point of its own: the right colour in the wrong place doesn't count. The moving average. The volume. And the RSI. Five pieces, five possible points. The total is your reading of the signal's quality. It isn't a probability or a promise. It's an organised way to compare signals and to decide which ones deserve your attention. If the total is below four, the guide asks you to let it go."
+    },
+    {
+     "id": "v2-05",
+     "tipo": "comparar",
+     "cap": "01 · The confirmations",
+     "kicker": "Score levels",
+     "titulo": "What each total means",
+     "cartoes": [
+      {
+       "t": "5 of 5 · A+",
+       "d": "A+ setup. All five pieces agree."
+      },
+      {
+       "t": "4 of 5 · B",
+       "d": "B setup. Still within the guide's criteria."
+      },
+      {
+       "t": "3 of 5 · C",
+       "d": "C setup. The guide hesitates, and the cautious rule is not to trade it."
+      },
+      {
+       "t": "2 or fewer",
+       "d": "Stay away from the market."
+      }
+     ],
+     "fala": "The guide sorts the total into levels. Five out of five is the A+ setup. Four out of five is the B setup. Three out of five is the C setup. And with two or fewer, stay away from the market. Notice an important point: the source itself hesitates about the C. So the cautious rule the guide suggests is to trade only the A+ and the B. It isn't a golden rule. It's a way of not accepting the weakest signals while you're still learning. If your total is three, the honest answer is: this idea isn't for me, right now."
+    },
+    {
+     "id": "v2-06",
+     "tipo": "capitulo",
+     "cap": "02 · Entry and management",
+     "numero": "02",
+     "titulo": "Entry, exits and invalidation",
+     "sub": "The scanner's plan",
+     "fala": "Chapter two: the entry, the exits and the invalidation."
+    },
+    {
+     "id": "v2-07",
+     "tipo": "plano",
+     "cap": "02 · Entry and management",
+     "kicker": "The levels",
+     "titulo": "Entry, exits and stop",
+     "linhas": [
+      [
+       "Entry",
+       "blue line · entry price",
+       "entrada"
+      ],
+      [
+       "Exit 1 to Exit 5",
+       "orange lines · targets",
+       "tp"
+      ],
+      [
+       "Invalidation",
+       "red line · the stop",
+       "sl"
+      ],
+      [
+       "Size",
+       "calculated by you, for your account",
+       "warning"
+      ]
+     ],
+     "fala": "The plan has three levels drawn by the scanner and one calculation that is yours. The blue line is the entry, the Entry. The orange lines are the exits, from Exit 1 to Exit 5. The red line is the invalidation, the stop. And the position size is the calculation you make before sending the order, based on your account. The guide warns that, even with five out of five, you shouldn't use too much leverage. A high score tells you the reading agrees. It doesn't give you permission to risk more. The risk stays the same, and it's still defined before you enter."
+    },
+    {
+     "id": "v2-08",
+     "tipo": "pontos",
+     "cap": "02 · Entry and management",
+     "kicker": "Step by step",
+     "titulo": "From score to order",
+     "itens": [
+      "Add up the points: below four, let it go",
+      "The entry is the blue line",
+      "The stop is the red invalidation line",
+      "Calculate the size before you send the order",
+      "Check the news before you enter"
+     ],
+     "fala": "Let's put the sequence in order. One: add up the points. Below four out of five, you let it go. Two: the entry is the blue line, the Entry. Three: the stop is the red invalidation line. Four: calculate the position size with the risk you decided on, before you send the order. Five: check the news. The guide reminds you that news can change the direction of the market, and a clean technical signal doesn't protect you from an event that moves the price in seconds. If any of these steps isn't done, there's no trade. Only after all of this does the order go to your broker."
+    },
+    {
+     "id": "v2-09",
+     "tipo": "grafico",
+     "cap": "02 · Entry and management",
+     "kicker": "A buy with a plan",
+     "titulo": "Buy, 5 of 5",
+     "cenario": "compra",
+     "seed": 7,
+     "base": [
+      "nuvem",
+      "medias",
+      "cores",
+      "volume"
+     ],
+     "camadas": [
+      "sinal",
+      "plano"
+     ],
+     "ate": [
+      0.6,
+      1
+     ],
+     "zoom": [
+      0,
+      0.5
+     ],
+     "rotulo": "Buy · 5 of 5",
+     "fala": "Let's read this buy with the checklist we just went through. The cloud is green and sits below the candles. The moving average is also green and sits below them. The volume is green in the middle panel. And the RSI crosses up out of the green zone. Five out of five. The entry is on the blue line, the exits sit above, in green and orange, and the invalidation sits below, in red. Notice that the plan only appears after the candle closes. Before that, there's nothing to execute. This example shows the full reading. The result isn't what matters here. What matters is that the reading, the entry and the stop were all made by the same process."
+    },
+    {
+     "id": "v2-10",
+     "tipo": "capitulo",
+     "cap": "03 · Refining the entry",
+     "numero": "03",
+     "titulo": "Refining the entry",
+     "sub": "When the space is too big",
+     "fala": "Chapter three: how to refine the entry when the space is large."
+    },
+    {
+     "id": "v2-11",
+     "tipo": "pontos",
+     "cap": "03 · Refining the entry",
+     "kicker": "When the stop is far",
+     "titulo": "The space is too big for your account",
+     "itens": [
+      "Wait for a break of structure",
+      "Mark the last opposing candle before the impulsive move",
+      "Wait for the price to come back to that zone",
+      "The stop sits a little below, and the entry improves",
+      "If the price doesn't come back, you don't enter"
+     ],
+     "fala": "There's a situation the guide describes carefully. Sometimes the distance between the entry and the invalidation is too big for your account. That isn't a mistake by the scanner. It's simply the distance the market created. In that case, you can refine the entry. Wait for a break of structure. Then mark the last opposing candle before the impulsive move, and wait for the price to come back to that zone. If it comes back, you enter with the stop a little lower, and the relationship between the entry and the stop improves. If the price doesn't come back, you don't enter. Notice that this option trades the certainty of entering for a better entry price. It isn't free, and you need to accept that with your eyes open."
+    },
+    {
+     "id": "v2-12",
+     "tipo": "grafico",
+     "cap": "03 · Refining the entry",
+     "kicker": "Entry waiting for the return",
+     "titulo": "Refining the entry on a buy",
+     "cenario": "compra",
+     "seed": 21,
+     "base": [
+      "nuvem",
+      "medias",
+      "cores"
+     ],
+     "camadas": [
+      "sinal",
+      "plano"
+     ],
+     "ate": [
+      0.6,
+      1
+     ],
+     "zoom": [
+      0,
+      0.5
+     ],
+     "rotulo": "Entry being refined",
+     "fala": "Here's the principle in practice. The impulsive move starts, and just before it there's a last opposing candle. That's the candle you mark. The price rises without returning to the zone, so the entry stays unfilled. Then the price pulls back and comes into the marked zone. At that moment, and only then, the refined entry makes sense, with the stop a little lower. If the price had kept rising without coming back, the trade simply wouldn't exist for you. Waiting for the return is a legitimate decision, as long as you know you'll miss some moves. Whoever refines the entry accepts missing trades in order to get a better price."
+    },
+    {
+     "id": "v2-13",
+     "tipo": "capitulo",
+     "cap": "04 · When not to enter",
+     "numero": "04",
+     "titulo": "When not to enter",
+     "sub": "And the daily routine",
+     "fala": "Chapter four: when not to enter, and a simple routine."
+    },
+    {
+     "id": "v2-14",
+     "tipo": "checklist",
+     "cap": "04 · When not to enter",
+     "kicker": "Let it go when",
+     "titulo": "Six situations",
+     "itens": [
+      "Lilac box over the candles",
+      "A sideways market, with no clear direction",
+      "Fewer than four out of five points",
+      "Risk not calculated",
+      "Stop too wide, without trying to refine the entry",
+      "Live account, without prior demo practice"
+     ],
+     "fala": "There are six situations where the guide tells you to stay out. First: a lilac box over the candles. The market is in a range, and there's no direction. Second: a sideways market with no clear direction, which traders call choppy. Third: fewer than four out of five points. Fourth: the risk isn't calculated against your account. Fifth: a stop that's too wide for your account, without first trying to refine the entry. And sixth, the simplest of all: trading a live account without having practised first on a demo. If any of these situations is on the chart, you don't have a trade. You don't need to justify it to anyone. That's the process working."
+    },
+    {
+     "id": "v2-15",
+     "tipo": "grafico",
+     "cap": "04 · When not to enter",
+     "kicker": "A sell with a plan",
+     "titulo": "Sell, 4 of 5",
+     "cenario": "venda",
+     "seed": 11,
+     "base": [
+      "nuvem",
+      "medias",
+      "cores",
+      "volume"
+     ],
+     "camadas": [
+      "sinal",
+      "plano"
+     ],
+     "ate": [
+      0.6,
+      1
+     ],
+     "zoom": [
+      0,
+      0.5
+     ],
+     "rotulo": "Sell · 4 of 5",
+     "fala": "Let's look at a sell with four out of five. The cloud is red and above the candles. The moving average is red and above them too. The volume is red. One confirmation is missing: for example, the RSI hasn't yet crossed down in the red zone. Four out of five is a B setup, within the guide's criteria. Notice that what changes here is your choice of size and management. The plan is the same, with the entry, exits and invalidation on the correct side. A B setup isn't an A+ setup, and that difference should show in what you risk, not only in how eager you are to enter."
+    },
+    {
+     "id": "v2-16",
+     "tipo": "pontos",
+     "cap": "04 · When not to enter",
+     "kicker": "The routine",
+     "titulo": "Five steps a day",
+     "itens": [
+      "Check the news calendar for the day",
+      "Open the market on your chosen timeframe",
+      "Read the cloud, the average, the volume and the RSI",
+      "Add up the points before you act",
+      "Write the decision in the journal"
+     ],
+     "fala": "The routine is short. First, you check the news calendar for the day, because the guide asks you to follow the news, and news can change the direction of the market. Second, you open the market on the timeframe you chose, always the same one. Third, you read the cloud, the average, the volume and the RSI, in the order you learned them. Fourth, you add up the points, and only then decide. And fifth, you write the decision in the journal, even when it's a no entry. You don't need to be in front of the screen all day. You need consistency, and to follow the same process every time."
+    },
+    {
+     "id": "v2-16b",
+     "tipo": "pontos",
+     "cap": "04 · When not to enter",
+     "kicker": "The journal",
+     "titulo": "What to record for each signal",
+     "itens": [
+      "Time, direction and volume colour",
+      "The five pieces, yes or no",
+      "If you entered: entry, stop and size",
+      "Result, and whether you followed the plan",
+      "One sentence on what you learned"
+     ],
+     "fala": "The journal is what turns Momentum into learning. For each signal, record the time, the direction and the volume colour at that moment. Then the five pieces, one by one, with yes or no. That way the score is written down, and not just kept in memory. If you entered, record the entry, the stop and the position size you calculated. Then the result, and one honest question: did you follow the plan? And finally, one sentence about what you learned. After a few weeks, the journal shows you how your own A+, B and C setups behave, measured by you and not by anyone else. It doesn't give you magic answers. It gives you facts about your own trading, so you can decide with more judgement."
+    },
+    {
+     "id": "v2-17",
+     "tipo": "frase",
+     "cap": "Closing",
+     "texto": "The direction shows itself. <span class='ouro'>The decision is yours.</span>",
+     "autor": "Ricardo Garcia · MoreThanMoney",
+     "fala": "We've reached the end of the Momentum Bootcamp. Remember the essentials: green is buy, red is sell, and the colour only counts when the other pieces agree. Add up the points, respect the plan, calculate the risk before you enter, and let go of everything below four out of five. Do the exercises, practise on a demo account, and write your journal from the very first signal. If you have questions, bring your cases to the community and to the live sessions at MoreThanMoney. I'm Ricardo Garcia. See you next time."
+    },
+    {
+     "id": "v2-18",
+     "tipo": "aviso",
+     "cap": "",
+     "titulo": "Momentum Bootcamp complete",
+     "sub": "morethanmoney.pt",
+     "texto": "Educational content. This is not financial advice. Trading forex, crypto, indices and commodities carries high risk, and you can lose part or all of your capital. The charts and examples in this video are illustrative. Past results do not guarantee future results. Practise first on a demo account and define your risk before every entry.",
+     "fala": "Educational content, not financial advice. Trading carries risk and you can lose money. Practise first on a demo account. See you next time.",
+     "respiro": 4
+    }
+   ]
+  }
+ ]
+}

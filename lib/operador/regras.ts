@@ -28,6 +28,7 @@
 import { peneira } from '@/lib/marketing/regras'
 import { RADAR_IDADE_MAX_DIAS } from '@/lib/instagram/radar-frescura'
 import { guardaDaLegenda } from '@/lib/agentes/social-agente'
+import { parecePortugues, verificarPtPt } from '@/lib/pt-pt'
 
 export const AGENTE_OPERADOR = 'AG-OPERADOR'
 
@@ -115,6 +116,11 @@ export function decidirPost(p: PostRascunho, desfeitos: ReadonlySet<string>, ago
   if (!marca.ok) return { acao: 'deixar', motivo: marca.motivo }
   const problemas = peneira(legenda)
   if (problemas.length) return { acao: 'deixar', motivo: problemas.join('; ') }
+  // Português de Portugal (pedido do Ricardo, 06/11): o que soa a Brasil fica para uma pessoa.
+  if (parecePortugues(legenda)) {
+    const br = verificarPtPt(legenda)
+    if (br.length) return { acao: 'deixar', motivo: `português do Brasil: ${br.map((b) => `«${b.trecho}»`).join(', ')}` }
+  }
 
   const quando = Date.parse(p.scheduled_at ?? '')
   if (!Number.isFinite(quando) || quando < agora + 30 * 60_000) {

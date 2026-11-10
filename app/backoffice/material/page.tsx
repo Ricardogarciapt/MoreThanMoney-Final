@@ -6,6 +6,9 @@
  * `?ref=`. Não se inventa aqui um segundo código para o backoffice: dois códigos para a mesma
  * pessoa dão duas contagens diferentes da mesma indicação, e nenhuma das duas se consegue provar.
  *
+ * O KIT DE CADA PAPEL
+ * Guiões, triagem e objecções do prospector, setter, closer e afiliado (`lib/backoffice-kit-papeis.ts`).
+ *
  * O GERADOR
  * Escreve peças com o tom e a oferta da casa. É apoio à escrita: não contacta ninguém, não publica
  * nada e não escreve na base. As regras da marca e a revisão do resultado vivem no SERVIDOR
@@ -23,6 +26,8 @@ import { TIPOS_MATERIAL } from '@/lib/backoffice-material-ia'
 import { abrirPagina, SemAcesso } from '../_partes/acesso'
 import { Cabecalho, Falhou, Vazio } from '../_partes/blocos'
 import { Gerador } from './gerador'
+import { KitDosPapeis } from './kit'
+import { kitsPara } from '@/lib/backoffice-kit-papeis'
 
 export const dynamic = 'force-dynamic'
 export const metadata = { title: 'Materiais · Backoffice MTM' }
@@ -50,6 +55,9 @@ export default async function MaterialPage() {
   }
 
   const linkRegisto = codigo ? `${SITE}/register?ref=${codigo}` : `${SITE}/register`
+
+  // O kit do(s) papel(éis) da pessoa: guiões, triagem e objecções (MTM Master Framework).
+  const kits = kitsPara(ctx.papeis, ctx.admin, { linkRegisto, linkAgendar: `${SITE}/agendar?t=onboarding` })
 
   const links: Array<{ nome: string; url: string; quando: string }> = [
     {
@@ -117,6 +125,15 @@ export default async function MaterialPage() {
           ))}
         </ul>
       </section>
+
+      {kits.length > 0 && (
+        <section id="kit" className="space-y-3">
+          <h2 className="text-sm font-semibold uppercase tracking-wide text-zinc-500">
+            {kits.length === 1 ? `O teu kit de ${kits[0].nome.toLowerCase()}` : 'Kits da equipa'}
+          </h2>
+          <KitDosPapeis kits={kits} />
+        </section>
+      )}
 
       {/* O que se pode dizer sobre a oferta, lido da fonte. Está aqui para a pessoa não ter de
           decorar preços: um preço decorado sobrevive à campanha que o criou. */}

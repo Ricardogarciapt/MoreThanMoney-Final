@@ -18,6 +18,8 @@ const DATA: EaLandingData = {
   title: ["O MTM Sensei", "a correr sozinho"],
   sub: "A mesma leitura que fazemos à mão — estrutura, order blocks, liquidez, sessões — transformada num robô que lê, entra, tira parciais e faz trailing. Vinte confirmações antes de cada entrada, e o painel no gráfico para tomares conta quando quiseres.",
   markets: ["XAUUSD", "BTCUSD", "US30", "M15", "H1", "MetaTrader 5"],
+  video: "/ea/sensei-ea/apresentacao.mp4",
+  poster: "/ea/sensei-ea/poster.jpg",
   hero: (
     <>
       <SenseiEstilos />

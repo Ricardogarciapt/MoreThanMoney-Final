@@ -1,4 +1,6 @@
 import { chamarIA, mensagemIndisponivel } from '@/lib/ia/chamar'
+import { blocoFramework } from '@/lib/framework-mtm'
+import { corrigirObjectoPtPt, verificarObjectoPtPt, verificarPtPt } from '@/lib/pt-pt'
 import { AVISO, DEMOS_GENERICAS, type EducadorReel } from './config'
 
 /**
@@ -66,10 +68,17 @@ Regras que nunca se quebram:
 · Não nomeies a plataforma onde estão os cursos.
 · Português de Portugal: «ecrã», «telemóvel», «tu».`
 
-/** Um JSON estrito, com tudo o que o desenhador precisa. Recusa o que não bate certo. */
-export function validarRoteiro(bruto: unknown, ed: EducadorReel): Omit<Roteiro, 'id'> {
-  const o = bruto as { tema?: unknown; cenas?: unknown; legenda?: unknown }
-  if (!o || !Array.isArray(o.cenas)) throw new Error('roteiro sem cenas')
+/**
+ * Um JSON estrito, com tudo o que o desenhador precisa. Recusa o que não bate certo.
+ *
+ * O texto passa pela régua do português de Portugal (`lib/pt-pt.ts`): o que é seguro trocar
+ * troca-se aqui; o que sobra (você, a gente, «Me diz»…) recusa o roteiro quando `estrito`, para a
+ * IA escrever outra versão. Na última tentativa já não se recusa — sai o melhor que houver.
+ */
+export function validarRoteiro(bruto: unknown, ed: EducadorReel, estrito = true): Omit<Roteiro, 'id'> {
+  const cru = bruto as { tema?: unknown; cenas?: unknown; legenda?: unknown }
+  if (!cru || !Array.isArray(cru.cenas)) throw new Error('roteiro sem cenas')
+  const o = corrigirObjectoPtPt(cru).valor
   const cenas = (o.cenas as Cena[]).filter((c) => c && typeof c === 'object')
   const g = cenas[0]
   if (!g || g.tipo !== 'gancho' || !Array.isArray(g.palavras) || !g.palavras.length) throw new Error('falta o gancho')
@@ -100,6 +109,14 @@ export function validarRoteiro(bruto: unknown, ed: EducadorReel): Omit<Roteiro, 
   const proibido = /(?<!não (?:são )?)garantid|taxa de acerto|\d+\s?% de acerto|win ?rate/i
   if (proibido.test(JSON.stringify(semCta)) || proibido.test(legenda.replace(AVISO, ''))) throw new Error('promessa ou taxa de acerto no roteiro')
 
+  if (estrito) {
+    // O gancho vem partido em blocos: «ESTÁS» + «PERDENDO» só se vê junto.
+    const sobra = [...verificarObjectoPtPt({ cenas: semCta, legenda }), ...verificarPtPt(textoDoGancho({ cenas: semCta }))]
+    if (sobra.length) {
+      throw new Error(`português do Brasil: ${sobra.map((b) => `«${b.trecho}» → ${b.sugestao}`).join('; ')}`)
+    }
+  }
+
   return { educador: ed.slug, tema: String(o.tema ?? '').slice(0, 120), aviso: AVISO, cenas: semCta, legenda }
 }
 
@@ -125,7 +142,7 @@ export async function gerarRoteiro(ed: EducadorReel, historico: Historico[], id:
     try {
       const r = await chamarIA({
         tarefa: 'reels-educadores-roteiro',
-        sistema: SISTEMA,
+        sistema: `${SISTEMA}\n\n${blocoFramework('conteudo')}`,
         mensagens: [{ role: 'user', content: pedido + (ultimoErro ? `\n\nA versão anterior foi recusada: ${ultimoErro}. Corrige.` : '') }],
         json: true,
         maxTokens: 2500,
@@ -133,7 +150,7 @@ export async function gerarRoteiro(ed: EducadorReel, historico: Historico[], id:
         preferencia: 'qualidade',
         timeoutMs: 60_000,
       })
-      return { id, ...validarRoteiro(JSON.parse(r.texto), ed) }
+      return { id, ...validarRoteiro(JSON.parse(r.texto), ed, i === 0) }
     } catch (e) {
       ultimoErro = e instanceof Error ? e.message : String(e)
       if (/indispon|todos os fornecedores/i.test(ultimoErro)) throw new Error(mensagemIndisponivel(e))

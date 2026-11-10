@@ -1309,7 +1309,23 @@ export const scannerAccessEmailTemplate = (
   scannerName: string,
   tradingviewUsername: string,
   siteUrl: string,
+  /** Páginas dos scripts no TradingView (lib/scanners/links-tradingview.ts): o cliente abre-as depois do convite. */
+  scriptLinks: readonly { nome: string; url: string }[] = [],
 ) => {
+  const linksHtml = scriptLinks.length
+    ? cardComponent(
+        scriptLinks.length > 1 ? 'Os teus scripts' : 'O teu script',
+        scriptLinks
+          .map(
+            (l) =>
+              `<p style="margin: 0 0 8px 0;"><a href="${l.url}" style="color: ${COLORS.primary}; font-weight: 700; text-decoration: none;">${l.nome}</a><br><span style="font-size: 12px; color: #666;">${l.url}</span></p>`,
+          )
+          .join('') +
+          `<p style="margin: 10px 0 0 0; font-size: 13px; color: #666;">Depois do convite, abre a página e carrega em «Adicionar aos indicadores favoritos» para o teres no gráfico.</p>`,
+        '📈',
+        COLORS.primary,
+      )
+    : ''
   const content = `
     ${headerComponent('🔓 Acesso Confirmado!', scannerName, '✅')}
     
@@ -1346,9 +1362,13 @@ export const scannerAccessEmailTemplate = (
       {
         icon: '3️⃣',
         title: 'Adiciona ao gráfico',
-        description: 'Indicadores → Os Meus Scripts → invite-only scripts.',
+        description: scriptLinks.length
+          ? 'Abre o link do script abaixo ou vai a Indicadores → Os Meus Scripts → invite-only scripts.'
+          : 'Indicadores → Os Meus Scripts → invite-only scripts.',
       },
     ])}
+
+    ${linksHtml}
     
     ${buttonComponent('Ver os meus scanners', `${siteUrl}/scanner`)}
   `

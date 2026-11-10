@@ -1,0 +1,522 @@
+{
+ "estrategia": "Sniper Pro",
+ "motor": "sniper-pro",
+ "marca": "MoreThanMoney",
+ "cores": {
+  "bull": "#2A7BE4",
+  "bear": "#E03E3E"
+ },
+ "ui": {
+  "nivel": "Level",
+  "compra": "Buy",
+  "venda": "Sell",
+  "entrada": "Entry",
+  "tp1": "TP1",
+  "tp2": "TP2",
+  "tp3": "TP3"
+ },
+ "pronuncia": [
+  ["TradingView", "Trading View"],
+  ["EURGBP", "E U R G B P"],
+  ["AUDCAD", "A U D C A D"],
+  ["EURNZD", "E U R N Z D"],
+  ["M15", "M fifteen"],
+  ["M30", "M thirty"],
+  ["H4", "H four"],
+  ["H1", "H one"],
+  ["TP1", "T P one"],
+  ["TP2", "T P two"],
+  ["R1", "R one"],
+  ["R2", "R two"],
+  ["R3", "R three"],
+  ["R4", "R four"],
+  ["R5", "R five"],
+  ["S1", "S one"],
+  ["S2", "S two"],
+  ["S3", "S three"],
+  ["S4", "S four"],
+  ["S5", "S five"]
+ ],
+ "plano": {
+  "warning": false,
+  "slAtr": 1,
+  "alvos": [1, 2],
+  "rotulos": ["TP1", "TP2"]
+ },
+ "videos": [
+  {
+   "rotulo": "Bootcamp Sniper Pro · 1/2",
+   "titulo": "What it is and how to read it",
+   "cenas": [
+    {
+     "id": "v1-00",
+     "tipo": "abertura",
+     "kicker": "Bootcamp MTM · Video 1 of 2",
+     "titulo": "Sniper Pro",
+     "sub": "What it is and how to read every element",
+     "rodape": "morethanmoney.pt",
+     "semVoz": 5
+    },
+    {
+     "id": "v1-01",
+     "tipo": "frase",
+     "cap": "Welcome",
+     "texto": "The candle gives the score. <span class='ouro'>The larger trend</span> decides whether the trade is taken.",
+     "autor": "Ricardo Garcia · MoreThanMoney",
+     "fala": "Hi, I'm Ricardo Garcia, and this is the Sniper Pro Bootcamp, the MoreThanMoney intraday scanner. Before we start, keep in mind the idea that runs through both videos: the scanner hands you a signal that is almost ready, but the most important step happens outside the candle that caught your eye. You have to move up to the higher timeframe and check whether the larger trend is on the side of the signal. Without that, the signal is just a loose piece. In this bootcamp you will first see what each element the scanner draws means, and then how to use that reading to decide, to manage, and often to not enter at all. There are no shortcuts. The scanner shows only the last two signals for each pair, and your job is to practise the same routine on demo, with records, before any live account. Let us take it step by step."
+    },
+    {
+     "id": "v1-02",
+     "tipo": "pontos",
+     "cap": "Welcome",
+     "kicker": "The plan of the bootcamp",
+     "titulo": "Two videos, one routine",
+     "itens": [
+      "Video 1 · What Sniper Pro is and how to read it",
+      "Video 2 · Signal, plan, management and routine"
+     ],
+     "fala": "The bootcamp has two videos. This first one is the map. We will look at what Sniper Pro is, what each timeframe is for, and how to read each piece of the chart: the score candle, the golden candle and the arrow, the key zones and the pivots, the trend table and the oscillator. The second video is the practice: how a signal is confirmed, how you enter on the signal candle or on the retest, how the stop and the targets are drawn, when you do not enter, and how to build a training routine. Watch the videos in order, because the second one assumes you recognise everything in this first one. If there is a piece you do not understand, go back before moving on. And do not try to memorise everything at once. Read one piece at a time, until reading it becomes automatic."
+    },
+    {
+     "id": "v1-03",
+     "tipo": "capitulo",
+     "cap": "01 · What Sniper Pro is",
+     "numero": "01",
+     "titulo": "What Sniper Pro is",
+     "sub": "An intraday scanner with a higher timeframe check",
+     "fala": "Chapter one. So what exactly is Sniper Pro?"
+    },
+    {
+     "id": "v1-04",
+     "tipo": "pontos",
+     "cap": "01 · What Sniper Pro is",
+     "kicker": "In a few words",
+     "titulo": "A scanner that delivers almost everything",
+     "itens": [
+      "Intraday scanner for reversal and impulse setups",
+      "Uses its own indicators and delivers an almost ready signal",
+      "Each signal brings a score, an arrow, a stop and two targets",
+      "The reading starts with the score candle"
+     ],
+     "fala": "Sniper Pro is the MoreThanMoney intraday scanner. It uses its own indicators to detect opportunities, and the way it presents them is deliberate: the signal arrives almost ready. You see a score, an arrow, a stop drawn by the scanner, two targets and, in some cases, a retest zone. This can feel very comfortable, and that is exactly why you need to be careful. Almost ready does not mean confirmed. The signal exists to catch your attention, and the confirmation is still your job. The strategy works mostly intraday, in a reversal and impulse style. The reading starts with the score candle, but the most important step is moving up to the higher timeframe. That move is what separates a pretty signal from a signal that makes sense in context."
+    },
+    {
+     "id": "v1-05",
+     "tipo": "capitulo",
+     "cap": "02 · The chart elements",
+     "numero": "02",
+     "titulo": "Reading every element",
+     "sub": "Candle, arrow, zones, stop and targets",
+     "fala": "Chapter two. Let us read every element on the chart, one at a time."
+    },
+    {
+     "id": "v1-06",
+     "tipo": "grafico",
+     "cap": "02 · The chart elements",
+     "kicker": "Score candle",
+     "titulo": "A score of plus eight on a sell",
+     "cenario": "venda",
+     "seed": 7,
+     "base": ["cores"],
+     "camadas": ["medias", "sinal"],
+     "ate": [0.6, 0.7],
+     "zoom": [0, 0.4],
+     "estrelas": "+8 sell",
+     "fala": "This chart is illustrative. It is there to explain the reading, not a real result and not a market history. Let us start with the score candle. It is the label with a plus sign and a number, from plus three to plus ten, placed above or below the candle. Each point matches one scanner condition that was met on that candle. Red means bearish, blue means bullish. Here you see a red plus eight, on a sell. Next to the score, the candle's volume appears as a percentage, which tells you whether the candle was strong or weak compared with what is normal. Look at this carefully: the score is not a probability. It is the sum of conditions that are in favour, and a higher number means more conditions in favour, nothing more."
+    },
+    {
+     "id": "v1-07",
+     "tipo": "pontos",
+     "cap": "02 · The chart elements",
+     "kicker": "Chart pieces",
+     "titulo": "Five pieces to recognise",
+     "itens": [
+      "Score candle, from plus three to plus ten",
+      "Golden candle and Sniper arrow, the strongest",
+      "Stop and two targets, drawn by the scanner",
+      "Key zones and pivots, on the right margin",
+      "Sniper oscillator, in the lower panel"
+     ],
+     "fala": "Let us fix the main pieces. One, the score candle, which we have already seen. Two, the golden candle and the Sniper arrow. The golden candle is the strongest, and it marks a more intense impulse or reversal move. On a sell, the arrow is red and sits above the candle. When the arrow is larger, it is called a super arrow. Three, the stop and the two targets. When the signal is printed, the scanner draws the stop as a dashed red line, and the targets, TP1 and TP2, as green lines. Four, the key zones and the pivots. The zones are shaded areas based on round numbers, whole numbers, halves and quarters. The pivots, from R1 to R5 and from S1 to S5, are on the right margin, and they are calculated from the open, high, low and close of the previous day. Five, the oscillator, in the panel below. Each of these pieces has its own job, and we will look at them one by one."
+    },
+    {
+     "id": "v1-08",
+     "tipo": "grafico",
+     "cap": "02 · The chart elements",
+     "kicker": "Golden candle",
+     "titulo": "The golden candle and the arrow",
+     "cenario": "venda",
+     "seed": 7,
+     "base": ["cores"],
+     "camadas": ["niveis", "sinal"],
+     "ate": [0.55, 0.66],
+     "zoom": [0, 0.3],
+     "estrelas": "+9 sell",
+     "fala": "Now the golden candle. It appears when the move has more impulse, and the scanner highlights it so that it does not go unnoticed. On a sell, the red Sniper arrow sits above the candle. The source has an example on the AUDCAD, on a golden candle of plus nine, where the arrow appeared larger, the so-called super arrow. Notice what a golden candle means and what it does not mean. It means the move is stronger than usual. It does not mean the entry is automatic. The golden candle is a reading piece. In practice, a golden candle with a high score, in a zone with context, is a signal that deserves extra attention. But the decision still goes through the confirmations, which we will cover in the second video."
+    },
+    {
+     "id": "v1-09",
+     "tipo": "grafico",
+     "cap": "02 · The chart elements",
+     "kicker": "Key zones",
+     "titulo": "Zones, pivots and context",
+     "cenario": "compra",
+     "seed": 7,
+     "base": ["cores"],
+     "camadas": ["niveis"],
+     "ate": [0.4, 0.6],
+     "zoom": [0, 0.2],
+     "estrelas": "+8 buy",
+     "fala": "The key zones are shaded areas on the chart, based on round numbers: whole numbers, halves and quarters. They work as price references, not as orders. The pivots are another layer of context. They sit on the right margin, from R1 to R5 above and from S1 to S5 below, and they are calculated from the open, high, low and close of the previous day. The source uses them in two ways: as an extra confirmation, when the price is inside a key zone with two pivots in it, and as additional targets. Notice that none of these is mandatory. The source is clear that they are additional confirmations. If the price is in a key zone with pivots, the reading is richer. If it is not, the signal does not disappear. It just has less context."
+    },
+    {
+     "id": "v1-10",
+     "tipo": "capitulo",
+     "cap": "03 · Trend and oscillator",
+     "numero": "03",
+     "titulo": "Trend and oscillator",
+     "sub": "Two readings that complete the signal",
+     "fala": "Chapter three. The trend table and the oscillator, the two readings that complete the signal."
+    },
+    {
+     "id": "v1-11",
+     "tipo": "pontos",
+     "cap": "03 · Trend and oscillator",
+     "kicker": "Trend table",
+     "titulo": "The higher timeframe",
+     "itens": [
+      "Entry on fifteen minutes, confirmation on four hours",
+      "On five minutes, confirmation on one hour",
+      "On one minute, confirmation on fifteen or thirty minutes",
+      "The table shows the direction of the higher timeframe"
+     ],
+     "fala": "The trend table is the piece that many people skip, and it is the one you should look at most. It shows the direction of the timeframe above your entry timeframe. The guide gives three combinations. If you enter on fifteen minutes, you confirm on four hours. If you enter on five minutes, you confirm on one hour. And if you enter on one minute, you confirm on fifteen or thirty minutes. The table shows labels such as Trending and Very Strong, which describe how strong the trend is on that timeframe. You do not need to memorise the labels. You need to look at the direction, and compare it with your signal. If the signal is a sell and the four hour table is bullish, the signal is set aside. That is the step that protects you most from trading against the larger current."
+    },
+    {
+     "id": "v1-12",
+     "tipo": "comparar",
+     "cap": "03 · Trend and oscillator",
+     "kicker": "Chart panel",
+     "titulo": "Four readings on the same screen",
+     "cartoes": [
+      {
+       "t": "Trend table",
+       "d": "The direction of the higher timeframe, with strength labels such as Trending and Very Strong."
+      },
+      {
+       "t": "Short-term average",
+       "d": "Red on a sell, blue on a buy. It should match the signal colour at the moment of the candle."
+      },
+      {
+       "t": "Candle volume",
+       "d": "The percentage shown next to the score. The higher it is, the stronger the candle."
+      },
+      {
+       "t": "Sniper oscillator",
+       "d": "Lower panel, with retest, crossings, trend and divergences."
+      }
+     ],
+     "fala": "Let us put together the four readings that the guide separates. The trend table tells you about the higher timeframe. The short-term average, which should match the signal colour at the moment of the candle, tells you about the immediate rhythm. The volume, next to the score, tells you how strong the candle was. And the oscillator, in the lower panel, tells you about momentum. None of these pieces decides on its own. What the guide asks is that you read them together, and that you read the higher context first. If one of them contradicts the others, the signal loses strength. That is the difference between looking at a number and reading a chart."
+    },
+    {
+     "id": "v1-13",
+     "tipo": "capitulo",
+     "cap": "04 · The oscillator",
+     "numero": "04",
+     "titulo": "The Sniper oscillator",
+     "sub": "Reversal, retest, crossings and divergences",
+     "fala": "Chapter four. The oscillator, which shows the momentum of the candle."
+    },
+    {
+     "id": "v1-14",
+     "tipo": "pontos",
+     "cap": "04 · The oscillator",
+     "kicker": "Lower panel",
+     "titulo": "What the oscillator shows",
+     "itens": [
+      "Bearish and bullish reversal",
+      "Retest, with the line in red or blue",
+      "Red and blue crossings",
+      "Panel trend, and real-time divergence marked with the letter D"
+     ],
+     "fala": "The Sniper oscillator lives in the lower panel. It shows the bearish reversal and the bullish reversal, so you can see when the move appears to be turning. It shows the retest, meaning the return of the price to a zone it has already visited. It shows the crossings, in red and in blue, which mark changes in momentum. And it shows the direction of the trend inside the panel itself. When a real-time divergence exists, it is marked with the letter D. A divergence happens when the price and the oscillator stop moving together. It is a hint that the move may be losing strength. But it is not an order. In the second video you will see how the oscillator enters the list of confirmations, and on which candle it has to line up with the signal."
+    },
+    {
+     "id": "v1-15",
+     "tipo": "comparar",
+     "cap": "04 · The oscillator",
+     "kicker": "Read together",
+     "titulo": "Three pieces you read as one",
+     "cartoes": [
+      {
+       "t": "Score",
+       "d": "How many conditions are in favour on that candle."
+      },
+      {
+       "t": "Higher trend",
+       "d": "Which side the timeframe above yours is on."
+      },
+      {
+       "t": "Oscillator",
+       "d": "Whether the momentum lines up with the signal direction."
+      }
+     ],
+     "fala": "To finish this chapter, three questions to ask every time you see a score candle. The first: how many conditions are in favour? Scores like plus eight and plus nine have more conditions than a plus three, and the guide says it favours the higher ones. The second: is the higher timeframe on the side of the signal? The third: is the oscillator lined up with the direction? If the answer to all three is yes, the signal gains context. If one of them is no, the work continues, but with more caution. The source does not give an official minimum score. So the criterion you use is your own, and you should write it down before you start trading."
+    },
+    {
+     "id": "v1-16",
+     "tipo": "pontos",
+     "cap": "Exercise",
+     "kicker": "Before video 2",
+     "titulo": "Your homework",
+     "itens": [
+      "Pick one forex pair and the fifteen minute timeframe",
+      "Find five score candles in the history",
+      "For each one, note the score, the candle and the higher table",
+      "Do not trade. Just observe and record"
+     ],
+     "fala": "Before the second video, you have an exercise. Pick one forex pair and the fifteen minute chart. Find five score candles in the history. For each one, note the score, whether the candle is golden or not, whether it has an arrow, and how the higher timeframe table looked. Do not trade. Just observe and record. Then reflect: in how many cases was the higher trend on the side of the signal? In how many cases was the score high? This analysis is simple, but it teaches more than any summary. Anyone who does this exercise arrives at the second video with concrete questions, and that is exactly what we want."
+    },
+    {
+     "id": "v1-17",
+     "tipo": "aviso",
+     "cap": "Warning",
+     "titulo": "Until video 2",
+     "sub": "Signal, plan, management and routine",
+     "texto": "Educational content. Not financial advice. Trading forex, indices, metals and crypto carries high risk, and you can lose part or all of your capital. The charts in this video are illustrative. Past results do not guarantee future results.",
+     "fala": "Remember: this content is educational and is not financial advice. Trading carries high risk, and you can lose part or all of your capital. Always practise on a demo account first. See you in the second video.",
+     "respiro": 4
+    }
+   ]
+  },
+  {
+   "rotulo": "Bootcamp Sniper Pro · 2/2",
+   "titulo": "Signal, plan, management and routine",
+   "cenas": [
+    {
+     "id": "v2-00",
+     "tipo": "abertura",
+     "kicker": "Bootcamp MTM · Video 2 of 2",
+     "titulo": "Sniper Pro",
+     "sub": "Signal, plan, management and routine",
+     "rodape": "morethanmoney.pt",
+     "semVoz": 5
+    },
+    {
+     "id": "v2-01",
+     "tipo": "pontos",
+     "cap": "Welcome",
+     "kicker": "In this video",
+     "titulo": "From candle to trade",
+     "itens": [
+      "Signal confirmations, in order",
+      "Entry on the candle or on the retest",
+      "Stop, targets and pivots",
+      "When not to enter",
+      "A routine for practising on demo"
+     ],
+     "fala": "Welcome to the second video of the Sniper Pro Bootcamp. In the first one, you learned to read the score candle, the golden candle and the arrow, the key zones, the trend table and the oscillator. Now we are going to use that reading to make a decision. We will go through the signal confirmations, in order. Then the entry, which can be on the signal candle itself or on the retest. We will look at the stop and the targets the scanner draws, using the EURGBP example that the guide uses. We will talk about management, and about what the source mentions without detailing. After that, the cases where you do not enter, which are just as important as the signals. And at the end, a simple routine for practising on demo before any real risk."
+    },
+    {
+     "id": "v2-02",
+     "tipo": "capitulo",
+     "cap": "01 · The signal",
+     "numero": "01",
+     "titulo": "Confirming the signal",
+     "sub": "Seven steps, in order",
+     "fala": "Chapter one. How to confirm a signal, step by step."
+    },
+    {
+     "id": "v2-03",
+     "tipo": "grafico",
+     "cap": "01 · The signal",
+     "kicker": "Full sequence",
+     "titulo": "A sell with a plus eight",
+     "cenario": "venda",
+     "seed": 7,
+     "base": ["cores", "niveis"],
+     "camadas": ["medias", "sinal", "plano"],
+     "ate": [0.45, 0.7],
+     "zoom": [0, 0.5],
+     "estrelas": "+8 sell",
+     "fala": "Let us follow a sell with a plus eight, from the score candle to the plan. First, the candle appears with a high score, and the candle shows its volume as a percentage. Before anything else, you move up to the higher timeframe. If the four hour table is bullish, this sell is against the larger current, and the guide asks you to let it pass. But here the table is bearish, in favour of the sell. Then you look at the signal candle. It has to be red, with the arrow above it, or golden. The short-term average should be red at the moment of the candle. The volume should be high. And the oscillator should be lined up. Only then does the plan make sense. Notice that the plan comes once the signal has been confirmed, and not before."
+    },
+    {
+     "id": "v2-04",
+     "tipo": "checklist",
+     "cap": "01 · The signal",
+     "kicker": "Confirmations, in order",
+     "titulo": "Seven steps before the trade",
+     "itens": [
+      "High score, preferably plus eight or plus nine",
+      "Four hour trend on the side of the signal, checked first",
+      "Signal candle of the right colour, with a Sniper arrow, or golden",
+      "Short-term average in the signal colour, at the moment of the candle",
+      "High volume on the signal candle",
+      "Key zone with pivots, as an extra confirmation",
+      "Oscillator lined up: line, retest, crossing and trend"
+     ],
+     "fala": "Let us turn the confirmations into a working list. One, the score. The guide favours high scores, such as plus eight and plus nine, because they have more conditions in favour. A low score, such as plus three, has few. Two, the four hour trend. This is the step the guide asks you to do first: if the higher table is against the signal, let it pass. Three, the signal candle. On a sell, it has to be red, with the red Sniper arrow above it. The exception is the golden candle, which is stronger. Four, the short-term average, which should be in the signal colour at the moment of the candle. Five, the volume of the signal candle, which should be high. Six, the key zone with pivots, which is not mandatory, but adds to the reading. Seven, the oscillator, on the signal candle: the line in the right colour, retest, crossing and trend lined up. On a buy, everything is reversed. None of these steps is optional when you want to take the trade."
+    },
+    {
+     "id": "v2-05",
+     "tipo": "capitulo",
+     "cap": "02 · Entry and retest",
+     "numero": "02",
+     "titulo": "Entry and retest",
+     "sub": "On the signal candle or in the zone",
+     "fala": "Chapter two. Where to enter, and what to do when the price does not come back."
+    },
+    {
+     "id": "v2-06",
+     "tipo": "pontos",
+     "cap": "02 · Entry and retest",
+     "kicker": "Two ways to enter",
+     "titulo": "Signal candle or retest",
+     "itens": [
+      "Enter on the signal candle, once it is confirmed",
+      "Wait for the retest in the shaded zone",
+      "Retest: when the price reaches about half of the zone",
+      "The retest is never guaranteed: often the price does not come back"
+     ],
+     "fala": "The guide describes two ways to enter. The first is on the signal candle itself, once the confirmations are done. The second is to wait for the retest, meaning the return of the price to the shaded zone. When the price reaches about half of the zone, the source considers it a second opportunity. But there is an important warning here, and the guide makes it itself. Often the price does not come back, and the trade is lost. So never count on the retest as guaranteed. If you entered on the candle and it moved against you, do not count on a retest to make up for it. And if you did not enter on the candle, the retest is an option, not an obligation. Decide before the signal appears which of the two ways you use, and stick with it."
+    },
+    {
+     "id": "v2-07",
+     "tipo": "plano",
+     "cap": "02 · Entry and retest",
+     "kicker": "Plan drawn by the scanner",
+     "titulo": "Stop and two targets",
+     "linhas": [
+      ["Entry", "Signal candle, or retest in the zone", "entrada"],
+      ["Stop", "Above the high of the signal, on a sell", "sl"],
+      ["TP1", "First target drawn by the scanner", "tp"],
+      ["TP2", "Second target, about one to two in the example", "tp"],
+      ["Pivots", "Extra targets, if you want to use them", "tp"]
+     ],
+     "fala": "When the signal is printed, the scanner draws the plan. The stop sits above the high of the signal, on a sell. The targets are TP1 and TP2. In the EURGBP example, the guide shows a sell with a plus eight, with the stop and the two targets drawn. The TP1 did not even reach one to one, and the TP2 gave about one to two, which was enough to take the trade. The chart's position tool showed a risk to reward ratio of two point one. Notice that the distance of the targets is the one the scanner draws on each signal, not a fixed value you can copy. The pivots can serve as extra targets. And the guide is clear on one point: risk management is your own responsibility. Calculate your position size before you enter, and not after you see where the stop ended up."
+    },
+    {
+     "id": "v2-08",
+     "tipo": "pontos",
+     "cap": "03 · Management",
+     "kicker": "After you enter",
+     "titulo": "Managing the trade",
+     "itens": [
+      "Once the price passes TP1, you can move the stop to that zone",
+      "The pivots serve as extra targets",
+      "If the trade does not reach any target, wait for the next signal",
+      "Your management rules are yours, written before the entry"
+     ],
+     "fala": "Now management, carefully. The guide says that once the price passes TP1, you can move the stop to that zone, if you want to. It is an option, not an obligation, and the guide does not detail it beyond that. The pivots can be used as extra targets. And if the trade does not reach either target, the source suggests waiting for the next signal, rather than forcing a new entry into the same move. Notice that none of this is a formula. Management is the moment when emotion gets in the way most, because the trade is going well or badly. So write your rules down beforehand: when you move the stop, to where, and what you do if the price comes back. Without that, every decision in the middle of a trade is an improvisation, and improvising with money is the most expensive way to learn."
+    },
+    {
+     "id": "v2-09",
+     "tipo": "capitulo",
+     "cap": "03 · When not to enter",
+     "numero": "03",
+     "titulo": "When not to enter",
+     "sub": "The cases where the right decision is to wait",
+     "fala": "Chapter three. The cases where the right decision is not to enter."
+    },
+    {
+     "id": "v2-10",
+     "tipo": "comparar",
+     "cap": "03 · When not to enter",
+     "kicker": "Four cases",
+     "titulo": "Do not enter if",
+     "cartoes": [
+      {
+       "t": "Higher trend against",
+       "d": "A sell with the four hour table bullish. The signal is set aside."
+      },
+      {
+       "t": "Candle of the wrong colour",
+       "d": "Without the signal colour, unless it is golden."
+      },
+      {
+       "t": "Low score",
+       "d": "A plus three has few conditions in favour."
+      },
+      {
+       "t": "Only the entry timeframe",
+       "d": "Reading only the entry chart, without the higher one."
+      }
+     ],
+     "fala": "Four cases where the guide asks you not to enter. The first: a sell with the four hour table bullish, or a buy with the four hour table bearish. The higher trend is against you, and the signal is set aside. The second: the signal candle does not have the signal colour, unless it is golden. The third: a low score, such as a plus three, which has few conditions in favour. And the fourth: relying only on the trend of the chart where you trade, instead of looking at the higher one. These four cases seem obvious when you read them, but they are exactly the ones that get lost when you are in a hurry. So keep them written down in front of you, before you open the chart."
+    },
+    {
+     "id": "v2-11",
+     "tipo": "checklist",
+     "cap": "03 · When not to enter",
+     "kicker": "More cases",
+     "titulo": "Other reasons to wait",
+     "itens": [
+      "Counting on the retest as guaranteed",
+      "Entering without checking the higher table",
+      "Entering with the oscillator against the signal",
+      "Going to a live account without prior demo training"
+     ],
+     "fala": "There are three more reasons to wait, which do not fit in the previous list. The first is counting on the retest as guaranteed. The guide warns that the price may not return to the zone, and that this happens often. The second is entering without having checked the higher table. The third is entering with the oscillator against the signal, because the momentum does not confirm the direction. And the fourth is the most important of all: going live without prior training. The guide says clearly that you should not move to a live account without training the strategy on demo. Everything you learn in this bootcamp should be tested with simulated money for weeks before any real risk."
+    },
+    {
+     "id": "v2-12",
+     "tipo": "grafico",
+     "cap": "03 · When not to enter",
+     "kicker": "Low score",
+     "titulo": "A plus three",
+     "cenario": "falha",
+     "seed": 21,
+     "base": ["cores", "niveis"],
+     "camadas": ["sinal"],
+     "ate": [0.6, 0.6],
+     "zoom": [0, 0.2],
+     "estrelas": "+3 buy",
+     "fala": "This chart shows a score of plus three. It has a label on the candle, but few conditions are in favour. The guide does not set an official minimum, but it is clear in spirit: high scores have more conditions in favour, and a low score has few. Notice that the existence of a score candle is not an entry signal. It is a reading you have to confirm. In this case, the higher table, the candle colour, the short-term average and the oscillator all have to say the same thing, and with a low score, that happens rarely. So the most common decision here is to let it pass. And letting it pass is also a decision that you can train."
+    },
+    {
+     "id": "v2-13",
+     "tipo": "capitulo",
+     "cap": "04 · Routine",
+     "numero": "04",
+     "titulo": "A routine on demo",
+     "sub": "Training before any real risk",
+     "fala": "Chapter four. A simple routine, designed to train before you risk anything."
+    },
+    {
+     "id": "v2-14",
+     "tipo": "pontos",
+     "cap": "04 · Routine",
+     "kicker": "The routine",
+     "titulo": "A process you repeat",
+     "itens": [
+      "Pick a pair and keep the fifteen minute chart",
+      "Go up to the four hour chart before looking at anything else",
+      "Record every signal: score, volume, zone and plan",
+      "Define risk and position size before you enter",
+      "Only after weeks on demo, think about a live account"
+     ],
+     "fala": "Let us build a routine that fits into your day. First, pick a pair and keep the fifteen minute chart for a few weeks. Then go up to the four hour chart before you look at anything else. If the higher table is against your idea, there is nothing more to do. When a score candle appears, confirm the pieces one by one, in the order we have seen. If the signal holds up, define the risk, the stop, the targets and the position size before you enter. And record everything: the score, the volume, the zone, the plan, the entry, and what happened afterwards. Recording is the part almost nobody does, and it is the part that teaches you the most. Only after weeks on demo, with consistent records and rules you actually followed, does it make sense to think about a live account, and even then, with a small risk that you defined in advance."
+    },
+    {
+     "id": "v2-15",
+     "tipo": "frase",
+     "cap": "Closing",
+     "texto": "The scanner gives the signal. <span class='ouro'>The larger trend</span> decides whether you take it.",
+     "autor": "Ricardo Garcia · MoreThanMoney",
+     "fala": "We have reached the end of the bootcamp. You are leaving with two ideas. The first: the score candle is a clue, not an order, and it only gains strength when the higher trend, the candle, the average, the volume and the oscillator agree. The second: the plan, the management and the cases where you do not enter are just as important as the signal. No indicator decides for you. Sniper Pro gives you a clear reading sequence, and the rest is practice, records and patience. Good luck on your path, and remember: demo first, and only then, if it makes sense, anything else."
+    },
+    {
+     "id": "v2-16",
+     "tipo": "aviso",
+     "cap": "Warning",
+     "titulo": "End of the bootcamp",
+     "sub": "Education, not advice",
+     "texto": "Educational content. Not financial advice. Trading forex, indices, metals and crypto carries high risk, and you can lose part or all of your capital. The charts in this bootcamp are illustrative. Past results do not guarantee future results.",
+     "fala": "Last warning. This content is educational and is not financial advice. Trading carries high risk, and you can lose part or all of your capital. Define your risk before every entry, and practise on a demo account first.",
+     "respiro": 4
+    }
+   ]
+  }
+ ]
+}

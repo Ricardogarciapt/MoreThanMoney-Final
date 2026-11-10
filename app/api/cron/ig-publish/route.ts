@@ -8,6 +8,7 @@
  * Recomenda-se cadência de 5 em 5 minutos (ver vercel.json).
  */
 
+import { corrigirPtPt, parecePortugues } from "@/lib/pt-pt"
 import { NextRequest, NextResponse } from "next/server"
 import { getSupabaseAdmin } from "@/lib/supabase-admin-client"
 import { isCronAuthorized } from "@/lib/cron-auth"
@@ -16,12 +17,14 @@ import {
   MediaNotReadyError,
   usernameForAccount,
   isAutoPublishBlocked,
+  autorizadoNaPessoal,
   type ScheduledPost,
 } from "@/lib/instagram/publish"
 import { CHAVE_AUTO_PUBLICAR, lerAutoPublicar } from "@/lib/agentes/social-agente"
+import { lerInterruptor } from "@/lib/carrossel-diario/interruptor"
 
 export const dynamic = "force-dynamic"
-export const maxDuration = 60
+export const maxDuration = 300
 
 const MAX_PER_RUN = 4
 const MAX_ATTEMPTS = 3
@@ -33,6 +36,16 @@ export async function GET(request: NextRequest) {
 
   const supabase = getSupabaseAdmin()
   const nowIso = new Date().toISOString()
+
+  // Uma ronda que morreu a meio (timeout) deixa a linha em «publishing» para sempre. Passados
+  // 15 minutos sem mexer, volta a «approved» e entra nesta mesma ronda. A tentativa já foi contada,
+  // por isso ao fim de MAX_ATTEMPTS acaba em «failed» em vez de rodar sem fim.
+  await supabase
+    .from("social_scheduled_posts")
+    .update({ status: "approved", error: "retomado: a ronda anterior não terminou", updated_at: nowIso })
+    .eq("status", "publishing")
+    .lt("updated_at", new Date(Date.now() - 15 * 60_000).toISOString())
+    .lt("attempts", MAX_ATTEMPTS)
 
   // Elegíveis: aprovados cuja hora chegou, ou já em processamento (ex.: Reels em encoding).
   const { data: due, error } = await supabase
@@ -58,6 +71,7 @@ export async function GET(request: NextRequest) {
   // ligado. O dono pausa tudo desligando-o: o que estava aprovado volta a rascunho, nada sai.
   const { data: autoRow } = await supabase.from("site_settings").select("value").eq("key", CHAVE_AUTO_PUBLICAR).maybeSingle()
   const autoAgentes = lerAutoPublicar(autoRow?.value)
+  let carrosselLigado: Record<"ricardo" | "mtm", boolean> | undefined
 
   for (const row of due) {
     if (String(row.created_by || "").startsWith("agente:") && !autoAgentes.ligado) {
@@ -68,9 +82,24 @@ export async function GET(request: NextRequest) {
       results.push({ id: row.id, status: "draft", reason: "agentes pausados" })
       continue
     }
+    // Carrossel diário (lib/carrossel-diario): o interruptor do perfil manda até ao último
+    // momento. Desligado, o que estava na fila volta a rascunho e nada sai.
+    const perfilCarrossel = String(row.created_by || "").match(/^carrossel-diario:(ricardo|mtm)$/)?.[1] as "ricardo" | "mtm" | undefined
+    if (perfilCarrossel) {
+      carrosselLigado ??= await lerInterruptor().catch(() => ({ ricardo: false, mtm: false }))
+      if (!carrosselLigado[perfilCarrossel]) {
+        await supabase
+          .from("social_scheduled_posts")
+          .update({ status: "draft", error: "Carrossel diário desligado pelo dono.", updated_at: new Date().toISOString() })
+          .eq("id", row.id)
+        results.push({ id: row.id, status: "draft", reason: "carrossel diário desligado" })
+        continue
+      }
+    }
     // O Instagram pessoal do Ricardo não é destino de automação: se alguma coisa pôs uma linha
-    // na fila para lá, morre aqui em vez de sair no perfil dele.
-    if (isAutoPublishBlocked(row.ig_account_id)) {
+    // na fila para lá, morre aqui em vez de sair no perfil dele. A única excepção é o carrossel
+    // diário que o próprio Ricardo pediu (ver autorizadoNaPessoal).
+    if (isAutoPublishBlocked(row.ig_account_id) && !autorizadoNaPessoal(row)) {
       await supabase
         .from("social_scheduled_posts")
         .update({
@@ -97,7 +126,9 @@ export async function GET(request: NextRequest) {
       ig_username: row.ig_username,
       media_type: row.media_type,
       media_urls: row.media_urls || [],
-      caption: row.caption,
+      // Última passagem antes de sair: trocas seguras de PT-BR para PT-PT na legenda (só em
+      // texto em português; os flyers EN passam intactos). Não toca no que já está publicado.
+      caption: row.caption && parecePortugues(row.caption) ? corrigirPtPt(row.caption).texto : row.caption,
       creation_id: row.creation_id,
       child_creation_ids: row.child_creation_ids,
     }

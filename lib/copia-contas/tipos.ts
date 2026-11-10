@@ -45,6 +45,8 @@ export interface RotaCopia {
   filtro_direcao: 'ambas' | Direcao
   lote_max: number | null
   max_abertas: number | null
+  /** risco máximo por trade da conta de destino, em % (migração 223); null = desconhecido */
+  risco_max_pct?: number | string | null
   copiar_sl: boolean
   copiar_tp: boolean
   copiar_parciais: boolean

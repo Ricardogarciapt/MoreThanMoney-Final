@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react"
 import { TESTEMUNHOS, type Testemunho } from "@/lib/testemunhos"
-import { useT } from "@/components/i18n-provider"
+import { useI18n, useT } from "@/components/i18n-provider"
 import { LANDING_CSS } from "@/components/new-landing/styles"
 import { mountLandingEffects } from "@/components/new-landing/effects"
 import { SNAPSHOT, type LandingStats } from "@/lib/landing-stats"
@@ -289,8 +289,11 @@ function Testimonial({ x, i, t }: { x: Testemunho; i: number; t: (k: string) => 
   )
 }
 
+const VIDEO_LEGENDAS = ["pt", "en", "es", "de", "it", "nl", "pl"] as const
+
 export default function NewLandingPage() {
   const t = useT()
+  const { lang } = useI18n()
   const root = useRef<HTMLDivElement>(null)
   const [video, setVideo] = useState(false)
   const [playing, setPlaying] = useState(false)
@@ -814,23 +817,40 @@ export default function NewLandingPage() {
               <button type="button" className="vm__x" aria-label={t("l2.close")} onClick={() => setVideo(false)}>✕</button>
             </div>
             <div className="vm__f">
+              {/* vídeo de entrada alojado em public/videos (editado a 01/11/2026: original + pilares, scanners, app e MTM Auto com a voz do Ricardo) */}
               {playing ? (
-                <iframe
-                  src="https://www.youtube.com/embed/dgd0-mLIrMw?autoplay=1&rel=0&modestbranding=1&iv_load_policy=3"
+                <video
+                  poster="/videos/entrada-new-landing-poster.jpg"
+                  controls
+                  autoPlay
+                  playsInline
+                  preload="metadata"
+                  crossOrigin="anonymous"
                   title={t("l2.videoTitle")}
-                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                  allowFullScreen
-                />
+                >
+                  <source src="/videos/entrada-new-landing.mp4" type="video/mp4" />
+                  {/* legendas: a língua da UI entra ligada; as outras ficam no menu CC do player */}
+                  {VIDEO_LEGENDAS.map((l) => (
+                    <track
+                      key={l}
+                      kind="subtitles"
+                      src={`/videos/entrada-new-landing-${l}.vtt`}
+                      srcLang={l}
+                      label={l.toUpperCase()}
+                      default={l === (VIDEO_LEGENDAS.includes(lang as (typeof VIDEO_LEGENDAS)[number]) ? lang : "pt")}
+                    />
+                  ))}
+                </video>
               ) : (
                 <>
-                  <img src="https://i.ytimg.com/vi/dgd0-mLIrMw/maxresdefault.jpg" alt={t("l2.videoTitle")} />
+                  <img src="/videos/entrada-new-landing-poster.jpg" alt={t("l2.videoTitle")} />
                   <div className="vm__p" onClick={() => setPlaying(true)}><span>▶</span></div>
                 </>
               )}
             </div>
             <p className="vm__l">
               {t("l2.videoFallback")}{" "}
-              <a href="https://www.youtube.com/watch?v=dgd0-mLIrMw" target="_blank" rel="noopener noreferrer">
+              <a href="/videos/entrada-new-landing.mp4" target="_blank" rel="noopener noreferrer">
                 {t("l2.videoFallbackLink")}
               </a>.
             </p>

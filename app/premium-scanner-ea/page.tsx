@@ -15,6 +15,8 @@ const DATA: EaLandingData = {
   sub: "O ouro em três sessões — Ásia, Londres e Nova Iorque. A mesma regra no teu TradingView e no teu MetaTrader 5: lê a direcção com cinco critérios, espera pelo recuo e desenha a zona, o stop e os alvos. A EA executa-a sozinha, com o mesmo plano no gráfico.",
   markets: ["XAUUSD", "M15", "Ásia", "Londres", "Nova Iorque", "TradingView", "MetaTrader 5"],
   // eslint-disable-next-line @next/next/no-img-element
+  video: "/ea/premium-scanner-ea/apresentacao.mp4",
+  poster: "/ea/premium-scanner-ea/poster.jpg",
   hero: <img src="/scanners/premium-scanner.png" alt="Zona de entrada, stop e alvos do MTM Premium Scanner no ouro" />,
   heroCaption: "Zona de entrada, SL e TP1–TP3 desenhados no gráfico. A EA desenha os mesmos níveis no MetaTrader.",
   heroNote: (

@@ -1,0 +1,76 @@
+{
+  "landing-pt": [
+    {
+      "cena": 1,
+      "ficheiro": "landing-pt/01.mp3",
+      "segundos": 4.65
+    },
+    {
+      "cena": 2,
+      "ficheiro": "landing-pt/02.mp3",
+      "segundos": 7.68
+    },
+    {
+      "cena": 3,
+      "ficheiro": "landing-pt/03.mp3",
+      "segundos": 12.83
+    },
+    {
+      "cena": 4,
+      "ficheiro": "landing-pt/04.mp3",
+      "segundos": 9.46
+    },
+    {
+      "cena": 5,
+      "ficheiro": "landing-pt/05.mp3",
+      "segundos": 3.97
+    },
+    {
+      "cena": 6,
+      "ficheiro": "landing-pt/06.mp3",
+      "segundos": 4.44
+    },
+    {
+      "cena": 7,
+      "ficheiro": "landing-pt/07.mp3",
+      "segundos": 4.34
+    }
+  ],
+  "landing-en": [
+    {
+      "cena": 1,
+      "ficheiro": "landing-en/01.mp3",
+      "segundos": 4.88
+    },
+    {
+      "cena": 2,
+      "ficheiro": "landing-en/02.mp3",
+      "segundos": 9.46
+    },
+    {
+      "cena": 3,
+      "ficheiro": "landing-en/03.mp3",
+      "segundos": 13.64
+    },
+    {
+      "cena": 4,
+      "ficheiro": "landing-en/04.mp3",
+      "segundos": 9.17
+    },
+    {
+      "cena": 5,
+      "ficheiro": "landing-en/05.mp3",
+      "segundos": 4.05
+    },
+    {
+      "cena": 6,
+      "ficheiro": "landing-en/06.mp3",
+      "segundos": 5.9
+    },
+    {
+      "cena": 7,
+      "ficheiro": "landing-en/07.mp3",
+      "segundos": 4.23
+    }
+  ]
+}

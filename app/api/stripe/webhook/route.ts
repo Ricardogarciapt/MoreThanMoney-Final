@@ -5,6 +5,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import Stripe from 'stripe'
 import { getSupabaseAdmin } from '@/lib/supabase-admin-client'
 import { sendScannerAccessEmail, sendMTMcopierSetupNotification } from '@/lib/email-service'
+import { linksDoPlano } from '@/lib/scanners/links-tradingview'
 import { sanitizeEnv } from '@/lib/env-sanitize'
 import { createMailTransporter, mailFrom, prepareBrandedEmailHtml, brandedMailAttachments } from '@/lib/mail-transport'
 import {
@@ -52,6 +53,7 @@ import {
   subscricaoEhAddon,
 } from '@/lib/mtmcopy/addon-stripe'
 import { planoIncluiScanners, scannerDoPackFundador } from '@/lib/packs-fundador'
+import { MOTIVO_FIM_SEM_PAGAMENTO, planoEfetivo, sincronizarPeriodoGratis, terminouNoPeriodoGratis } from '@/lib/periodos-gratis'
 import {
   ehFaturaDeMarketplace,
   ehSubscricaoDeMarketplace,
@@ -66,6 +68,16 @@ const SCANNER_PLAN_NAMES: Record<string, string> = {
   aurumflow_lifetime: 'Scanner Aurum Flow Cripto (Vitalício)',
   trendshot_semestral: 'TrendShot by MTM (Semestral)',
   trendshot_lifetime: 'TrendShot by MTM (Vitalício)',
+  defy_semestral: 'DEFY by MTM (Semestral)',
+  defy_lifetime: 'DEFY by MTM (Vitalício)',
+  rocketnova_semestral: 'RocketNova by MTM (Semestral)',
+  rocketnova_lifetime: 'RocketNova by MTM (Vitalício)',
+  quantum_semestral: 'Quantum by MTM (Semestral)',
+  quantum_lifetime: 'Quantum by MTM (Vitalício)',
+  sniperpro_semestral: 'SniperPro by MTM (Semestral)',
+  sniperpro_lifetime: 'SniperPro by MTM (Vitalício)',
+  goldenzone_semestral: 'Golden Zone by MTM (Semestral)',
+  goldenzone_lifetime: 'Golden Zone by MTM (Vitalício)',
   premium_scanner_lifetime: 'MTM Premium Scanner (Vitalício)',
   mtm_scanner_monthly: 'Scanner MTM V3.4 (Mensal)',
   mtm_scanner_semestral: 'Scanner MTM V3.4 (Semestral)',
@@ -275,6 +287,17 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
       })
       if (provision.ok) {
         compradorProvisionado = provision.userId ?? null
+        // O customer.subscription.created pode ter chegado antes de a conta existir: espelhar
+        // agora o período grátis (estado trialing e data de fim no perfil).
+        if (session.subscription && session.metadata?.periodo_gratis) {
+          try {
+            const subId = typeof session.subscription === 'string' ? session.subscription : session.subscription.id
+            const subGratis = await getStripeClient().subscriptions.retrieve(subId)
+            await sincronizarPeriodoGratis(subGratis, compradorProvisionado)
+          } catch (e) {
+            console.error('[periodos-gratis] falhou no provisionamento:', e)
+          }
+        }
         console.log(
           `✅ [STRIPE-WEBHOOK] Conta provisionada server-side: ${provision.userId} (session ${session.id})`
         )
@@ -335,7 +358,8 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
           guestEmail,
           'Trader',
           SCANNER_PLAN_NAMES[planId],
-          tvUsername
+          tvUsername,
+          linksDoPlano(planId),
         )
       } catch (err) {
         console.error('Erro ao enviar email de scanner (guest):', err)
@@ -369,7 +393,8 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
           profile.email,
           profile.full_name || 'Trader',
           SCANNER_PLAN_NAMES[planId],
-          tvUsername
+          tvUsername,
+          linksDoPlano(planId),
         )
       }
 
@@ -634,11 +659,13 @@ async function handleSubscriptionUpdate(sub: Stripe.Subscription) {
    * inventa direitos nem os retira. Quem cria um preço da casa garante a variável de ambiente do
    * catálogo ou `metadata.plan` no preço — ver `planoDaSubscricao`.
    */
-  const planId = planoDaSubscricao({
+  const planIdDoPreco = planoDaSubscricao({
     priceId,
     metadataDoPreco: item?.price?.metadata,
     metadataDaSubscricao: sub.metadata,
   })
+  // Campanha 90 dias: o preço é Premium, mas durante o período a pessoa é Membro.
+  const planId = planIdDoPreco ? planoEfetivo(sub, planIdDoPreco) : planIdDoPreco
   if (!planId) {
     console.error(
       '[STRIPE-WEBHOOK] subscrição com preço FORA do catálogo e sem metadata.plan — perfil não alterado.',
@@ -664,6 +691,17 @@ async function handleSubscriptionUpdate(sub: Stripe.Subscription) {
     is_active: sub.status === 'active' || sub.status === 'trialing',
     payment_failed_count: 0,
   }).eq('id', profile.id)
+
+  // Trial de 3 dias e campanha 90 dias: espelho para o admin/backoffice/MLM e data de fim.
+  await sincronizarPeriodoGratis(sub, profile.id)
+  if (sub.status === 'active' || sub.status === 'trialing') {
+    // Reativou depois de um período grátis sem pagamento: o fecho deixa de valer.
+    await supabase
+      .from('profiles')
+      .update({ inactive_reason: null, inactive_since: null, access_revoked_at: null })
+      .eq('id', profile.id)
+      .eq('inactive_reason', MOTIVO_FIM_SEM_PAGAMENTO)
+  }
 
   // Packs de fundador prometem Premium E o pack de scanners. O Premium ficou na escrita acima; o
   // scanner vive noutro sítio (`profile_data.addons.scanner`) porque se compra e cancela sozinho,
@@ -747,11 +785,16 @@ async function handleSubscriptionCanceled(sub: Stripe.Subscription) {
     Boolean(profile.stripe_customer_id) &&
     (profile.member_category === 'premium' || profile.subscription_plan === 'premium')
 
+  // Acabou o período grátis (trial 3 dias / campanha 90 dias) sem pagamento: o middleware manda
+  // a pessoa para /ativar-premium, a página com o checkout dos 65 €/mês.
+  const fimDoPeriodoGratis = terminouNoPeriodoGratis(sub)
+  await sincronizarPeriodoGratis(sub, profile.id)
+
   await supabase.from('profiles').update({
     subscription_status: 'canceled',
     is_active: false,
     access_revoked_at: new Date().toISOString(),
-    inactive_reason: 'subscription_canceled',
+    inactive_reason: fimDoPeriodoGratis ? MOTIVO_FIM_SEM_PAGAMENTO : 'subscription_canceled',
     inactive_since: new Date().toISOString(),
     subscription_auto_renew: false,
   }).eq('id', profile.id)

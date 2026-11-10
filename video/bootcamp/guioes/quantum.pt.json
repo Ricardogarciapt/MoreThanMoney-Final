@@ -1,0 +1,564 @@
+{
+ "estrategia": "Quantum",
+ "motor": "quantum",
+ "marca": "MoreThanMoney",
+ "cores": {
+  "bull": "#3B7DDD",
+  "bear": "#E0474C"
+ },
+ "ui": {
+  "nivel": "Nível",
+  "compra": "Compra",
+  "venda": "Venda",
+  "entrada": "Entrada",
+  "tp1": "TP1",
+  "tp2": "TP2",
+  "tp3": "TP3"
+ },
+ "pronuncia": [
+  ["TradingView", "Trading View"],
+  ["MasterStrength", "Master Strength"],
+  ["MacroPhase", "Macro Fase"],
+  ["MicroPullback", "Micro Pulback"],
+  ["MicroWave", "Micro Uêiv"],
+  ["M15", "M quinze"],
+  ["M30", "M trinta"],
+  ["M5", "M cinco"],
+  ["M1", "M um"],
+  ["H4", "H quatro"],
+  ["H1", "H um"],
+  ["W1", "W um"],
+  ["EURNZD", "EUR N Z D"],
+  ["NZDCAD", "N Z D C A D"],
+  ["AUDNZD", "AUD N Z D"],
+  ["EURUSD", "EUR U S D"]
+ ],
+ "plano": {
+  "warning": false,
+  "slAtr": 1,
+  "alvos": [2],
+  "rotulos": ["Alvo"]
+ },
+ "videos": [
+  {
+   "rotulo": "Bootcamp Quantum · 1/2",
+   "titulo": "O que é e como se lê",
+   "cenas": [
+    {
+     "id": "v1-00",
+     "tipo": "abertura",
+     "kicker": "Bootcamp MTM · Vídeo 1 de 2",
+     "titulo": "Quantum",
+     "sub": "O que é e como se lê cada elemento",
+     "rodape": "morethanmoney.pt",
+     "semVoz": 5
+    },
+    {
+     "id": "v1-01",
+     "tipo": "frase",
+     "cap": "Boas-vindas",
+     "texto": "A tendência confirma-se primeiro. <span class='ouro'>O recuo</span> dá a entrada.",
+     "autor": "Ricardo Garcia · MoreThanMoney",
+     "fala": "Olá, sou o Ricardo Garcia e este é o Bootcamp do Quantum, a estratégia da MoreThanMoney que segue a tendência e entra em recuos. Antes de começarmos, fica com a ideia que atravessa os dois vídeos: o Quantum não tenta adivinhar o topo nem o fundo. Confirma primeiro a direção, espera que o preço recue dentro dessa direção, e só entra quando o oscilador está na zona certa e aparece o sinal de entrada. São três tempos, sempre pela mesma ordem. O Quantum é um conjunto de ferramentas automáticas que interpreta a direção, a ação do preço e a fase do preço, e pode servir scalping, intradiário ou posições mais longas, conforme o timeframe que escolhes. Neste primeiro vídeo vamos ver o que é cada elemento do gráfico. No segundo, vamos ver como se confirma a entrada, como se desenham o stop e o alvo, e quando não se entra. Vamos por partes, sem pressa."
+    },
+    {
+     "id": "v1-02",
+     "tipo": "pontos",
+     "cap": "Boas-vindas",
+     "kicker": "O plano do bootcamp",
+     "titulo": "Dois vídeos, um método",
+     "itens": [
+      "Vídeo 1 · O que é o Quantum e como se lê",
+      "Vídeo 2 · Entrada, gestão, quando não entrar e rotina"
+     ],
+     "fala": "O bootcamp tem dois vídeos. Este primeiro é o mapa. Vamos ver a seta grande de fase, a linha primária, o painel de força MasterStrength, as pequenas setas, os triângulos de recuo, os pontos MicroWave, o oscilador e as bandas de volatilidade. O segundo vídeo é a prática: as oito confirmações por ordem, a entrada, o stop e o alvo, os casos em que não entras, e uma rotina para treinares em demo. Vê os vídeos por ordem, porque o segundo assume que reconheces todas as peças que vamos ver agora. Se houver uma peça que não percebes, volta atrás antes de avançar. E não tentes decorar tudo de uma vez. Lê uma peça de cada vez, até a leitura se tornar automática, porque é essa automatização que te deixa ver o alinhamento num só olhar."
+    },
+    {
+     "id": "v1-03",
+     "tipo": "capitulo",
+     "cap": "01 · O que é o Quantum",
+     "numero": "01",
+     "titulo": "O que é o Quantum",
+     "sub": "Seguidor de tendência com entradas em recuo",
+     "fala": "Primeiro capítulo. O que é, afinal, o Quantum?"
+    },
+    {
+     "id": "v1-04",
+     "tipo": "pontos",
+     "cap": "01 · O que é o Quantum",
+     "kicker": "Em poucas palavras",
+     "titulo": "Três tempos, sempre pela mesma ordem",
+     "itens": [
+      "Confirmar a tendência: fase, linha primária e pontuação",
+      "Esperar o recuo: o oscilador entra na zona da direção",
+      "Entrar com o sinal de entrada, na cor da direção",
+      "Serve scalping, intradiário ou posições mais longas"
+     ],
+     "fala": "O Quantum é um conjunto de ferramentas automáticas que interpreta a direção, a ação do preço e a fase do preço, para simplificar a análise. A lógica tem três tempos. Primeiro, confirmar a tendência, usando a fase, a linha primária e a pontuação. Segundo, esperar que o preço recue, e que o oscilador entre na zona da direção. Terceiro, entrar quando aparece o sinal de entrada, um triângulo de recuo, um ponto MicroWave, ou os dois, na cor da direção. A estratégia serve scalping, intradiário ou posições mais longas, conforme o timeframe. Repara que a fonte não define stop nem alvos. Neste guia, a gestão é a regra da MTM, e vamos vê-la com cuidado no segundo vídeo. Por agora, guarda a ideia central: o Quantum não é um indicador de reversão. É um seguidor de tendência que procura entrar do lado certo de um recuo."
+    },
+    {
+     "id": "v1-05",
+     "tipo": "capitulo",
+     "cap": "02 · Os elementos do gráfico",
+     "numero": "02",
+     "titulo": "Ler cada elemento",
+     "sub": "Fase, linha, setas, triângulos e pontos",
+     "fala": "Segundo capítulo. Vamos ler cada elemento do gráfico, um de cada vez."
+    },
+    {
+     "id": "v1-06",
+     "tipo": "grafico",
+     "cap": "02 · Os elementos do gráfico",
+     "kicker": "Tendência de alta",
+     "titulo": "Fase, linha e pequenas setas",
+     "cenario": "compra",
+     "seed": 7,
+     "base": ["cores"],
+     "camadas": ["medias", "setas"],
+     "ate": [0.6, 0.7],
+     "zoom": [0, 0.4],
+     "estrelas": "Score acima de 60",
+     "fala": "Este gráfico é ilustrativo. Serve para explicar a leitura, não é um resultado real nem um histórico de mercado. Vamos começar por uma tendência de alta. A seta grande de fase, chamada MacroPhase, marca o início da tendência, e fica para cima numa compra. A linha primária é azul, e o preço está acima dela. Por cima disso, vês as pequenas setas, na cor da direção, e os triângulos de recuo, chamados MicroPullback, e os pontos MicroWave. Os triângulos e os pontos são os sinais de entrada, mas só contam depois de a tendência estar confirmada. Repara também que a pontuação está acima de sessenta. Cada uma destas peças responde a uma pergunta diferente. A fase diz-te a direção, a linha diz-te o lado, as setas dizem-te o alinhamento, e os triângulos e os pontos dizem-te o momento de entrada."
+    },
+    {
+     "id": "v1-07",
+     "tipo": "pontos",
+     "cap": "02 · Os elementos do gráfico",
+     "kicker": "Peças do gráfico",
+     "titulo": "Cinco peças para reconhecer",
+     "itens": [
+      "Seta grande de fase, MacroPhase: o início da tendência",
+      "Linha primária: azul com o preço acima, vermelha com o preço abaixo",
+      "Pequenas setas, na cor da direção",
+      "Triângulos de recuo e pontos MicroWave: os sinais de entrada",
+      "Oscilador: a zona da direção"
+     ],
+     "fala": "Vamos fixar as peças principais. Um, a seta grande de fase, a MacroPhase. Marca o início da tendência, para cima numa compra e para baixo numa venda. Dois, a linha primária. É azul para comprar, com o preço acima dela, e vermelha para vender, com o preço abaixo dela. Três, as pequenas setas, que aparecem por cima do gráfico na cor da direção, azuis na compra e vermelhas na venda. Quatro, os triângulos de recuo, os MicroPullback, e os pontos MicroWave. São os sinais de entrada, e têm de estar na cor da direção, numa vela dessa cor. Cinco, o oscilador, que tem zonas azuis e vermelhas. Na compra, o oscilador deve estar na zona azul. Na venda, na zona vermelha. Estas cinco peças são lidas em conjunto, e nenhuma delas, sozinha, é uma ordem."
+    },
+    {
+     "id": "v1-08",
+     "tipo": "grafico",
+     "cap": "02 · Os elementos do gráfico",
+     "kicker": "Tendência de baixa",
+     "titulo": "O espelho da tendência de alta",
+     "cenario": "venda",
+     "seed": 11,
+     "base": ["cores"],
+     "camadas": ["medias", "setas"],
+     "ate": [0.55, 0.66],
+     "zoom": [0, 0.3],
+     "estrelas": "Score 36",
+     "fala": "O esquema de uma tendência de baixa é o espelho do anterior. A seta de fase aponta para baixo, a linha primária é vermelha, e as velas são vermelhas. A pontuação está em trinta e seis, abaixo de quarenta, e o oscilador está na zona vermelha de venda. Repara que tudo o que vimos na alta se inverte, sem exceções. A venda não é uma compra ao contrário com regras diferentes. É a mesma lógica, aplicada no sentido oposto. Por isso, quando estudares a estratégia, estuda os dois lados com o mesmo cuidado. Quem só treina uma direção acaba por ler mal o outro lado, justamente no momento em que o mercado muda de humor."
+    },
+    {
+     "id": "v1-09",
+     "tipo": "comparar",
+     "cap": "03 · O painel de força",
+     "kicker": "MasterStrength",
+     "titulo": "Uma pontuação e uma seta por timeframe",
+     "cartoes": [
+      {
+       "t": "Acima de 60",
+       "d": "Força de alta forte. Na alta, é a zona de confirmação."
+      },
+      {
+       "t": "Acima de 50",
+       "d": "Força de alta. Para a compra, mais de 60 é o critério do guia."
+      },
+      {
+       "t": "Entre 45 e 50",
+       "d": "Neutro. Nenhuma direção clara, mais cautela."
+      },
+      {
+       "t": "Abaixo de 45 e de 40",
+       "d": "Baixa, e baixa forte abaixo de 40. Venda com 40 ou menos."
+      }
+     ],
+     "fala": "O painel MasterStrength mostra uma pontuação e uma seta para cada timeframe, de M1 a W1. Os valores têm uma leitura própria. Acima de cinquenta há força de alta, e acima de sessenta, força de alta forte. Entre quarenta e cinco e cinquenta é neutro. Abaixo de quarenta e cinco é de baixa, e abaixo de quarenta é baixa forte. Atenção, porque há dois números diferentes em jogo. O painel mede a força por timeframe. A pontuação da confirmação, de que vamos falar no segundo vídeo, é o critério do guia para a compra e para a venda: mais de sessenta para comprar, e quarenta ou menos para vender. Não confundas as duas coisas. Uma é uma leitura de contexto, a outra é uma das confirmações da entrada."
+    },
+    {
+     "id": "v1-10",
+     "tipo": "capitulo",
+     "cap": "04 · As regras de alta e de baixa",
+     "numero": "04",
+     "titulo": "As regras da tendência",
+     "sub": "Condições e entradas, lado a lado",
+     "fala": "Quarto capítulo. As regras de alta e de baixa, lado a lado."
+    },
+    {
+     "id": "v1-11",
+     "tipo": "comparar",
+     "cap": "04 · As regras de alta e de baixa",
+     "kicker": "Condições e entradas",
+     "titulo": "Alta, baixa e transição",
+     "cartoes": [
+      {
+       "t": "Regra de alta",
+       "d": "Fase azul, linha primária azul e pontuação acima de 60. Entradas com pontos e triângulos azuis."
+      },
+      {
+       "t": "Regra de baixa",
+       "d": "Fase vermelha, linha primária vermelha e pontuação abaixo de 40. Entradas vermelhas."
+      },
+      {
+       "t": "Zona de transição",
+       "d": "Fase vermelha com setas azuis. Ainda não há direção confirmada."
+      },
+      {
+       "t": "Oscilador",
+       "d": "Azul na zona de compra, vermelho na zona de venda."
+      }
+     ],
+     "fala": "Vamos pôr as regras lado a lado. Para uma alta, as condições são três: fase azul, linha primária azul e pontuação acima de sessenta. As entradas vêm depois, com os pontos azuis, os triângulos azuis e o oscilador na zona azul. Para uma baixa, o espelho: fase vermelha, linha primária vermelha e pontuação abaixo de quarenta, com as entradas vermelhas. Há ainda uma zona de transição, que é a fase vermelha com setas azuis. Aqui a leitura ainda não está decidida, e o guia pede cautela. Repara que a pontuação do guia tem um pequeno intervalo neutro no meio. Entre quarenta e um e sessenta, não há confirmação de nenhum dos lados. É nesse intervalo que mais gente entra por impulso, e é por isso que o vamos desenhar com cuidado no segundo vídeo."
+    },
+    {
+     "id": "v1-12",
+     "tipo": "pontos",
+     "cap": "04 · As regras de alta e de baixa",
+     "kicker": "Alinhamento",
+     "titulo": "Os quatro timeframes que se leem juntos",
+     "itens": [
+      "O timeframe de entrada e os três seguintes, todos com a seta da direção",
+      "Em quinze minutos: M15, M30, H1 e H4",
+      "Velas da cor da direção, com as pequenas setas da cor certa",
+      "Há quem prefira todos alinhados, e isso aumenta a exigência"
+     ],
+     "fala": "O alinhamento de timeframes é a peça que dá contexto à entrada. Quando negoceias em quinze minutos, lês também os três timeframes seguintes, que são trinta minutos, uma hora e quatro horas. Todos devem ter a seta da direção. Esta é a confirmação de alinhamento, e é o que o guia usa para dizer que a tendência está confirmada em vários níveis ao mesmo tempo. Junta a isto as velas. Devem ser da cor da direção, com as pequenas setas da mesma cor. Numa compra, velas azuis e setas azuis. Há quem prefira que todos os timeframes estejam alinhados, e isso aumenta a exigência, e também diminui o número de sinais. A escolha é tua, mas deve ser uma escolha consciente e escrita. O que não podes fazer é mudar de critério a meio da semana, porque isso torna qualquer análise incomparável."
+    },
+    {
+     "id": "v1-13",
+     "tipo": "capitulo",
+     "cap": "05 · O oscilador e as bandas",
+     "numero": "05",
+     "titulo": "O oscilador e as bandas",
+     "sub": "A zona certa e a volatilidade",
+     "fala": "Quinto capítulo. O oscilador e as bandas de volatilidade."
+    },
+    {
+     "id": "v1-14",
+     "tipo": "pontos",
+     "cap": "05 · O oscilador e as bandas",
+     "kicker": "Zona e volatilidade",
+     "titulo": "Onde o oscilador e as bandas contam",
+     "itens": [
+      "Oscilador azul na zona de compra, vermelho na zona de venda",
+      "Bandas de volatilidade abertas ou fechadas",
+      "Preço na banda de volatilidade reforça a entrada",
+      "Consolidação com as bandas fechadas: espera que abram"
+     ],
+     "fala": "O oscilador é o que te diz se o preço já recuou o suficiente para a entrada. Na compra, deve estar dentro da zona azul. Na venda, dentro da zona vermelha. Enquanto o oscilador não entra na zona da direção, o recuo ainda não aconteceu, e a entrada espera. As bandas de volatilidade mostram o quanto o mercado está a mexer. Quando estão abertas, há movimento. Quando estão fechadas, o mercado está comprimido. O guia é claro: numa longa consolidação, com as bandas fechadas, não se opera. Espera que as bandas abram. E há uma regra de força: quando queres a entrada mais forte, o preço deve estar na banda de volatilidade. Nos exemplos do guia, as entradas que não estavam na banda moveram-se menos. Isso não as torna erradas, mas torna-as menos atrativas."
+    },
+    {
+     "id": "v1-15",
+     "tipo": "grafico",
+     "cap": "05 · O oscilador e as bandas",
+     "kicker": "Pausa e lê",
+     "titulo": "Lê tu primeiro",
+     "cenario": "compra",
+     "seed": 13,
+     "base": ["cores"],
+     "camadas": ["medias", "setas"],
+     "ate": [0.6, 0.62],
+     "zoom": [0, 0.3],
+     "estrelas": "Sem sinal",
+     "fala": "Agora é a tua vez. Pausa o vídeo e lê este gráfico sozinho, peça a peça. Qual é a seta de fase? Está para cima ou para baixo? De que cor é a linha primária, e de que lado está o preço? Qual é a pontuação? Os timeframes seguintes têm a seta da direção? O oscilador está na zona? Há algum triângulo ou ponto na cor da direção? Responde a estas perguntas antes de continuares. Pronto? A fase está para cima, a linha primária é azul e o preço está acima dela. A pontuação está acima de sessenta. As setas dos timeframes seguintes apontam, em geral, para cima. Mas ainda não há sinal de entrada, porque falta o recuo com o oscilador na zona e o triângulo ou o ponto. No segundo vídeo vais ver o que acontece a seguir."
+    },
+    {
+     "id": "v1-16",
+     "tipo": "checklist",
+     "cap": "Resumo",
+     "kicker": "Resumo do vídeo 1",
+     "titulo": "O que tens de saber ler",
+     "itens": [
+      "Fase e linha primária: a direção e o lado do preço",
+      "Pontuação: acima de 60 na compra, 40 ou menos na venda",
+      "Timeframes seguintes com a seta da direção",
+      "Oscilador na zona e triângulos ou pontos na cor certa",
+      "Bandas de volatilidade: abertas, de preferência com o preço na banda"
+     ],
+     "fala": "Resumindo o primeiro vídeo. A fase e a linha primária dizem-te a direção e o lado do preço. A pontuação confirma a força, com o critério de sessenta para comprar e de quarenta ou menos para vender. Os timeframes seguintes devem ter a seta da mesma direção. O oscilador tem de estar na zona, e a entrada aparece com os triângulos ou os pontos na cor certa. As bandas de volatilidade dizem-te se há espaço para o movimento. Antes de avançares, fica com uma regra simples: se não consegues confirmar a direção, ainda não há nada para ler na entrada."
+    },
+    {
+     "id": "v1-17",
+     "tipo": "pontos",
+     "cap": "Exercício",
+     "kicker": "Antes do vídeo 2",
+     "titulo": "O teu trabalho de casa",
+     "itens": [
+      "Escolhe um par de forex e o gráfico de quinze minutos",
+      "Procura cinco momentos de alinhamento nos quatro timeframes",
+      "Para cada um, anota a pontuação, o oscilador e as bandas",
+      "Não operes. Só observas e registas"
+     ],
+     "fala": "Antes do segundo vídeo, tens um exercício. Escolhe um par de forex e o gráfico de quinze minutos, com o Quantum ligado. Procura cinco momentos em que os quatro timeframes estão alinhados. Para cada um, anota a pontuação, a posição do oscilador e se as bandas estavam abertas ou fechadas. Depois procura também dois momentos de neutralidade, com pontuação entre quarenta e cinco e cinquenta e setas misturadas. Não operes. Só observas e registas. Este exercício treina o olho para o que o guia chama confirmação, e para o que chama a sua ausência. No segundo vídeo, vemos como a ausência de confirmação também é uma decisão."
+    },
+    {
+     "id": "v1-18",
+     "tipo": "aviso",
+     "cap": "Aviso",
+     "titulo": "Até ao vídeo 2",
+     "sub": "Entrada, gestão e rotina",
+     "texto": "Conteúdo educativo. Não é aconselhamento financeiro. Negociar forex, índices, metais, petróleo e cripto envolve risco elevado e podes perder parte ou a totalidade do capital. Os gráficos deste vídeo são ilustrativos. Resultados passados não garantem resultados futuros.",
+     "fala": "Lembra-te: este conteúdo é educativo e não é aconselhamento financeiro. Negociar tem risco elevado e podes perder parte ou a totalidade do capital. Treina sempre primeiro em conta demo. Vemo-nos no segundo vídeo.",
+     "respiro": 4
+    }
+   ]
+  },
+  {
+   "rotulo": "Bootcamp Quantum · 2/2",
+   "titulo": "Entrada, gestão e rotina",
+   "cenas": [
+    {
+     "id": "v2-00",
+     "tipo": "abertura",
+     "kicker": "Bootcamp MTM · Vídeo 2 de 2",
+     "titulo": "Quantum",
+     "sub": "Entrada, gestão, quando não entrar e rotina",
+     "rodape": "morethanmoney.pt",
+     "semVoz": 5
+    },
+    {
+     "id": "v2-01",
+     "tipo": "pontos",
+     "cap": "Boas-vindas",
+     "kicker": "Neste vídeo",
+     "titulo": "Do recuo ao trade",
+     "itens": [
+      "As oito confirmações, por ordem",
+      "A força da entrada: triângulo, ponto e banda",
+      "Stop e alvo: as regras da MTM",
+      "Quando não entrar",
+      "Uma rotina para treinar em demo"
+     ],
+     "fala": "Bem-vindo ao segundo vídeo do Bootcamp Quantum. No primeiro, aprendeste a ler a fase, a linha primária, o painel MasterStrength, as setas, os triângulos, os pontos, o oscilador e as bandas. Agora vamos usar essa leitura para decidir. Vamos percorrer as oito confirmações, por ordem, sem saltar nenhuma. Depois, o que torna uma entrada mais forte ou mais fraca. A seguir, o stop e o alvo, que a fonte não define e que a MTM define nas suas regras. Vamos ver também como a posição do stop muda o trade. Depois, os casos em que não entras, que no Quantum são tão importantes como as entradas. E no fim, uma rotina para treinar em demo antes de qualquer risco real."
+    },
+    {
+     "id": "v2-02",
+     "tipo": "capitulo",
+     "cap": "01 · As confirmações",
+     "numero": "01",
+     "titulo": "As oito confirmações",
+     "sub": "Por ordem, sem saltar nenhuma",
+     "fala": "Primeiro capítulo. As oito confirmações, uma a uma."
+    },
+    {
+     "id": "v2-03",
+     "tipo": "checklist",
+     "cap": "01 · As confirmações",
+     "kicker": "Lista de trabalho",
+     "titulo": "Oito passos, na ordem do guia",
+     "itens": [
+      "Fase: seta grande de MacroPhase na direção",
+      "Linha primária da cor certa, com o preço do lado certo",
+      "Pontuação acima de 60 na compra, ou 40 ou menos na venda",
+      "Timeframe de entrada e os três seguintes alinhados",
+      "Velas e pequenas setas da cor da direção",
+      "Oscilador dentro da zona da direção",
+      "Triângulo e ou ponto da cor da direção, numa vela dessa cor",
+      "Extra opcional: vela na banda de volatilidade do lado da direção"
+     ],
+     "fala": "Vamos então às oito confirmações, pela ordem do guia. Um, a fase. Precisas da seta grande de MacroPhase na direção: para cima na compra, para baixo na venda. Dois, a linha primária. Azul para comprar, vermelha para vender, com o preço do lado certo dela. Três, a pontuação. Na compra, acima de sessenta. Na venda, quarenta ou menos. Quatro, o alinhamento. O timeframe de entrada e os três seguintes, todos com a seta da direção. Em quinze minutos, são M15, M30, H1 e H4. Cinco, as velas e as pequenas setas, da cor da direção. Seis, o oscilador, dentro da zona da direção: azul na compra, vermelha na venda. Sete, o sinal de entrada: um triângulo de recuo, um ponto MicroWave, ou os dois, da cor da direção, e numa vela dessa cor. Os dois na mesma vela são melhores. E oito, um extra opcional: uma vela na banda de volatilidade inferior numa compra, ou na superior numa venda. A regra é simples: as sete primeiras são o núcleo, e a oitava é um bónus, não uma exigência."
+    },
+    {
+     "id": "v2-04",
+     "tipo": "comparar",
+     "cap": "02 · A força da entrada",
+     "kicker": "Triângulo, ponto e banda",
+     "titulo": "Entradas fortes e fracas",
+     "cartoes": [
+      {
+       "t": "Triângulo e ponto juntos",
+       "d": "Na mesma vela, da cor da direção. A entrada é mais forte."
+      },
+      {
+       "t": "Só um dos dois",
+       "d": "Ainda pode ser entrada, mas com menos força na leitura do guia."
+      },
+      {
+       "t": "Preço na banda",
+       "d": "Nos exemplos do guia, os movimentos mais fortes tinham o preço na banda."
+      },
+      {
+       "t": "Entrada antecipada",
+       "d": "Sem triângulo nem ponto. Pode ser parada antes do movimento principal."
+      }
+     ],
+     "fala": "Nem todas as entradas têm a mesma força. A mais forte é a que combina o triângulo e o ponto na mesma vela, da cor da direção, com o preço na banda de volatilidade. Foi esta combinação que deu os movimentos mais fortes nos exemplos do guia. Se só tens um dos dois, a entrada ainda existe, mas a leitura é menos forte. E a entrada mais cedo, sem triângulo e sem ponto, é a mais arriscada. O guia avisa que, dependendo de onde colocas o stop, estas entradas podem ser paradas antes de o movimento principal acontecer. Não é uma proibição. É uma diferença de qualidade que deves reconhecer antes de entrar, e não depois de o stop ser atingido."
+    },
+    {
+     "id": "v2-05",
+     "tipo": "grafico",
+     "cap": "02 · Entrada, stop e alvo",
+     "kicker": "Uma compra, passo a passo",
+     "titulo": "Do recuo ao sinal",
+     "cenario": "compra",
+     "seed": 7,
+     "base": ["cores", "medias"],
+     "camadas": ["setas", "sinal", "plano"],
+     "ate": [0.6, 1],
+     "zoom": [0, 0.5],
+     "estrelas": "Score acima de 60",
+     "fala": "Vamos seguir uma compra do princípio ao fim. A fase está para cima, e a linha primária é azul, com o preço acima dela. A pontuação está acima de sessenta. Os timeframes seguintes apontam para cima, e as velas e as pequenas setas são azuis. Até aqui, a tendência está confirmada, mas ainda não há entrada. O preço recua. O oscilador desce até à zona azul. E é então que aparece um triângulo de recuo, junto com um ponto MicroWave, na mesma vela azul, com o preço na banda de volatilidade. Isso é o sinal. Só agora desenhas o plano. A entrada fica na vela do sinal. O stop fica para lá do último mínimo do recuo. E o alvo tem de dar pelo menos o dobro do risco. Repara que a ordem é a mesma de sempre: primeiro confirmas, depois entras, e só depois pensas em números."
+    },
+    {
+     "id": "v2-06",
+     "tipo": "capitulo",
+     "cap": "03 · Entrada, stop e alvo",
+     "numero": "03",
+     "titulo": "Stop e alvo",
+     "sub": "O que a fonte define e o que não define",
+     "fala": "Terceiro capítulo. Stop e alvo, com cuidado sobre quem define cada coisa."
+    },
+    {
+     "id": "v2-07",
+     "tipo": "plano",
+     "cap": "03 · Entrada, stop e alvo",
+     "kicker": "Regras da MTM, não da fonte",
+     "titulo": "Entrada, stop e alvo",
+     "linhas": [
+      ["Entrada", "Triângulo ou ponto da cor da direção, na mesma vela", "entrada"],
+      ["Stop", "Para lá do último mínimo do recuo, numa compra", "sl"],
+      ["Alvo", "Pelo menos o dobro do risco", "tp"],
+      ["Tamanho", "Calculado antes de entrar, a partir do risco", ""]
+     ],
+     "fala": "Este plano tem uma origem que deves ter presente. A fonte do indicador não define stop nem alvos. A regra do stop e a do alvo são as regras de gestão da MTM, descritas no guia. O stop fica para lá do último mínimo do recuo, numa compra, ou do último máximo, numa venda. O alvo deve ter pelo menos o dobro do risco. E o tamanho da posição calcula-se antes de entrares, a partir do valor que estás disposto a perder. Esta distinção importa, porque o indicador te mostra o sinal, mas não te diz onde pôr a proteção. Se alguém te disser que o indicador define o stop, está a confundir a ferramenta com a regra da casa. Por isso, o plano é uma responsabilidade tua, e a regra vem escrita no guia, não no código."
+    },
+    {
+     "id": "v2-08",
+     "tipo": "pontos",
+     "cap": "03 · Entrada, stop e alvo",
+     "kicker": "Duas regras, e uma responsabilidade",
+     "titulo": "O que fica do teu lado",
+     "itens": [
+      "Stop para lá do último mínimo, numa compra, ou máximo, numa venda",
+      "Alvo com pelo menos o dobro do risco",
+      "Tamanho da posição calculado antes de entrar",
+      "Sem um plano escrito, a gestão é improvisada"
+     ],
+     "fala": "Vamos resumir o que fica do teu lado. Primeiro, o stop: para lá do último mínimo do recuo, numa compra, e do último máximo, numa venda. Segundo, o alvo: com pelo menos o dobro do risco. Terceiro, o tamanho da posição, que se calcula antes de entrares. E quarto, a responsabilidade de escrever tudo isto num plano. Sem um plano escrito, cada decisão a meio do trade é uma improvisação. E a improvisação é o que transforma uma estratégia com regras claras numa sequência de decisões emocionais. O Quantum dá-te uma leitura organizada. A parte que te protege da perda descontrolada é a tua, e começa com um papel e uma calculadora, antes de começar com o gráfico."
+    },
+    {
+     "id": "v2-09",
+     "tipo": "pontos",
+     "cap": "04 · Onde colocas o stop",
+     "kicker": "Stop e qualidade da entrada",
+     "titulo": "Onde o stop muda o trade",
+     "itens": [
+      "Stop mais apertado: as entradas mais cedo podem ser paradas",
+      "Stop para lá do recuo: dá espaço ao movimento principal",
+      "Entrada com triângulo e ponto juntos: a leitura mais forte",
+      "Quanto mais cedo entras, mais trabalho tem a confirmação"
+     ],
+     "fala": "Onde colocas o stop muda o trade, e o guia diz-o com clareza. Se o stop for mais apertado, as entradas mais cedo, sem o triângulo e o ponto juntos, podem ser paradas antes de o movimento principal acontecer. Se o stop ficar para lá do último mínimo do recuo, dá mais espaço ao movimento, mas aumenta o risco por operação, e por isso o tamanho da posição tem de ser menor. É uma troca, e não há uma opção gratuita. A entrada mais forte, com o triângulo e o ponto juntos e o preço na banda, costuma dar uma leitura mais limpa. Mas mesmo essa não é garantida. A boa notícia é que o teu critério é escrito e repetível. A má notícia é que tens de aceitar as trocas, em vez de as fugir."
+    },
+    {
+     "id": "v2-10",
+     "tipo": "capitulo",
+     "cap": "05 · Quando não entrar",
+     "numero": "05",
+     "titulo": "Quando não entrar",
+     "sub": "A ausência de confirmação também é decisão",
+     "fala": "Quinto capítulo. Os casos em que a decisão certa é não entrar."
+    },
+    {
+     "id": "v2-11",
+     "tipo": "checklist",
+     "cap": "05 · Quando não entrar",
+     "kicker": "Não entras se",
+     "titulo": "Os casos de não entrada",
+     "itens": [
+      "Longa consolidação com as bandas fechadas",
+      "Pontuação neutra, entre 45 e 50, com setas misturadas",
+      "Velas da cor contrária à direção",
+      "Timeframes não alinhados",
+      "Preço fora da banda, quando queres a entrada mais forte"
+     ],
+     "fala": "Vamos à lista de não entrada. Não entras numa longa consolidação, com as bandas de volatilidade fechadas. Espera que as bandas abram. Não entras com pontuação neutra, entre quarenta e cinco e cinquenta, e com setas misturadas no painel, porque nenhuma direção está confirmada. Não entras quando as velas são da cor contrária à direção. Não entras quando os timeframes não estão alinhados: se o painel mostra setas para cima em uns e para baixo noutros, não é uma entrada. E não entras à espera da entrada mais forte se o preço não está na banda, porque nos exemplos do guia, essas entradas moveram-se menos. Há uma regra que vale para todas: se não consegues apontar a confirmação, a decisão é esperar."
+    },
+    {
+     "id": "v2-12",
+     "tipo": "grafico",
+     "cap": "05 · Quando não entrar",
+     "kicker": "Consolidação",
+     "titulo": "Bandas fechadas, sem direção",
+     "cenario": "falha",
+     "seed": 21,
+     "base": ["cores"],
+     "camadas": ["medias"],
+     "ate": [0.6, 0.6],
+     "zoom": [0, 0.2],
+     "estrelas": "Score 50",
+     "fala": "Este gráfico é o caso típico de consolidação. As bandas de volatilidade estão fechadas, o preço anda de um lado para o outro, e a pontuação está neutra, em cinquenta. As setas do painel não apontam todas para o mesmo lado. Há tentações nestes momentos. Surgem velas que parecem fortes, triângulos que aparecem isolados, e a vontade de fazer alguma coisa. O guia pede o contrário: não se opera. Espera que as bandas abram e que a pontuação saia da zona neutra. Este gráfico não é um erro do indicador. É um estado do mercado, e a melhor decisão é reconhecê-lo. Quem aprende a ficar parado nestes momentos poupa mais dinheiro do que quem acerta uma boa entrada, porque não gasta o capital em entradas sem contexto."
+    },
+    {
+     "id": "v2-13",
+     "tipo": "comparar",
+     "cap": "05 · Quando não entrar",
+     "kicker": "Leitura do painel",
+     "titulo": "Três leituras de pontuação",
+     "cartoes": [
+      {
+       "t": "61, setas para cima",
+       "d": "Todos os timeframes apontam para cima. Alinhamento na compra."
+      },
+      {
+       "t": "50, setas misturadas",
+       "d": "Neutro. Não há direção confirmada. Não se entra."
+      },
+      {
+       "t": "40, setas para baixo",
+       "d": "Alinhamento na venda, exceto no semanal, que pode divergir."
+      },
+      {
+       "t": "Sem alinhamento",
+       "d": "Setas em sentidos diferentes. Não é uma entrada, mesmo com pontuação."
+      }
+     ],
+     "fala": "Vamos ver o painel em três leituras. Com sessenta e um, e todas as setas para cima, há alinhamento na compra. Com cinquenta, neutro, e setas misturadas, não há direção confirmada e não se entra. Com quarenta, e setas para baixo, o alinhamento está do lado da venda, com a exceção do semanal, que pode divergir. E há uma quarta leitura que é a mais comum: pontuação nalguma zona e setas em sentidos diferentes. Mesmo que o número pareça bom, sem alinhamento não há entrada. O painel lê-se de relance, e é exatamente isso que o torna útil. Se precisas de muito tempo para decidir se as setas estão alinhadas, provavelmente não estão."
+    },
+    {
+     "id": "v2-14",
+     "tipo": "capitulo",
+     "cap": "06 · Rotina",
+     "numero": "06",
+     "titulo": "Uma rotina em demo",
+     "sub": "Treino antes de qualquer risco real",
+     "fala": "Sexto capítulo. Uma rotina simples, para treinar antes de arriscar."
+    },
+    {
+     "id": "v2-15",
+     "tipo": "pontos",
+     "cap": "06 · Rotina",
+     "kicker": "A rotina",
+     "titulo": "Um processo que se repete",
+     "itens": [
+      "Escolhe um mercado e um timeframe de entrada",
+      "Lê os quatro timeframes antes de decidir",
+      "Confirma as oito peças, por ordem, antes de entrar",
+      "Regista cada sinal: score, alinhamento, entrada, stop e alvo",
+      "Só depois de semanas em demo, pensa em conta real"
+     ],
+     "fala": "Vamos construir uma rotina. Primeiro, escolhe um mercado e um timeframe de entrada, e mantém essa escolha durante algumas semanas. O guia usa exemplos de forex em quinze minutos, mas o método é o mesmo noutros mercados, desde que o estudes em demo. Depois, lê os quatro timeframes antes de decidir. Se a fase e a linha primária não estiverem alinhadas, não há nada para fazer. Quando a tendência está confirmada, espera o recuo e confirma as oito peças, por ordem. Se a entrada aparece, define o stop, o alvo e o tamanho da posição antes de entrar. E regista tudo: a pontuação, o alinhamento, o tipo de entrada, o stop, o alvo, e o que aconteceu. Só depois de semanas em demo, com registos consistentes e regras que cumpriste, faz sentido pensar em conta real, e mesmo assim com um risco pequeno e definido de antemão."
+    },
+    {
+     "id": "v2-16",
+     "tipo": "frase",
+     "cap": "Fecho",
+     "texto": "A tendência confirma-se. <span class='ouro'>A paciência</span> espera pelo recuo.",
+     "autor": "Ricardo Garcia · MoreThanMoney",
+     "fala": "Chegámos ao fim do bootcamp. Ficas com três ideias. A primeira: o Quantum é um seguidor de tendência. Confirma a direção, espera o recuo e entra quando o oscilador e o sinal concordam. A segunda: a ausência de confirmação também é uma decisão, e muitas vezes é a melhor. A terceira: o stop e o alvo que usas são regras da MTM, descritas no guia, e a responsabilidade de as escrever e cumprir é tua. Não há indicador que decida por ti. O Quantum dá-te uma leitura organizada, e o resto é treino, registo e disciplina. Boa sorte no teu caminho, e lembra-te: primeiro demo, e só depois, se fizer sentido, o resto."
+    },
+    {
+     "id": "v2-17",
+     "tipo": "aviso",
+     "cap": "Aviso",
+     "titulo": "Fim do bootcamp",
+     "sub": "Educação, não aconselhamento",
+     "texto": "Conteúdo educativo. Não é aconselhamento financeiro. Negociar forex, índices, metais, petróleo e cripto envolve risco elevado e podes perder parte ou a totalidade do capital. Os gráficos deste bootcamp são ilustrativos. Resultados passados não garantem resultados futuros.",
+     "fala": "Último aviso. Este conteúdo é educativo e não é aconselhamento financeiro. Negociar tem risco elevado, e podes perder parte ou a totalidade do capital. Define o teu risco antes de cada entrada e treina primeiro em conta demo.",
+     "respiro": 4
+    }
+   ]
+  }
+ ]
+}

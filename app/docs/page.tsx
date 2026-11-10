@@ -16,6 +16,7 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog"
 import ProtectedPage from "@/components/protected-page"
+import GuiasEstrategias from "@/components/docs/guias-estrategias"
 import { supabase } from "@/lib/supabase"
 import {
   FileText,
@@ -232,7 +233,8 @@ export default function DocsPage() {
   }
 
   const filterDocuments = () => {
-    let filtered = documents
+    // Os guias das estratégias já aparecem na secção própria (GuiasEstrategias): não os repetir na grelha.
+    let filtered = documents.filter(doc => !doc.file_url?.includes('/educador/estrategias/'))
 
     // Filtro por categoria
     if (selectedCategory !== 'all') {
@@ -386,6 +388,10 @@ export default function DocsPage() {
               )}
             </div>
           </div>
+
+          {(selectedCategory === 'all' || selectedCategory === 'estrategia') && (
+            <GuiasEstrategias pesquisa={searchTerm} />
+          )}
 
           {/* Grid de Documentos */}
           {filteredDocuments.length === 0 ? (

@@ -225,6 +225,7 @@ async function abrir(
     saldoOrigem: rota.modo_lote === 'proporcional_saldo' ? await loja.saldoOrigem(rota) : null,
     equityDestino: ctx?.equity ?? null, loteMax: rota.lote_max, regra: ctx?.regra ?? REGRA_POR_OMISSAO,
     distanciaSl: distanciaDoSl(direcao, num(p.preco), num(p.sl)), valorPorPrecoPorLote: ctx?.valorPorPrecoPorLote ?? null,
+    riscoMaxPct: num(rota.risco_max_pct),
   })
   if (!lote.ok) {
     await loja.inserirCopia({ rota_id: rota.id, origem_posicao_id: ev.origem_posicao_id, volume_origem_abertura: volumeOrigem, direcao, estado: 'recusada', erro: lote.motivo })

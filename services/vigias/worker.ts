@@ -24,6 +24,7 @@ import { runPremiumZoneMonitor } from '../../lib/mtmcopy/premium-zone-monitor'
 import { runPremiumPriceMonitor } from '../../lib/mtmcopy/premium-price-monitor'
 import { runPerpsPositionMonitor } from '../../lib/mtmcopy/perps-position-monitor'
 import { publicarTodasAsMestres } from '../../lib/mestres/servidor/publicar'
+import { espelharCanaisParaTelegram } from '../../lib/telegram-espelho-canal'
 import { correrPercursos } from '../../lib/funis-motor'
 import { bracosReais, motorLigado } from '../../lib/funis-bracos'
 import { pollMasterAccounts } from '../../lib/mtmcopy/master-poll'
@@ -40,7 +41,8 @@ const CORRER: Record<TarefaVigia, () => Promise<unknown>> = {
   'premium-zone-monitor': () => runPremiumZoneMonitor(),
   'premium-price-monitor': () => emSegundoPlano(() => runPremiumPriceMonitor()),
   'perps-position-monitor': () => runPerpsPositionMonitor(),
-  'mestre-publicar': () => publicarTodasAsMestres(),
+  // + espelho chat → Telegram (03/11, «MTM Auto Premium II»): seguimentos saem no mesmo minuto.
+  'mestre-publicar': async () => ({ mestres: await publicarTodasAsMestres(), espelho: await espelharCanaisParaTelegram() }),
   funis: async () => ((await motorLigado()) ? correrPercursos(bracosReais) : { ligado: false }),
   'mtmcopy-master-poll': () => pollMasterAccounts(),
   // Só escreve no livro quando abriu alguma coisa: uma linha por minuto a dizer «nada» enchia o

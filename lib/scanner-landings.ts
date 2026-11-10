@@ -128,6 +128,74 @@ export const SCANNER_LANDINGS: ScannerLanding[] = [
       "MTM Premium Scanner: zonas de recuo no ouro em Londres, Nova Iorque e Ásia, com entrada, stop e alvos no TradingView. Pacote vitalício de 1250€ com indicador, estratégia e EA MT5; o indicador vem no Premium e no Pack Scanners.",
   },
   {
+    slug: "defy",
+    key: "defy",
+    video: "/scanners/defy/apresentacao.mp4",
+    poster: "/scanners/defy/poster.jpg",
+    title: ["Desafia o mercado.", "Com método."],
+    sub: "Bandas de exaustão, níveis-chave e uma pontuação de confirmações. Cada ideia chega com estrelas, entrada, Warning, stop e três alvos.",
+    markets: ["Forex", "Ouro (XAUUSD)", "Índices", "Cripto"],
+    description:
+      "O DEFY junta quatro leituras no mesmo gráfico: bandas de exaustão à volta de uma média suave, níveis-chave onde o preço já reagiu, uma nuvem de tendência e uma pontuação de confirmações. A ideia só nasce quando o preço estica até às bandas, vira com uma vela forte e junta pelo menos três confirmações; quantas mais, mais estrelas. O plano fica fixo na vela de sinal.",
+    metaDescription:
+      "DEFY by MTM: bandas de exaustão, níveis-chave e confirmações com estrelas no TradingView, com entrada, Warning, stop e três alvos. 50€ por semestre ou 350€ vitalício.",
+  },
+  {
+    slug: "sniperpro",
+    key: "sniperpro",
+    poster: "/scanners/sniperpro/poster.jpg",
+    title: ["Cinco leituras.", "Um só gráfico."],
+    sub: "Bandas de exaustão, trend screener com tabela, nuvem Kalman, pivots e níveis-chave num só estudo, com o painel SniperPro Asst a ler o momento.",
+    markets: ["Forex", "Ouro (XAUUSD)", "Índices", "Cripto"],
+    description:
+      "O SniperPro lê o mercado em camadas. As bandas de 55 períodos dizem onde o preço está esticado. O trend screener corre onze médias adaptativas, de 8 a 987, e resume-as numa tabela: tendência, estado e força. A nuvem Kalman pinta as velas a favor ou contra. Os pivots e os níveis-chave marcam onde o preço reagiu antes. Quando o filtro curto cruza o longo numa vela válida e a maioria das ferramentas de tendência concorda, sai um sinal com pontuação e o plano por alerta: entrada, stop e três alvos.",
+    metaDescription:
+      "SniperPro by MTM: bandas de exaustão, trend screener com tabela, nuvem Kalman, pivots e níveis-chave no TradingView, com o painel SniperPro Asst. 50€ por semestre ou 350€ vitalício.",
+  },
+  {
+    slug: "rocketnova",
+    key: "rocketnova",
+    video: "/scanners/rocketnova/apresentacao.mp4",
+    poster: "/scanners/rocketnova/poster.jpg",
+    title: ["Descola com a tendência.", "Com o plano a bordo."],
+    sub: "Três médias, estrelas de lançamento, Rocket Candle e pulso de volatilidade. Cada sinal chega com entrada, stop e quatro alvos, e a gestão segue por alertas.",
+    markets: ["Forex", "Ouro (XAUUSD)", "Índices", "Cripto"],
+    description:
+      "O RocketNova junta a leitura de tendência das EMAs 20, 50 e 238 com a estrutura do preço: um sinal só nasce quando a média rápida cruza a lenta e há uma estrela de lançamento recente, um mínimo de swing para a compra ou um máximo para a venda. A Rocket Candle marca a vela de impulso, o Volatility Pulse diz se o ATR está acima do normal e o Trade Clock mostra se estás dentro da sessão e com volume. Entrada, stop e TP1 a TP4 ficam fixos na vela do sinal; depois do TP1 o stop passa para a entrada e um sinal contrário fecha a trade.",
+    metaDescription:
+      "RocketNova by MTM: EMAs 20/50/238, estrelas de lançamento, Rocket Candle e gestão da trade no TradingView, com entrada, stop e quatro alvos. 50€ por semestre ou 350€ vitalício.",
+  },
+  {
+    slug: "golden-zone",
+    key: "goldenzone",
+    video: "/scanners/golden-zone/apresentacao.mp4",
+    poster: "/scanners/golden-zone/poster.jpg",
+    videoEn: "/scanners/golden-zone/apresentacao-en.mp4",
+    posterEn: "/scanners/golden-zone/poster-en.jpg",
+    title: ["O ouro reage nos níveis.", "A zona diz-te onde esperar."],
+    sub: "Níveis psicológicos de 5 em 5 $, visto amarelo quando a tendência confirma, e o plano completo no fecho da vela seguinte.",
+    markets: ["Ouro (XAUUSD)", "5 minutos", "Scalping", "TradingView"],
+    description:
+      "A Golden Zone não te manda correr atrás do preço. Desenha os níveis psicológicos de 5 em 5 $ no ouro e, quando uma vela fecha para lá de um nível a favor da tendência das médias de 50 e 200, marca o visto amarelo e a caixa de 1 $ centrada nesse nível. A zona de ação é a aresta do lado do preço. No fecho da vela seguinte o scanner dá os parâmetros da posição: invalidação a 1,5 $ (150 pontos), Saída 1 a +1,5 $ e Saída 2 a +3 $, escritos na linha com o preço. A entrada é tua, com uma ordem limite na zona quando o preço recua. Ao tocar a Saída 1 aparece a bandeira dourada; a Saída 2 ou a invalidação fecham o plano, e o visto seguinte limpa o gráfico. Quem decide se entra és tu, depois das quatro confirmações do guia.",
+    metaDescription:
+      "Golden Zone by MTM: scalping de ouro em 5 minutos no TradingView, com níveis psicológicos, zona de ação, Saída 1 e Saída 2 e invalidação a 150 pontos. 50€ por semestre ou 350€ vitalício.",
+  },
+  {
+    slug: "quantum",
+    key: "quantum",
+    video: "/scanners/quantum/apresentacao.mp4",
+    poster: "/scanners/quantum/poster.jpg",
+    videoEn: "/scanners/quantum/apresentacao-en.mp4",
+    posterEn: "/scanners/quantum/poster-en.jpg",
+    title: ["A tendência confirma-se primeiro.", "O recuo dá a entrada."],
+    sub: "Linha primária, seta de fase e painel de força por timeframe. Depois o recuo à fita, o oscilador na zona e o triângulo ou o ponto que dão a entrada.",
+    markets: ["Forex", "Ouro (XAUUSD)", "Índices", "Cripto"],
+    description:
+      "O Quantum lê o mercado em três tempos. Primeiro confirma a direção: a linha primária (média de 269 com brilho) fica azul com o preço por cima e vermelha por baixo, a seta grande marca o início da fase e o painel de força dá uma pontuação de 0 a 100 com uma seta por timeframe, de M1 a W1. Depois espera o recuo: o preço volta à fita das EMAs 8 e 21 e o oscilador Stoch RSI entra na zona da direção. Só então dá a entrada, um triângulo de recuo, um ponto de onda ou os dois na mesma vela, numa vela da cor da direção. A estrutura (HH, HL, LH, LL e linhas de tendência), as bandas de volatilidade e os máximos e mínimos das sessões completam a leitura. Stop para lá do extremo do recuo e alvo com o dobro do risco, por alertas.",
+    metaDescription:
+      "Quantum by MTM: seguidor de tendência com entradas em recuo no TradingView, com linha primária, painel de força por timeframe, oscilador e sinais de entrada. 50€ por semestre ou 350€ vitalício.",
+  },
+  {
     slug: "sensei",
     video: "/scanners/sensei/apresentacao.mp4",
     poster: "/scanners/sensei/poster.jpg",
@@ -231,6 +299,102 @@ const EN: Record<string, NonNullable<ScannerLanding["en"]>> = {
       "Educational tool: it does not place orders or guarantee results",
     ],
     metaDescription: "MTM Premium Scanner: pullback zones on gold in London, New York and Asia, with entry, stop and targets on TradingView. €1250 lifetime bundle with indicator, strategy and MT5 EA; the indicator is included in Premium and the Scanner Pack.",
+  },
+  defy: {
+    title: ["Defy the market.", "With a method."],
+    sub: "Exhaustion bands, key levels and a confirmation score. Every idea comes with stars, entry, Warning, stop and three targets.",
+    markets: ["Forex", "Gold (XAUUSD)", "Indices", "Crypto"],
+    description:
+      "DEFY brings four readings onto one chart: exhaustion bands around a smooth average, key levels where price has reacted before, a trend cloud and a confirmation score. An idea is only born when price stretches into the bands, turns with a strong candle and gathers at least three confirmations; the more it gathers, the more stars it gets. The plan stays fixed on the signal candle.",
+    features: [
+      "Inner, mid and outer exhaustion bands, with a dashed projection",
+      "Key levels where price has reacted, spaced apart",
+      "A +3 to +15 score with stars (★ to ★★★) and a King Idea on the gold candle",
+      "Entry on the close or on a 50% pullback, Warning and a 1 ATR stop",
+      "Targets at 1R, 2R and 3R (or Squeeze, Stretch and Swing modes), with the distance in pips",
+    ],
+    specs: [
+      "Trend cloud, coloured candles and follow-up arrows",
+      "Volume break labels",
+      "JSON alerts with the idea and its follow-ups (entry, TP1 to TP3, stop)",
+      "Forex, gold, indices and crypto, on any timeframe",
+      "Educational tool: it does not place orders or guarantee results",
+    ],
+    metaDescription: "DEFY by MTM: exhaustion bands, key levels and confirmations with stars on TradingView, with entry, Warning, stop and three targets. €50 per six months or €350 lifetime.",
+  },
+  sniperpro: {
+    title: ["Five readings.", "One chart."],
+    sub: "Exhaustion bands, a trend screener with its table, a Kalman cloud, pivots and key levels in one study, with the SniperPro Asst panel reading momentum.",
+    markets: ["Forex", "Gold (XAUUSD)", "Indices", "Crypto"],
+    description:
+      "SniperPro reads the market in layers. The 55-period bands show where price is stretched. The trend screener runs eleven adaptive averages, from 8 to 987, and sums them up in a table: bias, state and strength. The Kalman cloud colours the candles with or against the trend. Pivots and key levels mark where price has reacted before. When the short filter crosses the long one on a valid candle and most trend tools agree, a scored signal prints and the plan goes out by alert: entry, stop and three targets.",
+    metaDescription: "SniperPro by MTM: exhaustion bands, trend screener with table, Kalman cloud, pivots and key levels on TradingView, with the SniperPro Asst panel. €50 per six months or €350 lifetime.",
+  },
+  rocketnova: {
+    title: ["Lift off with the trend.", "With the plan on board."],
+    sub: "Three averages, launch stars, the Rocket Candle and a volatility pulse. Every signal comes with entry, stop and four targets, and the management follows by alerts.",
+    markets: ["Forex", "Gold (XAUUSD)", "Indices", "Crypto"],
+    description:
+      "RocketNova pairs the trend read of the 20, 50 and 238 EMAs with price structure: a signal is only born when the fast average crosses the slow one and there is a recent launch star, a swing low for a buy or a swing high for a sell. The Rocket Candle marks the impulse candle, the Volatility Pulse tells you whether ATR is above normal and the Trade Clock shows whether you are inside the session and with volume. Entry, stop and TP1 to TP4 stay fixed on the signal candle; after TP1 the stop moves to entry and an opposite signal closes the trade.",
+    features: [
+      "20, 50 and 238 EMAs with the signal on a cross confirmed at candle close",
+      "High and low stars by Depth, Deviation and Backstep (34 / 13 / 8)",
+      "Rocket Candle: the impulse candle painted yellow, with an optional filter",
+      "Volatility Pulse (ATR against its average) and a Trade Clock with Good / Low Volume",
+      "Entry, stop and TP1 to TP4 fixed on the candle, with the stop moved to entry after TP1",
+    ],
+    specs: [
+      "Fixed stop in points (auto mode: 100 pips, 200 on gold) or on the last star",
+      "Targets at 30%, 50%, 100% and 150% of the stop (60% for TP2 on gold)",
+      "Configurable trading session (08:00 to 21:00 by default)",
+      "JSON alerts with the entry and the follow-ups of the same trade, ready for webhooks",
+      "Forex, gold, indices and crypto; educational tool, it does not place orders",
+    ],
+    metaDescription: "RocketNova by MTM: 20/50/238 EMAs, launch stars, Rocket Candle and trade management on TradingView, with entry, stop and four targets. €50 per six months or €350 lifetime.",
+  },
+  goldenzone: {
+    title: ["Gold reacts at the levels.", "The zone tells you where to wait."],
+    sub: "Psychological levels every 5 $, a yellow check when the trend confirms, and the full plan on the close of the next candle.",
+    markets: ["Gold (XAUUSD)", "5 minutes", "Scalping", "TradingView"],
+    description:
+      "Golden Zone does not send you chasing price. It draws the psychological levels every 5 $ in gold and, when a candle closes beyond a level with the trend of the 50 and 200 averages, it marks the yellow check and the 1 $ box centred on that level. The zone of action is the edge on the price side. On the close of the next candle the scanner gives the parameters: invalidation 1.5 $ away (150 points), Exit 1 at +1.5 $ and Exit 2 at +3 $, written on the line with the price. The entry is yours, with a limit order in the zone when price pulls back. When Exit 1 is touched the gold flag appears; Exit 2 or the invalidation close the plan, and the next check clears the chart. You decide whether to enter, after the four confirmations of the guide.",
+    features: [
+      "Ten black psychological lines around price (5 $ in gold; automatic step in other markets), the only fixed lines",
+      "Yellow check and zone box when the candle crosses the level with the trend (EMA 50/200)",
+      "Zone of action, invalidation, Exit 1 and Exit 2 written on the line, with the price, on the close of the next candle",
+      "Gold flag at Exit 1; Exit 2 or the invalidation close the plan; the next check clears the chart",
+      "Stats table (signals, plans, Exits and invalidations), off by default",
+    ],
+    specs: [
+      "1 $ zone centred on the level; stop at 3 × half zone (1.5 $ = 150 points in gold), adjustable",
+      "Lines from the check candle, extended 20 bars ahead while the idea is open, frozen at the close",
+      "Your own colours for the zone of action, Exit 1, Exit 2 and invalidation; the chart only shows the 5 $ lines and the active position",
+      "JSON alerts per event (check, plan, Exit 1, Exit 2, invalidation) with the same id, plus simple alerts for each, ready for webhooks",
+      "Built for XAUUSD on 5 minutes; educational tool, it does not place orders",
+    ],
+    metaDescription: "Golden Zone by MTM: gold scalping on 5 minutes on TradingView, with psychological levels, zone of action, Exit 1 and Exit 2 and a 150-point invalidation. €50 per six months or €350 lifetime.",
+  },
+  quantum: {
+    title: ["The trend confirms first.", "The pullback gives the entry."],
+    sub: "Primary line, phase arrow and a strength panel per timeframe. Then the pullback to the ribbon, the oscillator in the zone and the triangle or dot that give the entry.",
+    markets: ["Forex", "Gold (XAUUSD)", "Indices", "Crypto"],
+    description:
+      "Quantum reads the market in three steps. First it confirms the direction: the primary line (a 269 average with a glow) turns blue with price above and red below, the large arrow marks the start of the phase and the strength panel gives a score from 0 to 100 with an arrow per timeframe, from M1 to W1. Then it waits for the pullback: price returns to the 8 and 21 EMA ribbon and the Stoch RSI enters the zone of the direction. Only then it gives the entry, a pullback triangle, a wave dot or both on the same candle, in a candle of the direction colour. Structure (HH, HL, LH, LL and trend lines), volatility bands and session highs and lows complete the read. Stop beyond the extreme of the pullback and a target at twice the risk, by alerts.",
+    features: [
+      "Primary line of 269 (EMA, SMA, WMA, HMA, RMA or VWMA), blue or red by phase, with a glow",
+      "Large phase arrow and a strength panel with a 0–100 score and arrows from M1 to W1",
+      "Pullback triangles (ribbon touch and close in favour) and wave dots (Stoch RSI leaving the zone)",
+      "HH/HL/LH/LL structure, trend lines through pivots and 2σ and 3σ volatility bands",
+      "New York, London and Asia session highs and lows, with labels",
+    ],
+    specs: [
+      "Stoch RSI 14 / %K 5 / smoothing 1 and 1, 80 and 20 zones, phase by a 260 EMA",
+      "21-bar swing for the labels and a 13-bar lookback for the trend lines",
+      "Signals on 5, 15 and 30 minutes switchable one by one; other timeframes always on",
+      "JSON alerts with entry, stop beyond the pullback, target at 2R and score, ready for webhooks",
+      "Forex, gold, indices and crypto; educational tool, it does not place orders",
+    ],
+    metaDescription: "Quantum by MTM: trend following with pullback entries on TradingView, with a primary line, strength panel per timeframe, oscillator and entry signals. €50 per six months or €350 lifetime.",
   },
   sensei: {
     title: ["Many readings.", "One confluence."],

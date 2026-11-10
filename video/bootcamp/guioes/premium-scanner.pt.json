@@ -1,0 +1,857 @@
+{
+ "estrategia": "Premium Scanner",
+ "motor": "premium-scanner",
+ "marca": "MoreThanMoney",
+ "cores": {
+  "bull": "#2F80ED",
+  "bear": "#E5484D"
+ },
+ "ui": {
+  "nivel": "Nível",
+  "compra": "Compra",
+  "venda": "Venda",
+  "entrada": "Entrada",
+  "tp1": "TP1",
+  "tp2": "TP2",
+  "tp3": "TP3"
+ },
+ "pronuncia": [
+  [
+   "XAUUSD",
+   "X A U U S D"
+  ],
+  [
+   "EMA",
+   "E M A"
+  ],
+  [
+   "TradingView",
+   "Trading View"
+  ],
+  [
+   "TP1",
+   "T P um"
+  ],
+  [
+   "TP2",
+   "T P dois"
+  ],
+  [
+   "TP3",
+   "T P três"
+  ],
+  [
+   "TP4",
+   "T P quatro"
+  ],
+  [
+   "UTC",
+   "U T C"
+  ],
+  [
+   "GMT",
+   "G M T"
+  ]
+ ],
+ "plano": {
+  "warning": false,
+  "slAtr": 1,
+  "alvos": [
+   1,
+   1.67,
+   2.33,
+   3
+  ],
+  "rotulos": [
+   "TP1",
+   "TP2",
+   "TP3",
+   "TP4"
+  ]
+ },
+ "videos": [
+  {
+   "rotulo": "Bootcamp Premium Scanner · 1/2",
+   "titulo": "Fundamentos: sessões, voto, zona e alvos",
+   "cenas": [
+    {
+     "id": "v1-00",
+     "tipo": "abertura",
+     "kicker": "Bootcamp MTM · Módulo 1 de 2",
+     "titulo": "Premium Scanner",
+     "sub": "O que é, e como se lê cada elemento",
+     "rodape": "morethanmoney.pt",
+     "semVoz": 5
+    },
+    {
+     "id": "v1-01",
+     "tipo": "frase",
+     "cap": "Boas-vindas",
+     "texto": "Passar sinais para regras. <span class='ouro'>Cada peça tem um porquê.</span>",
+     "autor": "Ricardo Garcia · MoreThanMoney",
+     "fala": "Olá, sou o Ricardo Garcia, e este é o Bootcamp Premium Scanner da MoreThanMoney. Antes de começarmos, uma ideia para os dois vídeos: um sinal só é útil se conseguires explicar porque apareceu. Este scanner nasceu de um estudo. Pegámos nos sinais de ouro publicados na sala Premium e medimos cada um: a direção, a hora, a zona, o stop e os alvos. Depois passámos para regras o que eles tinham em comum. Neste bootcamp vamos ver cada regra, uma de cada vez, e porque é que ela está lá. Sem prometer resultados. Só com lógica que possas verificar."
+    },
+    {
+     "id": "v1-02",
+     "tipo": "pontos",
+     "cap": "Boas-vindas",
+     "kicker": "O plano do bootcamp",
+     "titulo": "Dois vídeos, um método",
+     "itens": [
+      "Vídeo 1 · Sessões, voto de cinco, zona, stop e alvos",
+      "Vídeo 2 · Confirmações, ordem limite, saídas e rotina"
+     ],
+     "fala": "O bootcamp tem dois vídeos. Neste primeiro, vamos perceber o que é o scanner e cada peça do gráfico: as três sessões em que trabalha, o voto de cinco perguntas que decide a direção, a zona dourada onde a entrada acontece, e o stop e os quatro alvos. No segundo vídeo entramos na prática: as confirmações antes de cada sinal, a ordem limite, a forma de sair por partes, os casos em que não entras, e uma rotina curta para o dia a dia. Vê os dois por ordem. O segundo depende das regras do primeiro."
+    },
+    {
+     "id": "v1-03",
+     "tipo": "capitulo",
+     "cap": "01 · O que é o Premium Scanner",
+     "numero": "01",
+     "titulo": "O que é o Premium Scanner",
+     "sub": "Os sinais de ouro, passados para regras",
+     "fala": "Primeiro capítulo. O que é, afinal, o Premium Scanner?"
+    },
+    {
+     "id": "v1-04",
+     "tipo": "pontos",
+     "cap": "01 · O que é o Premium Scanner",
+     "kicker": "Em poucas palavras",
+     "titulo": "Ouro, quinze minutos, três sessões",
+     "itens": [
+      "Trabalha só no ouro, o XAUUSD",
+      "Gráfico de quinze minutos",
+      "Só dá sinais dentro de três sessões",
+      "Entrada em recuo, numa zona de cinco dólares",
+      "Stop fixo e quatro alvos"
+     ],
+     "fala": "O Premium Scanner trabalha só no ouro, o XAUUSD, e só no gráfico de quinze minutos. Não procura sinais em todo o dia. Só olha para o mercado dentro de três sessões, a asiática, a de Londres e a de Nova Iorque. Quando decide uma direção, não manda entrar ao preço. Desenha uma zona dourada de cinco dólares e espera que o preço recue até lá. O stop fica sempre à mesma distância, e os alvos também. Tudo isto aparece desenhado no gráfico, com o preço de cada nível, e pode ser enviado em alerta. O scanner não executa ordens. Quem decide és tu."
+    },
+    {
+     "id": "v1-05",
+     "tipo": "grafico",
+     "cap": "01 · O que é o Premium Scanner",
+     "kicker": "Primeiro olhar",
+     "titulo": "O gráfico com tudo ligado",
+     "cenario": "tendencia",
+     "seed": 7,
+     "base": [
+      "cores",
+      "sinal",
+      "plano",
+      "setas"
+     ],
+     "camadas": [],
+     "ate": [
+      0.55,
+      0.55
+     ],
+     "zoom": [
+      0,
+      0
+     ],
+     "fala": "Este é o aspecto do gráfico com tudo ligado. Vês as velas, a marca do sinal, a zona dourada, o stop e os alvos desenhados à direita da entrada. Antes de avançarmos, uma nota sobre todos os gráficos deste bootcamp: são ilustrativos, desenhados para explicar o funcionamento da estratégia. Não são histórico real de mercado, nem resultados de nenhuma operação. Vamos ler uma peça de cada vez, começando pelo mais simples, que é o tempo. Porque é que o scanner só olha para certas horas?"
+    },
+    {
+     "id": "v1-06",
+     "tipo": "capitulo",
+     "cap": "02 · As sessões",
+     "numero": "02",
+     "titulo": "As sessões",
+     "sub": "Só se opera dentro de horas definidas",
+     "fala": "Segundo capítulo: as sessões, e porque é que o tempo importa."
+    },
+    {
+     "id": "v1-07",
+     "tipo": "pontos",
+     "cap": "02 · As sessões",
+     "kicker": "Horas em UTC",
+     "titulo": "Três janelas de trabalho",
+     "itens": [
+      "Ásia: das 00:00 às 06:00 UTC",
+      "Londres: das 07:00 às 11:00 UTC",
+      "Nova Iorque: das 13:00 às 16:00 UTC",
+      "Fora destas janelas, o scanner não dá sinais"
+     ],
+     "fala": "As horas do scanner são apresentadas em UTC, que é o tempo universal, e isso evita confusões com as mudanças de hora de cada país. A sessão asiática vai da meia-noite às seis da manhã. A de Londres vai das sete às onze. E a de Nova Iorque vai da uma da tarde às quatro. Repara que há intervalos sem sessão. Fora destas janelas, o scanner não dá sinais. Não é um defeito. É uma regra: o guia trabalha só nos períodos em que as regras foram estudadas. Se o teu relógio não está em UTC, converte antes de olhares para o gráfico."
+    },
+    {
+     "id": "v1-08",
+     "tipo": "grafico",
+     "cap": "02 · As sessões",
+     "kicker": "Leitura 1",
+     "titulo": "Dentro e fora da sessão",
+     "cenario": "tendencia",
+     "seed": 21,
+     "base": [
+      "cores"
+     ],
+     "camadas": [],
+     "ate": [
+      0.4,
+      0.6
+     ],
+     "zoom": [
+      0,
+      0
+     ],
+     "fala": "Vê este troço de mercado. Há movimento, há velas, há tendência. Mas se não estás dentro de uma sessão ativa, o scanner fica em silêncio. Pode haver uma boa leitura visual, e mesmo assim não haver sinal. Esta é uma das lições mais simples e, ao mesmo tempo, mais difíceis do bootcamp: o gráfico pode parecer bonito fora de horas, e a estratégia não está a funcionar nessas horas. Quando vires um movimento forte fora da sessão, não o tomes como um sinal que perdeste. Tomas como um movimento que não é deste método."
+    },
+    {
+     "id": "v1-09",
+     "tipo": "comparar",
+     "cap": "02 · As sessões",
+     "kicker": "Interruptores",
+     "titulo": "Cada sessão, o seu interruptor",
+     "cartoes": [
+      {
+       "t": "Ásia",
+       "d": "Liga ou desliga no painel. Fora da janela, sem sinais."
+      },
+      {
+       "t": "Londres",
+       "d": "Liga ou desliga no painel. Fora da janela, sem sinais."
+      },
+      {
+       "t": "Nova Iorque",
+       "d": "Liga ou desliga no painel. Fora da janela, sem sinais."
+      }
+     ],
+     "fala": "Cada sessão tem o seu interruptor nas definições. Podes ligar as três, ou desligar uma delas. Se desligares a sessão de Londres, por exemplo, o scanner continua a funcionar na asiática e em Nova Iorque, mas não dá nada entre as sete e as onze. Mexer nos interruptores é uma decisão para estudar com calma, e não para fazer a meio do dia. Sugiro que, se estás a começar, deixes as três ligadas e estudes primeiro o comportamento de cada uma."
+    },
+    {
+     "id": "v1-10",
+     "tipo": "capitulo",
+     "cap": "03 · A direção",
+     "numero": "03",
+     "titulo": "A direção",
+     "sub": "Um voto de cinco perguntas",
+     "fala": "Terceiro capítulo: como o scanner decide a direção."
+    },
+    {
+     "id": "v1-11",
+     "tipo": "pontos",
+     "cap": "03 · A direção",
+     "kicker": "As cinco perguntas",
+     "titulo": "Cinco leituras do mesmo preço",
+     "itens": [
+      "Preço contra a abertura da sessão",
+      "Preço contra o de há 1 hora",
+      "Preço contra o de há 4 horas",
+      "Preço contra a média de 200",
+      "Preço contra a média de 9"
+     ],
+     "fala": "A direção sai de um voto de cinco perguntas. Cada pergunta compara o preço atual com uma referência. A primeira compara com a abertura da sessão. A segunda com o preço de há uma hora. A terceira com o de há quatro horas. A quarta com a média exponencial de duzentos. E a quinta com a média exponencial de nove. Cada uma responde compra ou venda. Não há uma pergunta mais importante do que as outras. O que importa é o conjunto, porque o scanner está a medir se o movimento tem consistência em várias escalas de tempo, e não apenas num instante."
+    },
+    {
+     "id": "v1-12",
+     "tipo": "comparar",
+     "cap": "03 · A direção",
+     "kicker": "Modos do voto",
+     "titulo": "Maioria ou unânime",
+     "cartoes": [
+      {
+       "t": "Maioria",
+       "d": "Basta a maioria das cinco perguntas. É a réplica dos sinais Premium."
+      },
+      {
+       "t": "Unânime",
+       "d": "Só quando as cinco concordam. Menos sinais, mais exigência."
+      },
+      {
+       "t": "Escolha",
+       "d": "Decide-a antes de começares, e mantém-na durante semanas."
+      }
+     ],
+     "fala": "O voto tem dois modos. No modo Maioria, basta que a maioria das cinco perguntas aponte para o mesmo lado. É este o modo que replica os sinais que estudámos. No modo Unânime, as cinco têm de concordar. Dá menos sinais, e é mais exigente. Não há um modo certo para todos. Escolhe um, e mantém-no durante várias semanas, para que o teu diário possa comparar resultados de forma justa. Mudar de modo a cada dois dias é a melhor maneira de nunca saberes o que estás a testar."
+    },
+    {
+     "id": "v1-13",
+     "tipo": "grafico",
+     "cap": "03 · A direção",
+     "kicker": "Leitura 2",
+     "titulo": "O voto decide a compra",
+     "cenario": "compra",
+     "seed": 7,
+     "base": [
+      "cores"
+     ],
+     "camadas": [
+      "sinal"
+     ],
+     "ate": [
+      0.6,
+      0.66
+     ],
+     "zoom": [
+      0,
+      0
+     ],
+     "fala": "Aqui o voto decidiu compra. O preço está acima da abertura da sessão, acima do que tinha há uma hora e acima do que tinha há quatro horas. Está acima da média de duzentos, e também acima da média de nove. As cinco perguntas apontam para cima, ou pelo menos a maioria delas, e o scanner marca a direção. Repara que o sinal aparece no fecho da vela de quinze minutos. Não é o preço a mexer que o dispara. É a vela fechada, com o voto decidido."
+    },
+    {
+     "id": "v1-14",
+     "tipo": "capitulo",
+     "cap": "04 · A zona e o stop",
+     "numero": "04",
+     "titulo": "A zona e o stop",
+     "sub": "Entrar em recuo, e não a perseguir",
+     "fala": "Quarto capítulo: a zona, o stop e a lógica do recuo."
+    },
+    {
+     "id": "v1-15",
+     "tipo": "grafico",
+     "cap": "04 · A zona e o stop",
+     "kicker": "O plano",
+     "titulo": "Zona dourada, stop e alvos",
+     "cenario": "compra",
+     "seed": 7,
+     "base": [
+      "cores",
+      "sinal"
+     ],
+     "camadas": [
+      "plano"
+     ],
+     "ate": [
+      0.6,
+      1
+     ],
+     "zoom": [
+      0,
+      0.5
+     ],
+     "fala": "Quando o sinal aparece, o scanner não manda entrar ao preço de fecho. Desenha uma zona dourada, e espera que o preço volte lá. A zona tem cinco dólares de largura. O meio da zona fica quatro dólares contra o preço, ou seja, a entrada é em recuo. O stop fica cinco dólares para lá da zona, e os alvos ficam a partir da borda da zona. Esta lógica tem uma razão simples: quem persegue o preço entra longe do ponto que deu origem ao sinal, e o risco fica maior do que o desenhado. Quem espera pelo recuo entra mais perto, com um stop que já estava definido."
+    },
+    {
+     "id": "v1-16",
+     "tipo": "pontos",
+     "cap": "04 · A zona e o stop",
+     "kicker": "As medidas",
+     "titulo": "Zona de cinco, stop de cinco",
+     "itens": [
+      "Zona dourada de cinco dólares de largura",
+      "Meio da zona quatro dólares contra o preço",
+      "Stop cinco dólares para lá da zona",
+      "As distâncias são editáveis nas definições"
+     ],
+     "fala": "Vamos fixar as medidas. A zona dourada tem cinco dólares de largura. O meio da zona fica quatro dólares contra o preço do sinal, e é aí que colocas a ordem. O stop fica cinco dólares para lá da zona, e não se mexe com a entrada. Estas distâncias são padrão, mas são editáveis nas definições. Se mudares uma delas, muda a ideia toda. Por isso, a primeira coisa a fazer é manter as medidas do guia e observar o comportamento durante várias semanas, antes de tocar em qualquer número."
+    },
+    {
+     "id": "v1-17",
+     "tipo": "comparar",
+     "cap": "04 · A zona e o stop",
+     "kicker": "Os alvos",
+     "titulo": "Quatro alvos a partir da zona",
+     "cartoes": [
+      {
+       "t": "TP1 · 5 $",
+       "d": "Cinco dólares da borda da zona. Aqui metade sai e o stop vai para a entrada."
+      },
+      {
+       "t": "TP2 · 10 $",
+       "d": "Dez dólares da borda da zona. Sai um quarto da posição."
+      },
+      {
+       "t": "TP3 e TP4 · 15 $ e 20 $",
+       "d": "Terceiro alvo a quinze, e um quarto alvo a vinte para deixar correr."
+      }
+     ],
+     "fala": "Quatro alvos, sempre medidos a partir da borda da zona. O primeiro está cinco dólares à frente. O segundo, dez. O terceiro, quinze. E o quarto, vinte, serve para deixar correr a parte final da posição. Cada um destes alvos tem uma percentagem de saída associada, que também é editável. Por omissão, metade sai no primeiro alvo, e o stop da parte restante passa para o preço de entrada. Mais à frente falamos da gestão. Por agora, o importante é perceber que os alvos não são aleatórios: são a mesma distância, medida da mesma maneira, em cada sinal."
+    },
+    {
+     "id": "v1-18",
+     "tipo": "pontos",
+     "cap": "04 · A zona e o stop",
+     "kicker": "De onde vêm as regras",
+     "titulo": "Estudo, não palpite",
+     "itens": [
+      "Medimos cada sinal da sala Premium",
+      "Direção, hora, zona, stop e alvos",
+      "Passámos para regras o que tinham em comum",
+      "O painel aplica as regras, não um palpite"
+     ],
+     "fala": "Vale a pena dizer de onde vêm estas regras. Pegámos nos sinais de ouro publicados na sala Premium, e medimos cada um deles: a direção, a hora, a zona, o stop e os alvos. Depois procurámos o que tinham em comum, e transformámos isso em regras que o scanner aplica sozinho. Não é um palpite de alguém sobre o mercado. É um conjunto de medidas, com regras explícitas, que podes ver no gráfico e verificar. Isso não garante nada no futuro. Mas dá-te algo que muitos indicadores não dão: uma origem declarada, e regras que consegues ler."
+    },
+    {
+     "id": "v1-19",
+     "tipo": "grafico",
+     "cap": "04 · A zona e o stop",
+     "kicker": "Lê tu primeiro",
+     "titulo": "Uma venda, lida por ti",
+     "cenario": "venda",
+     "seed": 11,
+     "base": [
+      "cores",
+      "sinal"
+     ],
+     "camadas": [
+      "plano"
+     ],
+     "ate": [
+      0.6,
+      0.62
+     ],
+     "zoom": [
+      0,
+      0.3
+     ],
+     "fala": "Agora é a tua vez. Pausa o vídeo e lê este gráfico sozinho. Estás dentro de uma sessão ativa? De que lado ficou o preço em relação à abertura da sessão? E em relação à média de duzentos? Quantas das cinco perguntas apontam para baixo? Onde ficaria a zona dourada, e onde ficaria o stop? Responde a estas perguntas antes de continuares. Pronto? Está dentro de uma sessão. A maioria das perguntas aponta para baixo. A zona fica acima do preço, porque é uma venda em recuo, e o stop fica cinco dólares para lá dela. Confirmaste a leitura? Ótimo. No segundo vídeo vês o que se segue."
+    },
+    {
+     "id": "v1-20",
+     "tipo": "checklist",
+     "cap": "Resumo",
+     "kicker": "Resumo do módulo 1",
+     "titulo": "O que tens de saber ler",
+     "itens": [
+      "Ouro, quinze minutos, dentro de uma sessão",
+      "Voto de cinco perguntas, em maioria ou unânime",
+      "Zona dourada de cinco dólares, entrada em recuo",
+      "Stop fixo cinco dólares para lá da zona",
+      "Quatro alvos, a partir da borda da zona"
+     ],
+     "fala": "Resumindo o primeiro vídeo. O scanner trabalha só no ouro, no gráfico de quinze minutos, e só dentro das três sessões. O voto de cinco perguntas decide a direção, em maioria ou em unânime. A entrada acontece em recuo, numa zona dourada de cinco dólares. O stop fica fixo, cinco dólares para lá da zona. E os quatro alvos são medidos a partir da borda da zona. Se consegues ler estas cinco peças no gráfico, estás pronto para o segundo vídeo."
+    },
+    {
+     "id": "v1-21",
+     "tipo": "pontos",
+     "cap": "Exercício",
+     "kicker": "Antes do vídeo 2",
+     "titulo": "O teu trabalho de casa",
+     "itens": [
+      "Escolhe uma sessão e observa só essa",
+      "Anota o voto de cinco perguntas em dez sinais",
+      "Para cada um, anota se a zona foi atingida",
+      "Não operes ainda: só observa"
+     ],
+     "fala": "Antes do segundo vídeo, o exercício. Escolhe uma só sessão, e observa só essa. Procura dez sinais no histórico. Para cada um, anota o voto de cinco perguntas, e se o preço chegou à zona dourada. Depois anota se o stop foi atingido antes do primeiro alvo. Não operes ainda. Este exercício treina o teu olho para ver o voto e a zona como o scanner os vê, o que vale mais do que qualquer explicação escrita."
+    },
+    {
+     "id": "v1-22",
+     "tipo": "aviso",
+     "cap": "",
+     "titulo": "Até ao vídeo 2",
+     "sub": "Confirmações, entrada e gestão",
+     "texto": "Conteúdo educativo. Não é aconselhamento financeiro. Negociar forex, índices, metais e cripto envolve risco elevado e podes perder parte ou a totalidade do capital. Os gráficos deste vídeo são ilustrativos. Resultados passados não garantem resultados futuros.",
+     "fala": "Lembra-te: isto é conteúdo educativo e não é aconselhamento financeiro. Negociar ouro tem risco, e podes perder parte ou a totalidade do capital. Treina primeiro em conta demo. Vemo-nos no segundo vídeo.",
+     "respiro": 4
+    }
+   ]
+  },
+  {
+   "rotulo": "Bootcamp Premium Scanner · 2/2",
+   "titulo": "Confirmações, ordem, saídas e rotina",
+   "cenas": [
+    {
+     "id": "v2-00",
+     "tipo": "abertura",
+     "kicker": "Bootcamp MTM · Módulo 2 de 2",
+     "titulo": "Premium Scanner",
+     "sub": "Confirmações, ordem, saídas e rotina",
+     "rodape": "morethanmoney.pt",
+     "semVoz": 5
+    },
+    {
+     "id": "v2-01",
+     "tipo": "pontos",
+     "cap": "Boas-vindas",
+     "kicker": "Neste vídeo",
+     "titulo": "Do sinal à saída",
+     "itens": [
+      "As quatro condições antes de cada sinal",
+      "A ordem limite no meio da zona",
+      "Saídas por partes e stop para a entrada",
+      "Quando não entrar",
+      "Uma rotina curta para o dia a dia"
+     ],
+     "fala": "Bem-vindo ao segundo vídeo do Bootcamp Premium Scanner. No primeiro percebeste o voto, a zona, o stop e os alvos. Agora vamos à prática. Vemos as condições que o scanner exige antes de cada sinal, como colocar a ordem limite, o que fazer se a ordem não for preenchida, como sair por partes, quando não entrar, e uma rotina curta para o dia a dia. É o vídeo com mais regras seguidas. Pausa sempre que precisares, e volta atrás às regras do primeiro vídeo quando algo não bater certo."
+    },
+    {
+     "id": "v2-02",
+     "tipo": "capitulo",
+     "cap": "01 · Confirmações",
+     "numero": "01",
+     "titulo": "Confirmações",
+     "sub": "Quatro condições para cada sinal",
+     "fala": "Primeiro capítulo: as condições que um sinal tem de cumprir."
+    },
+    {
+     "id": "v2-03",
+     "tipo": "checklist",
+     "cap": "01 · Confirmações",
+     "kicker": "Quatro condições",
+     "titulo": "Tudo tem de se cumprir",
+     "itens": [
+      "Estás dentro de uma sessão ativa",
+      "O voto está decidido: maioria, ou as cinco no modo unânime",
+      "Passou pelo menos meia hora desde o sinal anterior",
+      "Ainda não houve seis sinais nesta sessão"
+     ],
+     "fala": "O scanner só dispara quando as quatro condições se cumprem, no fecho da vela de quinze minutos. A primeira é estares dentro de uma sessão ativa, seja a asiática, a de Londres ou a de Nova Iorque. A segunda é o voto estar decidido. No modo Maioria, basta a maioria das cinco perguntas. No modo Unânime, têm de ser as cinco. A terceira é passar pelo menos meia hora desde o sinal anterior. E a quarta é ainda não terem havido seis sinais nesta sessão. Se alguma destas condições falhar, o scanner não dá sinal, e a tua atenção deve ir para outra coisa."
+    },
+    {
+     "id": "v2-04",
+     "tipo": "pontos",
+     "cap": "01 · Confirmações",
+     "kicker": "Pausas e limites",
+     "titulo": "Pausa e teto por sessão",
+     "itens": [
+      "Meia hora entre sinais, medida em velas de quinze minutos",
+      "Seis sinais por sessão, no máximo",
+      "O teto é um limite, não uma meta",
+      "Os dois valores estão nas definições"
+     ],
+     "fala": "Há duas regras de espaçamento que muita gente ignora. A pausa obriga a esperar pelo menos meia hora entre um sinal e o seguinte. E o teto obriga a não passar de seis sinais numa mesma sessão. O teto é um limite, não uma meta. Se o scanner dá seis sinais, não significa que devas procurar mais. Significa que a sessão já fez o que tinha para fazer. Estes dois valores estão nas definições, e podem ser ajustados. Antes de ajustares, lembra-te de que eles existem para tornar o processo mais previsível, e não para o tornar mais agressivo."
+    },
+    {
+     "id": "v2-05",
+     "tipo": "grafico",
+     "cap": "01 · Confirmações",
+     "kicker": "Exemplo",
+     "titulo": "O voto decidido, a vela fechada",
+     "cenario": "compra",
+     "seed": 7,
+     "base": [
+      "cores"
+     ],
+     "camadas": [
+      "sinal"
+     ],
+     "ate": [
+      0.55,
+      0.62
+     ],
+     "zoom": [
+      0,
+      0
+     ],
+     "fala": "Vê este sinal de compra, e percorre as condições. Estás dentro de uma sessão ativa, porque a vela está na janela de Londres. O voto está decidido, porque a maioria das cinco perguntas aponta para cima. O sinal anterior foi há mais de meia hora, e ainda não houve seis sinais nesta sessão. E o sinal aparece no fecho da vela de quinze minutos. Repara que a leitura é mecânica. Não há nada a adivinhar. Ou as quatro condições estão cumpridas, ou não estão."
+    },
+    {
+     "id": "v2-06",
+     "tipo": "comparar",
+     "cap": "01 · Confirmações",
+     "kicker": "Modos do voto",
+     "titulo": "Menos sinais, mais exigência",
+     "cartoes": [
+      {
+       "t": "Maioria",
+       "d": "A réplica dos sinais Premium. Mais sinais, mais ruído."
+      },
+      {
+       "t": "Unânime",
+       "d": "As cinco perguntas de acordo. Menos sinais, mais exigência."
+      },
+      {
+       "t": "Comparação justa",
+       "d": "Só se compara um modo com o mesmo modo, durante semanas."
+      }
+     ],
+     "fala": "Recordas os dois modos do voto. O Maioria replica os sinais que estudámos, e por isso dá mais sinais. O Unânime exige acordo total, e dá menos. Nenhum é melhor em absoluto. O erro comum é mudar de modo sempre que um sinal falha, e depois não ter dados para comparar. Se escolheste Unânime, mantém Unânime, e anota no diário. Se escolheste Maioria, faz o mesmo. Só ao fim de várias semanas com o mesmo modo consegues perceber se o voto te serve a ti, no teu horário e no teu estilo."
+    },
+    {
+     "id": "v2-07",
+     "tipo": "capitulo",
+     "cap": "02 · Entrada",
+     "numero": "02",
+     "titulo": "Entrada",
+     "sub": "A ordem limite no meio da zona",
+     "fala": "Segundo capítulo: a entrada, com ordem limite, em recuo."
+    },
+    {
+     "id": "v2-08",
+     "tipo": "plano",
+     "cap": "02 · Entrada",
+     "kicker": "Passos",
+     "titulo": "Da vela à ordem",
+     "linhas": [
+      [
+       "Sinal",
+       "Fecho da vela de quinze minutos",
+       "entrada"
+      ],
+      [
+       "Ordem",
+       "Limite no meio da zona dourada",
+       "entrada"
+      ],
+      [
+       "Validade",
+       "Cancelada se não preencher em uma hora",
+       "warning"
+      ],
+      [
+       "Lote",
+       "Calculado pelo risco que aceitas perder",
+       "entrada"
+      ]
+     ],
+     "fala": "A entrada segue uma sequência clara. O sinal aparece no fecho da vela de quinze minutos. Com o sinal, colocas uma ordem limite no meio da zona dourada. Essa ordem tem validade: se não for preenchida em quatro velas, o que são uma hora, cancelas. E o lote calcula-se pelo risco que aceitas perder no stop, e não por um número fixo. Repara que estes passos foram pensados para não te deixar perseguir o preço. A ordem já está à espera no sítio certo, e o stop já está definido antes de entrares."
+    },
+    {
+     "id": "v2-09",
+     "tipo": "pontos",
+     "cap": "02 · Entrada",
+     "kicker": "A ordem limite",
+     "titulo": "No meio da zona, com prazo",
+     "itens": [
+      "Coloca a ordem limite no meio da zona dourada",
+      "Se não preencher em quatro velas, cancela",
+      "Quatro velas de quinze minutos são uma hora",
+      "Depois da primeira hora, esse sinal já passou"
+     ],
+     "fala": "Vamos fixar a ordem limite. Colocas a ordem no meio da zona dourada, e não na borda. Se o preço não chegar a esse nível em quatro velas, que são uma hora, cancelas a ordem. A regra é simples, mas tem uma consequência importante: depois da primeira hora, o sinal já passou. Se a ordem não foi preenchida nesse tempo, não a deixes ficar à espera, e não a mudes para um preço mais favorável. Aceitar que um sinal passou é parte da disciplina, e é uma das coisas mais difíceis de treinar."
+    },
+    {
+     "id": "v2-10",
+     "tipo": "grafico",
+     "cap": "02 · Entrada",
+     "kicker": "Na prática",
+     "titulo": "Preenchida na zona",
+     "cenario": "compra",
+     "seed": 7,
+     "base": [
+      "cores"
+     ],
+     "camadas": [
+      "sinal",
+      "plano"
+     ],
+     "ate": [
+      0.6,
+      0.9
+     ],
+     "zoom": [
+      0,
+      0
+     ],
+     "fala": "Vê a ordem preenchida. O sinal apareceu no fecho da vela, e a ordem limite ficou à espera no meio da zona dourada. O preço recuou até lá, e a ordem foi executada. O stop está cinco dólares para lá da zona, e os alvos estão desenhados à frente. A partir deste ponto, o gráfico já não muda o plano. O que está desenhado é o que vais gerir. A entrada foi em recuo, e não a perseguir o preço. É essa diferença que mantém o risco igual ao que estava previsto."
+    },
+    {
+     "id": "v2-11",
+     "tipo": "capitulo",
+     "cap": "03 · Gestão e saídas",
+     "numero": "03",
+     "titulo": "Gestão e saídas",
+     "sub": "Metade no primeiro alvo, o resto a correr",
+     "fala": "Terceiro capítulo: a gestão, e as saídas por partes."
+    },
+    {
+     "id": "v2-12",
+     "tipo": "pontos",
+     "cap": "03 · Gestão e saídas",
+     "kicker": "Saídas",
+     "titulo": "Por partes, com o stop a acompanhar",
+     "itens": [
+      "Metade no primeiro alvo, a cinco dólares",
+      "Depois do TP1, o stop da parte restante vai para a entrada",
+      "Um quarto no segundo alvo, a dez dólares",
+      "Um quarto no terceiro, a quinze, ou deixa correr até ao quarto"
+     ],
+     "fala": "A saída segue uma regra por partes, pela ordem que o guia indica. No primeiro alvo, a cinco dólares da borda da zona, fechas metade da posição, e o stop da parte que resta passa para o preço de entrada. A partir daqui, a parte restante já não pode dar prejuízo. No segundo alvo, a dez dólares, fechas um quarto. E no terceiro, a quinze dólares, fechas o último quarto, ou deixas-o correr até ao quarto alvo, a vinte dólares. As percentagens são editáveis nas definições. A ordem das saídas, porém, é a que te deixa a posição mais protegida ao longo do caminho."
+    },
+    {
+     "id": "v2-13",
+     "tipo": "grafico",
+     "cap": "03 · Gestão e saídas",
+     "kicker": "Primeiro alvo",
+     "titulo": "Primeiro alvo e saída na entrada",
+     "cenario": "compra",
+     "seed": 7,
+     "base": [
+      "cores",
+      "sinal"
+     ],
+     "camadas": [
+      "plano",
+      "setas"
+     ],
+     "ate": [
+      0.6,
+      1
+     ],
+     "zoom": [
+      0.5,
+      0.5
+     ],
+     "fala": "Vê o que acontece no primeiro alvo. Metade da posição sai com lucro, e o stop da parte restante passa para o preço de entrada. O preço ainda recua, e chega à entrada. Como o stop já estava lá, a parte restante sai sem perda. Esta é uma das situações que o guia descreve: o primeiro alvo atingido, e a saída na entrada. O resultado final fica com a parte que saiu no alvo, e a posição restante não pode dar prejuízo. Não é um truque. É a sequência escrita antes de entrares."
+    },
+    {
+     "id": "v2-14",
+     "tipo": "comparar",
+     "cap": "03 · Gestão e saídas",
+     "kicker": "Stop e definições",
+     "titulo": "Onde fica o stop, e o que se ajusta",
+     "cartoes": [
+      {
+       "t": "Stop inicial",
+       "d": "Cinco dólares para lá da zona. Não se mexe para mais longe."
+      },
+      {
+       "t": "Stop para a entrada",
+       "d": "Depois do primeiro alvo. A parte restante já não arrisca."
+      },
+      {
+       "t": "Percentagens",
+       "d": "Editáveis nas definições. Muda uma de cada vez, com diário."
+      }
+     ],
+     "fala": "Três pontos sobre o stop e as definições. O stop inicial fica cinco dólares para lá da zona, e não se mexe para mais longe, em caso algum. Depois do primeiro alvo, o stop da parte restante passa para a entrada, e é aí que a posição fica sem risco. E as percentagens de saída são editáveis. Se quiseres alterar alguma, muda uma de cada vez, e regista a alteração no diário. Mudar tudo ao mesmo tempo impede-te de saber o que funcionou e o que não funcionou."
+    },
+    {
+     "id": "v2-15",
+     "tipo": "capitulo",
+     "cap": "04 · Quando não entrar",
+     "numero": "04",
+     "titulo": "Quando não entrar",
+     "sub": "Os casos em que o guia pede para esperar",
+     "fala": "Quarto capítulo: quando não entrar."
+    },
+    {
+     "id": "v2-16",
+     "tipo": "checklist",
+     "cap": "04 · Quando não entrar",
+     "kicker": "Deixa passar quando",
+     "titulo": "Cinco situações",
+     "itens": [
+      "Noutro ativo, ou noutro timeframe que não o ouro de quinze minutos",
+      "Fora das sessões, ou numa sessão desligada",
+      "A ordem não foi preenchida na primeira hora",
+      "Com lote fixo, em vez de calculado pelo risco",
+      "Em conta real, antes de treinares as regras em demo"
+     ],
+     "fala": "O guia enumera cinco situações em que não entras. Primeira: noutro ativo, ou noutro timeframe. As distâncias estão medidas para o ouro em quinze minutos, e não servem para mais nada sem nova medição. Segunda: fora das sessões, ou numa sessão que desligaste. Terceira: quando a ordem não foi preenchida na primeira hora. Esse sinal já passou. Quarta: com lote fixo, em vez de um lote calculado pelo risco. E quinta: em conta real, antes de treinares as regras em demo. Qualquer uma destas situações basta para não entrares."
+    },
+    {
+     "id": "v2-17",
+     "tipo": "grafico",
+     "cap": "04 · Quando não entrar",
+     "kicker": "Stop",
+     "titulo": "Preenchida, mas sem chegar ao alvo",
+     "cenario": "falha",
+     "seed": 11,
+     "base": [
+      "cores"
+     ],
+     "camadas": [
+      "sinal",
+      "plano"
+     ],
+     "ate": [
+      0.62,
+      0.9
+     ],
+     "zoom": [
+      0,
+      0
+     ],
+     "fala": "Vê o que acontece quando o trade falha. A venda é preenchida na zona, mas o preço não chega ao primeiro alvo. Em vez disso, sobe, e bate no stop, cinco dólares para lá da zona. A perda já estava definida antes da entrada. Não há surpresa, e não há improviso. O stop não foi mexido, e a perda é exatamente a que o painel mostrou. Num método assim, o stop atingido não é um erro de execução. É uma das saídas previstas."
+    },
+    {
+     "id": "v2-18",
+     "tipo": "pontos",
+     "cap": "04 · Quando não entrar",
+     "kicker": "Duas saídas possíveis",
+     "titulo": "Stop ou alvo, sem surpresa",
+     "itens": [
+      "A ordem preenche, mas o preço não chega ao TP1",
+      "O stop é atingido, e a perda estava definida",
+      "Se o TP1 foi atingido, o resto sai na entrada",
+      "Em nenhum dos casos, o stop se mexe para mais longe"
+     ],
+     "fala": "Há duas saídas típicas, e ambas estavam previstas. Na primeira, a ordem é preenchida, mas o preço não chega ao primeiro alvo, e bate no stop. Perdes o que estava definido antes da entrada. Na segunda, o preço chega ao primeiro alvo, metade sai com lucro, e o resto volta à entrada sem perda. Nos dois casos, não há mudança de stop para mais longe. Esta é a regra que mais protege o processo, e é a que mais tentação gera quando o trade está a correr mal. Não a quebres."
+    },
+    {
+     "id": "v2-19",
+     "tipo": "grafico",
+     "cap": "04 · Quando não entrar",
+     "kicker": "Até ao terceiro alvo",
+     "titulo": "Quando a tendência continua",
+     "cenario": "tendencia",
+     "seed": 21,
+     "base": [
+      "cores"
+     ],
+     "camadas": [
+      "plano",
+      "setas"
+     ],
+     "ate": [
+      0.6,
+      1
+     ],
+     "zoom": [
+      0,
+      0.5
+     ],
+     "fala": "Este é o caso em que a tendência continua. A ordem é preenchida na zona, o preço sobe, e o primeiro alvo é atingido. Metade sai, e o stop da parte restante passa para a entrada. O preço continua, atinge o segundo alvo, e depois o terceiro. Em cada etapa, a decisão já estava tomada antes. Não há improviso, não há mudança de regras a meio. A posição fecha como o plano dizia, e o resultado sai da soma das partes. Isto só funciona se cada etapa tiver sido escrita antes de entrares."
+    },
+    {
+     "id": "v2-20",
+     "tipo": "pontos",
+     "cap": "05 · Diário",
+     "kicker": "Registo",
+     "titulo": "Mede em R e regista o modo",
+     "itens": [
+      "Data, hora, sessão e direção",
+      "Modo do voto e as cinco perguntas",
+      "Resultado em R, e se seguiste o plano",
+      "Quantos sinais houve nessa sessão"
+     ],
+     "fala": "Depois de cada trade, regista-o no diário. Escreve a data, a hora, a sessão e a direção. Escreve o modo do voto, e de que lado ficaram as cinco perguntas. Mede o resultado em R, porque é comparável de um trade para o outro. Responde se seguiste o plano. E escreve quantos sinais houve nessa sessão, porque o teto de seis pode mudar a leitura do dia. Ao fim de algumas semanas, o diário diz-te em que sessão e em que modo o scanner te serve melhor. Ninguém pode dar-te esse número. Só o teu diário o pode fazer."
+    },
+    {
+     "id": "v2-21",
+     "tipo": "capitulo",
+     "cap": "05 · Rotina",
+     "numero": "05",
+     "titulo": "Rotina curta",
+     "sub": "Consistência ganha à intensidade",
+     "fala": "Quinto capítulo: a rotina para o dia a dia."
+    },
+    {
+     "id": "v2-22",
+     "tipo": "checklist",
+     "cap": "05 · Rotina",
+     "kicker": "Todos os dias",
+     "titulo": "Quinze minutos, cinco passos",
+     "itens": [
+      "Ver as sessões de hoje, em UTC",
+      "Confirmar que os interruptores estão como queres",
+      "Ver o voto no gráfico de quinze minutos",
+      "Rever ordens abertas e canceladas",
+      "Atualizar o diário"
+     ],
+     "fala": "A rotina cabe em quinze minutos. Primeiro, vês as sessões de hoje, em UTC, e quais estão ligadas. Segundo, confirmas que os interruptores estão como decidiste. Terceiro, olhas para o voto no gráfico de quinze minutos. Quarto, revês as ordens abertas e as canceladas, e aplicas a gestão que vimos. Quinto, atualizas o diário. O resto do dia, o scanner trabalha sozinho. Não precisas de estar agarrado ao ecrã. Precisas de ser consistente, e de respeitar os limites que escreveste antes."
+    },
+    {
+     "id": "v2-23",
+     "tipo": "pontos",
+     "cap": "Resumo",
+     "kicker": "Checklist de bolso",
+     "titulo": "O processo Premium Scanner completo",
+     "itens": [
+      "Ouro em quinze minutos, dentro da sessão",
+      "Seta no fecho da vela",
+      "Ordem limite no meio da zona, cancelada ao fim de uma hora",
+      "Lote calculado pelo risco",
+      "Metade no primeiro alvo, stop na entrada",
+      "Um quarto no segundo, um quarto no terceiro"
+     ],
+     "fala": "Para fechar, a checklist de bolso. Ouro em quinze minutos, dentro da sessão. Seta no fecho da vela. Ordem limite no meio da zona, cancelada ao fim de uma hora. Lote calculado pelo risco. Metade no primeiro alvo, com o stop na entrada. E um quarto no segundo, e um quarto no terceiro. Se seguires estes passos sempre, mesmo quando é aborrecido, estás à frente de muita gente que opera sem processo. Não há promessas nesta lista. Há disciplina, e a disciplina depende de ti."
+    },
+    {
+     "id": "v2-24",
+     "tipo": "aviso",
+     "cap": "",
+     "titulo": "Bootcamp Premium Scanner concluído",
+     "sub": "morethanmoney.pt",
+     "texto": "Conteúdo educativo. Não é aconselhamento financeiro. Negociar forex, índices, metais e cripto envolve risco elevado e podes perder parte ou a totalidade do capital. Os gráficos deste vídeo são ilustrativos. Resultados passados não garantem resultados futuros.",
+     "fala": "Conteúdo educativo, não é aconselhamento financeiro. Negociar ouro tem risco, e podes perder dinheiro. Define o teu risco antes de cada entrada e treina em conta demo. Até à próxima.",
+     "respiro": 4
+    }
+   ]
+  }
+ ]
+}

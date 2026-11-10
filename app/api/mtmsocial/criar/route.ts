@@ -4,6 +4,7 @@ import { userIdDoPedido } from '@/lib/sessao-do-pedido'
 import { uploadBufferToBucket } from '@/lib/instagram/publish'
 import { renderCarrossel, renderElemento, socialCardElement, type Lamina } from '@/lib/social-card'
 import { chamarIA, mensagemIndisponivel } from '@/lib/ia/chamar'
+import { blocoFramework } from '@/lib/framework-mtm'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -72,7 +73,7 @@ async function escrever(
         '· LAMINAS — as do meio. Uma ideia por lâmina, 12 a 25 palavras.\n' +
         '· CAPTION — a legenda, até 6 linhas, a acabar a pedir o comentário.\n\n' +
         'Português de Portugal, tratamento por tu. NUNCA prometas lucro nem inventes números, ' +
-        'percentagens ou datas. Sem emojis, sem hashtags, sem aspas dentro do texto.',
+        'percentagens ou datas. Sem emojis, sem hashtags, sem aspas dentro do texto.\n\n' + blocoFramework('conteudo'),
       mensagens: [{ role: 'user', content: `Tema: ${tema}\nPalavra do CTA: ${cta}\nLâminas do meio: ${quantas}` }],
     })
     const o = JSON.parse(r.texto) as { hook?: string; laminas?: string[]; caption?: string }

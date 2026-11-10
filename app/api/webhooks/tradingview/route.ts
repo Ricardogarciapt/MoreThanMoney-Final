@@ -57,6 +57,9 @@ import { formatarSeguimento, formatarSinal } from "@/lib/sinais/formato-sinal"
 import { decidirPublicacaoGenerica } from "@/lib/sinais/publicacao-generica"
 import { eAlertaTrendshot } from "@/lib/sinais/trendshot"
 import { eAlertaPremiumScanner } from "@/lib/sinais/premium-scanner-webhook"
+import { eAlertaDefy } from "@/lib/sinais/defy-webhook"
+import { eAlertaRocketnova } from "@/lib/sinais/rocketnova"
+import { eAlertaQuantum } from "@/lib/sinais/quantum"
 import { TIMEFRAMES_POR_ESTRATEGIA, slFixo, timeframeAceite } from "@/lib/sinais/sl-por-estrategia"
 import { avaliarEntradaTardiaAoVivo } from "@/lib/sinais/filtro-entrada-tardia"
 import { marcaDaEstrategia } from "@/lib/sinais/grafico-estrategia"
@@ -522,6 +525,25 @@ async function processarAlerta(request: NextRequest) {
   if (eAlertaPremiumScanner(url.searchParams.get("strategy"), payload)) {
     const { processarPremiumScanner } = await import("@/lib/sinais/premium-scanner-webhook")
     return NextResponse.json(await processarPremiumScanner(payload))
+  }
+
+  // DEFY (04/11): entrada + seguimentos da própria trade (tp1..tp3, sl, cancel) pelo mesmo alerta.
+  if (eAlertaDefy(url.searchParams.get("strategy"), payload)) {
+    const { processarDefy } = await import("@/lib/sinais/defy-webhook")
+    return NextResponse.json(await processarDefy(payload))
+  }
+
+  // RocketNova (08/11): princípios do TrendShot com código próprio — entrada + seguimentos da própria
+  // trade (tp1..tp4, sl, be, exit) pelo mesmo alerta; o alerta simples também entra (níveis AUTO).
+  if (eAlertaRocketnova(url.searchParams.get("strategy"), payload, rawBody)) {
+    const { processarRocketnova } = await import("@/lib/sinais/rocketnova-webhook")
+    return NextResponse.json(await processarRocketnova(payload, rawBody, url.searchParams))
+  }
+
+  // Quantum by MTM (08/11): entrada com stop no extremo e alvo a 2R; o tracker segue a trade.
+  if (eAlertaQuantum(url.searchParams.get("strategy"), payload, rawBody)) {
+    const { processarQuantum } = await import("@/lib/sinais/quantum-webhook")
+    return NextResponse.json(await processarQuantum(payload, rawBody, url.searchParams))
   }
 
   // Campos do alerta TradingView

@@ -95,6 +95,19 @@ export const CANONICAL_TELEGRAM_CHANNELS = {
     envVars: ['TELEGRAM_CHANNEL_TRENDSHOT', 'TELEGRAM_TRENDSHOT_CHAT_ID'],
   },
   /**
+   * MTM Auto Premium II (03/11/2026, pedido do dono) — grupo de DESTINO: o chat da app
+   * `sinais-premium-ii` (entradas, gráficos e acompanhamento) é espelhado para aqui por
+   * lib/telegram-espelho-canal.ts. NÃO é fonte de sinais: as mensagens que chegam deste grupo são
+   * ignoradas (o título contém «Premium» e caía no fallback do Premium · Ouro — ver
+   * lib/telegram-app-channels.ts › GRUPOS_FECHADOS e channelKeyFromTitle).
+   */
+  premiumII: {
+    chatId: '-1004319380846',
+    title: 'MTM Auto Premium II',
+    appSlug: 'sinais-premium-ii' as const,
+    envVars: ['TELEGRAM_CHANNEL_PREMIUM_II', 'TELEGRAM_PREMIUM_II_CHAT_ID'],
+  },
+  /**
    * MTM System — a comunidade. NÃO é canal de sinais: não roteia para estratégia nenhuma.
    * Está aqui para o painel mostrar o conjunto dos grupos oficiais, que é o que o admin tem
    * de conseguir confirmar de uma vez.
@@ -175,6 +188,46 @@ export function resolvedMtmScannerChatId(): string | null {
   )
 }
 
+/** Grupo Telegram «MTM Auto Premium II» (só destino do espelho do chat). null = sem grupo. */
+export function resolvedPremiumIIChatId(): string | null {
+  return (
+    normalizeEnvChatId(readEnv(CANONICAL_TELEGRAM_CHANNELS.premiumII.envVars)) ??
+    (CANONICAL_TELEGRAM_CHANNELS.premiumII.chatId || null)
+  )
+}
+
+/**
+ * Grupo Telegram «MoreThanMoney Defy Signals» (04/11/2026, pedido do dono; o bot é admin). Só DESTINO
+ * do espelho do chat `sinais-defy` — o que lá se escreve não volta à app. Env TELEGRAM_CHANNEL_DEFY sobrepõe.
+ */
+export const DEFY_TELEGRAM_CHAT_ID = '-1004428544639'
+
+export function resolvedDefyChatId(): string | null {
+  return normalizeEnvChatId(readEnv(['TELEGRAM_CHANNEL_DEFY', 'TELEGRAM_DEFY_CHAT_ID'])) ?? DEFY_TELEGRAM_CHAT_ID
+}
+
+/**
+ * Grupo Telegram do RocketNova (08/11/2026): ainda não existe — só sai espelho quando
+ * TELEGRAM_CHANNEL_ROCKETNOVA estiver definido. Só DESTINO do espelho do chat `sinais-rocketnova`.
+ */
+export function resolvedRocketnovaChatId(): string | null {
+  return normalizeEnvChatId(readEnv(['TELEGRAM_CHANNEL_ROCKETNOVA', 'TELEGRAM_ROCKETNOVA_CHAT_ID']))
+}
+
+/**
+ * Grupo Telegram do Quantum by MTM (08/11/2026): ainda não existe — só sai espelho quando
+ * TELEGRAM_CHANNEL_QUANTUM estiver definido. Só DESTINO do espelho do chat `sinais-quantum`.
+ */
+export function resolvedQuantumChatId(): string | null {
+  return normalizeEnvChatId(readEnv(['TELEGRAM_CHANNEL_QUANTUM', 'TELEGRAM_QUANTUM_CHAT_ID']))
+}
+
+/** O título é de um grupo MTM Auto Premium II (destino, nunca fonte)? */
+export function tituloPremiumII(title: string | null | undefined): boolean {
+  // Também o grupo do DEFY (04/11): destino do espelho, nunca fonte.
+  return /premium\s*(ii|2)\b|\bdefy\b|rocket\s*nova/i.test(String(title ?? ''))
+}
+
 /** Canal Telegram dos Perpétuos Cripto. Env se definido; senão o chatId canónico; null se ambos vazios
  *  (grupo ainda por criar) → não relaya, seguro. */
 export function resolvedPerpsChatId(): string | null {
@@ -194,6 +247,8 @@ export function channelKeyFromTitle(
   title: string | null | undefined,
 ): 'trade-ideas' | 'premium-signals' | null {
   if (!title) return null
+  // O grupo «MTM Auto Premium II» é DESTINO do espelho do chat: nunca fonte de sinais.
+  if (tituloPremiumII(title)) return null
   const t = title.toLowerCase()
   if (t.includes('premium') || t.includes('mtmgold')) return 'premium-signals'
   if (

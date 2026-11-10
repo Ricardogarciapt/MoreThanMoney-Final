@@ -1,0 +1,8 @@
+Este é o Quantum, o scanner da MoreThanMoney que confirma a tendência primeiro e entra no recuo.
+A linha primária diz-te o lado: azul com o preço por cima, vermelha por baixo. A seta grande marca o início da fase.
+O painel de força dá uma pontuação de zero a cem e uma seta por timeframe, de M um a semanal. Compra acima de sessenta, venda a quarenta ou menos.
+Depois espera-se o recuo: o preço volta à fita e o oscilador entra na zona da direção. O triângulo ou o ponto, na cor da direção, dão a entrada. Os dois na mesma vela é a entrada mais forte.
+O stop fica para lá do extremo do recuo e o alvo tem o dobro do risco. Tudo por alertas.
+Funciona em forex, ouro, índices e cripto, em qualquer timeframe.
+Vê a demonstração em morethanmoney ponto pt barra scanner barra quantum.
+Conteúdo educativo. Não é aconselhamento financeiro e os resultados não são garantidos.

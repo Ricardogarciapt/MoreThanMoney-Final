@@ -5,6 +5,7 @@ import { useState, useEffect, useRef, useCallback, useImperativeHandle, type Ref
 import { supabase } from "@/lib/supabase"
 import ChartSocialShareDialog from "@/components/chart-social-share-dialog"
 import type { TradingViewWidgetRef } from "@/components/trading-view-widget"
+import PrecoVivoScanner from "@/components/mobile/preco-vivo-scanner"
 import {
   buildTradingViewScannerOptions,
   computeScannerAccessChartHeight,
@@ -76,6 +77,7 @@ import {
   Share2,
   CandlestickChart,
   Gem,
+  Flame,
 } from "lucide-react"
 
 // Checklist Types
@@ -101,13 +103,14 @@ const scannerLogos: Record<ScannerKey, { icon: any; color: string; bgColor: stri
   // ₿ e âmbar (#F59E0B = amber-500): a MTM Aurum Flow Cripto deixou de ser ouro+perpétuos.
   AurumFlow: { icon: Bitcoin, color: "text-amber-300", bgColor: "bg-gradient-to-r from-amber-500 to-yellow-500" },
   TrendShot: { icon: Skull, color: "text-gray-300", bgColor: "bg-gradient-to-r from-gray-600 to-slate-500" },
-  Supernova: { icon: Zap, color: "text-amber-300", bgColor: "bg-gradient-to-r from-amber-500 to-orange-500" },
+  RocketNova: { icon: Zap, color: "text-[#E9C46A]", bgColor: "bg-gradient-to-r from-amber-500 to-[#D2A63C]" },
   Winzone: { icon: Shield, color: "text-blue-300", bgColor: "bg-gradient-to-r from-blue-700 to-sky-500" },
   Sinergy: { icon: Star, color: "text-cyan-300", bgColor: "bg-gradient-to-r from-cyan-600 to-teal-500" },
   Goldkiller: { icon: Target, color: "text-yellow-300", bgColor: "bg-gradient-to-r from-yellow-600 to-amber-500" },
   MTMScanner: { icon: Brain, color: "text-violet-300", bgColor: "bg-gradient-to-r from-violet-600 to-purple-500" },
   Sensei: { icon: TrendingUp, color: "text-rose-300", bgColor: "bg-gradient-to-r from-rose-600 to-pink-500" },
   PremiumScanner: { icon: Gem, color: "text-[#E9C46A]", bgColor: "bg-gradient-to-r from-[#D2A63C] to-[#E9C46A]" },
+  Defy: { icon: Flame, color: "text-[#E9C46A]", bgColor: "bg-gradient-to-r from-[#8A6A1F] to-[#D2A63C]" },
 }
 
 declare global {
@@ -1286,6 +1289,12 @@ export default function ScannerMobile({
           className={isScannerAccess ? "w-full h-full min-h-full tv-chart-mount" : "w-full h-full"}
           style={isScannerAccess ? { minHeight: widgetHeight } : undefined}
         />
+
+        {/* Preço da corretora (WebSocket do motor): o TradingView só dá as velas, o número é nosso.
+            Fica sob a barra do TradingView e à esquerda da escala de preços; não apanha toques. */}
+        {widgetLoaded && !error && (
+          <PrecoVivoScanner symbol={selectedSymbol} className="absolute left-2 top-12 z-10" />
+        )}
 
         {!widgetLoaded && !error && (
           <div className="absolute top-0 left-0 w-full h-full flex items-center justify-center bg-black/90">

@@ -1,0 +1,838 @@
+{
+ "estrategia": "Aurum Flow",
+ "motor": "aurum-flow",
+ "marca": "MoreThanMoney",
+ "cores": {
+  "bull": "#2F9E8F",
+  "bear": "#C0262D"
+ },
+ "ui": {
+  "nivel": "Nível",
+  "compra": "Compra",
+  "venda": "Venda",
+  "entrada": "Entrada",
+  "tp1": "TP1",
+  "tp2": "TP2",
+  "tp3": "TP3"
+ },
+ "pronuncia": [
+  [
+   "Aurum",
+   "Áurum"
+  ],
+  [
+   "ORB",
+   "O R B"
+  ],
+  [
+   "EMA",
+   "E M A"
+  ],
+  [
+   "RSI",
+   "R S I"
+  ],
+  [
+   "ATR",
+   "A T R"
+  ],
+  [
+   "TradingView",
+   "Trading View"
+  ],
+  [
+   "Pre London",
+   "Pré London"
+  ],
+  [
+   "NYFX",
+   "N Y F X"
+  ],
+  [
+   "UTC",
+   "U T C"
+  ]
+ ],
+ "plano": {
+  "warning": false,
+  "slAtr": 1,
+  "alvos": [
+   3,
+   6,
+   10,
+   16
+  ],
+  "rotulos": [
+   "Exit 1",
+   "Exit 2",
+   "Exit 3",
+   "Exit 4"
+  ]
+ },
+ "videos": [
+  {
+   "rotulo": "Bootcamp Aurum Flow · 1/2",
+   "titulo": "Fundamentos: a caixa, o regime e o rompimento",
+   "cenas": [
+    {
+     "id": "v1-00",
+     "tipo": "abertura",
+     "kicker": "Bootcamp MTM · Módulo 1 de 2",
+     "titulo": "Aurum Flow",
+     "sub": "O que é, e como se lê cada elemento",
+     "rodape": "morethanmoney.pt",
+     "semVoz": 5
+    },
+    {
+     "id": "v1-01",
+     "tipo": "frase",
+     "cap": "Boas-vindas",
+     "texto": "A sessão desenha a caixa. <span class='ouro'>A tendência escolhe o lado.</span>",
+     "autor": "Ricardo Garcia · MoreThanMoney",
+     "fala": "Olá, sou o Ricardo Garcia, e este é o Bootcamp Aurum Flow da MoreThanMoney. Antes de começarmos, uma ideia que vai atravessar os dois vídeos: nenhum scanner decide por ti. O Aurum Flow faz três coisas concretas. Desenha a caixa de cada sessão, espera que o preço a rompa a favor da tendência de fundo, e mostra a entrada, o stop e os alvos com o risco em dólares. A leitura é simples de descrever e exigente de executar. Por isso vamos com calma, e sem prometer nada que o gráfico não mostre."
+    },
+    {
+     "id": "v1-02",
+     "tipo": "pontos",
+     "cap": "Boas-vindas",
+     "kicker": "O plano do bootcamp",
+     "titulo": "Dois vídeos, um método",
+     "itens": [
+      "Vídeo 1 · A caixa, o regime, o rompimento e os alvos",
+      "Vídeo 2 · Confirmações, entrada, gestão e rotina"
+     ],
+     "fala": "O bootcamp tem dois vídeos. Neste primeiro, vamos à estratégia e a cada peça do gráfico: a caixa da sessão, o regime que escolhe o lado, o rompimento que dá o sinal, e o stop e os alvos medidos em R. No segundo vídeo entramos no processo: as cinco condições que o scanner exige, como entrar a partir do painel, como gerir a posição, quando não entrar, e uma rotina curta para o dia a dia. Vê os dois por ordem. O segundo usa a linguagem do primeiro, e não faz sentido sem ele."
+    },
+    {
+     "id": "v1-03",
+     "tipo": "capitulo",
+     "cap": "01 · O que é o Aurum Flow",
+     "numero": "01",
+     "titulo": "O que é o Aurum Flow",
+     "sub": "Rompimento da range de abertura",
+     "fala": "Primeiro capítulo. O que é, afinal, o Aurum Flow?"
+    },
+    {
+     "id": "v1-04",
+     "tipo": "pontos",
+     "cap": "01 · O que é o Aurum Flow",
+     "kicker": "Em poucas palavras",
+     "titulo": "Uma caixa, um lado, um sinal",
+     "itens": [
+      "Rompimento da range de abertura (ORB) de cada sessão",
+      "Regime: média exponencial de 200 no gráfico de 4 horas",
+      "O sinal sai só no fecho da vela",
+      "Ativo principal: perpétuos cripto. Ouro, modo secundário"
+     ],
+     "fala": "O Aurum Flow marca a range de abertura de cada sessão, e espera que o preço a rompa a favor da tendência de fundo. A este método chama-se rompimento da range de abertura, ou ORB. A tendência de fundo vem da média exponencial de duzentos no gráfico de quatro horas: acima dela, só compras; abaixo, só vendas. O sinal sai apenas no fecho da vela, nunca a meio. O stop fica na aresta oposta da caixa, com uma pequena folga, e os alvos são múltiplos do risco. O guia dá como ativo principal os perpétuos cripto, e o ouro como modo secundário. Gráfico de referência: quinze minutos."
+    },
+    {
+     "id": "v1-05",
+     "tipo": "grafico",
+     "cap": "01 · O que é o Aurum Flow",
+     "kicker": "Primeiro olhar",
+     "titulo": "O gráfico com tudo ligado",
+     "cenario": "compra",
+     "seed": 7,
+     "base": [
+      "cores",
+      "sinal",
+      "plano",
+      "setas"
+     ],
+     "camadas": [],
+     "ate": [
+      0.55,
+      0.55
+     ],
+     "zoom": [
+      0,
+      0
+     ],
+     "fala": "Este é o aspecto do gráfico com tudo ligado. Vês as velas coloridas, a caixa desenhada em cima do movimento da sessão, a vela de sinal, e as linhas do plano. À primeira vista pode parecer muita coisa, mas vamos ler uma peça de cada vez. Antes disso, uma nota sobre todos os gráficos deste bootcamp: são ilustrativos, desenhados para explicar o funcionamento da estratégia. Não são histórico real de mercado, nem resultados de nenhuma operação. Vamos então à primeira peça, que é a caixa."
+    },
+    {
+     "id": "v1-06",
+     "tipo": "capitulo",
+     "cap": "02 · A caixa da sessão",
+     "numero": "02",
+     "titulo": "A caixa da sessão",
+     "sub": "A primeira hora, e a referência do dia",
+     "fala": "Segundo capítulo: a caixa da sessão."
+    },
+    {
+     "id": "v1-07",
+     "tipo": "pontos",
+     "cap": "02 · A caixa da sessão",
+     "kicker": "Como se lê",
+     "titulo": "Máximo, mínimo e range",
+     "itens": [
+      "Máximo e mínimo da primeira hora da sessão",
+      "Durante essa hora, a caixa cresce com o preço",
+      "Depois da hora, fica fixa e é a referência do dia",
+      "Os horários vêm na hora de Lisboa e ajustam-se ao teu fuso"
+     ],
+     "fala": "A caixa é a peça de partida. Em cada sessão, o scanner olha para a primeira hora e guarda o máximo e o mínimo desse intervalo. A range é a distância entre os dois. Durante essa hora, a caixa vai crescendo à medida que o preço explora o intervalo. Quando a hora termina, a caixa fica fixa, e passa a ser a referência do dia para essa sessão. Repara num detalhe prático: os horários são apresentados na hora de Lisboa, mas o painel ajusta-os ao teu fuso. Se o teu gráfico está noutra hora, confirma que a caixa que vês é a mesma que o guia descreve."
+    },
+    {
+     "id": "v1-08",
+     "tipo": "grafico",
+     "cap": "02 · A caixa da sessão",
+     "kicker": "Leitura 1",
+     "titulo": "A caixa e a sua hora",
+     "cenario": "tendencia",
+     "seed": 7,
+     "base": [],
+     "camadas": [
+      "cores"
+     ],
+     "ate": [
+      0.4,
+      0.6
+     ],
+     "zoom": [
+      0,
+      0
+     ],
+     "fala": "Vê a caixa a formar-se. A sessão começou, o preço anda de um lado para o outro, e a caixa cresce com o máximo e o mínimo da hora. Este é o momento de observar, não de operar. Repara que a caixa ainda não é uma referência fixa. Está a construir-se. Quando a hora fecha, o contorno pára, e a partir daí o preço só pode ser lido contra uma caixa que já não muda. É essa caixa fixa que o scanner vai usar para procurar o rompimento. Se alguém te disser que a caixa 'já está a dar sinal' antes de a hora terminar, está a dar-te uma leitura incompleta."
+    },
+    {
+     "id": "v1-09",
+     "tipo": "comparar",
+     "cap": "02 · A caixa da sessão",
+     "kicker": "As sessões",
+     "titulo": "Cada sessão, a sua caixa",
+     "cartoes": [
+      {
+       "t": "Pre London",
+       "d": "A primeira sessão do dia, com a sua própria caixa."
+      },
+      {
+       "t": "London",
+       "d": "A sessão de Londres, com a sua caixa independente."
+      },
+      {
+       "t": "Nova Iorque",
+       "d": "A sessão de Nova Iorque, também com caixa própria."
+      }
+     ],
+     "fala": "O guia usa três sessões: Pre London, London e Nova Iorque. Cada uma desenha a sua caixa, com a primeira hora da sessão. Não são caixas somadas, nem uma caixa do dia inteiro. São três referências separadas, e cada uma pode ser ligada ou desligada no painel. A ideia é simples: cada abertura de sessão traz a sua própria leitura de range. Se estás a começar, o mais sensato é estudares uma sessão de cada vez, e só depois juntares as restantes. Aprender três sessões ao mesmo tempo é uma forma de nunca dominar nenhuma."
+    },
+    {
+     "id": "v1-10",
+     "tipo": "capitulo",
+     "cap": "03 · O regime",
+     "numero": "03",
+     "titulo": "O regime",
+     "sub": "A média de duzentos escolhe o lado",
+     "fala": "Terceiro capítulo: o regime, que decide de que lado podes operar."
+    },
+    {
+     "id": "v1-11",
+     "tipo": "grafico",
+     "cap": "03 · O regime",
+     "kicker": "Leitura 2",
+     "titulo": "Só compras acima, só vendas abaixo",
+     "cenario": "tendencia",
+     "seed": 21,
+     "base": [],
+     "camadas": [
+      "cores"
+     ],
+     "ate": [
+      0.6,
+      0.9
+     ],
+     "zoom": [
+      0,
+      0
+     ],
+     "fala": "O regime é a tendência de fundo, e vem da média exponencial de duzentos no gráfico de quatro horas. Acima dela, o scanner só procura compras. Abaixo, só procura vendas. Não é um sinal em si. É um filtro de lado. Repara neste gráfico: enquanto o preço está acima da média, as quebras de baixo para cima são as que contam, e as quebras para baixo são ignoradas. Quando o preço cruza a média e fica do outro lado, o lado que o scanner procura muda. Antes de olhares para a caixa, pergunta sempre: de que lado está o regime?"
+    },
+    {
+     "id": "v1-12",
+     "tipo": "pontos",
+     "cap": "03 · O regime",
+     "kicker": "Como usar",
+     "titulo": "Regime primeiro, caixa depois",
+     "itens": [
+      "Acima da média de 200 de 4 horas: só compras",
+      "Abaixo da média de 200 de 4 horas: só vendas",
+      "O regime é um filtro de lado, não um sinal",
+      "Se o regime não concorda com o rompimento, não há sinal"
+     ],
+     "fala": "Vamos resumir o regime. Acima da média de duzentos do gráfico de quatro horas, só compras. Abaixo, só vendas. O regime não te diz quando entrar. Diz-te apenas de que lado a corrente de fundo está. E tem um efeito prático muito importante: se o rompimento acontece do lado contrário ao regime, o scanner não dá sinal, mesmo que a caixa esteja bonita. Muita gente perde tempo a tentar encontrar uma compra numa tendência de descida. O Aurum Flow foi desenhado para te poupar essa discussão."
+    },
+    {
+     "id": "v1-13",
+     "tipo": "capitulo",
+     "cap": "04 · O rompimento",
+     "numero": "04",
+     "titulo": "O rompimento",
+     "sub": "A vela que fecha fora da caixa",
+     "fala": "Quarto capítulo: o rompimento, que é o que dá o sinal."
+    },
+    {
+     "id": "v1-14",
+     "tipo": "grafico",
+     "cap": "04 · O rompimento",
+     "kicker": "Leitura 3",
+     "titulo": "O rompimento a favor do regime",
+     "cenario": "compra",
+     "seed": 7,
+     "base": [
+      "cores"
+     ],
+     "camadas": [
+      "sinal"
+     ],
+     "ate": [
+      0.6,
+      0.66
+     ],
+     "zoom": [
+      0,
+      0
+     ],
+     "fala": "Aqui está um rompimento. A caixa da sessão está fixa, o regime está acima da média de duzentos, e uma vela fecha acima do máximo da caixa. É um rompimento para cima, do lado da tendência de fundo, e o scanner marca a compra. Repara no que não está aqui: não há entrada antes do fecho. Uma mecha que espete acima da caixa não chega. Também não chega o preço andar perto do topo durante a sessão. É a vela que fecha fora da caixa que conta. Se a vela fecha dentro, não há rompimento, por mais tentador que pareça."
+    },
+    {
+     "id": "v1-15",
+     "tipo": "pontos",
+     "cap": "04 · O rompimento",
+     "kicker": "Regras do rompimento",
+     "titulo": "Fecho fora, do lado certo",
+     "itens": [
+      "Compra: vela fecha acima do máximo da caixa",
+      "Venda: vela fecha abaixo do mínimo da caixa",
+      "Só conta o fecho, nunca a mecha",
+      "Tem de ser do lado do regime"
+     ],
+     "fala": "As regras do rompimento cabem numa frase. Para comprar, uma vela tem de fechar acima do máximo da caixa. Para vender, uma vela tem de fechar abaixo do mínimo. Só o fecho conta. Uma mecha que atravessa a caixa e volta para dentro é um sinal falhado antes de existir, e não uma meia confirmação. E, como vimos, o rompimento só vale se estiver do lado do regime. Estas três condições juntas são a espinha dorsal do método. Se alguma falhar, não há sinal, e o gráfico continua a ser só um gráfico."
+    },
+    {
+     "id": "v1-16",
+     "tipo": "capitulo",
+     "cap": "05 · Stop e alvos em R",
+     "numero": "05",
+     "titulo": "Stop e alvos em R",
+     "sub": "O risco é uma distância",
+     "fala": "Quinto capítulo: o stop e os alvos, medidos em R."
+    },
+    {
+     "id": "v1-17",
+     "tipo": "grafico",
+     "cap": "05 · Stop e alvos em R",
+     "kicker": "O plano",
+     "titulo": "Stop na aresta oposta, alvos em R",
+     "cenario": "compra",
+     "seed": 7,
+     "base": [
+      "cores",
+      "sinal"
+     ],
+     "camadas": [
+      "plano"
+     ],
+     "ate": [
+      0.6,
+      1
+     ],
+     "zoom": [
+      0,
+      0.5
+     ],
+     "fala": "Quando o sinal aparece, o painel desenha o plano. A entrada está no sinal. O stop fica na aresta oposta da caixa, com uma pequena folga para não ser apanhado pela mecha. A distância entre a entrada e o stop é o teu R, a unidade de risco. Os alvos ficam a múltiplos desse R: três, seis, dez e dezasseis. Ou seja, o primeiro alvo está a três vezes o risco, o segundo a seis, e assim por diante. Não estás a medir lucros em dinheiro. Estás a medir tudo em R, que é a forma de comparar operações de tamanhos diferentes."
+    },
+    {
+     "id": "v1-18",
+     "tipo": "comparar",
+     "cap": "05 · Stop e alvos em R",
+     "kicker": "Os alvos",
+     "titulo": "Quatro saídas em R",
+     "cartoes": [
+      {
+       "t": "3 R",
+       "d": "Primeiro alvo. Aqui o stop passa para a entrada."
+      },
+      {
+       "t": "6 R",
+       "d": "Segundo alvo. A posição continua a correr."
+      },
+      {
+       "t": "10 R e 16 R",
+       "d": "Terceiro e quarto alvos, para quem deixa correr a tendência."
+      }
+     ],
+     "fala": "Quatro alvos, em múltiplos do risco. O primeiro, a três R, é o mais importante na prática. Quando o preço o atinge, o guia pede que passes o stop para a entrada. A partir daí, a operação deixa de poder dar prejuízo. O segundo alvo, a seis R, e os seguintes, a dez e a dezasseis R, são para a parte da posição que deixas correr com a tendência. Podes também sair por partes em cada alvo. Qualquer uma das opções é válida, mas tem de ser a que escolheste antes de entrar, e não a que decides a meio, com o preço a mexer."
+    },
+    {
+     "id": "v1-19",
+     "tipo": "pontos",
+     "cap": "05 · Stop e alvos em R",
+     "kicker": "O painel",
+     "titulo": "O painel faz as contas",
+     "itens": [
+      "Calcula o tamanho pelo risco que defines",
+      "Nos perpétuos: nocional e alavancagem",
+      "No ouro: lotes",
+      "Mostra a entrada, o stop, os alvos e o risco em dólares"
+     ],
+     "fala": "O painel faz as contas por ti, mas é importante saberes o que ele calcula. Recebe o risco que define em percentagem da conta, e calcula o tamanho da posição para que, se o stop for atingido, perdas esse valor. Nos perpétuos cripto, o painel mostra o nocional e a alavancagem. No ouro, mostra os lotes. E em todos os casos, mostra o risco em dólares. Esse é o número que deves ler antes de entrar. Se o risco em dólares não te parece bem, não aumentes o tamanho para compensar. Muda a conta, ou deixa a ideia passar."
+    },
+    {
+     "id": "v1-20",
+     "tipo": "pontos",
+     "cap": "05 · Stop e alvos em R",
+     "kicker": "Uma camada de leitura",
+     "titulo": "A estrutura por baixo",
+     "itens": [
+      "Corre por baixo o motor de estrutura do Sensei",
+      "Quebras e mudanças de estrutura, só para leitura",
+      "Não é uma condição de entrada, neste método",
+      "Ajuda a contar a história do movimento"
+     ],
+     "fala": "Por baixo do Aurum Flow corre o mesmo motor de estrutura que o Sensei usa: as quebras e as mudanças de estrutura do preço. Neste método, serve apenas de leitura. Ajuda-te a perceber a história do movimento: se o preço está a fazer topos e fundos mais altos, ou o contrário. Não é uma condição de entrada, e não deve ser tratada como tal. Quando lês um rompimento, olhar para a estrutura dá-te contexto. Mas a decisão continua a ser tomada pelas regras da caixa, do regime e do fecho."
+    },
+    {
+     "id": "v1-21",
+     "tipo": "checklist",
+     "cap": "Resumo",
+     "kicker": "Resumo do módulo 1",
+     "titulo": "O que tens de saber ler",
+     "itens": [
+      "Caixa: a primeira hora da sessão, fixa depois",
+      "Regime: a média de 200 de 4 horas escolhe o lado",
+      "Rompimento: fecho fora da caixa, do lado certo",
+      "Stop na aresta oposta, alvos em R"
+     ],
+     "fala": "Resumindo o primeiro vídeo. A caixa é a primeira hora de cada sessão, e fica fixa depois. O regime, a média de duzentos no gráfico de quatro horas, escolhe o lado. O rompimento é um fecho fora da caixa, do lado certo. E o stop fica na aresta oposta, com os alvos medidos em R. Lê estas peças juntas. Cada uma sozinha diz pouco. Em conjunto, dizem-te se há um sinal ou se não há."
+    },
+    {
+     "id": "v1-22",
+     "tipo": "pontos",
+     "cap": "Exercício",
+     "kicker": "Antes do vídeo 2",
+     "titulo": "O teu trabalho de casa",
+     "itens": [
+      "Escolhe uma só sessão e um só mercado",
+      "Marca cinco caixas e anota de que lado o regime estava",
+      "Para cada caixa, anota se houve rompimento e de que lado",
+      "Não operes ainda: só observa"
+     ],
+     "fala": "Antes do segundo vídeo, o exercício. Escolhe uma só sessão e um só mercado. Procura no histórico cinco caixas, e para cada uma anota de que lado estava o regime. Depois anota se houve rompimento com fecho, e do lado de quê. Não operes ainda. Este exercício treina o teu olho para o que realmente importa: a caixa, o lado e o fecho. No segundo vídeo, pegamos nestas leituras e transformamo-las em decisões."
+    },
+    {
+     "id": "v1-23",
+     "tipo": "aviso",
+     "cap": "",
+     "titulo": "Até ao vídeo 2",
+     "sub": "Confirmações, entrada e gestão",
+     "texto": "Conteúdo educativo. Não é aconselhamento financeiro. Negociar forex, índices, metais e cripto envolve risco elevado e podes perder parte ou a totalidade do capital. Os gráficos deste vídeo são ilustrativos. Resultados passados não garantem resultados futuros.",
+     "fala": "Lembra-te: isto é conteúdo educativo e não é aconselhamento financeiro. Negociar perpétuos e outros ativos tem risco, e podes perder parte ou a totalidade do capital. Treina primeiro em conta demo. Vemo-nos no segundo vídeo.",
+     "respiro": 4
+    }
+   ]
+  },
+  {
+   "rotulo": "Bootcamp Aurum Flow · 2/2",
+   "titulo": "Confirmações, entrada, gestão e rotina",
+   "cenas": [
+    {
+     "id": "v2-00",
+     "tipo": "abertura",
+     "kicker": "Bootcamp MTM · Módulo 2 de 2",
+     "titulo": "Aurum Flow",
+     "sub": "Confirmações, entrada, gestão e rotina",
+     "rodape": "morethanmoney.pt",
+     "semVoz": 5
+    },
+    {
+     "id": "v2-01",
+     "tipo": "pontos",
+     "cap": "Boas-vindas",
+     "kicker": "Neste vídeo",
+     "titulo": "Do rompimento à rotina",
+     "itens": [
+      "As cinco condições que o scanner exige",
+      "Entrada a partir do painel",
+      "Gestão: 3 R, stop para a entrada, alvos seguintes",
+      "Quando não entrar",
+      "Uma rotina curta para o dia a dia"
+     ],
+     "fala": "Bem-vindo ao segundo vídeo do Bootcamp Aurum Flow. No primeiro aprendeste a ler a caixa, o regime, o rompimento e os alvos em R. Agora vamos ver o que o scanner exige para dar um sinal, como entrar a partir do painel, como gerir a posição depois de entrares, e quando é melhor não entrar. No fim, deixo-te uma rotina curta para o dia a dia. Este vídeo é mais técnico nas condições e mais prático na gestão. Vai com calma, e volta atrás sempre que precisares."
+    },
+    {
+     "id": "v2-02",
+     "tipo": "capitulo",
+     "cap": "01 · Confirmações",
+     "numero": "01",
+     "titulo": "As cinco condições",
+     "sub": "O scanner só dá o sinal quando tudo se cumpre",
+     "fala": "Primeiro capítulo: as confirmações que o scanner exige antes de dar um sinal."
+    },
+    {
+     "id": "v2-03",
+     "tipo": "checklist",
+     "cap": "01 · Confirmações",
+     "kicker": "Cinco condições",
+     "titulo": "Tudo tem de se cumprir",
+     "itens": [
+      "Regime: do lado certo da média de 200 de 4 horas",
+      "Volatilidade normal: nem mercado parado, nem pico extremo",
+      "Momento: índice de força relativa acima de 55 nas compras, abaixo de 45 nas vendas",
+      "Vela sem exaustão: no máximo 2,5 vezes a volatilidade média",
+      "Stop acima do custo: pelo menos 9 vezes o custo das taxas, e nunca mais de 3,5% do preço"
+     ],
+     "fala": "O guia enumera cinco condições, e todas têm de se cumprir ao mesmo tempo. A primeira é o regime, que já conhecemos: do lado certo da média de duzentos de quatro horas. A segunda é a volatilidade normal. Nem mercado parado, em que a caixa não tem vida, nem um pico extremo, em que o movimento já pode estar esgotado. A terceira é o momento, medido pelo índice de força relativa, o RSI. Nas compras, precisa de estar acima de cinquenta e cinco. Nas vendas, abaixo de quarenta e cinco. A quarta é a vela sem exaustão: a vela do rompimento não pode ter mais de duas vezes e meia a volatilidade média. E a quinta é o stop acima do custo. O stop tem de ser pelo menos nove vezes o custo das taxas de entrada e saída, e nunca passa de três vírgula cinco por cento do preço. Se alguma condição falhar, o scanner não dá sinal, e tu também não devias dar."
+    },
+    {
+     "id": "v2-04",
+     "tipo": "pontos",
+     "cap": "01 · Confirmações",
+     "kicker": "Volatilidade",
+     "titulo": "Nem parado, nem no pico",
+     "itens": [
+      "Mercado parado: a caixa não tem espaço para correr",
+      "Pico extremo: o movimento pode já estar esgotado",
+      "O guia pede volatilidade normal",
+      "Se o painel não dá sinal, a leitura é clara: deixa passar"
+     ],
+     "fala": "A volatilidade é uma condição que muita gente trata como um pormenor, e não é. Num mercado parado, a caixa é pequena, e o rompimento não tem espaço para correr até aos alvos. Num pico extremo, o movimento já pode ter gasto a sua energia, e a vela que rompe é, muitas vezes, a última do impulso. O guia pede volatilidade normal, e é esse o estado que procuras. Quando o painel não dá sinal por causa da volatilidade, não há nada a corrigir. A leitura está a dizer-te que o momento não é este."
+    },
+    {
+     "id": "v2-05",
+     "tipo": "grafico",
+     "cap": "01 · Confirmações",
+     "kicker": "Exemplo",
+     "titulo": "Momento a favor",
+     "cenario": "compra",
+     "seed": 7,
+     "base": [
+      "cores"
+     ],
+     "camadas": [
+      "sinal"
+     ],
+     "ate": [
+      0.6,
+      0.66
+     ],
+     "zoom": [
+      0,
+      0
+     ],
+     "fala": "Neste rompimento de compra, as condições estão a favor. O regime está do lado comprador, a caixa estava fixa, e a vela fecha acima do máximo. O índice de força relativa está acima de cinquenta e cinco, ou seja, o momento acompanha o rompimento. E a vela não é uma vela de exaustão. Foi uma vela com corpo, mas dentro do limite que o guia define. Repara que não precisas de adivinhar nada. Cada condição é um teste, e ou passa, ou não passa."
+    },
+    {
+     "id": "v2-06",
+     "tipo": "comparar",
+     "cap": "01 · Confirmações",
+     "kicker": "Custos e exaustão",
+     "titulo": "Duas condições que escondem armadilhas",
+     "cartoes": [
+      {
+       "t": "Vela de exaustão",
+       "d": "Mais de duas vezes e meia a volatilidade média: a vela pode ser o fim do impulso."
+      },
+      {
+       "t": "Stop acima do custo",
+       "d": "Pelo menos nove vezes o custo das taxas. Stop curto demais deixa as taxas comerem o risco."
+      },
+      {
+       "t": "Teto de 3,5%",
+       "d": "O stop nunca passa de três vírgula cinco por cento do preço."
+      }
+     ],
+     "fala": "Há duas condições que parecem técnicas, mas protegem-te de armadilhas concretas. A primeira é a vela de exaustão. Uma vela muito maior do que a média pode ser a última do movimento, e não a primeira. O guia corta-a. A segunda é o custo. Se o stop for demasiado curto, as taxas de entrada e saída passam a ser uma parte grande do risco, e a conta deixa de bater certo. Por isso o stop tem de estar pelo menos nove vezes acima do custo das taxas. E há um teto: o stop nunca passa de três vírgula cinco por cento do preço. Se a conta só fecha com um stop maior do que isso, a ideia não é para ti."
+    },
+    {
+     "id": "v2-07",
+     "tipo": "capitulo",
+     "cap": "02 · Entrada",
+     "numero": "02",
+     "titulo": "Entrada",
+     "sub": "Da caixa fechada ao painel",
+     "fala": "Segundo capítulo: como entrar, a partir do painel."
+    },
+    {
+     "id": "v2-08",
+     "tipo": "plano",
+     "cap": "02 · Entrada",
+     "kicker": "Passos",
+     "titulo": "Quatro passos até à ordem",
+     "linhas": [
+      [
+       "Caixa",
+       "Fechada, depois da primeira hora",
+       "entrada"
+      ],
+      [
+       "Regime",
+       "Só do lado da média de 200",
+       "entrada"
+      ],
+      [
+       "Sinal",
+       "No fecho, validado pelo scanner",
+       "entrada"
+      ],
+      [
+       "Tamanho",
+       "O que o painel calcula, sem mais",
+       "warning"
+      ]
+     ],
+     "fala": "A entrada segue quatro passos, pela ordem em que o guia os apresenta. Primeiro, esperas que a caixa da sessão feche. Segundo, confirmas o regime, e só procuras o rompimento do lado da média de duzentos de quatro horas. Terceiro, deixas o scanner validar o sinal no fecho da vela. Quarto, lês no painel a entrada, o stop, os alvos e o risco em dólares, e entras com o tamanho que ele calculou. Repara que não há um quinto passo de improviso. O tamanho é o que o painel diz, nem mais nem menos."
+    },
+    {
+     "id": "v2-09",
+     "tipo": "pontos",
+     "cap": "02 · Entrada",
+     "kicker": "O painel",
+     "titulo": "Ler antes de entrar",
+     "itens": [
+      "Entrada, stop e alvos, nessa ordem",
+      "O risco em dólares, antes de tudo",
+      "O tamanho calculado pelo risco que definiste",
+      "Entras com esse tamanho, não com outro"
+     ],
+     "fala": "Antes de clicares em qualquer coisa, lê o painel de cima a baixo. Primeiro, a entrada e o stop: a distância entre eles é o teu R. Depois, os alvos, que estão a múltiplos desse R. Em seguida, o risco em dólares, que é o número mais importante, porque é aquilo que vais perder se o stop for atingido. E por fim, o tamanho. Entras com o tamanho que o painel calculou, e não com outro que te pareça mais bonito. Se achas que devias arriscar mais, não estás a ser corajoso. Estás a sair do plano."
+    },
+    {
+     "id": "v2-10",
+     "tipo": "grafico",
+     "cap": "02 · Entrada",
+     "kicker": "Na prática",
+     "titulo": "Entrada a partir do painel",
+     "cenario": "compra",
+     "seed": 7,
+     "base": [
+      "cores"
+     ],
+     "camadas": [
+      "sinal",
+      "plano"
+     ],
+     "ate": [
+      0.6,
+      0.85
+     ],
+     "zoom": [
+      0,
+      0
+     ],
+     "fala": "Vê o plano desenhado sobre o gráfico. O sinal aparece no fecho da vela, e o painel fixa a entrada. O stop fica na aresta oposta da caixa. Os alvos seguem à frente, a múltiplos do R. A partir daqui, o gráfico já não muda o plano: o que está desenhado é o que vais gerir. Ter o plano desenhado antes de entrar é metade do trabalho, porque te obriga a saber onde estás errado e onde sais, antes de arriscares um cêntimo."
+    },
+    {
+     "id": "v2-11",
+     "tipo": "capitulo",
+     "cap": "03 · Gestão",
+     "numero": "03",
+     "titulo": "Gestão",
+     "sub": "Três R, stop para a entrada, e deixar correr",
+     "fala": "Terceiro capítulo: a gestão depois de entrares."
+    },
+    {
+     "id": "v2-12",
+     "tipo": "pontos",
+     "cap": "03 · Gestão",
+     "kicker": "Passo a passo",
+     "titulo": "Gerir a posição",
+     "itens": [
+      "Vigia o stop, na aresta oposta da caixa",
+      "Aos 3 R, o stop passa para a entrada",
+      "Deixa o resto correr para 6, 10 e 16 R",
+      "Ou fecha por partes em cada alvo",
+      "Nunca mexas o stop para mais longe"
+     ],
+     "fala": "A gestão tem uma sequência clara. Até aos três R, a tua tarefa é vigiar o stop, que fica na aresta oposta da caixa. Quando o preço atinge os três R, o guia pede que passes o stop para a entrada. A partir desse momento, a posição deixa de poder dar prejuízo. Depois disso, tens duas maneiras de sair, e ambas estão no guia. Podes deixar correr o resto para seis, dez e dezasseis R. Ou podes fechar por partes em cada alvo. A única regra que não muda, em qualquer das duas opções, é esta: nunca mexas o stop para mais longe. Nunca. Se o preço voltar à caixa, a resposta é sair, ou deixar o stop onde está."
+    },
+    {
+     "id": "v2-13",
+     "tipo": "grafico",
+     "cap": "03 · Gestão",
+     "kicker": "Proteger",
+     "titulo": "Aos três R, o stop vai para a entrada",
+     "cenario": "compra",
+     "seed": 7,
+     "base": [
+      "cores",
+      "sinal"
+     ],
+     "camadas": [
+      "plano",
+      "setas"
+     ],
+     "ate": [
+      0.6,
+      1
+     ],
+     "zoom": [
+      0.5,
+      0.5
+     ],
+     "fala": "Vê o que muda quando o preço chega aos três R. O primeiro alvo foi atingido, e o stop passa para a entrada. A partir daqui, o resto da posição corre sem risco. O preço pode voltar, e a operação pode fechar sem perda. Mas, se a tendência continuar, a posição segue para o alvo seguinte. Repara que a decisão de passar o stop não depende de palpites. Depende de uma regra escrita: chegou aos três R, o stop vai para a entrada."
+    },
+    {
+     "id": "v2-14",
+     "tipo": "comparar",
+     "cap": "03 · Gestão",
+     "kicker": "Duas maneiras de sair",
+     "titulo": "Deixar correr ou sair por partes",
+     "cartoes": [
+      {
+       "t": "Deixar correr",
+       "d": "Para 6, 10 e 16 R, com o stop na entrada depois dos 3 R."
+      },
+      {
+       "t": "Por partes",
+       "d": "Fechar uma parte em cada alvo, e deixar o resto a correr."
+      },
+      {
+       "t": "Escolhe antes",
+       "d": "A forma de sair é decidida antes de entrar, e não a meio do trade."
+      }
+     ],
+     "fala": "Há duas maneiras de sair, e ambas estão no guia. Deixar correr significa manter a posição até aos alvos seguintes, seis, dez e dezasseis R, com o stop protegido na entrada. Sair por partes significa fechar uma fração da posição em cada alvo. Não há uma forma certa para todos. Há a forma que escolheste antes de entrar, e a que consegues cumprir. Se escolheres deixar correr, a posição fica exposta à tendência até ao alvo seguinte, sem um lucro fixo à vista. Se escolheres por partes, cada fração sai no seu alvo, mas, se a operação chegar ao dezasseis R, o resultado final é menor do que o de quem deixou tudo correr. Essa troca é tua."
+    },
+    {
+     "id": "v2-15",
+     "tipo": "capitulo",
+     "cap": "04 · Quando não entrar",
+     "numero": "04",
+     "titulo": "Quando não entrar",
+     "sub": "Os casos em que o guia pede para esperar",
+     "fala": "Quarto capítulo: quando não entrar."
+    },
+    {
+     "id": "v2-16",
+     "tipo": "checklist",
+     "cap": "04 · Quando não entrar",
+     "kicker": "Deixa passar quando",
+     "titulo": "Cinco situações",
+     "itens": [
+      "Antes de a caixa fechar",
+      "Rompimento contra a média de 200 das 4 horas",
+      "Demasiadas velas desde o fecho da caixa",
+      "Tamanho maior do que o painel calculou",
+      "Stop mais longe quando o preço volta à caixa"
+     ],
+     "fala": "O guia enumera cinco situações em que não entras. Primeira: antes de a caixa fechar. A caixa ainda está a construir-se, e qualquer rompimento é prematuro. Segunda: o rompimento vai contra a média de duzentos de quatro horas. Terceira: passaram demasiadas velas desde o fecho da caixa. Nesse caso, a range perdeu validade, e o rompimento já não diz o mesmo. Quarta: o tamanho que pensas usar é maior do que o painel calculou. E quinta: queres mover o stop para mais longe quando o preço volta à caixa. Qualquer uma destas situações basta para deixares a ideia passar. Não há desculpa de tempo, nem de intuição."
+    },
+    {
+     "id": "v2-17",
+     "tipo": "grafico",
+     "cap": "04 · Quando não entrar",
+     "kicker": "Rompimento falso",
+     "titulo": "Fecha fora, volta para dentro",
+     "cenario": "falha",
+     "seed": 11,
+     "base": [
+      "cores"
+     ],
+     "camadas": [
+      "sinal",
+      "plano"
+     ],
+     "ate": [
+      0.62,
+      0.9
+     ],
+     "zoom": [
+      0,
+      0
+     ],
+     "fala": "Vê este rompimento. Uma vela fecha fora da caixa, do lado certo, e o sinal aparece. Mas o preço não segue. Volta para dentro da caixa e, em vez de ficar do lado da corrente, atravessa a caixa toda até ao stop do outro lado. Isto é um rompimento falso, e é o caso mais frequente de perda neste método. Repara no que está previsto: perdes um R, exatamente o que o painel mostrou antes de entrares. Não há surpresa, e não há improviso. O risco já estava definido."
+    },
+    {
+     "id": "v2-18",
+     "tipo": "capitulo",
+     "cap": "05 · Quando falha",
+     "numero": "05",
+     "titulo": "Quando falha",
+     "sub": "Perder um R, como estava previsto",
+     "fala": "Quinto capítulo: o que acontece quando a ideia falha."
+    },
+    {
+     "id": "v2-19",
+     "tipo": "pontos",
+     "cap": "05 · Quando falha",
+     "kicker": "Sequência",
+     "titulo": "O que acontece num falso rompimento",
+     "itens": [
+      "O preço fecha fora da caixa, e o sinal aparece",
+      "Não segue: volta para dentro da caixa",
+      "Atravessa a caixa até ao stop do outro lado",
+      "Perdes 1 R, como estava previsto"
+     ],
+     "fala": "Vamos ver a sequência outra vez, devagar. O preço fecha fora da caixa, do lado certo, e o sinal aparece. Entras no tamanho do painel. Mas o preço não segue. Volta para dentro da caixa e atravessa-a até chegar ao stop do outro lado. Nesse momento, perdes um R. Não mais, porque o stop estava lá desde o início, e não menos, porque o guia não te deixa mexer nele para tentar salvar a operação. Num método assim, o falso rompimento não é um erro de execução. Faz parte do plano. O que importa é que a perda seja pequena, previsível e igual às outras."
+    },
+    {
+     "id": "v2-20",
+     "tipo": "pontos",
+     "cap": "05 · Quando falha",
+     "kicker": "Diário",
+     "titulo": "Mede em R, não em dinheiro",
+     "itens": [
+      "Data, mercado, sessão e direção",
+      "Lado do regime e pontuação das cinco condições",
+      "Resultado em R",
+      "Seguiste o plano? Sim ou não"
+     ],
+     "fala": "Depois de cada operação, regista-a. Escreve a data, o mercado, a sessão e a direção. Escreve de que lado estava o regime, e quais das cinco condições estavam cumpridas. Mede o resultado em R, porque o R é comparável entre operações de tamanhos diferentes. E responde à pergunta mais importante: seguiste o plano? Ao fim de algumas dezenas de operações, o diário diz-te em que sessão funciona melhor para ti, e onde é que o erro está na execução, e não no método. Esse diário é teu, e vale mais do que qualquer estatística que eu te pudesse dar."
+    },
+    {
+     "id": "v2-21",
+     "tipo": "capitulo",
+     "cap": "06 · Rotina",
+     "numero": "06",
+     "titulo": "Rotina curta",
+     "sub": "Consistência ganha à intensidade",
+     "fala": "Sexto capítulo: a rotina para o dia a dia."
+    },
+    {
+     "id": "v2-22",
+     "tipo": "checklist",
+     "cap": "06 · Rotina",
+     "kicker": "Todos os dias",
+     "titulo": "Quinze minutos, cinco passos",
+     "itens": [
+      "Ver o calendário económico do dia",
+      "Ver as caixas das sessões de hoje",
+      "Confirmar o regime no gráfico de 4 horas",
+      "Rever sinais e ordens abertas",
+      "Atualizar o diário"
+     ],
+     "fala": "A rotina cabe em quinze minutos. Primeiro, vês o calendário económico do dia, para saberes se há notícias de alto impacto. Segundo, vês as caixas das sessões de hoje, e se a primeira hora de cada uma já fechou. Terceiro, confirmas o regime no gráfico de quatro horas. Quarto, revês os sinais e as ordens abertas, e aplicas a gestão que vimos. Quinto, atualizas o diário. O resto do dia, o scanner trabalha por ti. Precisas de ser consistente, não de estar colado ao ecrã."
+    },
+    {
+     "id": "v2-23",
+     "tipo": "pontos",
+     "cap": "Resumo",
+     "kicker": "Checklist de bolso",
+     "titulo": "O processo Aurum Flow completo",
+     "itens": [
+      "Caixa fechada",
+      "Regime a favor",
+      "Sinal no fecho, com as cinco condições",
+      "Tamanho do painel",
+      "Stop na aresta oposta, e aos 3 R para a entrada",
+      "Deixar correr para 6, 10 e 16 R, ou sair por partes"
+     ],
+     "fala": "Para fechar, a checklist de bolso. Caixa fechada. Regime a favor. Sinal no fecho, com as cinco condições cumpridas. Tamanho do painel. Stop na aresta oposta, e aos três R, stop para a entrada. E depois, deixar correr para seis, dez e dezasseis R, ou sair por partes. Se seguires estes passos sempre, mesmo nos dias em que é aborrecido, estás à frente de muita gente que opera sem processo. Não há promessas nesta lista. Há disciplina, e a disciplina é a parte que depende de ti."
+    },
+    {
+     "id": "v2-24",
+     "tipo": "aviso",
+     "cap": "",
+     "titulo": "Bootcamp Aurum Flow concluído",
+     "sub": "morethanmoney.pt",
+     "texto": "Conteúdo educativo. Não é aconselhamento financeiro. Negociar forex, índices, metais e cripto envolve risco elevado e podes perder parte ou a totalidade do capital. Os gráficos deste vídeo são ilustrativos. Resultados passados não garantem resultados futuros.",
+     "fala": "Conteúdo educativo, não é aconselhamento financeiro. Negociar tem risco, e podes perder dinheiro. Define o teu risco antes de cada entrada e treina em conta demo. Até à próxima.",
+     "respiro": 4
+    }
+   ]
+  }
+ ]
+}
