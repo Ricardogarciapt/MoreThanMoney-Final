@@ -71,7 +71,8 @@ export async function runLeadFollowups(): Promise<{ ok: boolean; sent: number; r
 
     const touch = fc + 1
     const nome = (l.first_name || '').split(' ')[0] || null
-    const texto = textoDoToque(passo, touch, nome)
+    // 10/11: a forma de sair vai em CADA toque — sem ela a passagem legal não deixa sair nada.
+    const texto = `${textoDoToque(passo, touch, nome)}\n\nPara deixar de receber, escreve PARAR.`
     const codigo = AGENTE_DO_PASSO[passo]
     const r = await criarEnvioPorAprovar({
       kind: KIND_ENVIO.FOLLOWUP_TELEGRAM,

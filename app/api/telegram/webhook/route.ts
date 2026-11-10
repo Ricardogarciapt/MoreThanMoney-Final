@@ -381,6 +381,42 @@ export async function POST(request: NextRequest) {
         // Os botões do caminho (ecossistema vs MTM Auto) respondem-se ANTES de tudo: são de quem
         // ainda está a decidir, e uma pergunta que fica sem resposta é um lead que se vai embora.
         const dadosBotao = typeof cq.data === "string" ? cq.data : ""
+        // Opt-in de seguimento (10/11) e aprovação humana das DMs do setter do Instagram.
+        if (dadosBotao.startsWith("optin:") || dadosBotao.startsWith("igdm:")) {
+          const bt = getMtmcopyBotToken()
+          const chatBotao = String(cq.message?.chat?.id ?? cq.from?.id ?? "")
+          let resposta = ""
+          if (dadosBotao.startsWith("optin:")) {
+            const oi = await import("@/lib/telegram-optin")
+            const r = oi.respostaDoBotao(dadosBotao)
+            if (r) {
+              const { registarConsentimento } = await import("@/lib/telegram-lead-funnel")
+              const { garantirConversaAberta } = await import("@/lib/vendas/executor-pipeline")
+              await garantirConversaAberta(supabase, chatBotao, cq.from ?? null)
+              await registarConsentimento(supabase, chatBotao, "telegram:optin", r, r === "sim" ? `Botão «Sim, quero» por baixo de: ${oi.TEXTO_OPTIN}` : undefined)
+              resposta = oi.confirmacaoOptin(r)
+            }
+          } else {
+            const { ehChatDeAdmin } = await import("@/lib/telegram-admin-menu")
+            if (await ehChatDeAdmin(supabase, chatBotao)) {
+              const { decidirDmPorTelegram } = await import("@/lib/instagram/setter-aprovacao")
+              resposta = await decidirDmPorTelegram(dadosBotao)
+            }
+          }
+          if (bt) {
+            await fetch(`https://api.telegram.org/bot${bt}/answerCallbackQuery`, {
+              method: "POST", headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ callback_query_id: cq.id }),
+            })
+            if (resposta) {
+              await fetch(`https://api.telegram.org/bot${bt}/sendMessage`, {
+                method: "POST", headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ chat_id: chatBotao, text: resposta, parse_mode: "HTML", disable_web_page_preview: true }),
+              })
+            }
+          }
+          return NextResponse.json({ ok: true })
+        }
         if (dadosBotao.startsWith("caminho:") || dadosBotao.startsWith("mtmauto:")) {
           const mf = await import("@/lib/telegram-mtmauto-funnel")
           const chatBotao = String(cq.message?.chat?.id ?? cq.from?.id ?? "")
@@ -580,7 +616,16 @@ export async function POST(request: NextRequest) {
       // boas-vindas: cai no fim da cadeia de `else`, que responde «não conheço esse comando». A
       // pessoa carregava no link que veio do Instagram para ser mandada embora.
       const startMatch = text.match(/^\/start\s+([a-zA-Z0-9_]+)$/)
-      if (startMatch?.[1]) {
+      // /start seguimento — opt-in explícito de seguimento (10/11). Abre a conversa e pergunta com
+      // dois botões; só o «Sim» grava consentimento (lib/telegram-optin.ts).
+      if (startMatch?.[1] === "seguimento") {
+        const oi = await import("@/lib/telegram-optin")
+        const { garantirConversaAberta } = await import("@/lib/vendas/executor-pipeline")
+        await garantirConversaAberta(supabase, chatId, body.message?.from ?? null)
+        const q = oi.pedidoOptin(body.message?.from?.first_name ?? null)
+        await sendMessage(q.texto, q.teclado)
+      }
+      else if (startMatch?.[1]) {
         /**
          * A CARGA DO AGENTE SAI DO TOKEN ANTES DE TUDO O RESTO.
          *

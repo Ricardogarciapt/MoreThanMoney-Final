@@ -37,6 +37,7 @@ import {
 export const KINDS_AUTO: Record<string, 'email' | 'telegram'> = {
   [KIND_ENVIO.EMAIL_RECUPERACAO]: 'email',
   [KIND_ENVIO.FOLLOWUP_TELEGRAM]: 'telegram',
+  [KIND_ENVIO.EMAIL_SEGUIMENTO]: 'email',
 }
 
 /** Assuntos que nunca se aprovam sozinhos, mesmo dentro de uma mensagem com base legal. */

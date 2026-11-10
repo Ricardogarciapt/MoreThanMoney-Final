@@ -52,10 +52,16 @@ export interface Interruptor {
   redigir: boolean
   enviar_publica: boolean
   enviar_dm: boolean
+  /**
+   * 10/11: a DM espera pelo «Aprovar» do dono no Telegram antes de sair. Por omissão LIGADO: só
+   * `aprovacao_dm: false` (com `enviar_dm: true`) volta ao envio sozinho. A DM continua limitada às
+   * 48 h do comentário — o aviso chega ao dono na hora, com os dois botões.
+   */
+  aprovacao_dm?: boolean
 }
 
 /** Desligado é o estado por omissão, e é-o em TODOS os caminhos de erro deste ficheiro. */
-const DESLIGADO: Interruptor = { redigir: false, enviar_publica: false, enviar_dm: false }
+const DESLIGADO: Interruptor = { redigir: false, enviar_publica: false, enviar_dm: false, aprovacao_dm: true }
 
 let cache: { em: number; v: Interruptor } | null = null
 const CACHE_MS = 30_000
@@ -83,6 +89,7 @@ export async function lerInterruptor(): Promise<Interruptor> {
       redigir: bruto?.redigir === true,
       enviar_publica: bruto?.enviar_publica === true,
       enviar_dm: bruto?.enviar_dm === true,
+      aprovacao_dm: bruto?.aprovacao_dm !== false,
     }
     cache = { em: Date.now(), v }
     return v
@@ -353,7 +360,10 @@ export async function tratarComentario(
   linha.publica_enviada_em = enviouPublica ? new Date().toISOString() : null
   const temDm = dm.pode && !!textoDm
   let enviouDm = false
-  if (temDm && chaves.enviar_dm && podeSair({ tipo: 'dm_ao_comentador', horasDesdeComentario: horas }).pode) {
+  // Com aprovação ligada, a DM pede OK ao dono sempre que o setter redige — o `enviar_dm` passa a
+  // valer só para o envio SEM aprovação (e fica desligado pela migração 243).
+  const esperaAprovacao = temDm && chaves.aprovacao_dm !== false && (chaves.redigir || chaves.enviar_dm)
+  if (temDm && chaves.enviar_dm && chaves.aprovacao_dm === false && podeSair({ tipo: 'dm_ao_comentador', horasDesdeComentario: horas }).pode) {
     const r = await respostaPrivada(c.commentId, textoDm as string, token)
     if (r.ok) enviouDm = true
     else erros.push(`dm: ${String(r.json?.error?.message ?? 'erro').slice(0, 150)}`)
@@ -370,7 +380,11 @@ export async function tratarComentario(
     })
   }
 
-  if (enviouDm || (enviouPublica && !temDm)) {
+  if (esperaAprovacao) {
+    // A DM fica escrita como `rascunho` e o dono decide no Telegram (lib/instagram/setter-aprovacao.ts).
+    linha.estado = 'rascunho'
+    linha.erro = 'aguarda aprovação do dono (Telegram)'
+  } else if (enviouDm || (enviouPublica && !temDm)) {
     linha.estado = 'enviado'
     linha.enviado_em = new Date().toISOString()
   } else if (temDm && chaves.enviar_dm) {
@@ -384,6 +398,11 @@ export async function tratarComentario(
 
   const { error } = await db.from('ig_setter_rascunhos').upsert(linha, { onConflict: 'comment_id' })
   if (error) return 'erro'
+
+  if (esperaAprovacao && textoDm) {
+    const { pedirAprovacaoDm } = await import('./setter-aprovacao')
+    await pedirAprovacaoDm({ commentId: c.commentId, commenter: c.commenter, comentario: c.texto, textoDm, horasDesdeComentario: horas })
+  }
 
   if (enviouDm) return 'dm_enviada'
   if (enviouPublica) return 'publica_enviada'

@@ -228,7 +228,11 @@ export async function runLeadFunnelReply(input: {
   }
 
   const interest = lead?.interest || detectInterest(input.userText)
-  const stage = interest ? 'routed' : lead?.stage === 'new' || !lead ? 'qualifying' : lead?.stage || 'qualifying'
+  // 10/11: quem veio do GRUPO (`no_grupo`) ou do pedido de entrada (`pedido_sinais`) e agora escreve
+  // ao bot em privado ABRIU a conversa — passa a `qualifying`, senão o follow-up nunca o via e o
+  // negócio ficava em «lead» para sempre (era o caso de 57 dos 62 leads do Telegram).
+  const vemDeFora = lead?.stage === 'no_grupo' || lead?.stage === 'pedido_sinais'
+  const stage = interest ? 'routed' : lead?.stage === 'new' || !lead || vemDeFora ? 'qualifying' : lead?.stage || 'qualifying'
   const source = input.source || lead?.source || 'telegram'
   // Tags canónicas — MESMO vocabulário em todos os canais para segmentar os contactos.
   const tags = Array.from(new Set([
@@ -279,11 +283,13 @@ type Supa = ReturnType<typeof getSupabaseAdmin>
  * Falhar a escrita NÃO pode ser silencioso quando é uma saída: se não se conseguir gravar, o que
  * fica no log é a única forma de alguém reparar que uma pessoa pediu para sair e continua na lista.
  */
-async function registarConsentimento(
+export async function registarConsentimento(
   supabase: Supa,
   chatId: string,
   canal: string,
   resposta: 'sim' | 'nao' | 'sair',
+  /** O texto exacto a que a pessoa disse sim (botão do opt-in) — fica como prova. */
+  prova?: string,
 ): Promise<void> {
   const ehWhatsApp = chatId.startsWith('wa:')
   const contacto = ehWhatsApp ? chatId.slice(3) : chatId
@@ -319,9 +325,10 @@ async function registarConsentimento(
       pedido_em: agora,
       ...(resposta === 'nao' ? { retirado_em: agora, retirado_por: `conversa:${canal}` } : {}),
       prova:
-        resposta === 'sim'
+        prova ??
+        (resposta === 'sim'
           ? 'Respondeu «sim» ao pedido feito dentro da conversa'
-          : 'Respondeu «não» ao pedido feito dentro da conversa',
+          : 'Respondeu «não» ao pedido feito dentro da conversa'),
     })
   } catch (e) {
     // Uma saída que não se grava é uma pessoa que pediu para sair e continua na lista.

@@ -309,7 +309,14 @@ export async function juntarEvidencia(db: Db, p: PedidoContacto, extra: { inicio
     if (eCons) ev.excluido = true
     for (const c of (cons ?? []) as Array<{ canal: string | null; retirado_em: string | null }>) {
       if (c.retirado_em) ev.excluido = true
-      else if (String(c.canal ?? '').toLowerCase() === canal || (canal === 'sms' && c.canal === 'telefone')) ev.consentimentoCanal = true
+      else if (
+        String(c.canal ?? '').toLowerCase() === canal ||
+        (canal === 'sms' && c.canal === 'telefone') ||
+        // 10/11: a caixa do checkout/marketplace diz «por email» (TEXTO_CAIXA_CHECKOUT) — é
+        // consentimento de EMAIL, gravado com o canal onde foi dado. Sem isto os 5 consentimentos
+        // que existem não serviam para nada.
+        (canal === 'email' && (c.canal === 'checkout' || c.canal === 'marketplace'))
+      ) ev.consentimentoCanal = true
     }
   }
   if (ids.user_id) {
