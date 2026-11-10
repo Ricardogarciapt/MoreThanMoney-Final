@@ -25,7 +25,17 @@ type Ativo = {
   mime: string
   tamanho: number | null
   url: string | null
+  animacao?: string | null
 }
+const ANIMACOES: [string, string][] = [
+  ['auto', 'Animar: pelo contexto'],
+  ['zoom_in', 'Animar: aproximar'],
+  ['zoom_out', 'Animar: afastar'],
+  ['pan_esq', 'Animar: deslizar ←'],
+  ['pan_dir', 'Animar: deslizar →'],
+  ['sobe', 'Animar: subir'],
+  ['sem', 'Imagem parada'],
+]
 type Subida = { nome: string; progresso: number; erro?: string }
 
 const ACEITA = 'image/jpeg,image/png,image/webp,image/heic,image/heif,image/gif,video/mp4,video/quicktime,video/webm,audio/mpeg,audio/mp4,audio/x-m4a,audio/wav,audio/aac'
@@ -108,7 +118,7 @@ export default function AtivosEstudio({ pecaInicial }: { pecaInicial?: string | 
     setSubidas((s) => s.filter((x) => x.erro))
   }
 
-  const mudar = async (a: Ativo, campos: { peca_id?: string | null; segmento?: number | null }) => {
+  const mudar = async (a: Ativo, campos: { peca_id?: string | null; segmento?: number | null; animacao?: string }) => {
     setAtivos((xs) => xs.map((x) => (x.id === a.id ? { ...x, ...campos } : x)))
     try {
       await api('/api/estudio/ativo', { method: 'PATCH', body: JSON.stringify({ id: a.id, ...campos }) })
@@ -253,6 +263,16 @@ export default function AtivosEstudio({ pecaInicial }: { pecaInicial?: string | 
                         >
                           <option value="">Qualquer momento</option>
                           {segs.map((s, i) => <option key={i} value={i}>{`${i + 1}. ${(s.fala || '').slice(0, 30)}`}</option>)}
+                        </select>
+                      )}
+                      {a.tipo === 'imagem' && (
+                        <select
+                          aria-label={`Animação de ${a.nome}`}
+                          value={a.animacao ?? 'auto'}
+                          onChange={(e) => void mudar(a, { animacao: e.target.value })}
+                          className="min-h-9 w-full rounded-lg border border-zinc-700 bg-zinc-950 px-2 text-xs"
+                        >
+                          {ANIMACOES.map(([v, t]) => <option key={v} value={v}>{t}</option>)}
                         </select>
                       )}
                       <button

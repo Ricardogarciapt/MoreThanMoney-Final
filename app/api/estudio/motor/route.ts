@@ -74,18 +74,18 @@ export async function GET(request: NextRequest) {
   const { data: ativosBrutos } = cand.peca_id
     ? await db
         .from('estudio_ativos')
-        .select('tipo, nome, segmento, caminho, mime')
+        .select('tipo, nome, segmento, caminho, mime, animacao')
         .eq('peca_id', cand.peca_id)
         .eq('estado', 'pronto')
         .order('criado_em', { ascending: true })
         .limit(30)
-    : { data: [] as { tipo: string; nome: string; segmento: number | null; caminho: string; mime: string }[] }
+    : { data: [] as { tipo: string; nome: string; segmento: number | null; caminho: string; mime: string; animacao: string | null }[] }
   const listaAtivos = ativosBrutos ?? []
   const urlsAtivos = listaAtivos.length
     ? (await db.storage.from('estudio').createSignedUrls(listaAtivos.map((a) => a.caminho), 3600)).data ?? []
     : []
   const ativos = listaAtivos
-    .map((a, i) => ({ tipo: a.tipo, nome: a.nome, segmento: a.segmento, mime: a.mime, url: urlsAtivos[i]?.signedUrl ?? null }))
+    .map((a, i) => ({ tipo: a.tipo, nome: a.nome, segmento: a.segmento, mime: a.mime, animacao: a.animacao ?? 'auto', url: urlsAtivos[i]?.signedUrl ?? null }))
     .filter((a) => a.url)
   const segmentos = Array.isArray(g.reel?.segmentos)
     ? g.reel.segmentos.map((s: any) => ({

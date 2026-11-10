@@ -131,8 +131,8 @@ export default function PainelConteudoMagnetico({ onGravar }: { onGravar?: (peca
     })()
   }, [])
 
-  const cancelarRender = useCallback(async (id: string) => {
-    if (!window.confirm('Tirar este vídeo da fila?')) return
+  const cancelarRender = useCallback(async (id: string, pronto = false) => {
+    if (!window.confirm(pronto ? 'Apagar este vídeo de vez?' : 'Tirar este vídeo da fila?')) return
     const r = await fetch(`/api/conteudo-magnetico/render?id=${encodeURIComponent(id)}`, {
       method: 'DELETE',
       headers: await authHeaders(),
@@ -605,10 +605,10 @@ export default function PainelConteudoMagnetico({ onGravar }: { onGravar?: (peca
                       )}
                       <div className="mt-2 flex items-center justify-between gap-2">
                         <p className="text-xs text-white/35">{new Date(r.criado_em).toLocaleString('pt-PT')}</p>
-                        {(r.estado === 'na_fila' || r.estado === 'erro') && (
+                        {(r.estado === 'na_fila' || r.estado === 'erro' || r.estado === 'pronto') && (
                           <button
                             type="button"
-                            onClick={() => cancelarRender(r.id)}
+                            onClick={() => cancelarRender(r.id, r.estado === 'pronto')}
                             className="text-xs text-white/45 underline-offset-2 hover:text-red-300 hover:underline"
                           >
                             {r.estado === 'na_fila' ? 'Tirar da fila' : 'Apagar'}

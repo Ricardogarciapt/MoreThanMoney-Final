@@ -87,14 +87,17 @@ export async function DELETE(request: NextRequest) {
   if (!quem.admin) return NextResponse.json({ erro: 'Só para a casa' }, { status: 403 })
   const id = request.nextUrl.searchParams.get('id') || ''
   if (!/^[0-9a-f-]{36}$/i.test(id)) return NextResponse.json({ erro: 'id inválido' }, { status: 400 })
-  const { data, error } = await getSupabaseAdmin()
+  // Na fila, falhado ou pronto (apaga também o MP4). O que está a ser montado agora não se apaga.
+  const db = getSupabaseAdmin()
+  const { data, error } = await db
     .from('conteudo_magnetico_renders')
     .delete()
     .eq('id', id)
     .eq('user_id', quem.userId)
-    .in('estado', ['na_fila', 'erro'])
-    .select('id')
+    .in('estado', ['na_fila', 'erro', 'pronto'])
+    .select('id, estado')
   if (error) return NextResponse.json({ erro: error.message }, { status: 500 })
-  if (!data?.length) return NextResponse.json({ erro: 'Não está na fila (ou não é teu).' }, { status: 409 })
+  if (!data?.length) return NextResponse.json({ erro: 'A ser montado agora (ou não é teu).' }, { status: 409 })
+  await db.storage.from('uploads').remove([`conteudo-magnetico/${id}.mp4`]).catch(() => null)
   return NextResponse.json({ ok: true })
 }

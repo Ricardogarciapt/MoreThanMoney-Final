@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getSupabaseAdmin } from '@/lib/supabase-admin-client'
+
+const ANIMACOES = ['auto', 'sem', 'zoom_in', 'zoom_out', 'pan_esq', 'pan_dir', 'sobe']
 import { quemPede } from '@/lib/conteudo-magnetico/acesso'
 
 export const runtime = 'nodejs'
@@ -77,6 +79,7 @@ export async function PATCH(request: NextRequest) {
   if ('peca_id' in b) upd.peca_id = uuid(b.peca_id)
   if ('segmento' in b) upd.segmento = seg(b.segmento)
   if (typeof b.notas === 'string') upd.notas = b.notas.slice(0, 500)
+  if (typeof b.animacao === 'string' && ANIMACOES.includes(b.animacao)) upd.animacao = b.animacao
   if (!Object.keys(upd).length) return NextResponse.json({ erro: 'Nada para mudar.' }, { status: 400 })
   const { error } = await getSupabaseAdmin().from('estudio_ativos').update(upd).eq('id', b.id).eq('user_id', quem!.userId)
   if (error) return NextResponse.json({ erro: 'Não consegui guardar.' }, { status: 500 })
@@ -103,7 +106,7 @@ export async function GET(request: NextRequest) {
   const db = getSupabaseAdmin()
   let q = db
     .from('estudio_ativos')
-    .select('id, peca_id, segmento, tipo, nome, caminho, mime, tamanho, notas, criado_em')
+    .select('id, peca_id, segmento, tipo, nome, caminho, mime, tamanho, notas, animacao, criado_em')
     .eq('user_id', quem!.userId)
     .eq('estado', 'pronto')
     .order('criado_em', { ascending: false })
