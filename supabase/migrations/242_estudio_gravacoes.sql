@@ -15,7 +15,8 @@ create table if not exists public.estudio_gravacoes (
   mime text not null,
   duracao_s numeric,
   estado text not null default 'a_subir'
-    check (estado in ('a_subir', 'bruto', 'escolhido', 'editado', 'publicado', 'descartado')),
+    check (estado in ('a_subir', 'bruto', 'escolhido', 'a_editar', 'editado', 'publicado', 'descartado')),
+  reclamado_em timestamptz,
   notas text,
   editado_url text,
   criado_em timestamptz not null default now()

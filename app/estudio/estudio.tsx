@@ -206,6 +206,7 @@ export default function Estudio() {
 
         <section aria-labelledby="takes" className="mt-8">
           <h2 id="takes" className="text-base font-medium">Takes gravados</h2>
+          <p className="mt-1 text-xs text-zinc-400">«Escolher» manda o take para a edição automática no Mac; o reel editado entra na fila do Instagram para aprovação.</p>
           {!aCarregar && takes.length === 0 && <p className="mt-2 text-sm text-zinc-500">Nenhum take ainda.</p>}
           <ul className="mt-2 grid grid-cols-2 gap-3">
             {takes.map((t) => (
