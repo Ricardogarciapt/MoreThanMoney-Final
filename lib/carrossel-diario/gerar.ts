@@ -8,6 +8,7 @@
  */
 import { chamarIAGratis } from '@/lib/ia/chamar'
 import { blocoFramework } from '@/lib/framework-mtm'
+import { blocoGanchos } from '@/lib/conteudo/ganchos'
 import { corrigirObjectoPtPt, regrasPtPtParaPrompt } from '@/lib/pt-pt'
 import { DISCLAIMER_PT, regrasParaPrompt, verificarObjecto } from '@/lib/conteudo-magnetico/regras'
 import { BANCO } from './banco'
@@ -74,6 +75,7 @@ export async function gerarCarrossel(perfil: Perfil, tema: Tema, id: string): Pr
     VOZ[perfil],
     regrasParaPrompt(),
     regrasPtPtParaPrompt(),
+    blocoGanchos(),
     'Escreve em português de Portugal, com o Acordo Ortográfico de 1990 (direção, objetivo, ativo). Tratamento por «tu». Ortografia e acentuação impecáveis.',
     'Nada de números de resultados, percentagens de ganho, taxas de acerto ou promessas. Exemplos de risco (ex.: arriscar 1% por operação) são permitidos.',
     'Responde APENAS com JSON válido.',
