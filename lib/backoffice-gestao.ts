@@ -52,8 +52,8 @@ export const MODULOS_GESTAO: readonly ModuloGestao[] = [
   { slug: 'dashboard', nome: 'Dashboard de gestão', grupo: 'Inteligência', exige: 'bo.dono',
     descricao: 'Os 12 agentes de negócio em chat, métricas e o estado dos sistemas.' },
   { slug: 'acessos', nome: 'Acessos da equipa', grupo: 'Equipa', exige: 'bo.dono',
-    descricao: 'Quem entra na Gestão e em que áreas (Clientes & CRM, Comercial), e os papéis de venda.',
-    vistas: [{ id: 'gestao', nome: 'Acessos à Gestão' }, { id: 'papeis', nome: 'Papéis de venda' }] },
+    descricao: 'Quem entra na Gestão e em que áreas (Clientes & CRM, Comercial), quem usa o Estúdio e os papéis de venda.',
+    vistas: [{ id: 'gestao', nome: 'Acessos à Gestão' }, { id: 'estudio', nome: 'Estúdio' }, { id: 'papeis', nome: 'Papéis de venda' }] },
 ] as const
 
 export const GRUPOS_GESTAO: readonly GrupoGestao[] = ['Operação', 'Clientes & CRM', 'Comercial', 'Inteligência', 'Equipa']

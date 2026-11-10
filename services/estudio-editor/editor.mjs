@@ -19,6 +19,7 @@ import { spawn } from 'node:child_process'
 import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
+import { renderProjeto } from './projeto.mjs'
 
 const SITE = (process.env.MTM_SITE || 'https://www.morethanmoney.pt').replace(/\/$/, '')
 const SEGREDO = process.env.CRON_SECRET?.trim()
@@ -258,6 +259,48 @@ async function umTrabalho() {
   return true
 }
 
+/** Monta um projecto do Editor de vídeo do /estudio (timeline → MP4). */
+async function umProjeto() {
+  const r = await fetch(`${SITE}/api/estudio/motor/projeto`, { headers: auth })
+  if (r.status === 404) return false // site ainda sem o editor
+  if (!r.ok) throw new Error(`projeto GET ${r.status}`)
+  const { trabalho: t } = await r.json()
+  if (!t) return false
+  log('a montar projecto', t.id, t.titulo)
+  const pasta = await mkdtemp(join(tmpdir(), 'mtm-projeto-'))
+  const responder = (corpo) => fetch(`${SITE}/api/estudio/motor/projeto`, { method: 'POST', headers: { ...auth, 'content-type': 'application/json' }, body: JSON.stringify({ id: t.id, ...corpo }) })
+  try {
+    const p = t.projeto
+    const urls = [...new Set([...p.clips.map((c) => c.fonte?.url), p.musica?.fonte?.url].filter(Boolean))]
+    const ficheiros = {}
+    for (const [i, u] of urls.entries()) {
+      const d = await fetch(u)
+      if (!d.ok) { log('fonte ignorada', d.status); continue }
+      const tipo = d.headers.get('content-type') || ''
+      let f = join(pasta, `fonte-${i}.${/image\/(heic|heif)/.test(tipo) ? 'heic' : tipo.split('/')[1]?.split(';')[0].replace('quicktime', 'mov').replace('mpeg', 'mp3') || 'bin'}`)
+      await writeFile(f, Buffer.from(await d.arrayBuffer()))
+      if (f.endsWith('.heic')) { const jpg = f.replace(/heic$/, 'jpg'); await correr('sips', ['-s', 'format', 'jpeg', f, '--out', jpg]); f = jpg }
+      ficheiros[u] = f
+    }
+    let logo = null
+    if (p.marca_dagua) {
+      const l = await fetch(`${SITE}/logo-mtm-transparent.png`).catch(() => null)
+      if (l?.ok) { logo = join(pasta, 'logo.png'); await writeFile(logo, Buffer.from(await l.arrayBuffer())) }
+    }
+    const saida = join(pasta, 'projeto.mp4')
+    await renderProjeto(p, { pasta, ficheiros, palavras: t.palavras || {}, marca: t.marca, logo, saida })
+    const s = await fetch(t.subir_url, { method: 'PUT', headers: { 'content-type': 'video/mp4', 'x-upsert': 'true' }, body: await readFile(saida) })
+    if (!s.ok) throw new Error(`upload ${s.status}`)
+    log('projecto pronto', t.id, await (await responder({ ok: true })).text())
+  } catch (e) {
+    log('projecto falhou', t.id, e.message)
+    await responder({ ok: false, erro: e.message }).catch(() => {})
+  } finally {
+    await rm(pasta, { recursive: true, force: true })
+  }
+  return true
+}
+
 /** Transcreve um take (para editar pelo texto no /estudio), se houver ESTUDIO_TRANSCREVER_CMD. */
 async function umaTranscricao() {
   const cmdBase = process.env.ESTUDIO_TRANSCREVER_CMD
@@ -292,6 +335,7 @@ async function umaTranscricao() {
 while (principal) {
   try {
     while (await umTrabalho()) { /* esvaziar a fila, um de cada vez */ }
+    while (await umProjeto()) { /* projectos do editor */ }
     while (await umaTranscricao()) { /* depois as transcrições */ }
   } catch (e) {
     log('erro', e.message)

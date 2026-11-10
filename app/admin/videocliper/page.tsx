@@ -1,10 +1,8 @@
-import type { Metadata } from 'next'
-import PainelVideocliper from './painel'
+import { redirect } from 'next/navigation'
 
 export const dynamic = 'force-dynamic'
 
-export const metadata: Metadata = { title: 'Videocliper · Admin' }
-
+/** O cortador passou para o Estúdio (separador «Cortes»), onde a equipa com acesso também o usa. */
 export default function PaginaVideocliper() {
-  return <PainelVideocliper />
+  redirect('/estudio?tab=cortes')
 }

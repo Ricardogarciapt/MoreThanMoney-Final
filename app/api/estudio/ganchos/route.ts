@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getSupabaseAdmin } from '@/lib/supabase-admin-client'
-import { quemPede } from '@/lib/conteudo-magnetico/acesso'
+import { exigirEstudio } from '@/lib/estudio/acesso'
+import { MARCAS_CASA } from '@/lib/conteudo-magnetico/acesso'
 import { chamarIAGratis } from '@/lib/ia/chamar'
 import { blocoFramework } from '@/lib/framework-mtm'
 import { blocoGanchos } from '@/lib/conteudo/ganchos'
@@ -22,11 +23,9 @@ export const dynamic = 'force-dynamic'
  */
 type Gancho = { fala: string; ecra: string; gatilho: string }
 
+// Equipa do estúdio (backoffice → acessos): biblioteca partilhada, sem filtro por autor.
 async function soAdmin(request: Request) {
-  const quem = await quemPede(request)
-  if (!quem) return { erro: NextResponse.json({ erro: 'Sessão necessária' }, { status: 401 }) }
-  if (!quem.admin) return { erro: NextResponse.json({ erro: 'O estúdio é só da casa.' }, { status: 403 }) }
-  return { quem }
+  return exigirEstudio(request, 'gravar', 'criar')
 }
 
 async function lerPeca(id: unknown, userId: string) {
@@ -35,7 +34,7 @@ async function lerPeca(id: unknown, userId: string) {
     .from('conteudo_magnetico_pecas')
     .select('id, marca, guiao')
     .eq('id', id)
-    .eq('user_id', userId)
+    .in('marca', MARCAS_CASA)
     .maybeSingle()
   return data
 }

@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getSupabaseAdmin } from '@/lib/supabase-admin-client'
 import { mensagemIndisponivel } from '@/lib/ia/chamar'
-import { quemPede } from '@/lib/conteudo-magnetico/acesso'
+import { MARCAS_CASA, quemPede } from '@/lib/conteudo-magnetico/acesso'
 import { gerarGuiao } from '@/lib/conteudo-magnetico/gerar'
 import { FORMATOS, marcasPermitidas, resolverMarca, type Formato } from '@/lib/conteudo-magnetico/marcas'
 import { OBJECTIVOS, TONS, normalizarGuiao, type Objectivo, type Tom } from '@/lib/conteudo-magnetico/guiao'
@@ -19,7 +19,7 @@ export const maxDuration = 120
 export async function POST(request: NextRequest) {
   const quem = await quemPede(request)
   if (!quem) return NextResponse.json({ erro: 'Sessão necessária' }, { status: 401 })
-  if (!quem.admin) return NextResponse.json({ erro: 'Só para a casa' }, { status: 403 })
+  if (!quem.criar) return NextResponse.json({ erro: 'Não tens acesso a «Criar».' }, { status: 403 })
 
   const b = await request.json().catch(() => ({}))
   const formato = (b.formato in FORMATOS ? b.formato : 'carrossel') as Formato
@@ -57,7 +57,7 @@ export async function POST(request: NextRequest) {
 export async function PUT(request: NextRequest) {
   const quem = await quemPede(request)
   if (!quem) return NextResponse.json({ erro: 'Sessão necessária' }, { status: 401 })
-  if (!quem.admin) return NextResponse.json({ erro: 'Só para a casa' }, { status: 403 })
+  if (!quem.criar) return NextResponse.json({ erro: 'Não tens acesso a «Criar».' }, { status: 403 })
   const b = await request.json().catch(() => ({}))
   const g = b.guiao || {}
   if (!marcasPermitidas(quem.admin).includes(g.marca)) {
@@ -76,7 +76,7 @@ export async function PUT(request: NextRequest) {
       .from('conteudo_magnetico_pecas')
       .update({ guiao, fundo_url: b.fundo_url ?? null })
       .eq('id', b.id)
-      .eq('user_id', quem.userId)
+      .in('marca', MARCAS_CASA)
   }
   return NextResponse.json({ ok: true, guiao, avisos })
 }
@@ -88,8 +88,8 @@ export async function GET(request: NextRequest) {
   const { data } = await getSupabaseAdmin()
     .from('conteudo_magnetico_pecas')
     .select('id, formato, marca, guiao, fundo_url, criado_em')
-    .eq('user_id', quem.userId)
+    .in('marca', MARCAS_CASA)
     .order('criado_em', { ascending: false })
-    .limit(20)
-  return NextResponse.json({ ok: true, admin: quem.admin, marcas: marcasPermitidas(quem.admin), pecas: data ?? [] })
+    .limit(30)
+  return NextResponse.json({ ok: true, admin: quem.admin, criar: quem.criar, marcas: marcasPermitidas(quem.admin), pecas: data ?? [] })
 }

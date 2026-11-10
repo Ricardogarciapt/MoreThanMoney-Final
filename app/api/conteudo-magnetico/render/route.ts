@@ -17,7 +17,7 @@ export const maxDuration = 20
 export async function POST(request: NextRequest) {
   const quem = await quemPede(request)
   if (!quem) return NextResponse.json({ erro: 'Sessão necessária' }, { status: 401 })
-  if (!quem.admin) return NextResponse.json({ erro: 'Só para a casa' }, { status: 403 })
+  if (!quem.criar) return NextResponse.json({ erro: 'Não tens acesso a «Criar».' }, { status: 403 })
   const b = await request.json().catch(() => ({}))
   const g = b.guiao || {}
   if (!marcasPermitidas(quem.admin).includes(g.marca)) {

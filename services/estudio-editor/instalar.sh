@@ -14,6 +14,7 @@ command -v ffmpeg >/dev/null || { echo "Falta o ffmpeg (brew install ffmpeg)"; e
 NODE="$(command -v node)"; [ -n "$NODE" ] || { echo "Falta o node (brew install node)"; exit 1; }
 mkdir -p "$DEST"; chmod 700 "$DEST"
 cp "$REPO/services/estudio-editor/editor.mjs" "$DEST/editor.mjs"
+cp "$REPO/services/estudio-editor/projeto.mjs" "$DEST/projeto.mjs"
 # Segredos vêm do env do cortador («export X=…», às vezes com aspas). O site aceita qualquer um dos dois.
 ler() { [ -f "$HOME/.mtm-videocliper/env" ] && grep -E "^(export )?$1=" "$HOME/.mtm-videocliper/env" | head -1 | cut -d= -f2- | sed -E "s/^[\"']//; s/[\"']\$//"; }
 umask 077; touch "$DEST/env"
