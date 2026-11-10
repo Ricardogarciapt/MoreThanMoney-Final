@@ -54,7 +54,7 @@
     },
     {
       "path": "/api/cron/nightly-tp-sl",
-      "schedule": "*/15 * * * *"
+      "schedule": "0 3 * * *"
     },
     {
       "path": "/api/email-marketing/sequences/process",

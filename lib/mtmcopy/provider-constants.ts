@@ -114,7 +114,8 @@ export const CANONICAL_AURUMFLOW_STRATEGY_ID = 'vT8w'
  * visitá-los — ver `motorCorreNaConta`.
  */
 export const CONTAS_MOTOR_TEMPO_REAL: string[] = [
-  CANONICAL_PREMIUM_ACCOUNT_ID,      // MTM Auto Premium  · MT5 700160095 · MxsR
+  // MTM Auto Premium (530d2e07 · MxsR) SAIU a 2026-11-10: a conta deixou de existir na MetaApi a
+  // 04/11 e está em CONTAS_METAAPI_APAGADAS. O Premium corre pela mestre SIM do motor das mestres.
   // O Sensei está sem conta (reformado da 34744071). Entra sozinho quando a nova existir.
   ...(SENSEI_PROVIDER_ACCOUNT_ID ? [SENSEI_PROVIDER_ACCOUNT_ID] : []), // MTM Auto Sensei · Oca7
   // Aurum Flow: a conta a4ea0c45 foi apagada (null) — entra sozinha quando houver id.
