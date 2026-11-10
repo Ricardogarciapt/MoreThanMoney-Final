@@ -18,6 +18,7 @@ export async function POST(request: NextRequest) {
   const motor = ehMotor(request)
   const quem = motor ? null : await quemPede(request)
   if (!motor && !quem) return NextResponse.json({ erro: 'Sessão necessária' }, { status: 401 })
+  if (!motor && !quem?.admin) return NextResponse.json({ erro: 'Só para a casa' }, { status: 403 })
 
   const b = await request.json().catch(() => ({}))
   const formato = (b.formato in FORMATOS ? b.formato : 'carrossel') as Formato

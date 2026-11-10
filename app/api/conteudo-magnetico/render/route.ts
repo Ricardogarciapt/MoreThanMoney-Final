@@ -17,6 +17,7 @@ export const maxDuration = 20
 export async function POST(request: NextRequest) {
   const quem = await quemPede(request)
   if (!quem) return NextResponse.json({ erro: 'Sessão necessária' }, { status: 401 })
+  if (!quem.admin) return NextResponse.json({ erro: 'Só para a casa' }, { status: 403 })
   const b = await request.json().catch(() => ({}))
   const g = b.guiao || {}
   if (!marcasPermitidas(quem.admin).includes(g.marca)) {
@@ -69,6 +70,7 @@ export async function POST(request: NextRequest) {
 export async function GET(request: NextRequest) {
   const quem = await quemPede(request)
   if (!quem) return NextResponse.json({ erro: 'Sessão necessária' }, { status: 401 })
+  if (!quem.admin) return NextResponse.json({ erro: 'Só para a casa' }, { status: 403 })
   const { data } = await getSupabaseAdmin()
     .from('conteudo_magnetico_renders')
     .select('id, estado, video_url, erro, criado_em, terminado_em, guiao->laminas')
@@ -82,6 +84,7 @@ export async function GET(request: NextRequest) {
 export async function DELETE(request: NextRequest) {
   const quem = await quemPede(request)
   if (!quem) return NextResponse.json({ erro: 'Sessão necessária' }, { status: 401 })
+  if (!quem.admin) return NextResponse.json({ erro: 'Só para a casa' }, { status: 403 })
   const id = request.nextUrl.searchParams.get('id') || ''
   if (!/^[0-9a-f-]{36}$/i.test(id)) return NextResponse.json({ erro: 'id inválido' }, { status: 400 })
   const { data, error } = await getSupabaseAdmin()
