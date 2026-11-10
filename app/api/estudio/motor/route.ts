@@ -4,6 +4,13 @@ import { ehMotor } from '@/lib/conteudo-magnetico/acesso'
 import { ARROBA, IG_ID } from '@/lib/carrossel-diario/tipos'
 import { corrigirPtPt } from '@/lib/pt-pt'
 
+// O editor do Mac entra com o CRON_SECRET ou, como o cortador, com o segredo dos workers.
+function autorizado(request: NextRequest): boolean {
+  if (ehMotor(request)) return true
+  const w = process.env.LMS_CAPTION_WORKER_SECRET?.trim()
+  return !!w && request.headers.get('x-caption-secret') === w
+}
+
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
 
@@ -22,7 +29,7 @@ export const dynamic = 'force-dynamic'
 const PERFIL = { 'ricardo-garcia': 'ricardo', morethanmoney: 'mtm' } as const
 
 export async function GET(request: NextRequest) {
-  if (!ehMotor(request)) return NextResponse.json({ erro: 'Não autorizado' }, { status: 401 })
+  if (!autorizado(request)) return NextResponse.json({ erro: 'Não autorizado' }, { status: 401 })
   const db = getSupabaseAdmin()
 
   // Um take preso em 'a_editar' há mais de 30 min (o Mac caiu) volta a ser reclamável.
@@ -85,7 +92,7 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
-  if (!ehMotor(request)) return NextResponse.json({ erro: 'Não autorizado' }, { status: 401 })
+  if (!autorizado(request)) return NextResponse.json({ erro: 'Não autorizado' }, { status: 401 })
   const b = await request.json().catch(() => ({}))
   if (typeof b.id !== 'string') return NextResponse.json({ erro: 'Falta o id.' }, { status: 400 })
   const db = getSupabaseAdmin()
