@@ -8,6 +8,7 @@ import { factoDoDia, getPipsProof, notaViesPreco } from '@/lib/pips-proof'
 import { canvaAutofillImage } from '@/lib/canva-connect'
 import { chamarIA, ErroIA, mensagemIndisponivel } from '@/lib/ia/chamar'
 import { blocoFramework } from '@/lib/framework-mtm'
+import { blocoGanchos, blocoLegendaReel } from '@/lib/conteudo/ganchos'
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { agenteDoPilar, marcarConteudo } from '@/lib/agentes/marca-conteudo'
 import { AG } from '@/lib/agentes/codigos'
@@ -180,7 +181,7 @@ export async function draftBatch(
       : '')
   const r = await chamar({
     tarefa: 'content-draft',
-    sistema: `${buildSystem(proofText, campanha)}\n\n${blocoFramework('conteudo')}`,
+    sistema: `${buildSystem(proofText, campanha)}\n\n${blocoFramework('conteudo')}\n\n${blocoGanchos()}\n\n${blocoLegendaReel()}`,
     mensagens: [{ role: 'user', content: user }],
     maxTokens: 1600,
     // `CONTENT_DRAFT_PREFERENCIA` ('rapido' | 'qualidade') substitui o antigo `CONTENT_DRAFT_MODEL`:

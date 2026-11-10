@@ -9,6 +9,7 @@
 import { chamarIAGratis } from '@/lib/ia/chamar'
 import { corrigirObjectoPtPt } from '@/lib/pt-pt'
 import { blocoFramework } from '@/lib/framework-mtm'
+import { blocoGanchos, blocoLegendaReel } from '@/lib/conteudo/ganchos'
 import { MARCAS, type Formato, type Marca } from './marcas'
 import { LIMITES, OBJECTIVOS, TONS, normalizarGuiao, type Guiao, type Objectivo, type Tom } from './guiao'
 import { DISCLAIMER_PT, regrasParaPrompt, verificarObjecto, type Problema } from './regras'
@@ -51,6 +52,8 @@ export function montarPrompt(p: PedidoGuiao): { sistema: string; utilizador: str
     regrasParaPrompt(),
     'Escreve em português de Portugal («tu», «ecrã», «telemóvel»), nunca português do Brasil.',
     'Ganchos com tensão e curiosidade, linguagem pouco técnica, emoção; CTA disruptivo mas humano, nunca a soar a robô.',
+    blocoGanchos(),
+    blocoLegendaReel(),
     `Se falares de trading/investimento, a legenda termina com: «${DISCLAIMER_PT}»`,
     'Responde APENAS com JSON válido, sem comentários.',
   ].join('\n\n')
