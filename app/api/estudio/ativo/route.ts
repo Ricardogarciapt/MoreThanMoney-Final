@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getSupabaseAdmin } from '@/lib/supabase-admin-client'
 
 const ANIMACOES = ['auto', 'sem', 'zoom_in', 'zoom_out', 'pan_esq', 'pan_dir', 'sobe']
-import { quemPede } from '@/lib/conteudo-magnetico/acesso'
+import { exigirEstudio } from '@/lib/estudio/acesso'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -29,11 +29,9 @@ const tipoDe = (mime: string) => (mime.startsWith('image/') ? 'imagem' : mime.st
 const uuid = (v: unknown) => (typeof v === 'string' && /^[0-9a-f-]{36}$/i.test(v) ? v : null)
 const seg = (v: unknown) => (Number.isInteger(v) && (v as number) >= 0 && (v as number) <= 30 ? (v as number) : null)
 
+// Equipa do estúdio (backoffice → acessos): biblioteca partilhada, sem filtro por autor.
 async function soAdmin(request: Request) {
-  const quem = await quemPede(request)
-  if (!quem) return { erro: NextResponse.json({ erro: 'Sessão necessária' }, { status: 401 }) }
-  if (!quem.admin) return { erro: NextResponse.json({ erro: 'O estúdio é só da casa.' }, { status: 403 }) }
-  return { quem }
+  return exigirEstudio(request, 'ativos', 'editor', 'gravar')
 }
 
 export async function POST(request: NextRequest) {
@@ -81,7 +79,7 @@ export async function PATCH(request: NextRequest) {
   if (typeof b.notas === 'string') upd.notas = b.notas.slice(0, 500)
   if (typeof b.animacao === 'string' && ANIMACOES.includes(b.animacao)) upd.animacao = b.animacao
   if (!Object.keys(upd).length) return NextResponse.json({ erro: 'Nada para mudar.' }, { status: 400 })
-  const { error } = await getSupabaseAdmin().from('estudio_ativos').update(upd).eq('id', b.id).eq('user_id', quem!.userId)
+  const { error } = await getSupabaseAdmin().from('estudio_ativos').update(upd).eq('id', b.id)
   if (error) return NextResponse.json({ erro: 'Não consegui guardar.' }, { status: 500 })
   return NextResponse.json({ ok: true })
 }
@@ -92,7 +90,7 @@ export async function DELETE(request: NextRequest) {
   const id = uuid(request.nextUrl.searchParams.get('id'))
   if (!id) return NextResponse.json({ erro: 'Falta o id.' }, { status: 400 })
   const db = getSupabaseAdmin()
-  const { data: a } = await db.from('estudio_ativos').select('caminho').eq('id', id).eq('user_id', quem!.userId).maybeSingle()
+  const { data: a } = await db.from('estudio_ativos').select('caminho').eq('id', id).maybeSingle()
   if (!a) return NextResponse.json({ erro: 'Ativo desconhecido.' }, { status: 404 })
   await db.storage.from(BUCKET).remove([a.caminho])
   await db.from('estudio_ativos').delete().eq('id', id)
@@ -107,7 +105,6 @@ export async function GET(request: NextRequest) {
   let q = db
     .from('estudio_ativos')
     .select('id, peca_id, segmento, tipo, nome, caminho, mime, tamanho, notas, animacao, criado_em')
-    .eq('user_id', quem!.userId)
     .eq('estado', 'pronto')
     .order('criado_em', { ascending: false })
     .limit(100)

@@ -9,21 +9,21 @@
  * 10/11 (Ricardo): o Estúdio é só dele — todas as rotas do Conteúdo Magnético recusam (403)
  * quem não é admin.
  */
-import { getSupabaseAdmin } from '@/lib/supabase-admin-client'
-import { userIdDoPedido } from '@/lib/sessao-do-pedido'
+import { quemNoEstudio } from '@/lib/estudio/acesso'
 
-export type Quem = { userId: string; admin: boolean }
+// 10/11 23:43 (Ricardo): o dono pode dar acesso ao estúdio a outras pessoas no backoffice.
+// `admin` aqui quer dizer «da casa»: admin OU alguém com acesso ao estúdio (estudio_acessos).
+// `criar` diz se pode gerar guiões e vídeos (o separador «Criar»).
+export type Quem = { userId: string; admin: boolean; criar: boolean }
 
 export async function quemPede(request: Request): Promise<Quem | null> {
-  const userId = await userIdDoPedido(request)
-  if (!userId) return null
-  const { data } = await getSupabaseAdmin()
-    .from('profiles')
-    .select('user_type, is_active')
-    .eq('id', userId)
-    .maybeSingle()
-  return { userId, admin: data?.user_type === 'admin' && data?.is_active !== false }
+  const q = await quemNoEstudio(request)
+  if (!q) return null
+  return { userId: q.userId, admin: q.areas.size > 0, criar: q.areas.has('criar') }
 }
+
+/** As marcas da casa: a biblioteca partilhada da equipa filtra por elas (não por quem criou). */
+export const MARCAS_CASA = ['ricardo-garcia', 'morethanmoney']
 
 /** Renders de vídeo por dia para quem não é admin (o motor é uma máquina nossa, partilhada). */
 export const RENDERS_POR_DIA_MEMBRO = 2

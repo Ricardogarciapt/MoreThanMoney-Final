@@ -41,6 +41,7 @@ const ECRAS: Record<string, React.ComponentType> = {
   'agentes:ordens': dynamic(() => import('@/components/admin/agentes-ordens'), { ssr: false, loading: carregar }),
   dashboard: dynamic(() => import('@/app/dashboard-gestao/page'), { ssr: false, loading: carregar }),
   'acessos:gestao': dynamic(() => import('@/components/admin/gestao-acessos'), { ssr: false, loading: carregar }),
+  'acessos:estudio': dynamic(() => import('@/components/admin/estudio-acessos'), { ssr: false, loading: carregar }),
   'acessos:papeis': dynamic(() => import('@/components/admin/backoffice-equipa'), { ssr: false, loading: carregar }),
 }
 

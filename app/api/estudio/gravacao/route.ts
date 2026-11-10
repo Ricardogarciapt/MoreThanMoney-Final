@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getSupabaseAdmin } from '@/lib/supabase-admin-client'
-import { quemPede } from '@/lib/conteudo-magnetico/acesso'
+import { exigirEstudio } from '@/lib/estudio/acesso'
 import { marcasPermitidas } from '@/lib/conteudo-magnetico/marcas'
 import { normalizarCortes, normalizarEstilo } from '@/lib/estudio/texto'
 
@@ -40,11 +40,9 @@ async function cancelarPost(db: ReturnType<typeof getSupabaseAdmin>, postId: str
   return !!data?.length
 }
 
+// Equipa do estúdio (backoffice → acessos): biblioteca partilhada, sem filtro por autor.
 async function soAdmin(request: Request) {
-  const quem = await quemPede(request)
-  if (!quem) return { erro: NextResponse.json({ erro: 'Sessão necessária' }, { status: 401 }) }
-  if (!quem.admin) return { erro: NextResponse.json({ erro: 'O estúdio é só da casa.' }, { status: 403 }) }
-  return { quem }
+  return exigirEstudio(request, 'gravar', 'editor')
 }
 
 export async function POST(request: NextRequest) {
@@ -88,7 +86,7 @@ export async function PATCH(request: NextRequest) {
   if (typeof b.id !== 'string') return NextResponse.json({ erro: 'Falta o id.' }, { status: 400 })
   if (b.accao === 'cancelar') {
     const db = getSupabaseAdmin()
-    const { data: t } = await db.from('estudio_gravacoes').select('id, estado, post_id').eq('id', b.id).eq('user_id', quem!.userId).maybeSingle()
+    const { data: t } = await db.from('estudio_gravacoes').select('id, estado, post_id').eq('id', b.id).maybeSingle()
     if (!t) return NextResponse.json({ erro: 'Take desconhecido.' }, { status: 404 })
     const cancelouPost = await cancelarPost(db, t.post_id)
     await db.from('estudio_gravacoes').update({ estado: 'bruto', reclamado_em: null, post_id: null, notas: 'cancelado no estúdio' }).eq('id', t.id)
@@ -106,7 +104,6 @@ export async function PATCH(request: NextRequest) {
     .from('estudio_gravacoes')
     .update(upd)
     .eq('id', b.id)
-    .eq('user_id', quem!.userId)
   if (error) return NextResponse.json({ erro: 'Não consegui guardar.' }, { status: 500 })
   return NextResponse.json({ ok: true })
 }
@@ -122,7 +119,6 @@ export async function PUT(request: NextRequest) {
     .from('estudio_gravacoes')
     .select('peca_id, marca, caminho, mime, duracao_s, transcricao, transcricao_estado, cortes, estilo')
     .eq('id', id)
-    .eq('user_id', quem!.userId)
     .maybeSingle()
   if (!t) return NextResponse.json({ erro: 'Take desconhecido.' }, { status: 404 })
   const caminho = t.caminho.replace(/[^/]+(\.[a-z0-9]+)$/i, `${crypto.randomUUID()}$1`)
@@ -161,7 +157,6 @@ export async function DELETE(request: NextRequest) {
     .from('estudio_gravacoes')
     .select('id, marca, caminho, estado, post_id')
     .eq('id', id)
-    .eq('user_id', quem!.userId)
     .maybeSingle()
   if (!t) return NextResponse.json({ erro: 'Take desconhecido.' }, { status: 404 })
   if (t.estado === 'publicado') return NextResponse.json({ erro: 'Este já saiu no Instagram: apaga-o lá.' }, { status: 409 })
@@ -179,7 +174,6 @@ export async function GET(request: NextRequest) {
   const { data } = await db
     .from('estudio_gravacoes')
     .select('id, peca_id, marca, caminho, mime, duracao_s, estado, notas, editado_url, post_id, transcricao, transcricao_estado, cortes, estilo, criado_em')
-    .eq('user_id', quem!.userId)
     .not('estado', 'in', '(a_subir,descartado)')
     .order('criado_em', { ascending: false })
     .limit(30)
