@@ -1,5 +1,6 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { aprovarEnvio, rejeitarEnvio } from '@/lib/envios-fila'
+import { KINDS_AUTO, processarLinhas } from '@/lib/envios-auto-aprovar'
 import { marcarPublicado, marcarSaltado } from '@/lib/instagram/fila-comentarios-servidor'
 import {
   AGENTE_OPERADOR,
@@ -148,7 +149,18 @@ export async function passagemOperador(db: SupabaseClient): Promise<ResultadoPas
       if (d.acao === 'deixar') continue
       if (!feito && (await jaEnsaiadoHoje(db, e.id, d.acao))) continue
       if (feito) {
-        const res = d.acao === 'aprovar' ? await aprovarEnvio(e.id, AGENTE_OPERADOR) : await rejeitarEnvio(e.id, AGENTE_OPERADOR, d.motivo)
+        // 10/11: aprovar uma MENSAGEM passa pela regra legal (consentimento, soft opt-in, exclusão
+        // global, tectos) — a mesma do executor do pipeline. A peneira do operador não chega: diz
+        // se o texto é aceitável, não se a pessoa pode receber. Sem base legal, fica pendente.
+        let res: { ok: boolean; erro?: string; estado?: string }
+        if (d.acao === 'aprovar' && KINDS_AUTO[e.kind]) {
+          const lote = await processarLinhas(db, [e as never], { quem: AGENTE_OPERADOR, limite: 1 })
+          const it = lote.itens[0]
+          if (!it || it.destino !== 'sai') continue
+          res = { ok: !!it.enviado, erro: it.erro ?? undefined, estado: it.enviado ? 'enviado' : 'falhou' }
+        } else {
+          res = d.acao === 'aprovar' ? await aprovarEnvio(e.id, AGENTE_OPERADOR) : await rejeitarEnvio(e.id, AGENTE_OPERADOR, d.motivo)
+        }
         if (!res.ok) {
           r.erros.push(`envio ${e.id}: ${res.erro ?? res.estado}`)
           continue

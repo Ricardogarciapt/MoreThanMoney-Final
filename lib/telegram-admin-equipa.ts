@@ -204,53 +204,99 @@ export function textoEquipa(equipa: PessoaDaEquipa[]): string {
 export interface Pipeline {
   porEstado: Record<string, number>
   total: number
-  /** Abertos e sem mexer há mais de `DIAS_PARA_NEGOCIO_PARADO` dias. */
+  /** Abertos e sem mexer há mais de `DIAS_PARA_NEGOCIO_PARADO` dias (fora a lista importada). */
   parados: Array<{ id: string; nome: string; estado: string; desdeIso: string | null }>
+  /** 10/11: abertos que vieram da importação de contactos do WhatsApp — sem consentimento, não se contactam. */
+  importados?: number
+  /** 10/11: abertos por origem (sem a importação). */
+  porOrigem?: Record<string, number>
+  /** 10/11: quantas pessoas a máquina PODE contactar hoje (consentimento vivo). */
+  contactaveis?: { telegram: number; email: number }
+  /** 10/11: o executor do pipeline está ligado? E o que fez nas últimas 24 h. */
+  executor?: { ligado: boolean; enviados24h: number; pendentes: number }
+  /** Total de parados (a lista `parados` traz só os 10 primeiros). */
+  totalParados?: number
 }
 
-/** O pipeline: quantos em cada estado, e os que estão parados. */
-export async function carregarPipeline(supabase: Supa): Promise<Pipeline> {
-  const { data } = await supabase
-    .from('vendas_negocios')
-    .select('id, nome, estado, atualizado_em')
-    .order('atualizado_em', { ascending: true })
-    .limit(2000)
+const ESTADOS_TODOS = ['lead', 'contactado', 'qualificado', 'marcado', 'apresentado', 'no_show', 'ganho', 'perdido'] as const
 
-  const porEstado: Record<string, number> = {}
-  const parados: Pipeline['parados'] = []
-  const limite = Date.now() - DIAS_PARA_NEGOCIO_PARADO * 86_400_000
-  for (const n of data ?? []) {
-    const x = n as { id?: string; nome?: string; estado?: string; atualizado_em?: string }
-    const estado = String(x.estado ?? 'lead')
-    porEstado[estado] = (porEstado[estado] ?? 0) + 1
-    const fechado = (ESTADOS_FECHADOS as readonly string[]).includes(estado)
-    if (!fechado && x.atualizado_em && Date.parse(x.atualizado_em) < limite) {
-      parados.push({
-        id: String(x.id ?? ''),
-        nome: String(x.nome ?? '?'),
-        estado,
-        desdeIso: x.atualizado_em ?? null,
-      })
-    }
+/**
+ * O pipeline: quantos em cada estado (contagem EXACTA — antes lia 2.000 linhas e os números
+ * ficavam errados acima disso), os parados, a lista importada à parte e quem é contactável.
+ */
+export async function carregarPipeline(supabase: Supa): Promise<Pipeline> {
+  const contar = async (f: (q: any) => any): Promise<number> => {
+    const { count } = await f(supabase.from('vendas_negocios').select('id', { count: 'exact', head: true }))
+    return count ?? 0
   }
-  return { porEstado, total: (data ?? []).length, parados }
+  const porEstado: Record<string, number> = {}
+  const contagens = await Promise.all(ESTADOS_TODOS.map((e) => contar((q) => q.eq('estado', e))))
+  ESTADOS_TODOS.forEach((e, i) => { if (contagens[i]) porEstado[e] = contagens[i] })
+  const total = contagens.reduce((a, b) => a + b, 0)
+
+  const abertos = ESTADOS_TODOS.filter((e) => !(ESTADOS_FECHADOS as readonly string[]).includes(e))
+  const importados = await contar((q) => q.eq('origem', 'whatsapp_import').in('estado', abertos as unknown as string[]))
+
+  const limite = new Date(Date.now() - DIAS_PARA_NEGOCIO_PARADO * 86_400_000).toISOString()
+  const [{ data: paradosQ, count: nParados }, { data: origensQ }, { data: consQ }, { data: cfgQ }, { count: enviados24h }, { count: pendentes }] = await Promise.all([
+    supabase.from('vendas_negocios').select('id, nome, estado, atualizado_em', { count: 'exact' })
+      .in('estado', abertos as unknown as string[]).neq('origem', 'whatsapp_import').lt('atualizado_em', limite)
+      .order('atualizado_em', { ascending: true }).limit(10),
+    supabase.from('vendas_negocios').select('origem').in('estado', abertos as unknown as string[]).neq('origem', 'whatsapp_import').limit(2000),
+    supabase.from('captacao_consentimento').select('canal, email, telegram_chat_id, base_legal, retirado_em').limit(5000),
+    supabase.from('site_settings').select('value').eq('key', 'pipeline_executor').maybeSingle(),
+    supabase.from('aios_tasks').select('id', { count: 'exact', head: true }).like('kind', 'envio:%').eq('status', 'enviado')
+      .gte('enviado_em', new Date(Date.now() - 86_400_000).toISOString()),
+    supabase.from('aios_tasks').select('id', { count: 'exact', head: true }).like('kind', 'envio:%').eq('status', 'pendente'),
+  ])
+  const porOrigem: Record<string, number> = {}
+  for (const o of (origensQ ?? []) as Array<{ origem: string | null }>) porOrigem[o.origem ?? '?'] = (porOrigem[o.origem ?? '?'] ?? 0) + 1
+  const tg = new Set<string>()
+  const em = new Set<string>()
+  for (const c of (consQ ?? []) as Array<{ canal: string | null; email: string | null; telegram_chat_id: string | null; base_legal: string; retirado_em: string | null }>) {
+    if (c.retirado_em || c.base_legal !== 'consentimento') continue
+    if (c.telegram_chat_id && c.canal === 'telegram') tg.add(c.telegram_chat_id)
+    if (c.email && ['email', 'checkout', 'marketplace'].includes(String(c.canal))) em.add(c.email.toLowerCase())
+  }
+  const cfg = (cfgQ?.value ?? {}) as { ligado?: boolean }
+  return {
+    porEstado,
+    total,
+    parados: ((paradosQ ?? []) as Array<{ id: string; nome: string | null; estado: string; atualizado_em: string | null }>).map((x) => ({
+      id: String(x.id), nome: String(x.nome ?? '?'), estado: x.estado, desdeIso: x.atualizado_em,
+    })),
+    importados,
+    porOrigem,
+    contactaveis: { telegram: tg.size, email: em.size },
+    executor: { ligado: cfg.ligado === true, enviados24h: enviados24h ?? 0, pendentes: pendentes ?? 0 },
+    totalParados: nParados ?? undefined,
+  }
 }
 
 /** Pura: o pipeline em texto. Os parados vêm primeiro porque é o que ele tem de fazer hoje. */
 export function textoPipeline(p: Pipeline): string {
   if (!p.total) return '📋 <b>Pipeline</b>\n\nAinda não há negócios registados.'
-  const ordem = ['lead', 'contactado', 'qualificado', 'marcado', 'apresentado', 'no_show', 'ganho', 'perdido']
+  const ordem = [...ESTADOS_TODOS] as string[]
   const chaves = [...new Set([...ordem.filter((k) => p.porEstado[k]), ...Object.keys(p.porEstado)])]
   const abertos = chaves.filter((k) => !(ESTADOS_FECHADOS as readonly string[]).includes(k)).reduce((s, k) => s + (p.porEstado[k] ?? 0), 0)
+  const nParados = p.totalParados ?? p.parados.length
+  const origens = Object.entries(p.porOrigem ?? {}).sort((a, b) => b[1] - a[1]).map(([o, n]) => `${esc(o)} ${n}`).join(' · ')
   return [
     `📋 <b>Pipeline</b> — ${p.total} negócio${p.total === 1 ? '' : 's'} (${abertos} em aberto)`,
     '',
     ...chaves.map((k) => `• ${k.replace('_', ' ')}: <b>${p.porEstado[k] ?? 0}</b>`),
-    p.parados.length
-      ? `\n🐌 <b>Parados há mais de ${DIAS_PARA_NEGOCIO_PARADO} dias (${p.parados.length}):</b>`
+    p.importados
+      ? `\n📇 Desses abertos, <b>${p.importados}</b> são a lista importada do WhatsApp (sem consentimento — não se contactam).\n🎯 Funil real: <b>${Math.max(0, abertos - p.importados)}</b>${origens ? ` (${origens})` : ''}`
+      : '',
+    p.contactaveis ? `📬 Contactáveis com consentimento: Telegram <b>${p.contactaveis.telegram}</b> · email <b>${p.contactaveis.email}</b>` : '',
+    p.executor
+      ? `⚙️ Executor: ${p.executor.ligado ? 'ligado' : '<b>desligado</b>'} · ${p.executor.enviados24h} enviada${p.executor.enviados24h === 1 ? '' : 's'} em 24 h · ${p.executor.pendentes} na fila`
+      : '',
+    nParados
+      ? `\n🐌 <b>Parados há mais de ${DIAS_PARA_NEGOCIO_PARADO} dias (${nParados}):</b>`
       : `\n✅ Nenhum negócio aberto parado há mais de ${DIAS_PARA_NEGOCIO_PARADO} dias.`,
     ...p.parados.slice(0, 10).map((n) => `   • ${esc(n.nome)} — ${esc(n.estado)}, ${desde(n.desdeIso)}`),
-    p.parados.length > 10 ? `   <i>… e mais ${p.parados.length - 10}</i>` : '',
+    nParados > 10 ? `   <i>… e mais ${nParados - 10}</i>` : '',
   ]
     .filter(Boolean)
     .join('\n')

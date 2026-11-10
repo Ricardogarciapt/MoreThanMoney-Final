@@ -125,9 +125,12 @@ export async function aprovarEnvio(id: string, quem: string): Promise<ResultadoD
   const agora = new Date().toISOString()
 
   if (!UUID.test(id)) {
-    // Desde 06/10 (F4) a DM ao comentador do Instagram sai sozinha, dentro de 48 h: não há o que
-    // aprovar. Rejeitar continua a existir — serve para parar um reenvio.
-    return { ok: false, fila: 'ig_setter_rascunhos', estado: 'sem_aprovacao', erro: 'a DM ao comentador sai sozinha (48 h); não se aprova' }
+    // Desde 10/11 a DM ao comentador espera pelo OK do dono (lib/instagram/setter-aprovacao.ts).
+    // Aprovar aqui é o mesmo que o botão «Enviar DM» no Telegram.
+    const { decidirDmPorTelegram } = await import('@/lib/instagram/setter-aprovacao')
+    const txt = await decidirDmPorTelegram(`igdm:ok:${id}`)
+    const enviado = txt.startsWith('✅')
+    return { ok: enviado, fila: 'ig_setter_rascunhos', estado: enviado ? 'enviado' : 'nao_enviado', enviado, ...(enviado ? {} : { erro: txt }) }
   }
 
   const { data: atual } = await db.from('aios_tasks').select('id, kind, status').eq('id', id).maybeSingle()
@@ -157,7 +160,7 @@ export async function rejeitarEnvio(id: string, quem: string, motivo?: string): 
       .from('ig_setter_rascunhos')
       .update({ estado: 'descartado', decidido_em: agora, decidido_por: quem, erro: motivo ? `rejeitado: ${motivo}` : null })
       .eq('comment_id', id)
-      .eq('estado', 'pendente')
+      .in('estado', ['pendente', 'rascunho'])
       .select('comment_id')
     return data?.length
       ? { ok: true, fila: 'ig_setter_rascunhos', estado: 'descartado' }
@@ -228,7 +231,7 @@ export async function enviarEnvioAprovado(id: string): Promise<{ ok: boolean; es
     return fechar('enviado', null)
   }
 
-  if (t.kind === KIND_ENVIO.EMAIL_RECUPERACAO) {
+  if (t.kind === KIND_ENVIO.EMAIL_RECUPERACAO || t.kind === KIND_ENVIO.EMAIL_SEGUIMENTO) {
     const p = t.payload as PayloadEmailRecuperacao
     try {
       const { createMailTransporter, mailFrom, prepareBrandedEmailHtml, brandedMailAttachments } = await import('@/lib/mail-transport')

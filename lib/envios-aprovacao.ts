@@ -115,6 +115,8 @@ export function transicaoValida(de: string | null | undefined, para: 'aprovado' 
 export const KIND_ENVIO = {
   FOLLOWUP_TELEGRAM: 'envio:telegram_followup',
   EMAIL_RECUPERACAO: 'envio:email_recuperacao_checkout',
+  /** 10/11: seguimento por email de negócios do pipeline com consentimento de email (lib/vendas/executor-pipeline.ts). */
+  EMAIL_SEGUIMENTO: 'envio:email_seguimento_pipeline',
   /** «Quero que me liguem» / Meta Lead Ads → tarefa do setter (lib/pedido-contacto-registo.ts). */
   CONTACTO_IMEDIATO: 'envio:contacto_imediato',
 } as const

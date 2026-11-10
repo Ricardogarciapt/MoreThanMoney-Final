@@ -293,8 +293,8 @@
       "schedule": "30 7 * * *"
     },
     {
-      "path": "/api/cron/lead-followup",
-      "schedule": "0 */2 * * *"
+      "path": "/api/cron/pipeline-executor",
+      "schedule": "15 */2 * * *"
     },
     {
       "path": "/api/cron/content-repost",
