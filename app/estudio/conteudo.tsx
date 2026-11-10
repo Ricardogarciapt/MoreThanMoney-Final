@@ -1,11 +1,11 @@
 'use client'
 
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { AlertTriangle, Check, Copy, Download, Film, Loader2, Magnet, RefreshCw, Upload, Wand2 } from 'lucide-react'
+import { AlertTriangle, Check, Copy, Download, Film, Loader2, Magnet, RefreshCw, Upload, Video, Wand2 } from 'lucide-react'
 import { authHeaders } from '@/lib/auth-token'
 
 /**
- * O ecrã do MTM Conteúdo Magnético.
+ * O separador «Criar» do Estúdio (antigo /conteudomagnetico, fundido a 10/11).
  *
  * Três passos à vista, de cima para baixo: (1) marca e formato, (2) a estratégia (nicho,
  * objectivo, tom, notas), (3) o resultado — lâminas editáveis com pré-visualização, legenda e,
@@ -83,7 +83,7 @@ const TEXTO_AVISO: Record<string, string> = {
   promessa: 'Promessa de ganhos',
 }
 
-export default function PainelConteudoMagnetico() {
+export default function PainelConteudoMagnetico({ onGravar }: { onGravar?: (pecaId: string) => void } = {}) {
   const [marcas, setMarcas] = useState<IdMarca[]>(['propria'])
   const [marca, setMarca] = useState<IdMarca>('propria')
   const [propria, setPropria] = useState({ nome: '', arroba: '', cor: '#D2A63C' })
@@ -117,7 +117,7 @@ export default function PainelConteudoMagnetico() {
         // Sem sessão → login, e volta aqui depois. (Com sessão mas sem perfil, o middleware já
         // mandou para o registo antes de a página abrir.)
         if (r.status === 401) {
-          window.location.href = `/login?redirect=${encodeURIComponent('/conteudomagnetico')}`
+          window.location.href = `/login?redirect=${encodeURIComponent('/estudio?tab=criar')}`
           return
         }
         const j = await r.json()
@@ -303,7 +303,7 @@ export default function PainelConteudoMagnetico() {
   const ehAlto = guiao?.formato === 'story' || guiao?.formato === 'reel'
 
   return (
-    <div className="min-h-screen bg-[#07080b] pb-24 pt-24 text-white">
+    <div className="min-h-screen bg-[#07080b] pb-24 pt-6 text-white">
       <div className="mx-auto max-w-6xl px-4">
         {/* Cabeçalho */}
         <div className="mb-8 flex items-center gap-3">
@@ -532,9 +532,17 @@ export default function PainelConteudoMagnetico() {
                       <span className={rotulo}>
                         Segmentos do reel · ~{guiao.reel.duracao_estimada_segundos}s · música «{guiao.reel.musica_termo}»
                       </span>
-                      <button type="button" className={botaoOuro} onClick={pedirVideo} disabled={aEnfileirar || avisos.length > 0}>
-                        {aEnfileirar ? <Loader2 className="h-4 w-4 animate-spin" /> : <Film className="h-4 w-4" />} Gerar vídeo
-                      </button>
+                      <div className="flex flex-wrap gap-2">
+                        {/* Gravar eu próprio no teleprompter (marcas da casa) ou gerar o vídeo no motor. */}
+                        {onGravar && pecaId && marca !== 'propria' && (
+                          <button type="button" className={botaoOuro} onClick={() => onGravar(pecaId)} disabled={avisos.length > 0}>
+                            <Video className="h-4 w-4" /> Gravar no teleprompter
+                          </button>
+                        )}
+                        <button type="button" className={botaoOuro} onClick={pedirVideo} disabled={aEnfileirar || avisos.length > 0}>
+                          {aEnfileirar ? <Loader2 className="h-4 w-4 animate-spin" /> : <Film className="h-4 w-4" />} Gerar vídeo
+                        </button>
+                      </div>
                     </div>
                     <div className="space-y-3">
                       {guiao.reel.segmentos.map((s, i) => (

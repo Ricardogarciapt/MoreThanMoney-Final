@@ -17,7 +17,7 @@ export const ALVOS: Record<string, string | null> = {
   'funil:agendar': '/agendar', 'funil:registo': '/register', 'funil:abrir-conta': '/abrir-conta',
   'funil:ativar-premium': '/ativar-premium', 'produto:mtmfunded': '/mtmfunded', 'produto:mtmauto': '/mtmauto',
   'produto:automation': '/automation', 'produto:sensei-ea': '/sensei-ea', 'produto:scanner': '/scanner',
-  'produto:marketplace': '/marketplace', 'produto:conteudomagnetico': '/conteudomagnetico',
+  'produto:marketplace': '/marketplace', 'produto:conteudomagnetico': '/estudio?tab=criar',
   'app:app-mobile': '/app-mobile', 'conteudo:texto': null, 'email:texto': null, 'dm:texto': null,
 }
 

@@ -47,7 +47,7 @@ async function api(path: string, init?: RequestInit) {
   return j
 }
 
-export default function Estudio() {
+export default function Estudio({ pecaInicial }: { pecaInicial?: string | null } = {}) {
   const [ecra, setEcra] = useState<'escolher' | 'gravar' | 'rever'>('escolher')
   const [pecas, setPecas] = useState<Peca[]>([])
   const [takes, setTakes] = useState<Take[]>([])
@@ -81,6 +81,14 @@ export default function Estudio() {
     setGuiao({ pecaId: p.id, marca, titulo: p.guiao.nicho || 'Guião', texto: textoDaPeca(p), palavraChave: p.guiao.palavra_chave || '' })
     setEcra('gravar')
   }
+
+  // Vindo do separador «Criar» com um reel acabado: abre logo esse guião no teleprompter.
+  const abertaRef = useRef<string | null>(null)
+  useEffect(() => {
+    if (!pecaInicial || abertaRef.current === pecaInicial) return
+    const p = pecas.find((x) => x.id === pecaInicial)
+    if (p) { abertaRef.current = pecaInicial; abrirPeca(p) }
+  }, [pecaInicial, pecas])
 
   const gerar = async () => {
     if (!tema.trim()) return

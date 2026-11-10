@@ -15,7 +15,7 @@
  * e publicar continua a ser um gesto humano.
  *
  * Dono das peças: o MCP não tem sessão. As peças ficam em nome de `MCP_CONTEUDO_USER_ID` ou,
- * sem ela, do primeiro admin activo — aparecem-lhe em /conteudomagnetico como as outras.
+ * sem ela, do primeiro admin activo — aparecem-lhe em /estudio (separador Criar) como as outras.
  */
 import { getSupabaseAdmin } from '@/lib/supabase-admin-client'
 import type { Ferramenta } from '@/lib/mcp/ferramentas'
