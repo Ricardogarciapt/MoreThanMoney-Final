@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getSupabaseAdmin } from '@/lib/supabase-admin-client'
 import { quemPede } from '@/lib/conteudo-magnetico/acesso'
 import { marcasPermitidas } from '@/lib/conteudo-magnetico/marcas'
+import { normalizarCortes, normalizarEstilo } from '@/lib/estudio/texto'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -11,7 +12,8 @@ export const dynamic = 'force-dynamic'
  *
  * POST  { peca_id?, marca, mime, duracao_s } → cria a linha e devolve um URL assinado de upload
  *        (o browser sobe o vídeo directo para o Storage; a Vercel nunca carrega o ficheiro).
- * PATCH { id, estado?, notas? }              → confirma o upload (estado 'bruto') ou marca o take.
+ * PATCH { id, estado?, notas?, cortes?, estilo? } → confirma o upload (estado 'bruto'), marca o take,
+ *        guarda os cortes feitos pelo texto e o estilo (legenda, música). accao 'retranscrever' repete.
  * PATCH { id, accao: 'cancelar' }            → tira o take da fila: volta a 'bruto' e cancela o rascunho
  *                                              do Instagram que ainda não saiu.
  * PUT   { id }                               → duplica o take (cópia do ficheiro, estado 'bruto'), para
@@ -94,6 +96,9 @@ export async function PATCH(request: NextRequest) {
   }
   const upd: Record<string, unknown> = {}
   if ('peca_id' in b) upd.peca_id = uuid(b.peca_id)
+  if ('cortes' in b) upd.cortes = normalizarCortes(b.cortes)
+  if ('estilo' in b) upd.estilo = normalizarEstilo(b.estilo)
+  if (b.accao === 'retranscrever') upd.transcricao_estado = null
   if (ESTADOS.includes(b.estado)) upd.estado = b.estado
   if (typeof b.notas === 'string') upd.notas = b.notas.slice(0, 1000)
   if (!Object.keys(upd).length) return NextResponse.json({ erro: 'Nada para mudar.' }, { status: 400 })
@@ -115,7 +120,7 @@ export async function PUT(request: NextRequest) {
   const db = getSupabaseAdmin()
   const { data: t } = await db
     .from('estudio_gravacoes')
-    .select('peca_id, marca, caminho, mime, duracao_s')
+    .select('peca_id, marca, caminho, mime, duracao_s, transcricao, transcricao_estado, cortes, estilo')
     .eq('id', id)
     .eq('user_id', quem!.userId)
     .maybeSingle()
@@ -125,7 +130,21 @@ export async function PUT(request: NextRequest) {
   if (e1) return NextResponse.json({ erro: 'Não consegui copiar o vídeo.' }, { status: 500 })
   const { data: novo, error } = await db
     .from('estudio_gravacoes')
-    .insert({ user_id: quem!.userId, peca_id: t.peca_id, marca: t.marca, caminho, mime: t.mime, duracao_s: t.duracao_s, estado: 'bruto', origem_id: id, notas: 'cópia' })
+    .insert({
+      user_id: quem!.userId,
+      peca_id: t.peca_id,
+      marca: t.marca,
+      caminho,
+      mime: t.mime,
+      duracao_s: t.duracao_s,
+      estado: 'bruto',
+      origem_id: id,
+      notas: 'cópia',
+      transcricao: t.transcricao,
+      transcricao_estado: t.transcricao_estado === 'pronta' ? 'pronta' : null,
+      cortes: t.cortes,
+      estilo: t.estilo,
+    })
     .select('id')
     .single()
   if (error || !novo) return NextResponse.json({ erro: 'Não consegui registar a cópia.' }, { status: 500 })
@@ -159,7 +178,7 @@ export async function GET(request: NextRequest) {
   const db = getSupabaseAdmin()
   const { data } = await db
     .from('estudio_gravacoes')
-    .select('id, peca_id, marca, caminho, mime, duracao_s, estado, notas, editado_url, post_id, criado_em')
+    .select('id, peca_id, marca, caminho, mime, duracao_s, estado, notas, editado_url, post_id, transcricao, transcricao_estado, cortes, estilo, criado_em')
     .eq('user_id', quem!.userId)
     .not('estado', 'in', '(a_subir,descartado)')
     .order('criado_em', { ascending: false })

@@ -13,7 +13,8 @@
 // de 2 processos pesados.
 //
 // Variáveis: CRON_SECRET e/ou LMS_CAPTION_WORKER_SECRET (pelo menos um), MTM_SITE (omissão https://www.morethanmoney.pt),
-//            ESTUDIO_EDIT_CMD (opcional), ESTUDIO_INTERVALO_S (omissão 120).
+//            ESTUDIO_EDIT_CMD (opcional), ESTUDIO_TRANSCREVER_CMD (opcional: «cmd {in} {out}» que
+//            escreve { palavras: [{w,ini,fim}], lingua }), ESTUDIO_INTERVALO_S (omissão 120).
 import { spawn } from 'node:child_process'
 import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
@@ -87,16 +88,23 @@ function duracaoDe(ficheiro) {
 }
 
 export async function edicaoBase(entrada, saida, guiao = {}) {
-  // Corta o silêncio do início (até ao primeiro som) nos dois fluxos de uma vez, com -ss.
-  const inicio = await primeiroSom(entrada)
+  // Com cortes decididos no ecrã (editar pelo texto), aplicam-se esses; senão corta-se só o
+  // silêncio do início (até ao primeiro som) nos dois fluxos de uma vez, com -ss.
+  const cortes = (Array.isArray(guiao.cortes) ? guiao.cortes : []).filter((c) => c.fim > c.ini)
+  const inicio = cortes.length ? 0 : await primeiroSom(entrada)
   const corte = inicio > 0.2 ? Math.max(0, inicio - 0.15) : 0
-  const duracao = Math.max(0, (await duracaoDe(entrada)) - corte)
+  const removido = cortes.reduce((t, c) => t + (c.fim - c.ini), 0)
+  const duracao = Math.max(0, (await duracaoDe(entrada)) - corte - removido)
+  const estilo = { musica_db: -18, duck: true, ...(guiao.estilo || {}) }
   const ativos = Array.isArray(guiao.ativos) ? guiao.ativos.filter((a) => a.ficheiro) : []
   const plano = planoAtivos(Array.isArray(guiao.segmentos) ? guiao.segmentos : [], ativos, duracao)
   const musica = ativos.find((a) => a.tipo === 'audio')
 
   const args = ['-y', '-hide_banner', '-loglevel', 'error', '-threads', '2', ...(corte ? ['-ss', String(corte)] : []), '-i', entrada]
-  const filtros = [`[0:v]${ENQUADRAR}[v0]`, '[0:a]loudnorm=I=-14:TP=-1.5:LRA=11[a0]']
+  const fora = cortes.map((c) => `between(t,${c.ini},${c.fim})`).join('+')
+  const filtros = cortes.length
+    ? [`[0:v]select='not(${fora})',setpts=N/FRAME_RATE/TB,${ENQUADRAR}[v0]`, `[0:a]aselect='not(${fora})',asetpts=N/SR/TB,loudnorm=I=-14:TP=-1.5:LRA=11[a0]`]
+    : [`[0:v]${ENQUADRAR}[v0]`, '[0:a]loudnorm=I=-14:TP=-1.5:LRA=11[a0]']
   let n = 1
   let ultimo = 'v0'
   plano.forEach((p, k) => {
@@ -110,7 +118,13 @@ export async function edicaoBase(entrada, saida, guiao = {}) {
   let audio = 'a0'
   if (musica) {
     args.push('-stream_loop', '-1', '-i', musica.ficheiro)
-    filtros.push(`[${n}:a]volume=-18dB,aresample=48000[mu]`, '[a0][mu]amix=inputs=2:duration=first:dropout_transition=0:normalize=0[am]')
+    filtros.push(`[${n}:a]volume=${estilo.musica_db}dB,aresample=48000[mu]`)
+    if (estilo.duck) {
+      // Auto-duck: a música baixa sozinha enquanto há voz e volta nas pausas.
+      filtros.push('[a0]asplit=2[av][sc]', '[mu][sc]sidechaincompress=threshold=0.02:ratio=10:attack=15:release=350[md]', '[av][md]amix=inputs=2:duration=first:dropout_transition=0:normalize=0[am]')
+    } else {
+      filtros.push('[a0][mu]amix=inputs=2:duration=first:dropout_transition=0:normalize=0[am]')
+    }
     audio = 'am'
     n++
   }
@@ -204,9 +218,41 @@ async function umTrabalho() {
   return true
 }
 
+/** Transcreve um take (para editar pelo texto no /estudio), se houver ESTUDIO_TRANSCREVER_CMD. */
+async function umaTranscricao() {
+  const cmdBase = process.env.ESTUDIO_TRANSCREVER_CMD
+  if (!cmdBase) return false
+  const r = await fetch(`${SITE}/api/estudio/motor/transcricao`, { headers: auth })
+  if (!r.ok) throw new Error(`transcricao GET ${r.status}`)
+  const { trabalho: t } = await r.json()
+  if (!t) return false
+  log('a transcrever', t.id)
+  const pasta = await mkdtemp(join(tmpdir(), 'mtm-transc-'))
+  const responder = (corpo) => fetch(`${SITE}/api/estudio/motor/transcricao`, { method: 'POST', headers: { ...auth, 'content-type': 'application/json' }, body: JSON.stringify({ id: t.id, ...corpo }) })
+  try {
+    const ext = t.mime === 'video/webm' ? 'webm' : t.mime === 'video/quicktime' ? 'mov' : 'mp4'
+    const entrada = join(pasta, `bruto.${ext}`)
+    const saida = join(pasta, 'palavras.json')
+    const d = await fetch(t.bruto_url)
+    if (!d.ok) throw new Error(`descarga ${d.status}`)
+    await writeFile(entrada, Buffer.from(await d.arrayBuffer()))
+    await correr('nice', ['-n', '15', '/bin/zsh', '-lc', cmdBase.replaceAll('{in}', entrada).replaceAll('{out}', saida)])
+    const j = JSON.parse(await readFile(saida, 'utf8'))
+    const f = await responder({ palavras: j.palavras || [], lingua: j.lingua || 'pt' })
+    log('transcrito', t.id, await f.text())
+  } catch (e) {
+    log('transcrição falhou', t.id, e.message)
+    await responder({ erro: e.message }).catch(() => {})
+  } finally {
+    await rm(pasta, { recursive: true, force: true })
+  }
+  return true
+}
+
 while (principal) {
   try {
     while (await umTrabalho()) { /* esvaziar a fila, um de cada vez */ }
+    while (await umaTranscricao()) { /* depois as transcrições */ }
   } catch (e) {
     log('erro', e.message)
   }

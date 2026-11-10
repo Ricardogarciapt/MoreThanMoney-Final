@@ -1,8 +1,9 @@
 'use client'
 
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { Check, ChevronLeft, Circle, Copy, FlipHorizontal, Images, Loader2, Pause, Play, RefreshCw, Square, Trash2, Upload, Wand2, X } from 'lucide-react'
+import { Check, ChevronLeft, Circle, Copy, FlipHorizontal, Images, Loader2, Pause, Play, RefreshCw, Sparkles, Square, Trash2, Type, Upload, Wand2, X } from 'lucide-react'
 import { authHeaders } from '@/lib/auth-token'
+import { EditorTexto, PainelGanchos } from './editar-texto'
 
 /**
  * Estúdio de gravação (telemóvel). Três ecrãs: escolher guião → teleprompter a gravar → rever o take.
@@ -32,6 +33,10 @@ type Take = {
   peca_id: string | null
   notas?: string | null
   editado_url?: string | null
+  transcricao?: { palavras?: { w: string; ini: number; fim: number }[] } | null
+  transcricao_estado?: string | null
+  cortes?: { ini: number; fim: number }[] | null
+  estilo?: Record<string, unknown> | null
 }
 type Guiao = { pecaId: string | null; marca: MarcaCasa; titulo: string; texto: string; palavraChave: string }
 
@@ -70,6 +75,7 @@ export default function Estudio({ pecaInicial }: { pecaInicial?: string | null }
   const [marcaNova, setMarcaNova] = useState<MarcaCasa>('ricardo-garcia')
   const [aGerar, setAGerar] = useState(false)
   const [textoLivre, setTextoLivre] = useState('')
+  const [ganchosDe, setGanchosDe] = useState<Peca | null>(null)
 
   const carregar = useCallback(async () => {
     setACarregar(true)
@@ -124,6 +130,10 @@ export default function Estudio({ pecaInicial }: { pecaInicial?: string | null }
     if (!textoLivre.trim()) return
     setGuiao({ pecaId: null, marca: marcaNova, titulo: 'Texto livre', texto: textoLivre.trim(), palavraChave: '' })
     setEcra('gravar')
+  }
+
+  if (ganchosDe) {
+    return <PainelGanchos pecaId={ganchosDe.id} marca={ganchosDe.marca} onFechar={(mudou) => { setGanchosDe(null); if (mudou) void carregar() }} />
   }
 
   if (ecra === 'gravar' && guiao) {
@@ -205,8 +215,8 @@ export default function Estudio({ pecaInicial }: { pecaInicial?: string | null }
               const c = COR[p.marca as MarcaCasa] ?? '#D2A63C'
               const n = takes.filter((t) => t.peca_id === p.id).length
               return (
-                <li key={p.id}>
-                  <button type="button" onClick={() => abrirPeca(p)} className="flex min-h-14 w-full items-center gap-3 rounded-xl border border-zinc-800 bg-zinc-900/40 p-3 text-left hover:border-zinc-600">
+                <li key={p.id} className="flex gap-2">
+                  <button type="button" onClick={() => abrirPeca(p)} className="flex min-h-14 flex-1 items-center gap-3 rounded-xl border border-zinc-800 bg-zinc-900/40 p-3 text-left hover:border-zinc-600">
                     <span className="h-8 w-1 rounded-full" style={{ background: c }} aria-hidden />
                     <span className="flex-1">
                       <span className="block text-sm font-medium">{p.guiao.nicho || 'Sem tema'}</span>
@@ -216,6 +226,17 @@ export default function Estudio({ pecaInicial }: { pecaInicial?: string | null }
                     </span>
                     <Play className="h-4 w-4 text-zinc-400" aria-hidden />
                   </button>
+                  {p.formato === 'reel' && (
+                    <button
+                      type="button"
+                      onClick={() => setGanchosDe(p)}
+                      aria-label={`Ganchos A/B de ${p.guiao.nicho || 'guião'}`}
+                      title="Ganchos A/B"
+                      className="grid min-h-14 w-12 place-items-center rounded-xl border border-zinc-800 text-zinc-400 hover:text-white"
+                    >
+                      <Sparkles className="h-4 w-4" aria-hidden />
+                    </button>
+                  )}
                 </li>
               )
             })}
@@ -228,7 +249,7 @@ export default function Estudio({ pecaInicial }: { pecaInicial?: string | null }
           {!aCarregar && takes.length === 0 && <p className="mt-2 text-sm text-zinc-500">Nenhum take ainda.</p>}
           <ul className="mt-2 grid grid-cols-2 gap-3">
             {takes.map((t) => (
-              <TakeCartao key={t.id} take={t} onMudou={carregar} />
+              <TakeCartao key={t.id} take={t} peca={pecas.find((p) => p.id === t.peca_id) ?? null} onMudou={carregar} />
             ))}
           </ul>
         </section>
@@ -245,8 +266,14 @@ const ESTADO_TAKE: Record<string, string> = {
   publicado: 'Publicado',
 }
 
-function TakeCartao({ take, onMudou }: { take: Take; onMudou: () => void }) {
+function TakeCartao({ take, peca, onMudou }: { take: Take; peca: Peca | null; onMudou: () => void }) {
   const [a, setA] = useState(false)
+  const [editor, setEditor] = useState<{ ativos: number } | null>(null)
+  const abrirTexto = async () => {
+    let n = 0
+    if (take.peca_id) n = ((await api(`/api/estudio/ativo?peca=${take.peca_id}`).catch(() => ({}))).ativos ?? []).length
+    setEditor({ ativos: n })
+  }
   const [erro, setErro] = useState<string | null>(null)
   const fazer = async (f: () => Promise<unknown>) => {
     setA(true)
@@ -260,6 +287,7 @@ function TakeCartao({ take, onMudou }: { take: Take; onMudou: () => void }) {
       setA(false)
     }
   }
+  const retranscrever = () => fazer(() => api('/api/estudio/gravacao', { method: 'PATCH', body: JSON.stringify({ id: take.id, accao: 'retranscrever' }) }))
   const escolher = () => fazer(() => api('/api/estudio/gravacao', { method: 'PATCH', body: JSON.stringify({ id: take.id, estado: 'escolhido' }) }))
   const cancelar = () => fazer(() => api('/api/estudio/gravacao', { method: 'PATCH', body: JSON.stringify({ id: take.id, accao: 'cancelar' }) }))
   const duplicar = () => fazer(() => api('/api/estudio/gravacao', { method: 'PUT', body: JSON.stringify({ id: take.id }) }))
@@ -295,6 +323,21 @@ function TakeCartao({ take, onMudou }: { take: Take; onMudou: () => void }) {
             <Check className="h-4 w-4" aria-hidden /> Editar este
           </button>
         ) : null}
+        {(take.estado === 'bruto' || take.estado === 'escolhido') && (
+          take.transcricao_estado === 'pronta' ? (
+            <button type="button" disabled={a} onClick={() => void abrirTexto()} className={`${botao} col-span-2`}>
+              <Type className="h-4 w-4" aria-hidden /> Editar pelo texto{take.cortes?.length ? ' ✓' : ''}
+            </button>
+          ) : take.transcricao_estado === 'falhou' ? (
+            <button type="button" disabled={a} onClick={retranscrever} className={`${botao} col-span-2 text-zinc-400`}>
+              <RefreshCw className="h-4 w-4" aria-hidden /> Transcrição falhou · repetir
+            </button>
+          ) : (
+            <p className="col-span-2 flex min-h-11 items-center justify-center gap-1 text-xs text-zinc-500">
+              <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden /> A transcrever no Mac…
+            </p>
+          )
+        )}
         <button type="button" disabled={a} onClick={duplicar} className={botao}>
           <Copy className="h-4 w-4" aria-hidden /> Duplicar
         </button>
@@ -307,6 +350,14 @@ function TakeCartao({ take, onMudou }: { take: Take; onMudou: () => void }) {
           </a>
         )}
       </div>
+      {editor && (
+        <EditorTexto
+          take={take}
+          palavraChave={peca?.guiao.palavra_chave}
+          ativos={editor.ativos}
+          onFechar={(mudou) => { setEditor(null); if (mudou) onMudou() }}
+        />
+      )}
     </li>
   )
 }
