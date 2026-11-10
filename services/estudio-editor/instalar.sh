@@ -16,8 +16,12 @@ mkdir -p "$DEST"; chmod 700 "$DEST"
 cp "$REPO/services/estudio-editor/editor.mjs" "$DEST/editor.mjs"
 if [ ! -f "$DEST/env" ]; then
   SEG=""
-  [ -f "$HOME/.mtm-videocliper/env" ] && SEG="$(grep -E '^CRON_SECRET=' "$HOME/.mtm-videocliper/env" | head -1 | cut -d= -f2-)"
-  if [ -z "$SEG" ]; then printf "CRON_SECRET: "; read -rs SEG; echo; fi
+  # O env do cortador escreve «export CRON_SECRET=…», às vezes com aspas.
+  [ -f "$HOME/.mtm-videocliper/env" ] && SEG="$(grep -E '^(export )?CRON_SECRET=' "$HOME/.mtm-videocliper/env" | head -1 | cut -d= -f2- | sed -E "s/^[\"']//; s/[\"']\$//")"
+  if [ -z "$SEG" ]; then
+    [ -t 0 ] || { echo "Falta o CRON_SECRET e não há terminal para o pedir."; exit 1; }
+    printf "CRON_SECRET: "; read -rs SEG; echo
+  fi
   umask 077; printf 'CRON_SECRET=%s\n' "$SEG" > "$DEST/env"
 fi
 cat > "$PLIST" <<PL
