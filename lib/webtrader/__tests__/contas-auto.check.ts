@@ -7,7 +7,7 @@ import assert from 'node:assert/strict'
 import { chaveContaTL, chaveMetaApiDaConta, fundedLigadasAlheias, modoFundedPelaLigacao, tradeLockerAutoListavel } from '../contas-auto-regras'
 import { lerRefConta, refTexto } from '../corretoras/regras'
 import { montarSeletor } from '../seletor'
-import { criarLimitadorEmissoes, decidirPassagem, destinoDaEntrada, payloadJwt, tokenRecente, IDADE_MAX_TOKEN_S } from '../sessao-app'
+import { criarLimitadorEmissoes, decidirPassagem, userIdDoToken, destinoDaEntrada, payloadJwt, tokenRecente, IDADE_MAX_TOKEN_S } from '../sessao-app'
 
 let n = 0
 const caso = (nome: string, f: () => void) => { f(); n++; console.log(`  ok  ${nome}`) }
@@ -106,10 +106,19 @@ caso('limitador: 6 por janela por utilizador, e a janela liberta', () => {
 })
 caso('decisão da página: sair / manter / trocar', () => {
   assert.equal(decidirPassagem({ tokenApp: null, userIdApp: 'a', userIdAtual: 'a' }), 'sair')
-  assert.equal(decidirPassagem({ tokenApp: 't', userIdApp: null, userIdAtual: 'a' }), 'sair')
+  // Browser: o URL só traz o token — «não sei de quem é» pede ao servidor, nunca põe a pessoa fora.
+  assert.equal(decidirPassagem({ tokenApp: 't', userIdApp: null, userIdAtual: 'a' }), 'trocar')
+  assert.equal(decidirPassagem({ tokenApp: 't', userIdApp: null, userIdAtual: null }), 'trocar')
   assert.equal(decidirPassagem({ tokenApp: 't', userIdApp: 'a', userIdAtual: 'a' }), 'manter')
   assert.equal(decidirPassagem({ tokenApp: 't', userIdApp: 'a', userIdAtual: 'b' }), 'trocar')
   assert.equal(decidirPassagem({ tokenApp: 't', userIdApp: 'a', userIdAtual: null }), 'trocar')
+})
+caso('userIdDoToken: lê o sub de um JWT, null em lixo', () => {
+  const corpo = Buffer.from(JSON.stringify({ sub: 'u-123', iat: 1 })).toString('base64').replace(/=+$/, '').replace(/\+/g, '-').replace(/\//g, '_')
+  assert.equal(userIdDoToken(`h.${corpo}.s`), 'u-123')
+  assert.equal(userIdDoToken('lixo'), null)
+  assert.equal(userIdDoToken(null), null)
+  assert.equal(userIdDoToken('h.!!!.s'), null)
 })
 caso('destino: /webtrader com a query da entrada, nunca outro caminho', () => {
   assert.equal(destinoDaEntrada(''), '/webtrader')
