@@ -9,7 +9,7 @@
 // `claude -p` com a skill /video-edit). Um trabalho de cada vez e com prioridade baixa: o Mac
 // não aguenta mais de 2 processos pesados.
 //
-// Variáveis: CRON_SECRET (obrigatória), MTM_SITE (omissão https://www.morethanmoney.pt),
+// Variáveis: CRON_SECRET e/ou LMS_CAPTION_WORKER_SECRET (pelo menos um), MTM_SITE (omissão https://www.morethanmoney.pt),
 //            ESTUDIO_EDIT_CMD (opcional), ESTUDIO_INTERVALO_S (omissão 120).
 import { spawn } from 'node:child_process'
 import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises'
@@ -19,9 +19,13 @@ import { join } from 'node:path'
 const SITE = (process.env.MTM_SITE || 'https://www.morethanmoney.pt').replace(/\/$/, '')
 const SEGREDO = process.env.CRON_SECRET?.trim()
 const INTERVALO = Math.max(30, Number(process.env.ESTUDIO_INTERVALO_S) || 120) * 1000
-if (!SEGREDO) { console.error('Falta CRON_SECRET'); process.exit(1) }
+const SEGREDO_WORKER = process.env.LMS_CAPTION_WORKER_SECRET?.trim()
+if (!SEGREDO && !SEGREDO_WORKER) { console.error('Falta CRON_SECRET ou LMS_CAPTION_WORKER_SECRET'); process.exit(1) }
 
-const auth = { authorization: `Bearer ${SEGREDO}` }
+const auth = {
+  ...(SEGREDO ? { authorization: `Bearer ${SEGREDO}` } : {}),
+  ...(SEGREDO_WORKER ? { 'x-caption-secret': SEGREDO_WORKER } : {}),
+}
 const dormir = (ms) => new Promise((r) => setTimeout(r, ms))
 const log = (...a) => console.log(new Date().toISOString(), ...a)
 

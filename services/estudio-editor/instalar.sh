@@ -14,16 +14,20 @@ command -v ffmpeg >/dev/null || { echo "Falta o ffmpeg (brew install ffmpeg)"; e
 NODE="$(command -v node)"; [ -n "$NODE" ] || { echo "Falta o node (brew install node)"; exit 1; }
 mkdir -p "$DEST"; chmod 700 "$DEST"
 cp "$REPO/services/estudio-editor/editor.mjs" "$DEST/editor.mjs"
-if [ ! -f "$DEST/env" ]; then
-  SEG=""
-  # O env do cortador escreve «export CRON_SECRET=…», às vezes com aspas.
-  [ -f "$HOME/.mtm-videocliper/env" ] && SEG="$(grep -E '^(export )?CRON_SECRET=' "$HOME/.mtm-videocliper/env" | head -1 | cut -d= -f2- | sed -E "s/^[\"']//; s/[\"']\$//")"
-  if [ -z "$SEG" ]; then
-    [ -t 0 ] || { echo "Falta o CRON_SECRET e não há terminal para o pedir."; exit 1; }
-    printf "CRON_SECRET: "; read -rs SEG; echo
+# Segredos vêm do env do cortador («export X=…», às vezes com aspas). O site aceita qualquer um dos dois.
+ler() { [ -f "$HOME/.mtm-videocliper/env" ] && grep -E "^(export )?$1=" "$HOME/.mtm-videocliper/env" | head -1 | cut -d= -f2- | sed -E "s/^[\"']//; s/[\"']\$//"; }
+umask 077; touch "$DEST/env"
+for V in LMS_CAPTION_WORKER_SECRET CRON_SECRET; do
+  if ! grep -q "^$V=" "$DEST/env"; then
+    VAL="$(ler $V || true)"; [ -n "$VAL" ] && printf '%s=%s\n' "$V" "$VAL" >> "$DEST/env"
   fi
-  umask 077; printf 'CRON_SECRET=%s\n' "$SEG" > "$DEST/env"
+done
+if [ ! -s "$DEST/env" ]; then
+  [ -t 0 ] || { echo "Falta o segredo e não há terminal para o pedir."; exit 1; }
+  printf "CRON_SECRET: "; read -rs SEG; echo
+  printf 'CRON_SECRET=%s\n' "$SEG" > "$DEST/env"
 fi
+chmod 600 "$DEST/env"
 cat > "$PLIST" <<PL
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
