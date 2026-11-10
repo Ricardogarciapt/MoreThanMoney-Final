@@ -361,7 +361,7 @@ export async function tratarComentario(
   const temDm = dm.pode && !!textoDm
   let enviouDm = false
   // Com aprovação ligada, a DM pede OK ao dono sempre que o setter redige — o `enviar_dm` passa a
-  // valer só para o envio SEM aprovação (e fica desligado pela migração 243).
+  // valer só para o envio SEM aprovação (e fica desligado pela migração 244).
   const esperaAprovacao = temDm && chaves.aprovacao_dm !== false && (chaves.redigir || chaves.enviar_dm)
   if (temDm && chaves.enviar_dm && chaves.aprovacao_dm === false && podeSair({ tipo: 'dm_ao_comentador', horasDesdeComentario: horas }).pode) {
     const r = await respostaPrivada(c.commentId, textoDm as string, token)

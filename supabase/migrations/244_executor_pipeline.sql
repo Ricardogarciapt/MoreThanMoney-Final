@@ -1,4 +1,4 @@
--- 243 · Executor do pipeline + aprovação humana da DM do setter (10/11/2026)
+-- 244 · Executor do pipeline + aprovação humana da DM do setter (10/11/2026)
 --
 -- 1) Liga o executor do pipeline (lib/vendas/executor-pipeline.ts, cron /api/cron/pipeline-executor).
 --    Só envia o que a regra legal deixa (consentimento vivo / soft opt-in / exclusão global / tectos);
