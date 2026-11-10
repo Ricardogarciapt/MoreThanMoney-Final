@@ -32,7 +32,7 @@ import { correrTrader, registarDecisoesNoLivro } from '../../lib/agentes/trader'
 import { correrAgenteCripto } from '../../lib/cripto/ciclo'
 import { SERVICO_VIGIAS, TAREFAS_VIGIAS, type EstadoTarefa, type TarefaVigia } from '../../lib/vigias/tarefas'
 
-const VERSAO = 'vigias-010'
+const VERSAO = 'vigias-011'
 
 const CORRER: Record<TarefaVigia, () => Promise<unknown>> = {
   'webtrader-gestao-auto': () => correrGestaoAutoDeTodas(),
