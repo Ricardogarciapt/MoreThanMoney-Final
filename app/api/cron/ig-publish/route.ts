@@ -22,6 +22,7 @@ import {
 } from "@/lib/instagram/publish"
 import { CHAVE_AUTO_PUBLICAR, lerAutoPublicar } from "@/lib/agentes/social-agente"
 import { lerInterruptor } from "@/lib/carrossel-diario/interruptor"
+import { garantirCarrosselDoDia } from "@/lib/carrossel-diario/rede"
 
 export const dynamic = "force-dynamic"
 export const maxDuration = 300
@@ -46,6 +47,14 @@ export async function GET(request: NextRequest) {
     .eq("status", "publishing")
     .lt("updated_at", new Date(Date.now() - 15 * 60_000).toISOString())
     .lt("attempts", MAX_ATTEMPTS)
+
+  // Se o cron das 07:00 do carrossel diário falhar, a fila do dia fica vazia: agenda-o aqui.
+  try {
+    const rede = await garantirCarrosselDoDia()
+    if (rede.length) console.log("[ig-publish] carrossel do dia pela rede de segurança:", JSON.stringify(rede.map((r) => ({ perfil: r.perfil, estado: r.estado, motivo: r.motivo }))))
+  } catch (e) {
+    console.error("[ig-publish] rede do carrossel falhou:", e instanceof Error ? e.message : e)
+  }
 
   // Elegíveis: aprovados cuja hora chegou, ou já em processamento (ex.: Reels em encoding).
   const { data: due, error } = await supabase
