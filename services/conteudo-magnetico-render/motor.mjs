@@ -21,6 +21,8 @@
  *   PEXELS_API_KEY   opcional — sem ela, os segmentos b_roll usam o cartão da marca
  *   MUSICA_DIR       opcional — pasta com .mp3 livres de direitos; sem ela, não há música
  *   TTS_VOZ          pt-PT-DuarteNeural (omissão) · pt-PT-RaquelNeural
+ *   FISH_API_KEY + FISH_VOICE_RICARDO   opcional — a marca ricardo-garcia fala com o clone de voz
+ *                    do Ricardo (Fish Audio); se falhar, cai para o edge-tts. FISH_MODEL opcional.
  *   FFMPEG_THREADS   2 (omissão). No Mac, 2 chega: o Mac tem 16 GB e vive com o swap cheio.
  *   INTERVALO_S      20 — de quanto em quanto tempo pergunta se há trabalho
  *   TTS_TESTE=1      só para testes sem rede: fala substituída por silêncio
@@ -78,13 +80,39 @@ async function duracao(f) {
 }
 
 // ── Fase 2: voz ────────────────────────────────────────────────────────────────────────────────
-async function falar(texto, destino) {
+async function fishRicardo(texto, tmp) {
+  const chave = process.env.FISH_API_KEY
+  const voz = process.env.FISH_VOICE_RICARDO
+  if (!chave || !voz) return false
+  for (let tentativa = 1; tentativa <= 3; tentativa++) {
+    const r = await fetch('https://api.fish.audio/v1/tts', {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${chave}`, 'Content-Type': 'application/json', model: process.env.FISH_MODEL || 'speech-1.6' },
+      body: JSON.stringify({ text: texto, reference_id: voz, format: 'mp3', mp3_bitrate: 128, normalize: true, latency: 'normal' }),
+      signal: AbortSignal.timeout(60_000),
+    }).catch((e) => ({ ok: false, status: 0, text: async () => e.message }))
+    if (r.ok) {
+      await fs.writeFile(tmp, Buffer.from(await r.arrayBuffer()))
+      return true
+    }
+    log(`Fish ${r.status} (tentativa ${tentativa}):`, String(await r.text()).slice(0, 160))
+    await new Promise((ok) => setTimeout(ok, 3000 * tentativa))
+  }
+  return false
+}
+
+async function falar(texto, destino, marcaId) {
   if (process.env.TTS_TESTE === '1') {
     const seg = Math.max(1.6, texto.split(/\s+/).length / 2.7)
     await ff(['-f', 'lavfi', '-i', `anullsrc=r=44100:cl=mono`, '-t', seg.toFixed(2), destino])
     return
   }
   const tmp = destino.replace(/\.wav$/, '.mp3')
+  // A marca do Ricardo fala com a voz dele (clone Fish); se não houver chave ou falhar, edge-tts.
+  if (marcaId === 'ricardo-garcia' && (await fishRicardo(texto, tmp))) {
+    await ff(['-i', tmp, '-af', 'apad=pad_dur=0.25', '-ar', '44100', '-ac', '1', destino])
+    return
+  }
   try {
     await correr('edge-tts', ['--voice', VOZ, '--rate', '+6%', '--text', texto, '--write-media', tmp])
   } catch (e) {
@@ -269,7 +297,7 @@ export async function render(trabalho, saida) {
     for (let i = 0; i < segs.length; i++) {
       const s = segs[i]
       const voz = path.join(pasta, `voz-${i}.wav`)
-      await falar(s.fala, voz)
+      await falar(s.fala, voz, trabalho.marca?.id)
       const dur = await duracao(voz)
       const clip = path.join(pasta, `clip-${i}.mp4`)
       let feito = false

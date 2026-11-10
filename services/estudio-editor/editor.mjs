@@ -45,6 +45,40 @@ function correr(cmd, args, opts = {}) {
 
 const ENQUADRAR = 'scale=1080:1920:force_original_aspect_ratio=increase,crop=1080:1920,fps=30,format=yuv420p'
 
+/**
+ * Animação de uma imagem pelo contexto do segmento onde entra: o zoom pedido no guião manda; números,
+ * preços e percentagens aproximam (o olho vai ao número); o gancho aproxima; b-roll desliza; o resto
+ * alterna para não repetir o mesmo movimento duas vezes seguidas.
+ */
+export function animacaoDe(ativo, seg = {}, i = 0, k = 0) {
+  if (ativo.tipo !== 'imagem') return 'sem'
+  if (ativo.animacao && ativo.animacao !== 'auto') return ativo.animacao
+  const z = String(seg.zoom || '').toLowerCase()
+  if (/out|afast/.test(z)) return 'zoom_out'
+  if (/in|aprox|punch/.test(z)) return 'zoom_in'
+  const texto = `${seg.fala || ''} ${seg.texto_ecra || ''}`
+  if (i === 0 || /\d|%|€|\$/.test(texto)) return 'zoom_in'
+  if (seg.visual === 'b_roll') return k % 2 ? 'pan_dir' : 'pan_esq'
+  return ['zoom_in', 'pan_esq', 'zoom_out', 'sobe', 'pan_dir'][k % 5]
+}
+
+/** Filtro ffmpeg que anima uma imagem parada durante `dur` segundos (Ken Burns a 30 fps, com fade). */
+export function filtroImagem(animacao, dur) {
+  const N = Math.max(2, Math.round(dur * 30))
+  const base = 'scale=2160:3840:force_original_aspect_ratio=increase,crop=2160:3840,setsar=1'
+  const meio = { x: 'iw/2-(iw/zoom/2)', y: 'ih/2-(ih/zoom/2)' }
+  const m = {
+    zoom_in: { z: `1+0.18*on/${N}`, ...meio },
+    zoom_out: { z: `1.18-0.18*on/${N}`, ...meio },
+    pan_esq: { z: '1.15', x: `(iw-iw/zoom)*(1-on/${N})`, y: meio.y },
+    pan_dir: { z: '1.15', x: `(iw-iw/zoom)*on/${N}`, y: meio.y },
+    sobe: { z: '1.15', x: meio.x, y: `(ih-ih/zoom)*(1-on/${N})` },
+  }[animacao]
+  const fade = `format=yuva420p,fade=t=in:st=0:d=0.25:alpha=1,fade=t=out:st=${Math.max(0, dur - 0.25).toFixed(2)}:d=0.25:alpha=1`
+  if (!m) return `${base},scale=1080:1920,fps=30,trim=duration=${dur.toFixed(2)},${fade}`
+  return `${base},zoompan=z='${m.z}':x='${m.x}':y='${m.y}':d=${N}:s=1080x1920:fps=30,trim=duration=${dur.toFixed(2)},${fade}`
+}
+
 /** Onde cada ativo visual entra: [{ ficheiro, tipo, ini, fim }] em segundos do vídeo final. */
 export function planoAtivos(segmentos, ativos, duracao) {
   const visuais = ativos.filter((a) => a.tipo === 'imagem' || a.tipo === 'video')
@@ -61,7 +95,7 @@ export function planoAtivos(segmentos, ativos, duracao) {
     const fim = Math.min(j.fim, ini + 3.5)
     if (fim - ini < 0.8) return
     ocupado.add(i)
-    plano.push({ ficheiro: a.ficheiro, tipo: a.tipo, ini: +ini.toFixed(2), fim: +fim.toFixed(2) })
+    plano.push({ ficheiro: a.ficheiro, tipo: a.tipo, ini: +ini.toFixed(2), fim: +fim.toFixed(2), animacao: animacaoDe(a, segmentos[i], i, plano.length) })
   }
   // 1) os que o Ricardo ligou a um momento; 2) os soltos vão para os segmentos de b-roll/cartão
   //    livres, depois para qualquer segmento livre que não seja o gancho nem o fecho.
@@ -108,9 +142,15 @@ export async function edicaoBase(entrada, saida, guiao = {}) {
   let n = 1
   let ultimo = 'v0'
   plano.forEach((p, k) => {
-    if (p.tipo === 'imagem') args.push('-loop', '1', '-t', String(p.fim - p.ini + 0.5), '-i', p.ficheiro)
-    else args.push('-i', p.ficheiro)
-    filtros.push(`[${n}:v]${ENQUADRAR},setpts=PTS-STARTPTS+${p.ini}/TB[o${k}]`)
+    const dur = p.fim - p.ini
+    if (p.tipo === 'imagem') {
+      // Uma só imagem: o zoompan gera os fotogramas todos (animação pelo contexto do segmento).
+      args.push('-i', p.ficheiro)
+      filtros.push(`[${n}:v]${filtroImagem(p.animacao || 'sem', dur)},setpts=PTS-STARTPTS+${p.ini}/TB[o${k}]`)
+    } else {
+      args.push('-i', p.ficheiro)
+      filtros.push(`[${n}:v]${ENQUADRAR},setpts=PTS-STARTPTS+${p.ini}/TB[o${k}]`)
+    }
     filtros.push(`[${ultimo}][o${k}]overlay=eof_action=pass:enable='between(t,${p.ini},${p.fim})'[v${k + 1}]`)
     ultimo = `v${k + 1}`
     n++
@@ -151,7 +191,7 @@ async function descarregarAtivos(lista, pasta) {
         await correr('sips', ['-s', 'format', 'jpeg', ficheiro, '--out', jpg])
         ficheiro = jpg
       }
-      out.push({ tipo: a.tipo, nome: a.nome, segmento: a.segmento, ficheiro })
+      out.push({ tipo: a.tipo, nome: a.nome, segmento: a.segmento, animacao: a.animacao || 'auto', ficheiro })
     } catch (e) {
       log('ativo ignorado', a.nome, e.message)
     }
