@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { COOKIE_ATRIBUICAO, normalizar as normalizarAgente } from '@/lib/agentes/atribuicao'
 import { getSupabaseAdmin } from '@/lib/supabase-admin-client'
 import { getStripeClient } from '@/lib/stripe-client'
 import { getMtmFundedConfig } from '@/lib/mtmfunded/config'
@@ -189,6 +190,7 @@ export async function POST(request: NextRequest) {
   }
 
   const stripe = getStripeClient()
+  const agenteCodigo = normalizarAgente(request.cookies.get(COOKIE_ATRIBUICAO)?.value)
   const session = await stripe.checkout.sessions.create({
     mode: 'payment',
     customer_email: email,
@@ -229,6 +231,8 @@ export async function POST(request: NextRequest) {
       pais: pais.codigo,
       data_nascimento: nascimento,
       ...(cupaoAplicado ? { cupao: cupaoAplicado } : {}),
+      // Quem trouxe esta compra (cookie do `?ag=`) — o webhook já o passa ao livro de vendas.
+      ...(agenteCodigo ? { agente_codigo: agenteCodigo } : {}),
     },
   })
 
