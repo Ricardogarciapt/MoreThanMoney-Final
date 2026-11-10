@@ -5,7 +5,6 @@ import { useState, useEffect, useRef, useCallback, useImperativeHandle, type Ref
 import { supabase } from "@/lib/supabase"
 import ChartSocialShareDialog from "@/components/chart-social-share-dialog"
 import type { TradingViewWidgetRef } from "@/components/trading-view-widget"
-import PrecoVivoScanner from "@/components/mobile/preco-vivo-scanner"
 import {
   buildTradingViewScannerOptions,
   computeScannerAccessChartHeight,
@@ -1289,13 +1288,6 @@ export default function ScannerMobile({
           className={isScannerAccess ? "w-full h-full min-h-full tv-chart-mount" : "w-full h-full"}
           style={isScannerAccess ? { minHeight: widgetHeight } : undefined}
         />
-
-        {/* Preço da corretora (WebSocket do motor): o TradingView só dá as velas, o número é nosso.
-            Fica sob a barra do TradingView e à esquerda da escala de preços; não apanha toques.
-            No telemóvel fica escondido (tapava o título do gráfico). */}
-        {widgetLoaded && !error && (
-          <PrecoVivoScanner symbol={selectedSymbol} className="absolute left-2 top-12 z-10 hidden md:block" />
-        )}
 
         {!widgetLoaded && !error && (
           <div className="absolute top-0 left-0 w-full h-full flex items-center justify-center bg-black/90">
