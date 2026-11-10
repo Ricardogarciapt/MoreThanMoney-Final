@@ -263,11 +263,11 @@ const STEPS: TutorialStep[] = [
     phase: "Ferramentas",
     emoji: "🛠️",
     title: "Apps MTM",
-    body: "Ecossistema extra para conteúdo, parcerias e automação — disponível para membros IQ e Premium.",
+    body: "Ecossistema extra para conteúdo e parcerias — disponível para membros IQ e Premium.",
     tips: [
       "MTM Studio — brand builder e conteúdo visual",
       "Partnership Engine — UGC e colaborações",
-      "MTM AiOS — sistema operativo de IA da MTM",
+      "MTM Social — cartões e carrosséis com a tua marca",
     ],
     hint: "Tab «Apps» na barra nativa no fundo da app",
     color: "#D2A63C",
