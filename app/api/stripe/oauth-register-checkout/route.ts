@@ -161,6 +161,14 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    // O código também vai para a SUBSCRIÇÃO: com trial ou mês grátis esta sessão vale 0 € e o primeiro
+    // dinheiro chega numa fatura dias depois — é pela subscrição que o webhook o liga ao agente.
+    if (agenteCodigo && sessionParams.mode === "subscription") {
+      sessionParams.subscription_data = {
+        ...(sessionParams.subscription_data ?? {}),
+        metadata: { ...(sessionParams.subscription_data?.metadata ?? {}), agente_codigo: agenteCodigo },
+      }
+    }
     const session = await stripe.checkout.sessions.create(sessionParams)
 
     const json = NextResponse.json({ url: session.url, sessionId: session.id })

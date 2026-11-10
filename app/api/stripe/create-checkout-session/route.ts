@@ -155,6 +155,14 @@ export async function POST(request: NextRequest) {
       sessionParams.discounts = [{ coupon: CUPAO_INTRO_PREMIUM }]
     }
 
+    // O código também vai para a SUBSCRIÇÃO: com trial ou mês grátis esta sessão vale 0 € e o primeiro
+    // dinheiro chega numa fatura dias depois — é pela subscrição que o webhook o liga ao agente.
+    if (agenteCodigo && sessionParams.mode === 'subscription') {
+      sessionParams.subscription_data = {
+        ...(sessionParams.subscription_data ?? {}),
+        metadata: { ...(sessionParams.subscription_data?.metadata ?? {}), agente_codigo: agenteCodigo },
+      }
+    }
     const session = await stripe.checkout.sessions.create(sessionParams)
 
     // Funil Opinly: inicio de checkout (best-effort; anonId via cookie do pixel)

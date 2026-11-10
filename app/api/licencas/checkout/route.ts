@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { COOKIE_ATRIBUICAO, normalizar as normalizarAgente } from '@/lib/agentes/atribuicao'
 import { getStripeClient } from '@/lib/stripe-client'
 import { resolverPrecoStripe } from '@/lib/stripe-prices'
 import { buildStripeReturnUrl } from '@/lib/site-url'
@@ -64,6 +65,10 @@ export async function POST(request: NextRequest) {
       ...(body.tradingviewUsername ? { tradingview_username: String(body.tradingviewUsername).trim().slice(0, 60) } : {}),
       ...(sessao.userId ? { user_id: sessao.userId } : {}),
     }
+    // Quem trouxe esta compra (cookie do `?ag=`). Vai na sessão e, sendo subscrição, na própria
+    // subscrição — é daí que o livro de vendas o lê.
+    const agenteCodigo = normalizarAgente(request.cookies.get(COOKIE_ATRIBUICAO)?.value)
+    if (agenteCodigo) metadata.agente_codigo = agenteCodigo
 
     const checkout = await stripe.checkout.sessions.create({
       customer_email: email,
