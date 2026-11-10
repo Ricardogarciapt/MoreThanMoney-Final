@@ -3,6 +3,7 @@ import { getSupabaseAdmin } from '@/lib/supabase-admin-client'
 import { ehMotor } from '@/lib/conteudo-magnetico/acesso'
 import { ARROBA, IG_ID } from '@/lib/carrossel-diario/tipos'
 import { corrigirPtPt } from '@/lib/pt-pt'
+import { normalizarCortes, normalizarEstilo } from '@/lib/estudio/texto'
 
 // O editor do Mac entra com o CRON_SECRET ou, como o cortador, com o segredo dos workers.
 function autorizado(request: NextRequest): boolean {
@@ -43,7 +44,7 @@ export async function GET(request: NextRequest) {
 
   const { data: cand } = await db
     .from('estudio_gravacoes')
-    .select('id, peca_id, marca, caminho, mime, duracao_s')
+    .select('id, peca_id, marca, caminho, mime, duracao_s, transcricao, cortes, estilo')
     .eq('estado', 'escolhido')
     .order('criado_em', { ascending: true })
     .limit(1)
@@ -118,6 +119,10 @@ export async function GET(request: NextRequest) {
         segmentos,
       },
       ativos,
+      // Editar pelo texto: zonas do take ORIGINAL a cortar (segundos), palavras do Whisper e estilo.
+      cortes: normalizarCortes(cand.cortes),
+      palavras: Array.isArray((cand.transcricao as any)?.palavras) ? (cand.transcricao as any).palavras : [],
+      estilo: normalizarEstilo(cand.estilo),
     },
   })
 }
