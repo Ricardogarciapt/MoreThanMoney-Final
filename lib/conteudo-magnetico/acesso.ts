@@ -5,6 +5,9 @@
  * porque também são chamadas de dentro da app-mobile e das nativas, onde o cookie não chega
  * (ver `lib/sessao-do-pedido`). As marcas da casa (Ricardo Garcia, More Than Money) e o render
  * sem limite são só para admins.
+ *
+ * 10/11 (Ricardo): o Estúdio é só dele — todas as rotas do Conteúdo Magnético recusam (403)
+ * quem não é admin.
  */
 import { getSupabaseAdmin } from '@/lib/supabase-admin-client'
 import { userIdDoPedido } from '@/lib/sessao-do-pedido'

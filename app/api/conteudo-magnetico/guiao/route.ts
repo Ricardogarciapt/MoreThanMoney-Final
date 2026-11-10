@@ -19,6 +19,7 @@ export const maxDuration = 120
 export async function POST(request: NextRequest) {
   const quem = await quemPede(request)
   if (!quem) return NextResponse.json({ erro: 'Sessão necessária' }, { status: 401 })
+  if (!quem.admin) return NextResponse.json({ erro: 'Só para a casa' }, { status: 403 })
 
   const b = await request.json().catch(() => ({}))
   const formato = (b.formato in FORMATOS ? b.formato : 'carrossel') as Formato
@@ -56,6 +57,7 @@ export async function POST(request: NextRequest) {
 export async function PUT(request: NextRequest) {
   const quem = await quemPede(request)
   if (!quem) return NextResponse.json({ erro: 'Sessão necessária' }, { status: 401 })
+  if (!quem.admin) return NextResponse.json({ erro: 'Só para a casa' }, { status: 403 })
   const b = await request.json().catch(() => ({}))
   const g = b.guiao || {}
   if (!marcasPermitidas(quem.admin).includes(g.marca)) {
@@ -82,6 +84,7 @@ export async function PUT(request: NextRequest) {
 export async function GET(request: NextRequest) {
   const quem = await quemPede(request)
   if (!quem) return NextResponse.json({ erro: 'Sessão necessária' }, { status: 401 })
+  if (!quem.admin) return NextResponse.json({ erro: 'Só para a casa' }, { status: 403 })
   const { data } = await getSupabaseAdmin()
     .from('conteudo_magnetico_pecas')
     .select('id, formato, marca, guiao, fundo_url, criado_em')
