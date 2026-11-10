@@ -5,7 +5,7 @@
  * não gravou, e preenche o código do agente nas primeiras faturas com valor que ficaram sem ele.
  * A lógica está em `lib/vendas/reconciliar-stripe.ts`.
  *
- *   ?dias=N   janela em dias (omissão 3, máx. 90) — para a recuperação do histórico usa-se 45
+ *   ?dias=N   janela em dias (omissão 3, máx. 90; a primeira corrida de sempre usa 45)
  *   ?ensaio=1 devolve o que faria sem gravar
  */
 import { NextRequest, NextResponse } from 'next/server'
@@ -17,12 +17,24 @@ import { reconciliarStripe } from '@/lib/vendas/reconciliar-stripe'
 export const dynamic = 'force-dynamic'
 export const maxDuration = 300
 
+const CHAVE_ULTIMA = 'vendas_reconciliar_ultima'
+
 export async function GET(req: NextRequest) {
   if (!isCronAuthorized(req)) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-  const dias = Number(req.nextUrl.searchParams.get('dias') ?? 3)
+  const db = getSupabaseAdmin()
   const ensaio = req.nextUrl.searchParams.get('ensaio') === '1'
+  // A PRIMEIRA corrida recupera o histórico (45 dias) sozinha — ninguém tem de se lembrar de a
+  // lançar à mão. As seguintes olham só para os últimos 3 dias.
+  const { data: marca } = await db.from('site_settings').select('value').eq('key', CHAVE_ULTIMA).maybeSingle()
+  const pedido = req.nextUrl.searchParams.get('dias')
+  const dias = pedido ? Number(pedido) : marca ? 3 : 45
   try {
-    const r = await reconciliarStripe(getStripeClient(), getSupabaseAdmin(), { dias, ensaio })
+    const r = await reconciliarStripe(getStripeClient(), db, { dias, ensaio })
+    if (!ensaio) {
+      await db
+        .from('site_settings')
+        .upsert({ key: CHAVE_ULTIMA, value: { em: new Date().toISOString(), dias, registadas: r.registadas } }, { onConflict: 'key' })
+    }
     if (r.registadas || r.codigosPreenchidos) {
       console.log(`[vendas-reconciliar] ${r.registadas} vendas registadas, ${r.codigosPreenchidos} códigos preenchidos (${r.dias} d)`)
     }
