@@ -59,7 +59,7 @@ const linha = (p: Partial<LinhaContaProvider> & { provider_slug: string; metaapi
 {
   // O provider aponta para OUTRA conta — a conta do VPS ganha, e a divergência é reportada.
   const linhas = [linha({ provider_slug: SLUG_GOLDKILLER, metaapi_account_id: VIVA_GK, mt5_login: '19038' })]
-  const r = escolherContaDaEstrategia(SLUG_GOLDKILLER, linhas, CANONICAL_PREMIUM_ACCOUNT_ID)
+  const r = escolherContaDaEstrategia(SLUG_GOLDKILLER, linhas, VIVA_SENSEI)
   assert.equal(r?.accountId, VIVA_GK, 'a conta do VPS manda sobre o provider desalinhado')
   assert.match(String(r?.divergencia), /não é a conta provider viva/)
 }
@@ -89,8 +89,8 @@ const linha = (p: Partial<LinhaContaProvider> & { provider_slug: string; metaapi
 
 {
   // Sem linha de conta, o provider ainda serve (é o estado antigo, que continua a funcionar).
-  const r = escolherContaDaEstrategia(SLUG_PREMIUM, [], CANONICAL_PREMIUM_ACCOUNT_ID)
-  assert.equal(r?.accountId, CANONICAL_PREMIUM_ACCOUNT_ID)
+  const r = escolherContaDaEstrategia(SLUG_PREMIUM, [], VIVA_PREMIUM)
+  assert.equal(r?.accountId, VIVA_PREMIUM)
   assert.equal(r?.origem, 'provider')
 }
 

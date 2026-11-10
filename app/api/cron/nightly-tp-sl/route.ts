@@ -1,10 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { isCronAuthorized } from '@/lib/cron-auth'
 
+export const dynamic = 'force-dynamic'
+export const maxDuration = 120
+
 /**
  * CRON JOB NOTURNO - Recalcular TP/SL de TODOS os ativos
  * 
- * Execução: Diariamente às 03:00 UTC (04:00 em Portugal)
+ * Execução: Diariamente às 03:00 UTC (vercel.json; até 10/11/2026 corria de 15 em 15 min e falhava sempre com 403)
  * Função: Atualizar níveis de TP/SL usando análise técnica + IA
  * Duração estimada: ~1-2 minutos para 30 ativos
  */

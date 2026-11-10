@@ -3,6 +3,7 @@ import { isCronAuthorized } from '@/lib/cron-auth'
 import { getSupabaseAdmin } from '@/lib/supabase-admin-client'
 import { getMarketQuotes } from '@/lib/mtmcopy/metaapi'
 import { CANONICAL_PREMIUM_ACCOUNT_ID } from '@/lib/mtmcopy/provider-constants'
+import { contaInexistente } from '@/lib/mtmcopy/metaapi-inexistentes'
 import { isMarketOpen } from '@/lib/mtmcopy/market-hours'
 import { sendTelegramChannelMessage } from '@/lib/mtmcopy/telegram-bot'
 import { ehCriptoSeguida, simboloListavel } from '@/lib/cripto-seguida'
@@ -140,7 +141,10 @@ export async function GET(request: NextRequest) {
     // sistema já não segue — seriam linhas novas na base para ninguém.
     const abertos = (simbolos ?? []).filter((s) => simboloListavel(String(s.symbol), String(s.classe))).map((s) => String(s.symbol)).filter((s) => isMarketOpen(s).open)
     const conta = process.env.FUNDED_VIGIA_METAAPI_ACCOUNT?.trim() || CANONICAL_PREMIUM_ACCOUNT_ID
-    const quotes = await Promise.race([
+    // Conta apagada na MetaApi (a 530d2e07 desde 04/11): nem tentar — ia só repetir o erro a cada
+    // minuto (924 linhas de log/dia). Segue directo para a Binance; forex fica à espera do motor.
+    const contaViva = !(await contaInexistente(conta))
+    const quotes = !contaViva || !abertos.length ? {} as Record<string, { bid: number; ask: number }> : await Promise.race([
       getMarketQuotes(conta, abertos),
       new Promise<Record<string, { bid: number; ask: number }>>((res) => setTimeout(() => res({}), 40_000)),
     ])
@@ -170,7 +174,7 @@ export async function GET(request: NextRequest) {
       const { error } = await db.from('funded_precos').upsert(linhas, { onConflict: 'symbol' })
       if (!error) escritos = linhas.length
     }
-    return NextResponse.json({ ok: true, motor: 'parado', idadeSeg: Number.isFinite(idadeMs) ? Math.round(idadeMs / 1000) : null, congelados, simbolosAbertos: abertos.length, escritos })
+    return NextResponse.json({ ok: true, motor: 'parado', metaapi: contaViva ? conta : null, idadeSeg: Number.isFinite(idadeMs) ? Math.round(idadeMs / 1000) : null, congelados, simbolosAbertos: abertos.length, escritos })
   } catch (err) {
     return NextResponse.json({ ok: false, error: err instanceof Error ? err.message : 'erro' }, { status: 500 })
   }

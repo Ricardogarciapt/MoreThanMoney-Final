@@ -32,18 +32,18 @@ eq('id nulo → sem comentário', orderCommentFor(null, 'x'), undefined)
 eq('sem id é tratado como cliente', isNoCommentAccount(undefined), true)
 
 // ── contas provedoras: mantêm, porque o motor lê de volta ──────────────────
-eq('mestre Premium mantém comentário', orderCommentFor(CANONICAL_PREMIUM_ACCOUNT_ID, 'PREM-L1'), 'PREM-L1')
-eq('mestre sem texto usa o fallback', orderCommentFor(CANONICAL_PREMIUM_ACCOUNT_ID, null), 'MTMcopier')
-eq('mestre não é conta-sem-comentário', isNoCommentAccount(CANONICAL_PREMIUM_ACCOUNT_ID), false)
+// O Premium antigo (530d2e07) foi apagado na MetaApi a 04/11 e saiu do motor a 10/11: passa a ser
+// tratado como qualquer conta que não é provedora.
+eq('Premium antigo já não é provedora', isNoCommentAccount(CANONICAL_PREMIUM_ACCOUNT_ID), true)
 for (const conta of CONTAS_MOTOR_TEMPO_REAL) {
   eq(`provedora ${conta.slice(0, 8)} mantém`, isNoCommentAccount(conta), false)
+  eq(`provedora ${conta.slice(0, 8)} mantém comentário`, orderCommentFor(conta, 'PREM-L1'), 'PREM-L1')
+  eq(`provedora ${conta.slice(0, 8)} sem texto usa o fallback`, orderCommentFor(conta, null), 'MTMcopier')
+  // ── espaços à volta do id não podem furar a regra ──
+  eq(`provedora ${conta.slice(0, 8)} com espaços`, isNoCommentAccount(` ${conta} `), false)
+  // ── o comentário do mestre continua a caber no limite do MT5 (31 chars) ──
+  eq(`provedora ${conta.slice(0, 8)} comentário truncado a 31`, orderCommentFor(conta, 'x'.repeat(60))?.length, 31)
 }
-
-// ── espaços à volta do id não podem furar a regra ──────────────────────────
-eq('id do mestre com espaços', isNoCommentAccount(` ${CANONICAL_PREMIUM_ACCOUNT_ID} `), false)
-
-// ── o comentário do mestre continua a caber no limite do MT5 (31 chars) ────
-eq('comentário truncado a 31', orderCommentFor(CANONICAL_PREMIUM_ACCOUNT_ID, 'x'.repeat(60))?.length, 31)
 
 // ── a lista de contas assinadas não pode conter vazios ─────────────────────
 eq('sem ids vazios na lista', commentedAccountIds().some((x) => !x.trim()), false)

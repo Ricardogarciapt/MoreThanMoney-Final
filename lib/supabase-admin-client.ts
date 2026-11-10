@@ -15,6 +15,27 @@ const ANON_KEY = (
   "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Iml3c2N4b3R2bXRrcGhham1hc29mIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDk2NDIzNjMsImV4cCI6MjA2NTIxODM2M30._FbOwT_oVoDWWlWCZphNnwLckL1A0AzkEUSdJZkOecg"
 ).trim()
 
+/**
+ * Teto de tempo por pedido à Supabase (10/11/2026).
+ *
+ * Quando a base encrava (6/11 e 10/11, Disk IO esgotado), cada pedido fica pendurado até a
+ * Vercel matar a função aos 60/300 s: ~3.000 «Task timed out» num dia, todos a cobrar memória e
+ * CPU enquanto esperam. Com o teto, o pedido falha em segundos com um erro normal — o código já
+ * trata `{ error }` — e a função termina. Storage (uploads de vídeo) tem teto mais largo.
+ * Ajustável por SUPABASE_FETCH_TIMEOUT_MS / SUPABASE_STORAGE_TIMEOUT_MS.
+ */
+const REST_TIMEOUT_MS = Number(process.env.SUPABASE_FETCH_TIMEOUT_MS) || 25_000
+const STORAGE_TIMEOUT_MS = Number(process.env.SUPABASE_STORAGE_TIMEOUT_MS) || 120_000
+
+export const fetchComTeto: typeof fetch = (input, init) => {
+  const url = typeof input === "string" ? input : input instanceof URL ? input.href : input.url
+  const teto = AbortSignal.timeout(url.includes("/storage/v1/") ? STORAGE_TIMEOUT_MS : REST_TIMEOUT_MS)
+  // AbortSignal.any só existe no Node ≥ 20.3; sem ele respeita-se o sinal de quem chama.
+  const anyFn = (AbortSignal as unknown as { any?: (s: AbortSignal[]) => AbortSignal }).any
+  const signal = init?.signal ? (anyFn ? anyFn([init.signal, teto]) : init.signal) : teto
+  return fetch(input, { ...init, signal })
+}
+
 let singleton: SupabaseClient | null = null
 let anonSingleton: SupabaseClient | null = null
 
@@ -39,6 +60,7 @@ export function getSupabaseAdmin(): SupabaseClient {
   if (!singleton) {
     singleton = createClient(ADMIN_URL, ADMIN_SERVICE_KEY, {
       auth: { autoRefreshToken: false, persistSession: false },
+      global: { fetch: fetchComTeto },
     })
   }
   return singleton
@@ -49,6 +71,7 @@ export function getSupabaseAnonServerClient(): SupabaseClient {
   if (!anonSingleton) {
     anonSingleton = createClient(ADMIN_URL, ANON_KEY, {
       auth: { autoRefreshToken: false, persistSession: false },
+      global: { fetch: fetchComTeto },
     })
   }
   return anonSingleton
