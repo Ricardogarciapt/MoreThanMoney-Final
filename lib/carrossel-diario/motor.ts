@@ -47,16 +47,13 @@ const FOTOS_IA = [
   'https://d8j0ntlcm91z4.cloudfront.net/user_3EREu4FRjd9JfQ4QQ3vtvBw838A/hf_20261023_211220_819f988e-e49f-4024-8bab-73f50b0a2f8a.png',
   'https://d8j0ntlcm91z4.cloudfront.net/user_3EREu4FRjd9JfQ4QQ3vtvBw838A/hf_20261023_211220_9bfe033d-f42e-46a7-9dba-ccdfe2fd1e1c.png',
   'https://d8j0ntlcm91z4.cloudfront.net/user_3EREu4FRjd9JfQ4QQ3vtvBw838A/hf_20261023_211306_2fa61a2a-2bfe-4faf-be47-abb3f3522c80.png',
-  // Sessão de 07–08/11 (estúdio, palco, mentoria, biblioteca, Lisboa, podcast, Alfama, café).
+  // Sessão de 07–08/11. Fora por decisão do Ricardo (10/11): 03 mentoria, 07 podcast (a refazer), 09 diário.
   'https://d8j0ntlcm91z4.cloudfront.net/user_3EREu4FRjd9JfQ4QQ3vtvBw838A/hf_20261107_003034_9bd2dc47-bdd3-4c96-88be-483bd7d34201.png',
   'https://d8j0ntlcm91z4.cloudfront.net/user_3EREu4FRjd9JfQ4QQ3vtvBw838A/hf_20261107_003107_44527d4e-ebaf-441f-955a-fc177f6d3cd4.png',
-  'https://d8j0ntlcm91z4.cloudfront.net/user_3EREu4FRjd9JfQ4QQ3vtvBw838A/hf_20261107_003106_4590cec2-9234-4744-9641-b87329514254.png',
   'https://d8j0ntlcm91z4.cloudfront.net/user_3EREu4FRjd9JfQ4QQ3vtvBw838A/hf_20261107_003106_48dd0422-a73c-4283-9643-ae6956adecb3.png',
   'https://d8j0ntlcm91z4.cloudfront.net/user_3EREu4FRjd9JfQ4QQ3vtvBw838A/hf_20261108_003102_5e8a67fc-2f3a-443c-af47-3892851eb313.png',
   'https://d8j0ntlcm91z4.cloudfront.net/user_3EREu4FRjd9JfQ4QQ3vtvBw838A/hf_20261108_003103_edcd2ee9-d84d-40d4-b987-8ec887781cd0.png',
-  'https://d8j0ntlcm91z4.cloudfront.net/user_3EREu4FRjd9JfQ4QQ3vtvBw838A/hf_20261108_003103_6e2974e4-0189-4f24-a43e-ae33c6a07ff5.png',
   'https://d8j0ntlcm91z4.cloudfront.net/user_3EREu4FRjd9JfQ4QQ3vtvBw838A/hf_20261108_003102_55f15bf9-d160-4b32-8ebc-d6a38e6d0a39.png',
-  'https://d8j0ntlcm91z4.cloudfront.net/user_3EREu4FRjd9JfQ4QQ3vtvBw838A/hf_20261108_003457_3af8e1c8-7591-4569-b591-33369510a1c9.png',
 ]
 const AVATAR = 'capas/ref/rg-bracos.jpg'
 /** Fotografias dos educadores (as mesmas dos reels; retratos a ouro sobre preto). */
