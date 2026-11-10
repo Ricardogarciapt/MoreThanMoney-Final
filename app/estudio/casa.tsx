@@ -2,23 +2,25 @@
 
 import { useEffect, useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
-import { Loader2, PenLine, Video } from 'lucide-react'
+import { Images, Loader2, PenLine, Video } from 'lucide-react'
 import { authHeaders } from '@/lib/auth-token'
 import Estudio from './estudio'
 import PainelConteudoMagnetico from './conteudo'
+import AtivosEstudio from './ativos'
 
-type Separador = 'gravar' | 'criar'
+type Separador = 'gravar' | 'criar' | 'ativos'
 
 /**
- * O Estúdio tem dois separadores: «Gravar» (teleprompter, só a casa) e «Criar» (o antigo
- * Conteúdo Magnético: guiões, carrosséis, posts, stories e reels). Um reel criado em «Criar»
+ * O Estúdio tem três separadores: «Gravar» (teleprompter), «Criar» (o antigo Conteúdo Magnético:
+ * guiões, carrosséis, posts, stories e reels) e «Ativos» (fotos/vídeos/áudios para a edição). Um reel criado em «Criar»
  * passa para «Gravar» com um toque. Só para o Ricardo (admin): os outros vêem «área privada».
  */
 export default function EstudioCasa() {
   const router = useRouter()
   const params = useSearchParams()
   const [daCasa, setDaCasa] = useState<boolean | null>(null)
-  const pedido = params.get('tab') === 'criar' ? 'criar' : 'gravar'
+  const t = params.get('tab')
+  const pedido: Separador = t === 'criar' || t === 'ativos' ? t : 'gravar'
   const peca = params.get('peca')
 
   useEffect(() => {
@@ -71,6 +73,7 @@ export default function EstudioCasa() {
             {([
               ['gravar', 'Gravar', Video],
               ['criar', 'Criar', PenLine],
+              ['ativos', 'Ativos', Images],
             ] as const).map(([id, nome, Icone]) => (
               <button
                 key={id}
@@ -90,6 +93,8 @@ export default function EstudioCasa() {
       )}
       {tab === 'gravar' ? (
         <Estudio pecaInicial={peca} />
+      ) : tab === 'ativos' ? (
+        <AtivosEstudio pecaInicial={peca} />
       ) : (
         <PainelConteudoMagnetico onGravar={(id) => ir('gravar', `&peca=${encodeURIComponent(id)}`)} />
       )}

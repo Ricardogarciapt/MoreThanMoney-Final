@@ -1,7 +1,7 @@
 'use client'
 
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { Check, ChevronLeft, Circle, FlipHorizontal, Loader2, Pause, Play, RefreshCw, Square, Trash2, Upload, Wand2 } from 'lucide-react'
+import { Check, ChevronLeft, Circle, Copy, FlipHorizontal, Images, Loader2, Pause, Play, RefreshCw, Square, Trash2, Upload, Wand2, X } from 'lucide-react'
 import { authHeaders } from '@/lib/auth-token'
 
 /**
@@ -22,7 +22,17 @@ type Peca = {
     laminas?: { titulo?: string; corpo?: string }[]
   }
 }
-type Take = { id: string; marca: string; estado: string; duracao_s: number | null; criado_em: string; url: string | null; peca_id: string | null }
+type Take = {
+  id: string
+  marca: string
+  estado: string
+  duracao_s: number | null
+  criado_em: string
+  url: string | null
+  peca_id: string | null
+  notas?: string | null
+  editado_url?: string | null
+}
 type Guiao = { pecaId: string | null; marca: MarcaCasa; titulo: string; texto: string; palavraChave: string }
 
 const COR: Record<MarcaCasa, string> = { morethanmoney: '#D2A63C', 'ricardo-garcia': '#0097b2' }
@@ -214,7 +224,7 @@ export default function Estudio({ pecaInicial }: { pecaInicial?: string | null }
 
         <section aria-labelledby="takes" className="mt-8">
           <h2 id="takes" className="text-base font-medium">Takes gravados</h2>
-          <p className="mt-1 text-xs text-zinc-400">«Escolher» manda o take para a edição automática no Mac; o reel editado entra na fila do Instagram para aprovação.</p>
+          <p className="mt-1 text-xs text-zinc-400">«Editar este» manda o take para a edição no Mac, que usa os ativos do guião; o reel entra na fila do Instagram como rascunho. Podes tirar da fila, duplicar ou apagar a qualquer momento.</p>
           {!aCarregar && takes.length === 0 && <p className="mt-2 text-sm text-zinc-500">Nenhum take ainda.</p>}
           <ul className="mt-2 grid grid-cols-2 gap-3">
             {takes.map((t) => (
@@ -227,36 +237,75 @@ export default function Estudio({ pecaInicial }: { pecaInicial?: string | null }
   )
 }
 
+const ESTADO_TAKE: Record<string, string> = {
+  bruto: 'Por editar',
+  escolhido: 'Na fila de edição',
+  a_editar: 'A editar no Mac',
+  editado: 'Editado · na fila do IG',
+  publicado: 'Publicado',
+}
+
 function TakeCartao({ take, onMudou }: { take: Take; onMudou: () => void }) {
   const [a, setA] = useState(false)
-  const marcar = async (estado: string) => {
+  const [erro, setErro] = useState<string | null>(null)
+  const fazer = async (f: () => Promise<unknown>) => {
     setA(true)
+    setErro(null)
     try {
-      await api('/api/estudio/gravacao', { method: 'PATCH', body: JSON.stringify({ id: take.id, estado }) })
+      await f()
       onMudou()
+    } catch (e) {
+      setErro(e instanceof Error ? e.message : 'Falhou')
     } finally {
       setA(false)
     }
   }
+  const escolher = () => fazer(() => api('/api/estudio/gravacao', { method: 'PATCH', body: JSON.stringify({ id: take.id, estado: 'escolhido' }) }))
+  const cancelar = () => fazer(() => api('/api/estudio/gravacao', { method: 'PATCH', body: JSON.stringify({ id: take.id, accao: 'cancelar' }) }))
+  const duplicar = () => fazer(() => api('/api/estudio/gravacao', { method: 'PUT', body: JSON.stringify({ id: take.id }) }))
+  const apagar = () => {
+    if (!window.confirm('Apagar este take? O vídeo, o reel editado e o rascunho na fila desaparecem.')) return
+    void fazer(() => api(`/api/estudio/gravacao?id=${take.id}`, { method: 'DELETE' }))
+  }
   const c = COR[take.marca as MarcaCasa] ?? '#D2A63C'
+  const naFila = take.estado === 'escolhido' || take.estado === 'a_editar' || take.estado === 'editado'
+  const botao = 'flex min-h-11 items-center justify-center gap-1 rounded-lg border border-zinc-700 text-xs disabled:opacity-40'
   return (
     <li className="overflow-hidden rounded-xl border border-zinc-800 bg-zinc-900/40">
-      {take.url ? (
+      {take.estado === 'editado' && take.editado_url ? (
+        <video src={take.editado_url} controls playsInline preload="metadata" className="aspect-[9/16] w-full bg-black object-cover" />
+      ) : take.url ? (
         <video src={take.url} controls playsInline preload="metadata" className="aspect-[9/16] w-full bg-black object-cover" />
       ) : (
         <div className="aspect-[9/16] w-full bg-black" />
       )}
       <div className="p-2 text-xs text-zinc-400">
-        <span style={{ color: c }}>{take.estado}</span>
+        <span style={{ color: c }}>{ESTADO_TAKE[take.estado] ?? take.estado}</span>
         {take.duracao_s ? ` · ${Math.round(take.duracao_s)} s` : ''}
+        {take.estado === 'escolhido' && take.notas?.startsWith('motor:') ? <span className="block text-red-300">{take.notas}</span> : null}
+        {erro && <span role="alert" className="block text-red-300">{erro}</span>}
       </div>
-      <div className="flex gap-1 p-2 pt-0">
-        <button type="button" disabled={a} onClick={() => marcar('escolhido')} className="flex min-h-11 flex-1 items-center justify-center gap-1 rounded-lg border border-zinc-700 text-xs">
-          <Check className="h-4 w-4" aria-hidden /> Escolher
+      <div className="grid grid-cols-2 gap-1 p-2 pt-0">
+        {naFila ? (
+          <button type="button" disabled={a} onClick={cancelar} className={`${botao} col-span-2`}>
+            <X className="h-4 w-4" aria-hidden /> {take.estado === 'editado' ? 'Cancelar na fila' : 'Tirar da fila'}
+          </button>
+        ) : take.estado === 'bruto' ? (
+          <button type="button" disabled={a} onClick={escolher} className={`${botao} col-span-2`}>
+            <Check className="h-4 w-4" aria-hidden /> Editar este
+          </button>
+        ) : null}
+        <button type="button" disabled={a} onClick={duplicar} className={botao}>
+          <Copy className="h-4 w-4" aria-hidden /> Duplicar
         </button>
-        <button type="button" disabled={a} onClick={() => marcar('descartado')} aria-label="Descartar take" className="grid min-h-11 w-11 place-items-center rounded-lg border border-zinc-700 text-zinc-400">
-          <Trash2 className="h-4 w-4" aria-hidden />
+        <button type="button" disabled={a || take.estado === 'publicado'} onClick={apagar} className={`${botao} text-zinc-400 hover:text-red-300`}>
+          <Trash2 className="h-4 w-4" aria-hidden /> Apagar
         </button>
+        {take.peca_id && (
+          <a href={`/estudio?tab=ativos&peca=${take.peca_id}`} className={`${botao} col-span-2 text-zinc-300`}>
+            <Images className="h-4 w-4" aria-hidden /> Ativos deste guião
+          </a>
+        )}
       </div>
     </li>
   )
