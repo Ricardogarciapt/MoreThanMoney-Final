@@ -1,6 +1,7 @@
 "use client"
 
 import { useEffect, useMemo, useRef, useState } from "react"
+import { textosAuditoria, type TextosGraficos } from "@/lib/mtmfunded/auditoria-textos"
 
 /**
  * Gráficos interactivos da página pública de auditoria (/mtmfunded/auditoria/<token>).
@@ -15,7 +16,7 @@ import { useEffect, useMemo, useRef, useState } from "react"
 export interface PontoCurva { t: number; r: number; indice: number; saldo: number; pips: number; dd: number }
 interface DiaR { dia: string; r: number }
 
-type Aba = "crescimento" | "r" | "saldo" | "dd" | "pips" | "dia"
+export type Aba = "crescimento" | "r" | "saldo" | "dd" | "pips" | "dia"
 const ABAS: Array<{ id: Aba; nome: string; unidade: string }> = [
   { id: "crescimento", nome: "Crescimento", unidade: "%" },
   { id: "r", nome: "Resultado (R)", unidade: "R" },
@@ -43,9 +44,11 @@ function tempos(pts: PontoCurva[]): number[] {
   return out
 }
 
-export function GraficosAuditoria({ curva, saldoInicial }: { curva: PontoCurva[]; saldoInicial: number }) {
+/** `abas`: as que fazem sentido nesta conta (sem R numa conta real; só pips na TradeLocker). */
+export function GraficosAuditoria({ curva, saldoInicial, abas, textos = textosAuditoria("pt").graficos, locale = "pt-PT" }: { curva: PontoCurva[]; saldoInicial: number; abas?: Aba[]; textos?: TextosGraficos; locale?: string }) {
   const caixa = useRef<HTMLDivElement>(null)
-  const [aba, setAba] = useState<Aba>("crescimento")
+  const visiveis = abas?.length ? ABAS.filter((a) => abas.includes(a.id)) : ABAS
+  const [aba, setAba] = useState<Aba>(visiveis[0].id)
   const [periodo, setPeriodo] = useState("tudo")
   const [falhou, setFalhou] = useState(false)
 
@@ -78,7 +81,7 @@ export function GraficosAuditoria({ curva, saldoInicial }: { curva: PontoCurva[]
         rightPriceScale: { borderColor: "rgba(255,255,255,0.12)" },
         timeScale: { borderColor: "rgba(255,255,255,0.12)", timeVisible: aba !== "dia", secondsVisible: false, rightOffset: 2 },
         crosshair: { mode: LW.CrosshairMode.Normal },
-        localization: { locale: "pt-PT", priceFormatter: (v: number) => `${v.toLocaleString("pt-PT", { maximumFractionDigits: 2 })} ${def.unidade}` },
+        localization: { locale, priceFormatter: (v: number) => `${v.toLocaleString(locale, { maximumFractionDigits: 2 })} ${def.unidade}` },
         handleScroll: { mouseWheel: true, pressedMouseMove: true, horzTouchDrag: true, vertTouchDrag: false },
         handleScale: { mouseWheel: true, pinch: true, axisPressedMouseMove: true },
       })
@@ -118,32 +121,32 @@ export function GraficosAuditoria({ curva, saldoInicial }: { curva: PontoCurva[]
       remover = () => chart.remove()
     }).catch(() => vivo && setFalhou(true))
     return () => { vivo = false; ro?.disconnect(); remover?.() }
-  }, [aba, periodo, curva, ts, porDia, saldoInicial])
+  }, [aba, periodo, curva, ts, porDia, saldoInicial, locale])
 
   if (curva.length < 2) return null
   return (
     <div>
       <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-        <div role="tablist" aria-label="Gráfico" className="flex flex-wrap gap-1">
-          {ABAS.map((a) => (
+        <div role="tablist" aria-label={textos.grafico} className="flex flex-wrap gap-1">
+          {visiveis.map((a) => (
             <button key={a.id} role="tab" aria-selected={aba === a.id} onClick={() => setAba(a.id)}
               className={`min-h-9 rounded-md px-3 text-xs font-medium transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#D2A63C] ${aba === a.id ? "bg-[#D2A63C] text-black" : "bg-white/5 text-zinc-300 hover:bg-white/10"}`}>
-              {a.nome}
+              {textos.abas[a.id]}
             </button>
           ))}
         </div>
-        <div aria-label="Período" className="flex gap-1">
+        <div aria-label={textos.periodo} className="flex gap-1">
           {PERIODOS.map((p) => (
             <button key={p.id} aria-pressed={periodo === p.id} onClick={() => setPeriodo(p.id)}
               className={`min-h-9 min-w-10 rounded-md px-2 text-xs font-medium transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#D2A63C] ${periodo === p.id ? "border border-[#D2A63C] text-[#E9C46A]" : "border border-white/10 text-zinc-400 hover:text-zinc-200"}`}>
-              {p.nome}
+              {textos.periodos[p.id as keyof TextosGraficos["periodos"]]}
             </button>
           ))}
         </div>
       </div>
       <div ref={caixa} className="w-full touch-pan-y" style={{ height: 300 }} />
       <p className="mt-2 text-[11px] text-zinc-500">
-        {falhou ? "Não foi possível carregar o gráfico interactivo." : "Arrasta para os lados para percorrer o histórico; roda do rato ou pinça para zoom."}
+        {falhou ? textos.falhou : textos.ajuda}
       </p>
     </div>
   )

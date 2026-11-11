@@ -18,6 +18,7 @@
  *    503 `mt5_desligada` e o ecrã oferece «Ligar conta» (acção explícita, com aviso de ~1 min) →
  *    `ligarContaMt5`. A política de undeploy das ociosas continua a mandar depois disso.
  */
+import { historicoDosDealsMt5, type DealMt5 } from '@/lib/mtmfunded/auditoria-real'
 import { clampStopsToMinDistance, clampVolume, type MetaApiDeal, type MetaApiPendingOrder, type MetaApiPosition, type MetaApiSymbolSpecification } from '@/lib/mtmcopy/metaapi'
 import { invalidarLeiturasDeSimbolos, simbolosDaContaCache, specDoSimboloCache } from '@/lib/mtmcopy/metaapi-cache'
 import { contasStreaming, decidirFonte, type MetaApiSnapshot } from '@/lib/mtmcopy/metaapi-snapshot-regras'
@@ -265,6 +266,21 @@ export function adaptadorMt5(accountId: string, opcoes: { podeNegociar: boolean 
           lucro: x.profit == null ? null : Number(((x.profit ?? 0) + (x.commission ?? 0) + (x.swap ?? 0)).toFixed(2)),
           em: isoDe(x.time), estado: /OUT/i.test(String(x.entryType ?? '')) ? 'fechado' : 'aberto',
         }))
+    },
+
+    // Todos os deals da janela (até 10 páginas de 1000), incluindo depósitos e levantamentos.
+    historicoAuditoria: async (dias) => {
+      const d = Math.min(730, Math.max(1, dias))
+      const de = encodeURIComponent(new Date(Date.now() - d * 86_400_000).toISOString())
+      const ate = encodeURIComponent(new Date().toISOString())
+      const todos: MetaApiDeal[] = []
+      for (let pag = 0; pag < 10; pag++) {
+        const r = (await deps.rest(accountId, `/history-deals/time/${de}/${ate}?offset=${pag * 1000}&limit=1000`)) as MetaApiDeal[] | { deals?: MetaApiDeal[] } | null
+        const lote = Array.isArray(r) ? r : (r?.deals ?? [])
+        todos.push(...lote)
+        if (lote.length < 1000) break
+      }
+      return historicoDosDealsMt5(todos as DealMt5[])
     },
 
     enviarOrdem: async (bruto) => {
