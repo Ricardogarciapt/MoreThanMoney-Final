@@ -23,7 +23,7 @@
 const fs = require("node:fs")
 const os = require("node:os")
 const path = require("node:path")
-const { spawn } = require("node:child_process")
+const { spawn, execFile } = require("node:child_process")
 
 const API = (process.env.MTM_API_BASE || "https://www.morethanmoney.pt").replace(/\/+$/, "")
 // No robô diário do GitHub só existe o CRON_SECRET; o balcão aceita os dois.
@@ -732,15 +732,116 @@ function temAudio(fonte) {
  */
 const VOZ = "highpass=f=70,loudnorm=I=-14:TP=-1.5:LRA=11"
 
-function argsDaMontagem({ fonte, recuo, duracao, L, A, ass, broll, estilo = {}, zoom = null, audio = true }) {
+/* ─────────────────────────────────────────────────────────────────────────────
+ * ENQUADRAMENTO — onde está a cara, e A/B entre a câmara da chamada e o ecrã.
+ *
+ * Numa chamada ou live com ecrã partilhado, a câmara de quem fala é um quadrado num canto e o
+ * corte ao centro mostrava só o meio do ecrã: a cara nunca aparecia. O enquadrar.py (OpenCV)
+ * encontra a cara em 12 frames; com ela, o clipe alterna entre três planos:
+ *   A — a câmara, ampliada na vertical;
+ *   B — o ecrã inteiro e legível, por cima de um fundo desfocado do próprio ecrã;
+ *   C — a câmara em cima e o ecrã em baixo.
+ * Começa sempre em A (a cara segura o gancho) e troca nos inícios de frase, a cada 3–5 s.
+ * ────────────────────────────────────────────────────────────────────────────*/
+function enquadramento(fonte, recuo, duracao) {
+  return new Promise((resolve) => {
+    execFile("python3", [path.join(__dirname, "enquadrar.py"), fonte, String(recuo), String(duracao)], { timeout: 120_000 }, (err, out) => {
+      if (err) return resolve({ tipo: "nenhum", motivo: err.message })
+      try {
+        resolve(JSON.parse(String(out).trim().split("\n").pop()))
+      } catch {
+        resolve({ tipo: "nenhum" })
+      }
+    })
+  })
+}
+
+const PALAVRAS_DO_ECRA = /^(aqui|vejam|veja|vês|ves|repara|reparem|olha|olhem|gráfico|grafico|ecrã|ecra|tela|vela|velas|preço|preco|zona|linha|nível|nivel)$/i
+
+function planoAB(palavras, estilo, enfase, duracao) {
+  const ecras = ecrasDaLegenda(palavras, estilo, enfase)
+  const planos = [{ plano: "A", ini: 0 }]
+  const ciclo = ["B", "A", "C", "A"]
+  let k = 0
+  for (const e of ecras) {
+    if (e.inicio < 2 || e.inicio > duracao - 1.5) continue
+    const atual = planos[planos.length - 1]
+    const passou = e.inicio - atual.ini
+    const falaDoEcra = e.palavras.some((p) => PALAVRAS_DO_ECRA.test(normalizar(p.palavra)))
+    if (falaDoEcra && atual.plano !== "B" && passou >= 1.5) {
+      planos.push({ plano: "B", ini: e.inicio })
+      continue
+    }
+    if (passou >= (atual.plano === "A" ? 3.5 : 4.5)) {
+      let prox = ciclo[k++ % ciclo.length]
+      if (prox === atual.plano) prox = ciclo[k++ % ciclo.length]
+      planos.push({ plano: prox, ini: e.inicio })
+    }
+  }
+  planos.forEach((p, i) => (p.fim = i + 1 < planos.length ? planos[i + 1].ini : duracao))
+  return planos
+}
+
+const par = (n) => Math.max(2, Math.floor(n / 2) * 2)
+const preso = (v, a, b) => Math.min(Math.max(v, a), b)
+
+/** Janela com a proporção pedida, centrada na cara (um pouco acima, para ficar no terço de cima). */
+function janelaNaCara(enq, proporcao, alturaEmCaras) {
+  const { w, h, cara } = enq
+  let ch = Math.min(h, cara.h * alturaEmCaras)
+  let cw = ch * proporcao
+  if (cw > w) {
+    cw = w
+    ch = cw / proporcao
+  }
+  cw = par(cw)
+  ch = par(ch)
+  const cx = par(preso(cara.x + cara.w / 2 - cw / 2, 0, w - cw))
+  const cy = par(preso(cara.y + cara.h / 2 - ch * 0.4, 0, h - ch))
+  return `crop=${cw}:${ch}:${cx}:${cy}`
+}
+
+const entre = (planos, letra) =>
+  planos.filter((p) => p.plano === letra).map((p) => `between(t,${p.ini.toFixed(2)},${p.fim.toFixed(2)})`).join("+") || "0"
+
+function argsDaMontagem({ fonte, recuo, duracao, L, A, ass, broll, estilo = {}, zoom = null, audio = true, enq = null, planos = null }) {
   const ef = estilo.efeitos || {}
   const acento = String(estilo.corAcento || estilo.corDestaque || "#FFD700").replace("#", "0x")
   const entradas = ["-ss", String(recuo), "-t", String(duracao), "-i", fonte]
   const partes = []
 
   // O 9:16 a partir do meio do plano; com zoom, o zoompan faz o corte E a escala de uma vez.
-  const corte = "crop='min(iw,ih*9/16)':'min(ih,iw*16/9)'"
-  if (ef.punchIn && zoom) {
+  // Com uma cara a falar para a câmara, o 9:16 segue a cara e não o centro geométrico.
+  let corte = "crop='min(iw,ih*9/16)':'min(ih,iw*16/9)'"
+  if (enq && enq.tipo === "cara" && enq.cara) {
+    const cw = par(Math.min(enq.w, enq.h * 9 / 16))
+    const ch = par(Math.min(enq.h, enq.w * 16 / 9))
+    const cx = par(preso(enq.cara.x + enq.cara.w / 2 - cw / 2, 0, enq.w - cw))
+    corte = `crop=${cw}:${ch}:${cx}:0`
+  }
+  const grade = ef.grade && estilo.grade ? `,eq=contrast=${estilo.grade.contraste}:saturation=${estilo.grade.saturacao}:brightness=${estilo.grade.brilho}` : ""
+  const ab = enq && enq.tipo === "chamada" && enq.cara && planos && planos.length > 1
+  if (ab) {
+    const TOPO = par(A * 0.42)
+    const altEcra = par(L * enq.h / enq.w)
+    partes.push(
+      `[0:v]fps=30,split=4[s1][s2][s3][s4]`,
+      `[s1]${janelaNaCara(enq, L / A, 4.2)},scale=${L}:${A},setsar=1[pa]`,
+      `[s2]scale=${L}:${A}:force_original_aspect_ratio=increase,crop=${L}:${A},gblur=sigma=28,eq=brightness=-0.22,split[f1][f2]`,
+      `[s3]scale=${L}:${altEcra},setsar=1,split[e1][e2]`,
+      `[f1][e1]overlay=0:${par((A - altEcra) / 2)}[pb]`,
+      `[s4]${janelaNaCara(enq, L / TOPO, 3)},scale=${L}:${TOPO},setsar=1[topo]`,
+      `[f2][e2]overlay=0:${par(TOPO + Math.max(0, (A - TOPO - altEcra) / 2))}[base]`,
+      `[base][topo]overlay=0:0[pc]`,
+      `[pb][pc]overlay=0:0:enable='${entre(planos, "C")}'[pbc]`,
+      `[pbc][pa]overlay=0:0:enable='${entre(planos, "A")}'${grade}` +
+        // um clarão de 70 ms em cada troca: o olho lê-o como transição e não como salto
+        (ef.whoosh || ef.transicoesBroll
+          ? `,drawbox=x=0:y=0:w=iw:h=ih:color=white@0.28:t=fill:enable='${planos.slice(1).map((p) => `between(t,${p.ini.toFixed(2)},${(p.ini + 0.07).toFixed(2)})`).join("+") || "0"}'`
+          : "") +
+        "[v0]",
+    )
+  } else if (ef.punchIn && zoom) {
     partes.push(
       `[0:v]fps=30,${corte},` +
       `zoompan=z='${zoom}':d=1:x='iw/2-(iw/zoom/2)':y='ih/2-(ih/zoom/2)':s=${L}x${A}:fps=30,setsar=1` +
@@ -812,6 +913,7 @@ function argsDaMontagem({ fonte, recuo, duracao, L, A, ass, broll, estilo = {}, 
 
   // O whoosh: ruído rosa filtrado e com envelope rápido — sintetizado aqui, sem ficheiros de fora.
   const whooshes = ef.whoosh && ef.transicoesBroll && audio ? broll.map((b) => Math.max(0, b.inicio - 0.22)) : []
+  if (ab && ef.whoosh && audio) planos.slice(1).forEach((p) => whooshes.push(Math.max(0, p.ini - 0.22)))
   if (whooshes.length) {
     const n = whooshes.length
     partes.push(
@@ -986,9 +1088,12 @@ async function render(trabalho) {
      */
     const broll = await imagensDoBroll(limpo.broll, tmp, L, A)
     const zoom = planoDeZoom(limpo.legendas, estilo, extras.enfase, limpo.duracao, limpo.cortes)
+    const enq = await enquadramento(limpo.fonte, limpo.recuo, limpo.duracao)
+    const planos = enq.tipo === "chamada" ? planoAB(limpo.legendas, estilo, extras.enfase, limpo.duracao) : null
+    log(`enquadramento: ${enq.tipo}${planos ? ` · ${planos.map((p) => p.plano).join("")}` : ""}`)
     await correr("ffmpeg", [
       "-y",
-      ...argsDaMontagem({ fonte: limpo.fonte, recuo: limpo.recuo, duracao: limpo.duracao, L, A, ass, broll, estilo, zoom, audio }),
+      ...argsDaMontagem({ fonte: limpo.fonte, recuo: limpo.recuo, duracao: limpo.duracao, L, A, ass, broll, estilo, zoom, audio, enq, planos }),
       "-c:v", "libx264", "-preset", "medium", "-crf", "21",
       "-c:a", "aac", "-b:a", "128k",
       "-movflags", "+faststart",
@@ -1122,8 +1227,10 @@ async function previews(trabalho) {
         const saida = path.join(pasta, "preview.mp4")
         const broll = await imagensDoBroll(limpo.broll, pasta, L, A)
         const zoom = planoDeZoom(limpo.legendas, estilo, extras.enfase, limpo.duracao, limpo.cortes)
+        const enq = await enquadramento(limpo.fonte, limpo.recuo, limpo.duracao)
+        const planos = enq.tipo === "chamada" ? planoAB(limpo.legendas, estilo, extras.enfase, limpo.duracao) : null
         await correr("ffmpeg", [
-          "-y", ...argsDaMontagem({ fonte: limpo.fonte, recuo: limpo.recuo, duracao: limpo.duracao, L, A, ass, broll, estilo, zoom, audio }),
+          "-y", ...argsDaMontagem({ fonte: limpo.fonte, recuo: limpo.recuo, duracao: limpo.duracao, L, A, ass, broll, estilo, zoom, audio, enq, planos }),
           "-c:v", "libx264", "-preset", "veryfast", "-crf", "30",
           "-c:a", "aac", "-b:a", "64k", "-ac", "1",
           "-movflags", "+faststart", saida,
@@ -1300,4 +1407,4 @@ async function ronda() {
 
 // Importado (testes, harness de pré-visualização) não arranca o ciclo.
 if (require.main === module) (process.argv.includes("--ronda") ? ronda() : ciclo())
-module.exports = { construirASS, ecrasDaLegenda, planoDeZoom, argsDaMontagem, imagensDoBroll, temAudio, correr, planoSemPausas, semTemposMortos }
+module.exports = { enquadramento, planoAB, construirASS, ecrasDaLegenda, planoDeZoom, argsDaMontagem, imagensDoBroll, temAudio, correr, planoSemPausas, semTemposMortos }
