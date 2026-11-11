@@ -1,7 +1,7 @@
 'use client'
 
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { Check, Copy, Images, Loader2, Play, RefreshCw, Sparkles, Trash2, Type, Wand2, X } from 'lucide-react'
+import { Camera, Check, Copy, Images, Loader2, Play, RefreshCw, Sparkles, Trash2, Type, Wand2, X } from 'lucide-react'
 import { authHeaders } from '@/lib/auth-token'
 import { EditorTexto, PainelGanchos } from './editar-texto'
 import { Teleprompter } from './teleprompter'
@@ -121,6 +121,12 @@ export default function Estudio({ pecaInicial }: { pecaInicial?: string | null }
     }
   }
 
+  // câmara sem guião: testar enquadramento/luz/microfone ou gravar à vontade
+  const abrirCamara = () => {
+    setGuiao({ pecaId: null, marca: marcaNova, titulo: 'Gravação livre', texto: '', palavraChave: '' })
+    setEcra('gravar')
+  }
+
   const usarTextoLivre = () => {
     if (!textoLivre.trim()) return
     setGuiao({ pecaId: null, marca: marcaNova, titulo: 'Texto livre', texto: textoLivre.trim(), palavraChave: '' })
@@ -143,6 +149,21 @@ export default function Estudio({ pecaInicial }: { pecaInicial?: string | null }
         <p className="mt-1 text-sm text-zinc-400">Escolhe o guião, lê no teleprompter e grava. Cada take vai para a edição no Mac.</p>
 
         {erro && <p role="alert" className="mt-4 rounded-lg border border-red-500/40 bg-red-500/10 p-3 text-sm text-red-200">{erro}</p>}
+
+        <button
+          type="button"
+          onClick={abrirCamara}
+          className="mt-5 flex min-h-14 w-full items-center gap-3 rounded-2xl border px-4 text-left transition-colors hover:bg-white/5"
+          style={{ borderColor: `${cor}66` }}
+        >
+          <span className="grid h-10 w-10 shrink-0 place-items-center rounded-full" style={{ background: `${cor}1f`, color: cor }}>
+            <Camera className="h-5 w-5" aria-hidden />
+          </span>
+          <span className="min-w-0">
+            <span className="block text-sm font-medium">Abrir câmara</span>
+            <span className="block text-xs text-zinc-400">Testa enquadramento, luz, zoom e microfone, ou grava sem guião.</span>
+          </span>
+        </button>
 
         <section aria-labelledby="novo" className="mt-6 rounded-2xl border border-zinc-800 bg-zinc-900/60 p-4">
           <h2 id="novo" className="text-base font-medium">Guião novo</h2>
