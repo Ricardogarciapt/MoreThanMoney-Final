@@ -7,6 +7,8 @@
  *
  *   ?dias=N   janela em dias (omissão 3, máx. 90; a primeira corrida de sempre usa 45)
  *   ?ensaio=1 devolve o que faria sem gravar
+ *
+ * Corre duas vezes por dia (06:20 e 13:20 UTC): é idempotente, e a 11/11 a base deu 503 às 06:20.
  */
 import { NextRequest, NextResponse } from 'next/server'
 import { isCronAuthorized } from '@/lib/cron-auth'
@@ -30,13 +32,15 @@ export async function GET(req: NextRequest) {
   const dias = pedido ? Number(pedido) : marca ? 3 : 45
   try {
     const r = await reconciliarStripe(getStripeClient(), db, { dias, ensaio })
-    if (!ensaio) {
+    // Só marca quando tudo entrou: se alguma escrita falhou (base lenta), a próxima corrida volta
+    // a olhar para a mesma janela — na primeira de sempre, os 45 dias outra vez.
+    if (!ensaio && r.falhadas === 0) {
       await db
         .from('site_settings')
         .upsert({ key: CHAVE_ULTIMA, value: { em: new Date().toISOString(), dias, registadas: r.registadas } }, { onConflict: 'key' })
     }
-    if (r.registadas || r.codigosPreenchidos) {
-      console.log(`[vendas-reconciliar] ${r.registadas} vendas registadas, ${r.codigosPreenchidos} códigos preenchidos (${r.dias} d)`)
+    if (r.registadas || r.codigosPreenchidos || r.falhadas) {
+      console.log(`[vendas-reconciliar] ${r.registadas} vendas registadas, ${r.codigosPreenchidos} códigos preenchidos, ${r.falhadas} por gravar (${r.dias} d)`)
     }
     return NextResponse.json({ ok: true, ...r })
   } catch (e) {
