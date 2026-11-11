@@ -1,5 +1,5 @@
 import type { Metadata } from 'next'
-import { GraficosAuditoria } from '@/components/funded/graficos-auditoria'
+import { GraficosAuditoria, type Aba } from '@/components/funded/graficos-auditoria'
 import { notFound } from 'next/navigation'
 import { ShieldCheck } from 'lucide-react'
 import { getSupabaseAdmin } from '@/lib/supabase-admin-client'
@@ -13,13 +13,17 @@ import { nomeEstrategia, type MetricasAuditoria, type TradeAuditoria } from '@/l
  * mínimo que prova um histórico: métricas em R e pips, retorno ponderado no tempo, drawdown, risco de
  * ruína e TODAS as operações fechadas, cada uma com o sinal que a abriu. Sem nome, email ou passwords.
  * Revogado o link, a página deixa de existir. Fora dos motores de busca (noindex).
+ *
+ * Também serve contas REAIS ligadas (MT5 pela MetaApi, TradeLocker — migração 250): as operações
+ * vêm da corretora, sem sinal nem risco inicial, por isso o R e a ligação ao sinal não aparecem; na
+ * TradeLocker nem os dólares (a corretora não dá o lucro por ordem) — fica em pips.
  */
 
 export const revalidate = 300
 
 export const metadata: Metadata = {
-  title: 'Auditoria de conta · MTM Funded',
-  description: 'Histórico verificável de uma conta simulada MTM Funded: operações ligadas aos sinais, R, pips, drawdown e risco de ruína.',
+  title: 'Auditoria de conta · MoreThanMoney',
+  description: 'Histórico verificável de uma conta: operações fechadas, pips, drawdown e, nas contas MTM Funded, ligação aos sinais, R e risco de ruína.',
   robots: { index: false, follow: false },
 }
 
@@ -41,26 +45,66 @@ export default async function AuditoriaPage({ params }: { params: Promise<{ toke
   const m = a.metricas
   const estrategia = nomeEstrategia(a.conta.estrategiaSeguida)
   const recentes = [...a.trades].reverse()
+  const real = a.conta.fonte !== 'mtmfunded'
+  const comR = m.tradesComR > 0
+  const usd = a.conta.comValor
+  const plataforma = a.conta.fonte === 'tradelocker' ? 'TradeLocker' : a.conta.versao === 'mt4' ? 'MT4' : 'MT5'
+  const abas: Aba[] = [
+    ...(usd ? ['crescimento' as const] : []), ...(comR ? ['r' as const] : []),
+    ...(usd ? ['saldo' as const, 'dd' as const] : []), 'pips', ...(comR ? ['dia' as const] : []),
+  ]
+
+  if (a.conta.indisponivel) {
+    return (
+      <main className="px-4 py-16 text-zinc-200 sm:px-6">
+        <div className="mx-auto max-w-xl space-y-3 rounded-xl border border-white/10 bg-[#111] p-5">
+          <p className="flex items-center gap-2 text-xs uppercase tracking-[0.18em] text-[#D2A63C]">
+            <ShieldCheck className="h-4 w-4" aria-hidden="true" /> Auditoria de conta · {plataforma}
+          </p>
+          <p className="text-sm text-zinc-300">{a.conta.indisponivel}</p>
+        </div>
+      </main>
+    )
+  }
 
   return (
     <main className="px-4 py-8 text-zinc-200 sm:px-6">
       <div className="mx-auto max-w-6xl space-y-6">
         <header className="space-y-2">
           <p className="flex items-center gap-2 text-xs uppercase tracking-[0.18em] text-[#D2A63C]">
-            <ShieldCheck className="h-4 w-4" aria-hidden="true" /> Auditoria de conta · MTM Funded
+            <ShieldCheck className="h-4 w-4" aria-hidden="true" /> Auditoria de conta · {real ? `${plataforma} · conta ${a.conta.demo ? 'demo' : 'real'}` : 'MTM Funded'}
           </p>
           <h1 className="text-2xl font-semibold text-white sm:text-3xl">
-            {a.conta.etiqueta || estrategia || 'Conta MTM Funded'}
+            {a.conta.etiqueta || estrategia || (real ? `Conta ${plataforma}${a.conta.servidor ? ` · ${a.conta.servidor}` : ''}` : 'Conta MTM Funded')}
             {a.conta.login && <span className="ml-2 font-mono text-lg text-zinc-400">#{a.conta.login}</span>}
           </h1>
+          {real ? (
+          <p className="max-w-3xl text-sm leading-relaxed text-zinc-400">
+            Conta {a.conta.demo ? 'demo' : <strong className="text-zinc-200">real</strong>} na corretora{a.conta.servidor ? ` (${a.conta.servidor})` : ''}, lida pela ligação {plataforma} do dono.
+            {usd ? ` Saldo agora ${fmt(a.conta.saldoAtual)} USD.` : ''}
+            {' '}Histórico de {dia(m.primeiraTrade)} a {dia(m.ultimaTrade)} (último ano) · {m.trades} operações fechadas em {m.diasNegociados} dias · {a.abertas} aberta(s) agora.
+            {' '}Lido na corretora em {data(a.geradoEm)} UTC.
+          </p>
+          ) : (
           <p className="max-w-3xl text-sm leading-relaxed text-zinc-400">
             Conta <strong className="text-zinc-200">simulada</strong> no motor MTM Funded, saldo {a.conta.cicloDesde ? <>no início do ciclo actual ({dia(a.conta.cicloDesde)})</> : 'inicial'} {fmt(a.conta.saldoInicial, 0)} USD
             {estrategia ? <>, a seguir <strong className="text-zinc-200">{estrategia}</strong></> : null}.
             {' '}Histórico de {dia(m.primeiraTrade)} a {dia(m.ultimaTrade)} · {m.trades} operações fechadas em {m.diasNegociados} dias · {a.abertas} aberta(s) agora.
             {' '}Dados lidos da base de produção em {data(a.geradoEm)} UTC.
           </p>
+          )}
         </header>
 
+        {real ? (
+        <section aria-label="Indicadores principais" className="grid grid-cols-2 gap-2 sm:grid-cols-4 lg:grid-cols-6">
+          <Kpi rotulo="Taxa de acerto" valor={m.taxaAcertoPct == null ? '—' : `${fmt(m.taxaAcertoPct, 1)} %`} nota={usd ? 'por resultado' : 'por pips'} />
+          <Kpi rotulo="Pips (forex e metais)" valor={sinal(m.pips, 0)} cls={cor(m.pips)} nota={m.pontos ? `${sinal(m.pontos, 0)} pts em índices/cripto` : undefined} />
+          {usd && <Kpi rotulo="Retorno ponderado no tempo" valor={`${sinal(m.retornoPonderadoPct)} %`} cls={cor(m.retornoPonderadoPct)} nota="depósitos e levantamentos não contam" />}
+          {usd && <Kpi rotulo="Drawdown máx." valor={`${fmt(m.drawdownMaxPct)} %`} nota="no índice ponderado" />}
+          {usd && <Kpi rotulo="Resultado das operações" valor={`${sinal(m.resultadoTrades)} USD`} cls={cor(m.resultadoTrades)} nota="com swap e comissões" />}
+          <Kpi rotulo="Seguidas (ganho / perda)" valor={`${m.maxGanhasSeguidas} / ${m.maxPerdidasSeguidas}`} />
+        </section>
+        ) : (
         <section aria-label="Indicadores principais" className="grid grid-cols-2 gap-2 sm:grid-cols-4 lg:grid-cols-6">
           <Kpi rotulo="Resultado em R" valor={sinal(m.rTotal)} cls={cor(m.rTotal)} nota={`${m.tradesComR} trades com risco registado`} />
           <Kpi rotulo="Expectativa por trade" valor={`${sinal(m.expectativaR, 3)} R`} cls={cor(m.expectativaR)} />
@@ -75,11 +119,12 @@ export default async function AuditoriaPage({ params }: { params: Promise<{ toke
           <Kpi rotulo="Latência sinal → ordem" valor={m.latenciaMedianaSeg == null ? '—' : `${fmt(m.latenciaMedianaSeg, 1)} s`} nota="mediana, ordens a mercado" />
           <Kpi rotulo="Desvio da entrada" valor={m.desvioMedianoEntrada == null ? '—' : `${sinal(m.desvioMedianoEntrada, 1)}`} nota="mediana, em pips/pts vs. sinal" />
         </section>
+        )}
 
-        <Curva m={m} saldoInicial={a.conta.saldoInicial} />
+        <Curva m={m} saldoInicial={a.conta.saldoInicial} abas={abas} />
 
         <div className="grid gap-4 lg:grid-cols-2">
-          <Cartao titulo="Risco de ruína">
+          {comR ? <Cartao titulo="Risco de ruína">
             <p className="mb-2 text-xs leading-relaxed text-zinc-400">
               Probabilidade de perder 30 % do capital em 250 trades, arriscando uma fracção fixa do saldo por trade.
               Reamostragem ({'4 000'} simulações, semente fixa) das próprias trades desta conta em R.
@@ -97,46 +142,61 @@ export default async function AuditoriaPage({ params }: { params: Promise<{ toke
                 ))}
               </tbody>
             </table>
+          </Cartao> : (
+          <Cartao titulo="Sem R nem risco de ruína">
+            <p className="text-xs leading-relaxed text-zinc-400">
+              A corretora não guarda o stop com que cada operação abriu, por isso esta conta não tem resultado em R nem risco de ruína
+              (que se calcula a partir do R). Em vez de o estimar, a página mostra só o que a corretora regista{usd ? ': preços, pips e dinheiro' : ': preços e pips (a TradeLocker não dá o lucro por ordem)'}.
+            </p>
           </Cartao>
+          )}
 
           <Cartao titulo="Por mês">
             <table className="w-full text-sm tabular-nums">
               <caption className="sr-only">Resultado mensal</caption>
-              <thead><tr className="text-left text-xs text-zinc-500"><th className="py-1 font-medium">Mês</th><th className="py-1 text-right font-medium">Trades</th><th className="py-1 text-right font-medium">R</th><th className="py-1 text-right font-medium">Retorno</th></tr></thead>
+              <thead><tr className="text-left text-xs text-zinc-500"><th className="py-1 font-medium">Mês</th><th className="py-1 text-right font-medium">Trades</th>{comR && <th className="py-1 text-right font-medium">R</th>}{usd && <th className="py-1 text-right font-medium">Retorno</th>}</tr></thead>
               <tbody>
                 {m.porMes.map((x) => (
                   <tr key={x.mes} className="border-t border-white/5">
                     <td className="py-1.5">{x.mes}</td><td className="py-1.5 text-right">{x.trades}</td>
-                    <td className={`py-1.5 text-right font-mono ${cor(x.r)}`}>{sinal(x.r)}</td>
-                    <td className={`py-1.5 text-right font-mono ${cor(x.retornoPct)}`}>{sinal(x.retornoPct)} %</td>
+                    {comR && <td className={`py-1.5 text-right font-mono ${cor(x.r)}`}>{sinal(x.r)}</td>}
+                    {usd && <td className={`py-1.5 text-right font-mono ${cor(x.retornoPct)}`}>{sinal(x.retornoPct)} %</td>}
                   </tr>
                 ))}
               </tbody>
             </table>
           </Cartao>
 
-          <Grupos titulo="Por estratégia (origem do sinal)" grupos={m.porEstrategia} />
-          <Grupos titulo="Por símbolo" grupos={m.porSimbolo.slice(0, 12)} />
+          {!real && <Grupos titulo="Por estratégia (origem do sinal)" grupos={m.porEstrategia} comR={comR} />}
+          <Grupos titulo="Por símbolo" grupos={m.porSimbolo.slice(0, 12)} comR={comR} />
         </div>
 
         <Cartao titulo={`Operações fechadas (${a.trades.length})`}>
-          <p className="mb-2 text-xs text-zinc-400">Mais recentes primeiro. Horas em UTC. Parciais somadas na operação-mãe. «Sinal» é a hora a que o sinal chegou ao motor.</p>
+          <p className="mb-2 text-xs text-zinc-400">Mais recentes primeiro. Horas em UTC. Parciais somadas na operação-mãe.{real ? '' : ' «Sinal» é a hora a que o sinal chegou ao motor.'}</p>
           <div className="-mx-3 overflow-x-auto px-3">
-            <table className="w-full min-w-[860px] text-[12.5px] tabular-nums">
+            <table className={`w-full ${real ? 'min-w-[520px]' : 'min-w-[860px]'} text-[12.5px] tabular-nums`}>
               <caption className="sr-only">Lista de operações fechadas com o sinal de origem</caption>
               <thead>
                 <tr className="text-left text-[11px] uppercase tracking-wide text-zinc-500">
                   <th className="py-1.5 font-medium">Fecho</th><th className="py-1.5 font-medium">Símbolo</th><th className="py-1.5 font-medium">Dir.</th>
-                  <th className="py-1.5 font-medium">Origem / estratégia</th><th className="py-1.5 font-medium">Sinal</th><th className="py-1.5 text-right font-medium">Latência</th>
-                  <th className="py-1.5 text-right font-medium">Lote</th><th className="py-1.5 text-right font-medium">Pips/pts</th><th className="py-1.5 text-right font-medium">R</th><th className="py-1.5 text-right font-medium">USD</th>
+                  {!real && <><th className="py-1.5 font-medium">Origem / estratégia</th><th className="py-1.5 font-medium">Sinal</th><th className="py-1.5 text-right font-medium">Latência</th></>}
+                  <th className="py-1.5 text-right font-medium">Lote</th><th className="py-1.5 text-right font-medium">Pips/pts</th>{comR && <th className="py-1.5 text-right font-medium">R</th>}{usd && <th className="py-1.5 text-right font-medium">USD</th>}
                 </tr>
               </thead>
-              <tbody>{recentes.map((t) => <LinhaTrade key={t.id} t={t} />)}</tbody>
+              <tbody>{recentes.map((t) => <LinhaTrade key={t.id} t={t} real={real} comR={comR} usd={usd} />)}</tbody>
             </table>
           </div>
         </Cartao>
 
         <Cartao titulo="Como se mede">
+          {real ? (
+          <ul className="list-disc space-y-1.5 pl-5 text-xs leading-relaxed text-zinc-400">
+            <li><strong className="text-zinc-300">Origem</strong>: {a.conta.fonte === 'tradelocker' ? 'histórico de ordens executadas da TradeLocker; cada ordem que fecha (parte de) uma posição é uma saída.' : 'histórico de negócios (deals) do MetaTrader; cada saída é uma parte da operação, a comissão da entrada conta na operação.'} Janela: último ano.</li>
+            <li><strong className="text-zinc-300">Pips</strong>: 0,0001 no forex, 0,01 nos pares JPY, 0,1 no ouro, 0,01 na prata; índices e cripto em pontos. Média ponderada pelo lote de cada parte.</li>
+            {usd && <li><strong className="text-zinc-300">Retorno ponderado no tempo</strong>: cada operação conta sobre o saldo que havia nesse momento. {m.ajustes.quantidade ? `Esta conta teve ${m.ajustes.quantidade} depósito(s)/levantamento(s) na janela (${sinal(m.ajustes.total)} USD), que não contam como ganho nem como drawdown.` : 'Sem depósitos nem levantamentos na janela.'}</li>}
+            <li>Nada é editado à mão: a página relê a conta na corretora a cada poucos minutos. A MoreThanMoney não custodia nem executa nesta conta por ninguém — é a conta do próprio dono.</li>
+          </ul>
+          ) : (
           <ul className="list-disc space-y-1.5 pl-5 text-xs leading-relaxed text-zinc-400">
             <li><strong className="text-zinc-300">R</strong> = resultado líquido da operação (com parciais, swap e comissão) a dividir pelo risco inicial registado na abertura (distância ao stop × lote). Operações sem risco registado não entram no R.</li>
             <li><strong className="text-zinc-300">Pips</strong>: 0,0001 no forex, 0,01 nos pares JPY, 0,1 no ouro, 0,01 na prata; índices e cripto em pontos. Média ponderada pelo lote de cada parte.</li>
@@ -144,10 +204,11 @@ export default async function AuditoriaPage({ params }: { params: Promise<{ toke
             <li><strong className="text-zinc-300">Ligação ao sinal</strong>: cada ordem aberta por um sinal fica registada no motor com a estratégia, a hora e o preço do sinal — daí a latência e o desvio da entrada. Sinais com entrada por ordem pendente (limite) só abrem quando o preço chega: aí não se conta latência.</li>
             <li>Operações de teste interno marcadas na base são excluídas. Nada é editado à mão nesta página: é lida da base de produção.</li>
           </ul>
+          )}
         </Cartao>
 
         <footer className="border-t border-white/10 pt-4 text-[11px] leading-relaxed text-zinc-500">
-          Conta simulada. MTM Funded não é uma corretora nem uma prop firm e não executa ordens reais por clientes.
+          {real ? 'Conta numa corretora escolhida pelo dono; a MoreThanMoney só lê o histórico.' : 'Conta simulada. MTM Funded não é uma corretora nem uma prop firm e não executa ordens reais por clientes.'}
           Conteúdo educativo, não constitui consultoria financeira. Resultados passados, simulados ou não, não garantem resultados futuros;
           o trading envolve risco de perda de capital. · morethanmoney.pt
         </footer>
@@ -175,18 +236,18 @@ function Cartao({ titulo, children }: { titulo: string; children: React.ReactNod
   )
 }
 
-function Grupos({ titulo, grupos }: { titulo: string; grupos: MetricasAuditoria['porSimbolo'] }) {
+function Grupos({ titulo, grupos, comR }: { titulo: string; grupos: MetricasAuditoria['porSimbolo']; comR: boolean }) {
   return (
     <Cartao titulo={titulo}>
       <table className="w-full text-sm tabular-nums">
         <caption className="sr-only">{titulo}</caption>
-        <thead><tr className="text-left text-xs text-zinc-500"><th className="py-1 font-medium" /><th className="py-1 text-right font-medium">Trades</th><th className="py-1 text-right font-medium">Acerto</th><th className="py-1 text-right font-medium">R</th></tr></thead>
+        <thead><tr className="text-left text-xs text-zinc-500"><th className="py-1 font-medium" /><th className="py-1 text-right font-medium">Trades</th><th className="py-1 text-right font-medium">Acerto</th>{comR && <th className="py-1 text-right font-medium">R</th>}</tr></thead>
         <tbody>
           {grupos.map((g) => (
             <tr key={g.chave} className="border-t border-white/5">
               <td className="py-1.5">{g.chave}</td><td className="py-1.5 text-right">{g.trades}</td>
               <td className="py-1.5 text-right">{g.taxaAcertoPct == null ? '—' : `${fmt(g.taxaAcertoPct, 1)} %`}</td>
-              <td className={`py-1.5 text-right font-mono ${cor(g.r)}`}>{sinal(g.r)}</td>
+              {comR && <td className={`py-1.5 text-right font-mono ${cor(g.r)}`}>{sinal(g.r)}</td>}
             </tr>
           ))}
         </tbody>
@@ -195,34 +256,36 @@ function Grupos({ titulo, grupos }: { titulo: string; grupos: MetricasAuditoria[
   )
 }
 
-function LinhaTrade({ t }: { t: TradeAuditoria }) {
+function LinhaTrade({ t, real, comR, usd }: { t: TradeAuditoria; real: boolean; comR: boolean; usd: boolean }) {
   return (
     <tr className="border-t border-white/5">
       <td className="whitespace-nowrap py-1.5 text-zinc-400">{data(t.fechadaEm)}</td>
       <td className="py-1.5 font-medium text-white">{t.symbol}</td>
       <td className={`py-1.5 ${t.direcao === 'buy' ? 'text-emerald-300' : 'text-rose-300'}`}>{t.direcao === 'buy' ? 'Compra' : 'Venda'}</td>
-      <td className="py-1.5 text-zinc-300">{t.sinalEm ? nomeEstrategia(t.estrategia) ?? 'sinal' : t.origem === 'manual' ? 'Manual' : t.origem}</td>
-      <td className="whitespace-nowrap py-1.5 text-zinc-400">{t.sinalEm ? data(t.sinalEm) : '—'}</td>
-      <td className="py-1.5 text-right text-zinc-400">{t.ordemPendente ? 'pendente' : t.latenciaSeg == null ? '—' : `${fmt(t.latenciaSeg, 1)} s`}</td>
+      {!real && <>
+        <td className="py-1.5 text-zinc-300">{t.sinalEm ? nomeEstrategia(t.estrategia) ?? 'sinal' : t.origem === 'manual' ? 'Manual' : t.origem}</td>
+        <td className="whitespace-nowrap py-1.5 text-zinc-400">{t.sinalEm ? data(t.sinalEm) : '—'}</td>
+        <td className="py-1.5 text-right text-zinc-400">{t.ordemPendente ? 'pendente' : t.latenciaSeg == null ? '—' : `${fmt(t.latenciaSeg, 1)} s`}</td>
+      </>}
       <td className="py-1.5 text-right">{fmt(t.volume)}</td>
       <td className={`py-1.5 text-right font-mono ${cor(t.movimento)}`}>{t.movimento == null ? '—' : sinal(t.movimento, 1)}</td>
-      <td className={`py-1.5 text-right font-mono ${cor(t.r)}`}>{sinal(t.r)}</td>
-      <td className={`py-1.5 text-right font-mono ${cor(t.resultado)}`}>{sinal(t.resultado)}</td>
+      {comR && <td className={`py-1.5 text-right font-mono ${cor(t.r)}`}>{sinal(t.r)}</td>}
+      {usd && <td className={`py-1.5 text-right font-mono ${cor(t.resultado)}`}>{sinal(t.resultado)}</td>}
     </tr>
   )
 }
 
 /** Gráficos interactivos (arrastar, zoom, separadores). Resumo em texto para leitores de ecrã. */
-function Curva({ m, saldoInicial }: { m: MetricasAuditoria; saldoInicial: number }) {
+function Curva({ m, saldoInicial, abas }: { m: MetricasAuditoria; saldoInicial: number; abas: Aba[] }) {
   const pts = m.curva
   if (pts.length < 2) return null
   const ys = pts.map((p) => p.r)
   return (
     <Cartao titulo="Evolução da conta">
       <p className="sr-only">
-        {`Resultado acumulado de ${sinal(m.rTotal)} R em ${pts.length} operações, de ${dia(new Date(pts[0].t).toISOString())} a ${dia(new Date(pts.at(-1)!.t).toISOString())}; máximo ${fmt(Math.max(0, ...ys))} R, mínimo ${fmt(Math.min(0, ...ys))} R, drawdown máximo ${fmt(m.drawdownMaxR)} R e ${fmt(m.drawdownMaxPct)} % no índice.`}
+        {m.tradesComR === 0 ? `${pts.length} operações; ${sinal(pts.at(-1)!.pips, 0)} pips acumulados.` : `Resultado acumulado de ${sinal(m.rTotal)} R em ${pts.length} operações, de ${dia(new Date(pts[0].t).toISOString())} a ${dia(new Date(pts.at(-1)!.t).toISOString())}; máximo ${fmt(Math.max(0, ...ys))} R, mínimo ${fmt(Math.min(0, ...ys))} R, drawdown máximo ${fmt(m.drawdownMaxR)} R e ${fmt(m.drawdownMaxPct)} % no índice.`}
       </p>
-      <GraficosAuditoria curva={pts} saldoInicial={saldoInicial} />
+      <GraficosAuditoria curva={pts} saldoInicial={saldoInicial} abas={abas} />
     </Cartao>
   )
 }

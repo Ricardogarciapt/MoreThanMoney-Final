@@ -11,11 +11,17 @@ import { pedir } from "./api"
  * operações ligadas aos sinais, R, pips, drawdown e risco de ruína — sem nome, email nem passwords.
  * O login só aparece se o dono marcar a caixa. Revogar desliga o link de imediato; gerar de novo
  * cria outro endereço (o antigo deixa de abrir). Sessão investor: vê o link se existir, não mexe.
+ *
+ * Conta REAL ligada (MT5/TradeLocker, migração 250): passa-se `contaRef` em vez de `accountId`. A
+ * página lê o histórico na corretora; o número da conta nunca aparece.
  */
 
 interface Link { url: string; mostrarLogin: boolean; criadoEm: string; visitas: number }
 
-export default function PartilharAuditoria({ accountId, podeGerir }: { accountId: string; podeGerir: boolean }) {
+export default function PartilharAuditoria({ accountId, contaRef, podeGerir }: { accountId?: string; contaRef?: string; podeGerir: boolean }) {
+  const real = !accountId && !!contaRef
+  const alvo = real ? `ref=${encodeURIComponent(contaRef!)}` : `accountId=${accountId}`
+  const sessao = real ? null : accountId
   const [link, setLink] = useState<Link | null>(null)
   const [aCarregar, setACarregar] = useState(true)
   const [ocupado, setOcupado] = useState(false)
@@ -26,12 +32,12 @@ export default function PartilharAuditoria({ accountId, podeGerir }: { accountId
   useEffect(() => {
     let vivo = true
     setACarregar(true)
-    pedir<{ link: Link | null }>(`/api/mtmfunded/auditoria?accountId=${accountId}`, {}, accountId)
+    pedir<{ link: Link | null }>(`/api/mtmfunded/auditoria?${alvo}`, {}, sessao)
       .then((d) => { if (vivo) { setLink(d.link); setMostrarLogin(!!d.link?.mostrarLogin); setErro(null) } })
       .catch((e) => { if (vivo) setErro(e instanceof Error ? e.message : "erro") })
       .finally(() => { if (vivo) setACarregar(false) })
     return () => { vivo = false }
-  }, [accountId])
+  }, [alvo, sessao])
 
   const completo = link ? `${typeof window !== "undefined" ? window.location.origin : "https://www.morethanmoney.pt"}${link.url}` : ""
 
@@ -42,10 +48,10 @@ export default function PartilharAuditoria({ accountId, podeGerir }: { accountId
     finally { setOcupado(false) }
   }
   const gerar = (novo = false, login = mostrarLogin) => accao(() =>
-    pedir(`/api/mtmfunded/auditoria`, { method: "POST", body: JSON.stringify({ accountId, mostrarLogin: login, novo }) }, accountId))
+    pedir(`/api/mtmfunded/auditoria`, { method: "POST", body: JSON.stringify(real ? { ref: contaRef, novo } : { accountId, mostrarLogin: login, novo }) }, sessao))
   const revogar = () => {
     if (!window.confirm("Desligar o link? Quem o tiver deixa de conseguir abrir a página.")) return
-    void accao(() => pedir(`/api/mtmfunded/auditoria?accountId=${accountId}`, { method: "DELETE" }, accountId))
+    void accao(() => pedir(`/api/mtmfunded/auditoria?${alvo}`, { method: "DELETE" }, sessao))
   }
   async function copiar() {
     try { await navigator.clipboard.writeText(completo); setCopiado(true); setTimeout(() => setCopiado(false), 2000) } catch { /* sem permissão */ }
@@ -57,8 +63,9 @@ export default function PartilharAuditoria({ accountId, podeGerir }: { accountId
         <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0 text-[#D2A63C]" aria-hidden="true" />
         <div className="text-[11.5px] leading-snug text-zinc-300">
           <p className="font-semibold text-white">Link de auditoria da conta</p>
-          Uma página pública com o histórico verificável desta conta: cada operação ligada ao sinal que a abriu,
-          resultado em R e pips, drawdown e risco de ruína. Não mostra o teu nome, email nem passwords.
+          {real
+            ? "Uma página pública com o histórico desta conta, lido directamente na corretora: operações fechadas, pips, taxa de acerto e evolução. Não mostra o teu nome, email, número de conta nem passwords."
+            : "Uma página pública com o histórico verificável desta conta: cada operação ligada ao sinal que a abriu, resultado em R e pips, drawdown e risco de ruína. Não mostra o teu nome, email nem passwords."}
         </div>
       </div>
 
@@ -79,10 +86,12 @@ export default function PartilharAuditoria({ accountId, podeGerir }: { accountId
           <p className="text-[10.5px] text-zinc-500">{link.visitas} visita(s) · criado a {new Date(link.criadoEm).toLocaleDateString("pt-PT")}</p>
           {podeGerir && (
             <div className="flex flex-wrap items-center gap-2">
-              <label className="flex items-center gap-1.5 text-[11.5px] text-zinc-300">
-                <input type="checkbox" checked={mostrarLogin} disabled={ocupado} onChange={(e) => { setMostrarLogin(e.target.checked); void gerar(false, e.target.checked) }} />
-                Mostrar o número da conta
-              </label>
+              {!real && (
+                <label className="flex items-center gap-1.5 text-[11.5px] text-zinc-300">
+                  <input type="checkbox" checked={mostrarLogin} disabled={ocupado} onChange={(e) => { setMostrarLogin(e.target.checked); void gerar(false, e.target.checked) }} />
+                  Mostrar o número da conta
+                </label>
+              )}
               <button type="button" disabled={ocupado} onClick={() => void gerar(true)} className="flex min-h-8 items-center gap-1 rounded-md border border-white/10 px-2 text-[11px] text-zinc-300 disabled:opacity-50">
                 <RefreshCw className="h-3.5 w-3.5" aria-hidden="true" /> Novo endereço
               </button>
@@ -94,9 +103,11 @@ export default function PartilharAuditoria({ accountId, podeGerir }: { accountId
         </div>
       ) : podeGerir ? (
         <div className="space-y-2">
-          <label className="flex items-center gap-1.5 text-[11.5px] text-zinc-300">
-            <input type="checkbox" checked={mostrarLogin} onChange={(e) => setMostrarLogin(e.target.checked)} /> Mostrar o número da conta na página
-          </label>
+          {!real && (
+            <label className="flex items-center gap-1.5 text-[11.5px] text-zinc-300">
+              <input type="checkbox" checked={mostrarLogin} onChange={(e) => setMostrarLogin(e.target.checked)} /> Mostrar o número da conta na página
+            </label>
+          )}
           <button type="button" disabled={ocupado} onClick={() => void gerar(false)}
             className="flex min-h-10 items-center gap-1.5 rounded-md bg-[#D2A63C] px-3 text-[12px] font-semibold text-black disabled:opacity-50">
             {ocupado ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" /> : <Link2 className="h-4 w-4" aria-hidden="true" />} Criar link de partilha
@@ -106,7 +117,7 @@ export default function PartilharAuditoria({ accountId, podeGerir }: { accountId
         <p className="text-[11.5px] text-zinc-500">O dono da conta ainda não criou um link de partilha.</p>
       )}
       {erro && <p role="alert" className="text-[11px] text-rose-300">{erro}</p>}
-      <p className="text-[10.5px] text-zinc-500">Conta simulada. Resultados passados não garantem resultados futuros.</p>
+      <p className="text-[10.5px] text-zinc-500">{real ? "Conta real na tua corretora" : "Conta simulada"}. Resultados passados não garantem resultados futuros.</p>
     </div>
   )
 }

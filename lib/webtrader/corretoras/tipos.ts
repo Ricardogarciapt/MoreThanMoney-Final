@@ -174,6 +174,8 @@ export interface AdaptadorCorretora {
   posicoes(): Promise<PosicaoWT[]>
   ordens(): Promise<OrdemWT[]>
   historico(dias?: number): Promise<NegocioWT[]>
+  /** Histórico completo para o link público de auditoria (lib/mtmfunded/auditoria-real.ts). */
+  historicoAuditoria?(dias: number): Promise<import('@/lib/mtmfunded/auditoria-real').HistoricoReal>
   enviarOrdem(p: EntradaOrdemWT): Promise<ResultadoWT>
   modificar(m: ModificacaoWT): Promise<ResultadoWT>
   /** volume em lotes; sem volume = fecha tudo. */

@@ -1,5 +1,6 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { inicioDoCiclo } from './ciclos-estrategia'
+import { adaptadorDoDono, listarContasReais } from '@/lib/webtrader/contas'
 import { agruparTrades, metricasAuditoria, type MetricasAuditoria, type PernaAuditoria, type SinalLigado, type TradeAuditoria } from './auditoria'
 
 /**
@@ -25,6 +26,16 @@ export interface AuditoriaPublica {
     contaCasa: boolean
     /** Conta-mestre com novo ciclo: só contam as trades abertas desde aqui. */
     cicloDesde: string | null
+    /** De onde vêm as operações: o motor simulado ou uma conta real ligada (250). */
+    fonte: 'mtmfunded' | 'mt5' | 'tradelocker'
+    /** false = a corretora não dá o lucro por operação (TradeLocker): só pips. */
+    comValor: boolean
+    /** Conta real: servidor da corretora (ex.: «PUPrime-Live») e se é demo. */
+    servidor: string | null
+    demo: boolean
+    versao: 'mt4' | 'mt5' | null
+    /** Conta real que não se conseguiu ler agora (corretora/MetaApi em baixo, conta desligada). */
+    indisponivel: string | null
   }
   abertas: number
   geradoEm: string
@@ -36,8 +47,9 @@ export async function lerAuditoriaPorToken(db: SupabaseClient, token: string): P
   const t = String(token ?? '').trim()
   if (!/^[A-Za-z0-9]{16,64}$/.test(t)) return null
   const { data: link } = await db.from('funded_auditoria_links')
-    .select('account_id, mostrar_login, ativo, revogado_em').eq('token', t).maybeSingle()
+    .select('account_id, mostrar_login, ativo, revogado_em, conta_ref, dono_id').eq('token', t).maybeSingle()
   if (!link || !link.ativo || link.revogado_em) return null
+  if (!link.account_id && link.conta_ref && link.dono_id) return lerAuditoriaReal(t, String(link.conta_ref), String(link.dono_id))
 
   const id = String(link.account_id)
   const [{ data: conta }, { data: pernas }, { data: sinais }, { data: ajustes }, { count: abertas }] = await Promise.all([
@@ -90,10 +102,62 @@ export async function lerAuditoriaPorToken(db: SupabaseClient, token: string): P
       criadaEm: (conta.created_at as string | null) ?? null,
       contaCasa: !!conta.conta_casa,
       cicloDesde: ciclo,
+      fonte: 'mtmfunded', comValor: true, servidor: null, demo: false, versao: null, indisponivel: null,
     },
     abertas: abertas ?? 0,
     geradoEm: new Date().toISOString(),
     metricas,
     trades,
+  }
+}
+
+/** Janela do histórico de uma conta real: um ano (o que a MetaApi devolve sem paginar sem fim). */
+const DIAS_REAL = 365
+
+/**
+ * CONTA REAL LIGADA (MT5 pela MetaApi ou TradeLocker). A posse volta a verificar-se aqui: a conta
+ * abre-se com o user_id do dono, pelos mesmos filtros do WebTrader — se deixou de ser dele, ou saiu
+ * da quota, a página diz que não está disponível em vez de mostrar dados.
+ */
+async function lerAuditoriaReal(token: string, ref: string, donoId: string): Promise<AuditoriaPublica> {
+  const plataforma = ref.startsWith('tradelocker:') ? 'tradelocker' : 'mt5'
+  const vazia = (motivo: string): AuditoriaPublica => ({
+    token,
+    conta: {
+      tipo: 'real', etiqueta: null, login: null, estado: 'indisponivel', saldoInicial: 0, saldoAtual: 0, equityAtual: 0,
+      estrategiaSeguida: null, criadaEm: null, contaCasa: false, cicloDesde: null,
+      fonte: plataforma, comValor: plataforma === 'mt5', servidor: null, demo: false, versao: null, indisponivel: motivo,
+    },
+    abertas: 0, geradoEm: new Date().toISOString(), metricas: metricasAuditoria([], { saldoInicial: 0 }), trades: [],
+  })
+  try {
+    const ad = await adaptadorDoDono(donoId, plataforma, ref)
+    if (!ad.historicoAuditoria) return vazia('Esta corretora ainda não tem histórico para auditoria.')
+    const [conta, hist, posicoes, listadas] = await Promise.all([
+      ad.conta(), ad.historicoAuditoria(DIAS_REAL), ad.posicoes().catch(() => []), listarContasReais(donoId).catch(() => []),
+    ])
+    const info = listadas.find((c) => c.ref === ref)
+    const saldoAtual = Number(conta.saldo ?? 0)
+    // Saldo no início da janela: o de agora menos tudo o que entrou e saiu desde então.
+    const saldoInicial = hist.comValor ? Math.round((saldoAtual - hist.variacaoSaldo) * 100) / 100 : 0
+    const trades = agruparTrades(hist.pernas)
+    const metricas = metricasAuditoria(trades, { saldoInicial, ajustes: hist.ajustes, criterio: hist.comValor ? 'resultado' : 'movimento' })
+    return {
+      token,
+      conta: {
+        tipo: 'real', etiqueta: null, login: null, estado: 'ligada',
+        saldoInicial, saldoAtual, equityAtual: Number(conta.equity ?? saldoAtual),
+        estrategiaSeguida: null, criadaEm: null, contaCasa: false, cicloDesde: null,
+        fonte: plataforma, comValor: hist.comValor, servidor: info?.servidor ?? null, demo: !!info?.demo,
+        versao: plataforma === 'mt5' ? (info?.versao ?? 'mt5') : null, indisponivel: null,
+      },
+      abertas: posicoes.length,
+      geradoEm: new Date().toISOString(),
+      metricas,
+      trades,
+    }
+  } catch (e) {
+    console.warn('[auditoria-real]', e instanceof Error ? e.message : e)
+    return vazia('Não foi possível ler a conta na corretora neste momento. Tenta daqui a uns minutos.')
   }
 }

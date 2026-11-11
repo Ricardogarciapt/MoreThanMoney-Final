@@ -230,12 +230,12 @@ const mediana = (xs: number[]) => {
   return s.length % 2 ? s[m] : (s[m - 1] + s[m]) / 2
 }
 
-function agrupar(trades: TradeAuditoria[], chave: (t: TradeAuditoria) => string): Grupo[] {
+function agrupar(trades: TradeAuditoria[], chave: (t: TradeAuditoria) => string, val: (t: TradeAuditoria) => number = (t) => t.resultado): Grupo[] {
   const m = new Map<string, Grupo>()
   for (const t of trades) {
     const k = chave(t)
     const g = m.get(k) ?? { chave: k, trades: 0, ganhas: 0, taxaAcertoPct: null, r: 0, resultado: 0 }
-    g.trades++; if (t.resultado > 0) g.ganhas++
+    g.trades++; if (val(t) > 0) g.ganhas++
     g.r += t.r ?? 0; g.resultado += t.resultado
     m.set(k, g)
   }
@@ -243,7 +243,12 @@ function agrupar(trades: TradeAuditoria[], chave: (t: TradeAuditoria) => string)
     .sort((a, b) => b.trades - a.trades)
 }
 
-export function metricasAuditoria(trades: TradeAuditoria[], o: { saldoInicial: number; ajustes?: AjusteSaldo[] }): MetricasAuditoria {
+/**
+ * `criterio: 'movimento'` — para contas cuja corretora não dá o lucro por operação (TradeLocker):
+ * ganha/perde decide-se pelos pips em vez dos dólares. Por omissão, pelo resultado.
+ */
+export function metricasAuditoria(trades: TradeAuditoria[], o: { saldoInicial: number; ajustes?: AjusteSaldo[]; criterio?: 'resultado' | 'movimento' }): MetricasAuditoria {
+  const val = o.criterio === 'movimento' ? (t: TradeAuditoria) => t.movimento ?? 0 : (t: TradeAuditoria) => t.resultado
   const ajustes = [...(o.ajustes ?? [])].sort((a, b) => a.em.localeCompare(b.em))
   const comR = trades.filter((t) => t.r != null)
   const rs = comR.map((t) => t.r as number)
@@ -263,7 +268,7 @@ export function metricasAuditoria(trades: TradeAuditoria[], o: { saldoInicial: n
     saldo += t.resultado
     picoIdx = Math.max(picoIdx, indice); ddPct = Math.max(ddPct, (picoIdx - indice) / picoIdx)
     if (t.r != null) { cumR += t.r; picoR = Math.max(picoR, cumR); ddR = Math.max(ddR, picoR - cumR) }
-    if (t.resultado > 0) { seqG++; seqP = 0 } else if (t.resultado < 0) { seqP++; seqG = 0 }
+    if (val(t) > 0) { seqG++; seqP = 0 } else if (val(t) < 0) { seqP++; seqG = 0 }
     maxG = Math.max(maxG, seqG); maxP = Math.max(maxP, seqP)
     m.trades++; m.r += t.r ?? 0; m.idx1 = indice
     meses.set(mes, m)
@@ -284,9 +289,11 @@ export function metricasAuditoria(trades: TradeAuditoria[], o: { saldoInicial: n
     trades: trades.length,
     tradesComR: comR.length,
     tradesComSinal: trades.filter((t) => t.sinalEm).length,
-    ganhas: trades.filter((t) => t.resultado > 0).length,
-    perdidas: trades.filter((t) => t.resultado < 0).length,
-    taxaAcertoPct: rs.length ? r1((100 * ganhos.length) / rs.length) : null,
+    ganhas: trades.filter((t) => val(t) > 0).length,
+    perdidas: trades.filter((t) => val(t) < 0).length,
+    // Sem R (contas reais: a corretora não guarda o risco inicial), a taxa conta sobre todas as trades.
+    taxaAcertoPct: rs.length ? r1((100 * ganhos.length) / rs.length)
+      : trades.length ? r1((100 * trades.filter((t) => val(t) > 0).length) / trades.length) : null,
     rTotal: r2(cumR),
     expectativaR: rs.length ? Math.round((cumR / rs.length) * 1000) / 1000 : null,
     mediaGanhoR: ganhos.length ? r2(somaG / ganhos.length) : null,
@@ -306,8 +313,8 @@ export function metricasAuditoria(trades: TradeAuditoria[], o: { saldoInicial: n
     ruina: [0.5, 1, 2].map((riscoPct) => ({ riscoPct, limitePct: 30, prob: riscoDeRuina(rs, { riscoPct, limitePct: 30 }) })),
     curva,
     porMes: [...meses.entries()].map(([mes, m]) => ({ mes, trades: m.trades, r: r2(m.r), retornoPct: r2((m.idx1 / m.idx0 - 1) * 100) })),
-    porEstrategia: agrupar(trades, (t) => nomeEstrategia(t.estrategia) ?? (t.origem === 'manual' ? 'Manual' : t.origem)),
-    porSimbolo: agrupar(trades, (t) => t.symbol),
+    porEstrategia: agrupar(trades, (t) => nomeEstrategia(t.estrategia) ?? (t.origem === 'manual' ? 'Manual' : t.origem), val),
+    porSimbolo: agrupar(trades, (t) => t.symbol, val),
     primeiraTrade: trades[0]?.abertaEm ?? trades[0]?.fechadaEm ?? null,
     ultimaTrade: trades.at(-1)?.fechadaEm ?? null,
     diasNegociados: dias.size,

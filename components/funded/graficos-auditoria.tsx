@@ -15,7 +15,7 @@ import { useEffect, useMemo, useRef, useState } from "react"
 export interface PontoCurva { t: number; r: number; indice: number; saldo: number; pips: number; dd: number }
 interface DiaR { dia: string; r: number }
 
-type Aba = "crescimento" | "r" | "saldo" | "dd" | "pips" | "dia"
+export type Aba = "crescimento" | "r" | "saldo" | "dd" | "pips" | "dia"
 const ABAS: Array<{ id: Aba; nome: string; unidade: string }> = [
   { id: "crescimento", nome: "Crescimento", unidade: "%" },
   { id: "r", nome: "Resultado (R)", unidade: "R" },
@@ -43,9 +43,11 @@ function tempos(pts: PontoCurva[]): number[] {
   return out
 }
 
-export function GraficosAuditoria({ curva, saldoInicial }: { curva: PontoCurva[]; saldoInicial: number }) {
+/** `abas`: as que fazem sentido nesta conta (sem R numa conta real; só pips na TradeLocker). */
+export function GraficosAuditoria({ curva, saldoInicial, abas }: { curva: PontoCurva[]; saldoInicial: number; abas?: Aba[] }) {
   const caixa = useRef<HTMLDivElement>(null)
-  const [aba, setAba] = useState<Aba>("crescimento")
+  const visiveis = abas?.length ? ABAS.filter((a) => abas.includes(a.id)) : ABAS
+  const [aba, setAba] = useState<Aba>(visiveis[0].id)
   const [periodo, setPeriodo] = useState("tudo")
   const [falhou, setFalhou] = useState(false)
 
@@ -125,7 +127,7 @@ export function GraficosAuditoria({ curva, saldoInicial }: { curva: PontoCurva[]
     <div>
       <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
         <div role="tablist" aria-label="Gráfico" className="flex flex-wrap gap-1">
-          {ABAS.map((a) => (
+          {visiveis.map((a) => (
             <button key={a.id} role="tab" aria-selected={aba === a.id} onClick={() => setAba(a.id)}
               className={`min-h-9 rounded-md px-3 text-xs font-medium transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#D2A63C] ${aba === a.id ? "bg-[#D2A63C] text-black" : "bg-white/5 text-zinc-300 hover:bg-white/10"}`}>
               {a.nome}
