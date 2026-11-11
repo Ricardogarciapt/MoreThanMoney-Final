@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react"
 import { Loader2 } from "lucide-react"
-import { AREAS_ESTUDIO, NOMES_AREAS, type AreaEstudio } from "@/lib/estudio/acesso"
+import { AREAS_ESTUDIO, NOMES_AREAS, type AreaEstudio } from "@/lib/estudio/areas"
 
 type Pessoa = { user_id: string; email: string | null; nome: string | null; areas: AreaEstudio[]; atualizado_em: string }
 

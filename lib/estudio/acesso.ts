@@ -7,20 +7,8 @@ import { NextResponse } from 'next/server'
 import { getSupabaseAdmin } from '@/lib/supabase-admin-client'
 import { userIdDoPedido } from '@/lib/sessao-do-pedido'
 
-export const AREAS_ESTUDIO = ['gravar', 'criar', 'ativos', 'editor', 'cortes'] as const
-export type AreaEstudio = (typeof AREAS_ESTUDIO)[number]
-export const NOMES_AREAS: Record<AreaEstudio, string> = {
-  gravar: 'Gravar (teleprompter e takes)',
-  criar: 'Criar (guiões, carrosséis, vídeos com voz)',
-  ativos: 'Ativos (imagens, vídeos, músicas)',
-  editor: 'Editor de vídeo',
-  cortes: 'Cortes (YouTube e lives)',
-}
-
-export function normalizarAreas(v: unknown): AreaEstudio[] {
-  if (!Array.isArray(v)) return []
-  return AREAS_ESTUDIO.filter((a) => v.includes(a))
-}
+import { AREAS_ESTUDIO, normalizarAreas, type AreaEstudio } from './areas'
+export { AREAS_ESTUDIO, NOMES_AREAS, normalizarAreas, type AreaEstudio } from './areas'
 
 export type QuemEstudio = { userId: string; admin: boolean; areas: Set<AreaEstudio> }
 
