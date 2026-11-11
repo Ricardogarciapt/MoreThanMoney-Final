@@ -46,7 +46,7 @@ export async function lerAuditoriaPorToken(db: SupabaseClient, token: string): P
       .eq('account_id', id).eq('estado', 'fechada').is('fora_estatisticas', null)
       .order('fechada_em', { ascending: true }).limit(20000),
     db.from('funded_sinal_posicoes')
-      .select('funded_position_id, estrategia, created_at, entrada')
+      .select('funded_position_id, estrategia, created_at, entrada, funded_order_id')
       .eq('account_id', id).not('funded_position_id', 'is', null).limit(20000),
     db.from('mtm_funded_ajustes_saldo').select('aplicado_em, criado_em, delta')
       .eq('account_id', id).eq('estado', 'aplicado'),

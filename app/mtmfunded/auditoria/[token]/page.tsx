@@ -71,7 +71,7 @@ export default async function AuditoriaPage({ params }: { params: Promise<{ toke
           <Kpi rotulo="Ganho médio / perda média" valor={`${sinal(m.mediaGanhoR)} / ${sinal(m.mediaPerdaR)} R`} />
           <Kpi rotulo="Seguidas (ganho / perda)" valor={`${m.maxGanhasSeguidas} / ${m.maxPerdidasSeguidas}`} />
           <Kpi rotulo="Ligadas a um sinal" valor={`${m.tradesComSinal} de ${m.trades}`} />
-          <Kpi rotulo="Latência sinal → ordem" valor={m.latenciaMedianaSeg == null ? '—' : `${fmt(m.latenciaMedianaSeg, 1)} s`} nota="mediana" />
+          <Kpi rotulo="Latência sinal → ordem" valor={m.latenciaMedianaSeg == null ? '—' : `${fmt(m.latenciaMedianaSeg, 1)} s`} nota="mediana, ordens a mercado" />
           <Kpi rotulo="Desvio da entrada" valor={m.desvioMedianoEntrada == null ? '—' : `${sinal(m.desvioMedianoEntrada, 1)}`} nota="mediana, em pips/pts vs. sinal" />
         </section>
 
@@ -140,7 +140,7 @@ export default async function AuditoriaPage({ params }: { params: Promise<{ toke
             <li><strong className="text-zinc-300">R</strong> = resultado líquido da operação (com parciais, swap e comissão) a dividir pelo risco inicial registado na abertura (distância ao stop × lote). Operações sem risco registado não entram no R.</li>
             <li><strong className="text-zinc-300">Pips</strong>: 0,0001 no forex, 0,01 nos pares JPY, 0,1 no ouro, 0,01 na prata; índices e cripto em pontos. Média ponderada pelo lote de cada parte.</li>
             <li><strong className="text-zinc-300">Retorno ponderado no tempo</strong>: cada operação conta sobre o saldo que havia nesse momento. {m.ajustes.quantidade ? `Esta conta teve ${m.ajustes.quantidade} ajuste(s) de capital (${sinal(m.ajustes.total)} USD), que não contam como ganho nem como drawdown.` : 'Esta conta não teve ajustes de capital.'}</li>
-            <li><strong className="text-zinc-300">Ligação ao sinal</strong>: cada ordem aberta por um sinal fica registada no motor com a estratégia, a hora e o preço do sinal — daí a latência e o desvio da entrada.</li>
+            <li><strong className="text-zinc-300">Ligação ao sinal</strong>: cada ordem aberta por um sinal fica registada no motor com a estratégia, a hora e o preço do sinal — daí a latência e o desvio da entrada. Sinais com entrada por ordem pendente (limite) só abrem quando o preço chega: aí não se conta latência.</li>
             <li>Operações de teste interno marcadas na base são excluídas. Nada é editado à mão nesta página: é lida da base de produção.</li>
           </ul>
         </Cartao>
@@ -202,7 +202,7 @@ function LinhaTrade({ t }: { t: TradeAuditoria }) {
       <td className={`py-1.5 ${t.direcao === 'buy' ? 'text-emerald-300' : 'text-rose-300'}`}>{t.direcao === 'buy' ? 'Compra' : 'Venda'}</td>
       <td className="py-1.5 text-zinc-300">{t.sinalEm ? nomeEstrategia(t.estrategia) ?? 'sinal' : t.origem === 'manual' ? 'Manual' : t.origem}</td>
       <td className="whitespace-nowrap py-1.5 text-zinc-400">{t.sinalEm ? data(t.sinalEm) : '—'}</td>
-      <td className="py-1.5 text-right text-zinc-400">{t.latenciaSeg == null ? '—' : `${fmt(t.latenciaSeg, 1)} s`}</td>
+      <td className="py-1.5 text-right text-zinc-400">{t.ordemPendente ? 'pendente' : t.latenciaSeg == null ? '—' : `${fmt(t.latenciaSeg, 1)} s`}</td>
       <td className="py-1.5 text-right">{fmt(t.volume)}</td>
       <td className={`py-1.5 text-right font-mono ${cor(t.movimento)}`}>{t.movimento == null ? '—' : sinal(t.movimento, 1)}</td>
       <td className={`py-1.5 text-right font-mono ${cor(t.r)}`}>{sinal(t.r)}</td>

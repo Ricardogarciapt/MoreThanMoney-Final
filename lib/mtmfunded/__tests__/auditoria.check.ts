@@ -40,6 +40,9 @@ assert.equal(ouro.fechadaEm, '2026-11-02T12:00:00Z')
 assert.equal(eur.r, -1)
 assert.equal(eur.movimento, -20)
 assert.equal(eur.origem, 'manual')
+const pend = agruparTrades([pernas[2]], [{ funded_position_id: 'b', estrategia: 'premium-ouro', created_at: '2026-11-03T08:00:00Z', funded_order_id: 'o1' }])
+assert.equal(pend[0].ordemPendente, true)
+assert.equal(pend[0].latenciaSeg, null)
 
 // Ajuste de +10 000 $ entre as duas trades: não é ganho nem drawdown.
 const semAjuste = metricasAuditoria(trades, { saldoInicial: 10000 })

@@ -38,6 +38,8 @@ export interface SinalLigado {
   estrategia: string | null
   created_at: string
   entrada?: number | string | null
+  /** Sinal que entrou como ordem pendente (limite/stop): a posição nasce quando o preço lá chega. */
+  funded_order_id?: string | null
 }
 
 export interface AjusteSaldo { em: string; delta: number }
@@ -58,6 +60,8 @@ export interface TradeAuditoria {
   origem: string
   estrategia: string | null
   sinalEm: string | null
+  /** Entrou por ordem pendente: o tempo até abrir é espera pelo preço, não latência. */
+  ordemPendente: boolean
   latenciaSeg: number | null
   desvioEntrada: number | null
 }
@@ -123,7 +127,8 @@ export function agruparTrades(pernas: PernaAuditoria[], sinais: SinalLigado[] = 
     const risco = num(mae.risco_inicial)
     const s = sinalDe.get(raiz) ?? null
     const entrada = num(mae.preco_entrada), entradaSinal = num(s?.entrada)
-    const latencia = s && mae.aberta_em ? (Date.parse(mae.aberta_em) - Date.parse(s.created_at)) / 1000 : null
+    const pendente = !!s?.funded_order_id
+    const latencia = s && !pendente && mae.aberta_em ? (Date.parse(mae.aberta_em) - Date.parse(s.created_at)) / 1000 : null
     out.push({
       id: raiz,
       symbol: mae.symbol,
@@ -139,6 +144,7 @@ export function agruparTrades(pernas: PernaAuditoria[], sinais: SinalLigado[] = 
       origem: s ? 'sinal' : String(mae.origem ?? 'manual'),
       estrategia: s?.estrategia ?? null,
       sinalEm: s?.created_at ?? null,
+      ordemPendente: pendente,
       latenciaSeg: latencia != null && Number.isFinite(latencia) ? r1(latencia) : null,
       desvioEntrada: tp && entrada != null && entradaSinal != null && entradaSinal > 0
         ? r1(sinal * (entrada - entradaSinal) / tp.pip) : null,
