@@ -1,4 +1,5 @@
 import type { Metadata } from 'next'
+import { GraficosAuditoria } from '@/components/funded/graficos-auditoria'
 import { notFound } from 'next/navigation'
 import { ShieldCheck } from 'lucide-react'
 import { getSupabaseAdmin } from '@/lib/supabase-admin-client'
@@ -75,7 +76,7 @@ export default async function AuditoriaPage({ params }: { params: Promise<{ toke
           <Kpi rotulo="Desvio da entrada" valor={m.desvioMedianoEntrada == null ? '—' : `${sinal(m.desvioMedianoEntrada, 1)}`} nota="mediana, em pips/pts vs. sinal" />
         </section>
 
-        <Curva m={m} />
+        <Curva m={m} saldoInicial={a.conta.saldoInicial} />
 
         <div className="grid gap-4 lg:grid-cols-2">
           <Cartao titulo="Risco de ruína">
@@ -211,27 +212,17 @@ function LinhaTrade({ t }: { t: TradeAuditoria }) {
   )
 }
 
-/** Curva do R acumulado (SVG, sem bibliotecas). Resumo em texto para leitores de ecrã. */
-function Curva({ m }: { m: MetricasAuditoria }) {
+/** Gráficos interactivos (arrastar, zoom, separadores). Resumo em texto para leitores de ecrã. */
+function Curva({ m, saldoInicial }: { m: MetricasAuditoria; saldoInicial: number }) {
   const pts = m.curva
   if (pts.length < 2) return null
-  const W = 1000, H = 220, P = 8
   const ys = pts.map((p) => p.r)
-  const min = Math.min(0, ...ys), max = Math.max(0, ...ys)
-  const x = (i: number) => P + (i / (pts.length - 1)) * (W - 2 * P)
-  const y = (v: number) => H - P - ((v - min) / (max - min || 1)) * (H - 2 * P)
-  const linha = pts.map((p, i) => `${i ? 'L' : 'M'}${x(i).toFixed(1)},${y(p.r).toFixed(1)}`).join(' ')
-  const area = `${linha} L${x(pts.length - 1).toFixed(1)},${y(0).toFixed(1)} L${x(0).toFixed(1)},${y(0).toFixed(1)} Z`
   return (
-    <Cartao titulo="Curva do resultado acumulado (R)">
-      <svg viewBox={`0 0 ${W} ${H}`} className="h-48 w-full sm:h-56" role="img"
-        aria-label={`Resultado acumulado de ${sinal(m.rTotal)} R em ${pts.length} operações; mínimo ${fmt(min)} R, máximo ${fmt(max)} R, drawdown máximo ${fmt(m.drawdownMaxR)} R.`}>
-        <defs><linearGradient id="g" x1="0" x2="0" y1="0" y2="1"><stop offset="0" stopColor="#D2A63C" stopOpacity="0.35" /><stop offset="1" stopColor="#D2A63C" stopOpacity="0" /></linearGradient></defs>
-        <line x1={P} x2={W - P} y1={y(0)} y2={y(0)} stroke="#ffffff" strokeOpacity="0.15" strokeDasharray="4 4" />
-        <path d={area} fill="url(#g)" />
-        <path d={linha} fill="none" stroke="#E9C46A" strokeWidth="2" vectorEffect="non-scaling-stroke" />
-      </svg>
-      <div className="mt-1 flex justify-between text-[11px] text-zinc-500"><span>{dia(new Date(pts[0].t).toISOString())}</span><span>máx. {fmt(max)} R · mín. {fmt(min)} R</span><span>{dia(new Date(pts.at(-1)!.t).toISOString())}</span></div>
+    <Cartao titulo="Evolução da conta">
+      <p className="sr-only">
+        {`Resultado acumulado de ${sinal(m.rTotal)} R em ${pts.length} operações, de ${dia(new Date(pts[0].t).toISOString())} a ${dia(new Date(pts.at(-1)!.t).toISOString())}; máximo ${fmt(Math.max(0, ...ys))} R, mínimo ${fmt(Math.min(0, ...ys))} R, drawdown máximo ${fmt(m.drawdownMaxR)} R e ${fmt(m.drawdownMaxPct)} % no índice.`}
+      </p>
+      <GraficosAuditoria curva={pts} saldoInicial={saldoInicial} />
     </Cartao>
   )
 }
