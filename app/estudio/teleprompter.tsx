@@ -1,7 +1,8 @@
 'use client'
 
 import { useCallback, useEffect, useRef, useState, type PointerEvent as ReactPointerEvent } from 'react'
-import { Camera, Check, ChevronLeft, Circle, Flashlight, FlipHorizontal, Grid3x3, Mic, Pause, Play, RefreshCw, Settings2, SkipForward, Square, Upload } from 'lucide-react'
+import { createPortal } from 'react-dom'
+import { Camera, Check, ChevronLeft, ChevronsLeft, ChevronsRight, Circle, Flashlight, FlipHorizontal, Grid3x3, Mic, Pause, Play, RefreshCw, RotateCcw, Settings2, SkipForward, Square, Upload } from 'lucide-react'
 import { authHeaders } from '@/lib/auth-token'
 import { PLANOS } from '@/lib/conteudo-magnetico/guiao'
 
@@ -34,7 +35,25 @@ const maxSegundos = (r: Resolucao) => Math.min(180, Math.floor((LIMITE_MB * 8_00
 
 /** O que o aparelho deixa mexer na câmara (Media Capture: getCapabilities). */
 type Faixa = { min: number; max: number; step: number }
-type Capacidades = { zoom?: Faixa; torch?: boolean; focus?: string[]; exposicao?: Faixa; pontos?: boolean }
+type Capacidades = { zoom?: Faixa; torch?: boolean; focus?: string[]; exposicao?: Faixa; pontos?: boolean; manuais?: Partial<Record<Manual, Faixa>>; modos?: Partial<Record<ModoAuto, string[]>> }
+
+/**
+ * Controlos manuais (Media Capture «image capture» constraints). Cada um só aparece se a câmara o
+ * expuser: o Chrome em Android e muitas webcams dão quase todos; o Safari dá poucos.
+ */
+type ModoAuto = 'exposureMode' | 'whiteBalanceMode' | 'focusMode'
+type Manual = 'iso' | 'exposureTime' | 'colorTemperature' | 'focusDistance' | 'brightness' | 'contrast' | 'saturation' | 'sharpness'
+const MANUAIS: { k: Manual; nome: string; modo?: ModoAuto; fmt?: (v: number) => string }[] = [
+  { k: 'iso', nome: 'ISO', modo: 'exposureMode', fmt: (v) => String(Math.round(v)) },
+  // exposureTime vem em unidades de 100 µs
+  { k: 'exposureTime', nome: 'Obturador', modo: 'exposureMode', fmt: (v) => (v >= 10000 ? `${(v / 10000).toFixed(1)} s` : `1/${Math.round(10000 / Math.max(v, 0.0001))}`) },
+  { k: 'colorTemperature', nome: 'Balanço de brancos', modo: 'whiteBalanceMode', fmt: (v) => `${Math.round(v)} K` },
+  { k: 'focusDistance', nome: 'Foco manual', modo: 'focusMode', fmt: (v) => v.toFixed(2) },
+  { k: 'brightness', nome: 'Brilho' },
+  { k: 'contrast', nome: 'Contraste' },
+  { k: 'saturation', nome: 'Saturação' },
+  { k: 'sharpness', nome: 'Nitidez' },
+]
 
 type Modo = 'continuo' | 'blocos'
 type Prefs = { velocidade: number; tamanho: number; espelho: boolean; contagem: number; modo: Modo; autoRetomar: boolean; grelha: boolean; camara: 'user' | 'environment'; resolucao: Resolucao; fps: 30 | 60; micId: string; camId: string; cortar916: boolean }
@@ -62,7 +81,9 @@ async function api(path: string, init?: RequestInit) {
   return j
 }
 
-type Estado = 'pronto' | 'contagem' | 'a_gravar' | 'entre_blocos' | 'rever' | 'a_subir' | 'guardado'
+type Estado = 'pronto' | 'contagem' | 'a_gravar' | 'entre_blocos' | 'timelapse' | 'a_montar' | 'rever' | 'a_subir' | 'guardado'
+type Captura = 'video' | 'foto' | 'timelapse'
+const INTERVALOS_TL = [0.5, 1, 2, 5, 10]
 
 export function Teleprompter({ guiao, onSair }: { guiao: Guiao; onSair: () => void }) {
   const cor = COR[guiao.marca]
@@ -168,7 +189,11 @@ export function Teleprompter({ guiao, onSair }: { guiao: Guiao; onSair: () => vo
           focus: Array.isArray(c.focusMode) ? c.focusMode : undefined,
           exposicao: faixa(c.exposureCompensation),
           pontos: 'pointsOfInterest' in c,
+          manuais: Object.fromEntries(MANUAIS.map((m) => [m.k, faixa(c[m.k])]).filter(([, f]) => f)),
+          modos: Object.fromEntries((['exposureMode', 'whiteBalanceMode', 'focusMode'] as ModoAuto[]).map((k) => [k, Array.isArray(c[k]) ? c[k] : undefined]).filter(([, v]) => v)),
         })
+        setManuais(Object.fromEntries(MANUAIS.filter((m) => typeof st[m.k] === 'number').map((m) => [m.k, st[m.k] as number])))
+        setAutos({})
         setZoom(typeof st.zoom === 'number' ? st.zoom : 1)
         setExposicao(typeof st.exposureCompensation === 'number' ? st.exposureCompensation : 0)
         setLanterna(false)
@@ -250,6 +275,145 @@ export function Teleprompter({ guiao, onSair }: { guiao: Guiao; onSair: () => vo
     if (await ajustar({ torch: n })) setLanterna(n)
     else setErro('Esta câmara não deixa ligar a lanterna (só a traseira costuma ter).')
   }
+  const [manuais, setManuais] = useState<Partial<Record<Manual, number>>>({})
+  const [autos, setAutos] = useState<Partial<Record<ModoAuto, boolean>>>({}) // false = em manual
+  const mudarManual = (m: (typeof MANUAIS)[number], v: number) => {
+    setManuais((x) => ({ ...x, [m.k]: v }))
+    const manualOk = m.modo && caps.modos?.[m.modo]?.includes('manual')
+    if (m.modo && manualOk) setAutos((a) => ({ ...a, [m.modo!]: false }))
+    void ajustar({ ...(m.modo && manualOk ? { [m.modo]: 'manual' } : {}), [m.k]: v })
+  }
+  const voltarAuto = (modo: ModoAuto) => {
+    setAutos((a) => ({ ...a, [modo]: true }))
+    void ajustar({ [modo]: caps.modos?.[modo]?.includes('continuous') ? 'continuous' : 'single-shot' })
+  }
+
+  // TIMELAPSE: guarda um fotograma JPEG a cada intervalo e no fim monta-os a 30 fps num vídeo
+  // (tudo no aparelho; 10 min a 1 fotograma / 2 s dão 10 s de vídeo). Sem som.
+  const [captura, setCaptura] = useState<Captura>('video')
+  const [intervaloTL, setIntervaloTL] = useState(2)
+  const [nFrames, setNFrames] = useState(0)
+  const framesRef = useRef<Blob[]>([])
+  const tlRef = useRef<ReturnType<typeof setInterval> | null>(null)
+  const MAX_FRAMES = 1800 // 60 s de vídeo final
+  const canvasFrame = () => {
+    const el = videoRef.current
+    const v = streamRef.current?.getVideoTracks()[0]
+    if (!el || !v) return null
+    const st = v.getSettings()
+    const W = st.width || el.videoWidth
+    const H = st.height || el.videoHeight
+    if (!W || !H) return null
+    const cortar = deitada && prefs.cortar916 && W > H
+    const w = cortar ? Math.round((H * 9) / 16 / 2) * 2 : W
+    const c = document.createElement('canvas')
+    c.width = w
+    c.height = H
+    c.getContext('2d')!.drawImage(el, cortar ? Math.round((W - w) / 2) : 0, 0, w, H, 0, 0, w, H)
+    return c
+  }
+  const comecarTimelapse = () => {
+    if (!streamRef.current) return setErro('A câmara ainda não está pronta.')
+    setErro(null)
+    framesRef.current = []
+    setNFrames(0)
+    setEstado('timelapse')
+    const apanhar = () => {
+      const c = canvasFrame()
+      c?.toBlob((b) => {
+        if (!b) return
+        framesRef.current.push(b)
+        setNFrames(framesRef.current.length)
+        if (framesRef.current.length >= MAX_FRAMES) void pararTimelapse()
+      }, 'image/jpeg', 0.85)
+    }
+    apanhar()
+    tlRef.current = setInterval(apanhar, intervaloTL * 1000)
+  }
+  const pararTimelapse = async () => {
+    if (tlRef.current) clearInterval(tlRef.current)
+    tlRef.current = null
+    const frames = framesRef.current
+    if (frames.length < 2) {
+      setEstado('pronto')
+      return setErro('O timelapse precisa de pelo menos 2 fotogramas.')
+    }
+    setEstado('a_montar')
+    try {
+      const primeiro = await createImageBitmap(frames[0])
+      const c = document.createElement('canvas')
+      c.width = primeiro.width
+      c.height = primeiro.height
+      const ctx = c.getContext('2d')!
+      ctx.drawImage(primeiro, 0, 0)
+      primeiro.close()
+      const mime = escolherMime()
+      const saida = c.captureStream(30)
+      const rec = new MediaRecorder(saida, { ...(mime ? { mimeType: mime } : {}), videoBitsPerSecond: (RESOLUCOES[prefs.resolucao] ?? RESOLUCOES['1080']).bps })
+      const pedacos: Blob[] = []
+      rec.ondataavailable = (e) => e.data.size && pedacos.push(e.data)
+      const fim = new Promise<void>((ok) => (rec.onstop = () => ok()))
+      rec.start(500)
+      for (let i = 0; i < frames.length; i++) {
+        const t0 = performance.now()
+        const bm = await createImageBitmap(frames[i])
+        ctx.drawImage(bm, 0, 0, c.width, c.height)
+        bm.close()
+        setProgresso(Math.round(((i + 1) / frames.length) * 100))
+        await new Promise((ok) => setTimeout(ok, Math.max(0, 1000 / 30 - (performance.now() - t0))))
+      }
+      await new Promise((ok) => setTimeout(ok, 200))
+      rec.stop()
+      await fim
+      saida.getTracks().forEach((t) => t.stop())
+      const tipo = rec.mimeType || mime || 'video/webm'
+      const blob = new Blob(pedacos, { type: tipo })
+      framesRef.current = []
+      setTake({ blob, url: URL.createObjectURL(blob), mime: tipo, dur: frames.length / 30 })
+      setEstado('rever')
+    } catch {
+      setEstado('pronto')
+      setErro('Não consegui montar o timelapse neste browser.')
+    }
+  }
+  useEffect(() => () => { if (tlRef.current) clearInterval(tlRef.current) }, [])
+
+  // FOTO: tira uma fotografia (resolução total quando o browser deixa) e guarda-a nos Ativos
+  const [fotoEstado, setFotoEstado] = useState<'' | 'a_tirar' | 'guardada' | 'erro'>('')
+  const [flash, setFlash] = useState(false)
+  const tirarFoto = async () => {
+    const v = streamRef.current?.getVideoTracks()[0]
+    const el = videoRef.current
+    if (!v || !el) return
+    setFotoEstado('a_tirar')
+    setFlash(true)
+    setTimeout(() => setFlash(false), 180)
+    try {
+      let blob: Blob | null = null
+      const IC = (window as any).ImageCapture
+      if (IC && !(deitada && prefs.cortar916)) {
+        try {
+          blob = await new IC(v).takePhoto()
+        } catch {}
+      }
+      if (!blob) {
+        const c = canvasFrame()
+        blob = c ? await new Promise<Blob | null>((ok) => c.toBlob(ok, 'image/jpeg', 0.92)) : null
+      }
+      if (!blob) throw new Error('sem imagem')
+      const mime = blob.type || 'image/jpeg'
+      const nome = `Foto ${new Date().toLocaleString('pt-PT').replace(/[/:]/g, '-')}.${mime.includes('png') ? 'png' : 'jpg'}`
+      const r = await api('/api/estudio/ativo', { method: 'POST', body: JSON.stringify({ nome, mime, tamanho: blob.size, peca_id: guiao.pecaId }) })
+      const up = await fetch(r.upload_url, { method: 'PUT', headers: { 'content-type': mime }, body: blob })
+      if (!up.ok) throw new Error('upload')
+      await api('/api/estudio/ativo', { method: 'PATCH', body: JSON.stringify({ id: r.id, estado: 'pronto' }) })
+      setFotoEstado('guardada')
+    } catch {
+      setFotoEstado('erro')
+    }
+    setTimeout(() => setFotoEstado(''), 2500)
+  }
+
   const mudarExposicao = (e: number) => {
     setExposicao(e)
     void ajustar({ exposureCompensation: e })
@@ -428,6 +592,18 @@ export function Teleprompter({ guiao, onSair }: { guiao: Guiao; onSair: () => vo
     })
   }
 
+  // recuar/avançar o texto do teleprompter (≈3 linhas) ou voltar ao início; 0 = início
+  const moverTexto = (dir: -1 | 0 | 1) => {
+    const el = textoRef.current
+    if (!el) return
+    if (dir === 0) {
+      el.scrollTop = 0
+      return
+    }
+    const passo = Math.round(prefsRef.current.tamanho * 1.35 * 3)
+    el.scrollTo({ top: Math.max(0, el.scrollTop + dir * passo), behavior: 'smooth' })
+  }
+
   // pausa/retoma a GRAVAÇÃO (não só o texto), em qualquer modo
   const alternarGravacao = () => {
     const r = recRef.current
@@ -495,7 +671,11 @@ export function Teleprompter({ guiao, onSair }: { guiao: Guiao; onSair: () => vo
       } else if (e.key === 'ArrowUp') setPrefs({ velocidade: Math.min(160, prefsRef.current.velocidade + 5) })
       else if (e.key === 'ArrowDown') setPrefs({ velocidade: Math.max(5, prefsRef.current.velocidade - 5) })
       else if (e.key.toLowerCase() === 'p' && (st === 'a_gravar')) alternarGravacao()
-      else if (e.key === 'ArrowRight' || e.key === 'PageDown') {
+      else if (e.key === 'ArrowLeft' || e.key === 'PageUp') {
+        if (!semTexto) moverTexto(-1)
+      } else if (e.key === 'Home') {
+        if (!semTexto) moverTexto(0)
+      } else if (e.key === 'ArrowRight' || e.key === 'PageDown') {
         if (semTexto) return
         if (st === 'a_gravar' && prefsRef.current.modo === 'blocos') fimDeBloco()
         else if (st === 'entre_blocos') proximoBloco()
@@ -508,7 +688,7 @@ export function Teleprompter({ guiao, onSair }: { guiao: Guiao; onSair: () => vo
 
   const mmss = (s: number) => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, '0')}`
   const aGravar = estado === 'a_gravar'
-  const emCurso = aGravar || estado === 'entre_blocos' || (estado === 'contagem' && !!recRef.current && recRef.current.state !== 'inactive')
+  const emCurso = aGravar || estado === 'entre_blocos' || estado === 'timelapse' || estado === 'a_montar' || (estado === 'contagem' && !!recRef.current && recRef.current.state !== 'inactive')
   const MAX_SEGUNDOS = maxSegundos(prefs.resolucao)
   const planoDe = (i: number) => {
     const id = guiao.planos?.[i]
@@ -518,8 +698,20 @@ export function Teleprompter({ guiao, onSair }: { guiao: Guiao; onSair: () => vo
   const textoVisivel = prefs.modo === 'blocos' ? blocos[bloco] ?? '' : blocos.join('\n\n')
   const wpm = Math.round((prefs.velocidade / (prefs.tamanho * 1.3)) * 60 * 2.2) // estimativa grosseira
 
-  return (
-    <main className="fixed inset-0 z-50 overflow-hidden bg-black text-white">
+  // O gravador vai directo para o <body> e fica por cima de tudo: o menu do site e a barra de
+  // separadores do estúdio tapavam a barra de cima (câmara, definições, voltar).
+  const [montado, setMontado] = useState(false)
+  useEffect(() => {
+    setMontado(true)
+    const antes = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+    return () => {
+      document.body.style.overflow = antes
+    }
+  }, [])
+
+  const ecra = (
+    <main className="fixed inset-0 z-[2147483000] overflow-hidden bg-black text-white" role="dialog" aria-modal="true" aria-label="Gravador">
       {estado === 'rever' || estado === 'a_subir' || estado === 'guardado' ? (
         <video src={take?.url} controls playsInline className="absolute inset-0 h-full w-full object-contain" />
       ) : (
@@ -530,6 +722,8 @@ export function Teleprompter({ guiao, onSair }: { guiao: Guiao; onSair: () => vo
           )}
         </div>
       )}
+
+      {flash && <div className="pointer-events-none absolute inset-0 z-[60] bg-white/80" aria-hidden />}
 
       {deitada && prefs.cortar916 && comCamara && (
         <div className="pointer-events-none absolute inset-y-0 left-1/2 z-[4] aspect-[9/16] h-full -translate-x-1/2 rounded-sm ring-1 ring-white/40 [box-shadow:0_0_0_9999px_rgba(0,0,0,.45)]" aria-hidden />
@@ -647,6 +841,30 @@ export function Teleprompter({ guiao, onSair }: { guiao: Guiao; onSair: () => vo
                 <input type="range" min={caps.exposicao.min} max={caps.exposicao.max} step={caps.exposicao.step} value={exposicao} onChange={(e) => mudarExposicao(Number(e.target.value))} className="mt-1 h-11 w-full" style={{ accentColor: cor }} />
               </label>
             )}
+            {MANUAIS.filter((m) => caps.manuais?.[m.k]).map((m) => {
+              const f = caps.manuais![m.k]!
+              const v = manuais[m.k] ?? f.min
+              const emAuto = m.modo ? autos[m.modo] !== false : false
+              return (
+                <div key={m.k}>
+                  <div className="flex items-center justify-between text-xs text-zinc-400">
+                    <span>{m.nome} <span className="tabular-nums text-zinc-500">{emAuto ? 'auto' : m.fmt ? m.fmt(v) : Number(v.toFixed(2))}</span></span>
+                    {m.modo && !emAuto && (
+                      <button type="button" onClick={() => voltarAuto(m.modo!)} className="min-h-9 rounded-full border border-white/15 px-3 text-[11px]">Auto</button>
+                    )}
+                  </div>
+                  <input type="range" min={f.min} max={f.max} step={f.step} value={v} onChange={(e) => mudarManual(m, Number(e.target.value))} aria-label={m.nome} className="mt-1 h-11 w-full" style={{ accentColor: cor }} />
+                </div>
+              )
+            })}
+            <details className="rounded-xl border border-white/10 p-3 text-xs text-zinc-400">
+              <summary className="cursor-pointer text-zinc-300">Retrato, luz de estúdio e enquadramento automático</summary>
+              <p className="mt-2">
+                Estes efeitos são do sistema e funcionam aqui também. No iPhone, iPad e Mac abre o Centro de Controlo enquanto o gravador está aberto e toca em
+                «Efeitos de vídeo»: Retrato (fundo desfocado), Luz de estúdio, Palco central (segue-te no enquadramento) e Reações. Se não vires a opção, o aparelho não a suporta.
+              </p>
+              <p className="mt-2">ISO, obturador, balanço de brancos e foco manual só aparecem quando a câmara os deixa mexer pelo browser. No Chrome em Android e em muitas webcams aparecem quase todos; no Safari aparecem poucos.</p>
+            </details>
             {!caps.zoom && !caps.torch && !caps.exposicao && !caps.pontos && (
               <p className="text-xs text-zinc-500">Este browser não deixa mexer no zoom, na lanterna nem na exposição desta câmara. No iPhone isso chega com o iOS 17 ou mais recente; experimenta também a câmara traseira.</p>
             )}
@@ -691,13 +909,13 @@ export function Teleprompter({ guiao, onSair }: { guiao: Guiao; onSair: () => vo
             </label>
           </fieldset>
           <p className="mt-4 text-xs text-zinc-500">
-            Teclado ou comando Bluetooth: Enter grava/pára · espaço pausa o texto · P pausa a gravação · ↑/↓ velocidade · → ou PageDown bloco seguinte.
+            Teclado ou comando Bluetooth: Enter grava/pára · espaço pausa o texto · P pausa a gravação · ↑/↓ velocidade · ← ou PageUp recua o texto · Home volta ao início · → ou PageDown bloco seguinte.
           </p>
         </div>
       )}
 
       {/* Teleprompter: junto ao topo, perto da lente, para o olhar não fugir */}
-      {!semTexto && (estado === 'pronto' || estado === 'contagem' || aGravar) && (
+      {!semTexto && captura === 'video' && (estado === 'pronto' || estado === 'contagem' || aGravar) && (
         <div
           ref={textoRef}
           onClick={() => aGravar && setTextoPausado((p) => !p)}
@@ -756,7 +974,24 @@ export function Teleprompter({ guiao, onSair }: { guiao: Guiao; onSair: () => vo
           </div>
         )}
 
-        {!semTexto && (estado === 'pronto' || aGravar) && (
+        {!semTexto && captura === 'video' && (estado === 'pronto' || aGravar) && (
+          <div className="mb-3 flex items-center justify-center gap-2" role="group" aria-label="Controlo do texto">
+            <button type="button" onClick={() => moverTexto(0)} aria-label="Texto do início" className="grid h-11 w-11 place-items-center rounded-full bg-white/15">
+              <RotateCcw className="h-5 w-5" aria-hidden />
+            </button>
+            <button type="button" onClick={() => moverTexto(-1)} aria-label="Recuar o texto" className="flex h-11 items-center gap-1 rounded-full bg-white/15 px-4 text-xs">
+              <ChevronsLeft className="h-5 w-5" aria-hidden /> Recuar
+            </button>
+            <button type="button" onClick={() => setTextoPausado((p) => !p)} disabled={!aGravar} aria-label={textoPausado ? 'Continuar texto' : 'Pausar texto'} className="grid h-11 w-11 place-items-center rounded-full bg-white/15 disabled:opacity-30">
+              {textoPausado ? <Play className="h-5 w-5" aria-hidden /> : <Pause className="h-5 w-5" aria-hidden />}
+            </button>
+            <button type="button" onClick={() => moverTexto(1)} aria-label="Avançar o texto" className="flex h-11 items-center gap-1 rounded-full bg-white/15 px-4 text-xs">
+              Avançar <ChevronsRight className="h-5 w-5" aria-hidden />
+            </button>
+          </div>
+        )}
+
+        {!semTexto && captura === 'video' && (estado === 'pronto' || aGravar) && (
           <div className="mb-4 grid grid-cols-2 gap-4 text-xs text-zinc-300">
             <label className="block">
               Velocidade <span className="tabular-nums text-zinc-500">≈{wpm} pal/min</span>
@@ -771,9 +1006,63 @@ export function Teleprompter({ guiao, onSair }: { guiao: Guiao; onSair: () => vo
 
         <div className="flex items-center justify-center gap-5">
           {estado === 'pronto' && (
-            <button type="button" onClick={comecar} aria-label="Começar a gravar" className="grid h-20 w-20 place-items-center rounded-full border-4 border-white">
-              <Circle className="h-14 w-14 fill-red-600 text-red-600" aria-hidden />
-            </button>
+            <div className="flex flex-col items-center gap-3">
+              <div className="flex gap-1 rounded-full bg-black/50 p-1 text-xs" role="radiogroup" aria-label="Tipo de captura">
+                {([['video', 'Vídeo'], ['foto', 'Foto'], ['timelapse', 'Timelapse']] as const).map(([id, nome]) => (
+                  <button key={id} type="button" role="radio" aria-checked={captura === id} onClick={() => setCaptura(id)} className="min-h-9 rounded-full px-3" style={captura === id ? { background: cor, color: '#000' } : undefined}>
+                    {nome}
+                  </button>
+                ))}
+              </div>
+              {captura === 'timelapse' && (
+                <div className="flex items-center gap-1 text-[11px] text-zinc-300" role="radiogroup" aria-label="Intervalo">
+                  <span className="mr-1 text-zinc-400">1 foto a cada</span>
+                  {INTERVALOS_TL.map((n) => (
+                    <button key={n} type="button" role="radio" aria-checked={intervaloTL === n} onClick={() => setIntervaloTL(n)} className="min-h-8 rounded-full border px-2" style={intervaloTL === n ? { borderColor: cor, color: cor } : { borderColor: 'rgba(255,255,255,.2)' }}>
+                      {String(n).replace('.', ',')} s
+                    </button>
+                  ))}
+                </div>
+              )}
+              {captura === 'video' && (
+                <button type="button" onClick={comecar} aria-label="Começar a gravar" className="grid h-20 w-20 place-items-center rounded-full border-4 border-white">
+                  <Circle className="h-14 w-14 fill-red-600 text-red-600" aria-hidden />
+                </button>
+              )}
+              {captura === 'foto' && (
+                <button type="button" onClick={tirarFoto} disabled={fotoEstado === 'a_tirar'} aria-label="Tirar foto" className="grid h-20 w-20 place-items-center rounded-full border-4 border-white disabled:opacity-50">
+                  <span className="h-14 w-14 rounded-full bg-white" />
+                </button>
+              )}
+              {captura === 'timelapse' && (
+                <button type="button" onClick={comecarTimelapse} aria-label="Começar timelapse" className="grid h-20 w-20 place-items-center rounded-full border-4 border-white">
+                  <Circle className="h-14 w-14 fill-amber-500 text-amber-500" aria-hidden />
+                </button>
+              )}
+              {fotoEstado && (
+                <p className="text-xs" aria-live="polite" style={{ color: fotoEstado === 'erro' ? '#f87171' : cor }}>
+                  {fotoEstado === 'a_tirar' ? 'A guardar a foto…' : fotoEstado === 'guardada' ? 'Foto guardada nos Ativos' : 'Não consegui guardar a foto'}
+                </p>
+              )}
+            </div>
+          )}
+          {estado === 'timelapse' && (
+            <div className="flex flex-col items-center gap-2" aria-live="polite">
+              <p className="text-xs text-zinc-300">
+                ● {nFrames} fotogramas · {mmss(nFrames * intervaloTL)} captados · vídeo de {(nFrames / 30).toFixed(1).replace('.', ',')} s
+              </p>
+              <button type="button" onClick={() => void pararTimelapse()} aria-label="Parar timelapse" className="grid h-20 w-20 place-items-center rounded-full border-4 border-white">
+                <Square className="h-9 w-9 fill-amber-500 text-amber-500" aria-hidden />
+              </button>
+            </div>
+          )}
+          {estado === 'a_montar' && (
+            <div className="w-full max-w-xs text-center text-sm" aria-live="polite">
+              A montar o timelapse… {progresso}%
+              <div className="mt-2 h-2 overflow-hidden rounded-full bg-white/15">
+                <div className="h-full transition-[width]" style={{ width: `${progresso}%`, background: cor }} />
+              </div>
+            </div>
           )}
           {aGravar && (
             <>
@@ -831,4 +1120,5 @@ export function Teleprompter({ guiao, onSair }: { guiao: Guiao; onSair: () => vo
       </div>
     </main>
   )
+  return montado ? createPortal(ecra, document.body) : null
 }
