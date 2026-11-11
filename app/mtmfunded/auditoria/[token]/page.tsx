@@ -53,7 +53,7 @@ export default async function AuditoriaPage({ params }: { params: Promise<{ toke
             {a.conta.login && <span className="ml-2 font-mono text-lg text-zinc-400">#{a.conta.login}</span>}
           </h1>
           <p className="max-w-3xl text-sm leading-relaxed text-zinc-400">
-            Conta <strong className="text-zinc-200">simulada</strong> no motor MTM Funded, saldo inicial {fmt(a.conta.saldoInicial, 0)} USD
+            Conta <strong className="text-zinc-200">simulada</strong> no motor MTM Funded, saldo {a.conta.cicloDesde ? <>no início do ciclo actual ({dia(a.conta.cicloDesde)})</> : 'inicial'} {fmt(a.conta.saldoInicial, 0)} USD
             {estrategia ? <>, a seguir <strong className="text-zinc-200">{estrategia}</strong></> : null}.
             {' '}Histórico de {dia(m.primeiraTrade)} a {dia(m.ultimaTrade)} · {m.trades} operações fechadas em {m.diasNegociados} dias · {a.abertas} aberta(s) agora.
             {' '}Dados lidos da base de produção em {data(a.geradoEm)} UTC.
