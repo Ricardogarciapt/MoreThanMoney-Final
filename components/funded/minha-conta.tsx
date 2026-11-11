@@ -3,7 +3,7 @@
 import dynamic from "next/dynamic"
 import { estadoEmFrase } from "@/lib/webtrader/textos"
 import { useEffect, useState } from "react"
-import { Award, Banknote, BarChart3, BookOpen, History, KeyRound, LayoutGrid, Loader2 } from "lucide-react"
+import { Award, Banknote, BarChart3, BookOpen, History, KeyRound, LayoutGrid, Loader2, Share2 } from "lucide-react"
 import { barrasDaConta } from "@/lib/mtmfunded/numeros-conta"
 import { authHeaders } from "@/lib/auth-token"
 import FundedDesempenho from "./funded-desempenho"
@@ -11,6 +11,7 @@ import FundedDiario from "./funded-diario"
 import { DiarioPortefolio, HistoricoPortefolio, MetricasPortefolio, type DadosPortefolio } from "./portefolio-conta"
 import ListaPosicoes from "./lista-posicoes"
 import CredenciaisConta from "./credenciais-conta"
+import PartilharAuditoria from "./partilhar-auditoria"
 import { InterruptorUmClique } from "./um-clique"
 import { EtiquetaConta, type Trader } from "./trader-contexto"
 import { usd } from "./api"
@@ -30,7 +31,7 @@ const FundedEstatisticas = dynamic(() => import("./funded-estatisticas"), { ssr:
  * Valores em USD da própria conta simulada (só o dono ou quem tem a password a vê). Sem promessas.
  */
 
-type Seccao = "resumo" | "metricas" | "diario" | "historico" | "credenciais" | "levantamentos"
+type Seccao = "resumo" | "metricas" | "diario" | "historico" | "credenciais" | "partilhar" | "levantamentos"
 
 export default function MinhaConta({ t }: { t: Trader }) {
   const [seccao, setSeccao] = useState<Seccao>("resumo")
@@ -49,6 +50,7 @@ export default function MinhaConta({ t }: { t: Trader }) {
   const seccoes: Array<[Seccao, string, typeof LayoutGrid]> = [
     ["resumo", "Resumo", LayoutGrid], ["metricas", "Métricas", BarChart3], ["diario", "Diário", BookOpen],
     ["historico", "Histórico", History], ["credenciais", "Credenciais", KeyRound],
+    ...(carteira ? [] : [["partilhar", "Partilhar", Share2] as [Seccao, string, typeof LayoutGrid]]),
     ...(funded && dono ? [["levantamentos", "Levantamentos", Banknote] as [Seccao, string, typeof LayoutGrid]] : []),
   ]
 
@@ -117,6 +119,7 @@ export default function MinhaConta({ t }: { t: Trader }) {
           <CredenciaisConta contaId={t.accountId} login={c.login == null ? null : String(c.login)} servidor={c.servidor == null ? null : String(c.servidor)} podeGerir={dono} />
         </div>
       )}
+      {seccao === "partilhar" && !carteira && <PartilharAuditoria accountId={t.accountId} podeGerir={dono} />}
       {seccao === "levantamentos" && funded && dono && <Levantamentos t={t} />}
     </div>
   )
