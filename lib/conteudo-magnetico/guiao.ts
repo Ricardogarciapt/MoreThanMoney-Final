@@ -32,6 +32,24 @@ export const SFX = ['boom', 'whoosh', 'click', 'nenhum'] as const
 export type Sfx = (typeof SFX)[number]
 export const ESTILOS_LEGENDA = ['impacto', 'palavra_a_palavra', 'simples'] as const
 export type EstiloLegenda = (typeof ESTILOS_LEGENDA)[number]
+/** Efeito de cor do segmento: 'pb' liga o preto e branco (erro, passado), 'cor' impede o automático. */
+export const EFEITOS = ['normal', 'pb', 'cor'] as const
+export type Efeito = (typeof EFEITOS)[number]
+/**
+ * Plano de câmara com intenção (método dos 8 enquadramentos). O gravador mostra-o entre blocos e o
+ * editor do Mac ajusta o zoom digital (detalhe ≈1,45×, aberto sem zoom).
+ */
+export const PLANOS = {
+  aberto: { nome: 'Plano aberto', dica: 'corpo inteiro e o espaço: situa quem vê' },
+  de_cima: { nome: 'De cima', dica: 'câmara acima dos olhos: a dor, a vulnerabilidade' },
+  de_baixo: { nome: 'De baixo (ligeiro)', dica: 'câmara um pouco abaixo dos olhos: autoridade e prova' },
+  medio: { nome: 'Plano médio', dica: 'dos joelhos ou da cintura para cima: explicar com postura' },
+  fechado: { nome: 'Fechado', dica: 'cara e ombros: a frase forte' },
+  detalhe: { nome: 'Detalhe', dica: 'mãos, caderno, ecrã com o gráfico, olhos' },
+  mao: { nome: 'Câmara na mão', dica: 'íntimo, bastidores, em movimento' },
+} as const
+export type Plano = keyof typeof PLANOS
+export const IDS_PLANOS = Object.keys(PLANOS) as Plano[]
 
 /** Uma lâmina (carrossel), a peça única (post/story) ou o cartão de um segmento do reel. */
 export type Lamina = {
@@ -66,6 +84,10 @@ export type Segmento = {
   prompt_visual: string
   /** Imagem ou clip gerado fora (já no nosso Storage): o motor usa-o em vez do Pexels/cartão. */
   media_url: string | null
+  /** Preto e branco ('pb'), forçar cor ('cor') ou deixar o automático ('normal'). */
+  efeito: Efeito
+  /** Plano de câmara sugerido para este segmento (ou null). */
+  plano: Plano | null
 }
 
 export type Reel = {
@@ -193,6 +215,8 @@ export function normalizarGuiao(
         legenda_estilo: legendaDe(so.legenda_estilo),
         prompt_visual: txt(so.prompt_visual ?? cv.prompt_visual, 400),
         media_url: urlDeCasa(so.media_url),
+        efeito: umDe(so.efeito, EFEITOS, 'normal'),
+        plano: (IDS_PLANOS as string[]).includes(String(so.plano)) ? (so.plano as Plano) : null,
       }
     }).filter((s) => s.fala)
     const dur = Number(r.duracao_estimada_segundos)

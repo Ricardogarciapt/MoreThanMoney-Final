@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState, type PointerEvent as ReactPointerEvent } from 'react'
 import { Camera, Check, ChevronLeft, Circle, Flashlight, FlipHorizontal, Grid3x3, Mic, Pause, Play, RefreshCw, Settings2, SkipForward, Square, Upload } from 'lucide-react'
 import { authHeaders } from '@/lib/auth-token'
+import { PLANOS } from '@/lib/conteudo-magnetico/guiao'
 
 /**
  * Teleprompter com gravação. Dois modos:
@@ -17,7 +18,7 @@ import { authHeaders } from '@/lib/auth-token'
  */
 
 export type MarcaCasa = 'ricardo-garcia' | 'morethanmoney'
-export type Guiao = { pecaId: string | null; marca: MarcaCasa; titulo: string; texto: string; palavraChave: string }
+export type Guiao = { pecaId: string | null; marca: MarcaCasa; titulo: string; texto: string; palavraChave: string; planos?: (string | null)[] }
 
 const COR: Record<MarcaCasa, string> = { morethanmoney: '#D2A63C', 'ricardo-garcia': '#0097b2' }
 const NOME: Record<MarcaCasa, string> = { morethanmoney: 'More Than Money', 'ricardo-garcia': 'Ricardo Garcia' }
@@ -36,8 +37,8 @@ type Faixa = { min: number; max: number; step: number }
 type Capacidades = { zoom?: Faixa; torch?: boolean; focus?: string[]; exposicao?: Faixa; pontos?: boolean }
 
 type Modo = 'continuo' | 'blocos'
-type Prefs = { velocidade: number; tamanho: number; espelho: boolean; contagem: number; modo: Modo; autoRetomar: boolean; grelha: boolean; camara: 'user' | 'environment'; resolucao: Resolucao; fps: 30 | 60; micId: string }
-const PREFS_OMISSAO: Prefs = { velocidade: 40, tamanho: 30, espelho: true, contagem: 3, modo: 'continuo', autoRetomar: false, grelha: false, camara: 'user', resolucao: '1080', fps: 30, micId: '' }
+type Prefs = { velocidade: number; tamanho: number; espelho: boolean; contagem: number; modo: Modo; autoRetomar: boolean; grelha: boolean; camara: 'user' | 'environment'; resolucao: Resolucao; fps: 30 | 60; micId: string; camId: string; cortar916: boolean }
+const PREFS_OMISSAO: Prefs = { velocidade: 40, tamanho: 30, espelho: true, contagem: 3, modo: 'continuo', autoRetomar: false, grelha: false, camara: 'user', resolucao: '1080', fps: 30, micId: '', camId: '', cortar916: true }
 const CHAVE = 'estudio.teleprompter.v2'
 
 function lerPrefs(): Prefs {
@@ -95,6 +96,8 @@ export function Teleprompter({ guiao, onSair }: { guiao: Guiao; onSair: () => vo
   const [exposicao, setExposicao] = useState(0)
   const [foco, setFoco] = useState<{ x: number; y: number } | null>(null)
   const [mics, setMics] = useState<{ id: string; nome: string }[]>([])
+  const [cams, setCams] = useState<{ id: string; nome: string }[]>([])
+  const [deitada, setDeitada] = useState(false) // câmara a dar imagem horizontal (webcam, Osmo, iPhone no Mac)
   const [nivel, setNivel] = useState(0)
   const [real, setReal] = useState<string>('')
   const [versao, setVersao] = useState(0) // muda a cada stream novo (para o medidor)
@@ -103,6 +106,9 @@ export function Teleprompter({ guiao, onSair }: { guiao: Guiao; onSair: () => vo
     setPrefsState(lerPrefs())
     setPrefsLidas(true)
   }, [])
+  // espelhar só a câmara frontal do próprio aparelho (as externas gravam como vêem)
+  const espelhar = prefs.espelho && !prefs.camId && prefs.camara === 'user'
+  const trocarCamara = () => (prefs.camId ? setPrefs({ camId: '' }) : setPrefs({ camara: prefs.camara === 'user' ? 'environment' : 'user' }))
   const setPrefs = (p: Partial<Prefs>) =>
     setPrefsState((v) => {
       const n = { ...v, ...p }
@@ -131,7 +137,11 @@ export function Teleprompter({ guiao, onSair }: { guiao: Guiao; onSair: () => vo
     streamRef.current?.getTracks().forEach((t) => t.stop())
     const r = RESOLUCOES[prefs.resolucao] ?? RESOLUCOES['1080']
     const audio: MediaTrackConstraints = { echoCancellation: true, noiseSuppression: true, ...(prefs.micId ? { deviceId: { exact: prefs.micId } } : {}) }
-    const video: MediaTrackConstraints = { facingMode: prefs.camara, width: { ideal: r.w }, height: { ideal: r.h }, aspectRatio: { ideal: 9 / 16 }, frameRate: { ideal: prefs.fps } }
+    // câmara escolhida pelo nome (iPhone por Continuity, Osmo em modo webcam, USB, OBS) ou frontal/traseira
+    const video: MediaTrackConstraints = prefs.camId
+      ? { deviceId: { exact: prefs.camId }, width: { ideal: r.h }, height: { ideal: r.w }, frameRate: { ideal: prefs.fps } }
+      : { facingMode: prefs.camara, width: { ideal: r.w }, height: { ideal: r.h }, aspectRatio: { ideal: 9 / 16 }, frameRate: { ideal: prefs.fps } }
+    const videoOmissao: MediaTrackConstraints = { facingMode: prefs.camara, width: { ideal: r.w }, height: { ideal: r.h }, frameRate: { ideal: prefs.fps } }
     const md = navigator.mediaDevices
     if (!md?.getUserMedia) {
       setErro('Este browser não dá acesso à câmara. Abre em https no Safari ou no Chrome.')
@@ -140,6 +150,8 @@ export function Teleprompter({ guiao, onSair }: { guiao: Guiao; onSair: () => vo
     md.getUserMedia({ video, audio })
       // o microfone guardado pode ter desaparecido (auscultadores desligados): tenta com o de omissão
       .catch(() => md.getUserMedia({ video, audio: { echoCancellation: true, noiseSuppression: true } }))
+      // a câmara guardada pode estar desligada (Osmo sem cabo, iPhone longe): volta à do aparelho
+      .catch(() => md.getUserMedia({ video: videoOmissao, audio: { echoCancellation: true, noiseSuppression: true } }))
       .then(async (s) => {
         if (!vivo) return s.getTracks().forEach((t) => t.stop())
         streamRef.current = s
@@ -161,16 +173,30 @@ export function Teleprompter({ guiao, onSair }: { guiao: Guiao; onSair: () => vo
         setExposicao(typeof st.exposureCompensation === 'number' ? st.exposureCompensation : 0)
         setLanterna(false)
         setReal(st.width && st.height ? `${Math.min(st.width, st.height)}p${st.frameRate ? ` · ${Math.round(st.frameRate)} fps` : ''}` : '')
-        try {
-          const lista = await md.enumerateDevices()
-          setMics(lista.filter((d) => d.kind === 'audioinput').map((d, i) => ({ id: d.deviceId, nome: d.label || `Microfone ${i + 1}` })))
-        } catch {}
+        setDeitada(!!st.width && !!st.height && st.width > st.height)
+        await listarDispositivos()
       })
       .catch(() => setErro('Sem acesso à câmara ou ao microfone. Dá permissão nas definições do browser.'))
     return () => {
       vivo = false
     }
   }, [prefsLidas, prefs.camara, prefs.resolucao, prefs.fps, prefs.micId])
+
+  // lista de câmaras e microfones (os nomes só aparecem depois da permissão); actualiza quando ligas/desligas um
+  const listarDispositivos = useCallback(async () => {
+    try {
+      const lista = await navigator.mediaDevices.enumerateDevices()
+      setMics(lista.filter((d) => d.kind === 'audioinput' && d.deviceId).map((d, i) => ({ id: d.deviceId, nome: d.label || `Microfone ${i + 1}` })))
+      setCams(lista.filter((d) => d.kind === 'videoinput' && d.deviceId).map((d, i) => ({ id: d.deviceId, nome: d.label || `Câmara ${i + 1}` })))
+    } catch {}
+  }, [])
+  useEffect(() => {
+    const md = navigator.mediaDevices
+    if (!md?.addEventListener) return
+    const f = () => void listarDispositivos()
+    md.addEventListener('devicechange', f)
+    return () => md.removeEventListener('devicechange', f)
+  }, [listarDispositivos])
 
   // medidor de nível do microfone (o volume real que vai para o take)
   useEffect(() => {
@@ -234,7 +260,7 @@ export function Teleprompter({ guiao, onSair }: { guiao: Guiao; onSair: () => vo
     const r = ev.currentTarget.getBoundingClientRect()
     let x = (ev.clientX - r.left) / r.width
     const y = (ev.clientY - r.top) / r.height
-    if (prefs.espelho && prefs.camara === 'user') x = 1 - x
+    if (espelhar) x = 1 - x
     setFoco({ x: (ev.clientX - r.left) / r.width, y })
     setTimeout(() => setFoco(null), 900)
     const modo = caps.focus?.includes('single-shot') ? 'single-shot' : caps.focus?.includes('continuous') ? 'continuous' : undefined
@@ -326,11 +352,45 @@ export function Teleprompter({ guiao, onSair }: { guiao: Guiao; onSair: () => vo
     contar(gravar)
   }
 
+  /**
+   * Câmara horizontal (webcam, Osmo, iPhone no Mac) e «Recortar para 9:16» ligado: grava-se o centro
+   * da imagem num canvas vertical, com o som original. Devolve o stream a gravar e como parar o recorte.
+   */
+  const recorteRef = useRef<(() => void) | null>(null)
+  const streamParaGravar = (): MediaStream => {
+    const s = streamRef.current!
+    const v = s.getVideoTracks()[0]
+    const st = (v?.getSettings?.() ?? {}) as MediaTrackSettings
+    const el = videoRef.current
+    if (!prefsRef.current.cortar916 || !el || !st.width || !st.height || st.width <= st.height) return s
+    const canvas = document.createElement('canvas')
+    if (typeof canvas.captureStream !== 'function') return s
+    const h = st.height
+    const w = Math.round((h * 9) / 16 / 2) * 2
+    canvas.width = w
+    canvas.height = h
+    const ctx = canvas.getContext('2d')
+    if (!ctx) return s
+    const sx = Math.round((st.width - w) / 2)
+    const fps = Math.round(st.frameRate || prefsRef.current.fps || 30)
+    const desenhar = () => ctx.drawImage(el, sx, 0, w, h, 0, 0, w, h)
+    desenhar()
+    const id = setInterval(desenhar, 1000 / fps)
+    const saida = canvas.captureStream(fps)
+    s.getAudioTracks().forEach((t) => saida.addTrack(t))
+    recorteRef.current = () => {
+      clearInterval(id)
+      saida.getVideoTracks().forEach((t) => t.stop())
+    }
+    return saida
+  }
+
   const gravar = () => {
     const mime = escolherMime()
     let rec: MediaRecorder
     try {
-      rec = new MediaRecorder(streamRef.current!, { ...(mime ? { mimeType: mime } : {}), videoBitsPerSecond: (RESOLUCOES[prefsRef.current.resolucao] ?? RESOLUCOES['1080']).bps })
+      recorteRef.current?.()
+      rec = new MediaRecorder(streamParaGravar(), { ...(mime ? { mimeType: mime } : {}), videoBitsPerSecond: (RESOLUCOES[prefsRef.current.resolucao] ?? RESOLUCOES['1080']).bps })
     } catch {
       setEstado('pronto')
       return setErro('Este browser não grava vídeo. Usa o Safari ou o Chrome actualizados.')
@@ -340,6 +400,8 @@ export function Teleprompter({ guiao, onSair }: { guiao: Guiao; onSair: () => vo
     rec.ondataavailable = (e) => e.data.size && pedacosRef.current.push(e.data)
     rec.onstop = () => {
       cancelAnimationFrame(rafRef.current)
+      recorteRef.current?.()
+      recorteRef.current = null
       const tipo = rec.mimeType || mime || 'video/webm'
       const blob = new Blob(pedacosRef.current, { type: tipo })
       setTake({ blob, url: URL.createObjectURL(blob), mime: tipo, dur: gravadoRef.current })
@@ -448,6 +510,10 @@ export function Teleprompter({ guiao, onSair }: { guiao: Guiao; onSair: () => vo
   const aGravar = estado === 'a_gravar'
   const emCurso = aGravar || estado === 'entre_blocos' || (estado === 'contagem' && !!recRef.current && recRef.current.state !== 'inactive')
   const MAX_SEGUNDOS = maxSegundos(prefs.resolucao)
+  const planoDe = (i: number) => {
+    const id = guiao.planos?.[i]
+    return id && id in PLANOS ? PLANOS[id as keyof typeof PLANOS] : null
+  }
   const comCamara = !take && estado !== 'rever' && estado !== 'a_subir' && estado !== 'guardado'
   const textoVisivel = prefs.modo === 'blocos' ? blocos[bloco] ?? '' : blocos.join('\n\n')
   const wpm = Math.round((prefs.velocidade / (prefs.tamanho * 1.3)) * 60 * 2.2) // estimativa grosseira
@@ -458,11 +524,15 @@ export function Teleprompter({ guiao, onSair }: { guiao: Guiao; onSair: () => vo
         <video src={take?.url} controls playsInline className="absolute inset-0 h-full w-full object-contain" />
       ) : (
         <div className="absolute inset-0" onPointerDown={tocarParaFocar}>
-          <video ref={videoRef} autoPlay muted playsInline className="absolute inset-0 h-full w-full object-cover" style={{ transform: prefs.espelho && prefs.camara === 'user' ? 'scaleX(-1)' : undefined }} />
+          <video ref={videoRef} autoPlay muted playsInline className="absolute inset-0 h-full w-full object-cover" style={{ transform: espelhar ? 'scaleX(-1)' : undefined }} />
           {foco && (
             <span className="pointer-events-none absolute z-[6] h-16 w-16 -translate-x-1/2 -translate-y-1/2 rounded-md border-2" style={{ left: `${foco.x * 100}%`, top: `${foco.y * 100}%`, borderColor: cor }} aria-hidden />
           )}
         </div>
+      )}
+
+      {deitada && prefs.cortar916 && comCamara && (
+        <div className="pointer-events-none absolute inset-y-0 left-1/2 z-[4] aspect-[9/16] h-full -translate-x-1/2 rounded-sm ring-1 ring-white/40 [box-shadow:0_0_0_9999px_rgba(0,0,0,.45)]" aria-hidden />
       )}
 
       {prefs.grelha && !take && (
@@ -484,6 +554,7 @@ export function Teleprompter({ guiao, onSair }: { guiao: Guiao; onSair: () => vo
           <div className="truncate tabular-nums text-zinc-300" aria-live="polite">
             {emCurso ? `${gravPausada || estado === 'entre_blocos' ? '❚❚' : '●'} ${mmss(segundos)} / ${mmss(MAX_SEGUNDOS)}` : guiao.titulo}
             {!semTexto && prefs.modo === 'blocos' && (emCurso || estado === 'pronto') ? ` · bloco ${bloco + 1}/${blocos.length}` : ''}
+            {!semTexto && prefs.modo === 'blocos' && (emCurso || estado === 'pronto') && planoDe(bloco) ? ` · ${planoDe(bloco)!.nome}` : ''}
           </div>
           {comCamara && (
             <div className="mt-1 flex items-center justify-center gap-1.5 text-[10px] text-zinc-400">
@@ -501,7 +572,7 @@ export function Teleprompter({ guiao, onSair }: { guiao: Guiao; onSair: () => vo
               <Flashlight className="h-5 w-5" aria-hidden />
             </button>
           )}
-          <button type="button" disabled={emCurso} onClick={() => setPrefs({ camara: prefs.camara === 'user' ? 'environment' : 'user' })} aria-label="Trocar de câmara" className="grid h-11 w-11 place-items-center rounded-full bg-black/40 disabled:opacity-30">
+          <button type="button" disabled={emCurso} onClick={trocarCamara} aria-label="Trocar de câmara" className="grid h-11 w-11 place-items-center rounded-full bg-black/40 disabled:opacity-30">
             <Camera className="h-5 w-5" aria-hidden />
           </button>
           <button type="button" onClick={() => setPainel((v) => !v)} aria-expanded={painel} aria-label="Definições de gravação" className="grid h-11 w-11 place-items-center rounded-full bg-black/40">
@@ -518,6 +589,35 @@ export function Teleprompter({ guiao, onSair }: { guiao: Guiao; onSair: () => vo
             <button type="button" onClick={() => setPainel(false)} className="min-h-11 px-3 text-zinc-400">Fechar</button>
           </div>
           <fieldset disabled={emCurso} className="space-y-4 disabled:opacity-50">
+            <label className="block">
+              <span className="mb-1 flex items-center gap-2 text-xs text-zinc-400"><Camera className="h-3.5 w-3.5" aria-hidden /> Câmara</span>
+              <select value={prefs.camId} onChange={(e) => setPrefs({ camId: e.target.value })} className="min-h-11 w-full rounded-xl border border-white/15 bg-zinc-900 px-3 text-sm">
+                <option value="">{prefs.camara === 'user' ? 'Frontal deste aparelho' : 'Traseira deste aparelho'}</option>
+                {cams.map((c) => <option key={c.id} value={c.id}>{c.nome}</option>)}
+              </select>
+            </label>
+            <label className="block">
+              <span className="mb-1 flex items-center gap-2 text-xs text-zinc-400"><Mic className="h-3.5 w-3.5" aria-hidden /> Microfone</span>
+              <select value={prefs.micId} onChange={(e) => setPrefs({ micId: e.target.value })} className="min-h-11 w-full rounded-xl border border-white/15 bg-zinc-900 px-3 text-sm">
+                <option value="">O do aparelho (omissão)</option>
+                {mics.map((m) => <option key={m.id} value={m.id}>{m.nome}</option>)}
+              </select>
+            </label>
+            <details className="rounded-xl border border-white/10 p-3 text-xs text-zinc-400">
+              <summary className="cursor-pointer text-zinc-300">Como ligar outra câmara ou microfone</summary>
+              <ul className="mt-2 list-disc space-y-1 pl-4">
+                <li><b>iPhone perto do Mac</b>: Continuity Camera, sem cabo (mesmo Apple ID, Wi-Fi e Bluetooth ligados). Aparece como câmara do iPhone.</li>
+                <li><b>DJI Osmo Pocket 3</b>: liga por USB-C e escolhe «Webcam» no Osmo.</li>
+                <li><b>Webcam ou microfone USB</b> (lapela, recetor sem fios): aparecem logo nas listas.</li>
+                <li><b>Câmaras por Wi-Fi</b>: recebe-as no OBS (app da câmara, NDI ou RTMP) e carrega em «Iniciar câmara virtual». Aparece como OBS Virtual Camera.</li>
+                <li><b>Bluetooth</b> não passa vídeo. Serve para comandos (espaço, Enter, setas, P) e microfones, que soam pior do que um de lapela.</li>
+              </ul>
+              <p className="mt-2">Se ligaste agora, a lista actualiza sozinha. Se não aparecer, recarrega a página.</p>
+            </details>
+            <label className="flex min-h-11 items-center justify-between gap-3">
+              <span>Recortar para vertical 9:16 quando a câmara é horizontal{deitada ? ' (esta é)' : ''}</span>
+              <input type="checkbox" checked={prefs.cortar916} onChange={(e) => setPrefs({ cortar916: e.target.checked })} className="h-5 w-5" style={{ accentColor: cor }} />
+            </label>
             <div>
               <div className="mb-1 text-xs text-zinc-400">Resolução {real && <span className="text-zinc-500">· a câmara está a dar {real}</span>}</div>
               <div className="grid grid-cols-3 gap-2">
@@ -539,15 +639,6 @@ export function Teleprompter({ guiao, onSair }: { guiao: Guiao; onSair: () => vo
                 ))}
               </div>
             </div>
-            {mics.length > 0 && (
-              <label className="block">
-                <span className="mb-1 flex items-center gap-2 text-xs text-zinc-400"><Mic className="h-3.5 w-3.5" aria-hidden /> Microfone</span>
-                <select value={prefs.micId} onChange={(e) => setPrefs({ micId: e.target.value })} className="min-h-11 w-full rounded-xl border border-white/15 bg-zinc-900 px-3 text-sm">
-                  <option value="">O do aparelho (omissão)</option>
-                  {mics.map((m) => <option key={m.id} value={m.id}>{m.nome}</option>)}
-                </select>
-              </label>
-            )}
           </fieldset>
           <div className="mt-4 space-y-4">
             {caps.exposicao && (
@@ -629,6 +720,12 @@ export function Teleprompter({ guiao, onSair }: { guiao: Guiao; onSair: () => vo
         <div className="absolute inset-x-4 top-[22%] z-30 rounded-2xl bg-black/80 p-5 text-center" aria-live="polite">
           <div className="text-xs text-zinc-400">Gravação em pausa · muda de plano</div>
           <div className="mt-1 text-lg font-semibold" style={{ color: cor }}>Bloco {bloco + 2} de {blocos.length}</div>
+          {planoDe(bloco + 1) && (
+            <p className="mt-2 text-sm">
+              <span className="font-medium" style={{ color: cor }}>Próximo: {planoDe(bloco + 1)!.nome}</span>
+              <span className="text-zinc-400"> · {planoDe(bloco + 1)!.dica}</span>
+            </p>
+          )}
           <p className="mt-3 line-clamp-4 text-sm text-zinc-200">{blocos[bloco + 1]}</p>
           {prefs.autoRetomar && <p className="mt-3 text-xs text-zinc-400">Retoma sozinho…</p>}
         </div>

@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { AlertTriangle, Check, Copy, Download, Film, Loader2, Magnet, RefreshCw, Upload, Video, Wand2 } from 'lucide-react'
 import { authHeaders } from '@/lib/auth-token'
+import { PLANOS } from '@/lib/conteudo-magnetico/guiao'
 
 /**
  * O separador «Criar» do Estúdio (antigo /conteudomagnetico, fundido a 10/11).
@@ -25,6 +26,8 @@ type Segmento = {
   b_roll_busca: string | null
   sfx: string
   legenda_estilo: string
+  efeito?: 'normal' | 'pb' | 'cor'
+  plano?: string | null
 }
 type Guiao = {
   formato: Formato
@@ -562,6 +565,28 @@ export default function PainelConteudoMagnetico({ onGravar }: { onGravar?: (peca
                                 <option key={v.id} value={v.id}>{v.nome}</option>
                               ))}
                             </select>
+                            <select
+                              className={`${campo} text-sm`}
+                              value={s.plano ?? ''}
+                              onChange={(e) => mudarSegmento(i, { plano: e.target.value || null })}
+                              aria-label="Plano de câmara"
+                              title={s.plano && s.plano in PLANOS ? PLANOS[s.plano as keyof typeof PLANOS].dica : 'Plano de câmara sugerido'}
+                            >
+                              <option value="">Plano: sem sugestão</option>
+                              {Object.entries(PLANOS).map(([id, p]) => (
+                                <option key={id} value={id}>{p.nome}</option>
+                              ))}
+                            </select>
+                            <select
+                              className={`${campo} text-sm`}
+                              value={s.efeito ?? 'normal'}
+                              onChange={(e) => mudarSegmento(i, { efeito: e.target.value as Segmento['efeito'] })}
+                              aria-label="Efeito de cor"
+                            >
+                              <option value="normal">Cor: automático</option>
+                              <option value="pb">Preto e branco (erro, passado)</option>
+                              <option value="cor">Sempre a cores (solução)</option>
+                            </select>
                             {s.visual === 'b_roll' && (
                               <input
                                 className={`${campo} text-sm`}
@@ -570,7 +595,10 @@ export default function PainelConteudoMagnetico({ onGravar }: { onGravar?: (peca
                                 onChange={(e) => mudarSegmento(i, { b_roll_busca: e.target.value })}
                               />
                             )}
-                            <p className="text-xs text-white/40">som: {s.sfx} · legenda: {s.legenda_estilo}</p>
+                            <p className="text-xs text-white/40">
+                              som: {s.sfx} · legenda: {s.legenda_estilo}
+                              {s.visual === 'cartao' && s.texto_ecra.trim().split(/\s+/).filter(Boolean).length <= 2 ? ' · cartão em ecrã inteiro' : s.texto_ecra.trim() ? ' · título por cima do plano' : ''}
+                            </p>
                           </div>
                         </div>
                       ))}
