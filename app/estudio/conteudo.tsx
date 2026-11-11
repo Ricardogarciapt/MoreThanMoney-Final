@@ -28,7 +28,10 @@ type Segmento = {
   legenda_estilo: string
   efeito?: 'normal' | 'pb' | 'cor'
   plano?: string | null
+  /** clip próprio: undefined/null = automático, -1 = nenhum, n = índice em «clips» */
+  clip?: number | null
 }
+type Clip = { id: string; nome: string; url: string | null }
 type Guiao = {
   formato: Formato
   marca: IdMarca
@@ -97,6 +100,9 @@ export default function PainelConteudoMagnetico({ onGravar }: { onGravar?: (peca
   const [notas, setNotas] = useState('')
   const [quantas, setQuantas] = useState(6)
   const [fundo, setFundo] = useState('')
+  const [clips, setClips] = useState<Clip[]>([])
+  const [aSubirClip, setASubirClip] = useState(false)
+  const [ativosVideo, setAtivosVideo] = useState<Clip[] | null>(null)
 
   const [aGerar, setAGerar] = useState(false)
   const [erro, setErro] = useState<string | null>(null)
@@ -278,6 +284,39 @@ export default function PainelConteudoMagnetico({ onGravar }: { onGravar?: (peca
     }
   }
 
+  /** Sobe um vídeo directo para o Storage (nunca passa pela Vercel) e guarda-o nos Ativos. */
+  async function subirClips(ficheiros: FileList) {
+    setASubirClip(true)
+    setErro(null)
+    try {
+      for (const f of Array.from(ficheiros)) {
+        const cab = { ...(await authHeaders()), 'content-type': 'application/json' }
+        const mime = f.type || (/\.mov$/i.test(f.name) ? 'video/quicktime' : 'video/mp4')
+        const r = await fetch('/api/estudio/ativo', { method: 'POST', headers: cab, body: JSON.stringify({ nome: f.name, mime, tamanho: f.size, peca_id: pecaId }) })
+        const j = await r.json()
+        if (!r.ok || !j.ok) throw new Error(j.erro || `Não consegui preparar o envio de ${f.name}.`)
+        const up = await fetch(j.upload_url, { method: 'PUT', headers: { 'content-type': mime }, body: f })
+        if (!up.ok) throw new Error(`Falhou o envio de ${f.name}.`)
+        await fetch('/api/estudio/ativo', { method: 'PATCH', headers: cab, body: JSON.stringify({ id: j.id, estado: 'pronto' }) })
+        setClips((c) => [...c, { id: j.id, nome: f.name, url: null }])
+      }
+    } catch (e) {
+      setErro(e instanceof Error ? e.message : 'Falhou o envio.')
+    } finally {
+      setASubirClip(false)
+    }
+  }
+
+  async function verAtivosVideo() {
+    const r = await fetch('/api/estudio/ativo', { cache: 'no-store', headers: await authHeaders() })
+    const j = await r.json().catch(() => ({}))
+    setAtivosVideo(
+      (j.ativos || [])
+        .filter((a: { tipo: string }) => a.tipo === 'video')
+        .map((a: { id: string; nome: string; url: string | null }) => ({ id: a.id, nome: a.nome, url: a.url })),
+    )
+  }
+
   async function pedirVideo() {
     if (!guiao) return
     setAEnfileirar(true)
@@ -286,7 +325,7 @@ export default function PainelConteudoMagnetico({ onGravar }: { onGravar?: (peca
       const r = await fetch('/api/conteudo-magnetico/render', {
         method: 'POST',
         headers: { ...(await authHeaders()), 'content-type': 'application/json' },
-        body: JSON.stringify({ guiao, peca_id: pecaId, fundo_url: fundo || null, propria }),
+        body: JSON.stringify({ guiao, peca_id: pecaId, fundo_url: fundo || null, propria, clips: clips.map((c) => c.id) }),
       })
       const j = await r.json()
       if (!r.ok || !j.ok) {
@@ -426,6 +465,47 @@ export default function PainelConteudoMagnetico({ onGravar }: { onGravar?: (peca
                   <input type="file" accept="image/png,image/jpeg,image/webp" className="hidden" onChange={(e) => e.target.files?.[0] && subirFoto(e.target.files[0])} />
                 </label>
               </div>
+            </div>
+
+            <div>
+              <span className={rotulo}>Os teus vídeos (opcional)</span>
+              <div className="flex gap-2">
+                <label className={`${botaoLinha} flex-1 cursor-pointer`}>
+                  {aSubirClip ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
+                  {aSubirClip ? 'A enviar…' : 'Carregar vídeos'}
+                  <input type="file" multiple accept="video/mp4,video/quicktime,video/webm,.mov" className="hidden" disabled={aSubirClip} onChange={(e) => e.target.files?.length && subirClips(e.target.files)} />
+                </label>
+                <button type="button" className={`${botaoLinha} shrink-0`} onClick={verAtivosVideo}>
+                  Dos Ativos
+                </button>
+              </div>
+              {ativosVideo && (
+                <div className="mt-2 max-h-40 space-y-1 overflow-y-auto rounded-lg border border-white/10 p-2 text-sm">
+                  {ativosVideo.length === 0 && <p className="text-white/45">Ainda não tens vídeos nos Ativos.</p>}
+                  {ativosVideo.map((a) => {
+                    const tem = clips.some((c) => c.id === a.id)
+                    return (
+                      <label key={a.id} className="flex cursor-pointer items-center gap-2">
+                        <input type="checkbox" checked={tem} onChange={() => setClips((c) => (tem ? c.filter((x) => x.id !== a.id) : [...c, a]))} className="accent-[#D2A63C]" />
+                        <span className="truncate">{a.nome}</span>
+                      </label>
+                    )
+                  })}
+                </div>
+              )}
+              {clips.length > 0 && (
+                <ul className="mt-2 space-y-1 text-sm">
+                  {clips.map((c, i) => (
+                    <li key={c.id} className="flex items-center justify-between gap-2 rounded-lg bg-white/[0.04] px-2 py-1">
+                      <span className="truncate"><span className="font-mono text-[#D2A63C]">V{i + 1}</span> {c.nome}</span>
+                      <button type="button" onClick={() => setClips((x) => x.filter((y) => y.id !== c.id))} className="text-xs text-white/45 hover:text-red-300">tirar</button>
+                    </li>
+                  ))}
+                </ul>
+              )}
+              <p className="mt-1 text-xs text-white/40">
+                No reel, os teus clips entram nos segmentos de apresentador e de imagens de apoio, em vertical e sem o som do clip. Escolhes o clip de cada segmento em baixo.
+              </p>
             </div>
 
             <button type="button" onClick={gerar} disabled={aGerar} className={`${botaoOuro} w-full`}>
@@ -577,6 +657,20 @@ export default function PainelConteudoMagnetico({ onGravar }: { onGravar?: (peca
                                 <option key={id} value={id}>{p.nome}</option>
                               ))}
                             </select>
+                            {clips.length > 0 && (
+                              <select
+                                className={`${campo} text-sm`}
+                                value={s.clip == null ? '' : String(s.clip)}
+                                onChange={(e) => mudarSegmento(i, { clip: e.target.value === '' ? null : Number(e.target.value) })}
+                                aria-label="Clip teu neste segmento"
+                              >
+                                <option value="">Clip: automático</option>
+                                <option value="-1">Sem clip meu</option>
+                                {clips.map((c, k) => (
+                                  <option key={c.id} value={k}>V{k + 1} · {c.nome.slice(0, 24)}</option>
+                                ))}
+                              </select>
+                            )}
                             <select
                               className={`${campo} text-sm`}
                               value={s.efeito ?? 'normal'}

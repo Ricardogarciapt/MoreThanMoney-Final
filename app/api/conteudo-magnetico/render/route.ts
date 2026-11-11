@@ -51,6 +51,33 @@ export async function POST(request: NextRequest) {
     }
   }
 
+  // Clips do próprio (Ativos do estúdio, bucket privado): cada segmento leva um URL assinado
+  // que dura o suficiente para a fila. Automático = apresentador e imagens de apoio, por ordem,
+  // a começar noutro ponto do clip de cada vez que o mesmo clip se repete.
+  const idsClips = (Array.isArray(b.clips) ? b.clips : []).filter((v: unknown) => typeof v === 'string' && /^[0-9a-f-]{36}$/i.test(v)).slice(0, 12) as string[]
+  if (idsClips.length) {
+    const { data: ativos } = await db.from('estudio_ativos').select('id, caminho, tipo').in('id', idsClips).eq('tipo', 'video')
+    const porId = new Map((ativos ?? []).map((a) => [a.id, a.caminho as string]))
+    const caminhos = idsClips.map((id) => porId.get(id)).filter(Boolean) as string[]
+    const { data: assinados } = caminhos.length ? await db.storage.from('estudio').createSignedUrls(caminhos, 7 * 24 * 3600) : { data: [] }
+    const urls = (assinados ?? []).map((a) => a.signedUrl).filter(Boolean) as string[]
+    if (urls.length) {
+      const brutos = Array.isArray(g.reel?.segmentos) ? g.reel.segmentos : []
+      const usos = new Array(urls.length).fill(0)
+      let proximo = 0
+      guiao.reel.segmentos.forEach((s, i) => {
+        if (s.media_url) return
+        const pedido = brutos[i]?.clip
+        let k: number | null = null
+        if (Number.isInteger(pedido) && pedido >= 0 && pedido < urls.length) k = pedido
+        else if (pedido == null && (s.visual === 'apresentador' || s.visual === 'b_roll')) k = proximo++ % urls.length
+        if (k == null) return
+        Object.assign(s, { media_url: urls[k], media_inicio: usos[k] * 4.5 })
+        usos[k]++
+      })
+    }
+  }
+
   const marca = resolverMarca(guiao.marca, b.propria)
   const { data, error } = await db
     .from('conteudo_magnetico_renders')

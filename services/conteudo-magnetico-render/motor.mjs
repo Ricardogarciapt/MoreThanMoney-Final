@@ -187,10 +187,19 @@ async function clipDeImagem(img, dur, zoom, destino) {
   ])
 }
 
-async function clipDeVideo(video, dur, destino) {
+async function clipDeVideo(video, dur, destino, { inicio = 0, proprio = false } = {}) {
+  // Clip do próprio: começa noutro ponto de cada vez que se repete e o recorte vertical sobe um
+  // pouco (a cara fica no terço de cima), sem escurecer.
+  let ss = 0
+  if (inicio > 0) {
+    const total = await duracao(video).catch(() => 0)
+    ss = total > dur + 0.5 ? inicio % Math.max(0.1, total - dur) : 0
+  }
+  const recorte = proprio ? `crop=${W}:${H}:(iw-${W})/2:(ih-${H})*0.35` : `crop=${W}:${H}`
+  const cor = proprio ? 'eq=saturation=1.05' : 'eq=brightness=-0.08:saturation=1.1'
   await ff([
-    '-stream_loop', '-1', '-i', video, '-t', dur.toFixed(3),
-    '-vf', `scale=${W}:${H}:force_original_aspect_ratio=increase,crop=${W}:${H},fps=${FPS},eq=brightness=-0.08:saturation=1.1,format=yuv420p`,
+    '-stream_loop', '-1', ...(ss > 0 ? ['-ss', ss.toFixed(3)] : []), '-i', video, '-t', dur.toFixed(3),
+    '-vf', `scale=${W}:${H}:force_original_aspect_ratio=increase,${recorte},fps=${FPS},${cor},format=yuv420p`,
     '-an', '-c:v', 'libx264', '-preset', 'veryfast', '-crf', '20', '-threads', THREADS,
     destino,
   ])
@@ -306,8 +315,8 @@ export async function render(trabalho, saida) {
         const ehVideo = /\.(mp4|mov|webm|m4v)(\?|$)/i.test(s.media_url)
         const bruto = path.join(pasta, `media-${i}.${ehVideo ? 'mp4' : 'img'}`)
         try {
-          await baixar(s.media_url, bruto, ehVideo ? 80_000_000 : 15_000_000)
-          if (ehVideo) await clipDeVideo(bruto, dur, clip)
+          await baixar(s.media_url, bruto, ehVideo ? 250_000_000 : 15_000_000)
+          if (ehVideo) await clipDeVideo(bruto, dur, clip, { inicio: Number(s.media_inicio) || 0, proprio: /\/estudio\//.test(s.media_url) })
           else await clipDeImagem(bruto, dur, s.zoom, clip)
           feito = true
         } catch (e) {
