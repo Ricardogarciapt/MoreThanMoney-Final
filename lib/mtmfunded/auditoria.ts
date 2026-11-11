@@ -214,7 +214,8 @@ export interface MetricasAuditoria {
   desvioMedianoEntrada: number | null
   ajustes: { quantidade: number; total: number }
   ruina: Array<{ riscoPct: number; limitePct: number; prob: number | null }>
-  curva: Array<{ t: number; r: number; indice: number }>
+  /** Por trade fechada: R acumulado, índice ponderado, saldo, pips acumulados e drawdown actual (% do pico). */
+  curva: Array<{ t: number; r: number; indice: number; saldo: number; pips: number; dd: number }>
   porMes: Mes[]
   porEstrategia: Grupo[]
   porSimbolo: Grupo[]
@@ -251,7 +252,7 @@ export function metricasAuditoria(trades: TradeAuditoria[], o: { saldoInicial: n
 
   // Curva: R acumulado e índice ponderado no tempo (cada trade sobre o saldo que havia na altura).
   let saldo = o.saldoInicial, indice = 1, picoIdx = 1, ddPct = 0, cumR = 0, picoR = 0, ddR = 0, ia = 0
-  let seqG = 0, seqP = 0, maxG = 0, maxP = 0
+  let seqG = 0, seqP = 0, maxG = 0, maxP = 0, cumPips = 0
   const curva: MetricasAuditoria['curva'] = []
   const meses = new Map<string, { trades: number; r: number; idx0: number; idx1: number }>()
   for (const t of trades) {
@@ -266,7 +267,11 @@ export function metricasAuditoria(trades: TradeAuditoria[], o: { saldoInicial: n
     maxG = Math.max(maxG, seqG); maxP = Math.max(maxP, seqP)
     m.trades++; m.r += t.r ?? 0; m.idx1 = indice
     meses.set(mes, m)
-    curva.push({ t: Date.parse(t.fechadaEm), r: r2(cumR), indice: Math.round(indice * 10000) / 10000 })
+    if (t.unidade === 'pips') cumPips += t.movimento ?? 0
+    curva.push({
+      t: Date.parse(t.fechadaEm), r: r2(cumR), indice: Math.round(indice * 10000) / 10000,
+      saldo: r2(saldo), pips: r1(cumPips), dd: r2(-((picoIdx - indice) / picoIdx) * 100),
+    })
   }
 
   const pips = trades.filter((t) => t.unidade === 'pips').reduce((a, t) => a + (t.movimento ?? 0), 0)

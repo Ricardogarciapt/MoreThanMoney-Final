@@ -17,6 +17,7 @@ import MtmcopyGlobalPerformance from "@/components/admin/mtmcopy-global-performa
 import { TrailingEstrategias } from "@/components/admin/trailing-estrategias"
 import { EstrategiasDesempenho } from "@/components/admin/estrategias-desempenho"
 import { EquidadeCasaCard } from "@/components/admin/equidade-casa-card"
+import { AuditoriaRotas } from "@/components/admin/auditoria-rotas"
 import {
   MtmcopyAdminSection,
   MtmcopyAdminTabNav,
@@ -188,8 +189,8 @@ function PaginaAdminCopia() {
                     <Recolhivel titulo="Controlo das estratégias (só leitura)" descricao="On/off por estratégia, limites dos perps e trailing — o estado; muda-se no Centro.">
                       <DecideNoCentro titulo="Controlo e trailing"><div className="space-y-6"><MtmcopyStrategyControl /><TrailingEstrategias /></div></DecideNoCentro>
                     </Recolhivel>
-                    <Recolhivel titulo="Desempenho e equidade" descricao="Resultados por estratégia e equidade da casa.">
-                      <div className="space-y-6"><EstrategiasDesempenho /><EquidadeCasaCard /></div>
+                    <Recolhivel titulo="Desempenho e equidade" descricao="Links de auditoria por rota, resultados por estratégia e equidade da casa.">
+                      <div className="space-y-6"><AuditoriaRotas /><EstrategiasDesempenho /><EquidadeCasaCard /></div>
                     </Recolhivel>
                     <Recolhivel titulo="Saúde das ligações (regras de risco)" descricao="Multiplicador sem risco, T2T com grupos, sem baseline, MT5 em erro.">
                       <MtmcopySubscriberHealth />
