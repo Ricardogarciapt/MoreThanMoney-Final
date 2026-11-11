@@ -34,7 +34,7 @@ export interface AuditoriaPublica {
     servidor: string | null
     demo: boolean
     versao: 'mt4' | 'mt5' | null
-    /** Conta real que não se conseguiu ler agora (corretora/MetaApi em baixo, conta desligada). */
+    /** Conta real que não se conseguiu ler agora: 'sem_historico' | 'erro_leitura' (a página traduz). */
     indisponivel: string | null
   }
   abertas: number
@@ -138,7 +138,7 @@ async function lerAuditoriaReal(token: string, ref: string, donoId: string): Pro
   })
   try {
     const ad = await adaptadorDoDono(donoId, plataforma, ref)
-    if (!ad.historicoAuditoria) return vazia('Esta corretora ainda não tem histórico para auditoria.')
+    if (!ad.historicoAuditoria) return vazia('sem_historico')
     const [conta, hist, posicoes, listadas] = await Promise.all([
       ad.conta(), ad.historicoAuditoria(DIAS_REAL), ad.posicoes().catch(() => []), listarContasReais(donoId).catch(() => []),
     ])
@@ -164,6 +164,6 @@ async function lerAuditoriaReal(token: string, ref: string, donoId: string): Pro
     }
   } catch (e) {
     console.warn('[auditoria-real]', e instanceof Error ? e.message : e)
-    return vazia('Não foi possível ler a conta na corretora neste momento. Tenta daqui a uns minutos.')
+    return vazia('erro_leitura')
   }
 }

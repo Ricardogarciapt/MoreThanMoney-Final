@@ -26,7 +26,7 @@ export default function PartilharAuditoria({ accountId, contaRef, podeGerir }: {
   const [aCarregar, setACarregar] = useState(true)
   const [ocupado, setOcupado] = useState(false)
   const [erro, setErro] = useState<string | null>(null)
-  const [copiado, setCopiado] = useState(false)
+  const [copiado, setCopiado] = useState<"pt" | "en" | null>(null)
   const [mostrarLogin, setMostrarLogin] = useState(false)
 
   useEffect(() => {
@@ -53,8 +53,9 @@ export default function PartilharAuditoria({ accountId, contaRef, podeGerir }: {
     if (!window.confirm("Desligar o link? Quem o tiver deixa de conseguir abrir a página.")) return
     void accao(() => pedir(`/api/mtmfunded/auditoria?${alvo}`, { method: "DELETE" }, sessao))
   }
-  async function copiar() {
-    try { await navigator.clipboard.writeText(completo); setCopiado(true); setTimeout(() => setCopiado(false), 2000) } catch { /* sem permissão */ }
+  // A página existe em português (endereço base) e em inglês (/en): traduções revistas, não automáticas.
+  async function copiar(l: "pt" | "en" = "pt") {
+    try { await navigator.clipboard.writeText(l === "en" ? `${completo}/en` : completo); setCopiado(l); setTimeout(() => setCopiado(null), 2000) } catch { /* sem permissão */ }
   }
 
   return (
@@ -76,13 +77,16 @@ export default function PartilharAuditoria({ accountId, contaRef, podeGerir }: {
           <div className="flex items-center gap-1.5">
             <input readOnly value={completo} aria-label="Link público da auditoria" onFocus={(e) => e.currentTarget.select()}
               className="min-w-0 flex-1 rounded-md border border-white/10 bg-black/40 px-2 py-2 font-mono text-[11.5px] text-zinc-200" />
-            <button type="button" onClick={copiar} className="flex min-h-9 items-center gap-1 rounded-md border border-[#D2A63C]/50 bg-[#D2A63C]/15 px-2.5 text-[11.5px] text-[#E9C46A]">
-              {copiado ? <Check className="h-3.5 w-3.5" aria-hidden="true" /> : <Copy className="h-3.5 w-3.5" aria-hidden="true" />} {copiado ? "Copiado" : "Copiar"}
+            <button type="button" onClick={() => void copiar("pt")} className="flex min-h-9 items-center gap-1 rounded-md border border-[#D2A63C]/50 bg-[#D2A63C]/15 px-2.5 text-[11.5px] text-[#E9C46A]">
+              {copiado === "pt" ? <Check className="h-3.5 w-3.5" aria-hidden="true" /> : <Copy className="h-3.5 w-3.5" aria-hidden="true" />} {copiado === "pt" ? "Copiado" : "Copiar"}
             </button>
             <a href={link.url} target="_blank" rel="noopener" aria-label="Abrir a página de auditoria" className="flex min-h-9 items-center rounded-md border border-white/10 px-2 text-zinc-300">
               <ExternalLink className="h-3.5 w-3.5" aria-hidden="true" />
             </a>
           </div>
+          <button type="button" onClick={() => void copiar("en")} className="flex min-h-8 items-center gap-1 rounded-md border border-white/10 px-2 text-[11px] text-zinc-300">
+            {copiado === "en" ? <Check className="h-3.5 w-3.5" aria-hidden="true" /> : <Copy className="h-3.5 w-3.5" aria-hidden="true" />} {copiado === "en" ? "Copiado" : "Copiar versão em inglês"}
+          </button>
           <p className="text-[10.5px] text-zinc-500">{link.visitas} visita(s) · criado a {new Date(link.criadoEm).toLocaleDateString("pt-PT")}</p>
           {podeGerir && (
             <div className="flex flex-wrap items-center gap-2">
