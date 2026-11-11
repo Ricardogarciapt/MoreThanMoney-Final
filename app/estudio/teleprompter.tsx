@@ -56,8 +56,8 @@ const MANUAIS: { k: Manual; nome: string; modo?: ModoAuto; fmt?: (v: number) => 
 ]
 
 type Modo = 'continuo' | 'blocos'
-type Prefs = { velocidade: number; tamanho: number; espelho: boolean; contagem: number; modo: Modo; autoRetomar: boolean; grelha: boolean; camara: 'user' | 'environment'; resolucao: Resolucao; fps: 30 | 60; micId: string; camId: string; cortar916: boolean }
-const PREFS_OMISSAO: Prefs = { velocidade: 40, tamanho: 30, espelho: true, contagem: 3, modo: 'continuo', autoRetomar: false, grelha: false, camara: 'user', resolucao: '1080', fps: 30, micId: '', camId: '', cortar916: true }
+type Prefs = { velocidade: number; tamanho: number; espelho: boolean; contagem: number; modo: Modo; autoRetomar: boolean; grelha: boolean; camara: 'user' | 'environment'; resolucao: Resolucao; fps: 30 | 60; micId: string; camId: string; cortar916: boolean; enquadrar: 'auto' | 'preencher' | 'encaixar' }
+const PREFS_OMISSAO: Prefs = { velocidade: 40, tamanho: 30, espelho: true, contagem: 3, modo: 'continuo', autoRetomar: false, grelha: false, camara: 'user', resolucao: '1080', fps: 30, micId: '', camId: '', cortar916: true, enquadrar: 'auto' }
 const CHAVE = 'estudio.teleprompter.v2'
 
 function lerPrefs(): Prefs {
@@ -176,7 +176,10 @@ export function Teleprompter({ guiao, onSair }: { guiao: Guiao; onSair: () => vo
       .then(async (s) => {
         if (!vivo) return s.getTracks().forEach((t) => t.stop())
         streamRef.current = s
-        if (videoRef.current) videoRef.current.srcObject = s
+        if (videoRef.current) {
+          videoRef.current.srcObject = s
+          videoRef.current.play().catch(() => {})
+        }
         setErro(null)
         setVersao((n) => n + 1)
         const v = s.getVideoTracks()[0]
@@ -442,7 +445,10 @@ export function Teleprompter({ guiao, onSair }: { guiao: Guiao; onSair: () => vo
 
   // o <video> da câmara volta a montar depois de rever um take: religar o stream
   useEffect(() => {
-    if (videoRef.current && streamRef.current && videoRef.current.srcObject !== streamRef.current) videoRef.current.srcObject = streamRef.current
+    if (videoRef.current && streamRef.current && videoRef.current.srcObject !== streamRef.current) {
+      videoRef.current.srcObject = streamRef.current
+      videoRef.current.play().catch(() => {})
+    }
   }, [estado])
 
   const parar = useCallback(() => {
@@ -705,18 +711,32 @@ export function Teleprompter({ guiao, onSair }: { guiao: Guiao; onSair: () => vo
     setMontado(true)
     const antes = document.body.style.overflow
     document.body.style.overflow = 'hidden'
+    // esconde o menu do site enquanto o gravador está aberto (o menu tem z-index máximo)
+    document.documentElement.dataset.gravador = '1'
     return () => {
       document.body.style.overflow = antes
+      delete document.documentElement.dataset.gravador
     }
   }, [])
 
+  // Num ecrã largo (Mac, iPad deitado) o «preencher» cortava a cara: por omissão encaixa a imagem
+  // inteira quando o ecrã está deitado e preenche quando está ao alto.
+  const [ecraDeitado, setEcraDeitado] = useState(false)
+  useEffect(() => {
+    const ver = () => setEcraDeitado(window.innerWidth > window.innerHeight)
+    ver()
+    window.addEventListener('resize', ver)
+    return () => window.removeEventListener('resize', ver)
+  }, [])
+  const preencher = prefs.enquadrar === 'preencher' || (prefs.enquadrar !== 'encaixar' && !ecraDeitado)
+
   const ecra = (
-    <main className="fixed inset-0 z-[2147483000] overflow-hidden bg-black text-white" role="dialog" aria-modal="true" aria-label="Gravador">
+    <main style={{ zIndex: 2147483647 }} className="fixed inset-0 overflow-hidden bg-black text-white" role="dialog" aria-modal="true" aria-label="Gravador">
       {estado === 'rever' || estado === 'a_subir' || estado === 'guardado' ? (
         <video src={take?.url} controls playsInline className="absolute inset-0 h-full w-full object-contain" />
       ) : (
         <div className="absolute inset-0" onPointerDown={tocarParaFocar}>
-          <video ref={videoRef} autoPlay muted playsInline className="absolute inset-0 h-full w-full object-cover" style={{ transform: espelhar ? 'scaleX(-1)' : undefined }} />
+          <video ref={videoRef} autoPlay muted playsInline className={`absolute inset-0 h-full w-full ${preencher ? 'object-cover' : 'object-contain'}`} style={{ transform: espelhar ? 'scaleX(-1)' : undefined }} />
           {foco && (
             <span className="pointer-events-none absolute z-[6] h-16 w-16 -translate-x-1/2 -translate-y-1/2 rounded-md border-2" style={{ left: `${foco.x * 100}%`, top: `${foco.y * 100}%`, borderColor: cor }} aria-hidden />
           )}
@@ -808,6 +828,17 @@ export function Teleprompter({ guiao, onSair }: { guiao: Guiao; onSair: () => vo
               </ul>
               <p className="mt-2">Se ligaste agora, a lista actualiza sozinha. Se não aparecer, recarrega a página.</p>
             </details>
+            <div>
+              <div className="mb-1 text-xs text-zinc-400">Imagem no ecrã</div>
+              <div className="grid grid-cols-3 gap-2">
+                {([['auto', 'Automático'], ['encaixar', 'Inteira'], ['preencher', 'Preencher']] as const).map(([v, nome]) => (
+                  <button key={v} type="button" onClick={() => setPrefs({ enquadrar: v })} aria-pressed={prefs.enquadrar === v} className="min-h-11 rounded-xl border text-xs" style={prefs.enquadrar === v ? { borderColor: cor, color: cor } : { borderColor: 'rgba(255,255,255,.15)' }}>
+                    {nome}
+                  </button>
+                ))}
+              </div>
+              <p className="mt-1 text-[11px] text-zinc-500">Só muda o que vês. A gravação fica igual.</p>
+            </div>
             <label className="flex min-h-11 items-center justify-between gap-3">
               <span>Recortar para vertical 9:16 quando a câmara é horizontal{deitada ? ' (esta é)' : ''}</span>
               <input type="checkbox" checked={prefs.cortar916} onChange={(e) => setPrefs({ cortar916: e.target.checked })} className="h-5 w-5" style={{ accentColor: cor }} />
