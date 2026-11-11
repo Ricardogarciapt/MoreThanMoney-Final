@@ -20,7 +20,7 @@ type Peca = {
   guiao: {
     nicho?: string
     palavra_chave?: string
-    reel?: { duracao_estimada_segundos?: number; segmentos?: { fala: string }[] } | null
+    reel?: { duracao_estimada_segundos?: number; segmentos?: { fala: string; plano?: string | null }[] } | null
     laminas?: { titulo?: string; corpo?: string }[]
   }
 }
@@ -39,7 +39,7 @@ type Take = {
   cortes?: { ini: number; fim: number }[] | null
   estilo?: Record<string, unknown> | null
 }
-type Guiao = { pecaId: string | null; marca: MarcaCasa; titulo: string; texto: string; palavraChave: string }
+type Guiao = { pecaId: string | null; marca: MarcaCasa; titulo: string; texto: string; palavraChave: string; planos?: (string | null)[] }
 
 const COR: Record<MarcaCasa, string> = { morethanmoney: '#D2A63C', 'ricardo-garcia': '#0097b2' }
 const NOME: Record<MarcaCasa, string> = { morethanmoney: 'More Than Money', 'ricardo-garcia': 'Ricardo Garcia' }
@@ -89,7 +89,8 @@ export default function Estudio({ pecaInicial }: { pecaInicial?: string | null }
 
   const abrirPeca = (p: Peca) => {
     const marca = p.marca as MarcaCasa
-    setGuiao({ pecaId: p.id, marca, titulo: p.guiao.nicho || 'Guião', texto: textoDaPeca(p), palavraChave: p.guiao.palavra_chave || '' })
+    const segs = (p.guiao.reel?.segmentos ?? []).filter((s) => s.fala)
+    setGuiao({ pecaId: p.id, marca, titulo: p.guiao.nicho || 'Guião', texto: textoDaPeca(p), palavraChave: p.guiao.palavra_chave || '', planos: segs.map((s) => s.plano ?? null) })
     setEcra('gravar')
   }
 

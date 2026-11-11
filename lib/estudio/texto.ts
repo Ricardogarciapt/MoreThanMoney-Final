@@ -8,14 +8,19 @@
 export type Palavra = { w: string; ini: number; fim: number }
 export type Corte = { ini: number; fim: number }
 export type EstiloTake = {
-  legenda: 'karaoke' | 'caixa' | 'classica' | 'sem'
+  /** 'destaques' = só as palavras fortes, soltas junto à cara. */
+  legenda: 'karaoke' | 'caixa' | 'classica' | 'destaques' | 'sem'
   musica_db: number
   duck: boolean
   /** Encolher as pausas entre frases (Smart Cut). */
   pausas: boolean
+  /** Preto e branco automático nos momentos de erro/passado (o guião pode forçar por segmento). */
+  pb_auto: boolean
+  /** Pop-up «@conta + Seguir» a meio (vídeos com mais de 12 s). */
+  pop_up: boolean
 }
 
-export const ESTILO_OMISSAO: EstiloTake = { legenda: 'karaoke', musica_db: -18, duck: true, pausas: true }
+export const ESTILO_OMISSAO: EstiloTake = { legenda: 'karaoke', musica_db: -18, duck: true, pausas: true, pb_auto: true, pop_up: true }
 
 /** Bengalas que se cortam sempre (sons sem significado). */
 export const BENGALAS_SONS = ['ãh', 'ah', 'ahn', 'eh', 'éh', 'ehm', 'hum', 'hmm', 'hm', 'uhm', 'um', 'uh', 'mm', 'ã']
@@ -110,13 +115,15 @@ export const duracaoCortada = (cortes: Corte[]) => cortes.reduce((s, c) => s + (
 
 export function normalizarEstilo(v: unknown): EstiloTake {
   const o = (v ?? {}) as Record<string, unknown>
-  const legenda = ['karaoke', 'caixa', 'classica', 'sem'].includes(o.legenda as string) ? (o.legenda as EstiloTake['legenda']) : ESTILO_OMISSAO.legenda
+  const legenda = ['karaoke', 'caixa', 'classica', 'destaques', 'sem'].includes(o.legenda as string) ? (o.legenda as EstiloTake['legenda']) : ESTILO_OMISSAO.legenda
   const db = Number(o.musica_db)
   return {
     legenda,
     musica_db: Number.isFinite(db) ? Math.max(-40, Math.min(-6, Math.round(db))) : ESTILO_OMISSAO.musica_db,
     duck: typeof o.duck === 'boolean' ? o.duck : ESTILO_OMISSAO.duck,
     pausas: typeof o.pausas === 'boolean' ? o.pausas : ESTILO_OMISSAO.pausas,
+    pb_auto: typeof o.pb_auto === 'boolean' ? o.pb_auto : ESTILO_OMISSAO.pb_auto,
+    pop_up: typeof o.pop_up === 'boolean' ? o.pop_up : ESTILO_OMISSAO.pop_up,
   }
 }
 

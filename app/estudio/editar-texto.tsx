@@ -215,9 +215,10 @@ export function EditorTexto({
         <section className="mt-5 space-y-3" aria-label="Estilo">
           <fieldset>
             <legend className="text-sm text-zinc-300">Legendas</legend>
-            <div className="mt-2 grid grid-cols-4 gap-2">
+            <div className="mt-2 grid grid-cols-3 gap-2 sm:grid-cols-5">
               {([
                 ['karaoke', 'Karaoke'],
+                ['destaques', 'Destaques'],
                 ['caixa', 'Caixa'],
                 ['classica', 'Clássica'],
                 ['sem', 'Sem'],
@@ -245,6 +246,17 @@ export function EditorTexto({
               Auto-duck: a música baixa quando falas
             </label>
             <p className="text-xs text-zinc-500">A música vem do separador Ativos (um áudio ligado a este guião).</p>
+          </div>
+          <div>
+            <label className="flex min-h-11 items-center gap-2 text-sm text-zinc-300">
+              <input type="checkbox" checked={estilo.pb_auto} onChange={(e) => setEstilo({ ...estilo, pb_auto: e.target.checked })} className="h-4 w-4" />
+              Preto e branco automático no erro ou no passado
+            </label>
+            <label className="flex min-h-11 items-center gap-2 text-sm text-zinc-300">
+              <input type="checkbox" checked={estilo.pop_up} onChange={(e) => setEstilo({ ...estilo, pop_up: e.target.checked })} className="h-4 w-4" />
+              Pop-up «@conta · Seguir» a meio do vídeo
+            </label>
+            <p className="text-xs text-zinc-500">«Destaques» mostra só as palavras fortes, soltas. Os títulos e cartões vêm do «texto de ecrã» de cada segmento do guião.</p>
           </div>
         </section>
 

@@ -36,7 +36,9 @@ function instrucoesFormato(f: Formato, quantas: number): string {
   return [
     'REEL 9:16 de 20 a 45 segundos, ritmo alto (muda de plano a cada 3-5 s).',
     'Devolve também "reel": {"duracao_estimada_segundos":N,"musica_termo":"termo em inglês","segmentos":[...]}',
-    'Cada segmento: {"fala":"o que se diz, máx 2 frases curtas","texto_ecra":"3-6 palavras em CAIXA ALTA","visual":"apresentador|b_roll|cartao","zoom":"normal|zoom_in|close_up","b_roll_busca":"termo em inglês para Pexels ou null","sfx":"boom|whoosh|click|nenhum","legenda_estilo":"impacto|palavra_a_palavra|simples","prompt_visual":"prompt em inglês para gerar este plano em vídeo vertical 9:16 (cena, movimento de câmara, luz), sem texto"}',
+    'Cada segmento: {"fala":"o que se diz, máx 2 frases curtas","texto_ecra":"3-6 palavras em CAIXA ALTA","visual":"apresentador|b_roll|cartao","zoom":"normal|zoom_in|close_up","b_roll_busca":"termo em inglês para Pexels ou null","sfx":"boom|whoosh|click|nenhum","legenda_estilo":"impacto|palavra_a_palavra|simples","prompt_visual":"prompt em inglês para gerar este plano em vídeo vertical 9:16 (cena, movimento de câmara, luz), sem texto","plano":"aberto|de_cima|de_baixo|medio|fechado|detalhe|mao","efeito":"normal|pb|cor"}',
+    'Plano com intenção: aberto para situar no início; de_cima para a dor de quem vê; de_baixo (ligeiro) para autoridade e prova; medio para explicar; fechado para a frase forte; detalhe para levar o olhar (mãos, caderno, ecrã com o gráfico); mao para bastidores. Pelo menos 3 planos diferentes por reel.',
+    'Efeito: "pb" nos segmentos de erro, dor ou passado; "cor" quando entra a solução; senão "normal". Num segmento de cartão, texto_ecra de 1 ou 2 palavras sai em ecrã inteiro.',
     'Segmento 1 = gancho (sfx boom, legenda impacto). Último = CTA (sfx click). 5 a 9 segmentos.',
     'Em "laminas" devolve 1 lâmina: a CAPA do reel.',
   ].join('\n')

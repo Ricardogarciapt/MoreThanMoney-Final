@@ -23,7 +23,7 @@ assert.equal(zp.length, 3)
 assert.ok(Math.abs(zp[1].ini - 1.62) < 1e-9 && Math.abs(zp[1].fim - 2.48) < 1e-9)
 
 assert.deepEqual(normalizarCortes([{ ini: 1, fim: 2 }, { ini: 1.5, fim: 3 }, { ini: 5, fim: 5.01 }]), [{ ini: 1, fim: 3 }])
-assert.deepEqual(normalizarEstilo({ legenda: 'xx', musica_db: -100 }), { legenda: 'karaoke', musica_db: -40, duck: true, pausas: true })
+assert.deepEqual(normalizarEstilo({ legenda: 'xx', musica_db: -100 }), { legenda: 'karaoke', musica_db: -40, duck: true, pausas: true, pb_auto: true, pop_up: true })
 console.log('ok — texto do estúdio')
 
 import { notaGancho, notaReel } from './nota'
