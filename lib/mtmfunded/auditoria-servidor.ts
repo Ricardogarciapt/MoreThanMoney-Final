@@ -46,8 +46,14 @@ export interface AuditoriaPublica {
 export async function lerAuditoriaPorToken(db: SupabaseClient, token: string): Promise<AuditoriaPublica | null> {
   const t = String(token ?? '').trim()
   if (!/^[A-Za-z0-9]{16,64}$/.test(t)) return null
-  const { data: link } = await db.from('funded_auditoria_links')
+  // Sem a migração 250 aplicada as colunas conta_ref/dono_id não existem: lê-se só o que a 249 tem,
+  // para os links das contas MTM Funded nunca deixarem de abrir por causa disto.
+  let { data: link, error } = await db.from('funded_auditoria_links')
     .select('account_id, mostrar_login, ativo, revogado_em, conta_ref, dono_id').eq('token', t).maybeSingle()
+  if (error) {
+    const r = await db.from('funded_auditoria_links').select('account_id, mostrar_login, ativo, revogado_em').eq('token', t).maybeSingle()
+    link = r.data ? { ...r.data, conta_ref: null, dono_id: null } : null
+  }
   if (!link || !link.ativo || link.revogado_em) return null
   if (!link.account_id && link.conta_ref && link.dono_id) return lerAuditoriaReal(t, String(link.conta_ref), String(link.dono_id))
 
