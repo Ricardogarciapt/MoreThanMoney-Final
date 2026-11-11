@@ -16,12 +16,38 @@ import json
 import sys
 
 
+def pelo_vision(video, recuo, duracao):
+    """Sem OpenCV, no Mac: o detector do Vision da Apple (~/.mtm-videocliper/deteta-cara), se existir."""
+    import os
+    import subprocess
+
+    exe = os.environ.get("VIDEOCLIPER_DETETOR") or os.path.expanduser("~/.mtm-videocliper/deteta-cara")
+    if not os.access(exe, os.X_OK):
+        return {"tipo": "nenhum", "motivo": "sem opencv nem deteta-cara"}
+    try:
+        passo = max(1.0, duracao / 12)
+        out = subprocess.run([exe, video, str(recuo), str(duracao), f"{passo:.2f}"], capture_output=True, text=True, timeout=120).stdout
+        j = json.loads(out.strip().splitlines()[-1])
+    except Exception as e:  # noqa: BLE001
+        return {"tipo": "nenhum", "motivo": f"deteta-cara: {e}"}
+    w, h = int(j.get("largura") or 0), int(j.get("altura") or 0)
+    c = j.get("cara") or None
+    tipo = {"partilha": "chamada", "camara": "cara"}.get(j.get("layout"), "nenhum")
+    if not (w and h and c) or tipo == "nenhum":
+        return {"w": w, "h": h, "cara": None, "tipo": "nenhum"}
+    # Coordenadas normalizadas (0–1) passam a píxeis.
+    if all(float(c.get(k, 0)) <= 1 for k in ("x", "y", "w", "h")):
+        c = {"x": c["x"] * w, "y": c["y"] * h, "w": c["w"] * w, "h": c["h"] * h}
+    cara = {k: int(round(float(c[k]))) for k in ("x", "y", "w", "h")}
+    return {"w": w, "h": h, "cara": cara, "tipo": tipo, "fonte": "vision"}
+
+
 def main():
     video, recuo, duracao = sys.argv[1], float(sys.argv[2]), float(sys.argv[3])
     try:
         import cv2  # type: ignore
     except Exception:
-        print(json.dumps({"tipo": "nenhum", "motivo": "sem opencv"}))
+        print(json.dumps(pelo_vision(video, recuo, duracao)))
         return
 
     cap = cv2.VideoCapture(video)
