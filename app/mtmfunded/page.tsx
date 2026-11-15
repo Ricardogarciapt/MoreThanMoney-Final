@@ -30,7 +30,7 @@ import { comTecto, TECTO_PAGINA_MS } from '@/lib/com-tecto'
  */
 export const dynamic = 'force-dynamic'
 export const metadata = {
-  title: 'Programas',
+  title: { absolute: 'MTM Funded — Programas de avaliação em conta simulada' },
   description: 'Avaliação de traders em contas simuladas, de 500 a 10.000 USD. Regras publicadas, métricas à vista.',
 }
 
