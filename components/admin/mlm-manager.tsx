@@ -13,6 +13,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Badge } from '@/components/ui/badge'
 import MlmBinaryTreeWidget from '@/components/admin/mlm-binary-tree-widget'
+import PeriodosGratisAdmin from '@/components/admin/periodos-gratis-admin'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -593,6 +594,11 @@ export default function MlmManager({
             </span>
           </button>
         </div>
+      </div>
+
+      {/* Indicados em trial de 3 dias ou na campanha 90 dias, com o patrocinador de cada um. */}
+      <div className="mx-6 mt-4">
+        <PeriodosGratisAdmin titulo="Indicados em período grátis (trial e campanha 90 dias)" mlm />
       </div>
 
       {error && (

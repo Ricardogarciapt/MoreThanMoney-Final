@@ -9,7 +9,7 @@
  *     por T2T e a cópia automática fica desligada);
  *   · mestre SIM 10K «MTM Auto Premium II» pelo `encaminharSinalParaMestre` (fonte `premiumscanner`),
  *     por ordem limite no meio da zona válida 1 h (4 velas de 15m, como a EA).
- * Sem grupo Telegram próprio: não há nenhum criado para este scanner.
+ * Telegram (03/11): o chat é espelhado para o grupo «MTM Auto Premium II» (lib/telegram-espelho-canal).
  *
  * Os níveis vêm todos do Pine (entry = meio da zona, sl, tp1..tp4). Alerta incompleto não publica.
  */
@@ -134,6 +134,8 @@ export async function processarPremiumScanner(payload: Json): Promise<{ ok: bool
   }
   // Push da app: quem tem conta T2T recebe o «⚡ Tap to Trade», os outros a ideia no chat.
   await sendTelegramChannelPush({ slug: CANAL_PREMIUM_SCANNER, content: texto, chatMessageId: chatId }).catch(() => undefined)
+  // Grupo Telegram «MTM Auto Premium II»: a entrada sai já; os seguimentos seguem no cron do minuto.
+  await import('@/lib/telegram-espelho-canal').then((m) => m.espelharCanaisParaTelegram()).catch(() => undefined)
 
   // Mestre: a publicação já saiu; uma falha aqui fica escrita e não parte o webhook.
   let mestre: string | null = null

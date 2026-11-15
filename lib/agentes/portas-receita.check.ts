@@ -54,6 +54,7 @@ const PORTAS = [
   'app/api/apple/iap/webhook/route.ts',
   'app/api/admin/vendas/vendas/route.ts',
   'lib/marketplace/venda-equipa.ts',
+  'lib/vendas/reconciliar-stripe.ts',
 ] as const
 
 for (const porta of PORTAS) {

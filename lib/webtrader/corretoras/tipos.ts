@@ -193,6 +193,8 @@ export interface AdaptadorCorretora {
   historico(dias?: number): Promise<NegocioWT[]>
   /** Depósitos, levantamentos, créditos e comissões (deals que não são trades). Só onde a plataforma os dá. */
   movimentos?(dias?: number): Promise<MovimentoWT[]>
+  /** Histórico completo para o link público de auditoria (lib/mtmfunded/auditoria-real.ts). */
+  historicoAuditoria?(dias: number): Promise<import('@/lib/mtmfunded/auditoria-real').HistoricoReal>
   enviarOrdem(p: EntradaOrdemWT): Promise<ResultadoWT>
   modificar(m: ModificacaoWT): Promise<ResultadoWT>
   /** volume em lotes; sem volume = fecha tudo. */

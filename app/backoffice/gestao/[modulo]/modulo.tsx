@@ -33,6 +33,7 @@ const ECRAS: Record<string, React.ComponentType> = {
   'marketing:rascunhos': dynamic(() => import('@/components/admin/marketing/rascunhos'), { ssr: false, loading: carregar }),
   // O portão do /admin/coupons é «só admin»; aqui quem guarda é a página no servidor (`exige`).
   cupoes: () => <CuponsSemGuarda guarda={false} />,
+  'periodos-gratis': dynamic(() => import('@/components/admin/periodos-gratis-admin'), { ssr: false, loading: carregar }),
   'agentes:painel': dynamic(() => import('@/components/admin/agentes-equipa'), { ssr: false, loading: carregar }),
   'agentes:arvore': dynamic(() => import('@/app/admin/agentes/page'), { ssr: false, loading: carregar }),
   'agentes:orcamento': dynamic(() => import('@/components/admin/agentes-orcamento'), { ssr: false, loading: carregar }),
@@ -40,6 +41,7 @@ const ECRAS: Record<string, React.ComponentType> = {
   'agentes:ordens': dynamic(() => import('@/components/admin/agentes-ordens'), { ssr: false, loading: carregar }),
   dashboard: dynamic(() => import('@/app/dashboard-gestao/page'), { ssr: false, loading: carregar }),
   'acessos:gestao': dynamic(() => import('@/components/admin/gestao-acessos'), { ssr: false, loading: carregar }),
+  'acessos:estudio': dynamic(() => import('@/components/admin/estudio-acessos'), { ssr: false, loading: carregar }),
   'acessos:papeis': dynamic(() => import('@/components/admin/backoffice-equipa'), { ssr: false, loading: carregar }),
 }
 

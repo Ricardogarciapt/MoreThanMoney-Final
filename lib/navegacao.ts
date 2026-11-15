@@ -125,7 +125,6 @@ export const DESTINOS_NAVEGACAO: DestinoNavegacao[] = [
   { id: 'mtmsocial', href: '/mtmsocial', rotuloPt: 'MTM Social', grupo: 'apps', comoUsar: 'o MTM Social' },
   { id: 'mtm-studio', href: 'https://mtmbrandbuilder.lovable.app', rotuloPt: 'MTM Studio', grupo: 'apps', externo: true },
   { id: 'mtm-partnership', href: 'https://mtmugcapp.lovable.app', rotuloPt: 'MTM Partnership Engine', grupo: 'apps', externo: true },
-  { id: 'mtm-aios', href: 'https://mtmaios.lovable.app', rotuloPt: 'MTM AiOS', grupo: 'apps', externo: true },
 ]
 
 export type ItemNavbar = {

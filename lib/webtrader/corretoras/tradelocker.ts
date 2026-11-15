@@ -10,6 +10,7 @@
  * Limitação da API: PATCH de posição só aceita valores > 0, por isso «tirar» um SL não é possível
  * pelo WebTrader (move-se).
  */
+import { historicoDasOrdensTL } from '@/lib/mtmfunded/auditoria-real'
 import { TradeLockerError, type TLInstrumento, type TLOrdem, type TradeLockerSessao } from '@/lib/tradelocker/client'
 import { colocarOrdemTL } from '@/lib/tradelocker/executor'
 import { ajustarQty, regraDeLote, resolverInstrumento } from '@/lib/tradelocker/sizing'
@@ -112,6 +113,12 @@ export function adaptadorTradeLocker(sessao: TradeLockerSessao, opcoes: { podeNe
           estado: o.status === 'filled' ? 'executada' : o.status || '—',
         }
       })
+    }),
+
+    historicoAuditoria: (dias) => comErros(async () => {
+      const desde = Date.now() - Math.min(730, Math.max(1, dias)) * 86_400_000
+      const [ordens, inst] = await Promise.all([sessao.historicoOrdens(desde), sessao.instrumentos()])
+      return historicoDasOrdensTL(ordens, new Map(inst.map((i) => [i.tradableInstrumentId, i.name])))
     }),
 
     enviarOrdem: (bruto) => comErros(async () => {

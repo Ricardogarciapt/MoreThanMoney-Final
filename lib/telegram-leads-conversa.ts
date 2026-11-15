@@ -25,6 +25,8 @@ import { escadaNumaLinha, bonusNumaLinha } from '@/lib/escada-precos'
 import { MIN_DEPOSIT } from '@/lib/broker/deposito-minimo'
 import { REGRAS_CASA, peneira } from '@/lib/marketing/regras'
 import { DISCLAIMER } from '@/lib/telegram-leads-posts'
+import { blocoFramework } from '@/lib/framework-mtm'
+import { CHAVE_CONFIG as CHAVE_COMUNIDADE, lerConfig as lerConfigComunidade } from '@/lib/telegram-comunidade'
 
 type Supa = ReturnType<typeof getSupabaseAdmin>
 
@@ -97,7 +99,7 @@ export function respostaAceitavel(resposta: string, prova: string | null): boole
 function sistema(prova: string | null): string {
   return `És o assistente da equipa MoreThanMoney a responder NO GRUPO PÚBLICO do Telegram «MTM System», onde estão pessoas a decidir se entram. Responde como uma pessoa, não como um robô nem um FAQ: curto (máx. 45 palavras, 1–3 frases), caloroso, direto, no máx. 1 emoji.
 
-O teu objetivo é tirar a dúvida e dar UM passo seguinte: criar conta (morethanmoney.pt/register, 3 dias de Premium), a rota da corretora (depósito ≥ ${MIN_DEPOSIT}$ que fica na conta dela) ou falar em privado comigo. Nunca as três de uma vez.
+O teu objetivo é tirar a dúvida e dar UM passo seguinte: criar conta (morethanmoney.pt/register, 3 dias de Premium grátis sem cartão; quem vem com experiência de outras plataformas de educação digital usa o cupão 90DAYSPREVIOUSXP e tem 90 dias como Membro), a rota da corretora (depósito ≥ ${MIN_DEPOSIT}$ que fica na conta dela) ou falar em privado comigo. Nunca as três de uma vez.
 
 No grupo NUNCA peças UID, email, prints, valores ou dados pessoais — para isso diz que falamos em privado (o botão vai na mensagem).
 
@@ -109,7 +111,9 @@ Resultados medidos: ${prova ? `${prova} — se citares, usa só isto, tal como e
 ${REGRAS_CASA}
 - Responde no idioma de quem pergunta.
 - Se a pergunta não é sobre a MTM, trading ou finanças, responde numa frase simpática e não vendas.
-- Devolve só o texto da resposta.`
+- Devolve só o texto da resposta.
+
+${blocoFramework('setter')}`
 }
 
 async function lerProva(db: Supa): Promise<string | null> {
@@ -148,10 +152,15 @@ const escapar = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').re
  */
 export async function conversarNoGrupoDeLeads(db: Supa, m: MensagemDoGrupo): Promise<{ respondeu: boolean; motivo?: string }> {
   try {
-    const { data: rows } = await db.from('site_settings').select('key, value').in('key', ['telegram_leads_group_id', CHAVE_INTERRUPTOR])
+    const { data: rows } = await db.from('site_settings').select('key, value').in('key', ['telegram_leads_group_id', CHAVE_INTERRUPTOR, CHAVE_COMUNIDADE])
     const grupo = (rows?.find((r) => r.key === 'telegram_leads_group_id')?.value as { chat_id?: string } | null)?.chat_id
-    if (!grupo || String(m.chat.id) !== String(grupo)) return { respondeu: false, motivo: 'outro grupo' }
-    if ((rows?.find((r) => r.key === CHAVE_INTERRUPTOR)?.value as { ligado?: boolean } | null)?.ligado === false) return { respondeu: false, motivo: 'desligado' }
+    // MTM Chat (05/11): o mesmo bot conversa lá, com interruptor próprio (`telegram_comunidade.conversa`).
+    const comunidade = lerConfigComunidade(rows?.find((r) => r.key === CHAVE_COMUNIDADE)?.value)
+    const ehComunidade = comunidade.conversa && comunidade.chat_id != null && String(m.chat.id) === comunidade.chat_id
+    if (!ehComunidade) {
+      if (!grupo || String(m.chat.id) !== String(grupo)) return { respondeu: false, motivo: 'outro grupo' }
+      if ((rows?.find((r) => r.key === CHAVE_INTERRUPTOR)?.value as { ligado?: boolean } | null)?.ligado === false) return { respondeu: false, motivo: 'desligado' }
+    }
 
     const bot = MTMCOPY_BOT_USERNAME()
     const dono = process.env.TELEGRAM_ADMIN_CHAT_ID?.trim() || null

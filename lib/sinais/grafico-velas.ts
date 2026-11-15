@@ -63,6 +63,13 @@ export interface SinalGrafico {
   linhas?: LinhaEstrategia[]
   /** Velas a mais pedidas ANTES da janela (aquecimento dos indicadores). */
   historico?: number
+  /**
+   * Espaço vazio à direita da última vela (05/11, pedido do Ricardo: o preço não pode ficar encostado
+   * ao eixo). 'a' = ~15 % da largura livre, linhas da trade a atravessá-lo; 'b' = ~30 % com as zonas
+   * de risco (entrada→SL) e de alvo (entrada→TP) desenhadas nesse espaço, como a ferramenta de posição
+   * do TradingView. Sem valor = desenho antigo, encostado.
+   */
+  offset?: 'a' | 'b' | null
 }
 
 /** Timeframe do alerta TradingView ("15", "60", "240", "1D") → timeframe das referências. */
@@ -249,7 +256,8 @@ export function desenhoVelasSinal(sig: SinalGrafico, velas: VelaRef[]): DesenhoV
   const span = max - min || 1
   const y = (p: number) => areaY1 - ((p - min) / span) * areaH
 
-  const passo = areaW / velas.length
+  const vazias = sig.offset === 'b' ? Math.round(velas.length * 0.43) : sig.offset === 'a' ? Math.round(velas.length * 0.18) : 0
+  const passo = areaW / (velas.length + vazias)
   const corpo = Math.max(1.5, Math.min(11, passo * 0.62))
   const x = (i: number) => areaX0 + passo * (i + 0.5)
 
@@ -333,12 +341,28 @@ export function desenhoVelasSinal(sig: SinalGrafico, velas: VelaRef[]): DesenhoV
     partes.push(`<line x1="${cx.toFixed(1)}" y1="${areaY0}" x2="${cx.toFixed(1)}" y2="${areaY1}" stroke="${GOLD}" stroke-width="1.5" stroke-dasharray="4 4" opacity="0.75"/>`)
   }
 
+  // ── zonas da trade no espaço livre (estilo b) ───────────────────────────────
+  if (sig.offset === 'b' && sig.entry != null && sig.entry > 0) {
+    const zx0 = x(velas.length - 1) + passo * 1.5
+    const zx1 = areaX1 - 6
+    const ye = y(sig.entry)
+    const zona = (preco: number, cor: string) => {
+      const yp = Math.max(areaY0, Math.min(areaY1, y(preco)))
+      partes.push(`<rect x="${zx0.toFixed(1)}" y="${Math.min(ye, yp).toFixed(1)}" width="${(zx1 - zx0).toFixed(1)}" height="${Math.max(1, Math.abs(yp - ye)).toFixed(1)}" fill="${cor}" opacity="0.16"/>`)
+    }
+    if (sig.sl != null && sig.sl > 0) zona(sig.sl, RED)
+    const alvo = sig.tps.length ? sig.tps[sig.tps.length - 1] : null
+    if (alvo != null && alvo > 0) zona(alvo, GREEN)
+  }
+
   // ── linhas da trade ─────────────────────────────────────────────────────────
   for (const n of niveis) {
     const py = y(n.preco)
     if (py < areaY0 - 2 || py > areaY1 + 2) continue
     partes.push(`<line x1="${areaX0}" y1="${py.toFixed(1)}" x2="${areaX1}" y2="${py.toFixed(1)}" stroke="${n.cor}" stroke-width="2"/>`)
-    txt({ x: areaX0 + 8, y: py - 6, cor: n.cor, tam: 16, peso: 600, texto: n.texto })
+    txt(sig.offset === 'b'
+      ? { x: areaX1 - 12, y: py - 6, cor: n.cor, tam: 16, peso: 700, ancora: 'end', texto: n.texto }
+      : { x: areaX0 + 8, y: py - 6, cor: n.cor, tam: 16, peso: 600, texto: n.texto })
     partes.push(`<rect x="${areaX1}" y="${(py - 12).toFixed(1)}" width="${EIXO}" height="24" fill="${n.cor}"/>`)
     txt({ x: areaX1 + 8, y: py + 5, cor: '#08131a', tam: 15, peso: 700, texto: fmt(n.preco, dec) })
   }

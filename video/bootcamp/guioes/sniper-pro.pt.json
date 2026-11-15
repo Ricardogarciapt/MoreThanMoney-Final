@@ -1,0 +1,522 @@
+{
+ "estrategia": "Sniper Pro",
+ "motor": "sniper-pro",
+ "marca": "MoreThanMoney",
+ "cores": {
+  "bull": "#2A7BE4",
+  "bear": "#E03E3E"
+ },
+ "ui": {
+  "nivel": "Nível",
+  "compra": "Compra",
+  "venda": "Venda",
+  "entrada": "Entrada",
+  "tp1": "TP1",
+  "tp2": "TP2",
+  "tp3": "TP3"
+ },
+ "pronuncia": [
+  ["TradingView", "Trading View"],
+  ["EURGBP", "EUR G B P"],
+  ["AUDCAD", "AUD C A D"],
+  ["EURNZD", "EUR N Z D"],
+  ["M15", "M quinze"],
+  ["M30", "M trinta"],
+  ["H4", "H quatro"],
+  ["H1", "H um"],
+  ["TP1", "T P um"],
+  ["TP2", "T P dois"],
+  ["R1", "R um"],
+  ["R2", "R dois"],
+  ["R3", "R três"],
+  ["R4", "R quatro"],
+  ["R5", "R cinco"],
+  ["S1", "S um"],
+  ["S2", "S dois"],
+  ["S3", "S três"],
+  ["S4", "S quatro"],
+  ["S5", "S cinco"]
+ ],
+ "plano": {
+  "warning": false,
+  "slAtr": 1,
+  "alvos": [1, 2],
+  "rotulos": ["TP1", "TP2"]
+ },
+ "videos": [
+  {
+   "rotulo": "Bootcamp Sniper Pro · 1/2",
+   "titulo": "O que é e como se lê",
+   "cenas": [
+    {
+     "id": "v1-00",
+     "tipo": "abertura",
+     "kicker": "Bootcamp MTM · Vídeo 1 de 2",
+     "titulo": "Sniper Pro",
+     "sub": "O que é e como se lê cada elemento",
+     "rodape": "morethanmoney.pt",
+     "semVoz": 5
+    },
+    {
+     "id": "v1-01",
+     "tipo": "frase",
+     "cap": "Boas-vindas",
+     "texto": "O candle dá a pontuação. <span class='ouro'>A tendência maior</span> decide se o trade se toma.",
+     "autor": "Ricardo Garcia · MoreThanMoney",
+     "fala": "Olá, sou o Ricardo Garcia e este é o Bootcamp do Sniper Pro, o scanner intradiário da MoreThanMoney. Antes de começarmos, fica com a ideia que atravessa os dois vídeos: o scanner entrega um sinal quase pronto, mas o passo mais importante acontece fora do candle que te chama a atenção. É preciso subir ao timeframe superior e perceber se a tendência maior está do lado do sinal. Sem isso, o sinal é só uma peça solta. Neste bootcamp vais ver primeiro o que é cada elemento que o scanner desenha, e depois como se usa essa leitura para decidir, gerir e, muitas vezes, não entrar. Não há atalhos. O scanner mostra apenas os dois últimos sinais de cada par, e a tua tarefa é treinar o mesmo ritual, em demo, com registos, antes de qualquer conta real. Vamos por partes."
+    },
+    {
+     "id": "v1-02",
+     "tipo": "pontos",
+     "cap": "Boas-vindas",
+     "kicker": "O plano do bootcamp",
+     "titulo": "Dois vídeos, um ritual",
+     "itens": [
+      "Vídeo 1 · O que é o Sniper Pro e como se lê",
+      "Vídeo 2 · Sinal, plano, gestão e rotina"
+     ],
+     "fala": "O bootcamp tem dois vídeos. Este primeiro é o mapa. Vamos ver o que é o Sniper Pro, para que serve cada timeframe, e como se lê cada peça do gráfico: o candle de pontuação, a vela dourada e a seta, as zonas-chave e os pivots, a tabela de tendência e o oscilador. O segundo vídeo é a prática: como se confirma um sinal, como se entra na vela ou no reteste, como se desenham o stop e os alvos, em que casos não se entra e como montar uma rotina de treino. Vê os vídeos por ordem, porque o segundo assume que reconheces tudo o que aparece neste primeiro. Se houver uma peça que não percebes, volta atrás antes de avançar. E não tentes decorar tudo de uma vez. Lê uma peça de cada vez, até que a leitura se torne automática."
+    },
+    {
+     "id": "v1-03",
+     "tipo": "capitulo",
+     "cap": "01 · O que é o Sniper Pro",
+     "numero": "01",
+     "titulo": "O que é o Sniper Pro",
+     "sub": "Scanner intradiário com confirmação superior",
+     "fala": "Primeiro capítulo. O que é, afinal, o Sniper Pro?"
+    },
+    {
+     "id": "v1-04",
+     "tipo": "pontos",
+     "cap": "01 · O que é o Sniper Pro",
+     "kicker": "Em poucas palavras",
+     "titulo": "Um scanner que entrega quase tudo",
+     "itens": [
+      "Scanner intradiário, de reversão e de impulso",
+      "Usa indicadores próprios e entrega o sinal quase pronto",
+      "Cada sinal traz pontuação, seta, stop e dois alvos",
+      "A leitura começa no candle de pontuação"
+     ],
+     "fala": "O Sniper Pro é o scanner intradiário da MoreThanMoney. Usa indicadores próprios para detetar oportunidades, e a forma como os apresenta é deliberada: o sinal chega quase pronto. Vês uma pontuação, uma seta, o stop desenhado pelo scanner, dois alvos e, em certos casos, uma zona de reteste. Isto pode parecer muito confortável, e é precisamente por isso que deves ter cuidado. Quase pronto não quer dizer confirmado. O sinal serve para te chamar a atenção, e a confirmação continua a ser um trabalho teu. A estratégia funciona sobretudo em intradiário, em estilo de reversão e de impulso. A leitura começa no candle de pontuação, mas o passo mais importante é subir ao timeframe superior. Essa subida é o que separa um sinal bonito de um sinal que faz sentido no contexto."
+    },
+    {
+     "id": "v1-05",
+     "tipo": "capitulo",
+     "cap": "02 · Os elementos do gráfico",
+     "numero": "02",
+     "titulo": "Ler cada elemento",
+     "sub": "Candle, seta, zonas, stop e alvos",
+     "fala": "Segundo capítulo. Vamos ler cada elemento do gráfico, um de cada vez."
+    },
+    {
+     "id": "v1-06",
+     "tipo": "grafico",
+     "cap": "02 · Os elementos do gráfico",
+     "kicker": "Candle de pontuação",
+     "titulo": "Uma pontuação de +8 na venda",
+     "cenario": "venda",
+     "seed": 7,
+     "base": ["cores"],
+     "camadas": ["medias", "sinal"],
+     "ate": [0.6, 0.7],
+     "zoom": [0, 0.4],
+     "estrelas": "+8 venda",
+     "fala": "Este gráfico é ilustrativo. Serve para explicar a leitura, não é um resultado real nem um histórico de mercado. Vamos começar pelo candle de pontuação. É a etiqueta com um sinal de mais e um número, de mais três a mais dez, colocada por cima ou por baixo da vela. Cada ponto corresponde a uma condição do scanner que se verificou naquela vela. Vermelha é de baixa, azul é de alta. Aqui vês um mais oito vermelho, numa venda. Ao lado da pontuação aparece o volume da vela, em percentagem, que te diz se a vela foi forte ou fraca face ao que é habitual. Repara bem: a pontuação não é uma probabilidade. É a soma de condições que estão a favor, e o número mais alto significa mais condições a favor, nada mais."
+    },
+    {
+     "id": "v1-07",
+     "tipo": "pontos",
+     "cap": "02 · Os elementos do gráfico",
+     "kicker": "Peças do gráfico",
+     "titulo": "Cinco peças para reconhecer",
+     "itens": [
+      "Candle de pontuação, de mais três a mais dez",
+      "Vela dourada e seta Sniper, a mais forte",
+      "Stop e dois alvos, desenhados pelo scanner",
+      "Zonas-chave e pivots, na margem direita",
+      "Oscilador Sniper, no painel inferior"
+     ],
+     "fala": "Vamos fixar as peças principais. Um, o candle de pontuação, que já vimos. Dois, a vela dourada e a seta Sniper. A vela dourada é a mais forte e indica um movimento de impulso ou de reversão mais intenso. Numa venda, a seta é vermelha e fica por cima da vela. Quando a seta é maior, chama-se super seta. Três, o stop e os dois alvos. Ao imprimir o sinal, o scanner traça o stop numa linha tracejada vermelha, e os alvos, TP1 e TP2, em linhas verdes. Quatro, as zonas-chave e os pivots. As zonas são áreas sombreadas baseadas em números redondos, inteiros, meios e quartos. Os pivots, de R1 a R5 e de S1 a S5, estão na margem direita, e são calculados com a abertura, o máximo, o mínimo e o fecho do dia anterior. Cinco, o oscilador, no painel de baixo. Cada uma destas peças tem o seu papel, e vamos vê-las uma a uma."
+    },
+    {
+     "id": "v1-08",
+     "tipo": "grafico",
+     "cap": "02 · Os elementos do gráfico",
+     "kicker": "Vela dourada",
+     "titulo": "A vela dourada e a seta",
+     "cenario": "venda",
+     "seed": 7,
+     "base": ["cores"],
+     "camadas": ["niveis", "sinal"],
+     "ate": [0.55, 0.66],
+     "zoom": [0, 0.3],
+     "estrelas": "+9 venda",
+     "fala": "Agora a vela dourada. Ela aparece quando o movimento tem mais impulso, e o scanner destaca-a para que não passe despercebida. Na venda, a seta Sniper vermelha fica por cima da vela. Na fonte, há um exemplo no AUDCAD, numa vela dourada de mais nove, em que a seta apareceu maior, a chamada super seta. Repara no que a vela dourada significa e no que não significa. Significa que o movimento é mais forte do que o habitual. Não significa que a entrada seja automática. A vela dourada é uma peça de leitura. Na prática, uma vela dourada com pontuação alta, numa zona com contexto, é um sinal que merece atenção redobrada. Mas a decisão continua a passar pelas confirmações, que vamos ver no segundo vídeo."
+    },
+    {
+     "id": "v1-09",
+     "tipo": "grafico",
+     "cap": "02 · Os elementos do gráfico",
+     "kicker": "Zonas-chave",
+     "titulo": "Zonas, pivots e contexto",
+     "cenario": "compra",
+     "seed": 7,
+     "base": ["cores"],
+     "camadas": ["niveis"],
+     "ate": [0.4, 0.6],
+     "zoom": [0, 0.2],
+     "estrelas": "+8 compra",
+     "fala": "As zonas-chave são áreas sombreadas no gráfico, baseadas em números redondos: inteiros, meios e quartos. Funcionam como referências de preço, e não como ordens. Os pivots são outra camada de contexto. Estão na margem direita, de R1 a R5 para cima e de S1 a S5 para baixo, e são calculados com a abertura, o máximo, o mínimo e o fecho do dia anterior. A fonte usa-os de duas formas: como confirmação extra, quando o preço está numa zona-chave com dois pivots lá dentro, e como alvos adicionais. Repara que nenhuma destas coisas é obrigatória. A fonte diz claramente que são confirmações adicionais. Se o preço estiver numa zona-chave com pivots, a leitura fica mais rica. Se não estiver, o sinal não desaparece. Fica apenas com menos contexto."
+    },
+    {
+     "id": "v1-10",
+     "tipo": "capitulo",
+     "cap": "03 · Tendência e oscilador",
+     "numero": "03",
+     "titulo": "Tendência e oscilador",
+     "sub": "Duas leituras que completam o sinal",
+     "fala": "Terceiro capítulo. A tabela de tendência e o oscilador, as duas leituras que completam o sinal."
+    },
+    {
+     "id": "v1-11",
+     "tipo": "pontos",
+     "cap": "03 · Tendência e oscilador",
+     "kicker": "Tabela de tendência",
+     "titulo": "O timeframe superior",
+     "itens": [
+      "Entrada em quinze minutos, confirmação em quatro horas",
+      "Em cinco minutos, confirma em uma hora",
+      "Em um minuto, confirma em quinze ou trinta minutos",
+      "A tabela mostra a direção do timeframe superior"
+     ],
+     "fala": "A tabela de tendência é a peça que mais gente salta, e é a que mais deve ver. Mostra a direção do timeframe superior ao da tua entrada. O guia dá três combinações. Se entras em quinze minutos, confirmas em quatro horas. Se entras em cinco minutos, confirmas em uma hora. E se entras em um minuto, confirmas em quinze ou trinta minutos. Na tabela aparecem rótulos como Trending e Very Strong, que descrevem a força da tendência naquele timeframe. Não precisas de decorar os rótulos. Precisas de olhar para a direção, e de a comparar com o teu sinal. Se o sinal é de venda e a tabela das quatro horas está em alta, o sinal fica para trás. Esse é o passo que mais protege de entradas contra a corrente maior."
+    },
+    {
+     "id": "v1-12",
+     "tipo": "comparar",
+     "cap": "03 · Tendência e oscilador",
+     "kicker": "Painel do gráfico",
+     "titulo": "Quatro leituras no mesmo ecrã",
+     "cartoes": [
+      {
+       "t": "Tabela de tendência",
+       "d": "Direção do timeframe superior, com rótulos de força como Trending e Very Strong."
+      },
+      {
+       "t": "Média de curto prazo",
+       "d": "Vermelha em venda, azul em compra. Deve estar da cor do sinal no momento da vela."
+      },
+      {
+       "t": "Volume da vela",
+       "d": "A percentagem que aparece ao lado da pontuação. Quanto mais alta, mais forte a vela."
+      },
+      {
+       "t": "Oscilador Sniper",
+       "d": "Painel inferior, com reteste, cruzamentos, tendência e divergências."
+      }
+     ],
+     "fala": "Vamos juntar as quatro leituras que o guia separa. A tabela de tendência fala do timeframe superior. A média de curto prazo, que deve estar da cor do sinal no momento da vela, fala do ritmo imediato. O volume, ao lado da pontuação, diz-te o quanto a vela foi forte. E o oscilador, no painel de baixo, fala do momento. Nenhuma destas peças decide sozinha. O que o guia pede é que as leias em conjunto, e que o contexto superior seja lido em primeiro lugar. Se uma delas contradiz as outras, o sinal perde força. Esta é a diferença entre olhar para um número e ler um gráfico."
+    },
+    {
+     "id": "v1-13",
+     "tipo": "capitulo",
+     "cap": "04 · O oscilador",
+     "numero": "04",
+     "titulo": "O oscilador Sniper",
+     "sub": "Reversão, reteste, cruzamentos e divergências",
+     "fala": "Quarto capítulo. O oscilador, que mostra o momento da vela."
+    },
+    {
+     "id": "v1-14",
+     "tipo": "pontos",
+     "cap": "04 · O oscilador",
+     "kicker": "Painel inferior",
+     "titulo": "O que o oscilador mostra",
+     "itens": [
+      "Reversão de baixa e de alta",
+      "Reteste, com a linha a vermelho ou a azul",
+      "Cruzamentos a vermelho e a azul",
+      "Tendência do painel e divergência em tempo real, marcada com a letra D"
+     ],
+     "fala": "O oscilador Sniper vive no painel inferior. Mostra a reversão de baixa e a reversão de alta, para perceberes quando o movimento parece estar a virar. Mostra o reteste, ou seja, o regresso do preço a uma zona já visitada. Mostra os cruzamentos, a vermelho e a azul, que indicam mudanças de momento. E mostra a direção da tendência no próprio painel. Quando existe divergência em tempo real, aparece marcada com a letra D. Uma divergência acontece quando o preço e o oscilador deixam de andar juntos. É uma pista de que o movimento pode estar a perder força. Mas não é uma ordem. No segundo vídeo vais ver como o oscilador entra na lista de confirmações, e em que vela ele tem de estar alinhado com o sinal."
+    },
+    {
+     "id": "v1-15",
+     "tipo": "comparar",
+     "cap": "04 · O oscilador",
+     "kicker": "Leitura em conjunto",
+     "titulo": "Três peças que se leem juntas",
+     "cartoes": [
+      {
+       "t": "Pontuação",
+       "d": "Quantas condições estão a favor naquela vela."
+      },
+      {
+       "t": "Tendência superior",
+       "d": "De que lado está o timeframe acima do teu."
+      },
+      {
+       "t": "Oscilador",
+       "d": "Se o momento está alinhado com a direção do sinal."
+      }
+     ],
+     "fala": "Para acabar este capítulo, três perguntas que deves fazer sempre que vês um candle de pontuação. A primeira: quantas condições estão a favor? Pontuações como mais oito e mais nove têm mais condições do que um mais três, e o guia diz que privilegia as altas. A segunda: o timeframe superior está do lado do sinal? A terceira: o oscilador está alinhado com a direção? Se as três respostas forem sim, o sinal ganha contexto. Se uma for não, o trabalho continua, mas com mais cautela. Não há um mínimo oficial de pontuação na fonte. Por isso, o que tu defines é o teu critério, e deves escrevê-lo antes de começares a operar."
+    },
+    {
+     "id": "v1-16",
+     "tipo": "pontos",
+     "cap": "Exercício",
+     "kicker": "Antes do vídeo 2",
+     "titulo": "O teu trabalho de casa",
+     "itens": [
+      "Escolhe um par de forex e o timeframe de quinze minutos",
+      "Procura cinco candles de pontuação no histórico",
+      "Para cada um, anota a pontuação, a vela e a tabela superior",
+      "Não operes. Só observas e registas"
+     ],
+     "fala": "Antes do segundo vídeo, tens um exercício. Escolhe um só par de forex e o gráfico de quinze minutos. Procura no histórico cinco candles de pontuação. Para cada um, anota a pontuação, se a vela é dourada ou não, se tem seta, e como estava a tabela do timeframe superior. Não operes. Só observas e registas. Depois, reflete: em quantos casos a tendência superior estava do lado do sinal? Em quantos casos a pontuação era alta? Esta análise é simples, mas ensina mais do que qualquer resumo. Quem faz este exercício chega ao segundo vídeo com perguntas concretas, e é isso que queremos."
+    },
+    {
+     "id": "v1-17",
+     "tipo": "aviso",
+     "cap": "Aviso",
+     "titulo": "Até ao vídeo 2",
+     "sub": "Sinal, plano, gestão e rotina",
+     "texto": "Conteúdo educativo. Não é aconselhamento financeiro. Negociar forex, índices, metais e cripto envolve risco elevado e podes perder parte ou a totalidade do capital. Os gráficos deste vídeo são ilustrativos. Resultados passados não garantem resultados futuros.",
+     "fala": "Lembra-te: este conteúdo é educativo e não é aconselhamento financeiro. Negociar tem risco elevado e podes perder parte ou a totalidade do capital. Treina sempre primeiro em conta demo. Vemo-nos no segundo vídeo.",
+     "respiro": 4
+    }
+   ]
+  },
+  {
+   "rotulo": "Bootcamp Sniper Pro · 2/2",
+   "titulo": "Sinal, plano, gestão e rotina",
+   "cenas": [
+    {
+     "id": "v2-00",
+     "tipo": "abertura",
+     "kicker": "Bootcamp MTM · Vídeo 2 de 2",
+     "titulo": "Sniper Pro",
+     "sub": "Sinal, plano, gestão e rotina",
+     "rodape": "morethanmoney.pt",
+     "semVoz": 5
+    },
+    {
+     "id": "v2-01",
+     "tipo": "pontos",
+     "cap": "Boas-vindas",
+     "kicker": "Neste vídeo",
+     "titulo": "Do candle ao trade",
+     "itens": [
+      "Confirmações do sinal, por ordem",
+      "Entrada na vela ou no reteste",
+      "Stop, alvos e pivots",
+      "Quando não entrar",
+      "Uma rotina para treinar em demo"
+     ],
+     "fala": "Bem-vindo ao segundo vídeo do Bootcamp Sniper Pro. No primeiro aprendeste a ler o candle de pontuação, a vela dourada e a seta, as zonas-chave, a tabela de tendência e o oscilador. Agora vamos usar essa leitura para decidir. Vamos percorrer as confirmações do sinal, por ordem. Depois, a entrada, que pode ser na própria vela ou no reteste. Vamos ver o stop e os alvos que o scanner desenha, com o exemplo do EURGBP que o guia usa. Falamos de gestão, do que a fonte refere sem detalhar. Depois, os casos em que não se entra, que são tão importantes como os sinais. E no fim, uma rotina simples para treinar em demo antes de qualquer risco real."
+    },
+    {
+     "id": "v2-02",
+     "tipo": "capitulo",
+     "cap": "01 · O sinal",
+     "numero": "01",
+     "titulo": "Confirmar o sinal",
+     "sub": "Sete passos, por ordem",
+     "fala": "Primeiro capítulo. Como se confirma um sinal, passo a passo."
+    },
+    {
+     "id": "v2-03",
+     "tipo": "grafico",
+     "cap": "01 · O sinal",
+     "kicker": "Sequência completa",
+     "titulo": "Uma venda de mais oito",
+     "cenario": "venda",
+     "seed": 7,
+     "base": ["cores", "niveis"],
+     "camadas": ["medias", "sinal", "plano"],
+     "ate": [0.45, 0.7],
+     "zoom": [0, 0.5],
+     "estrelas": "+8 venda",
+     "fala": "Vamos seguir uma venda de mais oito, do candle de pontuação até ao plano. Primeiro, o candle aparece com a pontuação alta, e a vela tem o volume em percentagem. Antes de qualquer outra coisa, sobes ao timeframe superior. Se a tabela das quatro horas estiver em alta, este sinal é de venda contra a corrente maior, e o guia pede que o deixes passar. Mas aqui a tabela está em baixa, a favor da venda. Depois, olhas para a vela do sinal. Tem de ser vermelha, com a seta por cima, ou então dourada. A média de curto prazo deve estar vermelha no momento da vela. O volume deve ser alto. E o oscilador deve estar alinhado. Só então o plano faz sentido. Repara que o plano surge quando o sinal já foi confirmado, e não antes."
+    },
+    {
+     "id": "v2-04",
+     "tipo": "checklist",
+     "cap": "01 · O sinal",
+     "kicker": "Confirmações, por ordem",
+     "titulo": "Sete passos antes do trade",
+     "itens": [
+      "Pontuação alta, de preferência mais oito ou mais nove",
+      "Tendência das quatro horas do lado do sinal, verificada primeiro",
+      "Vela do sinal da cor certa, com seta Sniper, ou dourada",
+      "Média de curto prazo da cor do sinal, no momento da vela",
+      "Volume da vela do sinal alto",
+      "Zona-chave com pivots, como confirmação extra",
+      "Oscilador alinhado: linha, reteste, cruzamento e tendência"
+     ],
+     "fala": "Vamos transformar as confirmações numa lista de trabalho. Um, a pontuação. O guia privilegia as pontuações altas, como mais oito e mais nove, porque têm mais condições a favor. Uma pontuação baixa, como mais três, tem poucas. Dois, a tendência das quatro horas. Este é o passo que o guia pede que faças primeiro: se a tabela superior estiver contra o sinal, deixa-o passar. Três, a vela do sinal. Numa venda, tem de ser vermelha, com a seta Sniper vermelha por cima. A exceção é a vela dourada, que é mais forte. Quatro, a média de curto prazo, que deve estar da cor do sinal no momento da vela. Cinco, o volume da vela do sinal, que deve ser alto. Seis, a zona-chave com pivots, que não é obrigatória, mas soma. Sete, o oscilador, na vela do sinal: linha da cor certa, reteste, cruzamento e tendência alinhados. Numa compra, tudo se inverte. Nenhum destes passos é opcional quando queres tomar o trade."
+    },
+    {
+     "id": "v2-05",
+     "tipo": "capitulo",
+     "cap": "02 · Entrada e reteste",
+     "numero": "02",
+     "titulo": "Entrada e reteste",
+     "sub": "Na vela do sinal ou na zona",
+     "fala": "Segundo capítulo. Onde entrar, e o que fazer quando o preço não volta."
+    },
+    {
+     "id": "v2-06",
+     "tipo": "pontos",
+     "cap": "02 · Entrada e reteste",
+     "kicker": "Duas formas de entrar",
+     "titulo": "Vela do sinal ou reteste",
+     "itens": [
+      "Entrar na vela do sinal, depois de confirmada",
+      "Esperar pelo reteste na zona sombreada",
+      "Reteste: quando o preço chega a cerca de metade da zona",
+      "O reteste nunca é garantido: muitas vezes o preço não volta"
+     ],
+     "fala": "O guia descreve duas formas de entrar. A primeira é na própria vela do sinal, depois de as confirmações estarem feitas. A segunda é esperar pelo reteste, ou seja, pelo regresso do preço à zona sombreada. Quando o preço chega a cerca de metade da zona, a fonte considera que é uma segunda oportunidade. Mas aqui há um aviso importante, que o próprio guia faz. Muitas vezes o preço não volta, e perde-se o trade. Por isso, nunca contes com o reteste como garantido. Se entraste na vela e ela andou contra ti, não contes com um reteste para compensar. E se não entraste na vela, o reteste é uma opção, não uma obrigação. Decide antes de o sinal aparecer qual das duas formas usas, e mantém-te nela."
+    },
+    {
+     "id": "v2-07",
+     "tipo": "plano",
+     "cap": "02 · Entrada e reteste",
+     "kicker": "Plano desenhado pelo scanner",
+     "titulo": "Stop e dois alvos",
+     "linhas": [
+      ["Entrada", "Vela do sinal, ou reteste na zona", "entrada"],
+      ["Stop", "Acima do máximo do sinal, numa venda", "sl"],
+      ["TP1", "Primeiro alvo desenhado pelo scanner", "tp"],
+      ["TP2", "Segundo alvo, perto de um para dois no exemplo", "tp"],
+      ["Pivots", "Alvos extra, se os quiseres usar", "tp"]
+     ],
+     "fala": "Quando o sinal é impresso, o scanner desenha o plano. O stop fica acima do máximo do sinal, numa venda. Os alvos são TP1 e TP2. No exemplo do EURGBP, o guia mostra uma venda de mais oito, com o stop e os dois alvos desenhados. O TP1 nem chegava a um para um, e o TP2 dava cerca de um para dois, o que chegou para tomar o trade. A ferramenta de posição do gráfico mostrou um risco para retorno de dois vírgula um. Repara que a distância dos alvos é a que o scanner desenha em cada sinal, e não um valor fixo que possas copiar. Os pivots podem servir como alvos extra. E o guia é claro num ponto: a gestão de risco é de cada um. Calcula o teu tamanho de posição antes de entrar, e não depois de ver onde ficou o stop."
+    },
+    {
+     "id": "v2-08",
+     "tipo": "pontos",
+     "cap": "03 · Gestão",
+     "kicker": "Depois de entrar",
+     "titulo": "Gerir o trade",
+     "itens": [
+      "Quando o preço passa o TP1, podes mover o stop para essa zona",
+      "Os pivots servem como alvos extra",
+      "Se o trade não chegar a nenhum alvo, espera pelo sinal seguinte",
+      "As regras de gestão são tuas, e escritas antes da entrada"
+     ],
+     "fala": "Vamos à gestão, com cuidado. O guia diz que, quando o preço passa o TP1, podes mover o stop para essa zona, se quiseres. É uma opção, não uma obrigação, e o guia não a detalha para além disso. Os pivots podem ser usados como alvos extra. E se o trade não chegar a nenhum dos alvos, a fonte sugere esperar pelo sinal seguinte, em vez de forçar uma nova entrada no mesmo movimento. Repara que nada disto é uma fórmula. A gestão é o momento em que a emoção mais atrapalha, porque o trade está a correr bem ou mal. Por isso, escreve as tuas regras antes: quando moves o stop, para onde, e o que fazes se o preço voltar. Sem isso, cada decisão a meio do trade é uma improvisação, e a improvisação com dinheiro é a forma mais cara de aprender."
+    },
+    {
+     "id": "v2-09",
+     "tipo": "capitulo",
+     "cap": "03 · Quando não entrar",
+     "numero": "03",
+     "titulo": "Quando não entrar",
+     "sub": "Os casos em que a decisão certa é esperar",
+     "fala": "Terceiro capítulo. Os casos em que a decisão certa é não entrar."
+    },
+    {
+     "id": "v2-10",
+     "tipo": "comparar",
+     "cap": "03 · Quando não entrar",
+     "kicker": "Quatro casos",
+     "titulo": "Não entras se",
+     "cartoes": [
+      {
+       "t": "Tendência superior contra",
+       "d": "Venda com as quatro horas em alta. O sinal fica para trás."
+      },
+      {
+       "t": "Vela da cor errada",
+       "d": "Sem a cor do sinal, a não ser que seja dourada."
+      },
+      {
+       "t": "Pontuação baixa",
+       "d": "Um mais três tem poucas condições a favor."
+      },
+      {
+       "t": "Só o timeframe de entrada",
+       "d": "Guiar-te só pelo gráfico de entrada, sem o superior."
+      }
+     ],
+     "fala": "Quatro casos em que o guia pede que não entres. O primeiro: uma venda com as quatro horas em alta, ou uma compra com as quatro horas em baixa. A tendência superior está contra ti, e o sinal fica para trás. O segundo: a vela do sinal não tem a cor do sinal, a não ser que seja dourada. O terceiro: uma pontuação baixa, como mais três, que tem poucas condições a favor. E o quarto: guiares-te apenas pela tendência do gráfico onde negoceias, em vez de olhares para o superior. Estes quatro casos parecem óbvios quando os lês, mas são precisamente os que mais se perdem quando há pressa. Por isso, convém tê-los escritos à frente, antes de abrires o gráfico."
+    },
+    {
+     "id": "v2-11",
+     "tipo": "checklist",
+     "cap": "03 · Quando não entrar",
+     "kicker": "Mais casos",
+     "titulo": "Outras razões para esperar",
+     "itens": [
+      "Contares com o reteste como garantido",
+      "Entrares sem a tabela superior verificada",
+      "Entrares com o oscilador contra o sinal",
+      "Entrares em conta real sem treino prévio em demo"
+     ],
+     "fala": "Há mais três razões para esperar, que não cabem no quadro anterior. A primeira é contar com o reteste como garantido. O guia avisa que o preço pode não voltar à zona, e que isso acontece muitas vezes. A segunda é entrar sem teres verificado a tabela superior. A terceira é entrar com o oscilador contra o sinal, porque o momento não confirma a direção. E a quarta é a mais importante de todas: entrar em conta real sem treino prévio. O guia diz claramente que não se deve ir para conta real sem treinar a estratégia em demo. Tudo o que aprendes neste bootcamp deve ser testado com dinheiro simulado, durante semanas, antes de qualquer risco real."
+    },
+    {
+     "id": "v2-12",
+     "tipo": "grafico",
+     "cap": "03 · Quando não entrar",
+     "kicker": "Pontuação baixa",
+     "titulo": "Um mais três",
+     "cenario": "falha",
+     "seed": 21,
+     "base": ["cores", "niveis"],
+     "camadas": ["sinal"],
+     "ate": [0.6, 0.6],
+     "zoom": [0, 0.2],
+     "estrelas": "+3 compra",
+     "fala": "Este gráfico mostra uma pontuação de mais três. Tem uma etiqueta no candle, mas poucas condições estão a favor. O guia não define um mínimo oficial, mas é claro quanto ao espírito: pontuações altas têm mais condições a favor, e uma pontuação baixa tem poucas. Repara que a existência de um candle de pontuação não é um sinal de entrada. É uma leitura que tens de confirmar. Neste caso, a tabela superior, a cor da vela, a média de curto prazo e o oscilador têm de dizer o mesmo, e com uma pontuação baixa, isso acontece raramente. Por isso, a decisão mais comum aqui é deixar passar. E deixar passar é também uma decisão que se treina."
+    },
+    {
+     "id": "v2-13",
+     "tipo": "capitulo",
+     "cap": "04 · Rotina",
+     "numero": "04",
+     "titulo": "Uma rotina em demo",
+     "sub": "Treino antes de qualquer risco real",
+     "fala": "Quarto capítulo. Uma rotina simples, pensada para treinar antes de arriscar."
+    },
+    {
+     "id": "v2-14",
+     "tipo": "pontos",
+     "cap": "04 · Rotina",
+     "kicker": "A rotina",
+     "titulo": "Um processo que se repete",
+     "itens": [
+      "Escolhe um par e o gráfico de quinze minutos",
+      "Sobe às quatro horas antes de olhar para o resto",
+      "Regista cada sinal: pontuação, volume, zona e plano",
+      "Define risco e tamanho da posição antes de entrar",
+      "Só depois de semanas em demo, pensa em conta real"
+     ],
+     "fala": "Vamos construir uma rotina que cabe no teu dia. Primeiro, escolhe um par e mantém o gráfico de quinze minutos durante algumas semanas. Depois, sobe às quatro horas antes de olhar para qualquer outra coisa. Se a tabela superior estiver contra a tua ideia, não há mais nada para fazer. Quando aparece um candle de pontuação, confirma as peças, uma a uma, pela ordem que vimos. Se o sinal se confirma, define o risco, o stop, os alvos e o tamanho da posição antes de entrar. E regista tudo: a pontuação, o volume, a zona, o plano, a entrada, e o que aconteceu depois. O registo é a parte que quase ninguém faz, e é a que mais ensina. Só depois de semanas em demo, com registos consistentes e regras que cumpriste, faz sentido pensar em conta real, e mesmo assim, com um risco pequeno e definido de antemão."
+    },
+    {
+     "id": "v2-15",
+     "tipo": "frase",
+     "cap": "Fecho",
+     "texto": "O scanner dá o sinal. <span class='ouro'>A tendência maior</span> decide se o tomas.",
+     "autor": "Ricardo Garcia · MoreThanMoney",
+     "fala": "Chegámos ao fim do bootcamp. Ficas com duas ideias. A primeira: o candle de pontuação é uma pista, não uma ordem, e só ganha força quando a tendência superior, a vela, a média, o volume e o oscilador concordam. A segunda: o plano, a gestão e os casos em que não entras são tão importantes como o sinal. Não há indicador que decida por ti. O Sniper Pro entrega-te uma sequência de leitura clara, e o resto é treino, registo e paciência. Boa sorte no teu caminho, e lembra-te: primeiro demo, e só depois, se fizer sentido, o resto."
+    },
+    {
+     "id": "v2-16",
+     "tipo": "aviso",
+     "cap": "Aviso",
+     "titulo": "Fim do bootcamp",
+     "sub": "Educação, não aconselhamento",
+     "texto": "Conteúdo educativo. Não é aconselhamento financeiro. Negociar forex, índices, metais e cripto envolve risco elevado e podes perder parte ou a totalidade do capital. Os gráficos deste bootcamp são ilustrativos. Resultados passados não garantem resultados futuros.",
+     "fala": "Último aviso. Este conteúdo é educativo e não é aconselhamento financeiro. Negociar tem risco elevado, e podes perder parte ou a totalidade do capital. Define o teu risco antes de cada entrada e treina primeiro em conta demo.",
+     "respiro": 4
+    }
+   ]
+  }
+ ]
+}

@@ -76,6 +76,7 @@ import {
   Share2,
   CandlestickChart,
   Gem,
+  Flame,
 } from "lucide-react"
 
 // Checklist Types
@@ -101,13 +102,14 @@ const scannerLogos: Record<ScannerKey, { icon: any; color: string; bgColor: stri
   // ₿ e âmbar (#F59E0B = amber-500): a MTM Aurum Flow Cripto deixou de ser ouro+perpétuos.
   AurumFlow: { icon: Bitcoin, color: "text-amber-300", bgColor: "bg-gradient-to-r from-amber-500 to-yellow-500" },
   TrendShot: { icon: Skull, color: "text-gray-300", bgColor: "bg-gradient-to-r from-gray-600 to-slate-500" },
-  Supernova: { icon: Zap, color: "text-amber-300", bgColor: "bg-gradient-to-r from-amber-500 to-orange-500" },
+  RocketNova: { icon: Zap, color: "text-[#E9C46A]", bgColor: "bg-gradient-to-r from-amber-500 to-[#D2A63C]" },
   Winzone: { icon: Shield, color: "text-blue-300", bgColor: "bg-gradient-to-r from-blue-700 to-sky-500" },
   Sinergy: { icon: Star, color: "text-cyan-300", bgColor: "bg-gradient-to-r from-cyan-600 to-teal-500" },
   Goldkiller: { icon: Target, color: "text-yellow-300", bgColor: "bg-gradient-to-r from-yellow-600 to-amber-500" },
   MTMScanner: { icon: Brain, color: "text-violet-300", bgColor: "bg-gradient-to-r from-violet-600 to-purple-500" },
   Sensei: { icon: TrendingUp, color: "text-rose-300", bgColor: "bg-gradient-to-r from-rose-600 to-pink-500" },
   PremiumScanner: { icon: Gem, color: "text-[#E9C46A]", bgColor: "bg-gradient-to-r from-[#D2A63C] to-[#E9C46A]" },
+  Defy: { icon: Flame, color: "text-[#E9C46A]", bgColor: "bg-gradient-to-r from-[#8A6A1F] to-[#D2A63C]" },
 }
 
 declare global {

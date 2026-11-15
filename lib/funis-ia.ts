@@ -12,6 +12,7 @@
  */
 
 import { chamarIA, mensagemIndisponivel } from '@/lib/ia/chamar'
+import { blocoFramework } from '@/lib/framework-mtm'
 
 export interface PedidoIA {
   objetivo: string
@@ -55,7 +56,8 @@ export async function pensar(p: PedidoIA): Promise<RespostaIA> {
         (p.modo === 'classificar'
           ? `{"ramo": <número>}`
           : `{"ramo": <número>, "texto": "<a tua resposta>"}`)
-      : 'Devolves apenas a tua resposta, em texto simples.')
+      : 'Devolves apenas a tua resposta, em texto simples.') +
+    `\n\n${blocoFramework('closer')}`
 
   try {
     const r = await chamarIA({

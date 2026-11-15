@@ -219,6 +219,7 @@ export default function Navbar() {
   return (
     <>
       <nav
+        data-site-nav
         className={`fixed left-0 right-0 top-0 isolate transition-all duration-300 ${
           isScrolled
             ? `bg-gradient-to-r from-black via-gray-900 to-black ${navBlur} border-b border-mtm-primary/30 shadow-lg shadow-mtm-primary/20`

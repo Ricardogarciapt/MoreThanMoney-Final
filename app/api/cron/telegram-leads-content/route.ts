@@ -5,6 +5,7 @@ import { getMtmcopyBotToken } from "@/lib/mtmcopy/telegram-bot"
 import { getWeeklyFlyerStats, fmtSigned, fmtPt } from "@/lib/mtm-flyer/weekly-stats"
 import { tradesGanhasRecentes } from "@/lib/pips-proof"
 import { postDoSlot, type DadosPosts } from "@/lib/telegram-leads-posts"
+import { legendaDoPost } from "@/lib/telegram-legenda-ig"
 
 export const runtime = "nodejs"
 export const dynamic = "force-dynamic"
@@ -217,7 +218,8 @@ export async function GET(request: NextRequest) {
         body: JSON.stringify({
           chat_id: chatId,
           photo: ig.media_url,
-          caption: `📸 <b>Do nosso Instagram</b> @morethanmoney.pt\n\n${ig.caption}`.slice(0, 1000),
+          // Sem «@morethanmoney.pt» solto: o Telegram ligava «@morethanmoney» a um utilizador estranho (06/11).
+          caption: `📸 <b>Do nosso Instagram</b>\n\n${legendaDoPost(ig.caption, "morethanmoney.pt")}`,
           parse_mode: "HTML",
           reply_markup: {
             inline_keyboard: [

@@ -6,7 +6,7 @@
 
 import { useState } from "react"
 import Link from "next/link"
-import { Unbounded } from "next/font/google"
+import { unbounded } from "@/lib/fonts/unbounded"
 import Breadcrumbs from "@/components/breadcrumbs"
 import { ArrowRight, ArrowDown, BarChart3, Check, Lock, Shield, Zap } from "lucide-react"
 
@@ -14,7 +14,7 @@ import { SCANNERS, type ScannerProduct } from "@/lib/scanners-catalog"
 import { CheckoutModal } from "@/components/scanner/checkout-modal"
 import { SCANNER_LANDINGS } from "@/lib/scanner-landings"
 
-const display = Unbounded({ subsets: ["latin"], weight: ["600", "800"], display: "swap" })
+const display = unbounded
 
 const landingOf = (key: string) => SCANNER_LANDINGS.find((l) => l.key === key)
 
@@ -235,10 +235,10 @@ export default function ScannerPage() {
                   Pack <span className="text-[#D2A63C]">Scanners.</span>
                 </h2>
                 <p className="mt-4 max-w-[48ch] text-[#a9a7a0]">
-                  Todos os scanners MTM num só pack, por 35€/mês: Gold Killer, Aurum Flow, Scanner MTM, TrendShot, Sensei e Premium Scanner.
+                  Todos os scanners MTM num só pack, por 35€/mês: Gold Killer, Aurum Flow, Scanner MTM, TrendShot, Sensei, Premium Scanner, DEFY, RocketNova, Quantum, SniperPro e Golden Zone.
                 </p>
                 <ul className="mt-6 grid gap-2 sm:grid-cols-2">
-                  {["MTM Gold Killer V2.1", "Aurum Flow", "Scanner MTM", "TrendShot by MTM", "Sensei", "MTM Premium Scanner", "Atualizações incluídas", "Suporte prioritário", "Acesso TradingView"].map((name) => (
+                  {["MTM Gold Killer V2.1", "Aurum Flow", "Scanner MTM", "TrendShot by MTM", "Sensei", "MTM Premium Scanner", "DEFY by MTM", "RocketNova by MTM", "Quantum by MTM", "SniperPro by MTM", "Golden Zone by MTM", "Atualizações incluídas", "Suporte prioritário", "Acesso TradingView"].map((name) => (
                     <li key={name} className="flex items-center gap-2 text-sm text-[#c9c7c0]">
                       <Check className="h-4 w-4 text-[#D2A63C]" /> {name}
                     </li>

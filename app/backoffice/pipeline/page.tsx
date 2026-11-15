@@ -153,6 +153,11 @@ export default async function PipelinePage({ searchParams }: { searchParams: Pro
         sub="Os negócios em que participas, por estado, com o passo seguinte de cada um. Mover, escrever a nota, ocupar um papel e ver o histórico faz-se aqui — o que não se faz aqui é dinheiro: «ganho» não cria venda nem comissão."
       />
 
+      <p className="text-xs text-zinc-500">
+        Guiões de setter e closer (triagem, chamada, objecções, follow-up):{' '}
+        <a href="/backoffice/material#kit" className="text-[#D2A63C] hover:underline">abrir o teu kit</a>.
+      </p>
+
       {aviso && <Aviso>{aviso}</Aviso>}
 
       {/* Vim por um link de uma tarefa e o negócio não está à vista. Calar isto era deixar a pessoa

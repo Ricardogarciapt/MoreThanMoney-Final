@@ -23,7 +23,7 @@ export async function GET(request: NextRequest) {
     supabase.from('mtmauto_subscriptions').select('provider_id, ativo, auto_aceitar').eq('user_id', userId!).eq('ativo', true),
     // `apagado_em` (084) tem de entrar: sem ele, uma estratégia escondida no admin do site
     // continuava a aparecer na app-mobile. É o mesmo filtro de /mtmauto e da criação de contas.
-    supabase.from('mtmauto_providers').select('id, slug, nome, descricao, ativo').eq('ativo', true).is('apagado_em', null).order('nome'),
+    supabase.from('mtmauto_providers').select('id, slug, nome, descricao, ativo, arquivada_em').eq('ativo', true).is('apagado_em', null).order('nome'),
   ])
 
   const seguidas = new Map((subs ?? []).map((s) => [s.provider_id as string, Boolean(s.auto_aceitar)]))
@@ -40,7 +40,8 @@ export async function GET(request: NextRequest) {
       riscoMaxPct: p.riscoMaxPct,
       saidasPct: p.saidasPct,
     })),
-    estrategias: (provs ?? []).map((p) => ({
+    // Arquivada (03/11): só a vê quem ainda a segue.
+    estrategias: (provs ?? []).filter((p) => !p.arquivada_em || seguidas.has(p.id as string)).map((p) => ({
       id: p.id,
       slug: p.slug,
       nome: p.nome,

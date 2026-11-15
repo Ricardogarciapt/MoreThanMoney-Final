@@ -40,10 +40,10 @@ const RESUMO: Record<string, Record<"es" | "fr" | "de", string>> = {
     fr: "Scalping dans le sens de la tendance : moyennes, étoiles et risque 1:2.",
     de: "Scalping mit dem Trend: Durchschnitte, Sterne und 1:2-Risiko.",
   },
-  supernova: {
-    es: "Reversiones impulsivas: estrella, tres velas y ruptura.",
-    fr: "Retournements impulsifs : étoile, trois bougies et cassure.",
-    de: "Impulsive Umkehrungen: Stern, drei Kerzen und Ausbruch.",
+  rocketnova: {
+    es: "Tendencia con tres medias, estrellas de lanzamiento y gestión de la operación: entrada, stop y cuatro objetivos.",
+    fr: "Tendance avec trois moyennes, étoiles de lancement et gestion du trade : entrée, stop et quatre objectifs.",
+    de: "Trend mit drei Durchschnitten, Startsternen und Trade-Management: Einstieg, Stop und vier Ziele.",
   },
   "sniper-pro": {
     es: "Intradía en 15 minutos, con la tendencia de 4 horas decidiendo.",

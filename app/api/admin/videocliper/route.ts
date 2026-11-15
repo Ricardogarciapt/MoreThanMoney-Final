@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { requireAdmin } from '@/lib/admin-api-helpers'
+import { exigirEstudio } from '@/lib/estudio/acesso'
 import { getSupabaseAdmin } from '@/lib/supabase-admin-client'
 import { ESTILO_POR_OMISSAO, estiloValido } from '@/lib/videocliper/estilos'
 
@@ -19,6 +20,13 @@ export const maxDuration = 300
  */
 
 /** Tira o id de um link do YouTube, venha ele em que forma vier. */
+/** Admin, ou quem tem a área «Cortes» do /estudio (dada no backoffice). */
+async function guarda(req: NextRequest): Promise<NextResponse | null> {
+  const r = await exigirEstudio(req, 'cortes')
+  if (!('erro' in r)) return null
+  return requireAdmin(req)
+}
+
 function idDoYoutube(url: string): string | null {
   const m = url.match(
     /(?:youtube\.com\/(?:watch\?(?:.*&)?v=|embed\/|live\/|shorts\/)|youtu\.be\/)([A-Za-z0-9_-]{11})/,
@@ -27,7 +35,7 @@ function idDoYoutube(url: string): string | null {
 }
 
 export async function GET(req: NextRequest) {
-  const negado = await requireAdmin(req)
+  const negado = await guarda(req)
   if (negado) return negado
 
   const db = getSupabaseAdmin()
@@ -92,7 +100,7 @@ export async function GET(req: NextRequest) {
 }
 
 export async function POST(req: NextRequest) {
-  const negado = await requireAdmin(req)
+  const negado = await guarda(req)
   if (negado) return negado
 
   const db = getSupabaseAdmin()

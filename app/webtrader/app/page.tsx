@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react"
 import { Loader2 } from "lucide-react"
 import { supabase } from "@/lib/supabase"
-import { decidirPassagem, destinoDaEntrada, tokenDoFragmento } from "@/lib/webtrader/sessao-app"
+import { decidirPassagem, destinoDaEntrada, tokenDoFragmento, userIdDoToken } from "@/lib/webtrader/sessao-app"
 
 /**
  * /webtrader/app — a porta do WebTrader dentro da app iOS MTM Auto.
@@ -104,14 +104,14 @@ export default function EntradaWebtraderApp() {
        * antes de qualquer await. Se o pedido de rede falhasse com o fragmento ainda no URL, ficava
        * lá um token a que basta carregar em «recarregar» para reaparecer.
        *
-       * `decidirPassagem` não sabe o `userId` por este caminho (o URL não o traz, e trazê-lo não
-       * acrescentava segurança nenhuma) — passa-se `null`, que a função lê como «não sei de quem é»
-       * e resolve pedindo a sessão nova ao servidor, que é quem confirma a identidade do token.
+       * O `userId` lê-se do próprio token (o `sub`), só para não emitir uma sessão nova a quem já
+       * tem a da mesma pessoa. Se não se conseguir ler, vai `null` — e `decidirPassagem` pede a
+       * sessão ao servidor, que é quem confirma a identidade do token.
        */
       const token = tokenDoFragmento(window.location.hash)
       if (!token) { seguir(); return }
       window.history.replaceState(null, "", window.location.pathname + window.location.search)
-      void passar({ token, userId: null })
+      void passar({ token, userId: userIdDoToken(token) })
       return
     }
 

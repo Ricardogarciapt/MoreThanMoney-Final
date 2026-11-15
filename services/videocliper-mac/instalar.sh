@@ -44,7 +44,7 @@ if [[ -x "$DEST/venv/bin/python3" ]] && ! "$DEST/venv/bin/python3" -c 'import sy
   rm -rf "$DEST/venv"
 fi
 [[ -x "$DEST/venv/bin/python3" ]] || "$PY" -m venv "$DEST/venv"
-"$DEST/venv/bin/pip" install -q --upgrade pip faster-whisper numpy
+"$DEST/venv/bin/pip" install -q --upgrade pip faster-whisper numpy opencv-python-headless
 
 echo "→ worker"
 rm -rf "$DEST/worker"

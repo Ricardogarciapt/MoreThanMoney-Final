@@ -122,10 +122,10 @@ function trim(sim, warm) {
     candles: sim.candles.slice(warm),
     lines: sim.lines.map((l) => ({ ...l, pts: l.pts.slice(warm) })),
     areas: (sim.areas || []).map((a) => ({ ...a, upper: a.upper.slice(warm), lower: a.lower.slice(warm) })),
-    zones: (sim.zones || []).filter((z) => z.i1 > warm).map((z) => ({ ...z, i0: Math.max(0, cut(z.i0)), i1: Math.min(N - 1, cut(z.i1)), reveal: Math.max(0, cut(z.reveal ?? z.i0)) })),
+    zones: (sim.zones || []).filter((z) => z.i1 > warm).map((z) => ({ ...z, i0: Math.max(0, cut(z.i0)), i1: Math.min(N - 1, cut(z.i1)), reveal: Math.max(0, cut(z.reveal ?? z.i0)), to: z.to != null ? cut(z.to) : undefined })),
     segments: (sim.segments || []).filter((s) => keep(s.i1)).map((s) => ({ ...s, i0: Math.max(0, cut(s.i0)), i1: cut(s.i1) })),
-    markers: (sim.markers || []).filter((m) => keep(m.i)).map((m) => ({ ...m, i: cut(m.i) })),
-    groups: (sim.groups || []).filter((g) => keep(g.i0)).map((g) => ({ ...g, i0: cut(g.i0), items: g.items.map((it) => ({ ...it, from: it.from != null ? cut(it.from) : undefined, to: it.to != null ? cut(it.to) : undefined })) })),
+    markers: (sim.markers || []).filter((m) => keep(m.i)).map((m) => ({ ...m, i: cut(m.i), to: m.to != null ? cut(m.to) : undefined })),
+    groups: (sim.groups || []).filter((g) => keep(g.i0)).map((g) => ({ ...g, i0: cut(g.i0), items: g.items.map((it) => ({ ...it, from: it.from != null ? cut(it.from) : undefined, to: it.to != null ? cut(it.to) : undefined, until: it.until != null ? cut(it.until) : undefined })) })),
     alertGroups: (sim.alertGroups || []).filter((g) => keep(g.i0)).map((g) => ({ ...g, i0: cut(g.i0) })),
     panel: sim.panel ? { ...sim.panel, rows: sim.panel.rows.map((r) => ({ ...r, states: r.states.slice(warm) })) } : undefined,
     captions: (sim.captions || []).filter((c) => c.i >= warm).map((c) => ({ ...c, i: cut(c.i) })).sort((a, b) => a.i - b.i),
@@ -655,6 +655,453 @@ function premiumScanner() {
   }, warm)
 }
 
+// ───────────────────────── DEFY ─────────────────────────
+// Bandas de exaustão (interior 1,382 · média 2 · exterior 2,618 desvios) à volta de uma média
+// suave, nuvem rápida/lenta e níveis-chave. Uma ideia nasce quando o preço estica até às bandas,
+// vira com uma vela forte que fecha para lá da vela anterior e junta pelo menos 6 confirmações.
+// Plano fixo na vela de sinal: entrada no fecho, WARNING no extremo da vela, SL 1 ATR para lá e
+// alvos a 1R, 2R e 3R.
+function defy() {
+  const warm = 240
+  const cs = makeCandles(83, 1.0845, [
+    { len: 200, drift: 0.0, vol: 0.0007 }, { len: 40, drift: 0.00012, vol: 0.0007 },
+    { len: 36, drift: 0.0004, vol: 0.0008 }, { len: 34, drift: -0.0006, vol: 0.0008 },
+    { len: 30, drift: 0.0005, vol: 0.0008 }, { len: 40, drift: -0.0001, vol: 0.0007 },
+  ])
+  const close = cs.map((b) => b.c)
+  const hlc3 = cs.map((b) => (b.h + b.l + b.c) / 3)
+  const len = 55
+  const basis = ema(hlc3, len)
+  const dev = ema(stdev(hlc3, len), 5)
+  const band = (m) => basis.map((b, i) => b + dev[i] * m)
+  const up1 = band(1.382), up2 = band(2), up3 = band(2.618)
+  const lo1 = band(-1.382), lo2 = band(-2), lo3 = band(-2.618)
+  const fast = ema(close, 8), slow = ema(close, 21)
+  const atr = atrOf(cs, 14)
+  const vAvg = sma(cs.map((b) => b.v), 20)
+  const body = cs.map((b) => Math.abs(b.c - b.o))
+  const bAvg = sma(body, 20)
+  // Níveis-chave: pivots de 10 velas, espaçados entre si.
+  const zones = []
+  const look = 10
+  for (let i = warm - 120; i < cs.length - look; i++) {
+    const win = cs.slice(i - look, i + look + 1)
+    const isH = cs[i].h === Math.max(...win.map((b) => b.h))
+    const isL = cs[i].l === Math.min(...win.map((b) => b.l))
+    if (!isH && !isL) continue
+    const px = isH ? cs[i].h : cs[i].l
+    if (zones.some((z) => Math.abs((z.top + z.bot) / 2 - px) < atr[i] * 2.5)) continue
+    zones.push({ i0: i, i1: cs.length - 1, top: px + atr[i] * 0.25, bot: px - atr[i] * 0.25, color: isH ? RED : BLUE, opacity: 0.14, reveal: i + look, level: true })
+  }
+  const nearLevel = (i, px) => zones.some((z) => z.reveal <= i && px >= z.bot - atr[i] * 0.3 && px <= z.top + atr[i] * 0.3)
+  const touch = (i, arr, dir) => { for (let k = Math.max(0, i - 5); k <= i; k++) if (dir > 0 ? cs[k].l <= arr[k] : cs[k].h >= arr[k]) return true; return false }
+  const checksFor = (dir) => [
+    ['Toque na banda interior', (i) => touch(i, dir > 0 ? lo1 : up1, dir)],
+    ['Toque na banda média', (i) => touch(i, dir > 0 ? lo2 : up2, dir)],
+    ['Toque na banda exterior', (i) => touch(i, dir > 0 ? lo3 : up3, dir)],
+    ['Nível-chave por perto', (i) => nearLevel(i, dir > 0 ? cs[i].l : cs[i].h)],
+    ['Vela forte a favor', (i) => (cs[i].c - cs[i].o) * dir > 0 && body[i] >= bAvg[i]],
+    ['Volume acima da média', (i) => cs[i].v > vAvg[i]],
+    ['Momento a virar', (i) => (close[i] - close[i - 3]) * dir > 0],
+    ['Rejeição com pavio', (i) => (dir > 0 ? Math.min(cs[i].o, cs[i].c) - cs[i].l : cs[i].h - Math.max(cs[i].o, cs[i].c)) > body[i] * 0.4],
+  ]
+  const buyChecks = checksFor(1), sellChecks = checksFor(-1)
+  const markers = []
+  const groups = []
+  let last = -99
+  for (let i = warm - 40; i < cs.length - 2; i++) {
+    if (i - last < 12) continue
+    for (const dir of [1, -1]) {
+      const breaks = dir > 0 ? cs[i].c > Math.max(cs[i - 1].h, cs[i - 2].h) : cs[i].c < Math.min(cs[i - 1].l, cs[i - 2].l)
+      if (!breaks) continue
+      const checks = dir > 0 ? buyChecks : sellChecks
+      if (!checks[0][1](i)) continue // sem esticão até à banda interior não há ideia
+      const n = checks.filter(([, fn]) => fn(i)).length
+      const score = 3 + n
+      if (score < 6) continue
+      const stars = score >= 10 ? 3 : score >= 8 ? 2 : 1
+      const e = close[i], w = dir > 0 ? cs[i].l : cs[i].h
+      const sl = w - dir * atr[i]
+      const R = Math.abs(e - sl)
+      markers.push({ i, price: dir > 0 ? cs[i].l : cs[i].h, text: `+${score} ${'★'.repeat(stars)}`, color: dir > 0 ? BLUE : RED, up: dir > 0 })
+      groups.push({
+        i0: i,
+        dir,
+        items: [
+          { price: e, color: GOLD_L, label: 'Entrada' },
+          { price: w, color: '#ff9a3c', label: 'Warning' },
+          { price: sl, color: RED, label: 'SL' },
+          { price: e + dir * R, color: GREEN, label: 'TP1  1R' },
+          { price: e + dir * R * 2, color: GREEN, label: 'TP2  2R' },
+          { price: e + dir * R * 3, color: GREEN, label: 'TP3  3R' },
+        ],
+      })
+      last = i
+      break
+    }
+  }
+  const rows = buyChecks.map(([label], k) => ({ label, states: cs.map((_, i) => (i > 2 && (buyChecks[k][1](i) || sellChecks[k][1](i)) ? 'ok' : '–')) }))
+  const first = groups.find((g) => g.i0 >= warm)
+  const second = groups.find((g) => first && g.i0 > first.i0)
+  const espacar = (lista) => lista.reduce((acc, c) => [...acc, { ...c, i: acc.length ? Math.max(c.i, acc[acc.length - 1].i + 3) : c.i }], [])
+  return trim({
+    name: 'DEFY',
+    candles: cs,
+    lines: [
+      { name: 'Centro', color: GREY, width: 0.03, z: 0.2, pts: basis },
+      { name: 'Banda interior', color: RED, width: 0.03, z: 0.21, pts: up1 },
+      { name: 'Banda interior baixa', color: BLUE, width: 0.03, z: 0.21, pts: lo1 },
+      { name: 'Nuvem rápida', color: GOLD, width: 0.05, z: 0.23, pts: fast },
+      { name: 'Nuvem lenta', color: GOLD_L, width: 0.035, z: 0.22, pts: slow },
+    ],
+    areas: [
+      { upper: up3, lower: up2, color: RED, opacity: 0.22, z: 0.05 },
+      { upper: lo2, lower: lo3, color: BLUE, opacity: 0.22, z: 0.05 },
+    ],
+    zones,
+    markers,
+    groups,
+    panel: { title: 'Confirmações', rows },
+    captions: espacar([
+      { i: warm, text: 'Bandas de exaustão à volta de uma média suave' },
+      { i: warm + 8, text: 'Níveis-chave: onde o preço já reagiu antes' },
+      ...(first ? [{ i: first.i0 - 4, text: 'O preço estica até às bandas e as confirmações somam-se' }] : []),
+      ...(first ? [{ i: first.i0, text: 'Vela forte a virar: nasce a ideia, com a pontuação e as estrelas' }] : []),
+      ...(first ? [{ i: first.i0 + 2, text: 'Entrada, Warning, stop a 1 ATR e alvos a 1R, 2R e 3R' }] : []),
+      ...(second ? [{ i: second.i0, text: 'Do outro lado, a mesma leitura dá a ideia contrária' }] : []),
+    ]),
+    legend: [{ color: RED, label: 'Bandas de cima' }, { color: BLUE, label: 'Bandas de baixo' }, { color: GOLD, label: 'Nuvem DEFY' }],
+  }, warm)
+}
+
+// ───────────────────────── RocketNova ─────────────────────────
+// EMA 20/50/238 com sinal no cruzamento confirmado, mas só com uma «estrela de lançamento» recente
+// (mínimo de swing para a compra, máximo para a venda; Depth/Deviation/Backstep). Rocket Candle
+// (corpo >= 1,2 ATR a fechar no extremo), pulso de volatilidade (ATR contra a média) e Trade Clock.
+// Plano fixo na vela do sinal: Entry, SL e TP1–TP4 (30 %, 50 %, 100 % e 150 % do stop); depois do
+// TP1 o stop passa para a entrada; um sinal contrário fecha a trade.
+function rocketNova() {
+  const warm = 260
+  const cs = makeCandles(57, 2386, [
+    { len: 190, drift: 0.0001, vol: 0.0015 }, { len: 60, drift: -0.0007, vol: 0.0016 },
+    { len: 22, drift: -0.0013, vol: 0.0018 }, { len: 46, drift: 0.0017, vol: 0.0015 }, { len: 26, drift: 0.0001, vol: 0.0014 },
+    { len: 28, drift: -0.0016, vol: 0.0017 }, { len: 44, drift: 0.0015, vol: 0.0015 },
+  ])
+  const close = cs.map((b) => b.c)
+  const f = ema(close, 20), s = ema(close, 50), L = ema(close, 238)
+  const atr = atrOf(cs, 14)
+  const atrAvg = sma(atr, 100)
+  const vAvg = sma(cs.map((b) => b.v), 20)
+  // Estrelas: pivots com Depth 34 à esquerda e Backstep 8 à direita; Deviation 1,3 ATR face à estrela contrária.
+  const depth = 34, back = 8
+  const stars = []
+  let lastHi = NaN, lastLo = NaN
+  for (let i = depth; i < cs.length - back; i++) {
+    const left = cs.slice(i - depth, i), right = cs.slice(i + 1, i + 1 + back)
+    const isH = cs[i].h > Math.max(...left.map((b) => b.h), ...right.map((b) => b.h))
+    const isL = cs[i].l < Math.min(...left.map((b) => b.l), ...right.map((b) => b.l))
+    const dev = atr[i] * 1.3
+    if (isH && (isNaN(lastLo) || cs[i].h - lastLo >= dev)) { stars.push({ i, reveal: i + back, price: cs[i].h, up: false }); lastHi = cs[i].h }
+    if (isL && (isNaN(lastHi) || lastHi - cs[i].l >= dev)) { stars.push({ i, reveal: i + back, price: cs[i].l, up: true }); lastLo = cs[i].l }
+  }
+  const rocket = cs.map((b, i) => {
+    const body = Math.abs(b.c - b.o), rng = b.h - b.l
+    return rng > 0 && body >= atr[i] * 1.2 && (b.c > b.o ? b.h - b.c : b.c - b.l) <= rng * 0.3
+  })
+  const starOk = (i, up) => stars.some((st) => st.up === up && st.reveal <= i && i - st.reveal <= 40)
+  const markers = stars.map((st) => ({ i: st.reveal, price: st.price, text: '✦', color: st.up ? GREEN : RED, up: st.up, small: true }))
+  const groups = []
+  let open = null
+  for (let i = warm - 20; i < cs.length; i++) {
+    const up = f[i] > s[i] && f[i - 1] <= s[i - 1]
+    const dn = f[i] < s[i] && f[i - 1] >= s[i - 1]
+    if (!up && !dn) continue
+    if (!starOk(i, up)) continue
+    const dir = up ? 1 : -1
+    if (open && open.dir !== dir) open.exit = i // sinal contrário fecha a trade anterior
+    markers.push({ i, price: up ? cs[i].l : cs[i].h, text: up ? 'BUY' : 'SELL', color: up ? GREEN : RED, up })
+    const e = close[i], R = atr[i] * 1.6
+    const sl = e - dir * R
+    // Primeira vela que toca o TP1: o stop passa para a entrada.
+    let hit = null
+    for (let k = i + 1; k < cs.length; k++) if (dir > 0 ? cs[k].h >= e + R * 0.3 : cs[k].l <= e - R * 0.3) { hit = k; break }
+    const g = {
+      i0: i,
+      dir,
+      items: [
+        { price: e, color: GOLD_L, label: 'Entrada' },
+        { price: sl, color: RED, label: 'SL', to: hit ?? undefined },
+        ...(hit ? [{ price: e, color: GOLD_L, label: 'SL em BE', from: hit }] : []),
+        { price: e + dir * R * 0.3, color: GREEN, label: 'TP1' },
+        { price: e + dir * R * 0.5, color: GREEN, label: 'TP2' },
+        { price: e + dir * R * 1.0, color: GREEN, label: 'TP3' },
+        { price: e + dir * R * 1.5, color: GREEN, label: 'TP4' },
+      ],
+    }
+    groups.push(g)
+    open = g
+  }
+  const rows = [
+    { label: 'EMA 20 acima da 50', states: cs.map((_, i) => (f[i] > s[i] ? 'Alta' : 'Baixa')) },
+    { label: 'Estrela de lançamento', states: cs.map((_, i) => (starOk(i, f[i] > s[i]) ? 'ok' : '–')) },
+    { label: 'Rocket Candle', states: cs.map((_, i) => (rocket.slice(Math.max(0, i - 4), i + 1).some(Boolean) ? 'ok' : '–')) },
+    { label: 'Volatility Pulse', states: cs.map((_, i) => (atr[i] >= atrAvg[i] * 1.3 ? 'Alta' : atr[i] <= atrAvg[i] * 0.7 ? 'Baixa' : 'Normal')) },
+    { label: 'Trade Clock', states: cs.map((b, i) => (b.v < vAvg[i] * 0.5 ? 'Low Volume' : 'Good Volume')) },
+  ]
+  const first = groups.find((g) => g.i0 >= warm)
+  const firstStar = markers.find((m) => m.small && m.i >= warm)
+  return trim({
+    name: 'RocketNova',
+    candles: cs,
+    rocket,
+    lines: [
+      { name: 'EMA 20', color: RED, width: 0.05, z: 0.22, pts: f },
+      { name: 'EMA 50', color: BLUE, width: 0.05, z: 0.23, pts: s },
+      { name: 'EMA 238', color: '#ff9a3c', width: 0.07, z: 0.24, pts: L },
+    ],
+    zones: [],
+    markers,
+    groups,
+    panel: { title: 'RocketNova', rows },
+    captions: [
+      { i: warm, text: 'EMAs de 20, 50 e 238: a tendência em três horizontes' },
+      ...(firstStar ? [{ i: firstStar.i, text: 'As estrelas marcam os máximos e mínimos de swing: a rampa de lançamento' }] : []),
+      ...(first ? [{ i: first.i0, text: 'Cruzamento confirmado com estrela recente: sinal RocketNova' }] : []),
+      ...(first ? [{ i: first.i0 + 3, text: 'Entrada, stop e TP1 a TP4 fixos na vela do sinal' }] : []),
+      ...(first ? [{ i: first.i0 + 9, text: 'TP1 tocado: o stop passa para a entrada' }] : []),
+    ],
+    legend: [{ color: RED, label: 'EMA 20' }, { color: BLUE, label: 'EMA 50' }, { color: '#ff9a3c', label: 'EMA 238' }],
+  }, warm)
+}
+
+// ───────────────────────── Quantum ─────────────────────────
+// Seguidor de tendência com entradas em recuo (docs/pine/mtm-quantum.pine). Linha primária (EMA 269)
+// azul/vermelha pela fase (duas velas do mesmo lado); seta grande na viragem; fita EMA 8/21; triângulo
+// de recuo (toque na fita + fecho a favor); ponto de onda (Stoch RSI 14/5 a sair da zona 20/80 na
+// direção da fase); bandas 2σ/3σ; painel de força (score 0–100). Gestão MTM: stop para lá do extremo
+// do recuo, alvo a 2R.
+function rsiOf(src, len) {
+  const up = src.map((x, i) => (i === 0 ? 0 : Math.max(0, x - src[i - 1])))
+  const dn = src.map((x, i) => (i === 0 ? 0 : Math.max(0, src[i - 1] - x)))
+  const au = rma(up, len), ad = rma(dn, len)
+  return au.map((u, i) => (ad[i] === 0 ? 100 : 100 - 100 / (1 + u / ad[i])))
+}
+function quantum() {
+  const warm = 300
+  const cs = makeCandles(41, 1.6475, [
+    { len: 150, drift: 0.00004, vol: 0.0009 }, { len: 100, drift: 0.00022, vol: 0.0009 },
+    { len: 50, drift: 0.0006, vol: 0.0009 }, { len: 14, drift: -0.0007, vol: 0.001 }, { len: 34, drift: 0.0006, vol: 0.0009 },
+    { len: 12, drift: -0.0008, vol: 0.001 }, { len: 30, drift: 0.0006, vol: 0.0009 },
+    { len: 50, drift: -0.0008, vol: 0.0011 }, { len: 12, drift: 0.0007, vol: 0.001 }, { len: 36, drift: -0.0007, vol: 0.001 },
+  ])
+  const close = cs.map((b) => b.c)
+  const prim = ema(close, 269)
+  const e8 = ema(close, 8), e21 = ema(close, 21)
+  const rsi = rsiOf(close, 14)
+  const k = rsi.map((_, i) => { const w = rsi.slice(Math.max(0, i - 4), i + 1); const lo = Math.min(...w), hi = Math.max(...w); return hi === lo ? 50 : ((rsi[i] - lo) / (hi - lo)) * 100 })
+  const bbB = sma(close, 20), bbD = stdev(close, 20)
+  const bb1U = bbB.map((b, i) => b + 2 * bbD[i]), bb1L = bbB.map((b, i) => b - 2 * bbD[i])
+  const bb2U = bbB.map((b, i) => b + 3 * bbD[i]), bb2L = bbB.map((b, i) => b - 3 * bbD[i])
+  // Fase: duas velas seguidas do mesmo lado da linha primária.
+  const fase = []
+  let f = 0
+  for (let i = 0; i < cs.length; i++) {
+    if (i > 0 && close[i] > prim[i] && close[i - 1] > prim[i - 1]) f = 1
+    if (i > 0 && close[i] < prim[i] && close[i - 1] < prim[i - 1]) f = -1
+    fase.push(f)
+  }
+  // Painel de força: quatro «timeframes» aproximados por pares de médias mais longas.
+  const pares = [[8, 21], [21, 55], [34, 89], [55, 144]].map(([a, b]) => [ema(close, a), ema(close, b)])
+  const score = cs.map((_, i) => Math.round(50 + (50 / pares.length) * pares.reduce((s, [fa, sl]) => s + (close[i] > fa[i] ? 0.5 : -0.5) + (fa[i] > sl[i] ? 0.5 : -0.5), 0)))
+  const touchUp = (i) => cs[i].l <= e21[i] || cs[i - 1].l <= e21[i - 1]
+  const touchDn = (i) => cs[i].h >= e21[i] || cs[i - 1].h >= e21[i - 1]
+  const markers = []
+  const groups = []
+  let lastEntry = -99
+  for (let i = 2; i < cs.length; i++) {
+    const bull = fase[i] === 1, bear = fase[i] === -1
+    if (bull && fase[i - 1] !== 1) markers.push({ i, price: cs[i].l, text: '▲ Fase', color: BLUE, up: true })
+    if (bear && fase[i - 1] !== -1) markers.push({ i, price: cs[i].h, text: '▼ Fase', color: RED, up: false })
+    const pbUp = bull && touchUp(i) && close[i] > e8[i] && close[i] > cs[i].o
+    const pbDn = bear && touchDn(i) && close[i] < e8[i] && close[i] < cs[i].o
+    const dotUp = bull && k[i] > 20 && k[i - 1] <= 20
+    const dotDn = bear && k[i] < 80 && k[i - 1] >= 80
+    if (pbUp) markers.push({ i, price: cs[i].l, text: '▲', color: BLUE, up: true, small: true, kind: 'tri' })
+    if (pbDn) markers.push({ i, price: cs[i].h, text: '▼', color: RED, up: false, small: true, kind: 'tri' })
+    if (dotUp) markers.push({ i, price: cs[i].l, text: '●', color: BLUE, up: true, small: true, kind: 'dot' })
+    if (dotDn) markers.push({ i, price: cs[i].h, text: '●', color: RED, up: false, small: true, kind: 'dot' })
+    const entUp = (pbUp || dotUp) && score[i] > 60
+    const entDn = (pbDn || dotDn) && score[i] <= 40
+    if ((entUp || entDn) && i - lastEntry >= 14) {
+      const dir = entUp ? 1 : -1
+      const e = close[i]
+      const sl = dir > 0 ? Math.min(...cs.slice(i - 9, i + 1).map((b) => b.l)) : Math.max(...cs.slice(i - 9, i + 1).map((b) => b.h))
+      const R = Math.abs(e - sl)
+      groups.push({ i0: i, dir, forte: dir > 0 ? pbUp && dotUp : pbDn && dotDn, items: [
+        { price: e, color: GOLD_L, label: 'Entrada' },
+        { price: sl, color: RED, label: 'SL' },
+        { price: e + dir * R * 2, color: GREEN, label: 'Alvo 2R' },
+      ] })
+      lastEntry = i
+    }
+  }
+  const primUp = prim.map((v, i) => (fase[i] === 1 ? v : null))
+  const primDn = prim.map((v, i) => (fase[i] === -1 ? v : null))
+  const rows = [
+    { label: 'Fase', states: fase.map((v) => (v === 1 ? 'Alta' : v === -1 ? 'Baixa' : '–')) },
+    { label: 'Score', states: score.map((v) => (v > 60 ? 'Alta' : v <= 40 ? 'Baixa' : '–')) },
+    { label: 'Recuo à fita', states: cs.map((_, i) => (i > 1 && (fase[i] === 1 ? touchUp(i) : fase[i] === -1 ? touchDn(i) : false) ? 'ok' : '–')) },
+    { label: 'Oscilador na zona', states: k.map((v, i) => ((fase[i] === 1 && v <= 20) || (fase[i] === -1 && v >= 80) ? 'ok' : '–')) },
+    { label: 'Sinal de entrada', states: cs.map((_, i) => (markers.some((m) => m.small && m.i === i) ? 'ok' : '–')) },
+  ]
+  const flip = markers.find((m) => !m.small && m.i >= warm)
+  const first = groups.find((g) => g.i0 >= warm)
+  const forte = groups.find((g) => g.i0 >= warm && g.forte) || first
+  const espacar = (lista) => [...lista].sort((a, b) => a.i - b.i).reduce((acc, c) => [...acc, { ...c, i: acc.length ? Math.max(c.i, acc[acc.length - 1].i + 3) : c.i }], [])
+  return trim({
+    name: 'Quantum',
+    candles: cs,
+    lines: [
+      { name: 'Linha primária alta', color: BLUE, width: 0.08, z: 0.22, pts: primUp },
+      { name: 'Linha primária baixa', color: RED, width: 0.08, z: 0.22, pts: primDn },
+      { name: 'EMA 8', color: GOLD_L, width: 0.03, z: 0.23, pts: e8 },
+      { name: 'EMA 21', color: GOLD, width: 0.03, z: 0.23, pts: e21 },
+      { name: 'Banda superior', color: GREY, width: 0.03, z: 0.2, pts: bb1U },
+      { name: 'Banda inferior', color: GREY, width: 0.03, z: 0.2, pts: bb1L },
+    ],
+    areas: [
+      { upper: bb2U, lower: bb1U, color: GREY, opacity: 0.12, z: 0.05 },
+      { upper: bb1L, lower: bb2L, color: GREY, opacity: 0.12, z: 0.05 },
+    ],
+    zones: [],
+    markers,
+    groups,
+    panel: { title: 'Força', rows },
+    captions: espacar([
+      { i: warm, text: 'Linha primária: azul com o preço por cima, vermelha por baixo' },
+      ...(flip ? [{ i: flip.i, text: 'A seta de fase marca o início da tendência' }] : []),
+      ...(first ? [{ i: first.i0 - 4, text: 'O preço recua à fita e o oscilador entra na zona da direção' }] : []),
+      ...(first ? [{ i: first.i0, text: 'Triângulo de recuo ou ponto de onda na cor da direção: a entrada' }] : []),
+      ...(first ? [{ i: first.i0 + 2, text: 'Stop para lá do extremo do recuo e alvo a 2R' }] : []),
+      ...(forte && forte !== first ? [{ i: forte.i0, text: 'Triângulo e ponto na mesma vela: a entrada mais forte' }] : []),
+    ]),
+    legend: [{ color: BLUE, label: 'Fase de alta' }, { color: RED, label: 'Fase de baixa' }, { color: GOLD, label: 'Fita 8/21' }],
+  }, warm)
+}
+
+// ───────────────────────── Golden Zone ─────────────────────────
+// Scalping de ouro em 5 minutos (docs/pine/golden-zone.pine). Níveis psicológicos de 5 em 5 $;
+// zona de 1 $ centrada no nível; o visto amarelo aparece quando a vela fecha para lá da zona de ação
+// a favor da tendência (EMA 50/200); no fecho da vela seguinte surgem Invalidação (−1,5 $), Saída 1 (+1,5 $)
+// e Saída 2 (+3 $), com as linhas a começar na vela do visto. Bandeira dourada na Saída 1. Cada visto novo apaga o anterior.
+function goldenZone() {
+  const warm = 220
+  const STEP = 5, HALF = 0.5, RISK = 1.5
+  const r2 = (x) => Math.round(x * 2) / 2
+  const build = (seed) => {
+    const cs = makeCandles(seed, 4052, [
+      { len: 120, drift: 0.00002, vol: 0.00026 }, { len: 60, drift: 0.00008, vol: 0.00025 }, { len: 40, drift: -0.00006, vol: 0.00027 },
+      { len: 50, drift: 0.0001, vol: 0.00026 }, { len: 14, drift: -0.00012, vol: 0.00027 }, { len: 40, drift: 0.00012, vol: 0.00026 },
+      { len: 30, drift: -0.00004, vol: 0.00027 }, { len: 36, drift: 0.00009, vol: 0.00026 },
+    ])
+    const close = cs.map((b) => b.c)
+    const e50 = ema(close, 50), e200 = ema(close, 200)
+    const markers = [], zones = [], groups = [], sigs = []
+    let sig = null
+    const rows = { trend: [], broke: [], next: [], plan: [], flag: [] }
+    for (let i = 0; i < cs.length; i++) {
+      const c = cs[i], up = e50[i] > e200[i]
+      let broke = false, planned = false
+      if (sig && sig.plan != null && !sig.closed && i > sig.plan) {
+        const d = sig.dir
+        if (sig.e1Hit == null && (d > 0 ? c.h >= sig.e1 : c.l <= sig.e1)) { sig.e1Hit = i; markers.push({ i, price: d > 0 ? c.h : c.l, text: '⚑', color: GOLD_L, fg: '#111', up: d > 0, small: true, kind: 'flag' }) }
+        if (d > 0 ? c.h >= sig.e2 : c.l <= sig.e2) sig.closed = i
+        else if (d > 0 ? c.l <= sig.inval : c.h >= sig.inval) { sig.closed = i; if (sig.e1Hit == null) markers.push({ i, price: d > 0 ? c.l : c.h, text: '⚑', color: GOLD_L, fg: '#111', up: d < 0, small: true, kind: 'flag' }) }
+        // a caixa e as linhas acompanham a ideia desde o visto até ao fecho
+        if (sig.closed != null) { sig.zoneBox.i1 = i; sig.group.items.forEach((it) => (it.until = it.until ?? i)) } else sig.zoneBox.i1 = i
+      }
+      // o plano completo surge no fecho da vela seguinte ao visto (as linhas começam na vela do visto)
+      if (sig && sig.plan == null && i === sig.i + 1) {
+        const d = sig.dir
+        sig.plan = i; planned = true
+        sig.group = { i0: i, dir: d, items: [
+          { price: sig.zone, color: GREY, label: 'Zona de ação', from: sig.i },
+          { price: sig.inval, color: RED, label: 'Invalidação', from: sig.i },
+          { price: sig.e1, color: GREEN, label: 'Saída 1', from: sig.i },
+          { price: sig.e2, color: GREEN, label: 'Saída 2', from: sig.i },
+        ] }
+        groups.push(sig.group)
+        if (d > 0 ? c.h >= sig.e1 : c.l <= sig.e1) { sig.e1Hit = i; markers.push({ i, price: d > 0 ? c.h : c.l, text: '⚑', color: GOLD_L, fg: '#111', up: d > 0, small: true, kind: 'flag' }) }
+        if (d > 0 ? c.h >= sig.e2 : c.l <= sig.e2) sig.closed = i
+        else if (d > 0 ? c.l <= sig.inval : c.h >= sig.inval) { sig.closed = i; if (sig.e1Hit == null) markers.push({ i, price: d > 0 ? c.l : c.h, text: '⚑', color: GOLD_L, fg: '#111', up: d < 0, small: true, kind: 'flag' }) }
+        if (sig.closed != null) sig.group.items.forEach((it) => (it.until = i))
+        sig.zoneBox.i1 = i
+      }
+      if (i > 0) {
+        const lb = Math.floor(c.c / STEP) * STEP, la = Math.ceil(c.c / STEP) * STEP
+        const sigBuy = up && c.c > lb + HALF && close[i - 1] < lb - HALF
+        const sigSell = !up && c.c < la - HALF && close[i - 1] > la + HALF
+        if (sigBuy || sigSell) {
+          const d = sigBuy ? 1 : -1, level = sigBuy ? lb : la
+          if (sig) { sig.end = i; if (sig.group) sig.group.items.forEach((it) => (it.to = Math.min(it.to ?? i, i))); sig.zoneBox.i1 = Math.min(sig.zoneBox.i1, i); sig.zoneBox.to = i; markers.filter((m) => m.i >= sig.i && m.i < i).forEach((m) => (m.to = i)) }
+          const zone = r2(level + d * HALF)
+          sig = { i, dir: d, level, zone, inval: r2(zone - d * RISK), e1: r2(zone + d * RISK), e2: r2(zone + d * RISK * 2), plan: null, e1Hit: null, closed: null }
+          sig.zoneBox = { i0: i, i1: i + 1, top: level + HALF, bot: level - HALF, color: GOLD_L, opacity: 0.3, reveal: i, label: 'Zona' }
+          zones.push(sig.zoneBox)
+          markers.push({ i, price: d > 0 ? c.h + 1.2 : c.l - 1.2, text: '✓', color: GOLD_L, fg: '#111', up: d > 0, kind: 'check' })
+          sigs.push(sig); broke = true
+        }
+      }
+      rows.trend.push(up ? 'Alta' : 'Baixa')
+      rows.broke.push(broke ? 'ok' : '–')
+      rows.next.push(planned ? 'ok' : '–')
+      rows.plan.push(sig && sig.plan != null && !sig.closed ? 'ok' : '–')
+      rows.flag.push(sig && sig.e1Hit != null ? 'ok' : '–')
+    }
+    return { cs, e50, e200, markers, zones, groups, sigs, rows }
+  }
+  // procura um exemplo completo depois do aquecimento: compra, plano na vela seguinte, Saída 1 e Saída 2
+  let D = null, best = null
+  for (let seed = 23; seed < 23 + 400; seed++) {
+    const d = build(seed)
+    const s = d.sigs.find((x, k) => x.i >= warm + 20 && x.dir > 0 && x.plan != null && x.e1Hit != null && x.closed != null && x.e1Hit - x.plan >= 2 && x.closed - x.e1Hit >= 2 && x.closed - x.i <= 40 && d.cs[x.closed].h >= x.e2 && x.i + 60 < d.cs.length && (d.sigs[k + 1]?.i ?? 1e9) > x.closed + 6)
+    if (s) { D = d; best = s; break }
+    if (!D) { D = d; best = d.sigs.find((x) => x.i >= warm) || d.sigs[0] }
+  }
+  const { cs, e50, e200, markers, zones, groups, rows } = D
+  const lo = Math.floor(Math.min(...cs.slice(warm).map((b) => b.l)) / STEP) * STEP, hi = Math.ceil(Math.max(...cs.slice(warm).map((b) => b.h)) / STEP) * STEP
+  const lines = [
+    { name: 'EMA 50', color: BLUE, width: 0.03, z: 0.21, pts: e50 },
+    { name: 'EMA 200', color: '#ff9a3c', width: 0.03, z: 0.21, pts: e200 },
+  ]
+  for (let p = lo; p <= hi; p += STEP) lines.push({ name: `Nível ${p}`, psy: true, color: GREY, width: 0.02, z: 0.2, pts: cs.map(() => p) })
+  const s = best
+  return trim({
+    name: 'Golden Zone',
+    candles: cs,
+    lines,
+    zones,
+    markers,
+    groups,
+    panel: { title: 'Golden Zone', rows: [
+      { label: 'Tendência (EMA 50/200)', states: rows.trend },
+      { label: 'Nível rompido', states: rows.broke },
+      { label: 'Vela seguinte fechada', states: rows.next },
+      { label: 'Plano no gráfico', states: rows.plan },
+      { label: 'Saída 1 tocada', states: rows.flag },
+    ] },
+    captions: [
+      { i: warm, text: 'Níveis psicológicos de 5 em 5 $ no ouro, em 5 minutos' },
+      ...(s ? [{ i: s.i, text: 'A vela fecha para lá do nível, a favor da tendência: visto amarelo e zona de 1 $' }] : []),
+      ...(s && s.plan != null ? [{ i: s.plan, text: 'No fecho da vela seguinte, o plano: invalidação a 1,5 $, Saída 1 a +1,5 $ e Saída 2 a +3 $' }] : []),
+      ...(s && s.e1Hit != null ? [{ i: s.e1Hit, text: 'Saída 1 tocada: a bandeira dourada marca o trade pago' }] : []),
+      ...(s && s.closed != null ? [{ i: s.closed, text: 'Saída 2: o plano fecha; o visto seguinte limpa o gráfico' }] : []),
+    ],
+    legend: [{ color: GOLD_L, label: 'Visto e zona' }, { color: GREEN, label: 'Saída 1 e Saída 2' }, { color: RED, label: 'Invalidação' }, { color: GREY, label: 'Níveis psicológicos' }],
+    best: s ? { i: s.i - warm, plan: s.plan != null ? s.plan - warm : null, e1: s.e1Hit != null ? s.e1Hit - warm : null, closed: s.closed != null ? s.closed - warm : null } : null,
+  }, warm)
+}
+
 // ───────────────────────── Cartões de pontos-chave ─────────────────────────
 // Texto de cada cartão (vem do código Pine) e, à parte, o recorte da simulação que o ilustra.
 export const CARD_TEXT = {
@@ -699,6 +1146,34 @@ export const CARD_TEXT = {
     { title: 'Entrada em recuo', text: 'A zona de entrada fica uns dólares contra o preço: esperas que o ouro volte a ti em vez de o perseguires.' },
     { title: 'Stop e três alvos fixos', text: 'Stop para lá da zona e TP1, TP2 e TP3 a 5, 10 e 15 $, com a parte que fecha em cada um.' },
     { title: 'Stop para a entrada', text: 'Quando o TP1 é tocado, o stop do resto passa para o preço de entrada.' },
+  ],
+  defy: [
+    { title: 'Bandas de exaustão', text: 'Banda interior, média e exterior à volta de uma média suave. Quanto mais o preço estica, mais forte é a leitura.' },
+    { title: 'Níveis-chave', text: 'Zonas onde o preço já reagiu antes, espaçadas entre si: possíveis pontos de inversão.' },
+    { title: 'Confirmações e estrelas', text: 'Cada leitura soma um ponto. +6 dá uma estrela, +8 duas, +10 três. Com vela dourada, é King Idea.' },
+    { title: 'Entrada, Warning e stop', text: 'Entrada no fecho ou a 50 % da vela. O Warning é o extremo da vela de sinal e o stop fica 1 ATR para lá.' },
+    { title: 'Alvos em R', text: 'TP1, TP2 e TP3 a 1R, 2R e 3R, com a distância em pips. Há modos para scalp e para swing.' },
+  ],
+  rocketnova: [
+    { title: 'Três médias, um cruzamento', text: 'EMA 20, 50 e 238. O sinal nasce quando a rápida cruza a lenta e a vela fecha, nunca antes.' },
+    { title: 'Estrela de lançamento', text: 'Máximos e mínimos de swing por Depth, Deviation e Backstep. A compra exige uma estrela de mínimo recente; a venda, uma de máximo.' },
+    { title: 'Rocket Candle e pulso', text: 'A vela de impulso pinta-se de amarelo. O Volatility Pulse compara o ATR com a média e o Trade Clock mostra sessão e volume.' },
+    { title: 'Entrada, stop e quatro alvos', text: 'Stop fixo (100 pips, 200 no ouro) ou na última estrela. TP1 a TP4 a 30 %, 50 %, 100 % e 150 % do stop.' },
+    { title: 'Gestão por alertas', text: 'Depois do TP1 o stop passa para a entrada. Um sinal contrário fecha a trade. Tudo sai por webhook com o mesmo id.' },
+  ],
+  'golden-zone': [
+    { title: 'Níveis psicológicos', text: 'Linhas de 5 em 5 $ no ouro (4060, 4065, 4070). Dez à volta do preço. É nelas que o preço costuma reagir e é delas que nasce cada zona.' },
+    { title: 'Visto amarelo e zona', text: 'Quando uma vela fecha para lá do nível a favor da tendência (EMA 50 sobre a 200), aparece o visto e a caixa amarela de 1 $ centrada no nível. A zona de ação é a aresta do lado do preço.' },
+    { title: 'Plano na vela seguinte', text: 'No fecho da vela seguinte ao visto surgem os parâmetros: invalidação a 1,5 $ (150 pontos), Saída 1 a +1,5 $ e Saída 2 a +3 $. A entrada é tua: ordem limite na zona, quando o preço recua.' },
+    { title: 'Saída 1 e bandeira dourada', text: 'Ao tocar a Saída 1 aparece a bandeira dourada: o trade pagou. A Saída 2 ou a invalidação fecham o plano, e o visto seguinte limpa o gráfico.' },
+    { title: 'Confirmações e alertas', text: 'Tendência, suporte e resistência, padrão de vela e desequilíbrios, pela ordem do guia. Cada evento (visto, plano, Saída 1, Saída 2, invalidação) sai por alerta JSON para webhook.' },
+  ],
+  quantum: [
+    { title: 'Linha primária e fase', text: 'Uma média longa (269) com brilho. Azul com o preço por cima, vermelha por baixo. Duas velas do mesmo lado mudam a fase e a seta grande marca o início.' },
+    { title: 'Painel de força', text: 'Uma pontuação de 0 a 100 e uma seta por timeframe, de M1 a W1. Compra acima de 60, venda a 40 ou menos, 45 a 50 é neutro.' },
+    { title: 'O recuo', text: 'O preço volta à fita (EMA 8 e 21) e o oscilador Stoch RSI entra na zona da direção: azul em baixo na compra, vermelha em cima na venda.' },
+    { title: 'Triângulo e ponto', text: 'O triângulo nasce quando a vela fecha de volta a favor depois do toque na fita. O ponto nasce quando o oscilador sai da zona. Os dois na mesma vela é a entrada mais forte.' },
+    { title: 'Gestão MTM', text: 'Stop para lá do extremo das últimas velas do recuo e alvo com pelo menos o dobro do risco. Os alertas saem por webhook com entrada, stop, alvo e score.' },
   ],
 }
 
@@ -778,6 +1253,56 @@ const CARD_VIEWS = {
       { win: around(be?.from ?? g.i0 + 4, 10, 18, N), layers: { candles: true, groups: true }, group: g },
     ]
   },
+  defy: (s) => {
+    const N = s.candles.length
+    const g = s.groups.find((q) => q.i0 > 20) ?? s.groups[0]
+    const m = s.markers.find((q) => q.i === g.i0)
+    return [
+      { win: [0, N - 1], layers: { candles: true, areas: true, lines: ['Centro', 'Banda interior', 'Banda interior baixa'] } },
+      { win: [0, N - 1], layers: { candles: true, dimCandles: true, zones: (q) => !!q.level } },
+      { win: around(m?.i ?? g.i0, 40, 6, N), layers: { candles: true, dimCandles: true, panel: true, markers: true, areas: true } },
+      { win: around(g.i0, 8, 22, N), layers: { candles: true, groups: true, markers: true }, group: { ...g, items: g.items.slice(0, 3) } },
+      { win: around(g.i0, 8, 26, N), layers: { candles: true, groups: true, markers: true }, group: g },
+    ]
+  },
+  rocketnova: (s) => {
+    const N = s.candles.length
+    const sig = s.markers.filter((m) => !m.small)
+    const g = s.groups[s.groups.length - 1]
+    const be = g.items.find((it) => it.from != null)
+    return [
+      { win: [0, N - 1], layers: { candles: true, dimCandles: true, lines: ['EMA 20', 'EMA 50', 'EMA 238'] } },
+      { win: around(sig[0]?.i ?? 50, 46, 10, N), layers: { candles: true, markers: true, lines: ['EMA 20', 'EMA 50'] } },
+      { win: [Math.max(0, N - 90), N - 1], layers: { candles: true, dimCandles: true, panel: true } },
+      { win: around(g.i0, 8, 24, N), layers: { candles: true, groups: true, markers: (m) => !m.small }, group: { ...g, items: g.items.filter((it) => it.from == null).map((it) => ({ ...it, to: undefined })) } },
+      { win: around(be?.from ?? g.i0 + 4, 10, 18, N), layers: { candles: true, groups: true }, group: g },
+    ]
+  },
+  'golden-zone': (s) => {
+    const N = s.candles.length
+    const b = s.best || { i: 40, plan: 46, e1: 52, closed: 58 }
+    const g = s.groups.find((x) => x.i0 === b.plan) || s.groups[s.groups.length - 1]
+    const psy = s.lines.filter((l) => l.psy).map((l) => l.name)
+    return [
+      { win: [Math.max(0, b.i - 70), Math.min(N - 1, b.i + 10)], layers: { candles: true, dimCandles: true, lines: psy } },
+      { win: around(b.i, 26, 8, N), layers: { candles: true, zones: true, lines: [...psy, 'EMA 50', 'EMA 200'], markers: (m) => m.kind === 'check' } },
+      { win: around(b.plan ?? b.i + 4, 16, 14, N), layers: { candles: true, zones: true, groups: true, markers: (m) => m.kind === 'check' }, group: g },
+      { win: around(b.e1 ?? b.i + 10, 18, 16, N), layers: { candles: true, zones: true, groups: true, markers: true }, group: g },
+      { win: around(b.i, 40, 30, N), layers: { candles: true, zones: true, groups: true, panel: true, lines: ['EMA 50', 'EMA 200'], markers: true }, group: g },
+    ]
+  },
+  quantum: (s) => {
+    const N = s.candles.length
+    const flip = s.markers.find((m) => !m.small)
+    const g = s.groups.find((x) => x.forte) || s.groups[s.groups.length - 1]
+    return [
+      { win: [0, N - 1], layers: { candles: true, dimCandles: true, lines: ['Linha primária alta', 'Linha primária baixa'], markers: (m) => !m.small } },
+      { win: around(flip?.i ?? 40, 30, 40, N), layers: { candles: true, dimCandles: true, panel: true, lines: ['Linha primária alta', 'Linha primária baixa'] } },
+      { win: around(g.i0, 30, 8, N), layers: { candles: true, lines: ['EMA 8', 'EMA 21', 'Banda superior', 'Banda inferior'], areas: true, markers: (m) => m.kind === 'dot' } },
+      { win: around(g.i0, 16, 10, N), layers: { candles: true, lines: ['EMA 8', 'EMA 21'], markers: (m) => m.small } },
+      { win: around(g.i0, 8, 24, N), layers: { candles: true, groups: true, markers: (m) => m.small }, group: g },
+    ]
+  },
 }
 
 /** Cartões de pontos-chave de um scanner: texto + recorte da simulação. */
@@ -787,7 +1312,7 @@ export function scannerCards(slug) {
   return CARD_TEXT[slug].map((t, k) => ({ ...t, ...views[k] }))
 }
 
-const BUILDERS = { 'gold-killer': goldKiller, 'mtm-scanner': mtmScanner, 'aurum-flow': aurumFlow, trendshot: trendShot, sensei, 'premium-scanner': premiumScanner }
+const BUILDERS = { 'gold-killer': goldKiller, 'mtm-scanner': mtmScanner, 'aurum-flow': aurumFlow, trendshot: trendShot, sensei, 'premium-scanner': premiumScanner, defy, rocketnova: rocketNova, quantum, 'golden-zone': goldenZone }
 const cache = {}
 /** Simulação de um scanner pelo slug da landing. */
 export function simulate(slug) {

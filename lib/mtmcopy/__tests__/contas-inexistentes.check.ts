@@ -30,7 +30,7 @@ const MORTAS = [
   '0f38257a-ba12-4f6c-b20c-9139693b3674', 'a4ea0c45-3dd1-4b55-bd2a-7f44d8d6884b', 'a5a1dddd-0099-4d67-98f1-86b65aad5845',
   'bddad3b8-353f-4a19-badf-f8df8f532678', 'dc588b39-1f0a-47a5-8985-28e6fbc98817', 'fbeeafeb-96a9-4133-bc6c-194cc281b6e0',
 ]
-const VIVA = CANONICAL_PREMIUM_ACCOUNT_ID // 530d2e07, DEPLOYED na lista de 15/09
+const VIVA = 'e82f4cfa-daff-4821-9715-d4a5da20ebfa' // conta MT5 de cliente viva (Pedro, PU Prime)
 
 function lojaMemoria() {
   const linhas = new Map<string, number>()
@@ -49,7 +49,8 @@ async function main() {
     ok(c === null, 'constante de conta apagada é null')
   }
   ok(!CONTAS_MOTOR_TEMPO_REAL.some((id) => !id || CONTAS_METAAPI_APAGADAS.has(id)), 'motor sem contas vazias nem apagadas')
-  ok(CONTAS_MOTOR_TEMPO_REAL.includes(VIVA), 'o Premium continua no motor')
+  ok(!CONTAS_MOTOR_TEMPO_REAL.includes(CANONICAL_PREMIUM_ACCOUNT_ID), 'o Premium antigo (530d2e07, apagado a 04/11) saiu do motor')
+  ok(contaMarcadaInexistente(CANONICAL_PREMIUM_ACCOUNT_ID), 'o Premium antigo está marcado como apagado')
   for (const id of MORTAS) ok(CONTAS_METAAPI_APAGADAS.has(id) && contaMarcadaInexistente(id), `morta estática: ${id.slice(0, 8)}`)
   ok(!contaMarcadaInexistente(VIVA), 'a conta viva não está marcada')
   ok(!mesmaConta(null, null) && !mesmaConta('', null) && mesmaConta(VIVA, VIVA), 'mesmaConta: null nunca iguala null')

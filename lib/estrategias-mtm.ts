@@ -58,11 +58,14 @@ export const ESTRATEGIAS_MTM: EstrategiaMtm[] = [
     guia: guias("trendshot"),
   },
   {
-    slug: "supernova",
-    nome: "Supernova",
-    resumo: { pt: "Reversões impulsivas: estrela, três velas e rompimento.", en: "Impulsive reversals: star, three candles and a break." },
+    // 08/11/2026: o RocketNova (código da casa, docs/pine/rocketnova.pine) substitui o Supernova.
+    // As playlists são as da estratégia anterior, que o publicador dos bootcamps renomeia e enche
+    // com os vídeos novos (video/bootcamp). Os guias e as capas já são os do RocketNova.
+    slug: "rocketnova",
+    nome: "RocketNova",
+    resumo: { pt: "Tendência com três médias, estrelas de lançamento e gestão da trade: entrada, stop e quatro alvos.", en: "Trend with three averages, launch stars and trade management: entry, stop and four targets." },
     playlist: { pt: "https://www.youtube.com/playlist?list=PLI8Wz5hgwPPM", en: "https://www.youtube.com/playlist?list=PLfY_QCrNls3Q" },
-    guia: guias("supernova"),
+    guia: guias("rocketnova"),
   },
   {
     slug: "sniper-pro",
@@ -113,5 +116,13 @@ export const ESTRATEGIAS_MTM: EstrategiaMtm[] = [
     resumo: { pt: "Zonas de ouro nas três sessões: entrada no meio da zona, stop curto e alvos de 5 em 5 $.", en: "Gold zones across the three sessions: entry in the middle of the zone, a tight stop and targets every $5." },
     playlist: { pt: "https://www.youtube.com/playlist?list=PLYeKsTzDWWL8", en: "https://www.youtube.com/playlist?list=PLAXw9tkCzQVQ" },
     guia: guias("premium-scanner"),
+  },
+  {
+    // 06/11/2026: playlists do Bootcamp DEFY criadas pelo publicador (video/bootcamp/publicar-youtube.mjs).
+    slug: "defy",
+    nome: "DEFY",
+    resumo: { pt: "Bandas de exaustão, níveis-chave e confirmações com estrelas: entrada, Warning, stop e três alvos fixos na vela.", en: "Exhaustion bands, key levels and confirmations with stars: entry, Warning, stop and three targets fixed on the candle." },
+    playlist: { pt: "https://www.youtube.com/playlist?list=PLGgrpPKdUTXs", en: "https://www.youtube.com/playlist?list=PLDeelQZ27vQE" },
+    guia: guias("defy"),
   },
 ]

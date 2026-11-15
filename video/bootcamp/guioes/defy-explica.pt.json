@@ -1,0 +1,499 @@
+{
+ "estrategia": "DEFY",
+ "marca": "MoreThanMoney",
+ "cores": {
+  "bull": "#1E4FD8",
+  "bear": "#C0262D"
+ },
+ "ui": {
+  "nivel": "Nível",
+  "compra": "Compra",
+  "venda": "Venda",
+  "entrada": "Entrada",
+  "tp1": "TP1",
+  "tp2": "TP2",
+  "tp3": "TP3"
+ },
+ "pronuncia": [
+  [
+   "TradingView",
+   "Trading View"
+  ],
+  [
+   "ATR",
+   "A T R"
+  ],
+  [
+   "TP1",
+   "T P um"
+  ],
+  [
+   "TP2",
+   "T P dois"
+  ],
+  [
+   "TP3",
+   "T P três"
+  ],
+  [
+   "RSI",
+   "R S I"
+  ]
+ ],
+ "motor": "defy",
+ "playlist": "defy",
+ "posicao": "inicio",
+ "serie": {
+  "pt": "ESTRATÉGIAS MTM",
+  "en": "MTM STRATEGIES"
+ },
+ "pilula": {
+  "pt": "Vídeo",
+  "en": "Video"
+ },
+ "tituloPlaylist": {
+  "pt": "Estratégias MTM - Defy",
+  "en": "MTM Strategies - Defy"
+ },
+ "videos": [
+  {
+   "rotulo": "Estratégias MTM · DEFY 1/3",
+   "titulo": "O que é o DEFY: quatro leituras num gráfico",
+   "cenas": [
+    {
+     "id": "e1-00",
+     "tipo": "abertura",
+     "kicker": "Estratégias MTM · 1 de 3",
+     "titulo": "DEFY",
+     "sub": "Quatro leituras num só gráfico",
+     "rodape": "morethanmoney.pt",
+     "semVoz": 4
+    },
+    {
+     "id": "e1-01",
+     "tipo": "camadas3d",
+     "cap": "O que é o DEFY",
+     "kicker": "Uma camada de cada vez",
+     "titulo": "Quatro leituras, um gráfico",
+     "itens": [
+      "Bandas",
+      "Níveis-chave",
+      "Nuvem",
+      "Ideia e plano"
+     ],
+     "fala": "O DEFY é um indicador para o TradingView que junta quatro leituras num só gráfico. As bandas de exaustão mostram quando o preço esticou demais. Os níveis-chave marcam onde o preço já reagiu. A nuvem diz-te para que lado o mercado puxa. E, por cima de tudo, a ideia: uma ficha com a pontuação e o plano desenhado. Neste vídeo vês as três primeiras peças, exactamente como aparecem no indicador."
+    },
+    {
+     "id": "e1-02",
+     "tipo": "grafico",
+     "cap": "As bandas",
+     "kicker": "Bandas de previsão · comprimento 89",
+     "titulo": "Interior, média e exterior",
+     "cenario": "compra",
+     "seed": 7,
+     "base": [],
+     "camadas": [
+      "bandas"
+     ],
+     "ate": [
+      0.45,
+      0.6
+     ],
+     "zoom": [
+      0,
+      0
+     ],
+     "rotulo": "Bandas 1,382 · 2 · 2,618",
+     "fala": "Primeiro, as bandas. Há uma linha central cinzenta, uma média suave de oitenta e nove velas, e três bandas de cada lado: interior, média e exterior. As de cima são vermelhas, as de baixo azuis, e entre a média e a exterior a zona fica preenchida. Repara no fim do gráfico: a última parte é tracejada e vai desvanecendo. É a projecção. O DEFY estima para onde as bandas caminham, para não teres de esperar que fechem."
+    },
+    {
+     "id": "e1-03",
+     "tipo": "pontos",
+     "cap": "As bandas",
+     "kicker": "Como se lêem",
+     "titulo": "O esticão",
+     "itens": [
+      "O preço longe da linha central está esticado",
+      "Tocar a banda interior do lado contrário é o esticão",
+      "Sem esticão, o DEFY não marca ideia",
+      "Banda exterior: exaustão forte, não é sinal sozinha"
+     ],
+     "fala": "Como se lêem? Quando o preço se afasta muito da linha central, está esticado, e um mercado esticado tende a voltar. O DEFY usa isto como regra: uma ideia de compra só nasce depois de o preço tocar a banda interior de baixo, e uma de venda depois de tocar a de cima. Chamamos-lhe o esticão. Sem ele, não há ideia. E chegar à banda exterior é exaustão forte, mas sozinho nunca é sinal."
+    },
+    {
+     "id": "e1-04",
+     "tipo": "grafico",
+     "cap": "Os níveis-chave",
+     "kicker": "Zonas onde o preço reagiu",
+     "titulo": "Níveis-chave",
+     "cenario": "compra",
+     "seed": 7,
+     "base": [
+      "bandas"
+     ],
+     "camadas": [
+      "niveis"
+     ],
+     "ate": [
+      0.62,
+      0.62
+     ],
+     "zoom": [
+      0,
+      0
+     ],
+     "rotulo": "Níveis espaçados",
+     "fala": "A segunda leitura são os níveis-chave. O DEFY procura topos e fundos onde o preço virou e junta os que estão perto uns dos outros. Depois mostra só os dez mais próximos do preço actual, e salta os que ficariam colados, para o gráfico não encher. Cada nível é uma linha tracejada cinzenta com uma zona por trás: vermelha se está acima do preço, azul se está abaixo."
+    },
+    {
+     "id": "e1-05",
+     "tipo": "grafico",
+     "cap": "A nuvem",
+     "kicker": "Nuvem e velas",
+     "titulo": "Para que lado puxa o mercado",
+     "cenario": "tendencia",
+     "seed": 11,
+     "base": [
+      "bandas"
+     ],
+     "camadas": [
+      "nuvem",
+      "cores"
+     ],
+     "ate": [
+      0.4,
+      1
+     ],
+     "zoom": [
+      0,
+      0
+     ],
+     "rotulo": "Nuvem 8 / 21",
+     "fala": "A terceira leitura é a nuvem, feita com duas médias rápidas. Azul quando a mais rápida está por cima, vermelha quando está por baixo. As velas acompanham: azuis com tendência de alta, vermelhas com tendência de baixa, cinzentas na transição. E há uma vela especial, dourada: é uma vela forte, com corpo grande e volume acima do normal. Vais vê-la muitas vezes no momento da ideia."
+    },
+    {
+     "id": "e1-06",
+     "tipo": "checklist",
+     "cap": "Resumo",
+     "kicker": "Antes do próximo vídeo",
+     "titulo": "O que já sabes ler",
+     "itens": [
+      "Bandas: o preço esticou ou não",
+      "Níveis-chave: onde já reagiu",
+      "Nuvem e velas: para que lado puxa",
+      "Vela dourada: força com volume"
+     ],
+     "fala": "Resumindo: as bandas dizem-te se o preço esticou, os níveis mostram onde já reagiu, a nuvem e as velas dizem para que lado o mercado puxa, e a vela dourada mostra força com volume. No próximo vídeo vês como estas peças se somam numa pontuação, e o que significam as estrelas e a coroa."
+    },
+    {
+     "id": "e1-07",
+     "tipo": "aviso",
+     "cap": "",
+     "titulo": "Até ao vídeo 2",
+     "sub": "Confirmações, estrelas e King Idea",
+     "texto": "Conteúdo educativo, não constitui consultoria financeira. O trading envolve risco elevado e podes perder parte ou a totalidade do capital. Os gráficos deste vídeo são ilustrativos.",
+     "fala": "Conteúdo educativo, não é aconselhamento financeiro. Até já.",
+     "respiro": 3
+    }
+   ]
+  },
+  {
+   "rotulo": "Estratégias MTM · DEFY 2/3",
+   "titulo": "Confirmações, estrelas e King Idea",
+   "cenas": [
+    {
+     "id": "e2-00",
+     "tipo": "abertura",
+     "kicker": "Estratégias MTM · 2 de 3",
+     "titulo": "DEFY",
+     "sub": "Confirmações, estrelas e King Idea",
+     "rodape": "morethanmoney.pt",
+     "semVoz": 4
+    },
+    {
+     "id": "e2-01",
+     "tipo": "pontos",
+     "cap": "Como nasce uma ideia",
+     "kicker": "As três condições",
+     "titulo": "Uma ideia precisa de três coisas",
+     "itens": [
+      "Vela válida: corpo forte e a expandir",
+      "Fecho a romper o fractal anterior",
+      "Pelo menos três confirmações, depois do esticão"
+     ],
+     "fala": "Uma ideia do DEFY nunca aparece por acaso. Precisa de três coisas ao mesmo tempo. Uma vela válida: corpo grande em relação à vela inteira e maior do que as anteriores. Um fecho a romper o último fractal, ou seja, o último pequeno topo numa compra, ou o último pequeno fundo numa venda. E pelo menos três confirmações, depois de o preço ter feito o esticão até à banda interior."
+    },
+    {
+     "id": "e2-02",
+     "tipo": "grafico",
+     "cap": "Como nasce uma ideia",
+     "kicker": "Exemplo ilustrativo",
+     "titulo": "Esticão, vela forte, ideia",
+     "cenario": "compra",
+     "seed": 7,
+     "base": [
+      "bandas",
+      "nuvem",
+      "cores"
+     ],
+     "camadas": [
+      "toque",
+      "sinal"
+     ],
+     "ate": [
+      0.58,
+      0.64
+     ],
+     "zoom": [
+      0.3,
+      0.8
+     ],
+     "rotulo": "Toque na banda interior",
+     "fala": "Vê o exemplo. O preço desce até à banda interior de baixo, e o círculo marca esse toque. Logo a seguir aparece uma vela forte, dourada, que fecha acima do último pequeno topo. Nesse fecho, o DEFY conta as confirmações e coloca a ficha por baixo da vela, com a pontuação."
+    },
+    {
+     "id": "e2-03",
+     "tipo": "pontuacao",
+     "cap": "A pontuação",
+     "kicker": "Cada confirmação soma um",
+     "titulo": "Pontuação",
+     "inicio": 3,
+     "itens": [
+      "Toque na banda média",
+      "Nível-chave",
+      "Nuvem a favor",
+      "Momento a favor",
+      "Engolfo",
+      "Pavio de rejeição",
+      "Quebra de volume",
+      "RSI esticado"
+     ],
+     "fala": "A pontuação começa em mais três, que são as confirmações mínimas, e sobe um ponto por cada confirmação a favor. São quinze possíveis: os toques nas três bandas, um nível-chave por perto, a nuvem e o momento a favor, a posição face às médias, um engolfo, um pavio de rejeição, uma quebra de volume, um gap de valor justo, o RSI esticado e um fundo mais alto. A vela dourada soma mais um."
+    },
+    {
+     "id": "e2-04",
+     "tipo": "comparar",
+     "cap": "As estrelas",
+     "kicker": "O que dizem as estrelas",
+     "titulo": "Mais seis, mais oito, mais dez",
+     "cartoes": [
+      {
+       "t": "★",
+       "d": "Pontuação +6 ou +7"
+      },
+      {
+       "t": "★★",
+       "d": "Pontuação +8 ou +9"
+      },
+      {
+       "t": "★★★",
+       "d": "Pontuação +10 ou mais"
+      },
+      {
+       "t": "👑",
+       "d": "Dez ou mais confirmações e vela dourada: King Idea"
+      }
+     ],
+     "fala": "As estrelas resumem a pontuação. Uma estrela a partir de mais seis, duas a partir de mais oito, três a partir de mais dez. E quando há dez ou mais confirmações e a vela de sinal é dourada, a ficha fica dourada com uma coroa: é a King Idea. Por omissão, o DEFY só mostra ideias de mais cinco para cima, e podes subir esse filtro."
+    },
+    {
+     "id": "e2-05",
+     "tipo": "grafico",
+     "cap": "As estrelas",
+     "kicker": "No gráfico",
+     "titulo": "A ficha da ideia",
+     "cenario": "venda",
+     "seed": 12,
+     "base": [
+      "bandas",
+      "niveis",
+      "nuvem",
+      "cores"
+     ],
+     "camadas": [
+      "sinal",
+      "setas"
+     ],
+     "ate": [
+      0.6,
+      0.75
+     ],
+     "zoom": [
+      0.3,
+      0.6
+     ],
+     "rotulo": "Ideia de venda",
+     "fala": "Aqui tens uma ideia de venda: a ficha vermelha por cima da vela, com a pontuação e as estrelas. Depois da ideia, o DEFY desenha setas nas quinze velas seguintes, sempre que o momento continua a favor. São o Trend Tracker: mostram se o movimento ainda tem força."
+    },
+    {
+     "id": "e2-06",
+     "tipo": "frase",
+     "cap": "Lembra-te",
+     "texto": "As estrelas medem <span class='ouro'>confirmações</span>. Não garantem o resultado.",
+     "autor": "Ricardo Garcia · MoreThanMoney",
+     "fala": "E lembra-te: as estrelas medem quantas confirmações há, não garantem o resultado. Uma ideia de três estrelas também pode falhar, e é para isso que existe o plano. É esse o tema do próximo vídeo."
+    },
+    {
+     "id": "e2-07",
+     "tipo": "aviso",
+     "cap": "",
+     "titulo": "Até ao vídeo 3",
+     "sub": "O plano na prática",
+     "texto": "Conteúdo educativo, não constitui consultoria financeira. O trading envolve risco elevado e podes perder parte ou a totalidade do capital. Os gráficos deste vídeo são ilustrativos.",
+     "fala": "Conteúdo educativo, não é aconselhamento financeiro. Até já.",
+     "respiro": 3
+    }
+   ]
+  },
+  {
+   "rotulo": "Estratégias MTM · DEFY 3/3",
+   "titulo": "O plano na prática: entrada, Warning, stop e alvos",
+   "cenas": [
+    {
+     "id": "e3-00",
+     "tipo": "abertura",
+     "kicker": "Estratégias MTM · 3 de 3",
+     "titulo": "DEFY",
+     "sub": "O plano na prática",
+     "rodape": "morethanmoney.pt",
+     "semVoz": 4
+    },
+    {
+     "id": "e3-01",
+     "tipo": "grafico",
+     "cap": "O plano",
+     "kicker": "Quando nasce uma ideia",
+     "titulo": "O plano fica desenhado",
+     "cenario": "compra",
+     "seed": 7,
+     "base": [
+      "bandas",
+      "cores",
+      "sinal"
+     ],
+     "camadas": [
+      "plano"
+     ],
+     "ate": [
+      0.64,
+      0.64
+     ],
+     "zoom": [
+      0.7,
+      0.7
+     ],
+     "rotulo": "Plano da ideia",
+     "fala": "Quando nasce uma ideia, o DEFY desenha o plano completo a partir da vela de sinal. A zona colorida vai da entrada ao extremo dessa vela: é a zona de momento. E à direita ficam as etiquetas com os preços: entrada, Warning, stop e três alvos, com a distância de cada um em pips no forex ou em pontos no ouro, índices e cripto."
+    },
+    {
+     "id": "e3-02",
+     "tipo": "plano",
+     "cap": "O plano",
+     "kicker": "Os níveis",
+     "titulo": "Entrada, Warning, stop e alvos",
+     "linhas": [
+      [
+       "ENTRY",
+       "fecho da vela de sinal (ou 50 % no Pullback)",
+       "entrada"
+      ],
+      [
+       "WARNING",
+       "o extremo da vela de sinal",
+       "warning"
+      ],
+      [
+       "SL",
+       "1 ATR para lá do Warning",
+       "sl"
+      ],
+      [
+       "TP 1 · 2 · 3",
+       "1R, 2R e 3R no modo Standard",
+       "tp"
+      ]
+     ],
+     "fala": "A entrada é o fecho da vela de sinal. Se preferires, o modo Pullback põe a entrada a metade da vela, e cancela a ideia se o preço não voltar lá em dez velas. O Warning é o extremo da vela de sinal: se o preço lá chega, a ideia está a perder força. O stop fica a um ATR para lá do Warning. E os alvos, no modo Standard, ficam a uma, duas e três vezes o risco. Há ainda os modos Squeeze, Stretch e Swing, para alvos nas bandas ou mais longos."
+    },
+    {
+     "id": "e3-03",
+     "tipo": "grafico",
+     "cap": "O seguimento",
+     "kicker": "A trade a andar",
+     "titulo": "TP1, TP2, TP3",
+     "cenario": "compra",
+     "seed": 7,
+     "base": [
+      "bandas",
+      "cores",
+      "sinal",
+      "plano"
+     ],
+     "camadas": [
+      "setas"
+     ],
+     "ate": [
+      0.64,
+      1
+     ],
+     "zoom": [
+      0.5,
+      0.5
+     ],
+     "rotulo": "Seguimento",
+     "fala": "À medida que a trade anda, o DEFY vai marcando cada alvo atingido com um visto na etiqueta, e as setas mostram se o momento continua a favor. Os alertas para o telemóvel ou para a MoreThanMoney seguem a mesma trade: entrada, TP1, TP2, TP3 ou stop."
+    },
+    {
+     "id": "e3-04",
+     "tipo": "grafico",
+     "cap": "O seguimento",
+     "kicker": "Também falha",
+     "titulo": "Quando o stop é tocado",
+     "cenario": "falha",
+     "seed": 7,
+     "base": [
+      "bandas",
+      "cores",
+      "sinal",
+      "plano"
+     ],
+     "camadas": [],
+     "ate": [
+      0.62,
+      0.95
+     ],
+     "zoom": [
+      0.5,
+      0.5
+     ],
+     "rotulo": "Stop",
+     "fala": "E também falha. Aqui a ideia nasce, o preço avança um pouco e depois vira, passa o Warning e toca o stop, que fica marcado com uma cruz. Foi uma perda pequena e já conhecida antes de entrar. É exactamente para isto que o plano existe."
+    },
+    {
+     "id": "e3-05",
+     "tipo": "checklist",
+     "cap": "Antes de entrar",
+     "kicker": "A tua rotina",
+     "titulo": "Antes de cada ideia",
+     "itens": [
+      "Confirma o esticão e as estrelas",
+      "Vê se há um nível-chave no caminho",
+      "Define o risco por trade e o tamanho",
+      "Treina primeiro em conta demo"
+     ],
+     "fala": "Antes de cada ideia: confirma o esticão e a pontuação, vê se há um nível-chave no caminho até aos alvos, define o risco por trade e calcula o tamanho da posição. E treina primeiro em conta demo. No bootcamp DEFY, nesta mesma playlist, aprofundamos cada uma destas peças."
+    },
+    {
+     "id": "e3-06",
+     "tipo": "aviso",
+     "cap": "",
+     "titulo": "Estratégias MTM · DEFY",
+     "sub": "morethanmoney.pt",
+     "texto": "Conteúdo educativo, não constitui consultoria financeira. O trading envolve risco elevado e podes perder parte ou a totalidade do capital. Os gráficos deste vídeo são ilustrativos. Resultados passados não garantem resultados futuros.",
+     "fala": "Conteúdo educativo, não é aconselhamento financeiro e os resultados não são garantidos. Até à próxima.",
+     "respiro": 4
+    }
+   ]
+  }
+ ]
+}

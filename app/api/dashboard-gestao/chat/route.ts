@@ -10,6 +10,7 @@ import { NextRequest, NextResponse } from "next/server"
 import { requireAdmin } from "@/lib/admin-api-helpers"
 import { FERRAMENTAS, ferramentaPorNome } from "@/lib/mcp/ferramentas"
 import { chamarIA, mensagemIndisponivel, type MensagemIA } from "@/lib/ia/chamar"
+import { blocoFramework } from "@/lib/framework-mtm"
 import {
   MAX_VOLTAS_FERRAMENTAS, lerDecisao, protocoloFerramentas, type FerramentaDashboard,
 } from "@/lib/dashboard-gestao/protocolo-ferramentas"
@@ -651,7 +652,7 @@ export async function POST(req: NextRequest) {
       }
 
       try {
-        const sistema = `${systemPrompt}\n\n${protocoloFerramentas(TOOLS)}`
+        const sistema = `${systemPrompt}\n\n${protocoloFerramentas(TOOLS)}\n\n${blocoFramework("backoffice")}`
         const conversa: MensagemIA[] = messages.map((m) => ({
           role: m.role === "assistant" ? "assistant" : "user",
           content: m.content,

@@ -122,6 +122,9 @@ export async function POST(request: NextRequest) {
       response.message = `${coupon.discount_value} ${coupon.discount_value === 1 ? "mês grátis" : "meses grátis"} aplicado`
     } else if (coupon.type === "free_subscription") {
       response.message = "Subscrição gratuita aplicada"
+    } else if (coupon.type === "campanha_90d") {
+      // Campanha 90 dias: Membro com a app MTM System, nada cobrado nos 90 dias, depois Premium.
+      response.message = "90 dias grátis como Membro (app MTM System). Depois passas a Premium a 65€/mês."
     }
 
     if (coupon.plan_override) {

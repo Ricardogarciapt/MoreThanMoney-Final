@@ -58,7 +58,9 @@
 /** A conta de papel do agente. Está aqui em vez de num env para poder ser lida nos checks. */
 import {
   REGUA_PADRAO,
+  aplicarAprovadasManuais,
   chaveCombo,
+  lerAprovadasManuais,
   lerRegua,
   metricasDoAgente,
   riscoRecompensa,
@@ -533,7 +535,7 @@ export async function correrTrader(
     somaR: Number(r.soma_r) || 0,
     somaR2: Number(r.soma_r2) || 0,
   }))
-  const vantagens = vantagemPorCombo(historico, regua)
+  const vantagens = aplicarAprovadasManuais(vantagemPorCombo(historico, regua), lerAprovadasManuais(bruto))
 
   // As métricas dele: as posições que ELE abriu (chave com prefixo), fechadas ou não.
   const ids = ((minhasQ.data ?? []) as Record<string, unknown>[])

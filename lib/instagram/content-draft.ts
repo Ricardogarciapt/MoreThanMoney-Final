@@ -1,4 +1,5 @@
 import { getProofStats } from '@/lib/proof-stats'
+import { corrigirPtPt } from '@/lib/pt-pt'
 import { NextRequest, NextResponse } from 'next/server'
 import { getSupabaseAdmin } from '@/lib/supabase-admin-client'
 import { CAPTION_INTERNAL_MARK, uploadBufferToBucket } from '@/lib/instagram/publish'
@@ -6,6 +7,8 @@ import { renderSocialCardBuffer } from '@/lib/social-card'
 import { factoDoDia, getPipsProof, notaViesPreco } from '@/lib/pips-proof'
 import { canvaAutofillImage } from '@/lib/canva-connect'
 import { chamarIA, ErroIA, mensagemIndisponivel } from '@/lib/ia/chamar'
+import { blocoFramework } from '@/lib/framework-mtm'
+import { blocoGanchos, blocoLegendaReel } from '@/lib/conteudo/ganchos'
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { agenteDoPilar, marcarConteudo } from '@/lib/agentes/marca-conteudo'
 import { AG } from '@/lib/agentes/codigos'
@@ -99,7 +102,7 @@ Escreves posts curtos para o Instagram @morethanmoney.pt que educam, criam confi
 FACTOS REAIS (usa só estes; NUNCA promic lucros — é educação, não aconselhamento):
 - Provas da comunidade: ${PROOF}
 - App MTM System (grátis): alertas, scanner, sessões ao vivo, ferramentas.
-- Trial de 3 dias de Premium sem cartão em morethanmoney.pt/register.
+- Trial de 3 dias de Premium sem cartão em morethanmoney.pt/register (o trial é só do Premium; o Membro paga logo). No fim, ativa-se o Premium a 65 €/mês.
 - Copytrading (copiar sinais automaticamente) via assistente no Telegram.
 
 MECÂNICA DE CTA (obrigatória): cada post TERMINA a pedir um comentário com UMA palavra-chave exata
@@ -151,7 +154,8 @@ export function parseDrafts(text: string): Rascunho[] {
     const vis = (body.match(/VISUAL:\s*([^\n]+)/i)?.[1] || '').trim()
     const cap = (body.split(/CAPTION:\s*/i)[1] || '').trim()
     if (!cap) continue
-    out.push({ hook: (hk || cap.split('\n')[0]).slice(0, 120), caption: cap, cta_keyword: kw, visual_brief: vis })
+    const capPt = corrigirPtPt(cap).texto
+    out.push({ hook: corrigirPtPt(hk || capPt.split('\n')[0]).texto.slice(0, 120), caption: capPt, cta_keyword: kw, visual_brief: vis })
   }
   return out
 }
@@ -177,7 +181,7 @@ export async function draftBatch(
       : '')
   const r = await chamar({
     tarefa: 'content-draft',
-    sistema: buildSystem(proofText, campanha),
+    sistema: `${buildSystem(proofText, campanha)}\n\n${blocoFramework('conteudo')}\n\n${blocoGanchos()}\n\n${blocoLegendaReel()}`,
     mensagens: [{ role: 'user', content: user }],
     maxTokens: 1600,
     // `CONTENT_DRAFT_PREFERENCIA` ('rapido' | 'qualidade') substitui o antigo `CONTENT_DRAFT_MODEL`:

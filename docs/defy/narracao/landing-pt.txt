@@ -1,0 +1,7 @@
+Este é o DEFY, o scanner da MoreThanMoney que te ajuda a desafiar o mercado com método.
+O DEFY desenha bandas de exaustão à volta de uma média suave. Quando o preço estica até às bandas e vira com uma vela forte, nasce uma ideia.
+Mas não basta. O DEFY soma confirmações: níveis-chave onde o preço já reagiu, a nuvem de tendência e o volume. Com três ou mais, a ideia ganha estrelas.
+E o plano fica no gráfico: entrada, Warning, stop a um ATR e três alvos, com a distância em pips.
+Funciona em forex, ouro, índices e cripto, em qualquer timeframe.
+Vê a demonstração em morethanmoney ponto pt barra scanner barra defy.
+Conteúdo educativo. Não é aconselhamento financeiro e os resultados não são garantidos.

@@ -93,10 +93,11 @@ function resolveStudies(strategy: string | null): StudySpec[] | undefined {
   if (s.includes("goldkiller")) return SCANNER_STUDIES.Goldkiller
   if (s.includes("goldenzone")) return SCANNER_STUDIES.GoldenZone
   if (s.includes("killshot")) return SCANNER_STUDIES.KillShot
-  if (s.includes("supernova")) return SCANNER_STUDIES.Supernova
+  if (s.includes("rocketnova")) return SCANNER_STUDIES.RocketNova
   if (s.includes("momentum")) return SCANNER_STUDIES.Momentum
   if (s.includes("sinergy") || s.includes("quantum")) return SCANNER_STUDIES.Sinergy
   if (s.includes("winzone") || s.includes("sniper")) return SCANNER_STUDIES.Winzone
+  if (s.includes("defy")) return SCANNER_STUDIES.Defy
   if (s.includes("premiumscanner")) return SCANNER_STUDIES.PremiumScanner // antes do genérico: o nome contém "scanner"
   if (s.includes("mtm") || s.includes("scanner")) return SCANNER_STUDIES.MTMScanner
   return SCANNER_STUDIES.MTMScanner // fallback: indicador MTM base

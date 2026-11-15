@@ -1,0 +1,7 @@
+This is RocketNova, the MoreThanMoney scanner that lifts off with the trend and carries the plan on board.
+RocketNova reads three averages: twenty, fifty and two hundred and thirty-eight. The signal is born when the fast one crosses the slow one and the candle closes.
+But the cross alone is not enough. There is only a signal with a recent launch star: a swing low for a buy, a swing high for a sell. The Rocket Candle, the volatility pulse and the Trade Clock tell you whether there is strength, volatility and session.
+And the plan stays on the chart: entry, stop and four targets. After the first target the stop moves to entry, and an opposite signal closes the trade. All by alerts.
+It works on forex, gold, indices and crypto, on any timeframe.
+See the demo at morethanmoney dot pt slash en slash scanner slash rocketnova.
+Educational content. Not financial advice, and results are not guaranteed.

@@ -1,0 +1,94 @@
+name: Restart diário da Supabase (06:30 Lisboa)
+
+# Pedido do Ricardo (11/11/2026): reiniciar a BD todos os dias às 06:30 de Lisboa
+# para não «engasgar» (encravou a 10/11 ~06:45 UTC e a 11/11 ~02:45 UTC; em ambos
+# os dias só voltou com restart manual).
+#
+# O cron do GitHub é sempre em UTC e não conhece a hora de Verão, por isso corre às
+# 05:30 e às 06:30 UTC e só avança quando em Lisboa são 06:xx (05:30 UTC no Verão,
+# 06:30 UTC no Inverno). O GitHub costuma atrasar os crons uns minutos.
+#
+# Precisa do secret SUPABASE_ACCESS_TOKEN (GitHub → Settings → Secrets → Actions):
+# token pessoal da Supabase, de preferência «scoped» só ao projecto iwscxotvmtkphajmasof.
+# Opcional: TELEGRAM_BOT_TOKEN + TELEGRAM_ADMIN_CHAT_ID para avisar se falhar.
+
+on:
+  schedule:
+    - cron: '30 5 * * *'
+    - cron: '30 6 * * *'
+  workflow_dispatch:
+    inputs:
+      forcar:
+        description: 'Reiniciar já, ignorando a hora de Lisboa'
+        type: boolean
+        default: true
+
+concurrency:
+  group: supabase-restart
+  cancel-in-progress: false
+
+env:
+  PROJECT_REF: iwscxotvmtkphajmasof
+
+jobs:
+  restart:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Confirmar a hora de Lisboa
+        id: hora
+        run: |
+          H=$(TZ=Europe/Lisbon date +%H)
+          echo "Lisboa: $(TZ=Europe/Lisbon date '+%F %T %Z')"
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ] || [ "$H" = "06" ]; then
+            echo "avancar=1" >> "$GITHUB_OUTPUT"
+          else
+            echo "Não são 06h em Lisboa (é a outra entrada do cron por causa da hora de Verão). Nada a fazer."
+            echo "avancar=0" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Pedir o restart à Supabase
+        if: steps.hora.outputs.avancar == '1'
+        env:
+          TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+        run: |
+          if [ -z "$TOKEN" ]; then
+            echo "::error::Falta o secret SUPABASE_ACCESS_TOKEN"; exit 1
+          fi
+          for i in 1 2 3; do
+            HTTP=$(curl -s -o /tmp/restart.json -w '%{http_code}' -X POST \
+              "https://api.supabase.com/v1/projects/$PROJECT_REF/restart" \
+              -H "Authorization: Bearer $TOKEN" --max-time 60)
+            echo "restart → HTTP $HTTP"; cat /tmp/restart.json || true; echo
+            case "$HTTP" in 2*) exit 0;; 401|403) echo "::error::Token sem permissão"; exit 1;; esac
+            sleep $((i * 30))
+          done
+          exit 1
+
+      - name: Esperar que a BD volte
+        if: steps.hora.outputs.avancar == '1'
+        env:
+          TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+        run: |
+          sleep 60
+          for i in $(seq 1 40); do
+            ESTADO=$(curl -s "https://api.supabase.com/v1/projects/$PROJECT_REF/health?services=db&services=rest" \
+              -H "Authorization: Bearer $TOKEN" --max-time 20 || true)
+            echo "$(date -u +%T) $ESTADO"
+            if echo "$ESTADO" | grep -q '"healthy":true' && ! echo "$ESTADO" | grep -q '"healthy":false'; then
+              echo "BD de volta."; exit 0
+            fi
+            sleep 15
+          done
+          echo "::error::A BD não ficou saudável em ~11 min"; exit 1
+
+      - name: Avisar no Telegram se falhou
+        if: failure()
+        env:
+          TG_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TG_CHAT: ${{ secrets.TELEGRAM_ADMIN_CHAT_ID }}
+        run: |
+          [ -n "$TG_TOKEN" ] && [ -n "$TG_CHAT" ] || { echo "Sem Telegram configurado"; exit 0; }
+          curl -s "https://api.telegram.org/bot$TG_TOKEN/sendMessage" \
+            --data-urlencode "chat_id=$TG_CHAT" \
+            --data-urlencode "text=⚠️ Restart diário da Supabase falhou: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}" >/dev/null

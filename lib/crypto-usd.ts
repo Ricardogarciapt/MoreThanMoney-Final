@@ -15,7 +15,7 @@ export function normalizeBinancePair(raw: string): string {
 export async function fetchBinanceSpotUsd(rawSymbol: string): Promise<number | null> {
   try {
     const pair = normalizeBinancePair(rawSymbol)
-    const r = await fetch(`https://api.binance.com/api/v3/ticker/price?symbol=${pair}`, {
+    const r = await fetch(`https://data-api.binance.vision/api/v3/ticker/price?symbol=${pair}`, {
       next: { revalidate: 60 },
     })
     if (!r.ok) return null

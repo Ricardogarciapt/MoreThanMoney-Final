@@ -282,7 +282,9 @@ export default function MotorMestres() {
                       {c.ultimaFalha && <span className="mt-0.5 block max-w-[220px] truncate text-[10px] text-zinc-500" title={c.ultimaFalha}>{quando(c.ultimaFalhaEm)} · {c.ultimaFalha}</span>}
                     </td>
                     <td className={`${td} text-[10.5px] text-zinc-400`}>
-                      máx {c.limites.maxPosicoes} pos · {c.limites.maxRiscoTotalPct}% risco{c.limites.maxLoteTotal != null ? ` · ${c.limites.maxLoteTotal} lotes` : ""}{c.limites.loteFixoForcado != null ? ` · lote fixo ${c.limites.loteFixoForcado}` : ""}
+                      {c.limites.contaPequenaAte != null
+                        ? <Etiqueta tom="aviso">lote mínimo até {c.limites.contaPequenaAte}</Etiqueta>
+                        : <>máx {c.limites.maxPosicoes} pos · {c.limites.maxRiscoTotalPct}% risco{c.limites.maxLoteTotal != null ? ` · ${c.limites.maxLoteTotal} lotes` : ""}{c.limites.loteFixoForcado != null ? ` · lote fixo ${c.limites.loteFixoForcado}` : ""}</>}
                     </td>
                   </tr>
                 )

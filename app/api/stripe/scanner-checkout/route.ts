@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { COOKIE_ATRIBUICAO, normalizar as normalizarAgente } from '@/lib/agentes/atribuicao'
 import { getStripeClient } from '@/lib/stripe-client'
 import { recusaPlanoDescontinuado, resolverPrecoStripe } from '@/lib/stripe-prices'
 import { buildStripeReturnUrl } from '@/lib/site-url'
@@ -39,6 +40,7 @@ export async function POST(request: NextRequest) {
       },
     })
 
+    const agenteCodigo = normalizarAgente(request.cookies.get(COOKIE_ATRIBUICAO)?.value)
     const session = await stripe.checkout.sessions.create({
       customer: customer.id,
       mode,
@@ -55,7 +57,10 @@ export async function POST(request: NextRequest) {
         email: email.trim(),
         sponsor_username: sponsorCode || '',
         ...(request.cookies.get('opinly_anon_id')?.value ? { opinly_anon_id: request.cookies.get('opinly_anon_id')!.value } : {}),
+        // Quem trouxe esta compra (cookie do `?ag=`) — chega ao livro de vendas pelo webhook.
+        ...(agenteCodigo ? { agente_codigo: agenteCodigo } : {}),
       },
+      ...(agenteCodigo && mode === 'subscription' ? { subscription_data: { metadata: { agente_codigo: agenteCodigo } } } : {}),
     })
 
     return NextResponse.json({ url: session.url, sessionId: session.id })

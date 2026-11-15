@@ -59,6 +59,18 @@ Firebase ─────────────> Push notifications (iOS + Andr
 
 ---
 
+## MTM Master Framework (04/11/2026) — a forma de pensar de todas as IAs
+
+Fonte: `lib/framework-mtm.ts` (guarda `lib/framework-mtm.check.ts`), explicado em
+`docs/mtm-master-framework.md`. Qualquer prompt novo cola `blocoFramework('apoio'|'setter'|'closer'|'conteudo'|'backoffice')`.
+
+· **Modelo híbrido:** Rota corretora PU Prime (desbloqueia Premium enquanto financiada) · Membro · Premium (trial `TRIAL_DAYS`) · MTM Funded (contas SIMULADAS, Patrocínio de Desempenho, **não é prop firm**).
+· **Tom:** científico, transparente, dados, anti-pirâmide. Nunca prometer retornos. Ângulo anti-MLM fala do modelo, **nunca de empresas nem pessoas pelo nome**.
+· **Setter** triagem do custo fixo → agenda Onboarding. **Closer** WebTrader → Rota Corretora ou Premium. Sem capital → MTM Funded.
+· **Engenharia:** webhooks/alertas sem nada lento antes da entrega; acessos são permissões no servidor (`lib/entitlements.ts`, `lib/acesso-estrategias.ts`); IA via `lib/ia/chamar.ts`, grátis primeiro.
+
+---
+
 ## 12 Agentes IA — Activar um Agente
 
 Para usar qualquer agente localmente, escreve:

@@ -3,6 +3,7 @@ import { getMtmcopyBotToken } from '@/lib/mtmcopy/telegram-bot'
 import { getSupabaseAdmin } from "@/lib/supabase-admin-client"
 import { isCronAuthorized } from "@/lib/cron-auth"
 
+import { aplicarSkoolRotaCorretora } from "@/lib/rota-corretora-skool"
 export const runtime = "nodejs"
 export const dynamic = "force-dynamic"
 
@@ -119,6 +120,8 @@ export async function GET(request: NextRequest) {
         })
         .eq("id", prof.id)
       renewed++
+      // A comunidade vem com o Premium: pede o acesso uma vez (lib/rota-corretora-skool).
+      if (bal !== null) await aplicarSkoolRotaCorretora(supabase, prof, "renovado")
 
       // UPSELL ESCONDIDO: se PAGA Premium (Stripe/Apple, não 'manual') + depósito > $300
       // e ainda não tem o grupo Premium → puxa-o para lá com link pessoal.
@@ -162,6 +165,7 @@ export async function GET(request: NextRequest) {
         await supabase.from("coupons").update({ is_active: false }).eq("code", l.coupon_code as string)
       }
       await kickFromGroups(String(l.chat_id))
+      await aplicarSkoolRotaCorretora(supabase, prof, "revogado")
       await supabase
         .from("telegram_leads")
         .update({ stage: "revoked", premium_group_granted_at: null, updated_at: now.toISOString() })

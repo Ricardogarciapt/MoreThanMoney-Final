@@ -4,6 +4,7 @@ import { isCronAuthorized } from "@/lib/cron-auth"
 import { getMtmcopyBotToken } from "@/lib/mtmcopy/telegram-bot"
 import { chamarIA, ErroIA, mensagemIndisponivel } from "@/lib/ia/chamar"
 import type { SupabaseClient } from "@supabase/supabase-js"
+import { legendaDoPost } from "@/lib/telegram-legenda-ig"
 
 /**
  * CURADORIA DE CONTEÚDO IG → grupo de leads Telegram.
@@ -101,7 +102,7 @@ DESCARTA (score baixo) se for:
 Avalia sobretudo pela CAPTION. Se estiver vazia/ambígua e for IMAGE pessoal, assume personal (score baixo). Não inventes conteúdo que não esteja no texto. Nunca prometas lucros.
 
 Devolve APENAS JSON válido, sem markdown:
-{"score":<0.0-1.0>,"category":"proof|education|testimonial|cta|offer|personal|offtopic","publish":<true se score>=0.65>,"reason":"<1 frase PT>","suggested_caption":"<reescrita curta e vendedora p/ Telegram com 1 CTA; vazio se publish=false>"}`
+{"score":<0.0-1.0>,"category":"proof|education|testimonial|cta|offer|personal|offtopic","publish":<true se score>=0.65>,"reason":"<1 frase PT>","suggested_caption":"<reescrita curta e vendedora p/ Telegram com 1 CTA, em português de PORTUGAL a tratar por tu (nunca você/seu/junte-se), sem @menções; vazio se publish=false>"}`
 
   const user = `POST:
 - conta: @${username}
@@ -139,7 +140,9 @@ Devolve APENAS JSON válido, sem markdown:
 
 async function publishToLeads(token: string, chatId: string, item: IgItem, s: Score, username: string): Promise<string | null> {
   const photo = item.media_type === "VIDEO" ? item.thumbnail_url ?? item.media_url : item.media_url
-  const caption = `${s.suggested_caption || (item.caption ?? "").slice(0, 500)}\n\n📸 @${username}`.slice(0, 1000)
+  // 06/11: «📸 @morethanmoney.pt» virava menção a um utilizador do TELEGRAM (@morethanmoney). A legenda
+  // passa por `legendaDoPost`: @handles viram links para o Instagram e a reescrita só sai em PT-PT.
+  const caption = legendaDoPost(s.suggested_caption, username)
   const buttons = [[{ text: "Ver no Instagram", url: item.permalink || `https://instagram.com/${username}` }], [CTA_DM, CTA_TRIAL]]
   try {
     if (photo) {
@@ -164,6 +167,45 @@ async function publishToLeads(token: string, chatId: string, item: IgItem, s: Sc
   }
 }
 
+/**
+ * REPARAÇÃO dos posts já publicados (06/11): a legenda antiga acabava em «📸 @morethanmoney.pt» e o
+ * Telegram ligava «@morethanmoney» a um desconhecido. Não guardámos a legenda reescrita, por isso a
+ * antiga é trocada por uma neutra com link para o Instagram (`legendaDoPost('', conta)`). Uns quantos
+ * por ciclo; cada um fica marcado em `reparado_em` e não volta a ser tocado.
+ */
+export const REPARAR_POR_CICLO = 40
+
+async function repararPublicados(supabase: Pick<SupabaseClient, "from">, token: string, chatId: string): Promise<number> {
+  const { data } = await supabase
+    .from("ig_curation_log")
+    .select("ig_media_id, ig_username, telegram_msg_id")
+    .eq("status", "published")
+    .is("reparado_em", null)
+    .not("telegram_msg_id", "is", null)
+    .limit(REPARAR_POR_CICLO)
+  let feitos = 0
+  for (const row of (data ?? []) as { ig_media_id: string; ig_username: string; telegram_msg_id: string }[]) {
+    const id = Number(row.telegram_msg_id)
+    if (!Number.isFinite(id) || id <= 0) continue
+    const texto = legendaDoPost("", row.ig_username)
+    const corpo = { chat_id: chatId, message_id: id, parse_mode: "HTML" }
+    let r = await fetch(`${GRAPH_TG(token)}/editMessageCaption`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ ...corpo, caption: texto }) })
+    let j = (await r.json().catch(() => ({}))) as { ok?: boolean; description?: string }
+    // Posts de texto (sem foto) não têm legenda: edita-se o texto.
+    if (!j.ok && /no caption|there is no caption/i.test(j.description ?? "")) {
+      r = await fetch(`${GRAPH_TG(token)}/editMessageText`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ ...corpo, text: texto }) })
+      j = (await r.json().catch(() => ({}))) as { ok?: boolean; description?: string }
+    }
+    // Feito, já igual, ou a mensagem já não existe: marca e segue. Limite do Telegram: pára o ciclo.
+    if (r.status === 429) break
+    if (j.ok || /not modified|not found|can't be edited/i.test(j.description ?? "")) {
+      await supabase.from("ig_curation_log").update({ reparado_em: new Date().toISOString() }).eq("ig_media_id", row.ig_media_id)
+      feitos++
+    }
+  }
+  return feitos
+}
+
 function GRAPH_TG(token: string) {
   return `https://api.telegram.org/bot${token}`
 }
@@ -178,6 +220,8 @@ export type DepsCuracao = {
   fetchEdge: typeof fetchEdge
   publish: typeof publishToLeads
   botToken: () => string
+  /** Opcional: a guarda corre sem ela. */
+  reparar?: typeof repararPublicados
 }
 
 export const DEPS_REAIS: DepsCuracao = {
@@ -186,6 +230,7 @@ export const DEPS_REAIS: DepsCuracao = {
   fetchEdge,
   publish: publishToLeads,
   botToken: getMtmcopyBotToken,
+  reparar: repararPublicados,
 }
 
 export async function correrCuracao(request: NextRequest, deps: DepsCuracao) {
@@ -201,7 +246,8 @@ export async function correrCuracao(request: NextRequest, deps: DepsCuracao) {
   const chatId = (row?.value as { chat_id?: string } | null)?.chat_id
   if (!chatId) return NextResponse.json({ ok: false, error: "grupo de leads não configurado" })
 
-  const stats = { seen: 0, dup: 0, heuristic_skip: 0, scored: 0, published: 0, low_score: 0 }
+  const stats = { seen: 0, dup: 0, heuristic_skip: 0, scored: 0, published: 0, low_score: 0, reparados: 0 }
+  if (deps.reparar) stats.reparados = await deps.reparar(supabase, botToken, chatId).catch(() => 0)
   // A cadeia de IA falhou por inteiro: pára-se o ciclo (não vale a pena bater 5 fornecedores por
   // cada post) e nada é publicado. Fica no livro `ia_chamadas` e no log do cron.
   let iaIndisponivel: string | null = null

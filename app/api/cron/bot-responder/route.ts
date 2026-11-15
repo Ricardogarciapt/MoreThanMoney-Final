@@ -28,8 +28,13 @@ export async function GET(request: NextRequest) {
   const token = getMtmcopyBotToken()
   const prontas = await conversasProntas()
   let respondidas = 0
+  // Orçamento de tempo: com a IA lenta ou a base encravada, a passagem pára aos 40 s em vez de
+  // morrer aos 60 s a meio. O que ficar por responder segue na passagem do minuto seguinte.
+  const fimMs = Date.now() + 40_000
+  let adiadas = 0
 
   for (const c of prontas) {
+    if (Date.now() > fimMs) { adiadas++; continue }
     try {
       const auto = await encontrarAutomacao(c.canal, c.texto)
       // Sem regra que apanhe, as mensagens saem da fila na mesma: deixá-las lá fazia a fila
@@ -50,6 +55,7 @@ export async function GET(request: NextRequest) {
           method: 'POST',
           headers: { 'content-type': 'application/json' },
           body: JSON.stringify({ chat_id: c.pessoa, text: texto, parse_mode: 'HTML' }),
+          signal: AbortSignal.timeout(10_000),
         })
         if (!r.ok) continue // fica para a próxima passagem
       }
@@ -62,5 +68,5 @@ export async function GET(request: NextRequest) {
     }
   }
 
-  return NextResponse.json({ ok: true, prontas: prontas.length, respondidas })
+  return NextResponse.json({ ok: true, prontas: prontas.length, respondidas, adiadas })
 }

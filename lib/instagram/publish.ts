@@ -41,6 +41,18 @@ export function isAutoPublishBlocked(igAccountId: string | null | undefined): bo
   return String(igAccountId ?? "") === IG_PERSONAL_ID
 }
 
+/**
+ * A ÚNICA excepção, pedida pelo próprio Ricardo a 06/11/2026: «todos os dias cria-me para o
+ * Ricardo Garcia conteúdo novo de carrossel (…) e publicar no instagram @ricardogarciapt».
+ * Só os carrosséis do cron carrossel-diario (lib/carrossel-diario) passam, e só enquanto o
+ * interruptor `site_settings.carrossel_diario.ricardo` estiver ligado (o ig-publish verifica).
+ * Nada mais — funil, setter, repost, agentes — escreve ou publica na conta pessoal.
+ */
+export const CRIADOR_AUTORIZADO_PESSOAL = "carrossel-diario:ricardo"
+export function autorizadoNaPessoal(row: { created_by?: string | null; media_type?: string | null }): boolean {
+  return row.created_by === CRIADOR_AUTORIZADO_PESSOAL && row.media_type === "CAROUSEL"
+}
+
 export type IgMediaType = "IMAGE" | "CAROUSEL" | "STORIES" | "REELS"
 
 export interface ScheduledPost {
@@ -220,19 +232,22 @@ async function createCarouselContainer(
   caption: string,
   token: string,
 ): Promise<{ parentId: string; childIds: string[] }> {
-  const childIds: string[] = []
-  for (const url of urls.slice(0, 10)) {
-    const isVideo = /\.(mp4|mov)(\?|$)/i.test(url)
-    const params: Record<string, string> = { is_carousel_item: "true" }
-    if (isVideo) {
-      params.media_type = "VIDEO"
-      params.video_url = url
-    } else {
-      params.image_url = url
-    }
-    const j = await graphPost(igId, "media", params, token)
-    childIds.push(j.id as string)
-  }
+  // Os filhos criam-se em paralelo: um a um, 8 lâminas passavam dos 60 s do cron e a ronda
+  // morria a meio (08/11: os dois carrosséis diários ficaram presos em «publishing»).
+  const childIds: string[] = await Promise.all(
+    urls.slice(0, 10).map(async (url) => {
+      const isVideo = /\.(mp4|mov)(\?|$)/i.test(url)
+      const params: Record<string, string> = { is_carousel_item: "true" }
+      if (isVideo) {
+        params.media_type = "VIDEO"
+        params.video_url = url
+      } else {
+        params.image_url = url
+      }
+      const j = await graphPost(igId, "media", params, token)
+      return j.id as string
+    }),
+  )
   const parent = await graphPost(
     igId,
     "media",

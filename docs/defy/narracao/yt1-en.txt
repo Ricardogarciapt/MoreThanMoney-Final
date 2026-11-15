@@ -1,0 +1,8 @@
+What is DEFY? It is a TradingView indicator that brings four readings onto one chart.
+First, the exhaustion bands: inner, mid and outer, around a smooth average, with a dashed projection forward.
+Second, key levels: zones where price has reacted before, spaced apart so the chart stays clean.
+Third, the trend cloud, which tells you which way the market is pulling.
+And fourth, the confirmation score, from plus three to plus fifteen, with stars.
+The idea is simple: price stretches into the bands, turns with a strong candle and, if there are enough confirmations, DEFY marks the idea and draws the full plan.
+In the next video you will see how confirmations and stars work.
+Educational content. Not financial advice.

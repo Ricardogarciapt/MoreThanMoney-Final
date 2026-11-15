@@ -25,6 +25,8 @@ import {
   resolvedForexIdeasChatId,
   resolvedGoldkillerScannerChatId,
   resolvedPerpsChatId,
+  resolvedDefyChatId,
+  resolvedPremiumIIChatId,
   resolvedPremiumSignalsChatId,
   resolvedTradeIdeasChatId,
 } from '@/lib/telegram-channel-ids'
@@ -53,8 +55,8 @@ function envOu(chaves: string[], omissao: string): string {
 }
 
 /**
- * Os 6 grupos de sinais fechados: Sensei, Ideias de Forex (MTM Scanner), GoldKiller, TrendShot, Perps e
- * Premium. NÃO estão aqui: o grupo de leads (MTM System) e o FOREX swings, que desde 27/10/2026 é de
+ * Os 8 grupos de sinais fechados: Sensei, Ideias de Forex (MTM Scanner), GoldKiller, TrendShot, Perps,
+ * Premium, Premium II e DEFY. NÃO estão aqui: o grupo de leads (MTM System) e o FOREX swings, que desde 27/10/2026 é de
  * entrada livre (decisão do dono) e serve para converter para os packs — ver `grupoDeEntradaLivre`.
  */
 export function gruposDeSinais(): Set<string> {
@@ -66,6 +68,9 @@ export function gruposDeSinais(): Set<string> {
     resolvedPremiumSignalsChatId(),
     resolvedPerpsChatId() ?? '',
     envOu(c.trendshot.envVars, c.trendshot.chatId),
+    // 05/11: Premium II e DEFY também são de membros validados e estavam sem porta.
+    resolvedPremiumIIChatId() ?? '',
+    resolvedDefyChatId() ?? '',
   ]
   return new Set(ids.map((s) => String(s).trim()).filter((s) => /^-?\d+$/.test(s)))
 }

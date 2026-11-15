@@ -84,8 +84,8 @@ export async function GET() {
         tasks: tasks || [],
         progressPercent,
         rankGoals: {
-          rising_star: "2 PE Left, 2 PE Right",
-          bronze_star: "2 PE Left, 2 PE Right + 700 CV em cada perna",
+          rising_star: "Primeira semana com plano escrito e risco definido",
+          bronze_star: "Revisão semanal feita 4 semanas seguidas",
         },
       },
     })

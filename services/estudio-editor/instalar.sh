@@ -1,0 +1,50 @@
+#!/bin/zsh
+# Instala o EDITOR DO ESTÚDIO no Mac (launchd, prioridade baixa). Corre-se a partir do repositório:
+#   zsh services/estudio-editor/instalar.sh
+# Reaproveita o CRON_SECRET do cortador do Mac (~/.mtm-videocliper/env) se existir.
+# Parar:   launchctl bootout gui/$(id -u)/pt.morethanmoney.estudio-editor
+# Registo: ~/Library/Logs/mtm-estudio-editor.log
+set -eu
+REPO="$(cd "$(dirname "$0")/../.." && pwd)"
+DEST="$HOME/.mtm-estudio-editor"
+ROTULO="pt.morethanmoney.estudio-editor"
+PLIST="$HOME/Library/LaunchAgents/$ROTULO.plist"
+LOG="$HOME/Library/Logs/mtm-estudio-editor.log"
+command -v ffmpeg >/dev/null || { echo "Falta o ffmpeg (brew install ffmpeg)"; exit 1; }
+# Os textos e legendas do editor precisam do libass (filtro subtitles): o ffmpeg-full do Homebrew tem-no.
+FFDIR="$(dirname "$(command -v ffmpeg)")"
+[ -x /opt/homebrew/opt/ffmpeg-full/bin/ffmpeg ] && FFDIR=/opt/homebrew/opt/ffmpeg-full/bin
+"$FFDIR/ffmpeg" -hide_banner -filters 2>/dev/null | grep -q ' subtitles ' || echo "Aviso: este ffmpeg não tem libass; instala o ffmpeg-full (brew install ffmpeg-full) para os textos do editor."
+NODE="$(command -v node)"; [ -n "$NODE" ] || { echo "Falta o node (brew install node)"; exit 1; }
+mkdir -p "$DEST"; chmod 700 "$DEST"
+cp "$REPO/services/estudio-editor/editor.mjs" "$DEST/editor.mjs"
+cp "$REPO/services/estudio-editor/projeto.mjs" "$DEST/projeto.mjs"
+# Segredos vêm do env do cortador («export X=…», às vezes com aspas). O site aceita qualquer um dos dois.
+ler() { [ -f "$HOME/.mtm-videocliper/env" ] && grep -E "^(export )?$1=" "$HOME/.mtm-videocliper/env" | head -1 | cut -d= -f2- | sed -E "s/^[\"']//; s/[\"']\$//"; }
+umask 077; touch "$DEST/env"
+for V in LMS_CAPTION_WORKER_SECRET CRON_SECRET; do
+  if ! grep -q "^$V=" "$DEST/env"; then
+    VAL="$(ler $V || true)"; [ -n "$VAL" ] && printf '%s=%s\n' "$V" "$VAL" >> "$DEST/env"
+  fi
+done
+if [ ! -s "$DEST/env" ]; then
+  [ -t 0 ] || { echo "Falta o segredo e não há terminal para o pedir."; exit 1; }
+  printf "CRON_SECRET: "; read -rs SEG; echo
+  printf 'CRON_SECRET=%s\n' "$SEG" > "$DEST/env"
+fi
+chmod 600 "$DEST/env"
+cat > "$PLIST" <<PL
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0"><dict>
+  <key>Label</key><string>$ROTULO</string>
+  <key>ProgramArguments</key><array><string>/bin/zsh</string><string>-c</string>
+    <string>set -a; source "$DEST/env"; set +a; export PATH="$(dirname "$NODE"):$FFDIR:/opt/homebrew/bin:/usr/bin:/bin"; exec "$NODE" "$DEST/editor.mjs"</string></array>
+  <key>RunAtLoad</key><true/><key>KeepAlive</key><true/>
+  <key>Nice</key><integer>15</integer><key>LowPriorityIO</key><true/>
+  <key>StandardOutPath</key><string>$LOG</string><key>StandardErrorPath</key><string>$LOG</string>
+</dict></plist>
+PL
+launchctl bootout "gui/$(id -u)/$ROTULO" 2>/dev/null || true
+launchctl bootstrap "gui/$(id -u)" "$PLIST"
+echo "✓ Editor do estúdio a correr. Registo: $LOG"

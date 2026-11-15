@@ -4,6 +4,7 @@ import { ESPECIALISTAS, REVISOR_SISTEMA, ROUTER_SISTEMA, escolherPorPalavras, es
 import { ferramentasDe } from './ferramentas'
 import { lerMarca, marcaEmTexto } from './marca'
 import { REGRAS_CASA, peneira } from './regras'
+import { blocoFramework } from '@/lib/framework-mtm'
 
 /**
  * O ASSISTENTE DE MARKETING — router → especialista com ferramentas → revisor.
@@ -55,7 +56,9 @@ ${REGRAS_CASA}
 
 ${marcaEmTexto(marca)}
 
-${protocoloFerramentas(ferramentas.map((f) => ({ name: f.nome, description: f.descricao, input_schema: f.esquema })))}`
+${protocoloFerramentas(ferramentas.map((f) => ({ name: f.nome, description: f.descricao, input_schema: f.esquema })))}
+
+${blocoFramework('conteudo')}`
 
   const mensagens: MensagemIA[] = [...(opts.historico ?? []).slice(-8), { role: 'user', content: pedido }]
   const passos: PassoFerramenta[] = []

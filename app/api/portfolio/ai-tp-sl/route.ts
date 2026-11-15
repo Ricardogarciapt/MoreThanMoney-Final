@@ -25,7 +25,7 @@ interface TPSLRecommendation {
 async function getBinanceHistory(symbol: string, interval: string, limit: number) {
   try {
     const response = await fetch(
-      `https://api.binance.com/api/v3/klines?symbol=${symbol}&interval=${interval}&limit=${limit}`,
+      `https://data-api.binance.vision/api/v3/klines?symbol=${symbol}&interval=${interval}&limit=${limit}`,
       { next: { revalidate: 300 } }
     )
     if (!response.ok) return null
@@ -224,7 +224,7 @@ export async function GET(request: NextRequest) {
     let currentPrice = entryPrice
     try {
       const priceResponse = await fetch(
-        `https://api.binance.com/api/v3/ticker/price?symbol=${symbol}`,
+        `https://data-api.binance.vision/api/v3/ticker/price?symbol=${symbol}`,
         { next: { revalidate: 60 } }
       )
       if (priceResponse.ok) {

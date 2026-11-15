@@ -16,6 +16,7 @@ import type { SupabaseClient } from '@supabase/supabase-js'
 import { REGRA_ESPERTA, compradoresCedo, comprasDaTransacao, estadoDaCarteira, pontuar, retornoPct } from './carteiras'
 import { assinaturasDe, snapshotsDex, tradesPool, transacaoRpc, type SnapshotMeme } from './fontes'
 import { naCurva } from './memes'
+import { emParalelo } from './paralelo'
 
 const DESCOBRIR_CADA_MS = 10 * 60_000
 const MAX_POOLS_DESCOBERTA = 2
@@ -69,7 +70,8 @@ export async function passarCarteiras(db: SupabaseClient, memes: SnapshotMeme[],
     .order('vista_em', { ascending: true, nullsFirst: true })
     .limit(MAX_SEGUIDAS_POR_PASSAGEM)
   const novas: { carteira: string; esperta: boolean; mint: string; assinatura: string }[] = []
-  for (const c of (seguidas ?? []) as { endereco: string; estado: string; ultima_assinatura: string | null }[]) {
+  // 3 carteiras de cada vez no RPC público (as transacções de cada uma continuam em fila).
+  await emParalelo((seguidas ?? []) as { endereco: string; estado: string; ultima_assinatura: string | null }[], 3, async (c) => {
     try {
       const sigs = await assinaturasDe(c.endereco, c.ultima_assinatura)
       // Primeira vez: marca onde se começa e não lê o passado (o passado é o que a descoberta já viu).
@@ -84,7 +86,7 @@ export async function passarCarteiras(db: SupabaseClient, memes: SnapshotMeme[],
     } catch (e) {
       erro(`seguir ${c.endereco.slice(0, 6)}`, e)
     }
-  }
+  })
   if (novas.length) {
     const snaps = await snapshotsDex(novas.map((x) => x.mint), agora)
     const linhas = novas

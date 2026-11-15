@@ -244,6 +244,18 @@ export const DECISOES_IRREVERSIVEIS: Facto[] = [
     data: '01/10/2026',
     origem: [ficheiro('lib/agentes/atribuicao.ts'), ficheiro('lib/agentes/receita.ts')],
   },
+  {
+    oQue:
+      'O MTM MASTER FRAMEWORK é a forma de pensar da casa em blocos que as IAs leem: identidade e ' +
+      'modelo híbrido, tom científico e anti-pirâmide, dúvidas de capital encaminhadas para o MTM ' +
+      'Funded, protocolos setter e closer e diretivas de engenharia. Cada superfície cola só o seu ' +
+      'bloco, por `blocoFramework`.',
+    porque:
+      'Uma só fonte para o que a casa diz de si em todas as IAs. Colar o framework inteiro em todos ' +
+      'os prompts gasta tokens e dá a cada IA instruções que não são para ela.',
+    data: '04/11/2026',
+    origem: [ficheiro('lib/framework-mtm.ts')],
+  },
 ]
 
 // ── OS LIMITES: O QUE NENHUM AGENTE FAZ ──────────────────────────────────────────────────────

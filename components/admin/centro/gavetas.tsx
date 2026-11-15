@@ -8,6 +8,7 @@ import type { LinhaFanout, Sinal } from "@/lib/admin-centro/servidor/sinais"
 import { FONTES, nomeMotivo } from "@/lib/admin-centro/regras"
 import { appDaConta, contasDaEstrategia, estrategiasDaConta, estrategiasSemFicha } from "@/lib/admin-centro/ligacoes"
 import ContaModal from "@/components/admin/mtmfunded-conta-modal"
+import ContaCopia from "./conta-copia"
 import { useCentroCtx, type Alvo } from "./contexto"
 import { tomEstadoConta, type DadosContas } from "./seccoes/contas"
 import type { DadosEstrategias } from "./seccoes/estrategias"
@@ -134,6 +135,10 @@ function GavetaConta({ refConta }: { refConta: string }) {
               <Botao tom="ouro" onClick={() => ctx.abrir({ tipo: "conta", id: `funded:${c.fundedId}` })}>Gerir a conta MTM Funded →</Botao>
             </div>
           )}
+
+          {/* A ficha de cópia: risco/lote/BE/trailing, estratégias (rotas novas, lote por estratégia), limites do
+              motor e «retirar da cópia» — escreve na fonte e ressincroniza (nunca na rota). */}
+          {(c.origem === "site" || c.origem === "auto") && <ContaCopia refConta={refConta} aoMudar={() => { ctx.depoisDeAcao(); void recarregar() }} />}
 
           <div>
             <p className="mb-1.5 text-[10px] uppercase tracking-wider text-zinc-500">Acções desta ligação (auditadas)</p>

@@ -8,6 +8,9 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getSupabaseAdmin } from '@/lib/supabase-admin-client'
 import { requireAdmin } from "@/lib/admin-api-helpers"
+import { isCronAuthorized } from "@/lib/cron-auth"
+
+export const maxDuration = 120
 
 const supabaseAdmin = getSupabaseAdmin()
 
@@ -109,8 +112,11 @@ export async function POST(request: NextRequest) {
 
 // GET: Recalcular TP/SL para TODOS os ativos
 export async function GET(request: NextRequest) {
-  const guarda = await requireAdmin(request)
-  if (guarda) return guarda
+  // O cron nightly-tp-sl chama esta rota com Bearer CRON_SECRET e sem sessão de admin.
+  if (!isCronAuthorized(request)) {
+    const guarda = await requireAdmin(request)
+    if (guarda) return guarda
+  }
 
   try {
     console.log('🤖 [ADMIN TP/SL] Iniciando recálculo em massa...')

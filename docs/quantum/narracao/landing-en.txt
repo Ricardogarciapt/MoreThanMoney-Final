@@ -1,0 +1,8 @@
+This is Quantum, the MoreThanMoney scanner that confirms the trend first and enters on the pullback.
+The primary line tells you the side: blue with price above, red below. The large arrow marks the start of the phase.
+The strength panel gives a score from zero to one hundred and an arrow per timeframe, from M1 to weekly. Buy above sixty, sell at forty or less.
+Then you wait for the pullback: price returns to the ribbon and the oscillator enters the zone of the direction. The triangle or the dot, in the colour of the direction, give the entry. Both on the same candle is the strongest entry.
+The stop sits beyond the extreme of the pullback and the target is twice the risk. All by alerts.
+It works on forex, gold, indices and crypto, on any timeframe.
+See the demo at morethanmoney dot pt slash en slash scanner slash quantum.
+Educational content. Not financial advice, and results are not guaranteed.

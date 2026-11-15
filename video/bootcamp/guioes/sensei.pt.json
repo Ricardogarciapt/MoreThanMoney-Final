@@ -1,0 +1,1730 @@
+{
+ "estrategia": "Sensei",
+ "marca": "MoreThanMoney",
+ "cores": {
+  "bull": "#8b5cf6",
+  "bear": "#6b7280"
+ },
+ "ui": {
+  "nivel": "Nível",
+  "compra": "Compra",
+  "venda": "Venda",
+  "entrada": "Entrada",
+  "tp1": "TP1",
+  "tp2": "TP2",
+  "tp3": "TP3"
+ },
+ "pronuncia": [
+  [
+   "TradingView",
+   "Trading View"
+  ],
+  [
+   "ATR",
+   "A T R"
+  ],
+  [
+   "ADX",
+   "A D X"
+  ],
+  [
+   "RSI",
+   "R S I"
+  ],
+  [
+   "POC",
+   "P O C"
+  ],
+  [
+   "DEMA",
+   "D E M A"
+  ],
+  [
+   "EMA",
+   "E M A"
+  ],
+  [
+   "BOS",
+   "B O S"
+  ],
+  [
+   "CHoCH",
+   "C H O C H"
+  ],
+  [
+   "IDM",
+   "I D M"
+  ],
+  [
+   "HTF",
+   "H T F"
+  ],
+  [
+   "R",
+   "erre"
+  ],
+  [
+   "TP1",
+   "T P um"
+  ],
+  [
+   "TP2",
+   "T P dois"
+  ],
+  [
+   "TP3",
+   "T P três"
+  ],
+  [
+   "XAUUSD",
+   "ouro dólar"
+  ],
+  [
+   "EURUSD",
+   "euro dólar"
+  ]
+ ],
+ "plano": {
+  "warning": false,
+  "slAtr": 1.5,
+  "alvos": [
+   1.5,
+   2.5,
+   4,
+   6
+  ],
+  "rotulos": [
+   "Exit 1",
+   "Exit 2",
+   "Exit 3",
+   "Exit 4"
+  ]
+ },
+ "videos": [
+  {
+   "rotulo": "Bootcamp Sensei · 1/3",
+   "titulo": "Fundamentos: o que o Sensei desenha no gráfico",
+   "cenas": [
+    {
+     "id": "v1-00",
+     "tipo": "abertura",
+     "kicker": "Bootcamp MTM · Módulo 1 de 3",
+     "titulo": "Sensei",
+     "sub": "Fundamentos: o que o Sensei desenha no gráfico",
+     "rodape": "morethanmoney.pt",
+     "semVoz": 5
+    },
+    {
+     "id": "v1-01",
+     "tipo": "frase",
+     "cap": "Boas-vindas",
+     "texto": "Uma confluência não é uma certeza. <span class='ouro'>É concordância</span> entre leituras diferentes.",
+     "autor": "Ricardo Garcia · MoreThanMoney",
+     "fala": "Olá, sou o Ricardo Garcia e este é o Bootcamp Sensei da MoreThanMoney. Antes de começarmos, quero deixar uma ideia clara: nenhum indicador garante resultados. O Sensei junta várias leituras do mercado num só gráfico, com regras fixas, e mostra-te quando essas leituras concordam. Isso é diferente de prever o preço. Ao longo destes três módulos vais perceber cada peça do gráfico, depois vais ver como nasce um sinal e como o plano de trade fica desenhado, e no último módulo falamos de risco, gestão e de uma rotina de quinze minutos por dia. Vamos devagar. Cada módulo assenta no anterior, por isso não saltes à frente."
+    },
+    {
+     "id": "v1-02",
+     "tipo": "pontos",
+     "cap": "Boas-vindas",
+     "kicker": "O plano do bootcamp",
+     "titulo": "Três módulos, um método",
+     "itens": [
+      "Módulo 1 · Cada peça do gráfico e como se lê",
+      "Módulo 2 · Do placar ao plano de trade",
+      "Módulo 3 · Risco, gestão e rotina diária"
+     ],
+     "fala": "O bootcamp tem três módulos. Neste primeiro, a base: o que é o Sensei, como o pões no gráfico e o que desenha cada uma das leituras. No segundo, o motor: como nasce um sinal, como funciona o placar das vinte confirmações, quais são os filtros, e como o plano fica fixo na vela de sinal, com entrada, stop e quatro saídas. No terceiro, a prática: risco por ideia, tamanho da posição, gestão do trade, quando não entrar, e a rotina diária. Sugiro que os vejas por ordem, e que pares o vídeo sempre que quiseres experimentar no teu próprio gráfico."
+    },
+    {
+     "id": "v1-03",
+     "tipo": "capitulo",
+     "cap": "01 · O que é o Sensei",
+     "numero": "01",
+     "titulo": "O que é o Sensei",
+     "sub": "Várias leituras, uma só confluência",
+     "fala": "Vamos então ao primeiro capítulo. O que é, afinal, o Sensei?"
+    },
+    {
+     "id": "v1-04",
+     "tipo": "camadas3d",
+     "cap": "01 · O que é o Sensei",
+     "kicker": "Quatro lentes sobre o mesmo gráfico",
+     "titulo": "De onde vem cada peça",
+     "itens": [
+      "Estrutura de mercado",
+      "Médias duplas e POC",
+      "Banda Sensei e nuvem",
+      "Fluxo de ordens"
+     ],
+     "fala": "O Sensei nasce da junção de peças que já tinham utilidade própria. A primeira é o motor de estrutura do MTM Scanner, que identifica quebras e mudanças de carácter no preço. A segunda são as médias duplas e o POC, que mostram a tendência e um ponto de referência no volume. A terceira é a banda Sensei, uma média de oitenta e nove velas com um desvio padrão para cima e para baixo. E a quarta é o fluxo de ordens, lido a partir de um timeframe inferior, que tenta ver quem está a comprar e quem está a vender dentro de cada vela. Imagina quatro lentes sobre o mesmo gráfico. Cada uma dá um pedaço da história. O Sensei só deixa uma ideia avançar quando as lentes concordam o suficiente, e essa palavra, concordar, é o centro de todo o indicador."
+    },
+    {
+     "id": "v1-05",
+     "tipo": "pontos",
+     "cap": "01 · O que é o Sensei",
+     "kicker": "Como se mede a concordância",
+     "titulo": "Vinte confirmações, quatro grupos",
+     "itens": [
+      "Médias duplas: tendência e alinhamento",
+      "Volume, força e momento",
+      "Estrutura e POC",
+      "Banda e pressão compradora"
+     ],
+     "fala": "Para que as lentes concordem de forma mensurável, o Sensei usa vinte confirmações, organizadas em quatro grupos de cinco. O primeiro grupo é a tendência das médias duplas: o alinhamento entre elas, a inclinação, e a posição do preço face à média rápida. O segundo é o volume, a força e o momento: volume na vela de sinal, expansão da volatilidade, a força da tendência medida pelo ADX, o RSI e o fluxo de ordens. O terceiro é a estrutura e o POC: o estado da estrutura de mercado, as mudanças de carácter, as quebras de estrutura, a posição face ao POC e o desequilíbrio do fluxo. E o quarto é a banda e a pressão compradora: a nuvem, a posição face à banda, uma fase recente e a pressão de compra. Cada confirmação conta um ponto. Quantas acendem ao mesmo tempo é o placar. Mais à frente vamos ver quanto placar é preciso."
+    },
+    {
+     "id": "v1-06",
+     "tipo": "pontos",
+     "cap": "01 · O que é o Sensei",
+     "kicker": "Onde funciona",
+     "titulo": "Mercados e timeframes",
+     "itens": [
+      "Forex, ouro, índices e cripto",
+      "Scalp em 5 e 15 minutos",
+      "Intradiário em 1 hora",
+      "Swing em 4 horas"
+     ],
+     "fala": "O Sensei foi pensado para forex, ouro, índices e cripto, e para diferentes ritmos. Na prática, há três formas de o usar, e a diferença está sobretudo no timeframe. Em scalp, nos gráficos de cinco e quinze minutos, aparecem mais ideias e os movimentos são mais curtos, o que exige mais tempo ao ecrã. Em intradiário, no gráfico de uma hora, há menos ideias, e para muita gente é um bom equilíbrio, porque duas ou três verificações por dia chegam. Em swing, no gráfico de quatro horas, as ideias são raras e os movimentos tendem a durar mais. Se estás a começar, escolhe um só mercado e um só timeframe durante as primeiras semanas. Mudar tudo ao mesmo tempo é a forma mais rápida de não perceber o que estás a ver."
+    },
+    {
+     "id": "v1-06b",
+     "tipo": "checklist",
+     "cap": "01 · O que é o Sensei",
+     "kicker": "Antes de começar",
+     "titulo": "O que precisas",
+     "itens": [
+      "Uma conta no TradingView, onde o indicador corre",
+      "O Sensei no teu gráfico",
+      "Uma conta demo na tua corretora",
+      "Um caderno ou folha para o diário",
+      "Quinze minutos por dia"
+     ],
+     "fala": "Antes de avançarmos, o que precisas para tirar partido deste bootcamp. Uma conta no TradingView, porque é lá que o indicador corre. O Sensei no teu gráfico. Uma conta demo na tua corretora, porque tudo o que vais aprender deve ser treinado sem dinheiro real primeiro. Um caderno, ou uma folha de cálculo, para o diário, que vamos construir no terceiro módulo. E quinze minutos por dia. O que faz diferença não é o tempo que passas a olhar para gráficos, é a consistência com que repetes o mesmo processo durante semanas."
+    },
+    {
+     "id": "v1-07",
+     "tipo": "capitulo",
+     "cap": "02 · Pôr o Sensei no gráfico",
+     "numero": "02",
+     "titulo": "Pôr o Sensei no gráfico",
+     "sub": "Definições e temas",
+     "fala": "Segundo capítulo: como pões o Sensei no gráfico e como lês as definições sem te perderes."
+    },
+    {
+     "id": "v1-08",
+     "tipo": "pontos",
+     "cap": "02 · Pôr o Sensei no gráfico",
+     "kicker": "As definições",
+     "titulo": "Um mapa das definições",
+     "itens": [
+      "Sensei Otimizado e Estilo de Trading",
+      "Núcleo: confirmações mínimas, POC e médias",
+      "Filtros de qualidade: tendência de topo, anti-lateral e fecho de vela",
+      "Ordem de fluxo, bandas e estrutura",
+      "Gestão de risco, breakeven e alertas"
+     ],
+     "fala": "Quando abres as definições do Sensei, vês vários grupos, e vale a pena teres um mapa mental deles. No topo estão o tema e o estilo de trading, com a opção de Sensei Otimizado, que aplica por par e timeframe a configuração que o código tem para essa combinação. Depois, o núcleo, com o número mínimo de confirmações, o período do POC e a visibilidade das médias. Em seguida, os filtros de qualidade: a tendência de topo, o filtro de sessão, o anti-lateral e a exigência de fecho de vela. Mais abaixo, o lado de compra e de venda, a fase, o fluxo de ordens com o timeframe inferior, a banda e a nuvem. E no fim, a gestão de risco, o breakeven, o trailing e os alertas. Nesta primeira parte, a regra é simples: deixa tudo na omissão e aprende a ler antes de mexer."
+    },
+    {
+     "id": "v1-09",
+     "tipo": "grafico",
+     "cap": "02 · Pôr o Sensei no gráfico",
+     "kicker": "Primeiro olhar",
+     "titulo": "O gráfico com tudo ligado",
+     "cenario": "compra",
+     "seed": 7,
+     "base": [
+      "banda",
+      "medias",
+      "poc",
+      "estrutura",
+      "cores",
+      "sinal",
+      "plano"
+     ],
+     "camadas": [],
+     "zoom": [
+      0,
+      0
+     ],
+     "estrelas": "14/20",
+     "fala": "Este é o aspecto do gráfico com todas as camadas ligadas. À primeira vista parece muita coisa, e é normal. Daqui a pouco vais ler cada elemento em segundos: a banda à volta do preço, as médias, o POC, as marcas de estrutura, as velas coloridas, o sinal, o cartão com o placar e as linhas do plano. Uma nota importante, que vou repetir só uma vez neste módulo: os gráficos deste bootcamp são animações ilustrativas, desenhadas para explicar o funcionamento. Não são resultados reais nem histórico de mercado. Vamos agora desligar tudo e ligar uma camada de cada vez."
+    },
+    {
+     "id": "v1-10",
+     "tipo": "comparar",
+     "cap": "02 · Pôr o Sensei no gráfico",
+     "kicker": "Tema",
+     "titulo": "Os temas de cor",
+     "cartoes": [
+      {
+       "t": "Light",
+       "d": "Fundo claro. É o tema de origem do indicador."
+      },
+      {
+       "t": "Dark",
+       "d": "Modo escuro moderno, para quem trabalha de noite."
+      },
+      {
+       "t": "Classic",
+       "d": "Tons de azul-noite."
+      },
+      {
+       "t": "Pop",
+       "d": "Cores vibrantes, quase néon."
+      }
+     ],
+     "fala": "Antes de entrarmos nas leituras, um ponto prático: o tema. Nas definições, o Sensei tem o tema do indicador. O Light, que é o de origem, usa fundo claro. O Dark é um modo escuro moderno. O Classic usa tons de azul-noite. E o Pop usa cores vibrantes, quase néon. A lógica da leitura é a mesma em todos, só muda a paleta. Escolhe um e não andes a trocar, porque o teu olho habitua-se às cores, e isso torna a leitura muito mais rápida. Neste bootcamp uso o tema de origem, para que o que vês no ecrã seja igual ao que vais encontrar."
+    },
+    {
+     "id": "v1-11",
+     "tipo": "capitulo",
+     "cap": "03 · Banda e nuvem",
+     "numero": "03",
+     "titulo": "Leitura 1: a banda Sensei e a nuvem",
+     "sub": "A média de oitenta e nove e a sua banda",
+     "fala": "Terceiro capítulo, e a primeira leitura de fundo: a banda Sensei e a nuvem."
+    },
+    {
+     "id": "v1-12",
+     "tipo": "grafico",
+     "cap": "03 · Banda e nuvem",
+     "kicker": "Leitura 1",
+     "titulo": "Média de oitenta e nove, com um desvio padrão",
+     "cenario": "compra",
+     "seed": 7,
+     "base": [],
+     "camadas": [
+      "banda"
+     ],
+     "ate": [
+      0.55,
+      0.6
+     ],
+     "zoom": [
+      0,
+      0
+     ],
+     "fala": "A banda Sensei é construída a partir de uma média simples de oitenta e nove velas, e de um desvio padrão, que mede o quanto o preço costuma afastar-se dessa média. A banda superior fica a um desvio padrão acima da média, e a inferior a um desvio padrão abaixo. Quase sempre, o preço passeia dentro dessa faixa. Quando sai dela, está a afastar-se mais do que o habitual. Repara também na cor. A banda muda entre roxo e cinzento, conforme a nuvem. O roxo aparece quando a nuvem é de subida, e o cinzento quando é de descida. A nuvem compara uma média mais rápida com a média de oitenta e nove, e a cor diz-te qual das duas está por cima. Não é uma ordem de compra. É uma leitura da direcção do fundo."
+    },
+    {
+     "id": "v1-13",
+     "tipo": "pontos",
+     "cap": "03 · Banda e nuvem",
+     "kicker": "Como ler",
+     "titulo": "O que a banda te diz",
+     "itens": [
+      "Preço dentro da banda: movimento normal",
+      "Preço fora da banda: afastamento acima do habitual",
+      "Roxo: nuvem de subida",
+      "Cinzento: nuvem de descida",
+      "A posição face à banda é uma confirmação, não um sinal"
+     ],
+     "fala": "Como se lê a banda na prática? Enquanto o preço anda dentro da faixa, estás num movimento normal, com o mercado a respirar em torno da média. Quando o preço sai da faixa, por cima ou por baixo, está esticado, e isso merece atenção, mas não é uma ordem. O Sensei conta a posição do preço face à banda como uma das vinte confirmações, no grupo da banda e da pressão compradora. Ou seja, soma um ponto, e só isso. Uma vela fora da banda, sozinha, não faz uma ideia. Da mesma forma, a cor roxa não quer dizer que deves comprar. Quer dizer que a nuvem está do lado comprador. Tudo depende de como as outras leituras se comportam ao mesmo tempo."
+    },
+    {
+     "id": "v1-14",
+     "tipo": "comparar",
+     "cap": "03 · Banda e nuvem",
+     "kicker": "Definições da banda",
+     "titulo": "Comprimento e modo da nuvem",
+     "cartoes": [
+      {
+       "t": "Comprimento 89",
+       "d": "Valor de origem. Mudar o comprimento muda o carácter de toda a banda."
+      },
+      {
+       "t": "Cloud Active",
+       "d": "Modo de origem. A média rápida da nuvem reage mais depressa."
+      },
+      {
+       "t": "Cloud Passive",
+       "d": "A média rápida é mais lenta, e a cor muda com menos frequência."
+      }
+     ],
+     "fala": "Dois parâmetros mudam o carácter da banda. O comprimento, que de origem é oitenta e nove. Se o baixares, a banda fica mais colada ao preço e aparecem mais movimentos fora dela. Se o subires, fica mais larga e mais lenta. E o modo da nuvem: em Active, que é o de origem, a média rápida reage mais depressa, e a cor muda mais cedo. Em Passive, a média rápida é mais lenta, e a cor muda menos vezes. Não há uma opção certa para todos os mercados. A recomendação é a mesma de sempre: muda um valor de cada vez, e observa durante algumas semanas antes de tirares conclusões."
+    },
+    {
+     "id": "v1-15",
+     "tipo": "capitulo",
+     "cap": "04 · Médias duplas e POC",
+     "numero": "04",
+     "titulo": "Leitura 2: médias duplas e POC",
+     "sub": "Tendência e um ponto de referência no volume",
+     "fala": "Quarto capítulo: as médias duplas e o POC."
+    },
+    {
+     "id": "v1-16",
+     "tipo": "grafico",
+     "cap": "04 · Médias duplas e POC",
+     "kicker": "Leitura 2",
+     "titulo": "Três médias em pares e o POC",
+     "cenario": "compra",
+     "seed": 7,
+     "base": [
+      "banda"
+     ],
+     "camadas": [
+      "medias",
+      "poc"
+     ],
+     "ate": [
+      0.6,
+      0.6
+     ],
+     "zoom": [
+      0,
+      0
+     ],
+     "fala": "As médias duplas são três médias exponenciais de comprimentos diferentes: quinze, cinquenta e duzentas e trinta e oito velas. Cada uma tem a sua cor, e a leitura faz-se pela ordem em que aparecem. Quando a média mais rápida está acima da intermédia, e esta acima da lenta, o alinhamento é de subida. Quando a inclinação das médias também acompanha, a tendência está limpa. Repara como as médias se abrem e se seguem. Estes alinhamentos e estas inclinações contam como confirmações do primeiro grupo. A linha de pontos laranja é o POC, o ponto de controlo. Vamos explicá-lo no próximo ecrã. Por agora, fica com a ideia de que o preço a cruzar o POC para cima é um dos gatilhos de compra."
+    },
+    {
+     "id": "v1-17",
+     "tipo": "pontos",
+     "cap": "04 · Médias duplas e POC",
+     "kicker": "Contexto",
+     "titulo": "Alinhamento, inclinação e preço",
+     "itens": [
+      "Médias em ordem de subida: alinhamento comprador",
+      "Médias em ordem de descida: alinhamento vendedor",
+      "Médias a subir ou a descer: força a favor",
+      "Preço acima da média rápida: impulso de curto prazo"
+     ],
+     "fala": "Como usar as médias? Quatro ideias simples. Primeira: a ordem. Com a média mais rápida por cima das outras, o alinhamento é comprador. Com ela por baixo, é vendedor. Segunda: a inclinação. Uma média que sobe dá força à tendência, uma que se achata diz-te que o movimento perde tracção. Terceira: a posição do preço face à média rápida. Um preço que está acima dela tem impulso de curto prazo a favor. E quarta: as três ideias juntas. Quando alinhamento, inclinação e preço apontam para o mesmo lado, o grupo das médias soma muitas confirmações. Quando discordam, o placar fica mais baixo, e isso também é informação útil."
+    },
+    {
+     "id": "v1-18",
+     "tipo": "pontos",
+     "cap": "04 · Médias duplas e POC",
+     "kicker": "O POC",
+     "titulo": "Onde se fez mais negócio",
+     "itens": [
+      "Calculado em blocos de catorze velas",
+      "É o preço da vela com mais volume em cada bloco",
+      "Preço acima do POC: lado comprador",
+      "Cruzar o POC para cima pode ser um gatilho de compra"
+     ],
+     "fala": "Vamos ao POC, em palavras simples. De catorze em catorze velas, o indicador olha para o bloco que acabou de fechar e procura a vela com mais volume. O preço dessa vela passa a ser o POC desse bloco, desenhado como linha de pontos laranja. Porque é que isso importa? Porque as zonas onde se negociou muito volume costumam ter peso: são referências que muita gente vê. Por isso, o Sensei considera que o preço acima do POC está do lado comprador. E um cruzamento do preço para cima do POC é um dos dois gatilhos de compra. O outro é uma fase completa, que vamos ver no segundo módulo. Repara: o POC é uma referência, não uma garantia de que o preço vai parar ali."
+    },
+    {
+     "id": "v1-19",
+     "tipo": "capitulo",
+     "cap": "05 · Estrutura",
+     "numero": "05",
+     "titulo": "Leitura 3: a estrutura de mercado",
+     "sub": "Quando o movimento muda de carácter",
+     "fala": "Quinto capítulo, terceira leitura: a estrutura de mercado."
+    },
+    {
+     "id": "v1-20",
+     "tipo": "grafico",
+     "cap": "05 · Estrutura",
+     "kicker": "Leitura 3",
+     "titulo": "Quebras, mudanças e armadilhas",
+     "cenario": "compra",
+     "seed": 7,
+     "base": [
+      "banda",
+      "medias",
+      "cores"
+     ],
+     "camadas": [
+      "estrutura"
+     ],
+     "ate": [
+      0.62,
+      0.9
+     ],
+     "zoom": [
+      0,
+      0
+     ],
+     "fala": "A estrutura de mercado é a sequência de topos e fundos que o preço vai desenhando. Quando o preço rompe um topo anterior numa tendência de subida, temos uma quebra de estrutura, um BOS, e a tendência confirma-se. Quando, pelo contrário, o preço rompe um fundo importante contra a tendência, aparece uma mudança de carácter, um CHoCH. É o primeiro sinal de que o movimento pode ter mudado. O indicador marca também armadilhas de liquidez, que são os momentos em que o preço passa por cima de um nível conhecido, apanha quem lá estava colocado, e volta para dentro. E desenha order blocks, que são zonas da última vela antes de um movimento forte. Tudo isto é contexto. Nenhuma destas marcas, sozinha, é uma ordem."
+    },
+    {
+     "id": "v1-21",
+     "tipo": "pontos",
+     "cap": "05 · Estrutura",
+     "kicker": "No painel",
+     "titulo": "Estrutura em quatro marcas",
+     "itens": [
+      "BOS: a estrutura confirma a direcção",
+      "CHoCH: primeira pista de que o movimento mudou",
+      "Armadilhas de liquidez: o preço varre um nível e volta",
+      "Order blocks: zona de origem de um movimento forte"
+     ],
+     "fala": "Vale a pena separar as quatro marcas, porque cada uma responde a uma pergunta diferente. O BOS pergunta: a tendência continua? Se o preço rompe o último topo numa subida, a resposta é sim. O CHoCH pergunta: a tendência ainda manda? Se o preço rompe o último fundo importante, há uma primeira pista de que não. As armadilhas de liquidez perguntam: quem estava do lado errado? Quando o preço varre um nível conhecido e volta para dentro, muitas paragens foram tocadas. E os order blocks perguntam: de onde veio este movimento? A zona da última vela antes da força pode servir de referência. São quatro perguntas. Nenhuma tem resposta perfeita, e é a combinação delas que dá contexto."
+    },
+    {
+     "id": "v1-22",
+     "tipo": "capitulo",
+     "cap": "06 · Fluxo de ordens",
+     "numero": "06",
+     "titulo": "Leitura 4: o fluxo de ordens",
+     "sub": "Quem compra e quem vende dentro da vela",
+     "fala": "Sexto capítulo: o fluxo de ordens, a leitura mais técnica do Sensei."
+    },
+    {
+     "id": "v1-23",
+     "tipo": "pontos",
+     "cap": "06 · Fluxo de ordens",
+     "kicker": "Order flow",
+     "titulo": "Ver dentro da vela",
+     "itens": [
+      "O fluxo usa velas de um minuto, por omissão",
+      "Delta: compra menos venda, em proporção do volume",
+      "Desequilíbrio: quando o delta passa o limiar de 0,25",
+      "Sem dados do timeframe inferior, usa uma aproximação no gráfico"
+     ],
+     "fala": "Uma vela de uma hora parece uma caixa, mas por dentro houve muitos negócios, compras e vendas. O Sensei pede ao gráfico de um minuto, que é o timeframe do fluxo de ordens por omissão, para medir quanto do volume foi compra e quanto foi venda. A diferença, dividida pelo volume total, chama-se delta. Quando essa proporção passa o limiar, que por omissão é zero vírgula vinte e cinco, o indicador marca um desequilíbrio, de compra ou de venda. Se o gráfico não tiver dados desse timeframe inferior, o indicador usa uma aproximação feita a partir da própria vela. É útil, mas menos preciso. Por isso, o fluxo é mais um voto no placar, e não um motivo para entrar sozinho."
+    },
+    {
+     "id": "v1-24",
+     "tipo": "grafico",
+     "cap": "06 · Fluxo de ordens",
+     "kicker": "Pausa o vídeo",
+     "titulo": "Lê tu primeiro",
+     "cenario": "tendencia",
+     "seed": 11,
+     "base": [
+      "banda",
+      "medias",
+      "poc",
+      "estrutura",
+      "cores"
+     ],
+     "camadas": [],
+     "ate": [
+      0.6,
+      0.62
+     ],
+     "zoom": [
+      0,
+      0.3
+     ],
+     "fala": "Agora é a tua vez. Pausa o vídeo e lê este gráfico sozinho, camada a camada, antes de continuares. Onde está o preço face à banda? Está dentro ou fora? De que cor está a nuvem? Onde está o preço face ao POC, acima ou abaixo? Há um BOS ou um CHoCH recente? E o que dizem as últimas velas sobre o fluxo de ordens? Responde às seis perguntas por escrito. Não há resposta certa para treinar o olho. No próximo módulo vais ver o que o placar diz sobre este tipo de situação, e vais comparar a tua leitura com a do indicador."
+    },
+    {
+     "id": "v1-24b",
+     "tipo": "pontos",
+     "cap": "06 · Fluxo de ordens",
+     "kicker": "Uma ordem de leitura",
+     "titulo": "Antes de olhar para o placar",
+     "itens": [
+      "Primeiro o contexto: banda e nuvem",
+      "Depois a direcção: médias e estrutura",
+      "Depois o fluxo, como voto e não como ordem",
+      "Só então olhar para o placar"
+     ],
+     "fala": "Antes de juntarmos tudo, uma ordem de leitura que te vai poupar muito tempo. Primeiro, o contexto: onde está o preço face à banda, e de que cor é a nuvem. Depois, a direcção: o alinhamento e a inclinação das médias duplas, e a última estrutura marcada. A seguir, o fluxo de ordens, que deves tratar como mais um voto e nunca como uma ordem em si. E só no fim olhas para o placar. A razão é simples. Se começas pelo número, tens tendência a procurar leituras que confirmem o que já querias fazer. Se começas pelo contexto, o número vira uma confirmação, e não uma desculpa."
+    },
+    {
+     "id": "v1-25",
+     "tipo": "capitulo",
+     "cap": "07 · Juntar as leituras",
+     "numero": "07",
+     "titulo": "Juntar as leituras",
+     "sub": "Um exemplo ilustrativo",
+     "fala": "Sétimo capítulo: vamos juntar tudo num exemplo."
+    },
+    {
+     "id": "v1-26",
+     "tipo": "grafico",
+     "cap": "07 · Juntar as leituras",
+     "kicker": "Exemplo ilustrativo",
+     "titulo": "Do esticão à confirmação",
+     "cenario": "compra",
+     "seed": 7,
+     "base": [
+      "banda",
+      "medias",
+      "poc",
+      "cores"
+     ],
+     "camadas": [
+      "estrutura",
+      "sinal",
+      "plano"
+     ],
+     "ate": [
+      0.6,
+      1
+     ],
+     "zoom": [
+      0,
+      0.5
+     ],
+     "estrelas": "14/20",
+     "fala": "Vamos ler este exemplo com calma. O preço vem a descer, com a nuvem cinzenta, e chega à zona inferior da banda. Ainda não há nada a acontecer, e é aí que o indicador espera. Depois, a estrutura muda de carácter: aparece um CHoCH de subida. Logo a seguir, o preço fecha acima do POC, que é o cruzamento que dispara um setup de compra. O Sensei conta as confirmações, e a vela de sinal fecha com um placar de catorze em vinte. Esse número passa o mínimo do modo personalizado, que é doze. O plano desenha-se na vela do sinal: a entrada no fecho, o stop a um vírgula cinco ATR abaixo, a medida da volatilidade média das velas, e as quatro saídas acima. Repara que a ideia só existe depois do fecho. Até lá, era só uma leitura. No segundo módulo vamos desmontar cada um destes números."
+    },
+    {
+     "id": "v1-27",
+     "tipo": "pontos",
+     "cap": "07 · Juntar as leituras",
+     "kicker": "Erros de leitura",
+     "titulo": "O que os principiantes fazem mal",
+     "itens": [
+      "Comprar só porque o preço tocou na banda",
+      "Ler um sinal antes de a vela fechar",
+      "Ignorar a tendência de quatro horas",
+      "Encher o gráfico com mais indicadores por cima do Sensei",
+      "Mudar as definições todos os dias"
+     ],
+     "fala": "Antes de fechar este módulo, os erros de leitura mais comuns. Primeiro, comprar só porque o preço tocou na banda inferior. A banda é uma confirmação, não um gatilho. Segundo, ler um sinal antes de a vela fechar. Até ao fecho, nada está confirmado, e o preço pode mudar de ideias várias vezes. Terceiro, ignorar a tendência de quatro horas. Uma compra abaixo da média de duzentas velas do gráfico de quatro horas é uma compra contra o filtro, e o filtro existe por uma razão. Quarto, encher o gráfico com mais indicadores por cima do Sensei. Ele já junta as leituras de que precisas. Mais linhas não dão mais certeza, dão mais dúvidas. E quinto, mudar as definições todos os dias. Assim nunca chegas a conhecer o comportamento do indicador no teu mercado. Escolhe, fixa, observa."
+    },
+    {
+     "id": "v1-28",
+     "tipo": "checklist",
+     "cap": "Resumo",
+     "kicker": "Resumo do módulo 1",
+     "titulo": "O que tens de saber ler",
+     "itens": [
+      "Banda: onde o preço está face à média de oitenta e nove",
+      "Médias duplas e POC: para que lado puxa a tendência",
+      "Estrutura: se o movimento mantém ou muda de carácter",
+      "Fluxo de ordens: quem compra e quem vende dentro da vela",
+      "O placar só conta quando as leituras concordam"
+     ],
+     "fala": "Resumindo o primeiro módulo. A banda diz-te onde o preço está face à média de oitenta e nove. As médias duplas e o POC dizem-te para que lado puxa a tendência. A estrutura diz-te se o movimento mantém ou muda de carácter. O fluxo de ordens mostra quem está a comprar e a vender dentro da vela. E o placar só conta quando estas leituras concordam."
+    },
+    {
+     "id": "v1-29",
+     "tipo": "pontos",
+     "cap": "Exercício",
+     "kicker": "Antes do módulo 2",
+     "titulo": "O teu trabalho de casa",
+     "itens": [
+      "Põe o Sensei num só mercado e num só timeframe",
+      "Desliga tudo e liga uma camada de cada vez",
+      "Marca cinco vezes em que o preço saiu da banda",
+      "Anota o que aconteceu a seguir, sem operar"
+     ],
+     "fala": "Antes do segundo módulo, um exercício. Põe o Sensei num só mercado e num só timeframe, e fica com eles. Desliga tudo e liga uma camada de cada vez, como fizemos aqui. Depois, procura no histórico cinco momentos em que o preço saiu da banda, por cima ou por baixo, e anota o que aconteceu nas velas seguintes. Sem operar, só a observar. Este exercício simples treina o teu olho mais do que qualquer vídeo. No próximo módulo vemos como nasce um sinal, como se conta o placar e como o plano fica fixo na vela."
+    },
+    {
+     "id": "v1-30",
+     "tipo": "aviso",
+     "cap": "",
+     "titulo": "Até ao módulo 2",
+     "sub": "Do placar ao plano de trade",
+     "texto": "Conteúdo educativo. Não é aconselhamento financeiro. Negociar forex, índices, metais e cripto envolve risco elevado e podes perder parte ou a totalidade do capital. Os gráficos deste vídeo são ilustrativos. Resultados passados não garantem resultados futuros.",
+     "fala": "Lembra-te: isto é conteúdo educativo e não é aconselhamento financeiro. Negociar tem risco e podes perder dinheiro. Treina primeiro em conta demo. Vemo-nos no módulo dois.",
+     "respiro": 4
+    }
+   ]
+  },
+  {
+   "rotulo": "Bootcamp Sensei · 2/3",
+   "titulo": "Do placar ao plano de trade",
+   "cenas": [
+    {
+     "id": "v2-00",
+     "tipo": "abertura",
+     "kicker": "Bootcamp MTM · Módulo 2 de 3",
+     "titulo": "Sensei",
+     "sub": "Do placar ao plano de trade",
+     "rodape": "morethanmoney.pt",
+     "semVoz": 5
+    },
+    {
+     "id": "v2-01",
+     "tipo": "pontos",
+     "cap": "Boas-vindas",
+     "kicker": "Neste módulo",
+     "titulo": "O motor do Sensei",
+     "itens": [
+      "Como nasce um sinal",
+      "As vinte confirmações e o placar",
+      "Filtros que decidem o que chega ao ecrã",
+      "Plano de trade: entrada, stop e quatro saídas",
+      "Alertas e a leitura de uma venda"
+     ],
+     "fala": "Bem-vindo ao segundo módulo do Bootcamp Sensei. No primeiro aprendeste a ler cada peça do gráfico. Agora abrimos o motor. Vais perceber como nasce um setup, o que dispara um sinal, como funciona o placar das vinte confirmações e porque é que os filtros decidem quais os sinais que chegam ao ecrã. Depois passamos ao plano de trade: a entrada no fecho da vela de sinal, o stop a um múltiplo do ATR e as quatro saídas em R, com a regra de levar o stop para a entrada depois da primeira. No fim, vemos os alertas. É o módulo mais técnico, por isso vai com calma, e volta atrás sempre que precisares."
+    },
+    {
+     "id": "v2-02",
+     "tipo": "capitulo",
+     "cap": "01 · Como nasce um sinal",
+     "numero": "01",
+     "titulo": "Como nasce um sinal",
+     "sub": "Um fecho, nunca um palpite",
+     "fala": "Primeiro capítulo: como nasce um sinal."
+    },
+    {
+     "id": "v2-03",
+     "tipo": "pontos",
+     "cap": "01 · Como nasce um sinal",
+     "kicker": "Gatilhos",
+     "titulo": "O que dispara um setup de compra",
+     "itens": [
+      "O preço cruza o POC para cima",
+      "Ou completa uma fase: Momentum ou Exaustão",
+      "Só no fecho da vela, com Apenas Fecho de Vela ligado",
+      "E só se o placar passar o mínimo do estilo"
+     ],
+     "fala": "Um setup de compra pode nascer de duas maneiras. A primeira é o cruzamento do POC: o preço fecha acima de um ponto de controlo que estava por baixo dele. A segunda é uma fase. O Sensei conta sequências de velas, e quando a contagem fecha, a fase dispara. Há duas contagens. Uma é a do Momentum, em que o setup se completa numa sequência de nove velas por omissão, e que procura continuação. A outra é a da Exaustão, um countdown de treze velas que procura reversões. Mas um setup não é ainda um sinal. Para o sinal sair, o placar tem de passar o mínimo, a vela não pode ter fluxo a contrariar a compra, e tem de passar os filtros de volume e de volatilidade. E com o filtro de fecho ligado, o indicador só avalia a vela depois de ela fechar."
+    },
+    {
+     "id": "v2-04",
+     "tipo": "comparar",
+     "cap": "01 · Como nasce um sinal",
+     "kicker": "Modos de fase",
+     "titulo": "Momentum e Exaustão",
+     "cartoes": [
+      {
+       "t": "Momentum",
+       "d": "Dispara quando o setup se completa. Acompanha a continuação. Usado nos estilos de scalp e intradiário."
+      },
+      {
+       "t": "Exaustão",
+       "d": "Dispara no fim do countdown completo. Procura reversões. Usado nos estilos de swing e conservador."
+      }
+     ],
+     "fala": "Há dois modos de fase, e a escolha depende do estilo. O Momentum é a continuação: dispara quando a sequência de nove velas se completa, o que acontece quando o movimento continua a ganhar tracção. A Exaustão é a reversão: exige o countdown completo de treze velas, e procura o ponto em que o movimento anterior se esgota. Nos estilos de scalp e intradiário, o indicador usa o Momentum. Nos de swing e conservador, a Exaustão. E no modo otimizado, cada par e timeframe pode ter o seu. A regra é a mesma de sempre: não mudes de modo todas as semanas, porque assim o teu diário não consegue dizer-te o que está a funcionar."
+    },
+    {
+     "id": "v2-05",
+     "tipo": "grafico",
+     "cap": "01 · Como nasce um sinal",
+     "kicker": "Fecho de vela",
+     "titulo": "A vela tem de fechar",
+     "cenario": "compra",
+     "seed": 7,
+     "base": [
+      "banda",
+      "cores"
+     ],
+     "camadas": [
+      "medias",
+      "sinal"
+     ],
+     "ate": [
+      0.58,
+      0.63
+     ],
+     "zoom": [
+      0.4,
+      0.95
+     ],
+     "estrelas": "13/20",
+     "fala": "Vê como o fecho decide tudo. Enquanto a vela está a formar-se, o preço pode subir e descer à vontade, e o indicador espera. Só depois do fecho, e com o volume e a volatilidade a confirmar, o sinal aparece, com o placar ao lado. Repara que a vela que dispara não tem de ser a maior do gráfico. Tem de ser uma vela que fecha do lado certo das referências. Com o filtro de fecho ligado, o sinal nunca nasce a meio da vela. E isso importa muito, porque um sinal que aparece e desaparece a meio da vela não serve para nada na prática."
+    },
+    {
+     "id": "v2-06",
+     "tipo": "capitulo",
+     "cap": "02 · O placar",
+     "numero": "02",
+     "titulo": "O placar de confirmações",
+     "sub": "Vinte confirmações, quatro grupos",
+     "fala": "Segundo capítulo: o placar."
+    },
+    {
+     "id": "v2-07",
+     "tipo": "pontuacao",
+     "cap": "02 · O placar",
+     "kicker": "Cada peça soma um",
+     "titulo": "O placar em catorze peças",
+     "inicio": 0,
+     "itens": [
+      "Médias duplas alinhadas",
+      "Médias a subir",
+      "Preço acima da média rápida",
+      "Volume e expansão",
+      "Força (ADX) acima do mínimo",
+      "RSI e fluxo de ordens",
+      "Estrutura e mudança de carácter",
+      "BOS recente",
+      "Preço acima do POC",
+      "Desequilíbrio de fluxo",
+      "Banda e nuvem Sensei",
+      "Fase recente",
+      "Pressão compradora",
+      "Volatilidade segura"
+     ],
+     "fala": "O placar começa em zero, e cada confirmação que acende soma um. Por clareza, arrumei aqui as vinte confirmações em catorze peças, porque cabem melhor no ecrã. Cada peça junta uma ou duas leituras do mesmo tipo. As médias duplas alinhadas, e as médias a subir. O preço acima da média rápida. O volume e a expansão. A força do ADX, e o RSI com o fluxo de ordens. A estrutura e a mudança de carácter. Um BOS recente. O preço acima do POC. O desequilíbrio do fluxo. A banda e a nuvem. Uma fase recente. A pressão compradora. E a volatilidade em zona segura. Neste exemplo, catorze peças acenderam. No painel do indicador vês as vinte, uma a uma, e é aí que deves ler. O mínimo do modo personalizado é doze em vinte. Cada estilo tem o seu, e o painel mostra a contagem real."
+    },
+    {
+     "id": "v2-08",
+     "tipo": "comparar",
+     "cap": "02 · O placar",
+     "kicker": "Quatro grupos de cinco",
+     "titulo": "Onde está cada confirmação",
+     "cartoes": [
+      {
+       "t": "Médias duplas",
+       "d": "Alinhamento, inclinação e posição do preço face à média rápida."
+      },
+      {
+       "t": "Volume, força e momento",
+       "d": "Volume, expansão, ADX, RSI e fluxo de ordens."
+      },
+      {
+       "t": "Estrutura e POC",
+       "d": "Estado da estrutura, mudança de carácter, quebras, POC e desequilíbrio do fluxo."
+      },
+      {
+       "t": "Banda e pressão",
+       "d": "Nuvem, posição face à banda, fase recente, pressão compradora e volatilidade."
+      }
+     ],
+     "fala": "Vinte é muita coisa para decorar, por isso arruma-as em quatro grupos de cinco. O primeiro é a tendência das médias duplas: alinhamento, inclinação e posição do preço face à média rápida. O segundo é o volume, a força e o momento: volume na vela, expansão da volatilidade, ADX, RSI e fluxo de ordens. O terceiro é a estrutura e o POC: o estado da estrutura, a mudança de carácter, a quebra de estrutura, o POC e o desequilíbrio do fluxo. E o quarto é a banda e a pressão compradora: a nuvem, a posição face à banda, uma fase recente, a pressão de compra e a volatilidade. Uma ideia equilibrada tem peças de vários grupos. Um placar alto que vem todo do mesmo grupo merece um olhar mais crítico, porque significa que uma só família de leituras está a puxar tudo."
+    },
+    {
+     "id": "v2-08b",
+     "tipo": "pontos",
+     "cap": "02 · O placar",
+     "kicker": "Ler o cartão",
+     "titulo": "O que diz o cartão do sinal",
+     "itens": [
+      "Direcção: compra ou venda",
+      "Placar: quantas peças acesas, em vinte",
+      "Estilo e modo de fase em uso",
+      "Se o modo otimizado estava ligado"
+     ],
+     "fala": "Quando um sinal aparece, o cartão diz-te quatro coisas, e vale a pena ler sempre pela mesma ordem. Primeiro, a direcção: compra ou venda. Segundo, o placar, que é o número de peças acesas em vinte. Terceiro, o estilo e o modo de fase que estavam em uso naquele momento, porque uma mesma ideia pode ter sido gerada por um modo ou por outro. E quarto, se o modo otimizado estava ligado, porque isso muda a configuração que o indicador aplicou. Quando escreves no diário, copia estas quatro coisas para a linha da ideia. Sem elas, daqui a um mês não consegues perceber porque é que aquela ideia foi diferente das outras."
+    },
+    {
+     "id": "v2-09",
+     "tipo": "pontos",
+     "cap": "02 · O placar",
+     "kicker": "Como pensar no placar",
+     "titulo": "Concordância, não certeza",
+     "itens": [
+      "Mais peças acesas = mais leituras de acordo",
+      "Não é uma probabilidade nem uma promessa",
+      "Um placar alto sem estrutura é um aviso",
+      "Lê sempre o contexto por cima do número"
+     ],
+     "fala": "Quero que penses no placar da forma certa. Um placar alto quer dizer que muitas leituras diferentes estão de acordo ao mesmo tempo. Não quer dizer que a ideia vai resultar. Não é uma probabilidade, e muito menos uma promessa. O placar dá-te uma forma objectiva de comparar setups e de decidir quais merecem a tua atenção. Um placar alto sem nenhuma peça de estrutura, por exemplo, é um aviso: as médias e o volume podem estar a dizer uma coisa que o preço ainda não confirmou. A tua parte continua a ser ler o contexto: a tendência de quatro horas, as notícias do dia, e se o preço já se afastou demasiado do sinal."
+    },
+    {
+     "id": "v2-10",
+     "tipo": "capitulo",
+     "cap": "03 · Filtros",
+     "numero": "03",
+     "titulo": "Filtros que decidem",
+     "sub": "Tendência de topo, anti-lateral e fecho",
+     "fala": "Terceiro capítulo: os filtros, que decidem se um sinal com bom placar chega mesmo ao ecrã."
+    },
+    {
+     "id": "v2-11",
+     "tipo": "comparar",
+     "cap": "03 · Filtros",
+     "kicker": "Quatro portas",
+     "titulo": "Antes de sair um sinal",
+     "cartoes": [
+      {
+       "t": "Tendência de topo",
+       "d": "Compras só acima da média de duzentas velas do gráfico de quatro horas. Vendas só abaixo."
+      },
+      {
+       "t": "Anti-lateral",
+       "d": "O ADX bloqueia sinais quando o mercado não tem força. Mínimo de quinze por omissão."
+      },
+      {
+       "t": "Fecho de vela",
+       "d": "Só avalia depois de a vela fechar, para o sinal não desaparecer a meio."
+      },
+      {
+       "t": "Lado",
+       "d": "As vendas vêm desligadas. Ao ligar, exigem mais três confirmações."
+      }
+     ],
+     "fala": "Os filtros são as portas que um sinal tem de atravessar. A primeira é a tendência de topo: o Sensei só deixa passar compras quando o preço está acima da média de duzentas velas do gráfico de quatro horas, e vendas quando está abaixo. Isto alinha a entrada com a corrente maior. A segunda é o anti-lateral: quando o ADX mostra que o mercado não tem força, o indicador bloqueia os sinais. Não é um filtro perfeito, e por isso a leitura do mercado continua a ser tua. A terceira é o fecho de vela, que já vimos. E a quarta é o lado: as vendas vêm desligadas por omissão, e ao ligá-las o indicador exige mais três confirmações do que para uma compra. Um sinal que passa as quatro portas é um sinal com contexto. Um que não passa, mesmo com placar alto, deve ficar de fora."
+    },
+    {
+     "id": "v2-12",
+     "tipo": "pontos",
+     "cap": "03 · Filtros",
+     "kicker": "Interruptores",
+     "titulo": "Três interruptores para conhecer",
+     "itens": [
+      "Filtro de Sessão: desligado, limita as horas de sinal",
+      "Permitir Vendas: desligado por omissão",
+      "Só operar setups validados: desligado, bloqueia pares sem configuração validada",
+      "Mexe nestes três só depois de conheceres o indicador"
+     ],
+     "fala": "Há três interruptores que convém conheceres, todos desligados de origem. O filtro de sessão limita o indicador a uma janela de horas que tu defines no gráfico. A permissão de vendas, como já vimos, liga o lado vendedor com mais exigência. E o terceiro, só operar setups validados, bloqueia qualquer par ou timeframe que não tenha configuração validada no código. É mais restritivo, e corta a exposição a combinações não testadas. Para começar, deixa os três como vêm. Quando tiveres algumas semanas de diário, podes experimentar um de cada vez, e medir o efeito no teu próprio registo."
+    },
+    {
+     "id": "v2-12b",
+     "tipo": "pontos",
+     "cap": "03 · Filtros",
+     "kicker": "Quando o sinal não chega",
+     "titulo": "Porque um setup pode não virar sinal",
+     "itens": [
+      "Placar abaixo do mínimo do estilo",
+      "Preço do lado errado da média de 200 de 4 horas",
+      "ADX abaixo do mínimo: mercado sem força",
+      "Setup sem fecho de vela: ainda não é sinal"
+     ],
+     "fala": "Vale a pena saber porque é que um setup pode aparecer e não chegar a sinal. Há quatro razões típicas. A primeira é o placar: o cruzamento existe, mas o número de confirmações fica abaixo do mínimo do estilo, e então não há cartão. A segunda é a tendência de topo: uma compra com o preço abaixo da média de duzentas velas de quatro horas não passa esse filtro. A terceira é o anti-lateral: com o ADX abaixo do mínimo, o mercado não tem força suficiente, e o indicador prefere calar-se. E a quarta é a mais simples de todas: sem fecho de vela, ainda não há sinal, há só uma leitura em curso. Quando um setup não vira sinal, o indicador não está a falhar. Está a fazer o trabalho para que foi desenhado."
+    },
+    {
+     "id": "v2-12c",
+     "tipo": "grafico",
+     "cap": "03 · Filtros",
+     "kicker": "Exemplo ilustrativo",
+     "titulo": "Um setup que não chega a sinal",
+     "cenario": "tendencia",
+     "seed": 11,
+     "base": [
+      "banda",
+      "medias",
+      "poc",
+      "cores"
+     ],
+     "camadas": [
+      "estrutura"
+     ],
+     "ate": [
+      0.6,
+      0.9
+     ],
+     "zoom": [
+      0,
+      0.4
+     ],
+     "fala": "Vê este gráfico ilustrativo. Há um cruzamento do preço sobre o POC e a estrutura mostra uma mudança de carácter, por isso à primeira vista parece haver uma ideia. Mas repara que não existe cartão de sinal, nem linhas de plano. Neste exemplo, o placar fica abaixo do mínimo do estilo escolhido, porque algumas peças que costumam acompanhar este tipo de movimento não estão acesas. O indicador não desenha nada, e é exactamente essa a sua função. Tu, ao contrário, sentes a tentação de desenhar a ideia por ti. Não o faças. Se o indicador não a desenhou, a ideia não está validada, e o teu diário deve registá-la como uma leitura sem sinal."
+    },
+    {
+     "id": "v2-13",
+     "tipo": "capitulo",
+     "cap": "04 · Estilos",
+     "numero": "04",
+     "titulo": "Estilos e modo otimizado",
+     "sub": "Do scalp ao swing",
+     "fala": "Quarto capítulo: os estilos e o modo otimizado."
+    },
+    {
+     "id": "v2-14",
+     "tipo": "pontos",
+     "cap": "04 · Estilos",
+     "kicker": "Escolhe pelo tempo que tens",
+     "titulo": "Scalp, intradiário e swing",
+     "itens": [
+      "Scalp: gráficos de 5 e 15 minutos, mais ideias, mais tempo ao ecrã",
+      "Intradiário: gráfico de 1 hora, duas ou três verificações por dia",
+      "Swing: gráfico de 4 horas, menos ideias e mais paciência",
+      "Personalizado: tu escolhes o mínimo de confirmações"
+     ],
+     "fala": "Os estilos são o primeiro grande interruptor. O scalp trabalha nos gráficos de cinco e quinze minutos, dá mais ideias e exige estar ao ecrã com regularidade. O intradiário trabalha no gráfico de uma hora, e para quem tem um emprego é o mais realista: duas ou três verificações por dia chegam. O swing trabalha no gráfico de quatro horas, com menos ideias, trades que duram mais e muita paciência. E o personalizado deixa-te mexer no mínimo de confirmações, que vem em doze, e nos restantes parâmetros. Cada estilo ajusta um conjunto de coisas de uma vez: o mínimo de confirmações, o intervalo entre sinais, o filtro de ADX, o multiplicador do stop e o modo de fase. Por isso, mudar de estilo é mudar de indicador, e não apenas de cor."
+    },
+    {
+     "id": "v2-15",
+     "tipo": "pontos",
+     "cap": "04 · Estilos",
+     "kicker": "Modo automático",
+     "titulo": "Sensei Otimizado",
+     "itens": [
+      "Aplica a configuração que o código tem para o par e o timeframe",
+      "Substitui o estilo escolhido sempre que existe essa configuração",
+      "Sem configuração para essa combinação, usa o estilo escolhido",
+      "Lê as definições para saber qual ficou ativo"
+     ],
+     "fala": "O Sensei Otimizado vem ligado por omissão. Quando estás num par e timeframe para os quais o código tem uma configuração própria, o indicador aplica essa configuração, e ela substitui o estilo que escolheste. Quando não há configuração para essa combinação, volta ao estilo escolhido. Isto é prático, mas tem uma consequência: se estás a comparar dois dias, convém confirmar nas definições qual foi o modo em uso, porque o par e o timeframe mandam mais do que o estilo. Para o teu diário, regista sempre o estilo e se o modo otimizado estava ligado. Sem isso, não consegues comparar semanas umas com as outras."
+    },
+    {
+     "id": "v2-16",
+     "tipo": "capitulo",
+     "cap": "05 · O plano de trade",
+     "numero": "05",
+     "titulo": "O plano de trade",
+     "sub": "Fixo na vela do sinal",
+     "fala": "Quinto capítulo, e talvez o mais importante: o plano de trade."
+    },
+    {
+     "id": "v2-17",
+     "tipo": "grafico",
+     "cap": "05 · O plano de trade",
+     "kicker": "Plano completo",
+     "titulo": "Entrada, stop e quatro saídas",
+     "cenario": "compra",
+     "seed": 7,
+     "base": [
+      "banda",
+      "cores",
+      "sinal"
+     ],
+     "camadas": [
+      "plano"
+     ],
+     "ate": [
+      0.64,
+      0.64
+     ],
+     "zoom": [
+      0.7,
+      0.7
+     ],
+     "estrelas": "14/20",
+     "fala": "Quando a ideia nasce, o Sensei desenha o plano completo e fixa-o na vela de sinal. A entrada é o fecho dessa vela. O stop fica a alguns ATR de distância, do lado oposto à direcção: por omissão, um vírgula cinco ATR no estilo personalizado. Os outros estilos e o modo otimizado podem usar outro multiplicador, por isso confirma sempre o valor no cartão. As quatro saídas ficam do lado da direcção, a múltiplos do risco. Esse risco chama-se R, e é a distância entre a entrada e o stop. Os níveis não se mexem depois. O modo de níveis dinâmicos vem desligado, e é isso que garante que o plano que vês é o plano que tens. Ter o plano desenhado antes de entrar é metade da disciplina. Sabes onde entras, onde estás errado e onde realizas."
+    },
+    {
+     "id": "v2-18",
+     "tipo": "plano",
+     "cap": "05 · O plano de trade",
+     "kicker": "Como se calcula",
+     "titulo": "Entrada, stop e saídas em R",
+     "linhas": [
+      [
+       "Entrada",
+       "fecho da vela de sinal",
+       "entrada"
+      ],
+      [
+       "Stop",
+       "1,5 ATR de distância",
+       "sl"
+      ],
+      [
+       "Exit 1",
+       "1,5 R · 25% da posição",
+       "tp"
+      ],
+      [
+       "Exit 2",
+       "2,5 R · 25%",
+       "tp"
+      ],
+      [
+       "Exit 3",
+       "4 R · 25%",
+       "tp"
+      ],
+      [
+       "Exit 4",
+       "6 R · 25%",
+       "tp"
+      ]
+     ],
+     "fala": "Vamos ver as contas em palavras. O R é a distância entre a entrada e o stop. Se o stop está a seis pontos da entrada, um R vale seis pontos. A saída um fica a um vírgula cinco R, ou seja, a nove pontos. A saída dois a dois vírgula cinco R, a quinze pontos. A saída três a quatro R, a vinte e quatro pontos. E a saída quatro a seis R, a trinta e seis pontos. Em cada saída fechas um quarto da posição, por omissão. As quatro percentagens somam cem por cento, o que garante que, se as quatro saídas forem atingidas, a posição fica fechada. E o stop, depois da primeira saída, passa para a entrada. A partir daí, em condições normais de mercado, a ideia deixa de ter risco de perda."
+    },
+    {
+     "id": "v2-19",
+     "tipo": "plano",
+     "cap": "05 · O plano de trade",
+     "kicker": "Exemplo inventado",
+     "titulo": "Uma compra em números redondos",
+     "linhas": [
+      [
+       "Entrada",
+       "2 000,0",
+       "entrada"
+      ],
+      [
+       "ATR da vela de sinal",
+       "4,0",
+       ""
+      ],
+      [
+       "Stop (1,5 ATR)",
+       "1 994,0 · R = 6,0",
+       "sl"
+      ],
+      [
+       "Exit 1 (1,5 R)",
+       "2 009,0 · 25%",
+       "tp"
+      ],
+      [
+       "Exit 2 (2,5 R)",
+       "2 015,0 · 25%",
+       "tp"
+      ],
+      [
+       "Exit 3 (4 R)",
+       "2 024,0 · 25%",
+       "tp"
+      ],
+      [
+       "Exit 4 (6 R)",
+       "2 036,0 · 25%",
+       "tp"
+      ]
+     ],
+     "fala": "Um exemplo com números redondos, inventado, em ouro. A entrada está em dois mil, no fecho da vela de sinal. O ATR dessa vela é de quatro pontos. O stop, a um vírgula cinco ATR, fica seis pontos abaixo, em mil novecentos e noventa e quatro. Esse é o R: seis pontos. O primeiro alvo, a um vírgula cinco R, está nove pontos acima, em dois mil e nove. O segundo, a dois vírgula cinco R, em dois mil e quinze. O terceiro, a quatro R, em dois mil e vinte e quatro. E o quarto, a seis R, em dois mil e trinta e seis. O indicador faz estas contas por ti. Mas é importante perceberes de onde vêm, porque o tamanho da posição, que vem no terceiro módulo, depende precisamente desta distância."
+    },
+    {
+     "id": "v2-20",
+     "tipo": "pontos",
+     "cap": "05 · O plano de trade",
+     "kicker": "Fixo",
+     "titulo": "O plano não se mexe sozinho",
+     "itens": [
+      "Níveis fixos na vela de sinal",
+      "Níveis Dinâmicos vem desligado por omissão",
+      "Quem mexe no trade és tu, pela gestão",
+      "O stop só passa para a entrada depois da primeira saída"
+     ],
+     "fala": "Há quatro coisas que convém saber sobre a fixação do plano. Primeira: os níveis ficam presos à vela de sinal. Não se redesenham quando o preço se mexe. Segunda: o modo de níveis dinâmicos existe, mas vem desligado. Se o ligares, a entrada passa a seguir o fecho atual e os níveis recalculam a cada vela. Isso muda completamente a leitura, e não é o que o Sensei faz de origem. Terceira: depois de o plano estar desenhado, quem mexe no trade és tu, através da gestão que vamos ver. E quarta: a única alteração automática ao stop, de origem, é levá-lo para a entrada depois da primeira saída. Não há mais nada a deslizar por ti."
+    },
+    {
+     "id": "v2-21",
+     "tipo": "comparar",
+     "cap": "05 · O plano de trade",
+     "kicker": "Opções de gestão",
+     "titulo": "Breakeven e trailing",
+     "cartoes": [
+      {
+       "t": "Mover SL para BE em",
+       "d": "De origem, em Exit 1. O stop vai para a entrada."
+      },
+      {
+       "t": "Trailing Stop",
+       "d": "Desligado de origem. Quando ligado, segue o preço a uma distância de ATR vezes o multiplicador, só a favor."
+      },
+      {
+       "t": "BE conclui a trade",
+       "d": "Desligado de origem. Quando ligado, atingir o breakeven dá a trade como concluída."
+      }
+     ],
+     "fala": "Há formas de proteger a posição, e todas vêm em modo calmo. O breakeven, por omissão, move o stop para a entrada quando o Exit 1 é atingido. Podes escolher outro ponto de referência, como o Exit 2, o Exit 3 ou um número de pontos. O trailing stop, que vem desligado, faz o stop seguir o preço a uma distância de ATR vezes o multiplicador. E há ainda a opção de considerar a trade concluída quando o breakeven é atingido, que também vem desligada. Repara que o trailing só aperta o stop a favor, nunca o afasta. Tu decides se o ligas, e lês o efeito no teu diário antes de o manteres."
+    },
+    {
+     "id": "v2-22",
+     "tipo": "capitulo",
+     "cap": "06 · Lado vendedor",
+     "numero": "06",
+     "titulo": "Ler uma venda",
+     "sub": "O processo ao contrário, com cautela",
+     "fala": "Sexto capítulo: o lado vendedor. Com cautela, porque vem desligado de propósito."
+    },
+    {
+     "id": "v2-23",
+     "tipo": "pontos",
+     "cap": "06 · Lado vendedor",
+     "kicker": "Vendas",
+     "titulo": "Desligado, e com mais exigência",
+     "itens": [
+      "Vem desligado por omissão",
+      "Ao ligar, exige três confirmações extra face à compra",
+      "Só dispara abaixo da média de duzentas velas de quatro horas",
+      "O plano é o espelho do da compra: stop acima, saídas abaixo"
+     ],
+     "fala": "Ler uma venda é o mesmo processo, ao contrário. O preço estica, o placar conta, a vela de sinal fecha do lado vendedor, e o plano desenha-se espelhado: o stop acima, as saídas abaixo. Mas há uma diferença importante. As vendas vêm desligadas por omissão, porque o indicador tem de ter a certeza de que o contexto é de venda. Ao ligares o lado vendedor, o mínimo sobe em três confirmações, e o filtro de tendência só deixa vender abaixo da média de duzentas velas de quatro horas. Ou seja, uma venda tem de ser uma venda muito clara. Se não tens experiência a operar do lado vendedor, deixa-o desligado e treina primeiro a leitura em demo."
+    },
+    {
+     "id": "v2-24",
+     "tipo": "capitulo",
+     "cap": "07 · Alertas",
+     "numero": "07",
+     "titulo": "Alertas",
+     "sub": "O Sensei a trabalhar por ti",
+     "fala": "Sétimo capítulo: os alertas."
+    },
+    {
+     "id": "v2-25",
+     "tipo": "pontos",
+     "cap": "07 · Alertas",
+     "kicker": "No TradingView",
+     "titulo": "Um alerta, todas as entradas",
+     "itens": [
+      "Criar alerta com a condição do Sensei",
+      "Escolher «qualquer chamada da função alert()»",
+      "Modo Watchlist: um alerta cobre vários símbolos",
+      "Webhook opcional, com mensagem em JSON"
+     ],
+     "fala": "Para não estares colado ao ecrã, crias um alerta no TradingView. Na condição escolhes o Sensei, e depois a opção de qualquer chamada da função alert. Com o modo Watchlist ligado, que é o de origem, esse único alerta envia uma mensagem por cada símbolo e por cada estado da ideia. A frequência do código é de uma vez por barra, e com o filtro de fecho ligado isso respeita o fecho da vela. Se usares um webhook, cada mensagem chega em JSON, com o símbolo, o timeframe, o estilo, o estado, a direcção, a pontuação, o tipo de sinal e os níveis do plano. Repara que a pontuação vem na mensagem, mas o contexto continua a ser tu quem lê."
+    },
+    {
+     "id": "v2-26",
+     "tipo": "pontos",
+     "cap": "07 · Alertas",
+     "kicker": "Seguimentos",
+     "titulo": "A ideia acompanhada até ao fim",
+     "itens": [
+      "ENTRY: a ideia nasce, em compra ou venda",
+      "TP1 a TP4: cada saída atingida",
+      "BE: o stop deve passar para a entrada",
+      "SL: o stop foi atingido"
+     ],
+     "fala": "Depois do sinal, o indicador continua a acompanhar a ideia, e cada estado tem o seu aviso. O ENTRY marca o início, em compra ou em venda. Os avisos TP1 a TP4 chegam quando cada saída é tocada. O BE avisa-te que o stop deve passar para a entrada. E o SL avisa que o stop foi atingido. Com estes tipos de aviso, consegues fazer o diário de cada ideia, do princípio ao fim, sem ter de adivinhar o que aconteceu. E é isso que torna o diário honesto: cada ideia tem entrada, saídas e fim registados."
+    },
+    {
+     "id": "v2-27",
+     "tipo": "checklist",
+     "cap": "Resumo",
+     "kicker": "Resumo do módulo 2",
+     "titulo": "O motor, em cinco frases",
+     "itens": [
+      "Sinal = setup no fecho, com placar acima do mínimo",
+      "O placar mede concordância, não certeza",
+      "Os filtros decidem quais os sinais que chegam",
+      "O plano fica fixo: entrada, stop e quatro saídas em R",
+      "O stop vai para a entrada depois da primeira saída"
+     ],
+     "fala": "Resumindo o segundo módulo. Um sinal nasce de um setup, no fecho da vela, quando o placar passa o mínimo. O placar mede concordância, não certeza. Os filtros decidem quais os sinais que chegam ao ecrã. O plano fica fixo na vela de sinal, com entrada, stop e quatro saídas em R. E depois da primeira saída, o stop passa para a entrada."
+    },
+    {
+     "id": "v2-28",
+     "tipo": "pontos",
+     "cap": "Exercício",
+     "kicker": "Antes do módulo 3",
+     "titulo": "O teu trabalho de casa",
+     "itens": [
+      "Percorre o histórico do teu mercado, no teu timeframe",
+      "Encontra dez sinais e anota o placar de cada um",
+      "Para cada um: estilo, modo de fase e o que aconteceu",
+      "Conta quantos chegaram ao Exit 1 antes de tocar no stop"
+     ],
+     "fala": "O exercício deste módulo. Percorre o histórico do teu mercado, no teu timeframe, e encontra dez sinais. Para cada um, anota o placar, o estilo e o modo de fase que estavam em uso. Depois, anota o que aconteceu: chegou ao primeiro alvo? Tocou no stop? Quantas vezes o stop teve de ir para a entrada antes de qualquer outra coisa? No fim, conta quantos chegaram ao Exit 1 antes de tocar no stop. Este número é teu, medido por ti, e vale mais do que qualquer estatística que eu te pudesse dar. No terceiro módulo pegamos nisto e transformamos em gestão de risco."
+    },
+    {
+     "id": "v2-29",
+     "tipo": "aviso",
+     "cap": "",
+     "titulo": "Até ao módulo 3",
+     "sub": "Risco, gestão e rotina diária",
+     "texto": "Conteúdo educativo. Não é aconselhamento financeiro. Negociar forex, índices, metais e cripto envolve risco elevado e podes perder parte ou a totalidade do capital. Os gráficos e números deste vídeo são ilustrativos. Resultados passados não garantem resultados futuros.",
+     "fala": "Lembra-te: isto é conteúdo educativo e não é aconselhamento financeiro. Os números deste vídeo são exemplos. Treina em conta demo antes de arriscar dinheiro. Vemo-nos no módulo três.",
+     "respiro": 4
+    }
+   ]
+  },
+  {
+   "rotulo": "Bootcamp Sensei · 3/3",
+   "titulo": "Risco, gestão e rotina diária",
+   "cenas": [
+    {
+     "id": "v3-00",
+     "tipo": "abertura",
+     "kicker": "Bootcamp MTM · Módulo 3 de 3",
+     "titulo": "Sensei",
+     "sub": "Risco, gestão e rotina diária",
+     "rodape": "morethanmoney.pt",
+     "semVoz": 5
+    },
+    {
+     "id": "v3-01",
+     "tipo": "frase",
+     "cap": "Boas-vindas",
+     "texto": "O placar encontra a oportunidade. <span class='ouro'>A gestão</span> decide o resultado.",
+     "autor": "Bootcamp Sensei · Módulo 3",
+     "fala": "Bem-vindo ao terceiro e último módulo do Bootcamp Sensei. Até aqui aprendeste a ler o gráfico, a perceber como nasce um sinal e como o plano fica desenhado. Agora vem a parte que separa quem usa uma ferramenta de quem a usa com consistência: a gestão. O placar encontra a oportunidade. A gestão decide o que acontece depois. Neste módulo vamos falar de risco por ideia, de tamanho de posição, de como gerir a ideia do início ao fim, de quando não entrar, de perfis, de uma rotina simples de quinze minutos, e de diário. No fim, tens um processo completo, escrito, que podes seguir em conta demo a partir de amanhã."
+    },
+    {
+     "id": "v3-02",
+     "tipo": "capitulo",
+     "cap": "01 · Risco por trade",
+     "numero": "01",
+     "titulo": "Risco por trade",
+     "sub": "A única variável que controlas de verdade",
+     "fala": "Primeiro capítulo: o risco por ideia."
+    },
+    {
+     "id": "v3-03",
+     "tipo": "pontos",
+     "cap": "01 · Risco por trade",
+     "kicker": "O princípio",
+     "titulo": "Decide quanto perdes antes de decidir quanto ganhas",
+     "itens": [
+      "Não controlas o mercado, controlas o risco",
+      "Define o risco em percentagem da conta, por ideia",
+      "Muitos traders usam entre meio por cento e um por cento",
+      "Mantém o mesmo risco de ideia para ideia"
+     ],
+     "fala": "Há uma coisa que tens de aceitar desde o primeiro dia: não controlas o mercado. Não controlas se o preço vai ao primeiro alvo ou ao stop. A única coisa que controlas de verdade é quanto arriscas em cada ideia. Por isso, a primeira decisão não é onde entrar, é quanto estás disposto a perder se estiveres errado. Esse valor define-se em percentagem da conta, por ideia. Muitos traders usam entre meio por cento e um por cento. Não é uma regra mágica. É uma forma de garantir que uma sequência de perdas, que vai acontecer, não te tira do jogo. E mantém o mesmo risco de ideia para ideia. Quem aumenta o risco depois de perder, para recuperar, está a fazer exactamente o contrário do que devia."
+    },
+    {
+     "id": "v3-04",
+     "tipo": "plano",
+     "cap": "01 · Risco por trade",
+     "kicker": "Matemática, não previsão",
+     "titulo": "Dez perdas seguidas",
+     "linhas": [
+      [
+       "Risco de 1% por ideia",
+       "conta a cerca de 90%",
+       "entrada"
+      ],
+      [
+       "Risco de 2% por ideia",
+       "conta a cerca de 82%",
+       "warning"
+      ],
+      [
+       "Risco de 5% por ideia",
+       "conta a cerca de 60%",
+       "sl"
+      ],
+      [
+       "Risco de 10% por ideia",
+       "conta a cerca de 35%",
+       "sl"
+      ]
+     ],
+     "fala": "Vê o que acontece numa sequência de dez perdas seguidas. Não é uma previsão, é aritmética, e qualquer método pode atravessar um mês assim. Com um por cento de risco por ideia, ficas com cerca de noventa por cento da conta. Com dois por cento, cerca de oitenta e dois. Com cinco por cento, cerca de sessenta. E com dez por cento, cerca de trinta e cinco. A partir daí, para voltares ao início, precisas de quase triplicar o que te resta. Isto é só matemática, e é a razão pela qual o risco pequeno não é cobardia, é sobrevivência. Os números são exemplos, e não têm qualquer relação com o desempenho do indicador."
+    },
+    {
+     "id": "v3-05",
+     "tipo": "capitulo",
+     "cap": "02 · Tamanho da posição",
+     "numero": "02",
+     "titulo": "Tamanho da posição",
+     "sub": "Do risco em dinheiro aos lotes",
+     "fala": "Segundo capítulo: o tamanho da posição."
+    },
+    {
+     "id": "v3-06",
+     "tipo": "pontos",
+     "cap": "02 · Tamanho da posição",
+     "kicker": "A fórmula",
+     "titulo": "Tamanho = risco ÷ (R × valor por unidade)",
+     "itens": [
+      "Risco em dinheiro: conta vezes percentagem",
+      "R: a distância da entrada ao stop, que o Sensei mostra",
+      "Valor por unidade: quanto vale um pip ou um ponto por lote",
+      "O lote sai das contas, não da intuição"
+     ],
+     "fala": "O tamanho da posição calcula-se com uma fórmula simples. Primeiro, o risco em dinheiro: o valor da conta vezes a percentagem que decidiste arriscar. Segundo, o R, a distância entre a entrada e o stop, que o Sensei já te mostra no plano, em pips no forex e em pontos nos índices, no ouro e na cripto. Terceiro, o valor por unidade: quanto vale um pip ou um ponto por cada lote, no teu instrumento e na tua corretora. O tamanho é o risco em dinheiro dividido pelo R vezes o valor por unidade. A consequência importante é esta: o lote muda de ideia para ideia. Quando o stop está perto, o lote é maior. Quando está longe, o lote é menor. O que fica igual é o risco em dinheiro."
+    },
+    {
+     "id": "v3-07",
+     "tipo": "plano",
+     "cap": "02 · Tamanho da posição",
+     "kicker": "Exemplo com números redondos",
+     "titulo": "Uma conta de 10 000",
+     "linhas": [
+      [
+       "Conta",
+       "10 000",
+       "entrada"
+      ],
+      [
+       "Risco por ideia (1%)",
+       "100",
+       "warning"
+      ],
+      [
+       "Distância ao stop (R)",
+       "20 pips",
+       "sl"
+      ],
+      [
+       "Valor do pip por lote padrão",
+       "10",
+       "entrada"
+      ],
+      [
+       "Tamanho = 100 ÷ (20 × 10)",
+       "0,5 lotes",
+       "tp"
+      ]
+     ],
+     "fala": "Um exemplo com números redondos, num par de forex. A conta tem dez mil. Decides arriscar um por cento, ou seja, cem. O Sensei mostra que o stop está a vinte pips da entrada. Num par em que um pip vale dez por cada lote padrão, a conta é cem a dividir por vinte vezes dez, o que dá meio lote. Se o stop estivesse a quarenta pips, o lote seria um quarto. O risco em dinheiro fica sempre nos cem. Confirma sempre o valor do pip na tua plataforma, porque muda com o par e com a moeda da conta. E se o lote calculado for menor do que o mínimo da corretora, a ideia simplesmente não cabe na tua conta. Deixa-a passar."
+    },
+    {
+     "id": "v3-08",
+     "tipo": "pontos",
+     "cap": "02 · Tamanho da posição",
+     "kicker": "Contas pequenas",
+     "titulo": "Quando o lote mínimo não cabe",
+     "itens": [
+      "O lote mínimo da corretora define o risco mínimo possível",
+      "Stop longe numa conta pequena pode ultrapassar o teu limite",
+      "Nesse caso, a ideia não é para essa conta",
+      "Alternativas: timeframe mais baixo, outro instrumento, ou esperar"
+     ],
+     "fala": "Uma situação que acontece muito em contas pequenas. A corretora tem um lote mínimo, normalmente um centésimo de lote. Esse lote mínimo define o risco mais pequeno que podes ter numa ideia. Se a conta é pequena e o stop está longe, mesmo o lote mínimo pode arriscar mais do que o teu limite. Quando isso acontece, a resposta honesta é: esta ideia não é para a tua conta. Não aumentas o risco para caber. As alternativas são operar num timeframe mais baixo, onde os stops tendem a ser mais curtos, escolher um instrumento com um valor por ponto mais pequeno, ou simplesmente esperar pela próxima ideia que caiba. Deixar passar uma ideia que não cabe é gestão de risco a funcionar."
+    },
+    {
+     "id": "v3-09",
+     "tipo": "capitulo",
+     "cap": "03 · Gerir a ideia",
+     "numero": "03",
+     "titulo": "Gerir a ideia",
+     "sub": "Antes, durante e depois",
+     "fala": "Terceiro capítulo: como se gere uma ideia do princípio ao fim."
+    },
+    {
+     "id": "v3-10",
+     "tipo": "checklist",
+     "cap": "03 · Gerir a ideia",
+     "kicker": "Trinta segundos",
+     "titulo": "A verificação antes do clique",
+     "itens": [
+      "Tendência de topo a favor: compra acima da média de 200 de 4 horas",
+      "Mercado com força: o filtro anti-lateral ajuda, mas confirma tu",
+      "Vela fechada: o sinal saiu no fecho",
+      "Placar acima do mínimo e sem grupos vazios",
+      "Tamanho calculado pelo risco"
+     ],
+     "fala": "Antes de entrares, faz uma verificação de trinta segundos. A tendência de quatro horas está a favor? Compras acima da média de duzentas velas, vendas abaixo. O mercado tem força? O filtro anti-lateral ajuda, mas confirma tu também com o gráfico. A vela está fechada, e o sinal saiu no fecho? O placar está acima do mínimo do teu estilo, e há grupos inteiros vazios? E o lote calcula-se a partir do stop, e cabe no teu risco? Se alguma resposta for não, deixas passar. Vão aparecer outras ideias. Uma ideia que não entraste nunca te fez perder dinheiro."
+    },
+    {
+     "id": "v3-11",
+     "tipo": "grafico",
+     "cap": "03 · Gerir a ideia",
+     "kicker": "Entrada",
+     "titulo": "Entras no fecho, com o plano escrito",
+     "cenario": "compra",
+     "seed": 7,
+     "base": [
+      "banda",
+      "cores",
+      "sinal",
+      "plano"
+     ],
+     "camadas": [],
+     "zoom": [
+      0.5,
+      0.5
+     ],
+     "estrelas": "14/20",
+     "fala": "A entrada faz-se no fecho da vela de sinal, com o tamanho calculado pelo risco. Neste indicador, o plano é desenhado na vela de sinal, e a entrada é esse fecho. Vê como o cartão mostra o placar de catorze em vinte, e como as linhas do plano já estão no gráfico antes de qualquer coisa acontecer. Não é preciso mais nada para decidir. Se a ideia não respeita o que a verificação pedia, então não entras, mesmo que o cartão pareça bonito. O plano só serve se for seguido com o mesmo rigor nas ideias boas e nas más."
+    },
+    {
+     "id": "v3-12",
+     "tipo": "grafico",
+     "cap": "03 · Gerir a ideia",
+     "kicker": "Durante",
+     "titulo": "Um quarto no Exit 1",
+     "cenario": "compra",
+     "seed": 7,
+     "base": [
+      "banda",
+      "cores",
+      "sinal",
+      "plano"
+     ],
+     "camadas": [
+      "estrutura"
+     ],
+     "ate": [
+      0.63,
+      1
+     ],
+     "zoom": [
+      0.5,
+      0.5
+     ],
+     "estrelas": "14/20",
+     "fala": "Durante a ideia, a gestão tem três momentos. Até ao primeiro alvo, a tua tarefa é vigiar o stop e a estrutura. No Exit 1, fechas um quarto da posição e levas o stop para a entrada. A partir daí, a ideia já não deve custar dinheiro, em condições normais de mercado. Depois, em cada saída seguinte, fechas outro quarto, até ficares sem posição no Exit 4. Entretanto, há três razões para sair antes do último alvo, e estão escritas no guia da estratégia. Se a estrutura mudar de carácter contra ti. Se a nuvem deixar de ser roxa e passar a cinzenta. Ou se o placar cair. Não sais porque estás nervoso. Sais porque o motivo da entrada deixou de existir. E o que não deves fazer é mexer no stop para mais longe. Nunca."
+    },
+    {
+     "id": "v3-13",
+     "tipo": "grafico",
+     "cap": "03 · Gerir a ideia",
+     "kicker": "Quando falha",
+     "titulo": "O stop a fazer o seu trabalho",
+     "cenario": "falha",
+     "seed": 7,
+     "base": [
+      "banda",
+      "cores",
+      "sinal",
+      "plano"
+     ],
+     "camadas": [],
+     "ate": [
+      0.62,
+      0.9
+     ],
+     "zoom": [
+      0.5,
+      0.5
+     ],
+     "estrelas": "12/20",
+     "fala": "E quando a ideia falha? Vê este exemplo. A ideia aparece, o preço sobe um pouco, mas não chega ao primeiro alvo. Depois volta para trás, e chega ao stop, que está a um vírgula cinco ATR da entrada. A perda é de um R, mais os custos da corretora, e ela estava prevista antes de entrares. Não há surpresa, não há improviso, e não há razão para mexer no stop no meio do caminho. Perder um R é o plano a funcionar. O que não pode acontecer é perderes dois, três ou dez R numa só ideia, porque mexeste no stop. Ao longo de muitas ideias, o que separa quem aguenta de quem não aguenta é exactamente essa disciplina. Perder pouco, e de forma prevista, faz parte do processo."
+    },
+    {
+     "id": "v3-14",
+     "tipo": "capitulo",
+     "cap": "04 · Quando não entrar",
+     "numero": "04",
+     "titulo": "Quando não entrar",
+     "sub": "As ideias que deixas passar",
+     "fala": "Quarto capítulo: quando não entrar. Uma boa parte da disciplina é deixar ideias passar."
+    },
+    {
+     "id": "v3-15",
+     "tipo": "checklist",
+     "cap": "04 · Quando não entrar",
+     "kicker": "Deixa passar quando",
+     "titulo": "Cinco situações",
+     "itens": [
+      "Contra a média de duzentas velas de quatro horas",
+      "Mercado de lado, sem força",
+      "Placar no limite, com grupos inteiros vazios",
+      "Preço já longe da entrada",
+      "Venda sem saberes que vem desligada e sem as confirmações extra"
+     ],
+     "fala": "Há cinco situações em que deves deixar a ideia passar. Primeira: a tendência de quatro horas está contra ela. Uma compra abaixo da média de duzentas velas é uma compra contra a corrente maior, e o filtro existe por essa razão. Segunda: o mercado está de lado, sem força. O filtro anti-lateral ajuda, mas tu também tens de olhar. Terceira: o placar está no limite do mínimo e há grupos inteiros vazios. Quarta: o preço já está longe da entrada. Se chegaste tarde, chegaste tarde, e perseguir o preço estraga a relação entre o risco e as saídas. E quinta: uma venda sem saberes que as vendas vêm desligadas, e sem as confirmações extra que exigem."
+    },
+    {
+     "id": "v3-16",
+     "tipo": "pontos",
+     "cap": "04 · Quando não entrar",
+     "kicker": "Fora do indicador",
+     "titulo": "O que o indicador não vê",
+     "itens": [
+      "Decisões de bancos centrais e dados de emprego ou inflação",
+      "Um calendário económico mostra as horas",
+      "Nesses momentos, o preço pode saltar os teus níveis",
+      "Decide antes o que fazes a uma ideia aberta"
+     ],
+     "fala": "Há uma coisa que o indicador não vê: o calendário. As decisões de juros dos bancos centrais, os dados de emprego e os de inflação podem mover o mercado de forma violenta em segundos. Nesses momentos, o preço pode saltar por cima do teu stop, e a leitura técnica perde sentido durante alguns minutos. A regra prática, que é uma escolha tua, é não abrir ideias nos minutos antes e depois destes eventos. Se tiveres uma ideia aberta, decides antes da notícia o que fazes: proteger, fechar parcialmente, ou sair. Um calendário económico é fácil de consultar, e fica bem na tua rotina diária."
+    },
+    {
+     "id": "v3-17",
+     "tipo": "capitulo",
+     "cap": "05 · O teu perfil",
+     "numero": "05",
+     "titulo": "O teu perfil",
+     "sub": "Scalp, intradiário ou swing",
+     "fala": "Quinto capítulo: escolher o teu perfil."
+    },
+    {
+     "id": "v3-18",
+     "tipo": "comparar",
+     "cap": "05 · O teu perfil",
+     "kicker": "Três formas de usar o Sensei",
+     "titulo": "Escolhe uma e fica com ela",
+     "cartoes": [
+      {
+       "t": "Scalp",
+       "d": "5 e 15 minutos. Muitas ideias, exige tempo ao ecrã e decisões rápidas."
+      },
+      {
+       "t": "Intradiário",
+       "d": "1 hora. Duas ou três verificações por dia costumam chegar."
+      },
+      {
+       "t": "Swing",
+       "d": "4 horas. Poucas ideias, trades que duram mais, muita paciência."
+      }
+     ],
+     "fala": "Há três perfis típicos. O scalp, nos gráficos de cinco e quinze minutos. Dá mais ideias, mas exige tempo ao ecrã e decisões rápidas, e por isso é o mais exigente. O intradiário, no gráfico de uma hora, é o que recomendo a quem tem um emprego: duas ou três verificações por dia costumam chegar. E o swing, no gráfico de quatro horas, com poucas ideias e trades que duram mais. Exige sobretudo paciência, porque podes passar dias sem nada para fazer. Escolhe um perfil e fica com ele pelo menos algumas semanas antes de mudares. Cada mudança de perfil é uma mudança de método, e o teu diário precisa de tempo para te mostrar o que funciona."
+    },
+    {
+     "id": "v3-19",
+     "tipo": "checklist",
+     "cap": "05 · O teu perfil",
+     "kicker": "Da leitura à rotina",
+     "titulo": "Quatro semanas, sem pressa",
+     "itens": [
+      "Semana 1: só ler, sem operar, e anotar os sinais",
+      "Semana 2: operar em demo, com risco fixo por ideia",
+      "Semana 3: demo com gestão completa e diário todos os dias",
+      "Semana 4: rever o diário e decidir os próximos passos"
+     ],
+     "fala": "Para tornar isto concreto, um plano de quatro semanas. Na primeira, só lês. Abres o teu mercado no teu timeframe e anotas cada sinal que aparece e o que aconteceu a seguir. Na segunda, operas em conta demo, com o risco fixo por ideia, sem te preocupares com a gestão perfeita. Na terceira, ainda em demo, aplicas a gestão completa: o plano, a protecção no Exit 1, as quatro saídas, e escreves o diário todos os dias. Na quarta, revês tudo. Quantas ideias apareceram? Em quantas seguiste o plano? Qual foi o resultado médio em R? Só depois disto decides os próximos passos. Quatro semanas parece muito tempo, mas é o caminho mais curto para não perderes dinheiro a aprender."
+    },
+    {
+     "id": "v3-20",
+     "tipo": "capitulo",
+     "cap": "06 · A rotina de 15 minutos",
+     "numero": "06",
+     "titulo": "A rotina de 15 minutos",
+     "sub": "Consistência ganha à intensidade",
+     "fala": "Sexto capítulo: a rotina de quinze minutos por dia."
+    },
+    {
+     "id": "v3-21",
+     "tipo": "checklist",
+     "cap": "06 · A rotina de 15 minutos",
+     "kicker": "Todos os dias",
+     "titulo": "Quinze minutos, cinco passos",
+     "itens": [
+      "Ver o calendário económico do dia",
+      "Abrir o teu mercado no teu timeframe",
+      "Ver a tendência de quatro horas e a posição face à média de duzentas velas",
+      "Rever os sinais recebidos e as ideias abertas",
+      "Atualizar o diário"
+     ],
+     "fala": "A rotina cabe em quinze minutos. Primeiro, o calendário económico do dia, para saberes a que horas há eventos de alto impacto. Segundo, abres o teu mercado no teu timeframe, sempre o mesmo. Terceiro, vês a tendência de quatro horas e a posição do preço face à média de duzentas velas: a corrente maior está a favor de compras ou de vendas? Quarto, revês os sinais que recebeste e as ideias que tens abertas, e aplicas a gestão que vimos. Quinto, atualizas o diário. O resto do dia, os alertas trabalham por ti. Não precisas de estar agarrado ao ecrã. Precisas de ser consistente."
+    },
+    {
+     "id": "v3-22",
+     "tipo": "pontos",
+     "cap": "06 · A rotina de 15 minutos",
+     "kicker": "Uma vez por semana",
+     "titulo": "A revisão semanal",
+     "itens": [
+      "Quantos sinais apareceram e quantos operaste",
+      "Em quantos seguiste o plano",
+      "Resultado médio em R",
+      "Onde estiveram os teus erros",
+      "Uma única mudança para a semana seguinte"
+     ],
+     "fala": "Para além da rotina diária, reserva meia hora por semana para a revisão. Conta quantos sinais apareceram e quantos operaste. Em quantos seguiste o plano. Qual foi o resultado médio em R. E onde estiveram os teus erros: entraste tarde, mexeste no stop, ignoraste uma saída, saltaste a verificação? Depois decides uma única mudança para a semana seguinte. Só uma. Se mudares cinco coisas ao mesmo tempo, não sabes qual delas fez diferença. A revisão semanal é o momento em que deixas de reagir ao mercado e passas a melhorar o teu processo."
+    },
+    {
+     "id": "v3-23",
+     "tipo": "pontos",
+     "cap": "06 · A rotina de 15 minutos",
+     "kicker": "Depois de cada ideia",
+     "titulo": "Escreve, mesmo quando correu bem",
+     "itens": [
+      "Data, mercado, timeframe e direcção",
+      "Placar, estilo e modo de fase",
+      "Resultado em R, e não em dinheiro",
+      "Seguiste o plano? Sim ou não",
+      "Uma frase: o que aprendeste"
+     ],
+     "fala": "Depois de cada ideia, quer tenha corrido bem ou mal, escreves no diário. Data, mercado, timeframe e direcção. O placar, o estilo e o modo de fase em uso. O resultado medido em R, e não em dinheiro, porque o R é comparável entre ideias, contas e lotes diferentes. A pergunta mais importante: seguiste o plano, sim ou não? E uma frase sobre o que aprendeste. Ao fim de trinta ou quarenta ideias, o diário diz-te coisas que nenhum vídeo te pode dizer: em que mercado e em que horário o Sensei funciona melhor para ti, e onde é que tu, e não o indicador, estás a falhar."
+    },
+    {
+     "id": "v3-24",
+     "tipo": "plano",
+     "cap": "06 · A rotina de 15 minutos",
+     "kicker": "Exemplo inventado",
+     "titulo": "Uma ideia registada",
+     "linhas": [
+      [
+       "05/11 · XAUUSD · 1 hora · Compra",
+       "14 de 20 · intradiário",
+       "entrada"
+      ],
+      [
+       "Gestão",
+       "Exit 1 e stop na entrada",
+       "warning"
+      ],
+      [
+       "Resultado",
+       "+0,4 R",
+       "tp"
+      ],
+      [
+       "Seguiste o plano?",
+       "Sim",
+       "tp"
+      ],
+      [
+       "Aprendizagem",
+       "Esperei o fecho da vela, sem entrar a meio",
+       "entrada"
+      ]
+     ],
+     "fala": "Assim fica uma linha do diário, num exemplo inventado. Cinco de novembro, ouro, gráfico de uma hora, compra. Placar catorze em vinte, com o estilo intradiário. A entrada no fecho da vela de sinal. Na gestão, um quarto fechado no Exit 1, a um vírgula cinco R, e o stop levado para a entrada. O resto da posição saiu na entrada, sem perda. Um quarto a um vírgula cinco R dá zero vírgula trinta e sete R, e por isso o resultado fica em mais ou menos zero vírgula quatro R. Seguiste o plano? Sim. E a aprendizagem: esperei o fecho, sem entrar a meio. Repara que não há valores em dinheiro. O R permite-te comparar ideias ao longo de meses. E a aprendizagem pode ser sobre uma coisa que correu bem. O diário não é só para os erros."
+    },
+    {
+     "id": "v3-25",
+     "tipo": "capitulo",
+     "cap": "07 · A cabeça do trader",
+     "numero": "07",
+     "titulo": "A cabeça do trader",
+     "sub": "Os erros que nenhum indicador corrige",
+     "fala": "Sétimo capítulo: a cabeça do trader. Há erros que nenhum indicador corrige."
+    },
+    {
+     "id": "v3-26",
+     "tipo": "pontos",
+     "cap": "07 · A cabeça do trader",
+     "kicker": "Os quatro erros clássicos",
+     "titulo": "Reconhece-os em ti",
+     "itens": [
+      "Vingança: aumentar o risco para recuperar uma perda",
+      "Medo de ficar de fora: entrar tarde, longe do sinal",
+      "Excesso de confiança: saltar a verificação depois de ganhar",
+      "Mexer no stop para mais longe"
+     ],
+     "fala": "Há quatro erros clássicos, e quase toda a gente passa por eles. O primeiro é a vingança: perdes uma ideia e aumentas o risco na seguinte para recuperar. É a forma mais rápida de transformar um dia mau numa semana má. O segundo é o medo de ficar de fora: vês uma ideia a correr bem, entras tarde, longe do sinal, e o teu stop fica no sítio errado. O terceiro é o excesso de confiança: depois de três ou quatro ideias boas seguidas, saltas a verificação de trinta segundos porque achas que já não precisas. E o quarto, o mais perigoso, é mexer o stop para mais longe quando o preço se aproxima dele. Se te reconheceres num destes erros, não te sintas mal. Escreve-o no diário. Ver o padrão escrito é o primeiro passo para o quebrar."
+    },
+    {
+     "id": "v3-27",
+     "tipo": "pontos",
+     "cap": "07 · A cabeça do trader",
+     "kicker": "Regras de protecção",
+     "titulo": "Limites decididos com a cabeça fria",
+     "itens": [
+      "Um número máximo de perdas por dia",
+      "Depois de atingido, fechas a plataforma",
+      "Uma pausa obrigatória depois de uma perda grande",
+      "Revisão semanal do diário, sempre no mesmo dia"
+     ],
+     "fala": "A melhor forma de te protegeres destes erros é decidires regras com a cabeça fria, antes de abrires o gráfico. Por exemplo: um número máximo de perdas por dia, a partir do qual fechas a plataforma, aconteça o que acontecer. Uma pausa obrigatória depois de uma perda maior do que o normal. E uma revisão semanal do diário, sempre no mesmo dia, em que olhas para os números em R e para a pergunta: seguiste o plano? Estas regras parecem simples, e são. O difícil é cumpri-las nos dias em que o mercado te testa. É por isso que as escreves antes."
+    },
+    {
+     "id": "v3-28",
+     "tipo": "capitulo",
+     "cap": "08 · Perguntas frequentes",
+     "numero": "08",
+     "titulo": "Perguntas frequentes",
+     "sub": "O que os alunos mais perguntam",
+     "fala": "Oitavo capítulo: as perguntas que mais se repetem."
+    },
+    {
+     "id": "v3-29",
+     "tipo": "pontos",
+     "cap": "08 · Perguntas frequentes",
+     "kicker": "Perguntas e respostas",
+     "titulo": "Dúvidas comuns",
+     "itens": [
+      "O Sensei repinta? Com Apenas Fecho de Vela ligado, o sinal só é avaliado no fecho",
+      "Posso ligar as vendas? Podes, mas com três confirmações extra exigidas",
+      "Devo mudar os parâmetros? Só depois de semanas de diário, e um de cada vez",
+      "Preciso de vários timeframes? Lê um maior para a tendência, e opera num só"
+     ],
+     "fala": "Primeira pergunta: o Sensei repinta? Com o filtro Apenas Fecho de Vela ligado, o sinal só é avaliado depois do fecho da vela, e não a meio dela. Segunda: posso ligar as vendas? Podes, mas sabe que o lado vendedor exige mais três confirmações, e que o filtro de tendência só deixa vender abaixo da média de duzentas velas de quatro horas. Terceira: devo mudar os parâmetros? Só depois de algumas semanas de diário, e sempre um de cada vez, para saberes o efeito de cada mudança. Quarta: preciso de vários timeframes? Podes olhar para um timeframe maior para ler a tendência, mas opera num só, para não te contradizeres a ti próprio."
+    },
+    {
+     "id": "v3-30",
+     "tipo": "pontos",
+     "cap": "08 · Perguntas frequentes",
+     "kicker": "Mais dúvidas",
+     "titulo": "Perguntas que vêm depois",
+     "itens": [
+      "E se falhar várias seguidas? Confirma se seguiste o plano",
+      "Subir o mínimo de confirmações dá menos sinais",
+      "Posso operar só os sinais mais fortes? Podes, mas vão ser menos",
+      "Quanto tempo até dinheiro real? O diário diz-te"
+     ],
+     "fala": "Mais algumas perguntas. E se falhar várias ideias seguidas? É normal, acontece em qualquer método. A pergunta certa não é se o indicador deixou de funcionar, é se tu seguiste o plano em cada uma delas. Subir o mínimo de confirmações dá menos sinais, e isso é uma escolha tua, que tem de ser testada no diário. Posso operar só os sinais mais fortes? Podes, mas vão ser poucos, e precisas de paciência para esperar semanas por um. E por fim: quanto tempo até estar pronto para dinheiro real? Não há um número. O teu diário diz-te. Quando seguires o plano de forma consistente durante várias semanas, com o risco fixo, estás a tratar isto como um processo. É esse o objectivo."
+    },
+    {
+     "id": "v3-31",
+     "tipo": "pontos",
+     "cap": "Resumo",
+     "kicker": "Uma última ideia",
+     "titulo": "A expectativa",
+     "itens": [
+      "Expectativa = média dos R ganhos e perdidos por ideia",
+      "Mede-se no teu diário, ao fim de muitas ideias",
+      "Positiva: o processo tem vantagem nas tuas mãos",
+      "Negativa: revê a execução antes de culpar o indicador"
+     ],
+     "fala": "Uma última ideia, que liga tudo. No fim de trinta, quarenta ou cinquenta ideias, podes calcular a tua expectativa: a média dos R ganhos e perdidos por ideia. Somas todos os resultados em R e divides pelo número de ideias. Se esse número é positivo, o processo, nas tuas mãos, tem vantagem. Se é negativo, antes de culpares o indicador, revê a execução: seguiste o plano? Respeitaste o stop? Entraste tarde? Muitas vezes a diferença está aí. Este número é teu, medido por ti, no teu mercado. Não há vídeo, nem guru, nem indicador que te dê esse número. Só o teu diário."
+    },
+    {
+     "id": "v3-32",
+     "tipo": "checklist",
+     "cap": "Resumo",
+     "kicker": "Checklist de bolso",
+     "titulo": "O processo Sensei completo",
+     "itens": [
+      "Tendência de topo a favor",
+      "Mercado com força",
+      "Vela fechada",
+      "Placar acima do mínimo",
+      "Nenhum grupo vazio",
+      "Tamanho pelo risco",
+      "Stop para a entrada no Exit 1",
+      "Diário escrito"
+     ],
+     "fala": "Para fechar, a checklist de bolso do Sensei. Tendência de topo a favor. Mercado com força. Vela fechada. Placar acima do mínimo, e nenhum grupo vazio. Tamanho calculado pelo risco. Stop para a entrada no Exit 1. E diário escrito. Oito passos. Se os seguires sempre, mesmo quando é aborrecido, já estás à frente da maior parte das pessoas que tentam operar sem método."
+    },
+    {
+     "id": "v3-33",
+     "tipo": "frase",
+     "cap": "Fecho",
+     "texto": "Mais do que indicadores: <span class='ouro'>método, tempo e disciplina</span>.",
+     "autor": "Ricardo Garcia · MoreThanMoney",
+     "fala": "Chegámos ao fim do Bootcamp Sensei. Obrigado por teres feito os três módulos até aqui. Lembra-te do que te disse no início: o Sensei não decide por ti, junta leituras e mostra-te quando concordam. O resto é processo, paciência e risco controlado. Faz os exercícios, treina em demo, escreve o teu diário, e traz as tuas dúvidas para a comunidade. Eu sou o Ricardo Garcia, e isto é a MoreThanMoney."
+    },
+    {
+     "id": "v3-34",
+     "tipo": "aviso",
+     "cap": "",
+     "titulo": "Bootcamp Sensei concluído",
+     "sub": "morethanmoney.pt",
+     "texto": "Conteúdo educativo. Não é aconselhamento financeiro. Negociar forex, índices, metais e cripto envolve risco elevado e podes perder parte ou a totalidade do capital. Os gráficos e números deste vídeo são ilustrativos. Resultados passados não garantem resultados futuros.",
+     "fala": "Conteúdo educativo, não é aconselhamento financeiro. Negociar tem risco e podes perder dinheiro. Até à próxima.",
+     "respiro": 4
+    }
+   ]
+  }
+ ]
+}

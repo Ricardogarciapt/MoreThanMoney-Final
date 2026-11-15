@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getSupabaseAdmin } from '@/lib/supabase-admin-client'
 import { factosParaCartao, getPipsProof, notaViesPreco, publicavel, RESSALVA_LEGAL } from '@/lib/pips-proof'
 import { chamarIA, ErroIA, mensagemIndisponivel } from '@/lib/ia/chamar'
+import { blocoFramework } from '@/lib/framework-mtm'
 
 export const dynamic = 'force-dynamic'
 export const maxDuration = 60
@@ -34,7 +35,9 @@ async function ehAdmin(request: NextRequest): Promise<boolean> {
 async function pedirAoModelo(sistema: string, pedido: string, maxTokens = 1400): Promise<string> {
   const r = await chamarIA({
     tarefa: 'social-estudio',
-    sistema,
+    sistema: `${sistema}
+
+${blocoFramework('conteudo')}`,
     mensagens: [{ role: 'user', content: pedido }],
     maxTokens,
     preferencia: 'qualidade',

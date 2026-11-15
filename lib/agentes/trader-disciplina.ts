@@ -104,6 +104,42 @@ export function lerRegua(bruto: unknown): Regua {
   return r
 }
 
+/**
+ * AS APROVADAS PELO DONO — `site_settings.agente_trader.aprovadas`, uma lista de «estrategia|SYMBOL».
+ *
+ * 02/11/2026: o Ricardo mandou passar o Premium II em XAUUSD a lote completo com 10 trades medidos
+ * (+11,3), antes dos 20 da régua. É a decisão dele, e fica escrita onde a régua já vive, para se ver
+ * e se tirar sem tocar no código. Uma combinação aprovada à mão abre com lote inteiro mesmo com a
+ * amostra curta; se o histórico dela ficar a perder, a aprovação manual MANDA na mesma — é por isso
+ * que o veredicto medido continua no «porque», para o dono ver o que está a sobrepor.
+ */
+export function lerAprovadasManuais(bruto: unknown): Set<string> {
+  const lista = (bruto && typeof bruto === 'object' ? (bruto as Record<string, unknown>).aprovadas : null)
+  const fora = new Set<string>()
+  if (!Array.isArray(lista)) return fora
+  for (const item of lista) {
+    const [estrategia, symbol] = String(item ?? '').split('|')
+    if (estrategia?.trim() && symbol?.trim()) fora.add(chaveCombo(estrategia, symbol))
+  }
+  return fora
+}
+
+/** Sobrepõe as aprovações manuais ao mapa medido, sem apagar a medição. */
+export function aplicarAprovadasManuais(mapa: Map<string, Vantagem>, manuais: Set<string>): Map<string, Vantagem> {
+  for (const chave of manuais) {
+    const [estrategia, symbol] = chave.split('|')
+    const medida = mapa.get(chave)
+    mapa.set(chave, {
+      estrategia, symbol,
+      n: medida?.n ?? 0, acerto: medida?.acerto ?? 0, rMedio: medida?.rMedio ?? 0,
+      erroPadrao: medida?.erroPadrao ?? Infinity, pnl: medida?.pnl ?? 0,
+      aprovada: true,
+      porque: `Aprovada pelo dono (site_settings.agente_trader.aprovadas). Medido: ${medida?.porque ?? 'sem histórico'}`,
+    })
+  }
+  return mapa
+}
+
 export const chaveCombo = (estrategia: string, symbol: string) =>
   `${String(estrategia).trim().toLowerCase()}|${String(symbol).trim().toUpperCase()}`
 

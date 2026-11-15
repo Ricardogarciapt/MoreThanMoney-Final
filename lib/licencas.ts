@@ -390,14 +390,14 @@ export async function validarLicenca(ctx: ContextoValidacao): Promise<ResultadoV
 // Leitura e gestão
 // ---------------------------------------------------------------------------
 
-export async function licencasDoUtilizador(userId: string): Promise<Licenca[]> {
+export async function licencasDoUtilizador(
+  userId: string,
+  produto: ProdutoLicenca | 'todos' = PRODUTO_EA,
+): Promise<Licenca[]> {
   const db = getSupabaseAdmin()
-  const { data } = await db
-    .from('licencas')
-    .select('*')
-    .eq('user_id', userId)
-    .eq('produto', PRODUTO_EA)
-    .order('criada_em', { ascending: false })
+  let q = db.from('licencas').select('*').eq('user_id', userId)
+  if (produto !== 'todos') q = q.eq('produto', produto)
+  const { data } = await q.order('criada_em', { ascending: false })
   return (data ?? []) as Licenca[]
 }
 

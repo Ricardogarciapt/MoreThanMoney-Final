@@ -63,6 +63,8 @@ async function estrategiasVivas(): Promise<Array<{ slug: string; nome: string; d
       .select("slug, nome, descricao, ativo, apagado_em")
       .eq("ativo", true)
       .is("apagado_em", null)
+      // Arquivada (03/11: o MTM Auto Premium deu lugar ao Premium II) — fora da montra.
+      .is("arquivada_em", null)
       .order("slug")
     return (data ?? []).map((r) => ({
       slug: String(r.slug ?? ""),

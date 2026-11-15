@@ -70,6 +70,21 @@ export const ESTRATEGIA_DO_WEBHOOK: Record<string, AlvoDaFonte> = {
    */
   premiumscanner: { slug: 'mtm-auto-premium-ii', comentario: 'MTM Auto Premium II' },
   /**
+   * MTM Auto DEFY (04/11, pedido do dono): alertas do indicador DEFY (?strategy=defy). Sem linha em
+   * mestres_estrategias nada abre — começa em sombra, como as outras estratégias novas.
+   */
+  defy: { slug: 'mtm-auto-defy', comentario: 'MTM Auto DEFY' },
+  /**
+   * MTM Auto RocketNova (08/11, pedido do dono): alertas do indicador RocketNova (?strategy=rocketnova).
+   * Sem linha em mestres_estrategias nada abre — começa em sombra, como as outras estratégias novas.
+   */
+  rocketnova: { slug: 'mtm-auto-rocketnova', comentario: 'MTM Auto RocketNova' },
+  /**
+   * MTM Auto Quantum (08/11, pedido do dono): alertas do indicador Quantum by MTM (?strategy=quantum).
+   * Sem linha em mestres_estrategias nada abre — começa em sombra, como as outras estratégias novas.
+   */
+  quantum: { slug: 'mtm-auto-quantum', comentario: 'MTM Auto Quantum' },
+  /**
    * MTM Auto Edge (26/10, pedido do dono): estratégia individual, alimentada pelo pv-relay com os 2
    * top traders do canal PrimeVerse (lib/mestres/edge-pv.ts). Cada ENTRY HIT é uma trade — a chave é
    * o id da mensagem do SETUP (`tg:<id>`), que é também o que os seguimentos do trader citam.
@@ -293,6 +308,10 @@ export async function encaminharSinalParaMestre(s: SinalWebhook): Promise<Result
     }
 
     const ids = [...contas]
+    // Pontes de limites anteriores (cheias ou expiradas) arrumadas antes da ordem nova (05/11): o
+    // Premium II não passa por publicarDaMestre, e ficaram 127 pontes «aberta / pendente» sem posição.
+    if (s.limite) await import('@/lib/mtmfunded/estrategias-sinais/pendente')
+      .then((m) => m.arrumarPontesPendentes(ids, est.slug)).catch(() => undefined)
     const resultados: ResultadoAbrir[] = []
     // A partir da primeira ordem enviada, um erro mais à frente já não pode devolver o sinal à
     // mestre MT5 — ver o `catch` no fim.

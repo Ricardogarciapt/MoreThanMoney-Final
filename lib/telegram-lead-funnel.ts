@@ -22,6 +22,7 @@ import { MIN_DEPOSIT, TRIAL_CODE } from '@/lib/telegram-broker-gate'
 import { escadaNumaLinha, bonusNumaLinha, NOME_DEGRAU_TOPO, ondeComprarTopoNumaLinha, PRECO_MEMBRO, PRECO_PREMIUM, PRECO_PREMIUM_1O_MES, PRECO_TOPO } from '@/lib/escada-precos'
 // O preço do MTM Auto vem de quem o anuncia no funil dele — escrito à mão aqui, divergia.
 import { MTMAUTO_PRECO } from '@/lib/telegram-mtmauto-funnel'
+import { blocoFramework } from '@/lib/framework-mtm'
 import { getSupabaseAdmin } from '@/lib/supabase-admin-client'
 /**
  * A VISÃO DA CASA vem de um sítio só.
@@ -190,7 +191,7 @@ export async function runLeadFunnelReply(input: {
         'x-api-key': key,
         'anthropic-version': '2023-06-01',
       },
-      body: JSON.stringify({ model, max_tokens: 350, system: systemPrompt, messages }),
+      body: JSON.stringify({ model, max_tokens: 350, system: `${systemPrompt}\n\n${blocoFramework('closer')}`, messages }),
     })
     if (res.ok) {
       const data = await res.json()
@@ -227,7 +228,11 @@ export async function runLeadFunnelReply(input: {
   }
 
   const interest = lead?.interest || detectInterest(input.userText)
-  const stage = interest ? 'routed' : lead?.stage === 'new' || !lead ? 'qualifying' : lead?.stage || 'qualifying'
+  // 10/11: quem veio do GRUPO (`no_grupo`) ou do pedido de entrada (`pedido_sinais`) e agora escreve
+  // ao bot em privado ABRIU a conversa — passa a `qualifying`, senão o follow-up nunca o via e o
+  // negócio ficava em «lead» para sempre (era o caso de 57 dos 62 leads do Telegram).
+  const vemDeFora = lead?.stage === 'no_grupo' || lead?.stage === 'pedido_sinais'
+  const stage = interest ? 'routed' : lead?.stage === 'new' || !lead || vemDeFora ? 'qualifying' : lead?.stage || 'qualifying'
   const source = input.source || lead?.source || 'telegram'
   // Tags canónicas — MESMO vocabulário em todos os canais para segmentar os contactos.
   const tags = Array.from(new Set([
@@ -278,11 +283,13 @@ type Supa = ReturnType<typeof getSupabaseAdmin>
  * Falhar a escrita NÃO pode ser silencioso quando é uma saída: se não se conseguir gravar, o que
  * fica no log é a única forma de alguém reparar que uma pessoa pediu para sair e continua na lista.
  */
-async function registarConsentimento(
+export async function registarConsentimento(
   supabase: Supa,
   chatId: string,
   canal: string,
   resposta: 'sim' | 'nao' | 'sair',
+  /** O texto exacto a que a pessoa disse sim (botão do opt-in) — fica como prova. */
+  prova?: string,
 ): Promise<void> {
   const ehWhatsApp = chatId.startsWith('wa:')
   const contacto = ehWhatsApp ? chatId.slice(3) : chatId
@@ -318,9 +325,10 @@ async function registarConsentimento(
       pedido_em: agora,
       ...(resposta === 'nao' ? { retirado_em: agora, retirado_por: `conversa:${canal}` } : {}),
       prova:
-        resposta === 'sim'
+        prova ??
+        (resposta === 'sim'
           ? 'Respondeu «sim» ao pedido feito dentro da conversa'
-          : 'Respondeu «não» ao pedido feito dentro da conversa',
+          : 'Respondeu «não» ao pedido feito dentro da conversa'),
     })
   } catch (e) {
     // Uma saída que não se grava é uma pessoa que pediu para sair e continua na lista.

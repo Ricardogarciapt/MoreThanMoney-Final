@@ -1,13 +1,13 @@
 import type { Metadata } from "next"
 import Link from "next/link"
-import { Unbounded } from "next/font/google"
+import { unbounded } from "@/lib/fonts/unbounded"
 import { ArrowRight, ArrowUpRight, Asterisk, Bot, Check, KeyRound, Download, Plus } from "lucide-react"
 import s from "@/components/scanner/scanner-landing.module.css"
 import e from "@/components/ea/ea-landing.module.css"
 
 // Funil simples dos EAs: escolhe pelo teu estilo, vê os três lado a lado e segue para a landing de cada um.
 
-const display = Unbounded({ subsets: ["latin"], weight: ["600", "800"], display: "swap" })
+const display = unbounded
 
 export const metadata: Metadata = {
   title: "EAs para MetaTrader 5 · MoreThanMoney",

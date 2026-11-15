@@ -53,6 +53,9 @@ export const CONTAS_METAAPI_APAGADAS: ReadonlySet<string> = new Set([
   '6014b4fc-3ed3-458a-8cea-7099cf29b51f', // espelho T2T por defeito (signal-tracker, pips-proof) — definir METAAPI_T2T_MIRROR_ACCOUNT_ID
   '16f4f233-5cbe-4fe9-9530-89a58965bfe0', // conta Sensei 34744071 (reformada, estratégia removida 14/09)
   '6de59846-40e3-48d8-b908-1a8bda54d19a', // add-rg-slave (cascade RG antiga)
+  // Premium MxsR antiga / fonte de preços por omissão: 404 na MetaApi desde 2026-11-04 (924 erros/dia
+  // no funded-precos-vigia a 10/11). O Premium já corre pela mestre SIM do motor das mestres.
+  '530d2e07-b391-440f-bc6e-f4c2a224057b',
 ])
 
 // ── regras puras ────────────────────────────────────────────────────────────────────────────────

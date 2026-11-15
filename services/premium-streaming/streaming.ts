@@ -41,7 +41,7 @@ const CFG = {
   supabaseKey: env('SUPABASE_SERVICE_ROLE_KEY'),
   token: env('METAAPI_TOKEN'),
   contas: contasStreaming(env('PREMIUM_STREAMING_CONTAS')),
-  intervaloMs: Number(env('PREMIUM_STREAMING_INTERVALO_MS') || 1000),
+  intervaloMs: Number(env('PREMIUM_STREAMING_INTERVALO_MS') || 2000), // era 1000 (06/11)
   batimentoMs: Number(env('PREMIUM_STREAMING_BATIMENTO_MS') || 2000),
 }
 

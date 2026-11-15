@@ -3,6 +3,7 @@ import { requireAdmin } from "@/lib/admin-api-helpers"
 import { renderCarrossel, renderSocialCardBuffer, type Lamina, type SocialCardParams } from "@/lib/social-card"
 import { uploadBufferToBucket } from "@/lib/instagram/publish"
 import { chamarIA, mensagemIndisponivel } from '@/lib/ia/chamar'
+import { blocoFramework } from '@/lib/framework-mtm'
 
 export const runtime = "nodejs"
 export const dynamic = "force-dynamic"
@@ -41,7 +42,7 @@ async function escreverLaminas(tema: string, cta: string, quantas: number): Prom
         "· A do FIM pede a acção, no máximo 8 palavras.\n" +
         "· Português de Portugal, tratamento por tu, primeira pessoa (é ELE que fala).\n" +
         "· NUNCA prometas lucro. NUNCA inventes números, percentagens ou resultados.\n" +
-        "· Sem emojis, sem hashtags, sem aspas dentro do texto.",
+        "· Sem emojis, sem hashtags, sem aspas dentro do texto.\n\n" + blocoFramework('conteudo'),
       mensagens: [{ role: "user", content: `Tema: ${tema}\nPalavra do CTA: ${cta || "(nenhuma)"}\nLâminas do meio: ${quantas}` }],
     })
     const o = JSON.parse(r.texto) as { capa?: string; meio?: string[]; fim?: string }

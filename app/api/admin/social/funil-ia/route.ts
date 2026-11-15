@@ -6,6 +6,7 @@ import type { Funil, NoDoFunil, TipoDeNo } from "@/lib/funis"
 // depois de o depósito mínimo ter passado a 350 — e a IA desenhava funis com o número errado.
 import { escadaNumaLinha, bonusNumaLinha } from "@/lib/escada-precos"
 import { chamarIA, mensagemIndisponivel } from '@/lib/ia/chamar'
+import { blocoFramework } from "@/lib/framework-mtm"
 
 export const runtime = "nodejs"
 export const dynamic = "force-dynamic"
@@ -67,7 +68,8 @@ export async function POST(req: NextRequest) {
     `· ${bonusNumaLinha()}\n` +
     `· NÃO lideres com o grátis. O teste de 14 dias só se oferece a quem diz que não quer pagar nem depositar agora.\n` +
     `· NUNCA inventes números de resultados, percentagens ou promessas de lucro. Não os tens.\n` +
-    `· Português de Portugal, tratamento por tu.`
+    `· Português de Portugal, tratamento por tu.` +
+    `\n\n${blocoFramework("closer")}`
 
   const utilizador = existente
     ? `Funil atual:\n${JSON.stringify({ nome: existente.nome, nos: existente.nos.map((n) => ({ id: n.id, tipo: n.tipo, titulo: n.titulo, seguintes: n.seguintes })) })}\n\nPedido: ${pedido}`

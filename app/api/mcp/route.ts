@@ -4,7 +4,7 @@ import { FERRAMENTAS, ferramentaPorNome } from "@/lib/mcp/ferramentas"
 
 export const runtime = "nodejs"
 export const dynamic = "force-dynamic"
-export const maxDuration = 60
+export const maxDuration = 120
 
 /**
  * O sistema MTM como servidor MCP.

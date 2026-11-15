@@ -3,6 +3,7 @@ import { requireAdmin } from '@/lib/admin-api-helpers'
 import { getSupabaseAdmin } from '@/lib/supabase-admin-client'
 import { uploadBufferToBucket } from '@/lib/instagram/publish'
 import { chamarIA, ErroIA, mensagemIndisponivel } from '@/lib/ia/chamar'
+import { blocoFramework } from '@/lib/framework-mtm'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -68,7 +69,9 @@ async function planear(tema: string, quantas: number): Promise<Plano> {
     maxTokens: 2000,
     json: true,
     preferencia: 'qualidade',
-    sistema: SISTEMA,
+    sistema: `${SISTEMA}
+
+${blocoFramework('conteudo')}`,
     mensagens: [
       {
         role: 'user',

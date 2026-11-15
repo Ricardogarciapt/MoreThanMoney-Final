@@ -81,6 +81,9 @@ const TIPO_CERT: Record<string, string> = {
 /** Todos os ângulos possíveis com os dados de hoje. Os que não têm dados reais não entram. */
 export function postsPossiveis(d: DadosPosts, dia: number): PostLeads[] {
   const dm = { text: '💬 Tirar uma dúvida em privado', url: `https://t.me/${d.bot}?start=lead` }
+  // 10/11: opt-in de seguimento em privado (lib/telegram-optin.ts) — o único caminho para quem só
+  // está no grupo poder receber seguimento do bot.
+  const seg = { text: '📩 Quero seguimento', url: `https://t.me/${d.bot}?start=seguimento` }
   const conta = { text: '📲 Criar a minha conta', url: 'https://www.morethanmoney.pt/register' }
   const lista: PostLeads[] = []
 
@@ -96,7 +99,7 @@ export function postsPossiveis(d: DadosPosts, dia: number): PostLeads[] {
         `Medido na nossa conta de demonstração, que abre TODOS os sinais publicados — não é escolha a dedo. ` +
         `E sejamos honestos: nem todas fecham assim, também há stops. O que muda o jogo é a gestão de risco.\n\n` +
         `Queres perceber como se lê um sinal destes? Pergunta aqui em baixo. 👇\n\n${DISCLAIMER}`,
-      botoes: [[conta], [dm]],
+      botoes: [[conta], [dm], [seg]],
     })
   }
 
@@ -111,7 +114,7 @@ export function postsPossiveis(d: DadosPosts, dia: number): PostLeads[] {
         `.\n\n${ultimo}` +
         `Cada um sai com o seu código de validação. Não é um print: é um passo que alguém deu mesmo.\n\n` +
         `O teu pode ser o próximo. Começa pela conta grátis. 👇`,
-      botoes: [[conta], [dm]],
+      botoes: [[conta], [dm], [seg]],
     })
   }
 
@@ -122,7 +125,7 @@ export function postsPossiveis(d: DadosPosts, dia: number): PostLeads[] {
       `Cria a conta e tens 3 dias de Premium para ver tudo por dentro: os alertas, a app e a educação. ` +
       `Depois decides com calma${d.membros ? `, como fizeram os ${nf.format(d.membros)} membros da comunidade` : ''}.\n\n` +
       `Em 5 passos: morethanmoney.pt/onboarding/mtm`,
-    botoes: [[conta], [dm]],
+    botoes: [[conta], [dm], [seg]],
   })
 
   lista.push({
@@ -131,7 +134,7 @@ export function postsPossiveis(d: DadosPosts, dia: number): PostLeads[] {
       `🏦 <b>Sem mensalidade?</b> Também dá.\n\n` +
       `Abre conta na corretora parceira com o nosso link, deposita ≥ ${MIN_DEPOSIT}$ e valida no bot. ` +
       `Ficas com a app Premium e os grupos de sinais enquanto mantiveres o saldo. O dinheiro fica sempre na TUA conta.\n\n${DISCLAIMER}`,
-    botoes: [[{ text: '✅ Quero este caminho', url: `https://t.me/${d.bot}?start=broker` }], [dm]],
+    botoes: [[{ text: '✅ Quero este caminho', url: `https://t.me/${d.bot}?start=broker` }], [dm], [seg]],
   })
 
   const q = DUVIDAS[dia % DUVIDAS.length]
@@ -140,13 +143,13 @@ export function postsPossiveis(d: DadosPosts, dia: number): PostLeads[] {
     texto:
       `❓ <b>«${q.p}»</b>\n\n${q.r}\n\n` +
       `Tens outra dúvida? Escreve-a aqui no grupo — eu respondo. Se for coisa da tua conta, falamos em privado. 👇\n\n${DISCLAIMER}`,
-    botoes: [[dm]],
+    botoes: [[dm], [seg]],
   })
 
   lista.push({
     tipo: 'packs',
     texto: `🪜 <b>Os degraus da MTM</b>\n\n${escadaEmLinhas()}\n\nNão sabes qual é o teu? Diz-me o que procuras e eu aponto-te o caminho. 👇\n\n${DISCLAIMER}`,
-    botoes: [[{ text: '👑 Ver os packs', url: 'https://www.morethanmoney.pt/upgrade' }], [dm]],
+    botoes: [[{ text: '👑 Ver os packs', url: 'https://www.morethanmoney.pt/upgrade' }], [dm], [seg]],
   })
 
   return lista

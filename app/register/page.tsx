@@ -186,8 +186,8 @@ export default function RegisterPage() {
 
     setIsLoading(true)
 
-    // Trial de 3 dias COM cartão (Stripe): recolhe o método de pagamento, 3 dias sem
-    // cobrança, e ao fim cobra 65€/mês. Quem ativa já paga o 1º mês a 35€.
+    // Trial de 3 dias SEM cartão (Stripe, um clique): nada pedido nem cobrado nos 3 dias; no fim
+    // ativa-se o Premium a 65€/mês em /ativar-premium. Quem ativa já paga o 1º mês a 35€.
     // Um cupão VÁLIDO (ex.: broker MTM-BROKER-*) sobrepõe-se ao trial de 3 dias. Só conta o que
     // a validação aceitou: o preenchimento automático metia o email no campo e desligava o trial.
     let cupao = couponStatus
@@ -697,9 +697,12 @@ export default function RegisterPage() {
                 )}
               </Button>
 
-              <p className="text-xs text-center text-gray-500 -mt-1">
-                {t('register.cardRequiredNote')}
-              </p>
+              {/* O trial de 3 dias não pede cartão: a nota do cartão só vale para quem paga já. */}
+              {mode !== 'trial' && (
+                <p className="text-xs text-center text-gray-500 -mt-1">
+                  {t('register.cardRequiredNote')}
+                </p>
+              )}
 
               <p className="text-xs text-center text-gray-500 -mt-1">
                 {mode === 'trial'

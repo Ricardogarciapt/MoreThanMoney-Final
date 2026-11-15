@@ -5,6 +5,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import Stripe from 'stripe'
 import { getSupabaseAdmin } from '@/lib/supabase-admin-client'
 import { sendScannerAccessEmail, sendMTMcopierSetupNotification } from '@/lib/email-service'
+import { linksDoPlano } from '@/lib/scanners/links-tradingview'
 import { sanitizeEnv } from '@/lib/env-sanitize'
 import { createMailTransporter, mailFrom, prepareBrandedEmailHtml, brandedMailAttachments } from '@/lib/mail-transport'
 import {
@@ -28,6 +29,7 @@ import {
 } from '@/lib/stripe-skool-admin'
 import { processMlmCheckoutCommission } from '@/lib/mlm-checkout-commission'
 import { estornarVenda, registarVendaConfirmada } from '@/lib/vendas/livro'
+import { codigoDoAgenteDaFatura, compradorDoCliente } from '@/lib/vendas/reconciliar-stripe'
 import { subscriptionPlatformForStripeCheckout } from '@/lib/stripe-profile-sync'
 import { processMlmSubscriptionRenewal } from '@/lib/mlm-subscription-integration'
 import { upsertSponsorNode } from '@/lib/mlm-tree'
@@ -52,6 +54,7 @@ import {
   subscricaoEhAddon,
 } from '@/lib/mtmcopy/addon-stripe'
 import { planoIncluiScanners, scannerDoPackFundador } from '@/lib/packs-fundador'
+import { MOTIVO_FIM_SEM_PAGAMENTO, planoEfetivo, sincronizarPeriodoGratis, terminouNoPeriodoGratis } from '@/lib/periodos-gratis'
 import {
   ehFaturaDeMarketplace,
   ehSubscricaoDeMarketplace,
@@ -66,6 +69,16 @@ const SCANNER_PLAN_NAMES: Record<string, string> = {
   aurumflow_lifetime: 'Scanner Aurum Flow Cripto (Vitalício)',
   trendshot_semestral: 'TrendShot by MTM (Semestral)',
   trendshot_lifetime: 'TrendShot by MTM (Vitalício)',
+  defy_semestral: 'DEFY by MTM (Semestral)',
+  defy_lifetime: 'DEFY by MTM (Vitalício)',
+  rocketnova_semestral: 'RocketNova by MTM (Semestral)',
+  rocketnova_lifetime: 'RocketNova by MTM (Vitalício)',
+  quantum_semestral: 'Quantum by MTM (Semestral)',
+  quantum_lifetime: 'Quantum by MTM (Vitalício)',
+  sniperpro_semestral: 'SniperPro by MTM (Semestral)',
+  sniperpro_lifetime: 'SniperPro by MTM (Vitalício)',
+  goldenzone_semestral: 'Golden Zone by MTM (Semestral)',
+  goldenzone_lifetime: 'Golden Zone by MTM (Vitalício)',
   premium_scanner_lifetime: 'MTM Premium Scanner (Vitalício)',
   mtm_scanner_monthly: 'Scanner MTM V3.4 (Mensal)',
   mtm_scanner_semestral: 'Scanner MTM V3.4 (Semestral)',
@@ -204,6 +217,19 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
   // do que vem a seguir (planos, MLM, categorias de membro) se aplica a uma licença de software.
   if (ehCheckoutDoEA(session)) {
     await emitirLicencaDoCheckout(session)
+    // A licença é receita da casa: entra no livro como qualquer outra venda (sem regra de comissão
+    // definida para o pack, o livro só avisa — não paga nada).
+    await registarVendaDaEquipa({
+      referencia: session.id,
+      compradorId: session.metadata?.user_id ?? null,
+      emailComprador: session.customer_details?.email ?? session.metadata?.email ?? null,
+      pack: session.metadata?.plan ?? null,
+      valorCents: session.amount_total ?? 0,
+      moeda: session.currency ?? 'eur',
+      tipo: 'primeira',
+      nota: `Licença ${session.metadata?.produto ?? ''}`.trim(),
+      agenteCodigo: session.metadata?.agente_codigo ?? null,
+    })
     return
   }
 
@@ -275,6 +301,17 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
       })
       if (provision.ok) {
         compradorProvisionado = provision.userId ?? null
+        // O customer.subscription.created pode ter chegado antes de a conta existir: espelhar
+        // agora o período grátis (estado trialing e data de fim no perfil).
+        if (session.subscription && session.metadata?.periodo_gratis) {
+          try {
+            const subId = typeof session.subscription === 'string' ? session.subscription : session.subscription.id
+            const subGratis = await getStripeClient().subscriptions.retrieve(subId)
+            await sincronizarPeriodoGratis(subGratis, compradorProvisionado)
+          } catch (e) {
+            console.error('[periodos-gratis] falhou no provisionamento:', e)
+          }
+        }
         console.log(
           `✅ [STRIPE-WEBHOOK] Conta provisionada server-side: ${provision.userId} (session ${session.id})`
         )
@@ -335,12 +372,25 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
           guestEmail,
           'Trader',
           SCANNER_PLAN_NAMES[planId],
-          tvUsername
+          tvUsername,
+          linksDoPlano(planId),
         )
       } catch (err) {
         console.error('Erro ao enviar email de scanner (guest):', err)
       }
     }
+    // A compra de scanner sem conta também é uma venda — saía daqui sem chegar ao livro.
+    await registarVendaDaEquipa({
+      referencia: session.id,
+      compradorId: null,
+      emailComprador: guestEmail ?? null,
+      pack: planId ?? null,
+      valorCents: session.amount_total ?? 0,
+      moeda: session.currency ?? 'eur',
+      tipo: 'primeira',
+      nota: 'Scanner comprado sem conta MTM.',
+      agenteCodigo: session.metadata?.agente_codigo ?? null,
+    })
     return
   }
 
@@ -369,7 +419,8 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
           profile.email,
           profile.full_name || 'Trader',
           SCANNER_PLAN_NAMES[planId],
-          tvUsername
+          tvUsername,
+          linksDoPlano(planId),
         )
       }
 
@@ -634,11 +685,13 @@ async function handleSubscriptionUpdate(sub: Stripe.Subscription) {
    * inventa direitos nem os retira. Quem cria um preço da casa garante a variável de ambiente do
    * catálogo ou `metadata.plan` no preço — ver `planoDaSubscricao`.
    */
-  const planId = planoDaSubscricao({
+  const planIdDoPreco = planoDaSubscricao({
     priceId,
     metadataDoPreco: item?.price?.metadata,
     metadataDaSubscricao: sub.metadata,
   })
+  // Campanha 90 dias: o preço é Premium, mas durante o período a pessoa é Membro.
+  const planId = planIdDoPreco ? planoEfetivo(sub, planIdDoPreco) : planIdDoPreco
   if (!planId) {
     console.error(
       '[STRIPE-WEBHOOK] subscrição com preço FORA do catálogo e sem metadata.plan — perfil não alterado.',
@@ -664,6 +717,17 @@ async function handleSubscriptionUpdate(sub: Stripe.Subscription) {
     is_active: sub.status === 'active' || sub.status === 'trialing',
     payment_failed_count: 0,
   }).eq('id', profile.id)
+
+  // Trial de 3 dias e campanha 90 dias: espelho para o admin/backoffice/MLM e data de fim.
+  await sincronizarPeriodoGratis(sub, profile.id)
+  if (sub.status === 'active' || sub.status === 'trialing') {
+    // Reativou depois de um período grátis sem pagamento: o fecho deixa de valer.
+    await supabase
+      .from('profiles')
+      .update({ inactive_reason: null, inactive_since: null, access_revoked_at: null })
+      .eq('id', profile.id)
+      .eq('inactive_reason', MOTIVO_FIM_SEM_PAGAMENTO)
+  }
 
   // Packs de fundador prometem Premium E o pack de scanners. O Premium ficou na escrita acima; o
   // scanner vive noutro sítio (`profile_data.addons.scanner`) porque se compra e cancela sozinho,
@@ -747,11 +811,16 @@ async function handleSubscriptionCanceled(sub: Stripe.Subscription) {
     Boolean(profile.stripe_customer_id) &&
     (profile.member_category === 'premium' || profile.subscription_plan === 'premium')
 
+  // Acabou o período grátis (trial 3 dias / campanha 90 dias) sem pagamento: o middleware manda
+  // a pessoa para /ativar-premium, a página com o checkout dos 65 €/mês.
+  const fimDoPeriodoGratis = terminouNoPeriodoGratis(sub)
+  await sincronizarPeriodoGratis(sub, profile.id)
+
   await supabase.from('profiles').update({
     subscription_status: 'canceled',
     is_active: false,
     access_revoked_at: new Date().toISOString(),
-    inactive_reason: 'subscription_canceled',
+    inactive_reason: fimDoPeriodoGratis ? MOTIVO_FIM_SEM_PAGAMENTO : 'subscription_canceled',
     inactive_since: new Date().toISOString(),
     subscription_auto_renew: false,
   }).eq('id', profile.id)
@@ -812,6 +881,21 @@ async function handlePaymentSucceeded(invoice: Stripe.Invoice) {
         console.error('[MLM] Erro ao criar comissões de renovação (addon MTM Copy):', mlmErr)
       }
     }
+    // O addon também é dinheiro: saía daqui sem nunca chegar ao livro (os 20 € de 18, 22 e 30/10
+    // não estavam lá). A primeira cobrança vem pela sessão de checkout; daqui só as seguintes.
+    if (invoice.id && invoice.amount_paid > 0 && invoice.billing_reason !== 'subscription_create') {
+      await registarVendaDaEquipa({
+        referencia: invoice.id,
+        compradorId: alvo.id,
+        emailComprador: invoice.customer_email ?? null,
+        pack: PLANO_ADDON_MTMCOPY,
+        valorCents: invoice.amount_paid,
+        moeda: invoice.currency ?? 'eur',
+        tipo: 'renovacao',
+        pagoEm: invoice.created ? new Date(invoice.created * 1000).toISOString() : undefined,
+        agenteCodigo: await codigoDaFaturaSemFalhar(invoice),
+      })
+    }
     return
   }
 
@@ -825,7 +909,26 @@ async function handlePaymentSucceeded(invoice: Stripe.Invoice) {
     return
   }
 
-  if (!profile) return
+  if (!profile) {
+    // O dinheiro entrou mas o cliente Stripe não está em nenhum perfil. O acesso não se toca (não
+    // se sabe a quem dar), mas a VENDA existe e vai para o livro — antes saía daqui sem rasto e o
+    // livro ficava abaixo do Stripe (35 € de 12/10). Procura-se o comprador pelo email.
+    if (invoice.id && invoice.amount_paid > 0 && invoice.billing_reason !== 'subscription_create') {
+      await registarVendaDaEquipa({
+        referencia: invoice.id,
+        compradorId: await compradorDoCliente(supabase, invoice.customer as string, invoice.customer_email).catch(() => null),
+        emailComprador: invoice.customer_email ?? null,
+        pack: getPlanIdFromPriceId(stripeInvoiceLinePrice(invoice.lines?.data?.[0])?.id ?? '') ?? null,
+        valorCents: invoice.amount_paid,
+        moeda: invoice.currency ?? 'eur',
+        tipo: 'renovacao',
+        pagoEm: invoice.created ? new Date(invoice.created * 1000).toISOString() : undefined,
+        nota: 'Fatura paga sem perfil ligado ao cliente Stripe — comprador por ligar.',
+        agenteCodigo: await codigoDaFaturaSemFalhar(invoice),
+      })
+    }
+    return
+  }
 
   await supabase.from('profiles').update({
     subscription_status: 'active',
@@ -933,12 +1036,27 @@ async function handlePaymentSucceeded(invoice: Stripe.Invoice) {
         moeda: invoice.currency ?? 'eur',
         tipo: 'renovacao',
         pagoEm: invoice.created ? new Date(invoice.created * 1000).toISOString() : undefined,
-        // SEM código, e de propósito: uma `invoice` não traz metadata de checkout, e carimbar-lhe
-        // o código da primeira venda do mesmo cliente era inventar que um link clicado uma vez
-        // trouxe a renovação de um ano depois. Fica «sem código» — ver o campo `agenteCodigo`.
-        agenteCodigo: null,
+        // Código SÓ no primeiro pagamento com valor da subscrição (a conversão do trial / do mês
+        // grátis), que ainda é a venda que o agente trouxe. Daí em diante, sem código: a
+        // permanência não é do link. Regra pura em `lib/vendas/fatura-agente.ts`.
+        agenteCodigo: await codigoDaFaturaSemFalhar(invoice),
       })
     }
+  }
+}
+
+/**
+ * O código do agente para uma fatura (só o 1.º pagamento com valor leva), sem nunca rebentar:
+ * uma falha a ler o Stripe dá uma venda sem código, nunca um webhook a 500.
+ */
+async function codigoDaFaturaSemFalhar(invoice: Stripe.Invoice): Promise<string | null> {
+  try {
+    const r = await codigoDoAgenteDaFatura(getStripeClient(), supabase, invoice)
+    if (r.codigo) console.log(`[VENDAS] fatura ${invoice.id} atribuída a ${r.codigo} (${r.origem})`)
+    return r.codigo
+  } catch (e) {
+    console.error('[VENDAS] não foi possível ler o código do agente da fatura:', e)
+    return null
   }
 }
 
@@ -969,13 +1087,12 @@ async function registarVendaDaEquipa(params: {
    * `metadata` (é o que `app/api/marketplace/checkout/route.ts` já faz). Nada aqui o inventa: se o
    * metadata não o trouxer, a venda fica sem código, que é a verdade.
    *
-   * ── AS RENOVAÇÕES NÃO HERDAM O CÓDIGO, E É UMA DECISÃO ──
+   * ── SÓ O PRIMEIRO PAGAMENTO COM VALOR HERDA O CÓDIGO, E É UMA DECISÃO ──
    *
-   * Uma `invoice` de renovação não tem metadata de checkout nenhum. Era fácil ir buscar o código à
-   * primeira venda do mesmo cliente e carimbá-lo em todas as renovações — e seria inventar: a
-   * renovação de um ano depois não foi trazida por um link clicado uma vez. Fica «sem código». Se o
-   * dono um dia decidir que a permanência também é do agente, isso entra como regra declarada e
-   * não como um `join` discreto feito aqui.
+   * Com trial (ou mês grátis) a sessão de checkout vale 0 € e o primeiro dinheiro chega numa
+   * `invoice`. Essa fatura leva o código (da subscrição ou do checkout do trial) — é a venda que o
+   * agente fez. As seguintes ficam «sem código»: a renovação de um ano depois não foi trazida por
+   * um link clicado uma vez. Ver `lib/vendas/fatura-agente.ts`.
    */
   agenteCodigo?: string | null
 }): Promise<void> {

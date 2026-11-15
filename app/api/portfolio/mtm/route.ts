@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { cryptoPortfolio, etfPortfolio, portfolioTotals } from '@/lib/portfolio-data'
-import { getSupabaseAnonServerClient } from '@/lib/supabase-admin-client'
+import { getSupabaseAdmin as getSupabaseAdminClient, getSupabaseAnonServerClient } from '@/lib/supabase-admin-client'
 import { fetchCryptoUsdBest } from '@/lib/crypto-usd'
 
 // Cache para evitar múltiplas chamadas
@@ -43,9 +43,29 @@ function normalizeBinanceSymbol(rawSymbol: string): string {
   return mapped.endsWith('USDT') ? mapped : `${mapped}USDT`
 }
 
-/** Binance + fallback CoinGecko (Vercel EUA muitas vezes bloqueia Binance). */
+/**
+ * Cotações que o cron /api/cron/portfolio-cotacoes deixou na base (migração 234). Lidas uma vez por
+ * pedido; com elas a rota não vai fora. Só se uma faltar, ou tiver mais de 1 h, é que se pergunta
+ * à fonte — e isso deixa de acontecer a cada visita.
+ */
+let cotacoesDaBase = new Map<string, number>()
+async function carregarCotacoesDaBase(): Promise<void> {
+  try {
+    const { data } = await getSupabaseAdminClient()
+      .from('portfolio_cotacoes')
+      .select('symbol, preco, atualizado_em')
+      .gt('atualizado_em', new Date(Date.now() - 3600_000).toISOString())
+    cotacoesDaBase = new Map((data ?? []).filter((r) => Number(r.preco) > 0).map((r) => [String(r.symbol), Number(r.preco)]))
+  } catch {
+    cotacoesDaBase = new Map()
+  }
+}
+
+/** Base primeiro; depois Binance + fallback CoinGecko (Vercel EUA muitas vezes bloqueia Binance). */
 async function getCryptoSpotUsdCached(symbol: string): Promise<number | null> {
   const normalizedSymbol = normalizeBinanceSymbol(symbol)
+  const daBase = cotacoesDaBase.get(normalizedSymbol)
+  if (daBase) return daBase
   const cached = priceCache.get(normalizedSymbol)
   if (cached && Date.now() - cached.timestamp < CACHE_DURATION) {
     return cached.price
@@ -59,6 +79,8 @@ async function getCryptoSpotUsdCached(symbol: string): Promise<number | null> {
 
 // Função para buscar preço de ETF via Yahoo Finance
 async function getETFPrice(symbol: string): Promise<number | null> {
+  const daBase = cotacoesDaBase.get(symbol)
+  if (daBase) return daBase
   try {
     // Verificar cache
     const cached = priceCache.get(symbol)
@@ -93,6 +115,7 @@ export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url)
     const type = searchParams.get('type') // 'crypto' ou 'etf' ou 'all'
+    await carregarCotacoesDaBase()
 
     console.log('📊 [API MTM] Iniciando busca de portfolio, type:', type)
 

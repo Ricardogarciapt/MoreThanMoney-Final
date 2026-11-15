@@ -1,0 +1,1318 @@
+{
+ "estrategia": "MTM Scanner",
+ "marca": "MoreThanMoney",
+ "cores": {
+  "bull": "#3b82f6",
+  "bear": "#ef4444"
+ },
+ "ui": {
+  "nivel": "Level",
+  "compra": "Buy",
+  "venda": "Sell",
+  "entrada": "Entry",
+  "tp1": "TP1",
+  "tp2": "TP2",
+  "tp3": "TP3"
+ },
+ "pronuncia": [
+  ["TradingView", "Trading View"],
+  ["ATR", "A T R"],
+  ["POC", "P O C"],
+  ["DEMA", "D E M A"],
+  ["BOS", "B O S"],
+  ["CHoCH", "C H O C H"],
+  ["IDM", "I D M"],
+  ["XAUUSD", "X A U U S D"],
+  ["TP1", "T P one"],
+  ["TP2", "T P two"],
+  ["TP3", "T P three"]
+ ],
+ "plano": {
+  "warning": false,
+  "slAtr": 1,
+  "alvos": [2, 4, 6],
+  "rotulos": ["TP 1:2", "TP 1:4", "TP 1:6"]
+ },
+ "videos": [
+  {
+   "rotulo": "MTM Scanner Bootcamp · 1/3",
+   "titulo": "Foundations: read before you enter",
+   "cenas": [
+    {
+     "id": "v1-00",
+     "tipo": "abertura",
+     "kicker": "MTM Bootcamp · Module 1 of 3",
+     "titulo": "MTM Scanner",
+     "sub": "Foundations: read the structure before you enter",
+     "rodape": "morethanmoney.pt",
+     "semVoz": 5
+    },
+    {
+     "id": "v1-01",
+     "tipo": "frase",
+     "cap": "Welcome",
+     "texto": "Read the structure before you enter. <span class='ouro'>The trigger comes after.</span>",
+     "autor": "Ricardo Garcia · MoreThanMoney",
+     "fala": "Hi, I'm Ricardo Garcia, and this is the MTM Scanner Bootcamp, the trend-following strategy from MoreThanMoney. Before we start, I want to be clear about one thing: no indicator guarantees what happens next. What the MTM Scanner does is bring together, on the same chart, four pieces that usually live apart: three double moving averages, the price with the most recent volume, the market structure, and the momentum phases. When the pieces agree, the scanner draws a trigger and a plan. When they don't, it draws nothing. Over these three modules you'll learn to read each piece, to understand how a signal is born, how the plan gets drawn, and how risk is managed day to day. In the last module you'll see a simple routine, a few minutes long, built around all of this. Let's go slowly and in order, because each module rests on the one before."
+    },
+    {
+     "id": "v1-02",
+     "tipo": "pontos",
+     "cap": "Welcome",
+     "kicker": "The bootcamp plan",
+     "titulo": "Three modules, one method",
+     "itens": [
+      "Module 1 · Foundations: averages, POC and structure",
+      "Module 2 · From the cross to the trade plan",
+      "Module 3 · Risk, management and routine"
+     ],
+     "fala": "The bootcamp has three modules. In this first one we build the base: what the MTM Scanner is, what each piece of the chart is for, and how to read each one on its own. In the second module we get into the engine: what a signal exactly is, which confirmations help filter it, how the trade plan is drawn with entry, stop and three targets, and what the alerts say. In the third module we move to practice: how much to risk, how to manage an idea from start to finish, when not to enter, which profile to pick, and a simple routine that fits in fifteen minutes a day. I suggest you watch the modules in order, because each one builds on the last. And if a concept seems confusing, go back. There's no prize for watching fast."
+    },
+    {
+     "id": "v1-03",
+     "tipo": "capitulo",
+     "cap": "01 · What the MTM Scanner is",
+     "numero": "01",
+     "titulo": "What the MTM Scanner is",
+     "sub": "Trend following with a trigger at the POC",
+     "fala": "First chapter. So what exactly is the MTM Scanner?"
+    },
+    {
+     "id": "v1-04",
+     "tipo": "camadas3d",
+     "cap": "01 · What the MTM Scanner is",
+     "kicker": "One piece at a time",
+     "titulo": "Four pieces on the same chart",
+     "itens": [
+      "Three double moving averages",
+      "The POC of volume",
+      "The market structure",
+      "The stop and the targets, by ATR"
+     ],
+     "fala": "The MTM Scanner is an indicator for TradingView, and it works on forex, gold, indices and crypto, on any asset and any timeframe. Picture four layers of glass stacked on top of each other. The first is three double moving averages, blue, green and yellow, which show you how the trend lines up over short, medium and long periods. The second is the POC, the price with the most volume over the last fourteen candles, which works as a recent balance point. The third is the market structure, with the breaks that show continuation and the changes of character that show a possible reversal, plus the liquidity traps. The fourth is the decision layer: when the close crosses the POC, the scanner draws the entry, a stop one ATR away and three targets. Separately, each piece gives you part of the story. Together, they give you a reading with context. And notice: the scanner doesn't decide for you. It gives you an organised way to decide."
+    },
+    {
+     "id": "v1-05",
+     "tipo": "pontos",
+     "cap": "01 · What the MTM Scanner is",
+     "kicker": "Where and when",
+     "titulo": "Markets and timeframes",
+     "itens": [
+      "Forex, indices, gold and crypto",
+      "15 minutes as the base",
+      "5 minutes for more signals",
+      "1 hour for longer trades"
+     ],
+     "fala": "The MTM Scanner works on forex, indices, gold and crypto, and on any asset and timeframe in TradingView. There is no better market to learn on: there's the market you follow every day, and whose hours suit you. But the strategy has a clear frame. The base timeframe is fifteen minutes. If you want more signals, you can look at the five-minute chart, knowing there is more noise. If you want longer trades, the one-hour chart is the way. And the plan reads the same way on all of these markets, because the targets are measured in multiples of risk, not in fixed values. If you're just starting, choose one market and one timeframe, and stick with them for the first few weeks. Changing everything at once is the fastest way to understand nothing."
+    },
+    {
+     "id": "v1-06",
+     "tipo": "checklist",
+     "cap": "01 · What the MTM Scanner is",
+     "kicker": "Before you start",
+     "titulo": "What you need",
+     "itens": [
+      "A TradingView account, the free one is enough",
+      "The MTM Scanner indicator on your chart",
+      "A demo account with your broker",
+      "A notebook or spreadsheet for the journal",
+      "Fifteen minutes a day"
+     ],
+     "fala": "Before we move on, here's what you need to get the most out of this bootcamp. A TradingView account, and the free one is enough to start. The MTM Scanner indicator on your chart. A demo account with your broker, because everything you learn should be practised without real money first. A notebook, or a spreadsheet, for the journal we'll build in the third module. And fifteen minutes a day. What makes the difference isn't how much time you spend staring at charts. It's how consistently you repeat the same process, day after day, for weeks. If you have all of this ready, you're set for the rest of the bootcamp."
+    },
+    {
+     "id": "v1-07",
+     "tipo": "capitulo",
+     "cap": "02 · The three double averages",
+     "numero": "02",
+     "titulo": "The three double averages",
+     "sub": "Blue 15, green 50, yellow 238",
+     "fala": "Second chapter. We start with the first reading: the three averages."
+    },
+    {
+     "id": "v1-08",
+     "tipo": "grafico",
+     "cap": "02 · The three double averages",
+     "kicker": "Reading 1",
+     "titulo": "Three averages, stacked",
+     "cenario": "tendencia",
+     "seed": 21,
+     "base": [],
+     "camadas": ["medias"],
+     "ate": [0.4, 1],
+     "zoom": [0, 0],
+     "fala": "First, a note about these charts. They are illustrative animations, built to explain how the indicator works. They are not real results or historical market data, and I'll say this more than once, because it matters. With that said, let's look at the averages. These are three double exponential moving averages, each calculated from an exponential average and a second exponential average taken over that first one. The blue one is the fifteen-candle average, the green is fifty, and the yellow is two hundred and thirty-eight. Blue is the fastest: it shows the pace of the short-term move. Green shows the medium term. And yellow shows the long term, the side of the bigger trend. When all three are stacked in the same direction, the trend is aligned across every timeframe. Look at the chart: blue above green, and green above yellow. That's what we look for on a buy."
+    },
+    {
+     "id": "v1-09",
+     "tipo": "pontos",
+     "cap": "02 · The three double averages",
+     "kicker": "How to read them",
+     "titulo": "What each average tells you",
+     "itens": [
+      "Blue, 15: the short-term pace",
+      "Green, 50: the medium term",
+      "Yellow, 238: the side of the bigger trend",
+      "Stacked: aligned. Tangled: undecided"
+     ],
+     "fala": "Let's read each one. The blue, at fifteen, is the one that reacts fastest to price. If price accelerates, it accelerates first. The green, at fifty, filters out a bit more noise and shows the medium term. The yellow, at two hundred and thirty-eight, is slow, and shows which way the larger trend is pulling. On a buy, you want blue above green, and green above yellow. On a sell, it's the reverse. When this happens, we say the averages are stacked. When the lines cross with no order, and blue keeps moving in and out of green, we say they are tangled. Stacked averages give you context in your favour. Tangled ones tell you the market has no direction, and that will matter a lot in the third module, when we talk about when not to enter."
+    },
+    {
+     "id": "v1-10",
+     "tipo": "comparar",
+     "cap": "02 · The three double averages",
+     "kicker": "Quick reading",
+     "titulo": "Three states of the averages",
+     "cartoes": [
+      {"t": "Stacked up", "d": "Blue above green, green above yellow. Buy context."},
+      {"t": "Stacked down", "d": "Blue below green, green below yellow. Sell context."},
+      {"t": "Tangled", "d": "No clear order and constant crossings. A sideways market."}
+     ],
+     "fala": "Summing up the averages in three states. Stacked up, and the context is a buy. Stacked down, and the context is a sell. And tangled, when the averages cross each other with no order at all. This last state is the most treacherous, because it looks like something is always happening, yet nothing has a direction. Later we'll see that in these moments, the most useful decision is not to enter."
+    },
+    {
+     "id": "v1-11",
+     "tipo": "capitulo",
+     "cap": "03 · The POC",
+     "numero": "03",
+     "titulo": "The POC: the price with the most volume",
+     "sub": "The recent balance point",
+     "fala": "Third chapter. The POC, the gold line on the chart."
+    },
+    {
+     "id": "v1-12",
+     "tipo": "grafico",
+     "cap": "03 · The POC",
+     "kicker": "Reading 2",
+     "titulo": "The POC line",
+     "cenario": "compra",
+     "seed": 7,
+     "base": ["medias"],
+     "camadas": ["poc"],
+     "ate": [0.45, 0.75],
+     "zoom": [0, 0],
+     "fala": "The POC, short for point of control, is the price with the most volume over the last fourteen candles. More precisely: the indicator looks at the last fourteen candles, finds the one with the most volume, and uses that candle's close as the level. That level is drawn as a gold line, and it adjusts as the fourteen-candle window moves forward. The idea is simple: the market spent time and money trading near that price, so it works as a recent balance point. Look at the chart: the line follows the move, and when price pulls away from it, the line moves up or down with it, always a little behind. It is not a magic line, and it is not a forecast. It is a reference, and the value you give it depends on how price reacts around it."
+    },
+    {
+     "id": "v1-13",
+     "tipo": "pontos",
+     "cap": "03 · The POC",
+     "kicker": "How to use it",
+     "titulo": "The POC is a reference, not an order",
+     "itens": [
+      "Measures balance over the last fourteen candles",
+      "Adjusts with every new candle",
+      "Price above: the buyers have the upper hand",
+      "Price below: the sellers have the upper hand"
+     ],
+     "fala": "How do you read the POC in practice? When price is above it, the recent balance is on the buyers' side. When price is below it, it's on the sellers' side. And the cross, which we'll study in depth in the second module, is the moment price changes sides. But there's a caution I want you to have from the start. The POC changes as new candles arrive, so it is not a fixed line, like a support you drew by hand. It is also not an order to enter. It is a balance reference that, combined with the averages and the structure, helps you decide. If someone tells you the POC alone gives a perfect entry, be sceptical. On its own, it only gives you a point of comparison. The best readings come from looking at it together with the other pieces, and from watching how price reacts, candle after candle, as it approaches the line. At first, you'll think the POC is everywhere. Over time, you'll see that what matters is the relationship between price and the line, not the line itself."
+    },
+    {
+     "id": "v1-14",
+     "tipo": "capitulo",
+     "cap": "04 · Market structure",
+     "numero": "04",
+     "titulo": "Reading 3: the structure",
+     "sub": "Breaks, changes of character and traps",
+     "fala": "Fourth chapter, third reading: the market structure."
+    },
+    {
+     "id": "v1-15",
+     "tipo": "pontos",
+     "cap": "04 · Market structure",
+     "kicker": "Vocabulary",
+     "titulo": "BOS, CHoCH and traps",
+     "itens": [
+      "BOS: structure break, in the direction of the trend",
+      "CHoCH: change of character, a possible reversal",
+      "IDM: liquidity trap, the inducement",
+      "x: liquidity sweep"
+     ],
+     "fala": "Market structure is a reading of the highs and lows that price keeps making. The scanner marks four kinds of signal in this layer. The first is the BOS, a structure break: the close moves beyond the high of the move, in the direction of the trend. It shows continuation. The second is the CHoCH, a change of character: after a fall, price breaks a meaningful high, or after a rise, it breaks a meaningful low. It shows the trend may be turning. The third is the IDM, short for inducement: a liquidity trap, where price pokes a little above or below a recent high or low and then comes back. And the fourth is the x, a liquidity sweep, when price touches a level and rejects it straight away. These details matter. The scanner calculates changes of character over a period of fifty candles, and liquidity traps over a period of three candles. Technical numbers, but they show these marks are not decoration."
+    },
+    {
+     "id": "v1-16",
+     "tipo": "grafico",
+     "cap": "04 · Market structure",
+     "kicker": "Reading 3",
+     "titulo": "BOS and CHoCH on the same chart",
+     "cenario": "compra",
+     "seed": 7,
+     "base": ["medias", "poc"],
+     "camadas": ["estrutura"],
+     "ate": [0.3, 0.9],
+     "zoom": [0, 0],
+     "fala": "Let's look at the structure on the chart. It starts in a fall: the averages are stacked down and price sits below the POC. Then price rises and closes above a meaningful high. That's a CHoCH, a change of character, and it's the first warning that the fall may be losing strength. Further on, price climbs again and closes above the high of the move: a BOS appears, a structure break in favour of the new trend. Notice what this means. Structure doesn't tell you when to enter. It tells you whether the path is clear or whether there are obstacles. A buy with a recent BOS, in the right direction, has the cleanest path. A buy right after a CHoCH is still confirming itself, and calls for more caution. A practical tip: when you study the structure, mark the highs and lows the scanner draws, and see whether price respects them or cuts through them. That observation, made on past charts, is worth more than ten explanations."
+    },
+    {
+     "id": "v1-17",
+     "tipo": "comparar",
+     "cap": "04 · Market structure",
+     "kicker": "Reading the structure",
+     "titulo": "Continuation or reversal?",
+     "cartoes": [
+      {"t": "BOS", "d": "A break in the direction of the trend. Continuation, and the path tends to be clearer."},
+      {"t": "CHoCH", "d": "A change of character. A possible reversal, which needs more care and confirmation."},
+      {"t": "IDM", "d": "A liquidity trap. Price pokes out and comes back, often before it moves on."},
+      {"t": "x", "d": "A sweep. Price touches a level and is rejected straight away."}
+     ],
+     "fala": "Summing up the structure in four marks. The BOS is continuation. The CHoCH is a possible reversal. The IDM and the x are liquidity traps, where price seems to want to break out and then falls back. The rule I'll repeat across the modules is this: structure doesn't replace the POC cross or the averages. It joins them, to confirm that the path is clear or that there is an obstacle ahead."
+    },
+    {
+     "id": "v1-18",
+     "tipo": "pontos",
+     "cap": "04 · Market structure",
+     "kicker": "Context before the trigger",
+     "titulo": "Three questions before any signal",
+     "itens": [
+      "What state are the averages in?",
+      "Which side of the POC is price on?",
+      "Does the structure leave the path clear?"
+     ],
+     "fala": "Before we talk about signals, I want to give you three questions that will stay with you through every module. First: what state are the averages in? Stacked up, stacked down, or tangled? Second: which side of the POC is price on? Above it, the recent balance is on the buyers' side. Below it, on the sellers' side. Third: does the structure leave the path clear, or is there a high, a low or a liquidity trap in the way? These three questions don't give you a signal. They give you context. And context is what separates a cross worth attention from a cross that just happened by chance. In the second module you'll see that the signal has its own rules. But start getting used to answering all three, every time, before you look at the trigger."
+    },
+    {
+     "id": "v1-19",
+     "tipo": "capitulo",
+     "cap": "05 · Momentum and exhaustion",
+     "numero": "05",
+     "titulo": "Momentum and exhaustion",
+     "sub": "Where the trend gains strength and where it loses it",
+     "fala": "Fifth chapter: the momentum and exhaustion phases."
+    },
+    {
+     "id": "v1-20",
+     "tipo": "pontos",
+     "cap": "05 · Momentum and exhaustion",
+     "kicker": "The momentum phase",
+     "titulo": "When the move gains strength",
+     "itens": [
+      "Gives a reading of the trend's initial momentum",
+      "Can mark a likely top or bottom",
+      "Counts from 1 to 9 appear on the candles",
+      "Off by default"
+     ],
+     "fala": "The momentum phase, in the MTM Scanner, gives an indication of the trend's initial momentum. The aim is to identify, especially in sideways markets, a likely top or bottom. Visually, the scanner counts sequences of candles and writes small numbers next to them, from one to nine, with the option of showing zero as well. There are three display options. Completo shows only the phases already completed. Detalhado shows the whole counting process. And Nenhum turns the marks off. By default this reading is off. My suggestion is to turn it on only while you study, and to use it as a confirmation: you want a momentum phase on the side of your signal, not an exhaustion phase."
+    },
+    {
+     "id": "v1-21",
+     "tipo": "pontos",
+     "cap": "05 · Momentum and exhaustion",
+     "kicker": "The exhaustion phase",
+     "titulo": "When the trend tires",
+     "itens": [
+      "Only starts after an established momentum phase",
+      "Aims to identify when the trend is weakening",
+      "Can come before a reversal",
+      "The same display options as momentum"
+     ],
+     "fala": "The exhaustion phase aims to identify when the trend is weakening, and possibly starting to reverse. There is an important rule: this phase only begins if a momentum phase is already established. In other words, exhaustion is the second part of the story, not the beginning. It has the same three display options as momentum, and it is also off by default. The guide is clear: for an MTM Scanner entry, you want a momentum phase on your side, not an exhaustion phase. When exhaustion appears against your idea, that's one of the reasons not to enter, or to get out, as we'll see in the third module."
+    },
+    {
+     "id": "v1-22",
+     "tipo": "comparar",
+     "cap": "05 · Momentum and exhaustion",
+     "kicker": "Display",
+     "titulo": "Three ways to show the phases",
+     "cartoes": [
+      {"t": "Completo", "d": "Only the completed phases. A cleaner chart."},
+      {"t": "Detalhado", "d": "The whole counting process. For studying the indicator."},
+      {"t": "Nenhum", "d": "Turns the marks off. The default setting."}
+     ],
+     "fala": "The three display modes, summed up. Completo shows only completed phases and keeps the chart cleaner. Detalhado shows the full process, which helps you understand how the count works. Nenhum turns everything off. To start, use Nenhum, and switch the phases on only when you are studying a particular sequence. That way the chart keeps what matters: the averages, the POC and the structure. Changing the display doesn't change the logic of the signal or the plan. It only changes what you see drawn."
+    },
+    {
+     "id": "v1-23",
+     "tipo": "capitulo",
+     "cap": "06 · Read it yourself first",
+     "numero": "06",
+     "titulo": "Read it yourself first",
+     "sub": "One chart, no answers",
+     "fala": "Sixth chapter: a reading exercise. Your turn."
+    },
+    {
+     "id": "v1-24",
+     "tipo": "grafico",
+     "cap": "06 · Read it yourself first",
+     "kicker": "Pause the video",
+     "titulo": "Read this chart on your own",
+     "cenario": "venda",
+     "seed": 11,
+     "base": ["medias", "poc", "estrutura"],
+     "camadas": [],
+     "ate": [0.6, 0.62],
+     "zoom": [0, 0.3],
+     "fala": "Now it's your turn. Pause the video and read this chart on your own, layer by layer. Five questions. Where is price relative to the POC? Are the averages stacked, tangled, and in which direction? Is there a recent BOS or CHoCH, and on which side? Is there a liquidity trap near price? And are the last candles gaining strength, or losing it? Answer before you carry on. Ready? Price comes from a rise, but it has already broken a meaningful low. The averages are tilting down, and price is below the POC. There is a downward structure, with a recent CHoCH. There is still no signal, because the cross is missing. In the next module you'll see what happens after this chart."
+    },
+    {
+     "id": "v1-25",
+     "tipo": "pontos",
+     "cap": "06 · Read it yourself first",
+     "kicker": "The answer",
+     "titulo": "Reading it, in order",
+     "itens": [
+      "Price below the POC: the sellers' side",
+      "Averages stacked down: sell context",
+      "Downward CHoCH: a meaningful low has been broken",
+      "Still no signal: the cross is missing"
+     ],
+     "fala": "Let's check it, in order. Price is below the POC, which puts the recent balance on the sellers' side. The averages are stacked down, so the context is a sell. The structure shows a downward change of character: price has already broken a meaningful low. But notice: there is still no signal. A signal needs the close to cross the POC, with the averages in favour. Until then, what you have is context, not a trigger. This difference between context and trigger is the most important idea in this bootcamp."
+    },
+    {
+     "id": "v1-26",
+     "tipo": "pontos",
+     "cap": "06 · Read it yourself first",
+     "kicker": "Reading mistakes",
+     "titulo": "What beginners get wrong",
+     "itens": [
+      "Entering just because price crossed the POC",
+      "Ignoring the averages and the structure",
+      "Reading a signal before the candle closes",
+      "Filling the chart with more indicators",
+      "Changing the settings every day"
+     ],
+     "fala": "Before we close this module, the most common reading mistakes. First, entering just because price crossed the POC. The cross is one part of the story, and on its own it doesn't tell you the averages are in your favour, or that the structure lets the trade through. Second, ignoring the averages and the structure, as if they were decoration. Third, reading a signal before the candle closes. Until the close, nothing is confirmed, and the chart can change while the candle is still forming. Fourth, piling more indicators on top of the scanner. It already combines the readings you need, and extra lines don't give you more certainty, they give you more doubt. And fifth, changing the settings every day. That way you never get to know how the indicator behaves on your market. Choose, fix, observe."
+    },
+    {
+     "id": "v1-27",
+     "tipo": "checklist",
+     "cap": "Summary",
+     "kicker": "Module 1 summary",
+     "titulo": "What you need to know how to read",
+     "itens": [
+      "Averages: the alignment of the trend",
+      "POC: the balance of the last fourteen candles",
+      "Structure: continuation, reversal and traps",
+      "Momentum and exhaustion: the strength of the move",
+      "A signal only exists when the close crosses the POC"
+     ],
+     "fala": "Summing up the first module. The averages tell you how the trend is aligned. The POC tells you where the balance sits over the last fourteen candles. The structure tells you whether there is continuation, reversal or traps. The momentum and exhaustion phases tell you whether the move has strength or is running out of steam. And a signal only exists when the close crosses the POC. Everything else is context, to help you decide whether that cross deserves your attention."
+    },
+    {
+     "id": "v1-28",
+     "tipo": "pontos",
+     "cap": "Exercise",
+     "kicker": "Before module 2",
+     "titulo": "Your homework",
+     "itens": [
+      "Put the MTM Scanner on one market and one timeframe",
+      "Switch on one piece at a time, starting with the averages",
+      "Mark five moments when the averages were stacked",
+      "Note what price did next, without trading"
+     ],
+     "fala": "Before the second module, you have an exercise. Put the scanner on one market and one timeframe. Switch on one piece at a time, starting with the averages, then the POC, then the structure. Don't switch everything on at once, because your eye learns better one piece at a time. Look through the history for five moments when the averages were stacked, and note what happened next. Write in your notebook, in two lines, what you see on each chart before you move to the next one. No trading, just observing. This simple exercise trains your eye more than any video will. In the next module we'll see how a signal is born, what confirms an idea, and how the plan gets drawn on the chart."
+    },
+    {
+     "id": "v1-29",
+     "tipo": "aviso",
+     "cap": "",
+     "titulo": "See you in module 2",
+     "sub": "From the cross to the trade plan",
+     "texto": "Educational content. This is not financial advice. Trading forex, indices, metals and crypto involves high risk, and you can lose part or all of your capital. The charts in this video are illustrative. Past results do not guarantee future results.",
+     "fala": "Remember: this is educational content, and not financial advice. Trading carries risk, and you can lose money. Practise on a demo account first. See you in module two.",
+     "respiro": 4
+    }
+   ]
+  },
+  {
+   "rotulo": "MTM Scanner Bootcamp · 2/3",
+   "titulo": "From the cross to the trade plan",
+   "cenas": [
+    {
+     "id": "v2-00",
+     "tipo": "abertura",
+     "kicker": "MTM Bootcamp · Module 2 of 3",
+     "titulo": "MTM Scanner",
+     "sub": "From the cross to the trade plan",
+     "rodape": "morethanmoney.pt",
+     "semVoz": 5
+    },
+    {
+     "id": "v2-01",
+     "tipo": "pontos",
+     "cap": "Welcome",
+     "kicker": "In this module",
+     "titulo": "The scanner's engine",
+     "itens": [
+      "How a signal is born",
+      "The four confirmations",
+      "The plan: entry, stop and three targets",
+      "Management at the first target",
+      "Alerts and what goes inside them"
+     ],
+     "fala": "Welcome to the second module of the MTM Scanner Bootcamp. In the first one you learned to read each piece of the chart. Now we open the engine. You'll see exactly how a signal is born, what the POC cross is, and why it only counts once the candle's close confirms it. Then we look at the four confirmations that filter the signal: the averages, the POC, the structure and the momentum. Next, the trade plan: the entry, the stop one ATR away, and the three targets, at one-to-two, one-to-four and one-to-six. Finally, we cover management at the first target, and the alerts, and what's inside them. It's a technical module. Take it slowly, and rewind whenever you need to."
+    },
+    {
+     "id": "v2-02",
+     "tipo": "capitulo",
+     "cap": "01 · How a signal is born",
+     "numero": "01",
+     "titulo": "How a signal is born",
+     "sub": "The close that crosses the POC",
+     "fala": "First chapter. How a signal is born."
+    },
+    {
+     "id": "v2-03",
+     "tipo": "pontos",
+     "cap": "01 · How a signal is born",
+     "kicker": "The basic rule",
+     "titulo": "A cross, not a touch",
+     "itens": [
+      "Buy: the close crosses up through the POC",
+      "Sell: the close crosses down through the POC",
+      "The B or S mark appears on the chart",
+      "The alert fires at the candle close"
+     ],
+     "fala": "The basic rule of the signal is a cross, not a touch. It isn't enough for price to brush the POC. The candle's close has to end up on the other side. Buy: the close crosses up through the POC. Sell: the close crosses down. On the chart, a B mark appears below the candle on a buy, and an S mark above it on a sell. There's a technical caution worth keeping in mind. While a candle is still forming, price can cross the POC and cross back, and the mark can appear and disappear. The alert, for its part, is set to fire once per bar close. So the practical rule is the same: you only consider a signal when the candle closes."
+    },
+    {
+     "id": "v2-04",
+     "tipo": "grafico",
+     "cap": "01 · How a signal is born",
+     "kicker": "The cross",
+     "titulo": "A buy cross",
+     "cenario": "compra",
+     "seed": 7,
+     "base": ["medias", "poc"],
+     "camadas": ["sinal"],
+     "ate": [0.55, 0.62],
+     "zoom": [0, 0],
+     "estrelas": "POC ✓",
+     "fala": "Look at this chart. Price is below the POC, and the averages start tilting up. Then price rises, and the candles creep closer to the gold line. On the marked candle, the close moves up through the POC. A B mark appears, and the signal card shows the POC with a tick, confirming the cross. The averages are a separate piece, which you check before entering, as we'll see next. Don't mix the two up: the POC tick tells you the cross happened, not that the whole context is in your favour."
+    },
+    {
+     "id": "v2-05",
+     "tipo": "pontos",
+     "cap": "01 · How a signal is born",
+     "kicker": "The close counts",
+     "titulo": "On the right side of the POC",
+     "itens": [
+      "Buy: close above the POC",
+      "Sell: close below the POC",
+      "A wick that touches and returns is not a cross",
+      "The POC stays behind as support"
+     ],
+     "fala": "Point by point. On a buy, the close has to finish above the POC. On a sell, below it. A wick that pokes above the POC and then closes back below is not a cross: it's just a touch, and the scanner doesn't count it as a signal. After the cross, the POC doesn't disappear. It stays behind, and the guide describes it as support. On a buy, if price drops back down and closes below the POC, that's a warning sign for the idea. This reading matters when you're deciding whether price is still close to your entry, and it's one of the reasons not to enter every cross without looking at everything else."
+    },
+    {
+     "id": "v2-05b",
+     "tipo": "pontos",
+     "cap": "01 · How a signal is born",
+     "kicker": "Reading mistakes with the cross",
+     "titulo": "Four common traps",
+     "itens": [
+      "Counting a touch as a cross",
+      "Entering without looking at the structure ahead",
+      "Acting on a candle that hasn't closed yet",
+      "Changing the plan after you've seen it drawn"
+     ],
+     "fala": "Before we move on to the confirmations, four traps I see often. The first is counting a touch as a cross. A wick that pokes through the other side of the POC and returns doesn't count, and the scanner doesn't count it either. The second is entering without looking at the structure ahead. The cross can be perfect, and there can still be a major high two steps away. The third is acting on a candle that hasn't closed. While it's forming, nothing is confirmed, and the mark can disappear. And the fourth, the most subtle, is changing the plan after you've seen it drawn. If the stop was one ATR below and you move it further down because it feels safer, you're no longer following the plan, you're improvising. Each of these traps looks small in the moment. Together, they are the difference between a process and a series of impulsive decisions."
+    },
+    {
+     "id": "v2-06",
+     "tipo": "capitulo",
+     "cap": "02 · The confirmations",
+     "numero": "02",
+     "titulo": "The four confirmations",
+     "sub": "A filter, not a guarantee",
+     "fala": "Second chapter. The four confirmations."
+    },
+    {
+     "id": "v2-07",
+     "tipo": "pontos",
+     "cap": "02 · The confirmations",
+     "kicker": "A filter, not a guarantee",
+     "titulo": "Four confirmations before you act",
+     "itens": [
+      "Averages stacked in your favour",
+      "Close on the right side of the POC",
+      "Structure in your favour and a clear path",
+      "Momentum phase, not exhaustion"
+     ],
+     "fala": "The cross is the trigger. The confirmations are the filter. The scanner's guide organises them into four, and the idea is simple: a signal with all four in its favour has context on its side. It is not a promise, and it is not a probability. It's a way to avoid entering crosses that go against the bigger trend, or inside a market with no direction. Let's go through each one. First: the averages stacked. Second: the close on the right side of the POC, which we've already seen. Third: the structure in your favour, with a clear path to the first target. And fourth: a momentum phase, not an exhaustion phase. Four pieces, each with its own question. If one fails, the idea no longer has the full context in its favour, and you should be more selective."
+    },
+    {
+     "id": "v2-08",
+     "tipo": "comparar",
+     "cap": "02 · The confirmations",
+     "kicker": "Four questions",
+     "titulo": "The filter's questions",
+     "cartoes": [
+      {"t": "Averages", "d": "Buy: 15 above 50, and 50 above 238. Sell: the reverse."},
+      {"t": "POC", "d": "The close is on the right side of the POC, which acts as support."},
+      {"t": "Structure", "d": "A recent BOS, or break, in the direction of the signal, and a clear path to the 1:2."},
+      {"t": "Momentum", "d": "A momentum phase in your favour. Exhaustion against you, no."}
+     ],
+     "fala": "Each confirmation, as a question. Are the averages stacked in your favour? Is the close on the right side of the POC? Does the structure help, with a recent break in the direction of the signal and room to the first target? And is the momentum in your favour, not exhaustion? If you answer yes to all four, the signal has context on its side. If you answer no to any of them, you know exactly what is missing, and the decision gets easier."
+    },
+    {
+     "id": "v2-09",
+     "tipo": "pontos",
+     "cap": "02 · The confirmations",
+     "kicker": "Stacked averages, in detail",
+     "titulo": "The order of the three averages",
+     "itens": [
+      "Buy: 15 above 50",
+      "Buy: 50 above 238",
+      "Sell: the reverse, on both",
+      "The alert sends these comparisons"
+     ],
+     "fala": "Let's go to the first confirmation, in detail. On a buy, you want the fifteen average above the fifty, and the fifty above the two hundred and thirty-eight. Two comparisons, two conditions. On a sell, it's the reverse on both. This order is exactly what the scanner sends in its alerts, as comparisons: fifteen against fifty, fifty against two hundred and thirty-eight, and where price sits relative to the POC. So when you receive an alert, you don't have to guess whether the averages were in your favour. The message already carries that reading. But don't let the message replace your own look. Check the chart before you enter, because the message is only a summary of what's happening."
+    },
+    {
+     "id": "v2-10",
+     "tipo": "grafico",
+     "cap": "02 · The confirmations",
+     "kicker": "Confirmations in your favour",
+     "titulo": "Stacked averages and the POC",
+     "cenario": "compra",
+     "seed": 7,
+     "base": ["medias", "poc"],
+     "camadas": ["sinal"],
+     "ate": [0.58, 0.7],
+     "zoom": [0, 0],
+     "estrelas": "POC ✓",
+     "fala": "Here's a buy with the averages stacked up. Blue above green, and green above yellow. Price climbs, and on the marked candle it closes above the POC. The first two confirmations are in your favour: the averages, and the close on the right side. The structure and the momentum are still to come, and we'll look at them next. Notice that the signal candle isn't isolated. It sits inside a rise with context. That context is what these confirmations look for, and it is what separates a clean cross from a cross that happened by accident."
+    },
+    {
+     "id": "v2-11",
+     "tipo": "pontos",
+     "cap": "02 · The confirmations",
+     "kicker": "Structure and path",
+     "titulo": "Structure in your favour, a clear path",
+     "itens": [
+      "A recent BOS, in the direction of the signal",
+      "No major high or low between entry and the 1:2",
+      "A recent CHoCH against the signal calls for caution",
+      "If the structure blocks the path, let it go"
+     ],
+     "fala": "The third confirmation: the structure. You want a recent break in the direction of the signal, ideally a BOS, which shows the move has continuity. And you want a clear path to the first target as well. The guide is specific: there shouldn't be a major high or low between the entry and the one-to-two. If there is, price has a clear obstacle just ahead. On the other hand, a recent CHoCH against the signal calls for caution, because it suggests the trend may be switching sides. This is one of the easiest confirmations to forget, because the cross looks clean on the chart. But the chart has to be read forward as well as backward, from the signal candle onwards."
+    },
+    {
+     "id": "v2-12",
+     "tipo": "grafico",
+     "cap": "02 · The confirmations",
+     "kicker": "Structure in your favour",
+     "titulo": "BOS before the cross",
+     "cenario": "compra",
+     "seed": 21,
+     "base": ["medias", "poc"],
+     "camadas": ["estrutura", "sinal"],
+     "ate": [0.5, 0.66],
+     "zoom": [0, 0],
+     "fala": "This chart shows structure doing its job. First, price breaks the high of the previous move, and a BOS appears in favour of the rise. Then it pulls back, but without losing the meaningful low again. That's where price turns up, and on the marked candle it closes above the POC. The signal arrives with the structure in its favour and a cleaner path to the first target. Notice what came before: the break, the pullback, and the resumption. Structure didn't give the trigger, but it told you the trigger was being given on favourable ground."
+    },
+    {
+     "id": "v2-13",
+     "tipo": "pontos",
+     "cap": "02 · The confirmations",
+     "kicker": "Momentum",
+     "titulo": "Momentum phase, not exhaustion",
+     "itens": [
+      "Momentum on your side: the move is starting",
+      "Exhaustion against the idea: a reason not to enter",
+      "In a sideways market, a phase can mark a top or bottom",
+      "Visualisation on only while you study"
+     ],
+     "fala": "The fourth confirmation: momentum. You want a momentum phase in favour of your signal, which means the move is starting, not finishing. An exhaustion phase against the idea is a clear reason not to enter. Notice that the guide says it expressly: momentum phase, not exhaustion. This confirmation depends on how you read the counts on the chart, so practise it on past charts, with the phases switched on in Detalhado mode. Only then should you use it in real time, with whichever display you prefer."
+    },
+    {
+     "id": "v2-14",
+     "tipo": "capitulo",
+     "cap": "03 · The trade plan",
+     "numero": "03",
+     "titulo": "The trade plan",
+     "sub": "Entry, stop and three targets",
+     "fala": "Third chapter. The trade plan."
+    },
+    {
+     "id": "v2-15",
+     "tipo": "pontos",
+     "cap": "03 · The trade plan",
+     "kicker": "The entry",
+     "titulo": "Entry: at the close or the next open",
+     "itens": [
+      "The trigger is the close of the signal candle",
+      "By default, the entry source is the close",
+      "There is a custom entry option, if you switch it on",
+      "Enter at the close or at the next candle's open"
+     ],
+     "fala": "Now the plan. The entry is the starting point. By default, the entry price is the close of the signal candle, because the entry source is set to close. There's a custom entry option, which you should only use if you know exactly why you want it. In the guide, entry is taken at the close of the signal candle, or at the open of the next one. And before you enter, there's a sequence, which we'll look at in the third module: you confirm the structure, you measure the room to the first target, and you calculate the size from your risk. Only then do you go. The entry isn't an impulse. It's the last step of a list you've already worked through."
+    },
+    {
+     "id": "v2-16",
+     "tipo": "plano",
+     "cap": "03 · The trade plan",
+     "kicker": "Plan drawn",
+     "titulo": "Entry, stop and targets",
+     "linhas": [
+      ["Entry", "close of the signal candle", "entrada"],
+      ["Stop", "1 ATR on the opposite side", "sl"],
+      ["TP 1:2", "two R", "tp"],
+      ["TP 1:4", "four R", "tp"],
+      ["TP 1:6", "six R", "tp"]
+     ],
+     "fala": "When the signal appears, the scanner draws the full plan, with five lines. The entry, at the price of the signal candle's close. The stop, one ATR on the opposite side of the entry: on a buy, below. And three targets. The first at one-to-two, meaning twice the distance from entry to stop. The second at one-to-four, and the third at one-to-six. The keyword is R. R is your risk, the distance between entry and stop. A target at two R sits twice that distance away, in your favour. This way of measuring is the same on any market. Only the unit changes: pips in forex, points in gold and indices, but the logic doesn't change. Now, an important detail: the plan is recalculated while the last signal remains active, because the ATR and price change. So the faithful record is the one from the moment of the signal. The alert is sent at the candle close, with those values, and that's what you should write in your journal."
+    },
+    {
+     "id": "v2-17",
+     "tipo": "pontos",
+     "cap": "03 · The trade plan",
+     "kicker": "The stop and the targets",
+     "titulo": "How they are calculated",
+     "itens": [
+      "ATR over 14 candles",
+      "Stop: 1 ATR, multiplied by the configured value",
+      "Targets: the stop distance times 2, 4 and 6",
+      "Option: percentages instead of ATR"
+     ],
+     "fala": "How are these numbers calculated? The ATR, average true range, measures the average size of the candles. By default, it uses fourteen candles. The stop is one ATR, multiplied by the stop multiplier, which is set to one. The first target is the stop distance times two, the second times four, and the third times six, always measured from the entry. There is an alternative: if you switch off the option to use ATR for risk and reward, the indicator uses percentages instead, with its own stop and target values. The default is ATR, which adapts to the volatility of the moment. A one-ATR stop in a calm market sits close. In the same market, during a high-volatility phase, it sits further away, and the R follows. That's the point: the plan keeps pace with the market."
+    },
+    {
+     "id": "v2-18",
+     "tipo": "comparar",
+     "cap": "03 · The trade plan",
+     "kicker": "Settings",
+     "titulo": "What you can adjust",
+     "cartoes": [
+      {"t": "ATR period", "d": "Fourteen candles by default. It measures the average range."},
+      {"t": "Stop multiplier", "d": "One by default. Higher, and the stop sits further away."},
+      {"t": "Target ratios", "d": "Two, four and six by default. You can show or hide each target."},
+      {"t": "Entry source", "d": "Close by default. A custom entry only with care."}
+     ],
+     "fala": "Four groups of settings you'll see in the scanner's panel. The ATR period, fourteen by default. The stop multiplier, one by default. The ratios for the three targets, two, four and six, and the option to show or hide each target. And the entry source, which is the close by default. In your first phase, leave everything at the defaults. Change one value at a time, and only after you've watched the behaviour for a few weeks."
+    },
+    {
+     "id": "v2-19",
+     "tipo": "grafico",
+     "cap": "03 · The trade plan",
+     "kicker": "Plan drawn",
+     "titulo": "A buy with a plan",
+     "cenario": "compra",
+     "seed": 7,
+     "base": ["medias", "poc"],
+     "camadas": ["sinal", "plano"],
+     "ate": [0.58, 0.9],
+     "zoom": [0, 0.5],
+     "estrelas": "POC ✓",
+     "fala": "Let's put it all together on a buy. The averages are stacked up, the close crosses the POC upward, and a B mark appears. The scanner draws the plan: the entry at the close, the stop one ATR below, and the three targets above. The first at one-to-two, the second at one-to-four, and the third at one-to-six, always measured from the distance to the stop. Blue marks the buyers' side and red the sellers' side. From here the chart keeps moving, and the plan is the record of what was decided at the signal. So what you need to save is the moment of the signal. We'll look at that carefully at the end of this module."
+    },
+    {
+     "id": "v2-20",
+     "tipo": "pontos",
+     "cap": "03 · The trade plan",
+     "kicker": "What the plan does not do",
+     "titulo": "A drawing, not an order",
+     "itens": [
+      "It does not enter for you",
+      "It does not move your stop",
+      "It does not guarantee the target is reached",
+      "It does not execute anything at your broker"
+     ],
+     "fala": "Before the alerts, let's be precise about what the plan is and what it isn't. The plan is a drawing. It doesn't enter for you: the scanner doesn't execute orders on your account. It doesn't move your stop. And it doesn't guarantee that a target is hit, or that price reaches the first one. It's a reference that tells you, before you risk anything, where you are right, where you are wrong, and where you take profit. Once you have this clear, the decision stops being emotional. It was already made on paper."
+    },
+    {
+     "id": "v2-21",
+     "tipo": "grafico",
+     "cap": "03 · The trade plan",
+     "kicker": "A signal that fails",
+     "titulo": "When the cross doesn't hold",
+     "cenario": "falha",
+     "seed": 7,
+     "base": ["medias", "poc"],
+     "camadas": ["sinal", "plano"],
+     "ate": [0.62, 0.9],
+     "zoom": [0.5, 0.5],
+     "estrelas": "POC ✓",
+     "fala": "Not every cross reaches the first target. Look at this example. The close crossed the POC upward, with the B mark, and the plan appeared. But the averages weren't properly stacked, and price couldn't pull away from the balance point. It drops back, and closes on the opposite side of the POC again. Price reaches the stop, and the loss is the R you decided on before entering. That's a cost of the method. It's not an accident, and it's not a sign that the scanner has stopped working. It's exactly what the plan anticipated when the idea didn't have the full context in its favour. What matters is that the loss was defined and small. Notice this: across many ideas, the difference between a planned loss and an improvised one is what separates a process from a disaster."
+    },
+    {
+     "id": "v2-22",
+     "tipo": "grafico",
+     "cap": "03 · The trade plan",
+     "kicker": "Reading a sell",
+     "titulo": "A sell, the other way round",
+     "cenario": "venda",
+     "seed": 11,
+     "base": ["medias", "poc", "estrutura"],
+     "camadas": ["sinal", "plano"],
+     "ate": [0.6, 0.85],
+     "zoom": [0, 0.5],
+     "estrelas": "POC ✓",
+     "fala": "Now a sell, so you can see the process is the same, the other way round. The averages are stacked down: blue below green, and green below yellow. Price is below the POC, and on the marked candle the close crosses down. An S mark appears above the candle, and the plan flips: the entry at the close, the stop one ATR above, and the three targets below. Before entering, the same list: averages in your favour, close on the right side, structure with no obstacles to the first target, and momentum in your favour. Symmetry is the best news about the scanner. You don't need to learn one system for buying and another for selling. You have one, mirrored."
+    },
+    {
+     "id": "v2-23",
+     "tipo": "capitulo",
+     "cap": "04 · Alerts",
+     "numero": "04",
+     "titulo": "Alerts, and the scanner working for you",
+     "sub": "Get the signal without staring at the screen",
+     "fala": "Fourth chapter: the alerts."
+    },
+    {
+     "id": "v2-24",
+     "tipo": "pontos",
+     "cap": "04 · Alerts",
+     "kicker": "Setting up",
+     "titulo": "Two ways to get alerts",
+     "itens": [
+      "Simple conditions: MTM Scanner COMPRA and VENDA",
+      "Full message: any alert() function call",
+      "Frequency: once per bar close",
+      "Switch buy and sell alerts on or off"
+     ],
+     "fala": "There are two ways to receive signals without watching the chart. The first is TradingView's simple conditions: MTM Scanner COMPRA and MTM Scanner VENDA, with whatever frequency you choose. The second is the full message: you create an alert with the condition any alert() function call, and the frequency once per bar close. This is the option that carries the complete information, in JSON format, and it's the one the scanner uses to send alerts to the MTM site. In the alert settings you can allow or switch off the buy alerts and the sell alerts separately. While you're studying, switch them off. When you're trading, switch on only the ones you want."
+    },
+    {
+     "id": "v2-25",
+     "tipo": "pontos",
+     "cap": "04 · Alerts",
+     "kicker": "The message",
+     "titulo": "What's inside the alert",
+     "itens": [
+      "Strategy, ticker, source and timeframe",
+      "Action: buy or sell",
+      "Entry, stop and the three targets",
+      "Confirmations: the comparisons of the averages and the POC"
+     ],
+     "fala": "For those who use the full message, it's worth knowing what's inside. First, the identification: the strategy, the ticker, the source, and the timeframe. Then the action, buy or sell, and the order type configured, which is one field of the message. Then the levels: the entry, the stop, and the three targets. And last, the confirmations, with three comparisons: whether blue is above green, whether green is above yellow, and whether the close is above the POC, or below it on a sell. Each one comes as true or false. A system that receives the message can record the idea from start to finish, without having to draw the chart. And the order type field is only an indication: the indicator doesn't execute anything at your broker."
+    },
+    {
+     "id": "v2-26",
+     "tipo": "comparar",
+     "cap": "04 · Alerts",
+     "kicker": "Order type",
+     "titulo": "Limit or market, in the message",
+     "cartoes": [
+      {"t": "LIMIT", "d": "Signals a limit order at the entry price. Whoever receives it decides how to execute it."},
+      {"t": "MARKET", "d": "Signals a market order. The default setting."}
+     ],
+     "fala": "This field is only an indication. By default, the message comes with MARKET. If you prefer LIMIT, you change the option in the alerts. The person or system receiving the message decides how to execute it, and you remain responsible for your own account. So before you automate anything, test it on a demo account, and check in your journal what the message says and what your broker actually did."
+    },
+    {
+     "id": "v2-27",
+     "tipo": "checklist",
+     "cap": "Summary",
+     "kicker": "Module 2 summary",
+     "titulo": "The engine, in five lines",
+     "itens": [
+      "Signal = the close that crosses the POC",
+      "Four confirmations: averages, POC, structure and momentum",
+      "Plan: entry, a 1 ATR stop and targets at 1:2, 1:4 and 1:6",
+      "Alerts at the candle close, with a record of that moment",
+      "The scanner draws; you decide"
+     ],
+     "fala": "Summing up the second module. A signal is born when the close crosses the POC, and it only counts after the candle closes. The four confirmations filter the signal: averages, POC, structure and momentum. The plan has an entry, a stop one ATR away and three targets, at one-to-two, one-to-four and one-to-six. The alerts send the record of the moment of the signal. And the scanner draws, but you are the one who decides."
+    },
+    {
+     "id": "v2-28",
+     "tipo": "pontos",
+     "cap": "Exercise",
+     "kicker": "Before module 3",
+     "titulo": "Your homework",
+     "itens": [
+      "Switch the scanner on and read ten crosses in the history",
+      "For each one: confirmations, plan, and what happened",
+      "Note how many reached the first target before the stop",
+      "Record the plan's values at the moment of the signal"
+     ],
+     "fala": "This module's exercise: in the history of your market, find ten POC crosses. For each one, write down how many confirmations were in favour, how the structure looked, and what happened. Did it reach the first target before the stop? How many fell along the way? Notice that the question isn't whether you won or lost, it's whether the confirmations were in favour at the moment of the signal. No trading, just observing. The numbers you note are yours, measured by you, on your market, and they're worth more than any example I could show you. In the third module we take this and turn it into management."
+    },
+    {
+     "id": "v2-29",
+     "tipo": "aviso",
+     "cap": "",
+     "titulo": "See you in module 3",
+     "sub": "Risk, management and routine",
+     "texto": "Educational content. This is not financial advice. Trading forex, indices, metals and crypto involves high risk, and you can lose part or all of your capital. The charts and examples in this video are illustrative. Past results do not guarantee future results.",
+     "fala": "Remember: this is educational content, and not financial advice. The examples in this video are illustrative. Practise on a demo account before you risk any money. See you in module three.",
+     "respiro": 4
+    }
+   ]
+  },
+  {
+   "rotulo": "MTM Scanner Bootcamp · 3/3",
+   "titulo": "Risk, management and routine",
+   "cenas": [
+    {
+     "id": "v3-00",
+     "tipo": "abertura",
+     "kicker": "MTM Bootcamp · Module 3 of 3",
+     "titulo": "MTM Scanner",
+     "sub": "Risk, management and routine",
+     "rodape": "morethanmoney.pt",
+     "semVoz": 5
+    },
+    {
+     "id": "v3-01",
+     "tipo": "frase",
+     "cap": "Welcome",
+     "texto": "The scanner finds the cross. <span class='ouro'>Management decides the result.</span>",
+     "autor": "MTM Scanner Bootcamp · Module 3",
+     "fala": "Welcome to the third and final module. Up to now, you've learned to read the chart, understand how a signal is born, how the confirmations filter it, and how the plan gets drawn. Now comes the part that separates someone who learns a tool from someone who uses it consistently: management. The scanner finds the cross. Management largely decides the result, because it controls what you actually control: how much you risk, where you enter, what you do at the first target, and when you don't enter. In this module we'll talk about risk per idea, position size, how to manage an idea from start to finish, when to let one go, timeframes and profiles, a daily routine and psychology. By the end, you'll have a written process, which you can follow on a demo account starting tomorrow."
+    },
+    {
+     "id": "v3-02",
+     "tipo": "capitulo",
+     "cap": "01 · Risk per idea",
+     "numero": "01",
+     "titulo": "Risk per idea",
+     "sub": "The only variable you truly control",
+     "fala": "First chapter. Risk per idea."
+    },
+    {
+     "id": "v3-03",
+     "tipo": "pontos",
+     "cap": "01 · Risk per idea",
+     "kicker": "The principle",
+     "titulo": "Decide what you can lose before deciding what you can win",
+     "itens": [
+      "You don't control the market. You control how much you risk",
+      "Define the risk as a percentage of the account, per idea",
+      "Choose a small, fixed value",
+      "Keep the same risk, idea after idea"
+     ],
+     "fala": "There's one thing you have to accept from day one: you don't control the market. You don't control whether price reaches the first target or the stop. The only thing you truly control is how much you risk on each idea. So the first decision isn't where to enter. It's how much you're willing to lose if you're wrong. That amount is set as a percentage of the account, per idea. You choose the number, but it should be small enough that a run of losses, which will happen, doesn't take you out of the game. And it should always be the same. Someone who increases risk after a loss, to win it back, is doing exactly the opposite of what a process asks for. That impulse has a name, and we'll talk about it in the section on the trader's mind."
+    },
+    {
+     "id": "v3-04",
+     "tipo": "plano",
+     "cap": "01 · Risk per idea",
+     "kicker": "Maths, not a forecast",
+     "titulo": "Ten losses in a row, at each risk level",
+     "linhas": [
+      ["Risk of 1% per idea", "the account is left with about 90%", "entrada"],
+      ["Risk of 2% per idea", "the account is left with about 82%", "warning"],
+      ["Risk of 5% per idea", "the account is left with about 60%", "sl"],
+      ["Risk of 10% per idea", "the account is left with about 35%", "sl"]
+     ],
+     "fala": "Look at what happens over a run of ten losses in a row. This isn't a forecast. It's arithmetic, and any method can have a month like that. At one percent risk per idea, you're left with about ninety percent of the account. At two percent, about eighty-two. At five, about sixty. And at ten percent, about thirty-five. Notice that past a certain point, recovering takes a far bigger rise than the fall. When the account drops by half, you need to double what's left just to get back to the start. So small risk isn't cowardice. It's how you stay in the game long enough for the process to start working."
+    },
+    {
+     "id": "v3-05",
+     "tipo": "capitulo",
+     "cap": "02 · Position size",
+     "numero": "02",
+     "titulo": "Position size",
+     "sub": "From cash risk to lots",
+     "fala": "Second chapter. Position size."
+    },
+    {
+     "id": "v3-06",
+     "tipo": "pontos",
+     "cap": "02 · Position size",
+     "kicker": "The formula",
+     "titulo": "Size = cash risk ÷ (R × value per unit)",
+     "itens": [
+      "Cash risk: account times the percentage",
+      "R: the distance from entry to stop, which the scanner draws",
+      "Value per unit: what one pip or point is worth per lot",
+      "Size comes from the numbers, not from gut feeling"
+     ],
+     "fala": "Position size is calculated with a simple formula. First, the cash risk: the account value times the percentage you've decided to risk. Second, R, the distance between entry and stop, which the scanner already shows you in the plan, in pips in forex and in points in gold, indices and crypto. Third, the value per unit, that is, what one pip or one point is worth per lot, on your instrument and with your broker. Size equals cash risk divided by R times the value per unit. The important consequence: the lot changes from idea to idea. When the stop is close, the lot is bigger. When the stop is far, the lot is smaller. What stays the same is the cash risk, and that's what makes two ideas comparable, even with different lots."
+    },
+    {
+     "id": "v3-07",
+     "tipo": "plano",
+     "cap": "02 · Position size",
+     "kicker": "Invented example",
+     "titulo": "A 5,000 account",
+     "linhas": [
+      ["Account", "5,000", "entrada"],
+      ["Risk per idea (1%)", "50", "warning"],
+      ["Distance to stop (R)", "25 pips", "sl"],
+      ["Pip value per standard lot", "10", "entrada"],
+      ["Size = 50 ÷ (25 × 10)", "0.20 lots", "tp"]
+     ],
+     "fala": "An example with round numbers, invented, on a forex pair. The account holds five thousand. You decide to risk one percent, so fifty. The scanner shows the stop twenty-five pips from entry. On a pair where one pip is worth ten per standard lot, the calculation is fifty divided by twenty-five times ten, which gives zero point two lots. If the stop were fifty pips away, the lot would be zero point one, and the risk would still be fifty. Always confirm the pip value on your platform and with your broker, because it changes with the pair and the account currency. And notice: you didn't pick the lot from a feeling. You picked it from the risk. That is the difference between a process and a guess."
+    },
+    {
+     "id": "v3-08",
+     "tipo": "pontos",
+     "cap": "02 · Position size",
+     "kicker": "Small accounts",
+     "titulo": "When the minimum lot doesn't fit",
+     "itens": [
+      "The broker's minimum lot sets the smallest possible risk",
+      "Far stop and small account: the risk goes past your limit",
+      "In that case, the idea is not for your account",
+      "Alternatives: a lower timeframe, another instrument, or wait"
+     ],
+     "fala": "A common situation with small accounts. The broker has a minimum lot, and that lot sets the smallest risk you can have on an idea. If the account is small and the stop is far, even the minimum lot can risk more than your limit. When that happens, the honest answer is: this idea isn't for your account. You don't raise the risk to make it fit. The alternatives are to trade a lower timeframe, where stops tend to be smaller, to choose an instrument with a smaller value per point, or simply to wait for the next idea that fits. Letting go of an idea that doesn't fit is risk management working. It isn't failing."
+    },
+    {
+     "id": "v3-09",
+     "tipo": "capitulo",
+     "cap": "03 · Managing the idea",
+     "numero": "03",
+     "titulo": "Managing the idea",
+     "sub": "Before, during and after",
+     "fala": "Third chapter. How to manage an idea from start to finish."
+    },
+    {
+     "id": "v3-10",
+     "tipo": "pontos",
+     "cap": "03 · Managing the idea",
+     "kicker": "Before you enter",
+     "titulo": "The thirty-second check",
+     "itens": [
+      "Are the averages stacked in your favour?",
+      "Is the close on the right side of the POC, and has the candle closed?",
+      "Does the structure help, and is the path to the 1:2 clear?",
+      "Is the momentum in your favour, with no exhaustion against it?",
+      "Does the calculated size fit your risk?"
+     ],
+     "fala": "Before you enter, a thirty-second check. Five questions, in the same order, every time. Are the averages stacked in your favour? Is the close on the right side of the POC, and has the candle closed? Does the structure help, and is the path to the first target clear? Is the momentum in your favour, with no exhaustion against you? And does the calculated size fit your risk? If any answer is no, you let it go. Other ideas will come. And notice the order: the cross comes after the context, and the size comes last. Not the other way round. Someone who calculates the lot first has usually already decided to enter, and then goes looking for reasons."
+    },
+    {
+     "id": "v3-11",
+     "tipo": "grafico",
+     "cap": "03 · Managing the idea",
+     "kicker": "Before the first target",
+     "titulo": "Entry at the close, stop to protect",
+     "cenario": "compra",
+     "seed": 7,
+     "base": ["medias", "poc", "estrutura"],
+     "camadas": ["sinal", "plano"],
+     "ate": [0.6, 0.9],
+     "zoom": [0.5, 0.5],
+     "estrelas": "POC ✓",
+     "fala": "Let's manage a buy from start to finish. It passed the check: averages stacked, close above the POC, structure with a BOS in your favour, and a clear path. You enter at the close of the signal candle, with the lot you calculated. The stop is one ATR below, and it is your limit. Until the first target, your only job is to let the plan do its work. Don't look at every candle as if it were a new decision. There's no new decision to make until price reaches one of the levels you've already drawn. This is where many beginners get lost: they stare at the chart and start tinkering with what was already decided."
+    },
+    {
+     "id": "v3-12",
+     "tipo": "pontos",
+     "cap": "03 · Managing the idea",
+     "kicker": "At the first target",
+     "titulo": "Protect at the 1:2",
+     "itens": [
+      "Close part of the position at the 1:2",
+      "Move the stop to the entry",
+      "The remaining part is, in principle, no longer at risk",
+      "The rest runs toward 1:4 and 1:6"
+     ],
+     "fala": "When price reaches the first target, the one-to-two, management has a clear step. You close part of the position. And you move the stop to the entry. From there, the part that remains is, in principle, no longer at risk of losing money. In principle, because price gaps and fills can happen. The rest of the position runs toward the one-to-four and the one-to-six, as long as the averages stay stacked. The guide is explicit about when to exit early: if a change of character appears against your position, or an exhaustion phase, you close the rest. And it is explicit about what not to do: never move the stop further away. Management is there to protect what you've already gained and let the idea run, not to try to rescue a loss."
+    },
+    {
+     "id": "v3-13",
+     "tipo": "grafico",
+     "cap": "03 · Managing the idea",
+     "kicker": "When it fails",
+     "titulo": "When the cross doesn't hold",
+     "cenario": "falha",
+     "seed": 7,
+     "base": ["medias", "poc", "estrutura"],
+     "camadas": ["sinal", "plano"],
+     "ate": [0.62, 0.9],
+     "zoom": [0.5, 0.5],
+     "estrelas": "POC ✓",
+     "fala": "And when the idea fails? Look at this example. The close crossed the POC upward, with the B mark, and the plan appeared. But the averages weren't properly stacked, and price couldn't pull away from the balance point. It drops back, and the stop is hit. The loss is the R you decided on before entering, and it doesn't grow. That's the cost of the method, not a sign the scanner has stopped working. You don't move the stop, you don't wait for it to come back, and you don't change your mind midway. The reason for the entry was the cross with context, and the context has gone. Notice this: across many ideas, the difference between a planned loss and an improvised one is enormous."
+    },
+    {
+     "id": "v3-14",
+     "tipo": "pontos",
+     "cap": "03 · Managing the idea",
+     "kicker": "Management mistakes",
+     "titulo": "What not to do with the stop",
+     "itens": [
+      "Don't move the stop away as price approaches it",
+      "Don't pull the stop out of fear and re-enter higher",
+      "Don't take partial profit before the first target",
+      "Don't add to the position midway through the trade"
+     ],
+     "fala": "Four things the plan doesn't allow. Moving the stop away as price approaches it. Pulling the stop out of fear and then, ten minutes later, re-entering higher, with a bigger risk. Closing the partial before the first target, out of impatience. And adding to the position halfway through the trade, because the idea looks good. Each of these changes the R you decided on before entering. And once the R changes, you can't read your own journal anymore. So what the plan says is what you do. If you want to change something, change it in the process, before the next trade, and not in the middle of this one."
+    },
+    {
+     "id": "v3-15",
+     "tipo": "capitulo",
+     "cap": "04 · When not to enter",
+     "numero": "04",
+     "titulo": "When not to enter",
+     "sub": "The ideas you let pass",
+     "fala": "Fourth chapter. When not to enter."
+    },
+    {
+     "id": "v3-16",
+     "tipo": "checklist",
+     "cap": "04 · When not to enter",
+     "kicker": "Let it pass when",
+     "titulo": "Five situations",
+     "itens": [
+      "Tangled averages, with price moving sideways",
+      "A major high or low between entry and the 1:2",
+      "In an exhaustion phase",
+      "Price already far from the signal",
+      "With a fixed lot, instead of size by risk"
+     ],
+     "fala": "There are five situations where you should let it pass. First: the averages are tangled and price is moving sideways. In that zone, the close crosses the POC all the time, and every cross looks like a signal, but none has a trend behind it. Second: there is a major high or low between the entry and the first target. Third: you're in an exhaustion phase. Fourth: price is already far from the signal. If you're late, you're late, and chasing price ruins the relationship between risk and targets. And fifth: you're trading with a fixed lot instead of calculating from your risk. That last one looks small, but it's one of the things that most damages a journal, because every idea then carries a different risk, and you can no longer compare them."
+    },
+    {
+     "id": "v3-17",
+     "tipo": "grafico",
+     "cap": "04 · When not to enter",
+     "kicker": "Tangled averages",
+     "titulo": "Many crosses, no trend",
+     "cenario": "falha",
+     "seed": 21,
+     "base": ["medias", "poc"],
+     "camadas": ["sinal"],
+     "ate": [0.4, 0.9],
+     "zoom": [0, 0],
+     "fala": "This chart shows what the guide describes as tangled averages. Look: price crosses the POC upward, then downward, then upward again. The B and S marks appear one after another. If you entered each one, you'd pay the cost of every entry, with no context in your favour. The averages are tangled, with no clear order, and there is no trend behind any of these crosses. The rule is simple: when the averages tangle, the best work you can do is not to enter. A cross is an event. A trend is a state. You only trade the state."
+    },
+    {
+     "id": "v3-18",
+     "tipo": "capitulo",
+     "cap": "05 · Profiles and timeframes",
+     "numero": "05",
+     "titulo": "Your profile",
+     "sub": "Five, fifteen or sixty minutes",
+     "fala": "Fifth chapter. Choosing your profile and your timeframe."
+    },
+    {
+     "id": "v3-19",
+     "tipo": "comparar",
+     "cap": "05 · Profiles and timeframes",
+     "kicker": "The guide's timeframes",
+     "titulo": "Pick one and stick with it",
+     "cartoes": [
+      {"t": "5 minutes", "d": "For more signals. More noise, more time at the screen."},
+      {"t": "15 minutes", "d": "The guide's base. A balance between signals and noise."},
+      {"t": "1 hour", "d": "For longer trades. Fewer signals, more patience."}
+     ],
+     "fala": "The guide has three timeframe references. Five minutes is for more signals: there are more opportunities, but also more noise, and it demands more time at the screen. Fifteen minutes is the base, the recommended starting point, with a good balance between quantity and quality. And the hour is for longer trades: there are fewer signals, and the ideas tend to last longer, so you need more patience and a schedule that lets you keep track. There isn't one right timeframe for everyone. There's the one that fits your life. Someone with a job who can only look two or three times a day may prefer fifteen minutes or the hour. Someone who wants more signals and has time to follow them can look at the five-minute chart."
+    },
+    {
+     "id": "v3-20",
+     "tipo": "pontos",
+     "cap": "05 · Profiles and timeframes",
+     "kicker": "Choose and keep",
+     "titulo": "One profile for at least a month",
+     "itens": [
+      "Choose one market, one timeframe and one style",
+      "Keep the same profile for at least a month",
+      "Only adjust once you have data in your journal",
+      "Change one thing at a time"
+     ],
+     "fala": "Choosing a profile isn't forever, but it should last long enough for you to collect data. Pick one market, one timeframe, and the way you'll manage ideas. Then stick with that profile for at least a month. If you switch timeframe every three days, you'll never know what was working or what was failing. Only once you have data in your journal does it make sense to adjust. And when you adjust, change one thing at a time. If you change five, you won't know which one made the difference. It's the same rule as the settings, applied to your practice as a trader."
+    },
+    {
+     "id": "v3-21",
+     "tipo": "pontos",
+     "cap": "05 · Profiles and timeframes",
+     "kicker": "Four-week plan",
+     "titulo": "From the first idea to a routine",
+     "itens": [
+      "Week 1: only read, don't trade, and note the crosses",
+      "Week 2: trade on demo, with a fixed risk",
+      "Week 3: demo with full management and a daily journal",
+      "Week 4: review the journal and decide the next steps"
+     ],
+     "fala": "To make this concrete, a four-week plan. In the first week, you only read. You open your market, on your timeframe, and note every cross that appears, along with the state of the averages, the side of the POC and the structure. You don't trade. In the second week, you trade on a demo account, with a fixed risk per idea, without worrying about perfection. In the third week, still on demo, you apply full management: the thirty-second check, protection at the first target, the stop rule, and you write in the journal every day. In the fourth week, you review everything. How many ideas appeared? In how many did you follow the plan? What was the average result in R? Only after that do you decide the next steps. Four weeks sounds like a lot, but it's the shortest path to not losing money while you learn."
+    },
+    {
+     "id": "v3-22",
+     "tipo": "capitulo",
+     "cap": "06 · The fifteen-minute routine",
+     "numero": "06",
+     "titulo": "The fifteen-minute routine",
+     "sub": "Consistency beats intensity",
+     "fala": "Sixth chapter. The daily routine."
+    },
+    {
+     "id": "v3-23",
+     "tipo": "checklist",
+     "cap": "06 · The fifteen-minute routine",
+     "kicker": "Every day",
+     "titulo": "Fifteen minutes, five steps",
+     "itens": [
+      "Open your market, on your timeframe, always the same",
+      "Check the averages and the POC: what state are they in?",
+      "Read the structure: continuation, reversal or trap?",
+      "Review the alerts you received and the open ideas",
+      "Update the journal"
+     ],
+     "fala": "The routine is simple and fits in fifteen minutes. First, you open your market, on your timeframe, always the same ones. Second, you look at the averages and the POC: what state are they in? Stacked up, stacked down, or tangled? Third, you read the structure: is there a BOS, a CHoCH, a trap near price? Fourth, you review the alerts you received and the ideas you have open, and you apply the management we've covered. Fifth, you update the journal. For the rest of the day, the alerts work for you. You don't need to stay glued to the screen. You need to be consistent, and not to change the process just because the market looks different today."
+    },
+    {
+     "id": "v3-24",
+     "tipo": "pontos",
+     "cap": "06 · The fifteen-minute routine",
+     "kicker": "Once a week",
+     "titulo": "The weekly review",
+     "itens": [
+      "How many ideas appeared, and how many you traded",
+      "In how many you followed the plan",
+      "Average result in R",
+      "Where the errors were: entry, stop or exit",
+      "One single change for the following week"
+     ],
+     "fala": "Alongside the daily routine, set aside half an hour a week for the review. Count how many ideas appeared and how many you traded. In how many you followed the plan. What the average result in R was. And where the errors were: at the entry, at the stop, or at the exit. Then decide on one single change for the following week. Only one. If you change five things, you won't know which one made the difference. The weekly review is the moment you stop reacting to the market and start improving the process. And always pick the same day for it. Discipline starts with small things."
+    },
+    {
+     "id": "v3-25",
+     "tipo": "capitulo",
+     "cap": "07 · The trading journal",
+     "numero": "07",
+     "titulo": "The trading journal",
+     "sub": "Measure in R, not in feelings",
+     "fala": "Seventh chapter. The journal."
+    },
+    {
+     "id": "v3-26",
+     "tipo": "pontos",
+     "cap": "07 · The trading journal",
+     "kicker": "After each idea",
+     "titulo": "What you write down",
+     "itens": [
+      "Date, market, timeframe and direction",
+      "The confirmations in favour, and the state of the averages",
+      "The entry mode and the three targets",
+      "Result in R, not in money",
+      "Did you follow the plan? Yes or no. And one sentence"
+     ],
+     "fala": "After each idea, whether it went well or badly, you write in the journal. Date, market, timeframe and direction. The confirmations that were in favour, and the state the averages were in. The entry at the close of the signal candle, and how far it got. The result measured in R, not in money, because R is comparable across ideas, accounts and lots. The most important question: did you follow the plan, yes or no? And one sentence about what you learned. After thirty or forty ideas, the journal tells you things no video can tell you: which market and which hours suit the scanner best for you, and where you, not the indicator, are going wrong."
+    },
+    {
+     "id": "v3-27",
+     "tipo": "plano",
+     "cap": "07 · The trading journal",
+     "kicker": "Invented example",
+     "titulo": "One journal line",
+     "linhas": [
+      ["Day 1 · XAUUSD · 15 min · Buy", "POC ✓ · averages stacked", "entrada"],
+      ["Management", "Partial at 1:2, stop to entry", "warning"],
+      ["Result", "+1.5 R", "tp"],
+      ["Did you follow the plan?", "Yes", "tp"],
+      ["Lesson", "I waited for the close, didn't enter mid-candle", "entrada"]
+     ],
+     "fala": "Here's what one journal line looks like, in an invented example. Gold, on a fifteen-minute chart, a buy. A POC cross at the close, with the averages stacked. On management: a partial close at the first target, and the stop moved to entry. Result: plus one point five R. Did you follow the plan? Yes. And the lesson: I waited for the close, and didn't enter mid-candle. Notice there are no money values. R lets you compare ideas across different accounts, different lots, and over months. And notice too that the lesson can be about something that went well. The journal isn't only for mistakes."
+    },
+    {
+     "id": "v3-28",
+     "tipo": "capitulo",
+     "cap": "08 · The trader's mind",
+     "numero": "08",
+     "titulo": "The trader's mind",
+     "sub": "The mistakes no indicator fixes",
+     "fala": "Eighth chapter: the trader's mind. Because some mistakes no indicator can fix."
+    },
+    {
+     "id": "v3-29",
+     "tipo": "pontos",
+     "cap": "08 · The trader's mind",
+     "kicker": "The four classic mistakes",
+     "titulo": "Spot them in yourself",
+     "itens": [
+      "Revenge: raising risk to win back a loss",
+      "Fear of missing out: entering late, far from the entry",
+      "Overconfidence: skipping the check after a win",
+      "Moving the stop further away"
+     ],
+     "fala": "There are four classic mistakes, and almost everyone goes through them. The first is revenge: you lose an idea and raise the risk on the next one to win it back. It's the fastest way to turn a bad day into a bad week. The second is fear of missing out: you see a cross running well, you enter late, far from the entry, and the stop ends up in the wrong place for your risk. The third is overconfidence: after three or four good ideas in a row, you skip the thirty-second check because you think you no longer need it. And the fourth, the most dangerous, is moving the stop further away when price gets close to it. If you recognise yourself in any of these, don't feel bad about it. Write it in the journal. Seeing the pattern written down is the first step to breaking it."
+    },
+    {
+     "id": "v3-30",
+     "tipo": "pontos",
+     "cap": "08 · The trader's mind",
+     "kicker": "Protection rules",
+     "titulo": "Limits you set with a cool head",
+     "itens": [
+      "A maximum number of losses per day",
+      "Once you hit it, you close the platform",
+      "A mandatory pause after a big loss",
+      "A weekly review on the same day, always"
+     ],
+     "fala": "The best way to protect yourself from these mistakes is to set rules with a cool head, before you open the chart. For example: a maximum number of losses per day, and once you reach it, you close the platform, whatever happens. A mandatory pause after a loss bigger than usual. And a weekly journal review, on the same day, in which you look at the numbers in R and at the answer to did you follow the plan. These rules sound simple, and they are. The hard part is keeping them on the days the market tests you. That's why you write them down beforehand, and read them out before you start the session."
+    },
+    {
+     "id": "v3-31",
+     "tipo": "capitulo",
+     "cap": "09 · Frequently asked questions",
+     "numero": "09",
+     "titulo": "Frequently asked questions",
+     "sub": "What students ask most",
+     "fala": "Ninth chapter: the questions that come up again and again."
+    },
+    {
+     "id": "v3-32",
+     "tipo": "pontos",
+     "cap": "09 · Frequently asked questions",
+     "kicker": "Questions and answers",
+     "titulo": "Common questions",
+     "itens": [
+      "Does the scanner repaint? Marks can change until the close",
+      "Can I use several timeframes? Yes, but trade just one",
+      "Should I start with every confirmation? Start by watching them all",
+      "Can I trade only from alerts? Always read the chart first"
+     ],
+     "fala": "First question: does the scanner repaint? There's a distinction you need to know. While a candle is still forming, price can cross the POC and turn back, and the mark can change. The signal and the alert count at the candle close. So the rule is to wait for the close. Second: can I use several timeframes? You can look at a higher timeframe to read the context, but trade just one, so you don't contradict yourself. Third: should I start with every confirmation? Start by watching all of them, even if you only use some at first, so you understand what's going on. Fourth: can I trade only from alerts? You can receive the alerts, but read the chart before each entry. The alert is a summary of the moment, and the chart shows you the context that an alert can't summarise."
+    },
+    {
+     "id": "v3-33",
+     "tipo": "pontos",
+     "cap": "09 · Frequently asked questions",
+     "kicker": "More questions",
+     "titulo": "The questions that keep coming back",
+     "itens": [
+      "Should I change the parameters? Only after weeks of journal",
+      "What if I lose several in a row? Check whether you followed the plan",
+      "How long until I'm ready? Your journal will tell you",
+      "Can I change the display? Yes, without changing the process"
+     ],
+     "fala": "Four more questions. Should I change the parameters? Only after a few weeks of journal, and one at a time, so you know the effect of each change. What if several ideas in a row fail? It's normal, it happens with any method. The right question isn't whether the indicator has stopped working. It's whether you followed the plan in each one. How long until I'm ready for real money? There's no magic number. Your journal tells you. When you follow the plan consistently for several weeks, with a fixed risk, you're treating this as a process. And the last one: can I change the phase display? Yes, because it doesn't alter the logic of the signal or the plan. But make that change outside the middle of an idea."
+    },
+    {
+     "id": "v3-34",
+     "tipo": "pontos",
+     "cap": "09 · Frequently asked questions",
+     "kicker": "One last idea",
+     "titulo": "Expectancy",
+     "itens": [
+      "Expectancy = the average of the R won and lost per idea",
+      "Measured in your journal, after many ideas",
+      "Positive: the process had the edge in your hands",
+      "Negative: review the execution before blaming the indicator"
+     ],
+     "fala": "One last idea, which ties everything together. After thirty, forty or fifty ideas, you can calculate your expectancy: the average of the R won and lost per idea. You add up all the results in R and divide by the number of ideas. If the figure is positive, the process, in your hands, was working in your favour across that sample. Positive isn't a guarantee of anything for the future. If it's negative, before you blame the indicator, review the execution: did you follow the plan? Did you respect the stop? Did you enter late? Often the difference is there. This number is yours, measured by you, on your market, on your timeframe. No video, no indicator, no alert can give you that number. Only your journal. And that is the only number you should take seriously."
+    },
+    {
+     "id": "v3-35",
+     "tipo": "checklist",
+     "cap": "Summary",
+     "kicker": "Pocket checklist",
+     "titulo": "The complete process",
+     "itens": [
+      "Averages stacked in your favour",
+      "Close beyond the POC",
+      "Structure in your favour",
+      "Clear path to the 1:2",
+      "Momentum phase",
+      "Size by risk",
+      "Stop to entry at the 1:2"
+     ],
+     "fala": "To close, the MTM Scanner pocket checklist. Averages stacked in your favour. Close beyond the POC. Structure in your favour. A clear path to the first target. A momentum phase, not exhaustion. Size calculated from your risk. And at the first target, stop to entry. Seven steps. If you follow them every time, even when it's tedious, you're already ahead of many people who try to trade without a method."
+    },
+    {
+     "id": "v3-36",
+     "tipo": "frase",
+     "cap": "Closing",
+     "texto": "More than a signal: <span class='ouro'>method, time and discipline</span>.",
+     "autor": "Ricardo Garcia · MoreThanMoney",
+     "fala": "We've reached the end of the MTM Scanner Bootcamp. Thank you for getting through all three modules. Remember what I said at the start: the scanner doesn't decide for you. It brings the pieces together, and gives you a trigger and a plan. The rest is process, patience and controlled risk. Do the exercises, practise on a demo account, write your journal, and bring your questions to the community and to the live sessions at MoreThanMoney. I'm Ricardo Garcia, and this is MoreThanMoney."
+    },
+    {
+     "id": "v3-37",
+     "tipo": "aviso",
+     "cap": "",
+     "titulo": "MTM Scanner Bootcamp complete",
+     "sub": "morethanmoney.pt",
+     "texto": "Educational content. This is not financial advice. Trading forex, indices, metals and crypto involves high risk, and you can lose part or all of your capital. The charts and examples in this video are illustrative. Past results do not guarantee future results.",
+     "fala": "Educational content, not financial advice. Trading carries risk, and you can lose money. See you next time.",
+     "respiro": 4
+    }
+   ]
+  }
+ ]
+}

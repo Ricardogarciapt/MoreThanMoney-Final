@@ -6,6 +6,7 @@ import { buildStripeReturnUrl, getSiteOrigin } from "@/lib/site-url"
 import { isRegisteredMember } from "@/lib/member-access"
 import { buildUsername } from "@/lib/member-profile"
 import { resolveStripePromotionCode } from "@/lib/coupon-stripe-discount"
+import { ORIGEM_CAMPANHA_90D, PLANO_DURANTE_CAMPANHA, ehCupaoCampanha90d, paramsCampanha90d } from "@/lib/stripe-checkout-premium"
 import { getSupabaseAdmin } from "@/lib/supabase-admin-client"
 import { isIosAppRequest, IOS_IAP_REQUIRED } from "@/lib/is-native-request"
 import type Stripe from 'stripe'
@@ -131,7 +132,17 @@ export async function POST(request: NextRequest) {
       },
     }
 
-    if (couponCode) {
+    if (ehCupaoCampanha90d(couponCode)) {
+      // Campanha 90 dias: preço Premium, 90 dias grátis, Membro durante o período.
+      sessionParams.line_items = [{ price: requireStripePriceId("premium_monthly"), quantity: 1 }]
+      Object.assign(sessionParams, paramsCampanha90d())
+      sessionParams.metadata = {
+        ...sessionParams.metadata,
+        plan: PLANO_DURANTE_CAMPANHA,
+        periodo_gratis: ORIGEM_CAMPANHA_90D,
+        coupon_code: String(couponCode).trim().toUpperCase(),
+      }
+    } else if (couponCode) {
       const promoId = await resolveStripePromotionCode(couponCode)
       if (promoId) {
         sessionParams.discounts = [{ promotion_code: promoId }]
@@ -150,6 +161,14 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    // O código também vai para a SUBSCRIÇÃO: com trial ou mês grátis esta sessão vale 0 € e o primeiro
+    // dinheiro chega numa fatura dias depois — é pela subscrição que o webhook o liga ao agente.
+    if (agenteCodigo && sessionParams.mode === "subscription") {
+      sessionParams.subscription_data = {
+        ...(sessionParams.subscription_data ?? {}),
+        metadata: { ...(sessionParams.subscription_data?.metadata ?? {}), agente_codigo: agenteCodigo },
+      }
+    }
     const session = await stripe.checkout.sessions.create(sessionParams)
 
     const json = NextResponse.json({ url: session.url, sessionId: session.id })

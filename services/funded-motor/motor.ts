@@ -617,7 +617,16 @@ let escritasFalhadasSeguidas = 0
  * base é lida por quem decide SL e parciais, e meio segundo de atraso é um preço errado.
  */
 const ESCRITA_MIN_MS = Number(process.env.ESCRITA_PRECOS_MIN_MS ?? 5000)
+/**
+ * 06/11: os rápidos também têm tecto. Sem ele eram ~67 UPDATEs/s nesta tabela (1,27 milhões em
+ * 5 h): cada tick de cada símbolo do provider ia direito à base. Somado ao resto, encheu o disco
+ * da Supabase de escrita e o login do site esteve 3 h em baixo. O espelho provider decide SL e
+ * parciais com o preço em MEMÓRIA, a cada tick — a base só serve os leitores de fora (fills da
+ * Vercel, vigia), e para esses 1 s chega.
+ */
+const ESCRITA_RAPIDOS_MIN_MS = Number(process.env.ESCRITA_PRECOS_RAPIDOS_MIN_MS ?? 1000)
 const escritoEm = new Map<string, number>()
+const ESCRITA_EQUITY_MIN_MS = Number(process.env.ESCRITA_EQUITY_MIN_MS ?? 10_000)
 
 /**
  * O QUE JÁ FOI GRAVADO, por símbolo — para não voltar a gravar o mesmo.
@@ -649,7 +658,8 @@ async function escreverPrecos(): Promise<void> {
   const aEscrever: string[] = []
   for (const s of precosPorEscrever) {
     if (!precos[s]) continue
-    if (rapidosAgora.has(s) || agora - (escritoEm.get(s) ?? 0) >= ESCRITA_MIN_MS) aEscrever.push(s)
+    const minimo = rapidosAgora.has(s) ? ESCRITA_RAPIDOS_MIN_MS : ESCRITA_MIN_MS
+    if (agora - (escritoEm.get(s) ?? 0) >= minimo) aEscrever.push(s)
   }
   const linhas = aEscrever.map((s) => {
     const mercado = precoEmMercado.get(s) ?? null
@@ -1103,11 +1113,13 @@ async function processarConta(id: string, confirmado = false): Promise<void> {
   if (haAccao) await aplicar(c, d)
   if (!contas.has(id)) return
 
-  // Equity e margem: no máximo 1× a cada 2s, e só se mudou.
+  // Equity e margem: no máximo 1× a cada ESCRITA_EQUITY_MIN_MS (10 s), e só se mudou. Era 2 s:
+  // com dezenas de contas com posições abertas dava ~18 UPDATEs/s (06/11). As decisões de fim
+  // (stop-out, quebra) usam a equity em memória, não esta coluna — ela é só para o painel.
   const u = ultimaEquity.get(id)
   const agoraMs = Date.now()
   const mudou = !u || Math.abs(u.equity - d.estado.equity) >= 0.01 || Math.abs(u.margem - d.estado.margem) >= 0.01
-  if (mudou && (!u || agoraMs - u.em >= 2000)) {
+  if (mudou && (!u || agoraMs - u.em >= ESCRITA_EQUITY_MIN_MS)) {
     ultimaEquity.set(id, { em: agoraMs, equity: d.estado.equity, margem: d.estado.margem })
     const pico = Math.max(c.sim_pico_equity ?? c.saldo_inicial, d.estado.equity)
     c.sim_pico_equity = pico

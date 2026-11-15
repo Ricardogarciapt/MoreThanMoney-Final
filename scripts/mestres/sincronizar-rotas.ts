@@ -61,12 +61,14 @@ async function main() {
       const tem = await direitoMtmAuto(u).then((d) => d.tem).catch(() => true) // erro de rede não corta ninguém
       if (!tem) semDireito.add(u)
     }))
+    const { semAcessoAEstrategia } = await import('../../lib/acesso-estrategias-servidor')
+    const semAcesso = await semAcessoAEstrategia(e.slug, [...candidatos])
     const plano = planearRotasDaEstrategia({
       estrategia: {
         providerId: e.providerId, slug: e.slug, nome: nomes.get(e.providerId) ?? e.slug, contaMestreId: e.contaMestreId,
         copyfactoryIds: e.copyfactoryIds, incluirMtmauto: e.incluirMtmauto, picksExtra: extra.picks, gruposTelegram: extra.gruposTelegram,
       },
-      site: (site.data ?? []) as never, subsAuto: (subs.data ?? []) as never, contasAuto: (contasAuto.data ?? []) as never, lotesForcados, semDireito,
+      site: (site.data ?? []) as never, subsAuto: (subs.data ?? []) as never, contasAuto: (contasAuto.data ?? []) as never, lotesForcados, semDireito, semAcesso,
     })
     const { data: existentes } = await db.from('copia_rotas').select('*').eq('mestres', true).eq('tipo_rota', 'estrategia').ilike('estrategia_slug', e.slug).neq('estado', 'recusada')
     const abertas = new Map<string, number>()

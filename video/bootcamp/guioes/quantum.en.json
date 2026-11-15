@@ -1,0 +1,564 @@
+{
+ "estrategia": "Quantum",
+ "motor": "quantum",
+ "marca": "MoreThanMoney",
+ "cores": {
+  "bull": "#3B7DDD",
+  "bear": "#E0474C"
+ },
+ "ui": {
+  "nivel": "Level",
+  "compra": "Buy",
+  "venda": "Sell",
+  "entrada": "Entry",
+  "tp1": "TP1",
+  "tp2": "TP2",
+  "tp3": "TP3"
+ },
+ "pronuncia": [
+  ["TradingView", "Trading View"],
+  ["MasterStrength", "Master Strength"],
+  ["MacroPhase", "Macro Phase"],
+  ["MicroPullback", "Micro Pull back"],
+  ["MicroWave", "Micro Wave"],
+  ["M15", "M fifteen"],
+  ["M30", "M thirty"],
+  ["M5", "M five"],
+  ["M1", "M one"],
+  ["H4", "H four"],
+  ["H1", "H one"],
+  ["W1", "W one"],
+  ["EURNZD", "E U R N Z D"],
+  ["NZDCAD", "N Z D C A D"],
+  ["AUDNZD", "A U D N Z D"],
+  ["EURUSD", "E U R U S D"]
+ ],
+ "plano": {
+  "warning": false,
+  "slAtr": 1,
+  "alvos": [2],
+  "rotulos": ["Target"]
+ },
+ "videos": [
+  {
+   "rotulo": "Bootcamp Quantum · 1/2",
+   "titulo": "What it is and how to read it",
+   "cenas": [
+    {
+     "id": "v1-00",
+     "tipo": "abertura",
+     "kicker": "Bootcamp MTM · Video 1 of 2",
+     "titulo": "Quantum",
+     "sub": "What it is and how to read every element",
+     "rodape": "morethanmoney.pt",
+     "semVoz": 5
+    },
+    {
+     "id": "v1-01",
+     "tipo": "frase",
+     "cap": "Welcome",
+     "texto": "The trend is confirmed first. <span class='ouro'>The pullback</span> gives the entry.",
+     "autor": "Ricardo Garcia · MoreThanMoney",
+     "fala": "Hi, I'm Ricardo Garcia, and this is the Quantum Bootcamp, the MoreThanMoney strategy that follows the trend and enters on pullbacks. Before we start, keep in mind the idea that runs through both videos: Quantum does not try to guess the top or the bottom. It confirms the direction first, waits for the price to pull back inside that direction, and only enters when the oscillator is in the right zone and the entry signal appears. There are three steps, always in the same order. Quantum is a set of automatic tools that reads the direction, the price action and the price phase, and it can be used for scalping, intraday or longer positions, depending on the timeframe you choose. In this first video we look at what each element on the chart means. In the second, we look at how the entry is confirmed, how the stop and the target are drawn, and when you do not enter. Let us take it step by step, without rushing."
+    },
+    {
+     "id": "v1-02",
+     "tipo": "pontos",
+     "cap": "Welcome",
+     "kicker": "The plan of the bootcamp",
+     "titulo": "Two videos, one method",
+     "itens": [
+      "Video 1 · What Quantum is and how to read it",
+      "Video 2 · Entry, management, when not to enter and routine"
+     ],
+     "fala": "The bootcamp has two videos. This first one is the map. We will look at the large phase arrow, the primary line, the MasterStrength panel, the small arrows, the pullback triangles, the MicroWave dots, the oscillator and the volatility bands. The second video is the practice: the eight confirmations in order, the entry, the stop and the target, the cases where you do not enter, and a routine for practising on demo. Watch the videos in order, because the second one assumes you recognise every piece we are about to look at. If there is a piece you do not understand, go back before moving on. And do not try to memorise everything at once. Read one piece at a time, until reading it becomes automatic, because that automation is what lets you see the alignment at a glance."
+    },
+    {
+     "id": "v1-03",
+     "tipo": "capitulo",
+     "cap": "01 · What Quantum is",
+     "numero": "01",
+     "titulo": "What Quantum is",
+     "sub": "A trend follower that enters on pullbacks",
+     "fala": "Chapter one. So what exactly is Quantum?"
+    },
+    {
+     "id": "v1-04",
+     "tipo": "pontos",
+     "cap": "01 · What Quantum is",
+     "kicker": "In a few words",
+     "titulo": "Three steps, always in the same order",
+     "itens": [
+      "Confirm the trend: phase, primary line and score",
+      "Wait for the pullback: the oscillator enters the direction zone",
+      "Enter with the entry signal, in the direction colour",
+      "Works for scalping, intraday or longer positions"
+     ],
+     "fala": "Quantum is a set of automatic tools that reads the direction, the price action and the price phase, to simplify the analysis. The logic has three steps. First, confirm the trend, using the phase, the primary line and the score. Second, wait for the price to pull back, and for the oscillator to enter the zone of the direction. Third, enter when the entry signal appears, a pullback triangle, a MicroWave dot, or both, in the colour of the direction. The strategy works for scalping, intraday or longer positions, depending on the timeframe. Notice that the source does not define a stop or targets. In this guide, management is the MTM rule, and we will look at it carefully in the second video. For now, keep the central idea: Quantum is not a reversal indicator. It is a trend follower that looks for an entry on the right side of a pullback."
+    },
+    {
+     "id": "v1-05",
+     "tipo": "capitulo",
+     "cap": "02 · The chart elements",
+     "numero": "02",
+     "titulo": "Reading every element",
+     "sub": "Phase, line, arrows, triangles and dots",
+     "fala": "Chapter two. Let us read every element on the chart, one at a time."
+    },
+    {
+     "id": "v1-06",
+     "tipo": "grafico",
+     "cap": "02 · The chart elements",
+     "kicker": "Uptrend",
+     "titulo": "Phase, line and small arrows",
+     "cenario": "compra",
+     "seed": 7,
+     "base": ["cores"],
+     "camadas": ["medias", "setas"],
+     "ate": [0.6, 0.7],
+     "zoom": [0, 0.4],
+     "estrelas": "Score above 60",
+     "fala": "This chart is illustrative. It is there to explain the reading, not a real result and not a market history. Let us start with an uptrend. The large phase arrow, called MacroPhase, marks the start of the trend, and on a buy it points up. The primary line is blue, and the price is above it. Above that you see the small arrows, in the colour of the direction, and the pullback triangles, called MicroPullback, and the MicroWave dots. The triangles and the dots are the entry signals, but they only count once the trend is confirmed. Notice also that the score is above sixty. Each of these pieces answers a different question. The phase tells you the direction, the line tells you which side you are on, the arrows tell you the alignment, and the triangles and dots tell you the moment of entry."
+    },
+    {
+     "id": "v1-07",
+     "tipo": "pontos",
+     "cap": "02 · The chart elements",
+     "kicker": "Chart pieces",
+     "titulo": "Five pieces to recognise",
+     "itens": [
+      "Large phase arrow, MacroPhase: the start of the trend",
+      "Primary line: blue with the price above, red with the price below",
+      "Small arrows, in the colour of the direction",
+      "Pullback triangles and MicroWave dots: the entry signals",
+      "Oscillator: the zone of the direction"
+     ],
+     "fala": "Let us fix the main pieces. One, the large phase arrow, the MacroPhase. It marks the start of the trend, up for a buy and down for a sell. Two, the primary line. It is blue for buying, with the price above it, and red for selling, with the price below it. Three, the small arrows, which appear above the chart in the colour of the direction, blue on a buy and red on a sell. Four, the pullback triangles, the MicroPullback, and the MicroWave dots. They are the entry signals, and they have to be in the colour of the direction, on a candle of that colour. Five, the oscillator, which has blue and red zones. On a buy, the oscillator should be in the blue zone. On a sell, in the red zone. These five pieces are read together, and none of them, on its own, is an order."
+    },
+    {
+     "id": "v1-08",
+     "tipo": "grafico",
+     "cap": "02 · The chart elements",
+     "kicker": "Downtrend",
+     "titulo": "The mirror of the uptrend",
+     "cenario": "venda",
+     "seed": 11,
+     "base": ["cores"],
+     "camadas": ["medias", "setas"],
+     "ate": [0.55, 0.66],
+     "zoom": [0, 0.3],
+     "estrelas": "Score 36",
+     "fala": "The layout of a downtrend is the mirror of the previous one. The phase arrow points down, the primary line is red, and the candles are red. The score is at thirty six, below forty, and the oscillator is in the red sell zone. Notice that everything we saw on the upside is reversed, without exceptions. A sell is not a buy turned upside down with different rules. It is the same logic, applied in the opposite direction. So when you study the strategy, study both sides with the same care. Someone who only practises one direction ends up reading the other side badly, precisely at the moment when the market changes mood."
+    },
+    {
+     "id": "v1-09",
+     "tipo": "comparar",
+     "cap": "03 · The strength panel",
+     "kicker": "MasterStrength",
+     "titulo": "One score and one arrow per timeframe",
+     "cartoes": [
+      {
+       "t": "Above 60",
+       "d": "Strong bullish strength. On the upside, this is the confirmation zone."
+      },
+      {
+       "t": "Above 50",
+       "d": "Bullish strength. For a buy, the guide's criterion is above 60."
+      },
+      {
+       "t": "Between 45 and 50",
+       "d": "Neutral. No clear direction, so more caution."
+      },
+      {
+       "t": "Below 45 and 40",
+       "d": "Bearish, and strongly bearish below 40. Sell at 40 or less."
+      }
+     ],
+     "fala": "The MasterStrength panel shows one score and one arrow for each timeframe, from M1 to W1. The values have their own reading. Above fifty there is bullish strength, and above sixty, strong bullish strength. Between forty five and fifty is neutral. Below forty five is bearish, and below forty is strongly bearish. Be careful, because there are two different numbers in play. The panel measures strength per timeframe. The confirmation score, which we will talk about in the second video, is the guide's criterion for buying and selling: above sixty to buy, and forty or less to sell. Do not mix the two. One is a context reading, the other is one of the entry confirmations."
+    },
+    {
+     "id": "v1-10",
+     "tipo": "capitulo",
+     "cap": "04 · The rules for up and down",
+     "numero": "04",
+     "titulo": "The trend rules",
+     "sub": "Conditions and entries, side by side",
+     "fala": "Chapter four. The up and down rules, side by side."
+    },
+    {
+     "id": "v1-11",
+     "tipo": "comparar",
+     "cap": "04 · The rules for up and down",
+     "kicker": "Conditions and entries",
+     "titulo": "Up, down and transition",
+     "cartoes": [
+      {
+       "t": "Up rule",
+       "d": "Blue phase, blue primary line and score above 60. Entries with blue dots and triangles."
+      },
+      {
+       "t": "Down rule",
+       "d": "Red phase, red primary line and score below 40. Red entries."
+      },
+      {
+       "t": "Transition zone",
+       "d": "Red phase with blue arrows. The direction is not yet confirmed."
+      },
+      {
+       "t": "Oscillator",
+       "d": "Blue in the buy zone, red in the sell zone."
+      }
+     ],
+     "fala": "Let us put the rules side by side. For an uptrend, there are three conditions: a blue phase, a blue primary line, and a score above sixty. The entries come after, with the blue dots, the blue triangles, and the oscillator in the blue zone. For a downtrend, the mirror image: a red phase, a red primary line, and a score below forty, with red entries. There is also a transition zone, which is a red phase with blue arrows. Here the reading is not yet decided, and the guide asks for caution. Notice that the guide's score has a small neutral gap in the middle. Between forty one and sixty, neither side is confirmed. That is where most people enter on impulse, and that is why we will go through it carefully in the second video."
+    },
+    {
+     "id": "v1-12",
+     "tipo": "pontos",
+     "cap": "04 · The rules for up and down",
+     "kicker": "Alignment",
+     "titulo": "Four timeframes read together",
+     "itens": [
+      "The entry timeframe and the three after it, all with the direction arrow",
+      "On fifteen minutes: M15, M30, H1 and H4",
+      "Candles in the direction colour, with small arrows of the right colour",
+      "Some prefer all timeframes aligned, which raises the bar"
+     ],
+     "fala": "Timeframe alignment is the piece that gives context to the entry. When you trade on fifteen minutes, you also read the three timeframes that follow it, which are thirty minutes, one hour and four hours. All of them should have the direction arrow. This is the alignment confirmation, and it is what the guide uses to say that the trend is confirmed on several levels at once. Add the candles to this. They should be in the colour of the direction, with small arrows of the same colour. On a buy, blue candles and blue arrows. Some people prefer every timeframe to be aligned, which raises the bar and also reduces the number of signals. The choice is yours, but it should be a conscious choice, and written down. What you must not do is change your criteria halfway through the week, because that makes any analysis impossible to compare."
+    },
+    {
+     "id": "v1-13",
+     "tipo": "capitulo",
+     "cap": "05 · The oscillator and the bands",
+     "numero": "05",
+     "titulo": "The oscillator and the bands",
+     "sub": "The right zone and the volatility",
+     "fala": "Chapter five. The oscillator and the volatility bands."
+    },
+    {
+     "id": "v1-14",
+     "tipo": "pontos",
+     "cap": "05 · The oscillator and the bands",
+     "kicker": "Zone and volatility",
+     "titulo": "Where the oscillator and the bands matter",
+     "itens": [
+      "Blue oscillator in the buy zone, red in the sell zone",
+      "Volatility bands open or closed",
+      "Price on the volatility band strengthens the entry",
+      "Consolidation with closed bands: wait for them to open"
+     ],
+     "fala": "The oscillator tells you whether the price has pulled back far enough for the entry. On a buy, it should be inside the blue zone. On a sell, inside the red zone. While the oscillator has not entered the zone of the direction, the pullback has not happened, and the entry waits. The volatility bands show how much the market is moving. When they are open, there is movement. When they are closed, the market is compressed. The guide is clear: in a long consolidation, with the bands closed, you do not trade. You wait for the bands to open. And there is a strength rule: when you want the stronger entry, the price should be on the volatility band. In the guide's examples, the entries that were not on the band moved less. That does not make them wrong, but it makes them less attractive."
+    },
+    {
+     "id": "v1-15",
+     "tipo": "grafico",
+     "cap": "05 · The oscillator and the bands",
+     "kicker": "Pause and read",
+     "titulo": "Read it yourself first",
+     "cenario": "compra",
+     "seed": 13,
+     "base": ["cores"],
+     "camadas": ["medias", "setas"],
+     "ate": [0.6, 0.62],
+     "zoom": [0, 0.3],
+     "estrelas": "No signal",
+     "fala": "Now it is your turn. Pause the video and read this chart on your own, piece by piece. What is the phase arrow? Is it pointing up or down? What colour is the primary line, and which side of it is the price on? What is the score? Do the following timeframes have the direction arrow? Is the oscillator in the zone? Is there a triangle or a dot in the direction colour? Answer these questions before you carry on. Ready? The phase is pointing up, the primary line is blue, and the price is above it. The score is above sixty. The arrows on the following timeframes, in general, point up. But there is no entry signal yet, because the pullback with the oscillator in the zone and the triangle or the dot is still missing. In the second video you will see what happens next."
+    },
+    {
+     "id": "v1-16",
+     "tipo": "checklist",
+     "cap": "Summary",
+     "kicker": "Video 1 summary",
+     "titulo": "What you need to know how to read",
+     "itens": [
+      "Phase and primary line: the direction and the side of the price",
+      "Score: above 60 to buy, 40 or less to sell",
+      "Following timeframes with the direction arrow",
+      "Oscillator in the zone, and triangles or dots in the right colour",
+      "Volatility bands: open, ideally with the price on the band"
+     ],
+     "fala": "A recap of the first video. The phase and the primary line tell you the direction and the side of the price. The score confirms the strength, using the criterion of sixty to buy and forty or less to sell. The following timeframes should have the arrow of the same direction. The oscillator has to be in the zone, and the entry appears with the triangles or the dots in the right colour. The volatility bands tell you whether there is room for the move. Before you move on, keep one simple rule: if you cannot confirm the direction, there is nothing to read on the entry yet."
+    },
+    {
+     "id": "v1-17",
+     "tipo": "pontos",
+     "cap": "Exercise",
+     "kicker": "Before video 2",
+     "titulo": "Your homework",
+     "itens": [
+      "Pick one forex pair and the fifteen minute chart",
+      "Find five moments of alignment across the four timeframes",
+      "For each one, note the score, the oscillator and the bands",
+      "Do not trade. Just observe and record"
+     ],
+     "fala": "Before the second video, you have an exercise. Pick one forex pair and the fifteen minute chart, with Quantum switched on. Find five moments when the four timeframes are aligned. For each one, note the score, where the oscillator sits, and whether the bands were open or closed. Then also look for two moments of neutrality, with a score between forty five and fifty and mixed arrows. Do not trade. Just observe and record. This exercise trains your eye for what the guide calls confirmation, and for what it calls its absence. In the second video we will see how the absence of confirmation is also a decision."
+    },
+    {
+     "id": "v1-18",
+     "tipo": "aviso",
+     "cap": "Warning",
+     "titulo": "Until video 2",
+     "sub": "Entry, management and routine",
+     "texto": "Educational content. Not financial advice. Trading forex, indices, metals, oil and crypto carries high risk, and you can lose part or all of your capital. The charts in this video are illustrative. Past results do not guarantee future results.",
+     "fala": "Remember: this content is educational and is not financial advice. Trading carries high risk, and you can lose part or all of your capital. Always practise on a demo account first. See you in the second video.",
+     "respiro": 4
+    }
+   ]
+  },
+  {
+   "rotulo": "Bootcamp Quantum · 2/2",
+   "titulo": "Entry, management and routine",
+   "cenas": [
+    {
+     "id": "v2-00",
+     "tipo": "abertura",
+     "kicker": "Bootcamp MTM · Video 2 of 2",
+     "titulo": "Quantum",
+     "sub": "Entry, management, when not to enter and routine",
+     "rodape": "morethanmoney.pt",
+     "semVoz": 5
+    },
+    {
+     "id": "v2-01",
+     "tipo": "pontos",
+     "cap": "Welcome",
+     "kicker": "In this video",
+     "titulo": "From pullback to trade",
+     "itens": [
+      "The eight confirmations, in order",
+      "The strength of the entry: triangle, dot and band",
+      "Stop and target: the MTM rules",
+      "When not to enter",
+      "A routine for practising on demo"
+     ],
+     "fala": "Welcome to the second video of the Quantum Bootcamp. In the first one, you learned to read the phase, the primary line, the MasterStrength panel, the arrows, the triangles, the dots, the oscillator and the bands. Now we are going to use that reading to make a decision. We will go through the eight confirmations, in order, without skipping any. Then, what makes an entry stronger or weaker. After that, the stop and the target, which the source does not define and which the MTM sets in its own rules. We will also see how the position of the stop changes the trade. Then, the cases where you do not enter, which on Quantum are just as important as the entries. And at the end, a routine for practising on demo before any real risk."
+    },
+    {
+     "id": "v2-02",
+     "tipo": "capitulo",
+     "cap": "01 · The confirmations",
+     "numero": "01",
+     "titulo": "The eight confirmations",
+     "sub": "In order, without skipping any",
+     "fala": "Chapter one. The eight confirmations, one by one."
+    },
+    {
+     "id": "v2-03",
+     "tipo": "checklist",
+     "cap": "01 · The confirmations",
+     "kicker": "Working list",
+     "titulo": "Eight steps, in the guide's order",
+     "itens": [
+      "Phase: large MacroPhase arrow in the direction",
+      "Primary line in the right colour, with the price on the right side",
+      "Score above 60 to buy, or 40 or less to sell",
+      "Entry timeframe and the three after it aligned",
+      "Candles and small arrows in the direction colour",
+      "Oscillator inside the direction zone",
+      "Triangle and or dot in the direction colour, on a candle of that colour",
+      "Optional extra: candle on the volatility band on the side of the direction"
+     ],
+     "fala": "So let us go through the eight confirmations, in the guide's order. One, the phase. You need the large MacroPhase arrow in the direction: up for a buy, down for a sell. Two, the primary line. Blue for buying, red for selling, with the price on the right side of it. Three, the score. On a buy, above sixty. On a sell, forty or less. Four, the alignment. The entry timeframe and the three after it, all with the direction arrow. On fifteen minutes, those are M15, M30, H1 and H4. Five, the candles and the small arrows, in the direction colour. Six, the oscillator, inside the zone of the direction: blue on a buy, red on a sell. Seven, the entry signal: a pullback triangle, a MicroWave dot, or both, in the direction colour, on a candle of that colour. Both on the same candle are better. And eight, an optional extra: a candle on the lower volatility band on a buy, or on the upper band on a sell. The rule is simple: the first seven are the core, and the eighth is a bonus, not a requirement."
+    },
+    {
+     "id": "v2-04",
+     "tipo": "comparar",
+     "cap": "02 · The strength of the entry",
+     "kicker": "Triangle, dot and band",
+     "titulo": "Strong and weak entries",
+     "cartoes": [
+      {
+       "t": "Triangle and dot together",
+       "d": "On the same candle, in the direction colour. The entry is stronger."
+      },
+      {
+       "t": "Only one of the two",
+       "d": "It can still be an entry, but with less strength in the guide's reading."
+      },
+      {
+       "t": "Price on the band",
+       "d": "In the guide's examples, the strongest moves had the price on the band."
+      },
+      {
+       "t": "Early entry",
+       "d": "No triangle and no dot. It can be stopped out before the main move."
+      }
+     ],
+     "fala": "Not all entries have the same strength. The strongest is the one that combines the triangle and the dot on the same candle, in the direction colour, with the price on the volatility band. That combination gave the strongest moves in the guide's examples. If you only have one of the two, the entry still exists, but the reading is weaker. And the early entry, with no triangle and no dot, is the riskiest. The guide warns that, depending on where you place the stop, these early entries can be stopped out before the main move happens. That is not a prohibition. It is a difference in quality that you should recognise before you enter, and not after the stop has been hit."
+    },
+    {
+     "id": "v2-05",
+     "tipo": "grafico",
+     "cap": "02 · Entry, stop and target",
+     "kicker": "A buy, step by step",
+     "titulo": "From pullback to signal",
+     "cenario": "compra",
+     "seed": 7,
+     "base": ["cores", "medias"],
+     "camadas": ["setas", "sinal", "plano"],
+     "ate": [0.6, 1],
+     "zoom": [0, 0.5],
+     "estrelas": "Score above 60",
+     "fala": "Let us follow a buy from beginning to end. The phase is pointing up, and the primary line is blue, with the price above it. The score is above sixty. The following timeframes point up, and the candles and small arrows are blue. Up to this point, the trend is confirmed, but there is no entry yet. The price pulls back. The oscillator drops into the blue zone. And that is when a pullback triangle appears, together with a MicroWave dot, on the same blue candle, with the price on the volatility band. That is the signal. Only now do you draw the plan. The entry sits on the signal candle. The stop goes beyond the last low of the pullback. And the target has to give at least twice the risk. Notice that the order is the same as always: you confirm first, then you enter, and only then do you think about numbers."
+    },
+    {
+     "id": "v2-06",
+     "tipo": "capitulo",
+     "cap": "03 · Stop and target",
+     "numero": "03",
+     "titulo": "Stop and target",
+     "sub": "What the source defines, and what it does not",
+     "fala": "Chapter three. Stop and target, with care about who defines each thing."
+    },
+    {
+     "id": "v2-07",
+     "tipo": "plano",
+     "cap": "03 · Stop and target",
+     "kicker": "MTM rules, not the source's",
+     "titulo": "Entry, stop and target",
+     "linhas": [
+      ["Entry", "Triangle or dot in the direction colour, on the same candle", "entrada"],
+      ["Stop", "Beyond the last low of the pullback, on a buy", "sl"],
+      ["Target", "At least twice the risk", "tp"],
+      ["Size", "Calculated before entering, from the risk", ""]
+     ],
+     "fala": "This plan has an origin you need to keep in mind. The source of the indicator does not define a stop or targets. The stop rule and the target rule are the MTM management rules, described in the guide. The stop sits beyond the last low of the pullback, on a buy, or beyond the last high, on a sell. The target should be at least twice the risk. And the position size is calculated before you enter, from the amount you are willing to lose. This distinction matters, because the indicator shows you the signal, but it does not tell you where to place your protection. If someone tells you that the indicator sets the stop, they are confusing the tool with the house rule. So the plan is your responsibility, and the rule is written in the guide, not in the code."
+    },
+    {
+     "id": "v2-08",
+     "tipo": "pontos",
+     "cap": "03 · Stop and target",
+     "kicker": "Two rules, and one responsibility",
+     "titulo": "What stays on your side",
+     "itens": [
+      "Stop beyond the last low on a buy, or the last high on a sell",
+      "Target of at least twice the risk",
+      "Position size calculated before you enter",
+      "Without a written plan, management becomes improvisation"
+     ],
+     "fala": "Let us sum up what stays on your side. First, the stop: beyond the last low of the pullback on a buy, and the last high on a sell. Second, the target: at least twice the risk. Third, the position size, which you calculate before you enter. And fourth, the responsibility of writing all of this down in a plan. Without a written plan, every decision in the middle of a trade is an improvisation. And improvisation is what turns a strategy with clear rules into a string of emotional decisions. Quantum gives you an organised reading. The part that protects you from uncontrolled losses is yours, and it starts with a piece of paper and a calculator, before it starts with the chart."
+    },
+    {
+     "id": "v2-09",
+     "tipo": "pontos",
+     "cap": "04 · Where you place the stop",
+     "kicker": "Stop and entry quality",
+     "titulo": "Where the stop changes the trade",
+     "itens": [
+      "A tighter stop: early entries can be stopped out",
+      "A stop beyond the pullback: gives the main move room",
+      "Entry with triangle and dot together: the strongest reading",
+      "The earlier you enter, the more the confirmation has to carry"
+     ],
+     "fala": "Where you place the stop changes the trade, and the guide says so clearly. If the stop is tighter, the early entries, without the triangle and the dot together, can be stopped out before the main move happens. If the stop sits beyond the last low of the pullback, it gives the move more room, but it increases the risk per trade, and so the position size has to be smaller. It is a trade-off, and there is no free option. The strongest entry, with the triangle and the dot together and the price on the band, usually gives a cleaner reading. But even that one is not guaranteed. The good news is that your criterion is written down and repeatable. The bad news is that you have to accept the trade-offs, rather than running away from them."
+    },
+    {
+     "id": "v2-10",
+     "tipo": "capitulo",
+     "cap": "05 · When not to enter",
+     "numero": "05",
+     "titulo": "When not to enter",
+     "sub": "The absence of confirmation is also a decision",
+     "fala": "Chapter five. The cases where the right decision is not to enter."
+    },
+    {
+     "id": "v2-11",
+     "tipo": "checklist",
+     "cap": "05 · When not to enter",
+     "kicker": "Do not enter if",
+     "titulo": "Cases where you do not enter",
+     "itens": [
+      "A long consolidation with the volatility bands closed",
+      "Neutral score, between 45 and 50, with mixed arrows",
+      "Candles of the colour opposite to the direction",
+      "Timeframes not aligned",
+      "Price off the band, when you want the stronger entry"
+     ],
+     "fala": "Now the list of cases where you do not enter. Do not enter during a long consolidation, with the volatility bands closed. Wait for the bands to open. Do not enter with a neutral score, between forty five and fifty, and with mixed arrows on the panel, because no direction is confirmed. Do not enter when the candles are the colour opposite to the direction. Do not enter when the timeframes are not aligned: if the panel shows arrows up on some and down on others, it is not an entry. And do not wait for the stronger entry if the price is not on the band, because in the guide's examples, those entries moved less. There is one rule that applies to all of them: if you cannot point to the confirmation, the decision is to wait."
+    },
+    {
+     "id": "v2-12",
+     "tipo": "grafico",
+     "cap": "05 · When not to enter",
+     "kicker": "Consolidation",
+     "titulo": "Closed bands, no direction",
+     "cenario": "falha",
+     "seed": 21,
+     "base": ["cores"],
+     "camadas": ["medias"],
+     "ate": [0.6, 0.6],
+     "zoom": [0, 0.2],
+     "estrelas": "Score 50",
+     "fala": "This chart is the typical consolidation case. The volatility bands are closed, the price moves back and forth, and the score is neutral, at fifty. The arrows on the panel do not all point the same way. There are temptations in moments like this. Candles appear that look strong, triangles show up on their own, and there is a urge to do something. The guide asks for the opposite: do not trade. Wait for the bands to open, and for the score to leave the neutral zone. This chart is not a mistake of the indicator. It is a state of the market, and the best decision is to recognise it. Someone who learns to stay still in these moments saves more money than someone who gets one good entry, because they do not spend capital on entries without context."
+    },
+    {
+     "id": "v2-13",
+     "tipo": "comparar",
+     "cap": "05 · When not to enter",
+     "kicker": "Reading the panel",
+     "titulo": "Three panel readings",
+     "cartoes": [
+      {
+       "t": "61, arrows up",
+       "d": "Every timeframe points up. Alignment for a buy."
+      },
+      {
+       "t": "50, mixed arrows",
+       "d": "Neutral. No confirmed direction. Do not enter."
+      },
+      {
+       "t": "40, arrows down",
+       "d": "Alignment for a sell, except the weekly, which may diverge."
+      },
+      {
+       "t": "No alignment",
+       "d": "Arrows pointing different ways. Not an entry, even with a good score."
+      }
+     ],
+     "fala": "Let us look at the panel in three readings. With sixty one, and every arrow up, there is alignment for a buy. With fifty, neutral, and mixed arrows, no direction is confirmed, and you do not enter. With forty, and arrows down, the alignment is on the sell side, with the exception of the weekly, which may diverge. And there is a fourth reading, which is the most common: a score in some zone, and arrows pointing different ways. Even if the number looks good, without alignment there is no entry. The panel is read at a glance, and that is exactly what makes it useful. If you need a long time to decide whether the arrows are aligned, they probably are not."
+    },
+    {
+     "id": "v2-14",
+     "tipo": "capitulo",
+     "cap": "06 · Routine",
+     "numero": "06",
+     "titulo": "A routine on demo",
+     "sub": "Training before any real risk",
+     "fala": "Chapter six. A simple routine, to train before you risk anything."
+    },
+    {
+     "id": "v2-15",
+     "tipo": "pontos",
+     "cap": "06 · Routine",
+     "kicker": "The routine",
+     "titulo": "A process you repeat",
+     "itens": [
+      "Pick a market and an entry timeframe",
+      "Read the four timeframes before deciding",
+      "Confirm the eight pieces, in order, before entering",
+      "Record every signal: score, alignment, entry, stop and target",
+      "Only after weeks on demo, think about a live account"
+     ],
+     "fala": "Let us build a routine. First, pick a market and an entry timeframe, and keep that choice for a few weeks. The guide uses forex examples on fifteen minutes, but the method is the same on other markets, as long as you study it on demo first. Then read the four timeframes before deciding. If the phase and the primary line are not aligned, there is nothing to do. When the trend is confirmed, wait for the pullback, and confirm the eight pieces, in order. If the entry appears, define the stop, the target and the position size before you enter. And record everything: the score, the alignment, the type of entry, the stop, the target, and what happened. Only after weeks on demo, with consistent records and rules you actually followed, does it make sense to think about a live account, and even then, with a small risk that you defined in advance."
+    },
+    {
+     "id": "v2-16",
+     "tipo": "frase",
+     "cap": "Closing",
+     "texto": "The trend is confirmed. <span class='ouro'>Patience</span> waits for the pullback.",
+     "autor": "Ricardo Garcia · MoreThanMoney",
+     "fala": "We have reached the end of the bootcamp. You are leaving with three ideas. The first: Quantum is a trend follower. It confirms the direction, waits for the pullback, and enters when the oscillator and the signal agree. The second: the absence of confirmation is also a decision, and often it is the best one. The third: the stop and the target you use are MTM rules, described in the guide, and the responsibility for writing them down and following them is yours. No indicator decides for you. Quantum gives you an organised reading, and the rest is practice, records and discipline. Good luck on your path, and remember: demo first, and only then, if it makes sense, anything else."
+    },
+    {
+     "id": "v2-17",
+     "tipo": "aviso",
+     "cap": "Warning",
+     "titulo": "End of the bootcamp",
+     "sub": "Education, not advice",
+     "texto": "Educational content. Not financial advice. Trading forex, indices, metals, oil and crypto carries high risk, and you can lose part or all of your capital. The charts in this bootcamp are illustrative. Past results do not guarantee future results.",
+     "fala": "Last warning. This content is educational and is not financial advice. Trading carries high risk, and you can lose part or all of your capital. Define your risk before every entry, and practise on a demo account first.",
+     "respiro": 4
+    }
+   ]
+  }
+ ]
+}

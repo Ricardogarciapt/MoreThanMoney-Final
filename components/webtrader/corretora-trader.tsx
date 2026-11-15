@@ -1,5 +1,6 @@
 "use client"
 
+import PartilharAuditoria from "@/components/funded/partilhar-auditoria"
 import dynamic from "next/dynamic"
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { AlertTriangle, History, Info, ListOrdered, Loader2, ScrollText, Search, User, Wallet, X } from "lucide-react"
@@ -386,6 +387,7 @@ function Trader({ contaRef, plataforma, altura, prefill, simboloInicial, compraP
             TP1-3 em bracket, trailing, OCO, regras, diário e alertas só existem nas contas MTM Funded.
             {directo ? " Cotações, velas e posições vêm directamente da tua corretora (ligação da tua conta, lida pelo teu browser); as ordens saem pelo servidor MTM." : " Preço no ecrã é indicativo (feed MTM); a execução é ao preço da corretora."}
           </p>
+          {!contaRef.startsWith("tradelocker:sessao:") && <PartilharAuditoria contaRef={contaRef} podeGerir />}
         </div>
       ),
     },

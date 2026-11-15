@@ -107,7 +107,6 @@ export default function Footer() {
                 { name: t("navfooter.footerAiAppsMtm"), href: "/app-mobile?tab=apps" },
                 { name: "MTM Studio", href: "https://mtmbrandbuilder.lovable.app", external: true },
                 { name: "MTM Partnership Engine", href: "https://mtmugcapp.lovable.app", external: true },
-                { name: "MTM AiOS", href: "https://mtmaios.lovable.app", external: true },
                 { name: t("navfooter.footerMtmCourses"), href: "https://www.skool.com/morethanmoney-1132/about", external: true },
               ].map((link) => (
                 <li key={link.name}>

@@ -1429,3 +1429,8 @@ body.scanner-access-route [contenteditable="true"] {
   text-align: center;
   background: color-mix(in srgb, var(--fundo) 60%, transparent);
 }
+
+/* Gravador do /estudio aberto: o menu do site sai do caminho */
+html[data-gravador] [data-site-nav] {
+  display: none !important;
+}

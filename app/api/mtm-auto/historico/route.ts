@@ -204,6 +204,7 @@ export async function GET(request: NextRequest) {
       .from('funded_positions')
       .select('id, mae_id, account_id, symbol, direcao, volume, preco_entrada, preco_fecho, pnl, comissao, swap, aberta_em, fechada_em')
       .in('account_id', [...rotuloDe.keys()]).eq('estado', 'fechada').gte('fechada_em', desde)
+      .or('fora_estatisticas.is.null,fora_estatisticas.neq.anulada_erro') // 228: anuladas por erro
       .order('fechada_em', { ascending: false }).limit(2000)
     const todasAsPartes = (fechadas ?? []) as unknown as ParteFechada[]
     for (const lado of [...new Set(todasAsPartes.map((p) => String(p.account_id)))]) {

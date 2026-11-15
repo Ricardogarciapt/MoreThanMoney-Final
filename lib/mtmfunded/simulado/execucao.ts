@@ -758,7 +758,9 @@ export async function estadoCompleto(
   const nada = Promise.resolve({ data: null })
   const [abertas, { data: fechadas }, { data: pendentes }, regras, { data: todasFechadas }, { data: estrategia }] = await Promise.all([
     posicoesAbertas(conta.id),
+    // 228: trades anuladas por erro do sistema (saldo devolvido) saem do histórico do cliente.
     leve ? nada : db.from('funded_positions').select('*').eq('account_id', conta.id).eq('estado', 'fechada')
+      .or('fora_estatisticas.is.null,fora_estatisticas.neq.anulada_erro')
       .order('fechada_em', { ascending: false }).limit(100),
     db.from('funded_orders').select('*').eq('account_id', conta.id).eq('estado', 'pendente')
       .order('criada_em', { ascending: false }),

@@ -73,9 +73,30 @@ export function criarLimitadorEmissoes(limite = LIMITE_EMISSOES, janelaMs = JANE
  *   · 'trocar'  — sem sessão, ou de OUTRA pessoa: sai e pede uma nova.
  */
 export function decidirPassagem(p: { tokenApp: string | null | undefined; userIdApp: string | null | undefined; userIdAtual: string | null | undefined }): 'sair' | 'manter' | 'trocar' {
-  if (!p.tokenApp || !p.userIdApp) return 'sair'
-  if (p.userIdAtual && p.userIdAtual === p.userIdApp) return 'manter'
+  // Sem token é que a app não tem sessão. Token SEM userId (a passagem pelo browser, onde o URL só
+  // traz o token) quer dizer «não sei de quem é» — e quem confirma isso é o servidor: 'trocar'.
+  // Até 10/11 isto devolvia 'sair', e TODA a gente que vinha da MTM Auto pelo browser (e pela
+  // casca iOS/Android, que abre a mesma página) era posta fora e caía no ecrã de entrada.
+  if (!p.tokenApp) return 'sair'
+  if (p.userIdApp && p.userIdAtual && p.userIdAtual === p.userIdApp) return 'manter'
   return 'trocar'
+}
+
+/**
+ * O `sub` do token, lido no BROWSER e sem verificar a assinatura. Serve só para a página decidir
+ * 'manter' (já tens a sessão desta pessoa, não se emite outra) — nunca para dar acesso: um token
+ * forjado com o `sub` de outra pessoa só consegue manter a sessão que JÁ está no browser.
+ */
+export function userIdDoToken(token: string | null | undefined): string | null {
+  const parte = String(token ?? '').split('.')[1]
+  if (!parte) return null
+  try {
+    const b64 = parte.replace(/-/g, '+').replace(/_/g, '/')
+    const o = JSON.parse(atob(b64 + '='.repeat((4 - (b64.length % 4)) % 4))) as { sub?: unknown }
+    return typeof o?.sub === 'string' && o.sub ? o.sub : null
+  } catch {
+    return null
+  }
 }
 
 /** Destino depois da passagem: /webtrader com a query da própria entrada (símbolo de um alerta, etc.). */

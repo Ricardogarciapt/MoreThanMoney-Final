@@ -1,0 +1,130 @@
+import { NextRequest, NextResponse } from 'next/server'
+import { getSupabaseAdmin } from '@/lib/supabase-admin-client'
+import { RENDERS_POR_DIA_MEMBRO, quemPede } from '@/lib/conteudo-magnetico/acesso'
+import { marcasPermitidas, resolverMarca } from '@/lib/conteudo-magnetico/marcas'
+import { normalizarGuiao, OBJECTIVOS, TONS } from '@/lib/conteudo-magnetico/guiao'
+import { verificarObjecto } from '@/lib/conteudo-magnetico/regras'
+
+export const runtime = 'nodejs'
+export const dynamic = 'force-dynamic'
+export const maxDuration = 20
+
+/**
+ * A FILA dos reels. O vídeo NÃO se faz aqui: a Vercel não tem ffmpeg nem tempo para isso.
+ * Aqui só se põe o trabalho na fila; o motor (services/conteudo-magnetico-render, na VPS ou
+ * no Mac) reclama-o, desenha e devolve o MP4.
+ */
+export async function POST(request: NextRequest) {
+  const quem = await quemPede(request)
+  if (!quem) return NextResponse.json({ erro: 'Sessão necessária' }, { status: 401 })
+  if (!quem.criar) return NextResponse.json({ erro: 'Não tens acesso a «Criar».' }, { status: 403 })
+  const b = await request.json().catch(() => ({}))
+  const g = b.guiao || {}
+  if (!marcasPermitidas(quem.admin).includes(g.marca)) {
+    return NextResponse.json({ erro: 'Essa marca é só da casa.' }, { status: 403 })
+  }
+  const guiao = normalizarGuiao(g, {
+    formato: 'reel',
+    marca: g.marca,
+    nicho: String(g.nicho || ''),
+    objectivo: g.objectivo in OBJECTIVOS ? g.objectivo : 'atracao',
+    tom: g.tom in TONS ? g.tom : 'educativo',
+  })
+  if (!guiao.reel?.segmentos.length) {
+    return NextResponse.json({ erro: 'O guião não tem segmentos de reel.' }, { status: 400 })
+  }
+  const avisos = verificarObjecto(guiao)
+  if (avisos.length) {
+    return NextResponse.json({ erro: 'O guião ainda falha as regras de conteúdo.', avisos }, { status: 422 })
+  }
+
+  const db = getSupabaseAdmin()
+  if (!quem.admin) {
+    const desde = new Date(Date.now() - 24 * 3600_000).toISOString()
+    const { count } = await db
+      .from('conteudo_magnetico_renders')
+      .select('id', { count: 'exact', head: true })
+      .eq('user_id', quem.userId)
+      .gte('criado_em', desde)
+    if ((count ?? 0) >= RENDERS_POR_DIA_MEMBRO) {
+      return NextResponse.json({ erro: `Máximo de ${RENDERS_POR_DIA_MEMBRO} vídeos por dia.` }, { status: 429 })
+    }
+  }
+
+  // Clips do próprio (Ativos do estúdio, bucket privado): cada segmento leva um URL assinado
+  // que dura o suficiente para a fila. Automático = apresentador e imagens de apoio, por ordem,
+  // a começar noutro ponto do clip de cada vez que o mesmo clip se repete.
+  const idsClips = (Array.isArray(b.clips) ? b.clips : []).filter((v: unknown) => typeof v === 'string' && /^[0-9a-f-]{36}$/i.test(v)).slice(0, 12) as string[]
+  if (idsClips.length) {
+    const { data: ativos } = await db.from('estudio_ativos').select('id, caminho, tipo').in('id', idsClips).eq('tipo', 'video')
+    const porId = new Map((ativos ?? []).map((a) => [a.id, a.caminho as string]))
+    const caminhos = idsClips.map((id) => porId.get(id)).filter(Boolean) as string[]
+    const { data: assinados } = caminhos.length ? await db.storage.from('estudio').createSignedUrls(caminhos, 7 * 24 * 3600) : { data: [] }
+    const urls = (assinados ?? []).map((a) => a.signedUrl).filter(Boolean) as string[]
+    if (urls.length) {
+      const brutos = Array.isArray(g.reel?.segmentos) ? g.reel.segmentos : []
+      const usos = new Array(urls.length).fill(0)
+      let proximo = 0
+      guiao.reel.segmentos.forEach((s, i) => {
+        if (s.media_url) return
+        const pedido = brutos[i]?.clip
+        let k: number | null = null
+        if (Number.isInteger(pedido) && pedido >= 0 && pedido < urls.length) k = pedido
+        else if (pedido == null && (s.visual === 'apresentador' || s.visual === 'b_roll')) k = proximo++ % urls.length
+        if (k == null) return
+        Object.assign(s, { media_url: urls[k], media_inicio: usos[k] * 4.5 })
+        usos[k]++
+      })
+    }
+  }
+
+  const marca = resolverMarca(guiao.marca, b.propria)
+  const { data, error } = await db
+    .from('conteudo_magnetico_renders')
+    .insert({
+      user_id: quem.userId,
+      peca_id: b.peca_id || null,
+      guiao,
+      marca,
+      fundo_url: typeof b.fundo_url === 'string' ? b.fundo_url.slice(0, 1000) : null,
+    })
+    .select('id, estado, criado_em')
+    .maybeSingle()
+  if (error) return NextResponse.json({ erro: error.message }, { status: 500 })
+  return NextResponse.json({ ok: true, render: data })
+}
+
+export async function GET(request: NextRequest) {
+  const quem = await quemPede(request)
+  if (!quem) return NextResponse.json({ erro: 'Sessão necessária' }, { status: 401 })
+  if (!quem.admin) return NextResponse.json({ erro: 'Só para a casa' }, { status: 403 })
+  const { data } = await getSupabaseAdmin()
+    .from('conteudo_magnetico_renders')
+    .select('id, estado, video_url, erro, criado_em, terminado_em, guiao->laminas')
+    .eq('user_id', quem.userId)
+    .order('criado_em', { ascending: false })
+    .limit(10)
+  return NextResponse.json({ ok: true, renders: data ?? [] })
+}
+
+/** DELETE ?id= — tira da fila (ou apaga um que falhou). Só os do próprio; um vídeo a montar ou pronto fica. */
+export async function DELETE(request: NextRequest) {
+  const quem = await quemPede(request)
+  if (!quem) return NextResponse.json({ erro: 'Sessão necessária' }, { status: 401 })
+  if (!quem.admin) return NextResponse.json({ erro: 'Só para a casa' }, { status: 403 })
+  const id = request.nextUrl.searchParams.get('id') || ''
+  if (!/^[0-9a-f-]{36}$/i.test(id)) return NextResponse.json({ erro: 'id inválido' }, { status: 400 })
+  // Na fila, falhado ou pronto (apaga também o MP4). O que está a ser montado agora não se apaga.
+  const db = getSupabaseAdmin()
+  const { data, error } = await db
+    .from('conteudo_magnetico_renders')
+    .delete()
+    .eq('id', id)
+    .eq('user_id', quem.userId)
+    .in('estado', ['na_fila', 'erro', 'pronto'])
+    .select('id, estado')
+  if (error) return NextResponse.json({ erro: error.message }, { status: 500 })
+  if (!data?.length) return NextResponse.json({ erro: 'A ser montado agora (ou não é teu).' }, { status: 409 })
+  await db.storage.from('uploads').remove([`conteudo-magnetico/${id}.mp4`]).catch(() => null)
+  return NextResponse.json({ ok: true })
+}

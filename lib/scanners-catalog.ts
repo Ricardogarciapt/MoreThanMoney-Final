@@ -14,6 +14,7 @@ export interface ScannerData {
   key: string
   name: string
   subtitle: string
+  /** Imagem principal: render nosso (public/scanners/<slug>/render-N.jpg, gerado por docs/scanners/gerar-prints.mjs). Nunca capturas de terceiros. */
   image: string
   description: string
   features: string[]
@@ -28,7 +29,8 @@ export const SCANNERS: ScannerData[] = [
     key: "goldkiller",
     name: "MTM Gold Killer V2.1",
     subtitle: "Análise Técnica Avançada",
-    image: "https://s3.tradingview.com/snapshots/x/X7SREOsm.png",
+    image: "/scanners/gold-killer/render-3.jpg",
+    gallery: ["/scanners/gold-killer/render-1.jpg", "/scanners/gold-killer/render-2.jpg", "/scanners/gold-killer/render-3.jpg", "/scanners/gold-killer/sinal.png"],
     badge: "Best Seller",
     description:
       "Um indicador avançado que combina técnicas estatísticas robustas, filtros de suavização personalizados e lógica de tendência baseada em SuperTrend para mapear oportunidades de trade com níveis de risco e recompensa claramente definidos.",
@@ -55,7 +57,8 @@ export const SCANNERS: ScannerData[] = [
     key: "aurumflow",
     name: "MTM Aurum Flow Cripto",
     subtitle: "Perpétuos Cripto · Tendência",
-    image: "/aurum-flow-preview.png",
+    image: "/scanners/aurum-flow/render-3.jpg",
+    gallery: ["/scanners/aurum-flow/render-1.jpg", "/scanners/aurum-flow/render-2.jpg", "/scanners/aurum-flow/render-3.jpg"],
     badge: "Novo",
     description:
       "O scanner de perpétuos cripto da MTM (otimizado para 1H). Só opera a favor da tendência (stack DEMA) com confirmação de momentum e entrega um plano completo e estático por sinal — entrada, stop e 3 alvos — com distâncias em % e cálculo de alavancagem e custo para o tamanho da tua conta.",
@@ -82,7 +85,8 @@ export const SCANNERS: ScannerData[] = [
     key: "mtm-scanner",
     name: "Scanner MTM V3.4",
     subtitle: "Market Structures and ATR",
-    image: "https://s3.tradingview.com/snapshots/z/ZPM47fOg.png",
+    image: "/scanners/mtm-scanner/render-3.jpg",
+    gallery: ["/scanners/mtm-scanner/render-1.jpg", "/scanners/mtm-scanner/render-2.jpg", "/scanners/mtm-scanner/render-3.jpg", "/scanners/mtm-scanner/sinal.png"],
     description:
       "Scanner avançado de estruturas de mercado com cálculo automático de ATR, sinais de entrada e saída optimizados e compatibilidade com múltiplos timeframes.",
     features: [
@@ -108,8 +112,8 @@ export const SCANNERS: ScannerData[] = [
     key: "trendshot",
     name: "TrendShot by MTM",
     subtitle: "Tendência · Estrutura · Risco/Retorno",
-    image: "/scanners/trendshot-xauusd.png",
-    gallery: ["/scanners/trendshot-xauusd.png", "/scanners/trendshot-us30.png", "/scanners/trendshot-sp500.png"],
+    image: "/scanners/trendshot/render-3.jpg",
+    gallery: ["/scanners/trendshot/render-1.jpg", "/scanners/trendshot/render-2.jpg", "/scanners/trendshot/render-3.jpg", "/scanners/trendshot/sinal.png", "/scanners/trendshot-xauusd.png", "/scanners/trendshot-us30.png", "/scanners/trendshot-sp500.png"],
     badge: "Novo",
     description:
       "Indicador multifuncional de análise técnica que junta seguimento de tendência, análise multi-timeframe, níveis de preço por volume e projeções automáticas de risco/retorno — uma leitura estruturada do mercado diretamente no teu gráfico do TradingView. Para Forex, Ouro (XAUUSD), índices e cripto.",
@@ -136,8 +140,8 @@ export const SCANNERS: ScannerData[] = [
     key: "premium-scanner",
     name: "MTM Premium Scanner",
     subtitle: "Ouro · Zonas de recuo por sessão",
-    image: "/scanners/premium-scanner.png",
-    gallery: ["/scanners/premium-scanner.png", "/scanners/premium-scanner-ny.png", "/scanners/premium-scanner-asia.png"],
+    image: "/scanners/premium-scanner/render-3.jpg",
+    gallery: ["/scanners/premium-scanner/render-1.jpg", "/scanners/premium-scanner/render-2.jpg", "/scanners/premium-scanner/render-3.jpg", "/scanners/premium-scanner.png", "/scanners/premium-scanner-ny.png", "/scanners/premium-scanner-asia.png"],
     badge: "Novo",
     description:
       "O scanner das sessões de ouro da MTM. Em Londres, Nova Iorque e Ásia lê a direção do movimento e desenha logo a zona de entrada em recuo, o stop e os alvos, com a mesma geometria dos sinais Premium da casa. Assenta no método de zonas de recuo por sessão, usado por traders de topo em todo o mundo e por vários programas de IB nos seus sinais de ouro.",
@@ -161,10 +165,149 @@ export const SCANNERS: ScannerData[] = [
     ],
   },
   {
+    key: "defy",
+    name: "DEFY by MTM",
+    subtitle: "Bandas de exaustão · Confirmações · Estrelas",
+    image: "/scanners/defy/render-3.jpg",
+    gallery: ["/scanners/defy/render-1.jpg", "/scanners/defy/render-2.jpg", "/scanners/defy/render-3.jpg"],
+    badge: "Novo",
+    description:
+      "O DEFY lê a estrutura do mercado com bandas de exaustão, níveis-chave, uma nuvem de tendência e uma pontuação de confirmações. Quando há confirmações suficientes, marca a ideia com estrelas e desenha o plano completo no gráfico: entrada, Warning, stop e três alvos.",
+    features: [
+      "Bandas de exaustão interior, média e exterior, com projecção tracejada",
+      "Níveis-chave onde o preço já reagiu, espaçados entre si",
+      "Pontuação +3 a +15 com estrelas (★ a ★★★) e King Idea na vela dourada",
+      "Entrada no fecho ou em pullback de 50 %, Warning e stop a 1 ATR",
+      "Alvos a 1R, 2R e 3R (ou modos Squeeze, Stretch e Swing), com a distância em pips",
+    ],
+    techSpecs: [
+      "Nuvem de tendência, velas coloridas e setas de seguimento",
+      "Etiquetas de quebra de volume",
+      "Alertas JSON com a ideia e os seguimentos (entrada, TP1 a TP3, stop)",
+      "Forex, ouro, índices e cripto, em qualquer timeframe",
+      "Ferramenta educativa: não executa ordens nem garante resultados",
+    ],
+    products: [
+      { id: "defy-semestral", label: "Semestral", price: "50€", priceNote: "6 meses de acesso", planId: "defy_semestral" },
+      { id: "defy-lifetime", label: "Vitalício", price: "350€", priceNote: "Pagamento único", planId: "defy_lifetime", highlight: true },
+    ],
+  },
+  {
+    key: "rocketnova",
+    name: "RocketNova by MTM",
+    subtitle: "Médias · Estrelas · Rocket Candle · Gestão da trade",
+    image: "/scanners/rocketnova/render-3.jpg",
+    gallery: ["/scanners/rocketnova/render-1.jpg", "/scanners/rocketnova/render-2.jpg", "/scanners/rocketnova/render-3.jpg"],
+    badge: "Novo",
+    description:
+      "O RocketNova lê a tendência com três médias (20, 50 e 238) e só dispara no cruzamento confirmado quando há uma estrela de lançamento: um mínimo recente de swing para a compra, um máximo para a venda. A Rocket Candle, o pulso de volatilidade e o Trade Clock dizem-te se o mercado tem força e horas para a ideia. O plano fica fixo na vela do sinal e a gestão sai por alertas: TP1 a TP4, stop, stop na entrada e saída por sinal contrário.",
+    features: [
+      "EMA 20, 50 e 238 com sinal no cruzamento confirmado no fecho da vela",
+      "Estrelas de máximo e mínimo por Depth, Deviation e Backstep (34 / 13 / 8)",
+      "Rocket Candle: a vela de impulso pintada de amarelo, com filtro opcional",
+      "Volatility Pulse (ATR contra a média) e Trade Clock com Good / Low Volume",
+      "Entrada, stop e TP1 a TP4 fixos na vela, com stop na entrada depois do TP1",
+    ],
+    techSpecs: [
+      "Stop fixo em pontos (modo auto: 100 pips, 200 no ouro) ou na última estrela",
+      "Alvos a 30 %, 50 %, 100 % e 150 % do stop (60 % no TP2 do ouro)",
+      "Sessão de negociação configurável (08:00 a 21:00 por omissão)",
+      "Alertas JSON com a entrada e os seguimentos da mesma trade, prontos para webhook",
+      "Forex, ouro, índices e cripto; ferramenta educativa, não executa ordens",
+    ],
+    products: [
+      { id: "rn-semestral", label: "Semestral", price: "50€", priceNote: "6 meses de acesso", planId: "rocketnova_semestral" },
+      { id: "rn-lifetime", label: "Vitalício", price: "350€", priceNote: "Pagamento único", planId: "rocketnova_lifetime", highlight: true },
+    ],
+  },
+  {
+    key: "goldenzone",
+    name: "Golden Zone by MTM",
+    subtitle: "Níveis psicológicos · Zona de ação · Saída 1 e 2 · Ouro em 5 minutos",
+    image: "/scanners/golden-zone/poster.jpg",
+    badge: "Novo",
+    description:
+      "A Golden Zone é o scanner de scalping de ouro da MTM, com código da casa. Desenha os níveis psicológicos de 5 em 5 $ e, quando uma vela fecha para lá de um nível a favor da tendência, marca o visto amarelo e a zona de 1 $ centrada nesse nível. Só quando o preço recua à zona de ação é que dá os parâmetros da posição: invalidação a 1,5 $ (150 pontos), Saída 1 a +1,5 $ e Saída 2 a +3 $. Ao tocar a Saída 1 aparece a bandeira branca. Cada visto novo apaga o anterior, por isso acompanha-se ao vivo no gráfico de 5 minutos.",
+    features: [
+      "Dez linhas psicológicas pretas à volta do preço (5 $ no ouro; passo automático noutros mercados), as únicas linhas fixas",
+      "Visto amarelo e caixa da zona quando a vela atravessa o nível a favor da tendência (EMA 50/200)",
+      "Zona de ação, invalidação, Saída 1 e Saída 2 escritas na linha, com o preço, só depois do recuo",
+      "Bandeira branca na Saída 1; Saída 2 ou invalidação fecham o plano; o visto seguinte limpa o gráfico",
+      "Tabela de estatísticas (sinais, planos, Saídas e invalidações), desligada por omissão",
+    ],
+    techSpecs: [
+      "Zona de 1 $ centrada no nível; stop a 3 × meia zona (1,5 $ = 150 pontos no ouro), ajustável",
+      "Offset de 20 velas para as linhas e para a validade da zona à espera do recuo",
+      "Cores da zona de ação, Saída 1, Saída 2 e invalidação à tua escolha; no gráfico só há as linhas de 5 $ e a posição activa",
+      "Alertas JSON por evento (visto, plano, Saída 1, Saída 2, invalidação), prontos para webhook",
+      "Pensado para o XAUUSD em 5 minutos; ferramenta educativa, não executa ordens",
+    ],
+    products: [
+      { id: "gz-semestral", label: "Semestral", price: "50€", priceNote: "6 meses de acesso", planId: "goldenzone_semestral" },
+      { id: "gz-lifetime", label: "Vitalício", price: "350€", priceNote: "Pagamento único", planId: "goldenzone_lifetime", highlight: true },
+    ],
+  },
+  {
+    key: "quantum",
+    name: "Quantum by MTM",
+    subtitle: "Tendência · Recuo · Oscilador · Painel de força",
+    image: "/scanners/quantum/render-3.jpg",
+    gallery: ["/scanners/quantum/render-1.jpg", "/scanners/quantum/render-2.jpg", "/scanners/quantum/render-3.jpg"],
+    badge: "Novo",
+    description:
+      "O Quantum é um seguidor de tendência que entra em recuos. A linha primária (média de 269 com brilho) e a seta de fase dizem a direção; o painel de força dá uma pontuação de 0 a 100 e uma seta por timeframe, de M1 a W1. Depois espera-se o recuo: o preço volta à fita das EMAs 8 e 21 e o oscilador entra na zona da direção. A entrada é um triângulo de recuo, um ponto de onda ou os dois na mesma vela. Traz ainda HH/HL/LH/LL, linhas de tendência, bandas de volatilidade e os máximos e mínimos das sessões.",
+    features: [
+      "Linha primária de 269 (EMA, SMA, WMA, HMA, RMA ou VWMA) azul ou vermelha pela fase, com brilho",
+      "Seta grande de fase e painel de força com score 0–100 e setas M1 a W1",
+      "Triângulos de recuo (toque na fita 8/21 e fecho a favor) e pontos de onda (Stoch RSI a sair da zona)",
+      "Estrutura HH/HL/LH/LL, linhas de tendência pelos pivots e bandas de volatilidade 2σ e 3σ",
+      "Máximos e mínimos das sessões de Nova Iorque, Londres e Ásia, com etiquetas",
+    ],
+    techSpecs: [
+      "Oscilador Stoch RSI 14 / %K 5 / suavização 1 e 1, zonas 80 e 20, fase pela EMA 260",
+      "Swing de 21 velas para as etiquetas e lookback de 13 para as linhas de tendência",
+      "Sinais em 5, 15 e 30 minutos ligáveis um a um; outros timeframes sempre activos",
+      "Alertas JSON com entrada, stop para lá do recuo, alvo a 2R e score, prontos para webhook",
+      "Forex, ouro, índices e cripto; ferramenta educativa, não executa ordens",
+    ],
+    products: [
+      { id: "qt-semestral", label: "Semestral", price: "50€", priceNote: "6 meses de acesso", planId: "quantum_semestral" },
+      { id: "qt-lifetime", label: "Vitalício", price: "350€", priceNote: "Pagamento único", planId: "quantum_lifetime", highlight: true },
+    ],
+  },
+  {
+    key: "sniperpro",
+    name: "SniperPro by MTM",
+    subtitle: "Bandas · Trend Screener · Nuvem Kalman · Pivots",
+    image: "/scanners/sniperpro/poster.jpg",
+    badge: "Novo",
+    description:
+      "O SniperPro junta num só estudo o que antes eram cinco: bandas de exaustão a 1.5, 2 e 2.5 desvios, um trend screener com onze médias adaptativas e a tabela Bullish/Bearish · Trending/Consolidating/Pulling Back · força, uma nuvem Kalman que pinta as velas, Supertrend, Parabolic SAR, etiquetas de exaustão por volume, pivots S1–S7 / R1–R7 e níveis-chave com brilho. O painel inferior SniperPro Asst lê o momento com um RSI alisado, bandas de retest e divergências.",
+    features: [
+      "Bandas da média de 55 do (H+L)/2 a 1.5, 2 e 2.5 desvios, com a zona de exaustão preenchida",
+      "Trend Screener: onze VIDYA de Fibonacci (8 a 987) e tabela de tendência, estado e força",
+      "Nuvem Kalman 5/13 com velas coloridas; Supertrend que se esbate e Parabolic SAR",
+      "Pivots clássicos S1–S7 / R1–R7 com etiquetas e níveis-chave com brilho",
+      "Sinais «+N» no cruzamento Kalman com vela válida e votos de quatro ferramentas de tendência",
+    ],
+    techSpecs: [
+      "Etiquetas «Vol: N%» de exaustão por volume nos pivots (densidade de Gauss)",
+      "Painel inferior SniperPro Asst: Exp-RSI, canal de regressão, retest, reversal e divergências",
+      "Alertas JSON com entrada, stop (Supertrend 10/3) e alvos a 1R, 2R e 3R, prontos para webhook",
+      "Forex, ouro, índices e cripto, em qualquer timeframe; cada secção liga-se e desliga-se",
+      "Ferramenta educativa: não executa ordens nem garante resultados",
+    ],
+    products: [
+      { id: "sp-semestral", label: "Semestral", price: "50€", priceNote: "6 meses de acesso", planId: "sniperpro_semestral" },
+      { id: "sp-lifetime", label: "Vitalício", price: "350€", priceNote: "Pagamento único", planId: "sniperpro_lifetime", highlight: true },
+    ],
+  },
+  {
     key: "sensei",
     name: "MTM Sensei",
     subtitle: "Inteligência Artificial Avançada",
-    image: "/MTM%20Sensei%20Preview.png",
+    image: "/scanners/sensei/render-3.jpg",
+    gallery: ["/scanners/sensei/render-1.jpg", "/scanners/sensei/render-2.jpg", "/scanners/sensei/render-3.jpg", "/scanners/sensei/sinal.png"],
     badge: "Novo",
     description:
       "O scanner mais sofisticado da MTM. O Sensei usa inteligência artificial para identificar confluências entre múltiplas metodologias — Smart Money, Goldenzone, SR MTM e TrendShot — gerando sinais de alta precisão para traders profissionais.",

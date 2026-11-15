@@ -4,6 +4,7 @@ import { chamarIA, mensagemIndisponivel } from '@/lib/ia/chamar'
 import { excessos, formatoSaida, geradorPorId, normalizarVariacoes } from '@/lib/marketing/geradores'
 import { lerMarca, marcaEmTexto } from '@/lib/marketing/marca'
 import { REGRAS_CASA, peneira } from '@/lib/marketing/regras'
+import { blocoFramework } from '@/lib/framework-mtm'
 
 export const dynamic = 'force-dynamic'
 export const maxDuration = 60
@@ -38,7 +39,9 @@ ${REGRAS_CASA}
 
 ${marcaEmTexto(marca)}
 
-${formatoSaida(g)}`
+${formatoSaida(g)}
+
+${blocoFramework('conteudo')}`
 
   try {
     const r = await chamarIA({

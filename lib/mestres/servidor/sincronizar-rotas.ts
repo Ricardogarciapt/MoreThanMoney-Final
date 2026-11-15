@@ -18,6 +18,7 @@
  */
 import { getSupabaseAdmin } from '@/lib/supabase-admin-client'
 import { direitoMtmAuto } from '@/lib/entitlements'
+import { semAcessoAEstrategia } from '@/lib/acesso-estrategias-servidor'
 import { ligacaoSegueEstrategia, ligacaoSegueGrupoTelegram, planearRotasDaEstrategia, planoDeEscrita } from '../planear'
 import { seguidoresExtra } from '../premium'
 import { lerEstrategiaMestre } from '../tipos'
@@ -71,6 +72,8 @@ export async function sincronizarRotasDaEstrategia(slug: string): Promise<Result
     const tem = await direitoMtmAuto(u).then((d) => d.tem).catch(() => true)
     if (!tem) semDireito.add(u)
   }))
+  // O NÍVEL da estratégia (03/11, dono): Premium II só Premium/corretora validada, Edge só PU Prime.
+  const semAcesso = await semAcessoAEstrategia(e.slug, [...candidatos])
 
   const plano = planearRotasDaEstrategia({
     estrategia: {
@@ -82,6 +85,7 @@ export async function sincronizarRotasDaEstrategia(slug: string): Promise<Result
     contasAuto: (contasAuto.data ?? []) as never,
     lotesForcados,
     semDireito,
+    semAcesso,
   })
   out.ignorados = plano.ignorados
 

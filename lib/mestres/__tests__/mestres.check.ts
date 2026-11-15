@@ -226,6 +226,8 @@ caso('falhas seguidas: um alerta ao chegar a N, bloqueio ao chegar ao limite, su
   assert.equal(eFalhaTecnica('timeout ao falar com a MetaApi'), true)
   assert.equal(eFalhaTecnica('XAUUSD não existe no destino'), false)
   assert.equal(eFalhaTecnica('risco total 7.00% acima do limite de 6% da conta'), false)
+  assert.equal(eFalhaTecnica('A corretora recusou: Position not found'), false)
+  assert.equal(eFalhaTecnica('A corretora recusou: Invalid stops in the request'), false)
 })
 
 // ── concorrência ────────────────────────────────────────────────────────────
