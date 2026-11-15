@@ -3,16 +3,19 @@ import { verifyAgentAccess } from '@/lib/agent-site-api'
 import { getSupabaseAdmin } from '@/lib/supabase-admin-client'
 import { avisarDono, carregarConfig, contarEnviados, excluir } from '@/lib/b2b/envio'
 import { recolherDaPagina } from '@/lib/b2b/recolha'
+import { importarDaApollo } from '@/lib/b2b/apollo'
+import { apolloConfigurada } from '@/lib/apollo/cliente'
 import { AGENTE_B2B, SEGMENTOS, type Pais, type Segmento } from '@/lib/b2b/sequencias'
 
 /**
  * PROSPEÇÃO B2B — painel (/admin/sales-machine), cron (Bearer CRON_SECRET) e o motor dos agentes
  * (Bearer AGENT_SITE_API_KEY: 07/10 o Prospector alimenta a lista pela acção «recolher»).
  *  GET  → contagens por estado, prospectos, envios recentes, configuração.
- *  POST → { action: 'excluir'|'estado'|'confirmar_pc'|'config'|'recolher', ... }
+ *  POST → { action: 'excluir'|'estado'|'confirmar_pc'|'config'|'recolher'|'apollo', ... }
+ *  'apollo' (15/11): descobre empresas na Apollo e recolhe o email da página de contacto de cada uma.
  */
 export const dynamic = 'force-dynamic'
-export const maxDuration = 60
+export const maxDuration = 300
 
 const ESTADOS = ['novo', 'contactado', 'respondeu', 'reuniao', 'fechado', 'excluido'] as const
 
@@ -110,6 +113,20 @@ export async function POST(req: NextRequest) {
         if (error) return NextResponse.json({ ok: false, error: error.message }, { status: 500 })
       }
       return NextResponse.json({ ...r, gravados: linhas.length })
+    }
+    case 'apollo': {
+      if (!apolloConfigurada()) return NextResponse.json({ ok: false, error: 'APOLLO_API_KEY em falta neste ambiente' }, { status: 503 })
+      const segmento = String(b.segmento ?? '') as Segmento
+      const pais = (String(b.pais ?? 'PT').toUpperCase() === 'BR' ? 'BR' : 'PT') as Pais
+      if (!SEGMENTOS.includes(segmento)) return NextResponse.json({ ok: false, error: 'segmento inválido' }, { status: 400 })
+      const r = await importarDaApollo(db, {
+        segmento, pais,
+        limite: Number(b.limite) || 5,
+        pagina: Number(b.pagina) || 1,
+        palavras: Array.isArray(b.palavras) ? (b.palavras as unknown[]).map(String).slice(0, 4) : [],
+        pessoaColectiva: b.pessoa_colectiva === true,
+      })
+      return NextResponse.json(r, { status: r.ok ? 200 : 502 })
     }
     default:
       return NextResponse.json({ ok: false, error: 'acção desconhecida' }, { status: 400 })
