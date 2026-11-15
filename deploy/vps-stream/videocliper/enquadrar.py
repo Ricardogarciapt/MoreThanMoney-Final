@@ -39,7 +39,13 @@ def pelo_vision(video, recuo, duracao):
     if all(float(c.get(k, 0)) <= 1 for k in ("x", "y", "w", "h")):
         c = {"x": c["x"] * w, "y": c["y"] * h, "w": c["w"] * w, "h": c["h"] * h}
     cara = {k: int(round(float(c[k]))) for k in ("x", "y", "w", "h")}
-    return {"w": w, "h": h, "cara": cara, "tipo": tipo, "fonte": "vision"}
+    out = {"w": w, "h": h, "cara": cara, "tipo": tipo, "fonte": "vision"}
+    cam = j.get("camara")
+    if isinstance(cam, dict) and all(k in cam for k in ("x", "y", "w", "h")):
+        if all(float(cam[k]) <= 1 for k in ("x", "y", "w", "h")):
+            cam = {"x": cam["x"] * w, "y": cam["y"] * h, "w": cam["w"] * w, "h": cam["h"] * h}
+        out["camara"] = {k: int(round(float(cam[k]))) for k in ("x", "y", "w", "h")}
+    return out
 
 
 def main():
