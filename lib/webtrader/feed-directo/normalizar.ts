@@ -183,7 +183,7 @@ export interface OrdemMetaApiMinima {
   stopLoss?: number; takeProfit?: number; time?: Date | string; stopLimitPrice?: number
 }
 export interface ContaMetaApiMinima {
-  balance?: number; equity?: number; margin?: number; freeMargin?: number; marginLevel?: number; currency?: string
+  balance?: number; equity?: number; credit?: number; margin?: number; freeMargin?: number; marginLevel?: number; currency?: string
 }
 
 export function posicaoDeMetaApi(p: PosicaoMetaApiMinima, mapa: MapaSimbolos): PosicaoWT {
@@ -211,9 +211,11 @@ export function contaDeMetaApi(i: ContaMetaApiMinima | null | undefined): ContaW
   if (!i) return null
   const saldo = num(i.balance)
   const equity = num(i.equity)
+  const credito = num(i.credit)
   return {
     saldo, equity, margem: num(i.margin), margemLivre: num(i.freeMargin),
-    nivelMargem: num(i.marginLevel), flutuante: saldo != null && equity != null ? Number((equity - saldo).toFixed(2)) : null,
+    nivelMargem: num(i.marginLevel), credito,
+    flutuante: saldo != null && equity != null ? Number((equity - saldo - (credito ?? 0)).toFixed(2)) : null,
     moeda: i.currency ?? null,
   }
 }
@@ -285,7 +287,7 @@ export function contaDeTL(bruto: Record<string, number>, moeda: string | null): 
     saldo, equity, margem, margemLivre: num(bruto.availableFunds),
     nivelMargem: margem && equity != null && margem > 0 ? Number(((equity / margem) * 100).toFixed(1)) : null,
     flutuante: num(bruto.openNetPnL) ?? num(bruto.openGrossPnL) ?? (saldo != null && equity != null ? Number((equity - saldo).toFixed(2)) : null),
-    moeda,
+    credito: null, moeda,
   }
 }
 
