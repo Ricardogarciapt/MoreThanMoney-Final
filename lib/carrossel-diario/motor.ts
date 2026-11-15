@@ -29,7 +29,7 @@ import { visuaisDoCarrossel } from './visuais'
 const HORA: Record<Perfil, { h: number; m: number }> = { ricardo: { h: 19, m: 0 }, mtm: { h: 12, m: 30 } }
 
 /**
- * Fotografias do Ricardo para a capa e o fecho (sempre desenhadas a preto e branco).
+ * Fotografias do Ricardo para a capa e o fecho (a cores ou a preto e branco, alterna por dia).
  * As locais são as fotos de referência que ele aprovou (PR #165); as remotas são retratos gerados
  * por IA a partir delas (Higgsfield, 23/10). Se uma remota falhar, usa-se uma local.
  */
@@ -54,6 +54,18 @@ const FOTOS_IA = [
   'https://d8j0ntlcm91z4.cloudfront.net/user_3EREu4FRjd9JfQ4QQ3vtvBw838A/hf_20261108_003102_5e8a67fc-2f3a-443c-af47-3892851eb313.png',
   'https://d8j0ntlcm91z4.cloudfront.net/user_3EREu4FRjd9JfQ4QQ3vtvBw838A/hf_20261108_003103_edcd2ee9-d84d-40d4-b987-8ec887781cd0.png',
   'https://d8j0ntlcm91z4.cloudfront.net/user_3EREu4FRjd9JfQ4QQ3vtvBw838A/hf_20261108_003102_55f15bf9-d160-4b32-8ebc-d6a38e6d0a39.png',
+  // 10–15/11: 07b (podcast refeito), 12, 14, 15 e 16–22. Fora: 10, 11 e 13 (defeitos apontados pelo Ricardo).
+  'https://d8j0ntlcm91z4.cloudfront.net/user_3EREu4FRjd9JfQ4QQ3vtvBw838A/hf_20261111_003112_e050718d-2895-4bc9-a927-be8f6b727ab6.png',
+  'https://d8j0ntlcm91z4.cloudfront.net/user_3EREu4FRjd9JfQ4QQ3vtvBw838A/hf_20261110_003127_03092a5e-a728-48b5-b057-e485ffadb80e.png',
+  'https://d8j0ntlcm91z4.cloudfront.net/user_3EREu4FRjd9JfQ4QQ3vtvBw838A/hf_20261110_003127_b1641e01-543a-4bc7-b3c3-b9f91d6fc62c.png',
+  'https://d8j0ntlcm91z4.cloudfront.net/user_3EREu4FRjd9JfQ4QQ3vtvBw838A/hf_20261110_003127_d41501e6-ab71-41c9-bb78-95ec035e17d0.png',
+  'https://d8j0ntlcm91z4.cloudfront.net/user_3EREu4FRjd9JfQ4QQ3vtvBw838A/hf_20261111_003112_edcf7fd9-8504-4ea1-b015-69a97d0475c8.png',
+  'https://d8j0ntlcm91z4.cloudfront.net/user_3EREu4FRjd9JfQ4QQ3vtvBw838A/hf_20261111_003111_490b2e30-ae9e-489e-bd6d-4456b9f57c21.png',
+  'https://d8j0ntlcm91z4.cloudfront.net/user_3EREu4FRjd9JfQ4QQ3vtvBw838A/hf_20261111_003111_13d17902-6ab2-4cc2-a699-bcd8c5b7a38f.png',
+  'https://d8j0ntlcm91z4.cloudfront.net/user_3EREu4FRjd9JfQ4QQ3vtvBw838A/hf_20261115_000202_e0981083-681f-4ba4-975c-53aaa4af2f37.png',
+  'https://d8j0ntlcm91z4.cloudfront.net/user_3EREu4FRjd9JfQ4QQ3vtvBw838A/hf_20261115_000201_7755db7c-2ee4-4d0e-8387-0ce191961381.png',
+  'https://d8j0ntlcm91z4.cloudfront.net/user_3EREu4FRjd9JfQ4QQ3vtvBw838A/hf_20261115_000200_23b7f886-aea8-4a54-8636-cc56477a31eb.png',
+  'https://d8j0ntlcm91z4.cloudfront.net/user_3EREu4FRjd9JfQ4QQ3vtvBw838A/hf_20261115_000200_96a3b7c2-2145-4159-b7ee-b5c4e5b86b72.png',
 ]
 const AVATAR = 'capas/ref/rg-bracos.jpg'
 /** Fotografias dos educadores (as mesmas dos reels; retratos a ouro sobre preto). */
@@ -88,25 +100,42 @@ async function remota(url: string): Promise<string | null> {
   }
 }
 
-/** A foto do dia `n` (roda pela lista: IA e locais intercaladas). */
-async function fotoDoDia(n: number): Promise<string | null> {
-  // Alterna real e IA para as fotos reais dele aparecerem tanto quanto as geradas.
+/** Todas as fotos uma vez só (reais e IA intercaladas enquanto houver das duas). */
+function listaDeFotos(): { u: string; ia: boolean }[] {
   const lista: { u: string; ia: boolean }[] = []
   for (let i = 0; i < Math.max(FOTOS_IA.length, FOTOS_LOCAIS.length); i++) {
-    lista.push({ u: FOTOS_LOCAIS[i % FOTOS_LOCAIS.length], ia: false })
+    if (i < FOTOS_LOCAIS.length) lista.push({ u: FOTOS_LOCAIS[i], ia: false })
     if (i < FOTOS_IA.length) lista.push({ u: FOTOS_IA[i], ia: true })
   }
-  const escolha = lista[((n % lista.length) + lista.length) % lista.length]
-  const img = escolha.ia ? await remota(escolha.u) : local(escolha.u)
-  return img ?? local(FOTOS_LOCAIS[n % FOTOS_LOCAIS.length])
+  return lista
+}
+
+/**
+ * A foto da posição `n`: roda por todas, cada uma uma vez por volta (10/11 Ricardo: antes as
+ * primeiras reais repetiam-se). Se uma remota falhar, avança para a seguinte em vez de cair
+ * sempre na mesma local.
+ */
+async function fotoDoDia(n: number): Promise<string | null> {
+  const lista = listaDeFotos()
+  for (let k = 0; k < Math.min(lista.length, 6); k++) {
+    const escolha = lista[(((n + k) % lista.length) + lista.length) % lista.length]
+    const img = escolha.ia ? await remota(escolha.u) : local(escolha.u)
+    if (img) return img
+  }
+  return local(FOTOS_LOCAIS[((n % FOTOS_LOCAIS.length) + FOTOS_LOCAIS.length) % FOTOS_LOCAIS.length])
 }
 
 export async function desenharCarrossel(c: Carrossel, dia: number): Promise<Buffer[]> {
   const fontes = await carregarFontes()
-  const img: Imagens = { avatar: local(AVATAR), logo: local(LOGO) }
+  // A fotografia redonda das lâminas do meio também roda pelas reais (antes era sempre a mesma).
+  const avatar = local(FOTOS_LOCAIS[((dia % FOTOS_LOCAIS.length) + FOTOS_LOCAIS.length) % FOTOS_LOCAIS.length]) ?? local(AVATAR)
+  // 15/11 Ricardo: «não tens necessariamente de usar preto e branco» — um dia a cores, outro a P&B.
+  const img: Imagens = { avatar, logo: local(LOGO), cor: dia % 2 === 1 }
   const fotoEdu = c.perfil === 'mtm' && c.educador ? local(FOTO_EDUCADOR[c.educador]) : null
+  // Capa e fecho a meia volta de distância: nunca a mesma foto no mesmo carrossel.
+  const meiaVolta = Math.max(1, Math.floor(listaDeFotos().length / 2))
   const fotoCapa = c.perfil === 'ricardo' ? await fotoDoDia(dia) : fotoEdu
-  const fotoFecho = c.perfil === 'ricardo' ? await fotoDoDia(dia + 3) : fotoEdu
+  const fotoFecho = c.perfil === 'ricardo' ? await fotoDoDia(dia + meiaVolta) : fotoEdu
   const assinatura = c.perfil === 'mtm' && c.educador ? `${EDUCADOR_NOME[c.educador]} · ${EDUCADOR_AREA[c.educador]}` : undefined
   const visuais = visuaisDoCarrossel(c)
   const total = c.laminas.length
