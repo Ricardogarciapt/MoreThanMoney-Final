@@ -118,7 +118,7 @@ export async function compradorDoCliente(
 
 export interface LinhaDoEnsaio {
   referencia: string
-  accao: 'registada' | 'codigo_preenchido' | 'ignorada'
+  accao: 'registada' | 'codigo_preenchido' | 'ignorada' | 'falhou'
   valorCents: number
   pack: string | null
   agenteCodigo: string | null
@@ -131,7 +131,22 @@ export interface ResultadoReconciliacao {
   vistas: number
   registadas: number
   codigosPreenchidos: number
+  /** Pagamentos que não se conseguiram gravar nesta corrida (base lenta, 503…). A próxima tenta outra vez. */
+  falhadas: number
   linhas: LinhaDoEnsaio[]
+}
+
+/** Uma escrita que falha (a base deu 503 a 11/11 às 06:20) não pode parar a corrida inteira. */
+async function tentar(res: ResultadoReconciliacao, linha: LinhaDoEnsaio, escrever: () => Promise<void>): Promise<boolean> {
+  try {
+    await escrever()
+    return true
+  } catch (e) {
+    res.falhadas++
+    res.linhas.push({ ...linha, accao: 'falhou', motivo: e instanceof Error ? e.message.slice(0, 200) : String(e) })
+    console.error('[vendas-reconciliar] não gravou', linha.referencia, e)
+    return false
+  }
 }
 
 /**
@@ -149,14 +164,16 @@ export async function reconciliarStripe(
   const dias = Math.min(Math.max(Math.round(opcoes.dias ?? 3), 1), 90)
   const ensaio = Boolean(opcoes.ensaio)
   const desde = Math.floor(Date.now() / 1000) - dias * 86400
-  const res: ResultadoReconciliacao = { dias, ensaio, vistas: 0, registadas: 0, codigosPreenchidos: 0, linhas: [] }
+  const res: ResultadoReconciliacao = { dias, ensaio, vistas: 0, registadas: 0, codigosPreenchidos: 0, falhadas: 0, linhas: [] }
 
   // O que o livro já tem, numa só leitura.
-  const { data: noLivro } = await db
+  const { data: noLivro, error: erroLivro } = await db
     .from('vendas_vendas')
     .select('referencia, agente_codigo, tipo')
     .eq('fonte', 'stripe')
     .gte('pago_em', new Date((desde - 86400) * 1000).toISOString())
+  // Sem saber o que o livro já tem não se adivinha: pára aqui e a próxima corrida repete a janela.
+  if (erroLivro) throw new Error(`Não consegui ler o livro: ${erroLivro.message}`)
   const livro = new Map((noLivro ?? []).map((r) => [String(r.referencia), r as { agente_codigo: string | null; tipo: string }]))
 
   // ── 1. CHECKOUTS CONCLUÍDOS (primeiras compras, scanners, licenças, Funded) ──
@@ -170,7 +187,7 @@ export async function reconciliarStripe(
       s.metadata?.plan || (s.metadata?.source === 'mtmfunded_program' ? 'mtmfunded' : s.metadata?.source) || null
     const agenteCodigo = normalizar(s.metadata?.agente_codigo)
     const linha: LinhaDoEnsaio = { referencia: s.id, accao: 'registada', valorCents: s.amount_total ?? 0, pack, agenteCodigo }
-    if (!ensaio) {
+    const gravou = ensaio || (await tentar(res, linha, async () => {
       const compradorId =
         s.metadata?.user_id ||
         (await compradorDoCliente(db, typeof s.customer === 'string' ? s.customer : s.customer?.id, s.customer_details?.email))
@@ -187,7 +204,8 @@ export async function reconciliarStripe(
         nota: 'Registada pela reconciliação diária com o Stripe (o webhook não a tinha gravado).',
         agenteCodigo,
       })
-    }
+    }))
+    if (!gravou) continue
     res.registadas++
     res.linhas.push(linha)
   }
@@ -196,28 +214,49 @@ export async function reconciliarStripe(
   for await (const inv of stripe.invoices.list({ created: { gte: desde }, status: 'paid', limit: 100 })) {
     res.vistas++
     if (!inv.id || !((inv.amount_paid ?? 0) > 0)) continue
-    if (await ehFaturaDeMarketplace(inv as unknown as Parameters<typeof ehFaturaDeMarketplace>[0])) continue
+    await tentar(res, { referencia: inv.id, accao: 'registada', valorCents: inv.amount_paid ?? 0, pack: null, agenteCodigo: null }, () =>
+      faturaParaOLivro(stripe, db, inv, livro, ensaio, desde, res),
+    )
+  }
+
+  return res
+}
+
+/** Uma fatura paga com valor: regista-a, ou preenche-lhe o código, se for preciso. Lança se a escrita falhar. */
+async function faturaParaOLivro(
+  stripe: Stripe,
+  db: SupabaseClient,
+  inv: Fatura,
+  livro: Map<string, { agente_codigo: string | null; tipo: string }>,
+  ensaio: boolean,
+  desde: number,
+  res: ResultadoReconciliacao,
+): Promise<void> {
+  if (!inv.id) return
+  {
+    if (await ehFaturaDeMarketplace(inv as unknown as Parameters<typeof ehFaturaDeMarketplace>[0])) return
 
     const subId = subscricaoDaFatura(inv)
     if (inv.billing_reason === 'subscription_create' && subId) {
       const sessoes = await stripe.checkout.sessions.list({ subscription: subId, limit: 1 })
-      if (sessoes.data.length) continue // a primeira compra está no livro pela sessão
+      if (sessoes.data.length) return // a primeira compra está no livro pela sessão
     }
 
     const ja = livro.get(inv.id)
-    if (ja?.agente_codigo) continue
+    if (ja?.agente_codigo) return
     const codigo = await codigoDoAgenteDaFatura(stripe, db, inv)
 
     if (ja) {
       // Já está no livro, sem código: preenche-o se esta fatura é o primeiro pagamento com valor.
-      if (!codigo.codigo) continue
+      if (!codigo.codigo) return
       if (!ensaio) {
-        await db
+        const { error } = await db
           .from('vendas_vendas')
           .update({ agente_codigo: codigo.codigo })
           .eq('fonte', 'stripe')
           .eq('referencia', inv.id)
           .is('agente_codigo', null)
+        if (error) throw new Error(`Não preenchi o código: ${error.message}`)
       }
       res.codigosPreenchidos++
       res.linhas.push({
@@ -228,7 +267,7 @@ export async function reconciliarStripe(
         agenteCodigo: codigo.codigo,
         motivo: codigo.origem ?? undefined,
       })
-      continue
+      return
     }
 
     const pack = planoDaFatura(inv)
@@ -262,6 +301,4 @@ export async function reconciliarStripe(
       motivo: codigo.origem ?? codigo.motivo,
     })
   }
-
-  return res
 }
