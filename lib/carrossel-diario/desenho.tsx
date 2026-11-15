@@ -35,6 +35,8 @@ export type Imagens = {
   avatar?: string | null
   /** Logótipo MTM. */
   logo?: string | null
+  /** Ricardo: fotografias a cores neste carrossel (sem isto, preto e branco). */
+  cor?: boolean
 }
 
 export type PecaCarrossel = {
@@ -127,7 +129,7 @@ function Cabeca({ e, img, perfil, indice, total }: { e: Estilo; img: Imagens; pe
               objectFit: perfil === 'ricardo' ? 'cover' : 'contain',
               objectPosition: 'center 22%',
               border: `3px solid ${e.cor}`,
-              filter: perfil === 'ricardo' ? 'grayscale(1)' : 'none',
+              filter: perfil === 'ricardo' && !img.cor ? 'grayscale(1)' : 'none',
               background: '#000',
             }}
           />
@@ -204,7 +206,7 @@ function CapaOuFecho(p: PecaCarrossel & { e: Estilo }) {
   const comFoto = !!img.foto
   return (
     <div style={{ display: 'flex', position: 'relative', width: LARGURA, height: ALTURA, background: e.fundo, overflow: 'hidden' }}>
-      {comFoto ? <FundoFoto foto={img.foto as string} cinza={perfil === 'ricardo'} /> : <FundoMarca e={e} marcaDagua={img.logo} />}
+      {comFoto ? <FundoFoto foto={img.foto as string} cinza={perfil === 'ricardo' && !img.cor} /> : <FundoMarca e={e} marcaDagua={img.logo} />}
       <div
         style={{
           display: 'flex',
