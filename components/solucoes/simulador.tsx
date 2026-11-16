@@ -66,7 +66,7 @@ export function SimuladorSolucoes({ agendar }: { agendar: string }) {
               onClick={() => escolher(s)}
               className={[
                 "rounded-full border px-3.5 py-1.5 text-sm transition active:scale-[0.97]",
-                s.id === sectorId ? "border-[#D2A63C] bg-[#D2A63C] font-semibold text-[#08090C]" : "border-white/12 text-zinc-300 hover:border-[#D2A63C]/50",
+                s.id === sectorId ? "border-[#D2A63C] bg-[#D2A63C] font-semibold text-[#08090C]" : "border-white/15 text-zinc-300 hover:border-[#D2A63C]/50",
               ].join(" ")}
             >
               {s.nome}
@@ -111,7 +111,7 @@ export function SimuladorSolucoes({ agendar }: { agendar: string }) {
               min={0}
               value={custo}
               onChange={(e) => setCusto(Number(e.target.value))}
-              className="w-20 rounded-lg border border-white/12 bg-black/40 px-2 py-1 text-right tabular-nums"
+              className="w-20 rounded-lg border border-white/15 bg-black/40 px-2 py-1 text-right tabular-nums"
             />
             <span className="text-zinc-500">€</span>
           </span>
@@ -173,7 +173,7 @@ export function SimuladorSolucoes({ agendar }: { agendar: string }) {
             { k: "Valor por ano", v: `${fmt(r.eurosAno)} €` },
             { k: "Pessoas a tempo inteiro", v: fmt(r.pessoas, 1) },
           ].map((x) => (
-            <div key={x.k} className="rounded-2xl border border-white/8 bg-white/[0.03] p-3">
+            <div key={x.k} className="rounded-2xl border border-white/10 bg-white/[0.03] p-3">
               <dt className="text-[11px] uppercase tracking-wider text-zinc-500">{x.k}</dt>
               <dd className="mt-1 text-xl font-black tabular-nums text-[#E9C46A]">{x.v}</dd>
             </div>
@@ -227,7 +227,7 @@ function Agente({ children }: { children: React.ReactNode }) {
       <span className="mt-1 flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-[#D2A63C] text-[#08090C]">
         <Sparkles className="h-3.5 w-3.5" />
       </span>
-      <p className="rounded-2xl rounded-tl-sm bg-[#D2A63C]/12 px-3.5 py-2.5 text-sm text-zinc-100">{children}</p>
+      <p className="rounded-2xl rounded-tl-sm bg-[#D2A63C]/15 px-3.5 py-2.5 text-sm text-zinc-100">{children}</p>
     </div>
   )
 }
@@ -241,7 +241,7 @@ function Cliente({ nome, children }: { nome: string; children: React.ReactNode }
   )
 }
 
-function EcraArea({ area, sector }: { area: AreaId; sector: Sector }) {
+export function EcraArea({ area, sector }: { area: AreaId; sector: Sector }) {
   const e = sector.ecra
   switch (area) {
     case "atendimento":

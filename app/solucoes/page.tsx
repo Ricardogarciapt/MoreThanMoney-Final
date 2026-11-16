@@ -1,11 +1,14 @@
 import Image from "next/image"
 import Link from "next/link"
-import { ArrowRight, BarChart3, Bot, Building2, CalendarCheck, CandlestickChart, Check, FileText, GraduationCap, Handshake, Megaphone, MessageCircle, Mic, Package, Receipt, Server, UserRound, Users } from "lucide-react"
+import { ArrowRight, ArrowUpRight, Bot, Building2, CandlestickChart, Check, GraduationCap, Mic, Server, UserRound } from "lucide-react"
 import { linkAgendar } from "@/lib/agenda/link"
 import { IDENTIFICACAO } from "@/lib/legal/identificacao"
-import { CASOS, DEMOS, FAQ, OFERTAS, PERFIS } from "@/lib/site-solucoes/conteudo"
-import { AREAS, CASO_MTM } from "@/lib/site-solucoes/automacao"
+import { CASOS, DEMOS, FAQ, PERFIS, PROXIMOS } from "@/lib/site-solucoes/conteudo"
+import { CASO_MTM, SECTORES } from "@/lib/site-solucoes/automacao"
 import { SimuladorSolucoes } from "@/components/solucoes/simulador"
+import { HeroAoVivo } from "@/components/solucoes/hero-ao-vivo"
+import { AreasInterativas } from "@/components/solucoes/areas-interativas"
+import { MenuTrabalhos } from "@/components/solucoes/menu-trabalhos"
 
 /**
  * /solucoes: o site de apresentação dos modelos de negócio da MTM (pedido do Ricardo, 16/11/2026).
@@ -27,23 +30,13 @@ const ICONES: Record<string, typeof Building2> = {
   pessoas: UserRound,
 }
 
-const ICONES_AREA: Record<string, typeof Building2> = {
-  atendimento: MessageCircle,
-  agenda: CalendarCheck,
-  vendas: Handshake,
-  financas: Receipt,
-  dados: BarChart3,
-  marketing: Megaphone,
-  operacoes: Package,
-  equipa: Users,
-  conhecimento: FileText,
-}
-
 const CTA_LABEL = "Marcar diagnóstico"
 
 export default function SolucoesPage() {
   const agendar = linkAgendar("negocios")
   const casos = CASOS.filter((c) => c.autorizado)
+  const destaque = casos.find((c) => c.img)
+  const outros = casos.filter((c) => c !== destaque)
 
   return (
     <div className="min-h-[100dvh] bg-[#08090C] text-zinc-100 antialiased">
@@ -58,7 +51,7 @@ export default function SolucoesPage() {
             <a href="#o-que-automatizamos" className="hover:text-white">Soluções</a>
             <a href="#simulador" className="hover:text-white">Simulador</a>
             <a href="#casos" className="hover:text-white">Casos</a>
-            <a href="#precos" className="hover:text-white">Preços</a>
+            <a href="#trabalhos" className="hover:text-white">Trabalhos</a>
           </div>
           <a
             href={agendar}
@@ -70,19 +63,15 @@ export default function SolucoesPage() {
       </header>
 
       <main id="topo">
-        {/* Herói: mensagem à esquerda, sistema real à direita */}
+        {/* Herói: mensagem à esquerda, o agente a trabalhar à direita */}
         <section className="relative overflow-hidden">
-          <div
-            aria-hidden
-            className="pointer-events-none absolute right-[-10%] top-[-20%] h-[560px] w-[560px] rounded-full bg-[radial-gradient(closest-side,rgba(210,166,60,0.18),transparent)]"
-          />
-          <div className="relative mx-auto grid max-w-6xl items-center gap-12 px-4 pb-20 pt-14 md:grid-cols-[1.2fr_1fr] md:pt-20">
-            <div>
+          <div className="relative mx-auto grid max-w-6xl items-center gap-14 px-4 pb-16 pt-12 md:grid-cols-[1.15fr_1fr] md:pb-24 md:pt-20">
+            <div className="animate-in fade-in slide-in-from-bottom-4 duration-700">
               <h1 className="text-4xl font-black leading-[1.05] tracking-tight md:text-6xl">
                 Automatizamos o que te <span className="text-[#E9C46A]">rouba horas.</span>
               </h1>
-              <p className="mt-6 max-w-[52ch] text-lg leading-relaxed text-zinc-400">
-                Para quem ainda trabalha sem IA: mensagens, marcações, orçamentos, faturas e papelada a correr sozinhos. Sites, apps e agentes construídos por nós, sem subscrições externas.
+              <p className="mt-6 max-w-[46ch] text-lg leading-relaxed text-zinc-400">
+                Mensagens, marcações, orçamentos e faturas a correr sozinhos, para quem ainda trabalha sem IA.
               </p>
               <div className="mt-8 flex flex-wrap gap-3">
                 <a
@@ -93,31 +82,28 @@ export default function SolucoesPage() {
                 </a>
                 <a
                   href="#simulador"
-                  className="inline-flex items-center rounded-full border border-white/15 px-6 py-3 font-semibold text-zinc-200 transition hover:border-[#D2A63C]/60"
+                  className="inline-flex items-center rounded-full border border-white/15 px-6 py-3 font-semibold text-zinc-200 transition hover:border-[#D2A63C]/60 active:scale-[0.98]"
                 >
                   Simular o meu negócio
                 </a>
               </div>
             </div>
-            <div className="relative mx-auto flex w-full max-w-sm justify-center gap-4">
-              <Image
-                src="/images/apresentacao/app-chat.jpg"
-                alt="App MTM System: chat da comunidade"
-                width={620}
-                height={1344}
-                priority
-                className="w-1/2 translate-y-6 rounded-3xl border border-white/10 shadow-[0_30px_80px_-20px_rgba(210,166,60,0.35)]"
-              />
-              <Image
-                src="/images/apresentacao/app-aulas.jpg"
-                alt="App MTM System: aulas"
-                width={620}
-                height={1344}
-                className="w-1/2 -translate-y-4 rounded-3xl border border-white/10"
-              />
-            </div>
+            <HeroAoVivo />
           </div>
         </section>
+
+        {/* Para quem: uma faixa com os negócios que servimos */}
+        <div className="overflow-hidden border-y border-white/5 py-5" aria-label="Negócios que servimos">
+          <div className="flex w-max gap-10 whitespace-nowrap text-lg font-semibold text-zinc-500 motion-safe:animate-[solucoes-faixa_40s_linear_infinite]">
+            {[...SECTORES, ...SECTORES].map((x, i) => (
+              <span key={i} className="flex items-center gap-10">
+                {x.nome}
+                <span className="h-1.5 w-1.5 rounded-full bg-[#D2A63C]/60" aria-hidden />
+              </span>
+            ))}
+          </div>
+          <style>{`@keyframes solucoes-faixa{from{transform:translateX(0)}to{transform:translateX(-50%)}}`}</style>
+        </div>
 
         {/* O que automatizamos: as dores de quem trabalha sem IA */}
         <section id="o-que-automatizamos" className="mx-auto max-w-6xl px-4 py-20">
@@ -125,28 +111,8 @@ export default function SolucoesPage() {
           <p className="mt-3 max-w-[62ch] text-zinc-400">
             Não é preciso perceber de IA. Começa pelo que te cansa todas as semanas: cada dor tem uma automação que já sabemos fazer.
           </p>
-          <div className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {AREAS.map((a) => {
-              const Icone = ICONES_AREA[a.id] ?? Building2
-              return (
-                <article key={a.id} className="flex flex-col rounded-2xl border border-white/8 bg-white/[0.03] p-6 transition hover:border-[#D2A63C]/40">
-                  <div className="flex items-center gap-3">
-                    <Icone className="h-5 w-5 text-[#E9C46A]" strokeWidth={1.75} />
-                    <h3 className="font-bold">{a.titulo}</h3>
-                  </div>
-                  <p className="mt-4 text-sm italic text-zinc-400">«{a.dor}»</p>
-                  <p className="mt-3 text-sm text-zinc-200">{a.implementamos}</p>
-                  <ul className="mt-4 space-y-1.5 text-sm text-zinc-400">
-                    {a.exemplos.map((x) => (
-                      <li key={x} className="flex gap-2">
-                        <Check className="mt-0.5 h-4 w-4 shrink-0 text-[#D2A63C]" /> {x}
-                      </li>
-                    ))}
-                  </ul>
-                  <p className="mt-auto pt-5 text-xs font-semibold uppercase tracking-wider text-[#D2A63C]">{a.oferta}</p>
-                </article>
-              )
-            })}
+          <div className="mt-10">
+            <AreasInterativas />
           </div>
         </section>
 
@@ -167,9 +133,36 @@ export default function SolucoesPage() {
         <section id="casos" className="mx-auto max-w-6xl px-4 py-20">
           <h2 className="text-3xl font-bold tracking-tight md:text-4xl">Projectos reais</h2>
           <p className="mt-3 max-w-[62ch] text-zinc-400">O que construímos para quem já trabalha connosco. Os números ficam para quando cada cliente os medir.</p>
-          <div className="mt-10 grid gap-5 md:grid-cols-2">
-            {casos.map((c) => (
-              <article key={c.cliente} className="flex flex-col rounded-2xl border border-white/8 bg-white/[0.03] p-6">
+          {destaque && (
+            <article className="mt-10 grid overflow-hidden rounded-3xl border border-white/10 bg-white/[0.03] md:grid-cols-[1.25fr_1fr]">
+              {destaque.img && (
+                <Image src={destaque.img} alt={`Site de ${destaque.cliente}`} width={1366} height={900} className="h-full w-full object-cover object-top" />
+              )}
+              <div className="flex flex-col p-7 md:p-9">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <p className="text-sm text-[#E9C46A]">{destaque.setor}</p>
+                  <span className="rounded-full bg-white/[0.06] px-2.5 py-0.5 text-[11px] font-semibold text-zinc-300">{destaque.estado}</span>
+                </div>
+                <h3 className="mt-2 text-2xl font-bold">{destaque.cliente}</h3>
+                <p className="mt-3 text-sm italic text-zinc-400">«{destaque.problema}»</p>
+                <ul className="mt-5 space-y-2 text-sm text-zinc-300">
+                  {destaque.feito.map((f) => (
+                    <li key={f} className="flex gap-2">
+                      <Check className="mt-0.5 h-4 w-4 shrink-0 text-[#D2A63C]" /> {f}
+                    </li>
+                  ))}
+                </ul>
+                {destaque.url && (
+                  <a href={destaque.url} target="_blank" rel="noopener noreferrer" className="mt-auto inline-flex items-center gap-1 pt-6 text-sm font-semibold text-[#E9C46A] hover:underline">
+                    Ver o projecto <ArrowUpRight className="h-4 w-4" />
+                  </a>
+                )}
+              </div>
+            </article>
+          )}
+          <div className="mt-5 grid gap-5 md:grid-cols-3">
+            {outros.map((c) => (
+              <article key={c.cliente} className="flex flex-col rounded-2xl border border-white/10 bg-white/[0.03] p-6">
                 <div className="flex flex-wrap items-center justify-between gap-2">
                   <p className="text-sm text-[#E9C46A]">{c.setor}</p>
                   <span className="rounded-full bg-white/[0.06] px-2.5 py-0.5 text-[11px] font-semibold text-zinc-300">{c.estado}</span>
@@ -186,14 +179,29 @@ export default function SolucoesPage() {
                     </li>
                   ))}
                 </ul>
-                {c.url && (
-                  <a href={c.url} target="_blank" rel="noopener noreferrer" className="mt-auto pt-5 text-sm font-semibold text-[#E9C46A] hover:underline">
-                    Ver o projecto
-                  </a>
-                )}
               </article>
             ))}
           </div>
+
+          {/* Próximos projectos: o que está em cima da mesa */}
+          <h3 className="mt-20 text-2xl font-bold md:text-3xl">A seguir</h3>
+          <p className="mt-2 max-w-[60ch] text-zinc-400">Projectos em proposta e em construção. Os nomes aparecem quando cada cliente der o OK.</p>
+          <ol className="mt-8 grid gap-x-6 gap-y-10 sm:grid-cols-2 lg:grid-cols-4">
+            {PROXIMOS.map((p) => (
+              <li key={p.setor} className="border-t-2 border-[#D2A63C]/50 pt-5">
+                <span className="text-xs font-semibold text-[#E9C46A]">{p.estado}</span>
+                <h4 className="mt-1 text-lg font-bold">{p.setor}</h4>
+                <p className="mt-2 text-sm text-zinc-400">{p.desafio}</p>
+                <ul className="mt-4 space-y-1.5 text-sm text-zinc-300">
+                  {p.vamosConstruir.map((v) => (
+                    <li key={v} className="flex gap-2">
+                      <ArrowRight className="mt-0.5 h-4 w-4 shrink-0 text-[#D2A63C]" /> {v}
+                    </li>
+                  ))}
+                </ul>
+              </li>
+            ))}
+          </ol>
         </section>
 
         {/* Para quem: bento com cinco perfis */}
@@ -211,7 +219,7 @@ export default function SolucoesPage() {
                   key={p.id}
                   id={p.id}
                   className={[
-                    "rounded-2xl border border-white/8 p-6 transition hover:border-[#D2A63C]/40",
+                    "rounded-2xl border border-white/10 p-6 transition hover:border-[#D2A63C]/40",
                     larga ? "bg-gradient-to-br from-[#D2A63C]/15 to-transparent md:col-span-4 md:row-span-2" : "bg-white/[0.03]",
                     larga ? "" : i >= 3 ? "md:col-span-3" : "md:col-span-2",
                   ].join(" ")}
@@ -284,21 +292,13 @@ export default function SolucoesPage() {
           </div>
         </section>
 
-        {/* Preços */}
-        <section id="precos" className="border-t border-white/5 bg-white/[0.02]">
+        {/* Menu de trabalhos */}
+        <section id="trabalhos" className="border-y border-white/5 bg-white/[0.02]">
           <div className="mx-auto max-w-6xl px-4 py-20">
-            <h2 className="text-3xl font-bold tracking-tight md:text-4xl">O que custa</h2>
-            <div className="mt-10 grid gap-x-12 gap-y-8 md:grid-cols-2">
-              {OFERTAS.map((o, i) => (
-                <div key={o.nome} className={i === 0 ? "rounded-2xl border border-[#D2A63C]/40 p-6 md:col-span-2" : ""}>
-                  <div className="flex flex-wrap items-baseline justify-between gap-2">
-                    <h3 className="text-lg font-bold">{o.nome}</h3>
-                    <span className={i === 0 ? "text-2xl font-black text-[#E9C46A]" : "font-semibold text-[#E9C46A]"}>{o.preco}</span>
-                  </div>
-                  <p className="text-sm text-zinc-500">{o.para}</p>
-                  <p className="mt-2 text-zinc-400">{o.detalhe}</p>
-                </div>
-              ))}
+            <h2 className="text-3xl font-bold tracking-tight md:text-4xl">O que podemos fazer por ti</h2>
+            <p className="mt-3 max-w-[60ch] text-zinc-400">Escolhe por onde começar. Cada trabalho corre sobre o nosso sistema e liga-se aos outros.</p>
+            <div className="mt-10">
+              <MenuTrabalhos agendar={agendar} />
             </div>
           </div>
         </section>
@@ -320,7 +320,7 @@ export default function SolucoesPage() {
           <h2 className="text-3xl font-bold tracking-tight">Dúvidas</h2>
           <div className="mt-8 space-y-3">
             {FAQ.map((f) => (
-              <details key={f.p} className="group rounded-xl border border-white/8 bg-white/[0.03] p-5">
+              <details key={f.p} className="group rounded-xl border border-white/10 bg-white/[0.03] p-5">
                 <summary className="cursor-pointer list-none font-semibold marker:hidden">{f.p}</summary>
                 <p className="mt-3 text-zinc-400">{f.r}</p>
               </details>
