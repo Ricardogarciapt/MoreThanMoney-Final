@@ -10,6 +10,7 @@ import {
   type AreaId,
   type Sector,
 } from "@/lib/site-solucoes/automacao"
+import { PedirAnalise } from "@/components/solucoes/pedir-analise"
 
 /**
  * O simulador do /solucoes: escolhes o teu negócio, ajustas as horas e vês, num ecrã desenhado,
@@ -32,6 +33,7 @@ export function SimuladorSolucoes({ agendar }: { agendar: string }) {
   const [verTodas, setVerTodas] = useState(false)
   const [ecra, setEcra] = useState(0)
   const [tocou, setTocou] = useState(false)
+  const [analise, setAnalise] = useState(false)
 
   const r = useMemo(() => simular(horas, custo), [horas, custo])
   const areas = r.prioridades.slice(0, 4)
@@ -53,7 +55,13 @@ export function SimuladorSolucoes({ agendar }: { agendar: string }) {
 
   const tarefasVisiveis = Object.values(TAREFAS).filter((t) => verTodas || (sector.horas[t.id as keyof typeof TAREFAS] ?? 0) > 0)
 
+  function abrirAnalise() {
+    setAnalise(true)
+    setTimeout(() => document.getElementById("pedir-analise")?.scrollIntoView({ behavior: "smooth", block: "start" }), 50)
+  }
+
   return (
+    <div>
     <div className="grid gap-8 lg:grid-cols-[1fr_1.05fr]">
       {/* Lado esquerdo: o negócio e as horas */}
       <div className="min-w-0">
@@ -193,14 +201,24 @@ export function SimuladorSolucoes({ agendar }: { agendar: string }) {
               </li>
             ))}
           </ul>
-          <a
-            href={agendar}
+          <button
+            type="button"
+            onClick={abrirAnalise}
             className="mt-5 inline-flex w-full items-center justify-center rounded-full bg-[#D2A63C] px-5 py-3 font-semibold text-[#08090C] transition hover:bg-[#E9C46A] active:scale-[0.98]"
           >
-            Quero este plano para o meu negócio
+            Pedir análise ao meu negócio
+          </button>
+          <a href={agendar} className="mt-3 block text-center text-sm font-semibold text-[#E9C46A] hover:underline">
+            Prefiro marcar já uma conversa
           </a>
         </div>
       </div>
+    </div>
+    {analise && (
+      <div id="pedir-analise" className="mt-10 scroll-mt-24">
+        <PedirAnalise sector={sectorId} horas={horas} custoHora={custo} agendar={agendar} onFechar={() => setAnalise(false)} />
+      </div>
+    )}
     </div>
   )
 }

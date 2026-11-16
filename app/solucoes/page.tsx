@@ -84,7 +84,7 @@ export default function SolucoesPage() {
                   href="#simulador"
                   className="inline-flex items-center rounded-full border border-white/15 px-6 py-3 font-semibold text-zinc-200 transition hover:border-[#D2A63C]/60 active:scale-[0.98]"
                 >
-                  Simular o meu negócio
+                  Pedir análise ao meu negócio
                 </a>
               </div>
             </div>
