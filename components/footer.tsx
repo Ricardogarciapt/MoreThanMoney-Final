@@ -174,6 +174,23 @@ export default function Footer() {
                 <FileText className="h-4 w-4 group-hover:scale-110 transition-transform" />
                 <span>{t("navfooter.footerTerms")}</span>
               </Link>
+              <Link
+                href="/aviso-de-risco"
+                className="text-gray-400 hover:text-mtm-primary transition-colors flex items-center gap-2 group"
+              >
+                <FileText className="h-4 w-4 group-hover:scale-110 transition-transform" />
+                <span>Aviso de Risco</span>
+              </Link>
+              {/* Obrigatório para quem vende online a consumidores (DL 156/2005, na redação do DL 74/2017). */}
+              <a
+                href="https://www.livroreclamacoes.pt"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-gray-400 hover:text-mtm-primary transition-colors flex items-center gap-2 group"
+              >
+                <FileText className="h-4 w-4 group-hover:scale-110 transition-transform" />
+                <span>Livro de Reclamações</span>
+              </a>
               {/*
                 Backoffice da equipa. É OUTRO domínio, por isso é uma âncora e não um <Link> do
                 Next: o router não conhece o subdomínio e um <Link> ficaria a tentar navegar dentro
