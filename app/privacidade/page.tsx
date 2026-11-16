@@ -2,6 +2,7 @@ import type { Metadata } from "next"
 import Link from "next/link"
 import { AuthProvider } from "@/contexts/auth-context"
 import Breadcrumbs from "@/components/breadcrumbs"
+import { linhaIdentificacao, ULTIMA_ACTUALIZACAO_LEGAL } from "@/lib/legal/identificacao"
 
 export const metadata: Metadata = {
   title: "Política de Privacidade | More Than Money",
@@ -20,7 +21,7 @@ export default function PrivacidadePage() {
               Política de Privacidade
             </h1>
             <p className="text-gray-400 text-center">
-              Última atualização: Junho de 2025
+              Última atualização: {ULTIMA_ACTUALIZACAO_LEGAL}
             </p>
           </div>
 
@@ -40,7 +41,13 @@ export default function PrivacidadePage() {
                   morethanmoney.pt
                 </a>
                 ) e as aplicações móveis MTM System e MTM Auto — no Google Play
-                (pt.morethanmoney.app) e na App Store da Apple.
+                (pt.morethanmoney.app) e na App Store da Apple — e quando falas connosco por
+                Instagram, WhatsApp ou Telegram.
+              </p>
+              <p className="mt-3">
+                <strong className="text-white">Responsável pelo tratamento:</strong>{" "}
+                {linhaIdentificacao()} Não somos obrigados a nomear um Encarregado de Proteção de
+                Dados; as questões de privacidade tratam-se pelo email indicado no fim desta página.
               </p>
             </section>
 
@@ -88,6 +95,18 @@ export default function PrivacidadePage() {
                   documentos que o próprio envie quando lhe sejam pedidos
                 </li>
               </ul>
+              <p className="font-medium text-white mb-2">Mensagens e contactos comerciais:</p>
+              <ul className="list-disc pl-5 space-y-1 mb-4">
+                <li>
+                  Quando comentas ou nos envias mensagem no Instagram, WhatsApp ou Telegram: o teu
+                  nome de utilizador ou número, o conteúdo das mensagens e a palavra-chave que usaste
+                </li>
+                <li>
+                  Quando pedes contacto, marcas uma reunião ou deixas o email: nome, email, telefone
+                  e as respostas que dês às perguntas de qualificação
+                </li>
+                <li>Para clientes empresariais (B2B): dados de contacto profissionais públicos</li>
+              </ul>
               <p className="font-medium text-white mb-2">Não recolhemos:</p>
               <ul className="list-disc pl-5 space-y-1">
                 <li>Dados de saúde ou biométricos</li>
@@ -123,6 +142,24 @@ export default function PrivacidadePage() {
                   <strong className="text-white">Segurança:</strong> deteção de acessos não
                   autorizados
                 </li>
+                <li>
+                  <strong className="text-white">Assistentes de IA:</strong> responder às tuas
+                  mensagens e perguntas. Quando falas com um assistente de IA, isso é-te indicado,
+                  e podes pedir para falar com uma pessoa. A IA ajuda a perceber o que procuras, mas
+                  não toma decisões com efeitos jurídicos sobre ti.
+                </li>
+                <li>
+                  <strong className="text-white">Marketing:</strong> enviar-te novidades e ofertas
+                  por email, WhatsApp ou Telegram, apenas se tiveres dado consentimento (ou, por
+                  email, se já fores cliente e não te tiveres oposto). Podes sair a qualquer momento.
+                </li>
+              </ul>
+              <p className="font-medium text-white mt-4 mb-2">Fundamentos legais (art. 6.º RGPD):</p>
+              <ul className="list-disc pl-5 space-y-1">
+                <li>Execução do contrato: conta, compras, subscrições, acesso a conteúdos e ferramentas</li>
+                <li>Obrigação legal: faturação e conservação de registos contabilísticos e fiscais</li>
+                <li>Interesse legítimo: segurança, prevenção de fraude, melhoria do serviço, resposta a quem nos contacta e prospeção B2B de contactos profissionais</li>
+                <li>Consentimento: marketing, notificações push e cookies não essenciais — podes retirá-lo a qualquer momento</li>
               </ul>
             </section>
 
@@ -215,6 +252,31 @@ export default function PrivacidadePage() {
                   </a>
                 </li>
               </ul>
+              <ul className="list-disc pl-5 space-y-3 mt-3">
+                <li>
+                  <strong className="text-white">Meta</strong> (Instagram e WhatsApp Business) e{" "}
+                  <strong className="text-white">Telegram</strong> — quando falas connosco por esses
+                  canais, as mensagens passam também pelos sistemas deles, segundo as políticas de
+                  privacidade de cada um.
+                </li>
+                <li>
+                  <strong className="text-white">Fornecedores de IA</strong> (Anthropic, Google Gemini,
+                  Groq, OpenAI, ou modelos executados nos nossos próprios servidores) — processam o
+                  texto das mensagens para gerar respostas, sem o usarem para treinar os seus modelos
+                  nas condições contratadas.
+                </li>
+                <li>
+                  <strong className="text-white">Corretoras parceiras</strong> — só recebem dados teus
+                  se abrires conta nelas; recebemos delas, enquanto Introducing Broker, informação
+                  sobre a conta aberta pelo nosso link (identificação, financiamento e volume) para
+                  validar o teu acesso e calcular comissões.
+                </li>
+              </ul>
+              <p className="mt-4">
+                Alguns destes prestadores estão fora do Espaço Económico Europeu (sobretudo nos
+                Estados Unidos). Nesses casos, a transferência é feita ao abrigo do EU-US Data
+                Privacy Framework ou de cláusulas contratuais-tipo aprovadas pela Comissão Europeia.
+              </p>
               <p className="mt-4">
                 Todos os prestadores estão contratualmente obrigados a proteger os seus dados e a
                 utilizá-los apenas para os fins contratados.
@@ -259,10 +321,10 @@ export default function PrivacidadePage() {
               <p className="mt-4">
                 Para exercer qualquer um destes direitos, contacte-nos através de{" "}
                 <a
-                  href="mailto:support@morethanmoney.pt"
+                  href="mailto:suporte@morethanmoney.pt"
                   className="text-[#D2A63C] hover:underline"
                 >
-                  support@morethanmoney.pt
+                  suporte@morethanmoney.pt
                 </a>
                 . Responderemos no prazo de 30 dias.
               </p>
@@ -281,6 +343,15 @@ export default function PrivacidadePage() {
               </p>
               <p>
                 Os dados de análise anónimos do Firebase Analytics são conservados durante 14 meses.
+              </p>
+              <p className="mt-4">
+                Contactos que não chegaram a cliente (leads e conversas) são apagados ao fim de 24
+                meses sem interação. Documentos de faturação são conservados 10 anos, por obrigação
+                fiscal.
+              </p>
+              <p className="mt-4">
+                Os nossos serviços destinam-se a maiores de 18 anos. Não recolhemos
+                intencionalmente dados de menores.
               </p>
             </section>
 
@@ -355,10 +426,10 @@ export default function PrivacidadePage() {
                 <li>
                   <strong className="text-white">Por e-mail:</strong> Envie um e-mail para{" "}
                   <a
-                    href="mailto:support@morethanmoney.pt?subject=Pedido%20de%20Elimin%C3%A7%C3%A3o%20de%20Conta"
+                    href="mailto:suporte@morethanmoney.pt?subject=Pedido%20de%20Elimin%C3%A7%C3%A3o%20de%20Conta"
                     className="text-[#D2A63C] hover:underline"
                   >
-                    support@morethanmoney.pt
+                    suporte@morethanmoney.pt
                   </a>{" "}
                   com o assunto <em>&quot;Pedido de Eliminação de Conta&quot;</em> e o endereço de
                   email associado à sua conta.
@@ -399,10 +470,10 @@ export default function PrivacidadePage() {
               <p className="mb-1">
                 <strong className="text-white">Email:</strong>{" "}
                 <a
-                  href="mailto:support@morethanmoney.pt"
+                  href="mailto:suporte@morethanmoney.pt"
                   className="text-[#D2A63C] hover:underline"
                 >
-                  support@morethanmoney.pt
+                  suporte@morethanmoney.pt
                 </a>
               </p>
               <p className="mb-4">
