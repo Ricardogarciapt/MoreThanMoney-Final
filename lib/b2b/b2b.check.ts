@@ -8,9 +8,10 @@
 import { readFileSync } from 'fs'
 import { join } from 'path'
 import { validarProspecto, eWebmailPessoal } from './validador'
-import { montarMensagem, validarMensagem, lerSaida, linkSaida, SEGMENTOS, type Pais } from './sequencias'
-import { decidirEnvioB2B, vagasHoje, prontoParaToque, CONFIG_PADRAO, type ConfigB2B, type ProspectoLinha } from './envio'
-import { robotsPermite, extrairEmails } from './recolha'
+import { montarMensagem, validarMensagem, lerSaida, linkSaida, lerPais, SEGMENTOS, SEGMENTOS_INT, type Pais } from './sequencias'
+import { decidirEnvioB2B, vagasHoje, prontoParaToque, remetenteB2B, CONFIG_PADRAO, type ConfigB2B, type ProspectoLinha } from './envio'
+import { robotsPermite, extrairEmails, extrairEmailsDeLinks, evidenciaPessoaColectiva, ePaginaDeLinks } from './recolha'
+import { normalizarCandidato } from './candidatos'
 
 const falhas: string[] = []
 const teste = (n: string, ok: boolean) => { if (!ok) falhas.push(n) }
@@ -90,7 +91,7 @@ teste('desligado: nada sai', decidirEnvioB2B(pros('info@exemplo.pt'), { cfg: { .
 
 // ── BONS: as 30 mensagens passam a porta e não inventam números ──────────────────────────────
 for (const segmento of SEGMENTOS) {
-  for (const pais of ['PT', 'BR'] as Pais[]) {
+  for (const pais of (SEGMENTOS_INT.includes(segmento) ? ['PT', 'BR', 'INT'] : ['PT', 'BR']) as Pais[]) {
     for (const toque of [1, 2, 3] as const) {
       const m = montarMensagem({ segmento, pais, toque, empresa: 'Exemplo', email: 'info@exemplo.pt', segredo: SEG })
       const n = `${segmento}/${pais}/T${toque}`
@@ -98,7 +99,10 @@ for (const segmento of SEGMENTOS) {
       teste(`${n}: link com ?ag=AG-PROSPECTOR`, m.linkOferta.includes('ag=AG-PROSPECTOR'))
       teste(`${n}: sem €/%/R$ (nada de números de resultado)`, !/[€%]|R\$|\+\d/.test(m.texto))
       teste(`${n}: curto (< 1300 caracteres)`, m.texto.length < 1300)
-      teste(`${n}: idioma`, pais === 'BR' ? /você|vocês|Oi/.test(m.texto) : /Olá/.test(m.texto))
+      teste(`${n}: idioma`, pais === 'BR' ? /você|vocês|Oi/.test(m.texto) : pais === 'INT' ? /\bHi\b/.test(m.texto) && /unsubscribe/.test(m.texto) : /Olá/.test(m.texto))
+      // Em público é «educação em trading»: nunca network marketing, MLM nem pirâmide.
+      teste(`${n}: sem network marketing`, !/network|marketing multin|\bMLM\b|pir[âa]mide/i.test(m.texto))
+      teste(`${n}: sem promessa de lucro`, !/lucro garantido|garantid|guaranteed|rendimento passivo/i.test(m.texto))
     }
   }
 }
@@ -120,6 +124,32 @@ teste('robots: Disallow vazio permite', robotsPermite('User-agent: *\nDisallow:'
   teste('extrai só do domínio do site', e.includes('geral@exemplo.pt') && e.includes('info@exemplo.pt') && e.includes('parcerias@sub.exemplo.pt') && !e.includes('outro@gmail.com'))
   teste('ignora imagens', !e.some((x) => x.endsWith('.png')))
 }
+
+// ── 16/11: segmentos novos, páginas de links, prova de pessoa colectiva, candidatos ─────────
+teste('INT sem textos (escola) não sai', decidirEnvioB2B(pros('info@school.co.uk', { pais: 'INT', segmento: 'escola' }), { cfg, enviadosHoje: 0, exclusao: [], segredo: SEG }).decisao === 'bloqueado')
+teste('INT licenca_scanners sai', decidirEnvioB2B(pros('info@academy.co.uk', { pais: 'INT', segmento: 'licenca_scanners' }), { cfg, enviadosHoje: 0, exclusao: [], segredo: SEG }).decisao === 'sai')
+teste('negocio_local leva à agenda de negócios', /\/agendar\?t=negocios/.test(montarMensagem({ segmento: 'negocio_local', pais: 'PT', toque: 1, empresa: 'Estúdio X', email: 'geral@estudiox.pt', segredo: SEG }).texto))
+teste('parceria_redes T2 leva às parcerias', /\/agendar\?t=parcerias/.test(montarMensagem({ segmento: 'parceria_redes', pais: 'PT', toque: 2, empresa: 'Marca Y', email: 'geral@marcay.pt', segredo: SEG }).texto))
+teste('lerPais', lerPais('br') === 'BR' && lerPais('en') === 'INT' && lerPais(undefined) === 'PT')
+teste('linktr.ee é página de links', ePaginaDeLinks('linktr.ee') && ePaginaDeLinks('beacons.ai') && !ePaginaDeLinks('exemplo.pt'))
+{
+  const html = 'Marcações: <a href="mailto:reservas@estudiox.pt">x</a> ou estudiox@gmail.com · sentry@o123.ingest.sentry.io · foto@2x.png'
+  const e = extrairEmailsDeLinks(html)
+  teste('links: aceita email do domínio do negócio', e.includes('reservas@estudiox.pt'))
+  teste('links: recusa webmail pessoal', !e.includes('estudiox@gmail.com'))
+  teste('links: ignora imagens e sentry', !e.some((x) => x.endsWith('.png') || x.includes('sentry')))
+}
+teste('prova: NIPC de empresa', !!evidenciaPessoaColectiva('<footer>NIPC: 514 123 456</footer>'.replace('514 123 456', '514123456')))
+teste('prova: NIF de pessoa singular não conta', evidenciaPessoaColectiva('<footer>NIF 212345678</footer>') === null)
+teste('prova: CNPJ', !!evidenciaPessoaColectiva('CNPJ: 12.345.678/0001-90'))
+teste('prova: forma jurídica com o nome da empresa', !!evidenciaPessoaColectiva('© 2026 Estúdio Aurora, Lda. Todos os direitos', 'Estúdio Aurora'))
+teste('prova: forma jurídica de outra empresa (agência) não conta', evidenciaPessoaColectiva('Site feito por Agência Pixel, Lda.', 'Estúdio Aurora') === null)
+teste('candidato: sem segmento válido recusado', normalizarCandidato({ empresa: 'X', url: 'https://x.pt', segmento: 'nada' }) === null)
+teste('candidato: URL sem esquema corrigida', normalizarCandidato({ empresa: 'X', url: 'linktr.ee/x', segmento: 'negocio_local' })?.url === 'https://linktr.ee/x')
+teste('candidato: PC só com identificação', normalizarCandidato({ empresa: 'X', url: 'https://x.pt', segmento: 'licenca_scanners', pessoa_colectiva: true })?.pessoa_colectiva === false)
+teste('remetente: B2B_MAIL_FROM válido', remetenteB2B('MoreThanMoney <a@gmail.com>', { B2B_MAIL_FROM: 'geral@morethanmoney.pt' }) === 'MoreThanMoney <geral@morethanmoney.pt>')
+teste('remetente: sem B2B_MAIL_FROM fica o do site', remetenteB2B('MoreThanMoney <a@gmail.com>', {}) === 'MoreThanMoney <a@gmail.com>')
+teste('respostas vão para geral@', readFileSync(join(__dirname, 'envio.ts'), 'utf8').includes("replyTo: RESPOSTAS_B2B"))
 
 // ── O código: nada envia sem passar pela decisão ────────────────────────────────────────────
 {
