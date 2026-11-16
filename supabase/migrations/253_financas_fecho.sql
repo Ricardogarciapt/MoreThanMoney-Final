@@ -41,8 +41,7 @@ create table if not exists public.financas_fechos (
 );
 alter table public.financas_fechos enable row level security;
 
--- 16/11/2026 Ricardo: sem regime de IVA (isenção do art. 53.º do CIVA). A entidade (ENI ou empresa)
--- fica por confirmar; até lá os avisos mostram IRS e IRC.
+-- 16/11/2026 Ricardo: empresário em nome individual (ENI), sem regime de IVA (isenção do art. 53.º do CIVA).
 insert into public.site_settings (key, value)
-values ('financas_regime', '{"iva":"isento"}'::jsonb)
+values ('financas_regime', '{"entidade":"eni","iva":"isento"}'::jsonb)
 on conflict (key) do nothing;
