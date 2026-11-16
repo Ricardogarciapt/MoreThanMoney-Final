@@ -21,6 +21,7 @@ import { capacidadesDe, pode } from "@/lib/backoffice-papeis"
 import { areaDoCaminho, normalizarAreas } from "@/lib/backoffice-acessos-site"
 // O tecto vive em `lib/com-tecto.ts` — é puro, corre no edge, e o porquê está lá escrito.
 import { comTecto, TECTO_MIDDLEWARE_MS } from "@/lib/com-tecto"
+import { decidirSolucoes } from "@/lib/site-solucoes/dominio"
 import { caminhoSuperAdmin, eSuperAdmin } from "@/lib/super-admin-regras"
 
 // Cache para rate limiting
@@ -232,6 +233,17 @@ export async function middleware(request: NextRequest) {
    * passar a dizer `www`, senão a pessoa fica a navegar o site inteiro debaixo de um subdomínio
    * que não é o dele — e o próximo link relativo repetia o problema.
    */
+  // Site de apresentação em domínio próprio (lib/site-solucoes/dominio.ts). Sem a env, não faz nada.
+  const solucoes = decidirSolucoes(request.headers.get("host"), pathname)
+  if (solucoes.tipo === "reescrever") {
+    const url = request.nextUrl.clone()
+    url.pathname = solucoes.para
+    return NextResponse.rewrite(url)
+  }
+  if (solucoes.tipo === "site-principal") {
+    return NextResponse.redirect(urlNoSitePrincipal(pathname, request.nextUrl.search), 308)
+  }
+
   if (devolverAoSitePrincipal(request.headers.get("host"), pathname)) {
     return NextResponse.redirect(urlNoSitePrincipal(pathname, request.nextUrl.search), 308)
   }
