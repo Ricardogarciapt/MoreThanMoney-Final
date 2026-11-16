@@ -38,6 +38,8 @@ export interface Anfitriao {
   ordem: number
   google_email: string | null
   google_calendar_id: string | null
+  /** Agendas extra cujo «ocupado» também conta (ex.: a pessoal do anfitrião). Só freeBusy. */
+  google_calendarios_ocupado: string[] | null
   google_refresh_token: string | null
 }
 
