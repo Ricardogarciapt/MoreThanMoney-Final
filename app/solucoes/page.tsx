@@ -2,7 +2,7 @@ import Image from "next/image"
 import Link from "next/link"
 import { ArrowRight, Bot, Building2, CandlestickChart, GraduationCap, Mic, Server, UserRound } from "lucide-react"
 import { linkAgendar } from "@/lib/agenda/link"
-import { TESTEMUNHOS } from "@/lib/testemunhos"
+import { IDENTIFICACAO } from "@/lib/legal/identificacao"
 import { CASOS, DEMOS, FAQ, OFERTAS, PERFIS } from "@/lib/site-solucoes/conteudo"
 
 /**
@@ -30,7 +30,6 @@ const CTA_LABEL = "Marcar diagnóstico"
 export default function SolucoesPage() {
   const agendar = linkAgendar("negocios")
   const casos = CASOS.filter((c) => c.autorizado)
-  const vozes = TESTEMUNHOS.filter((t) => t.chat).slice(0, 3)
 
   return (
     <div className="min-h-[100dvh] bg-[#08090C] text-zinc-100 antialiased">
@@ -187,9 +186,9 @@ export default function SolucoesPage() {
           </div>
         </section>
 
-        {/* Casos e vozes */}
+        {/* Casos: só com autorização escrita (DL 57/2008) */}
         <section className="mx-auto max-w-6xl px-4 py-20">
-          <h2 className="text-3xl font-bold tracking-tight md:text-4xl">Casos e testemunhos</h2>
+          <h2 className="text-3xl font-bold tracking-tight md:text-4xl">Casos de clientes</h2>
           {casos.length > 0 ? (
             <div className="mt-10 grid gap-6 md:grid-cols-2">
               {casos.map((c) => (
@@ -204,22 +203,9 @@ export default function SolucoesPage() {
             </div>
           ) : (
             <p className="mt-4 max-w-[62ch] text-zinc-400">
-              Estamos a fechar os primeiros casos de empresas com autorização para publicar. Até lá, mostramos-te projectos reais
-              ao vivo na chamada de diagnóstico.
+              Só publicamos casos com autorização escrita de cada cliente, e estamos a fechar os primeiros. Até lá, mostramos-te
+              projectos reais ao vivo na chamada de diagnóstico.
             </p>
-          )}
-          {vozes.length > 0 && (
-            <div className="mt-12 grid gap-8 md:grid-cols-3">
-              {vozes.map((v) => (
-                <blockquote key={v.q} className="border-l-2 border-[#D2A63C]/60 pl-5">
-                  <p className="line-clamp-3 text-zinc-200">“{v.q}”</p>
-                  <footer className="mt-3 text-sm text-zinc-500">
-                    {v.n}, membro da comunidade MTM
-                    <span className="block">{v.l}</span>
-                  </footer>
-                </blockquote>
-              ))}
-            </div>
           )}
         </section>
 
@@ -283,11 +269,24 @@ export default function SolucoesPage() {
       </main>
 
       <footer className="border-t border-white/5">
-        <div className="mx-auto flex max-w-6xl flex-col gap-3 px-4 py-8 text-xs text-zinc-500 md:flex-row md:justify-between">
-          <p>© {new Date().getFullYear()} MoreThanMoney. Conteúdo educativo, não constitui consultoria financeira.</p>
-          <div className="flex gap-5">
-            <a href="https://www.morethanmoney.pt" className="hover:text-zinc-300">morethanmoney.pt</a>
-            <a href="/privacidade" className="hover:text-zinc-300">Privacidade</a>
+        <div className="mx-auto max-w-6xl space-y-4 px-4 py-8 text-xs leading-relaxed text-zinc-500">
+          <p className="max-w-[90ch]">
+            A MoreThanMoney presta serviços de tecnologia, marketing, automatização e educação. Não presta consultoria financeira ou
+            de investimento, não gere carteiras nem recebe fundos de clientes. Exemplos e demonstrações mostram casos reais com
+            autorização dos clientes; resultados variam e não são garantidos.
+          </p>
+          <div className="flex flex-col gap-3 md:flex-row md:justify-between">
+            <p>
+              {IDENTIFICACAO.marca} · {IDENTIFICACAO.titular}, NIF {IDENTIFICACAO.nif} ·{" "}
+              <a href={`mailto:${IDENTIFICACAO.email}`} className="hover:text-zinc-300">{IDENTIFICACAO.email}</a>
+            </p>
+            <nav className="flex flex-wrap gap-x-5 gap-y-2" aria-label="Informação legal">
+              <a href="/terms" className="hover:text-zinc-300">Termos de Serviços</a>
+              <a href="/privacidade" className="hover:text-zinc-300">Privacidade</a>
+              <a href="/aviso-de-risco" className="hover:text-zinc-300">Aviso de Risco</a>
+              <a href="https://www.livroreclamacoes.pt" target="_blank" rel="noopener noreferrer" className="hover:text-zinc-300">Livro de Reclamações</a>
+              <a href="https://www.morethanmoney.pt" className="hover:text-zinc-300">morethanmoney.pt</a>
+            </nav>
           </div>
         </div>
       </footer>

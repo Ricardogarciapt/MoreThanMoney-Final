@@ -35,7 +35,7 @@ export function ehAnfitriaoSolucoes(host: string | null | undefined, lista: stri
 }
 
 /** Caminhos que o domínio próprio serve tal e qual (o resto do site é partilhado por baixo). */
-const PASSAM_DIRETO = ['/api/', '/_next/', '/.well-known/', '/images/', '/videos/', '/fonts/', '/agendar', '/privacidade', '/terms', '/favicon.ico', '/logo-']
+const PASSAM_DIRETO = ['/api/', '/_next/', '/.well-known/', '/images/', '/videos/', '/fonts/', '/agendar', '/privacidade', '/terms', '/aviso-de-risco', '/favicon.ico', '/logo-']
 
 export type DecisaoSolucoes =
   | { tipo: 'nada' }
