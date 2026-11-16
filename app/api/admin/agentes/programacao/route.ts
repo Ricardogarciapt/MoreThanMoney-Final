@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { requireAdmin } from '@/lib/admin-api-helpers'
+import { requireSuperAdmin } from '@/lib/super-admin'
 import { getSupabaseAdmin } from '@/lib/supabase-admin-client'
 import { CAMPOS_GLOBAIS, QUOTA_MAX, aplicarAgente, aplicarGlobais, programacaoDoAgente } from '@/lib/agentes/programacao'
 import { RITMO_MIN } from '@/lib/agentes/os/ciclo-vida'
@@ -25,7 +25,7 @@ async function lerSettings(db: ReturnType<typeof getSupabaseAdmin>) {
 }
 
 export async function GET(request: NextRequest) {
-  const negado = await requireAdmin(request)
+  const negado = await requireSuperAdmin(request)
   if (negado) return negado
   const db = getSupabaseAdmin()
 
@@ -70,7 +70,7 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
-  const negado = await requireAdmin(request)
+  const negado = await requireSuperAdmin(request)
   if (negado) return negado
   const db = getSupabaseAdmin()
   const body = (await request.json().catch(() => ({}))) as Record<string, unknown>

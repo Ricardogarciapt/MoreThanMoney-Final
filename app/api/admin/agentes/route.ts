@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { requireAdmin } from '@/lib/admin-api-helpers'
+import { requireSuperAdmin } from '@/lib/super-admin'
 import { getSupabaseAdmin } from '@/lib/supabase-admin-client'
 import { JANELA_HORAS, julgar, lerRegrasVida } from '@/lib/agentes/vida'
 import { acaoManual, montarAgente, somarJanela, ultimaReceita, type EventoLido, type LinhaAgente } from '@/lib/agentes/motor'
@@ -25,7 +25,7 @@ import {
 export const dynamic = 'force-dynamic'
 
 export async function GET(request: NextRequest) {
-  const negado = await requireAdmin(request)
+  const negado = await requireSuperAdmin(request)
   if (negado) return negado
 
   const db = getSupabaseAdmin()
@@ -181,7 +181,7 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
-  const negado = await requireAdmin(request)
+  const negado = await requireSuperAdmin(request)
   if (negado) return negado
 
   const body = (await request.json().catch(() => ({}))) as {

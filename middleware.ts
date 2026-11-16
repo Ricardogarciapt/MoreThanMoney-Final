@@ -21,6 +21,7 @@ import { capacidadesDe, pode } from "@/lib/backoffice-papeis"
 import { areaDoCaminho, normalizarAreas } from "@/lib/backoffice-acessos-site"
 // O tecto vive em `lib/com-tecto.ts` — é puro, corre no edge, e o porquê está lá escrito.
 import { comTecto, TECTO_MIDDLEWARE_MS } from "@/lib/com-tecto"
+import { caminhoSuperAdmin, eSuperAdmin } from "@/lib/super-admin-regras"
 
 // Cache para rate limiting
 const rateLimit = new Map<string, { count: number; timestamp: number }>()
@@ -402,6 +403,20 @@ export async function middleware(request: NextRequest) {
       const url = request.nextUrl.clone()
       url.pathname = "/app-mobile"
       url.search = `tab=live&stream=${encodeURIComponent(streamMatch[1])}`
+      return NextResponse.redirect(url)
+    }
+  }
+
+  // ── Páginas só do super admin (antigo AIOS no site: /dashboard-gestao, /admin/agentes) ──
+  // Decisão do Ricardo a 16/11: só o dono as abre. As APIs delas têm a mesma guarda
+  // (lib/super-admin.ts); aqui evita-se só mostrar o ecrã a quem não é. Se o auth não responder
+  // e a pessoa trouxer sessão, serve-se a página: os dados continuam fechados nas APIs.
+  if (caminhoSuperAdmin(pathname) && hasSupabaseEnv) {
+    const quem = await getCachedUser()
+    if (!(autenticacaoIndecisa && trazCookieDeSessao(request)) && !eSuperAdmin(quem?.email)) {
+      const url = request.nextUrl.clone()
+      url.pathname = quem ? "/admin" : "/login"
+      url.search = ""
       return NextResponse.redirect(url)
     }
   }
