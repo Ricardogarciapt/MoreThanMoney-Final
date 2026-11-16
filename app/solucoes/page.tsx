@@ -8,6 +8,7 @@ import { CASO_MTM, SECTORES } from "@/lib/site-solucoes/automacao"
 import { SimuladorSolucoes } from "@/components/solucoes/simulador"
 import { HeroAoVivo } from "@/components/solucoes/hero-ao-vivo"
 import { AreasInterativas } from "@/components/solucoes/areas-interativas"
+import { VideoApresentacao } from "@/components/solucoes/video-apresentacao"
 import { MenuTrabalhos } from "@/components/solucoes/menu-trabalhos"
 
 /**
@@ -106,6 +107,10 @@ export default function SolucoesPage() {
         </div>
 
         {/* O que automatizamos: as dores de quem trabalha sem IA */}
+        <section id="video" className="mx-auto max-w-5xl px-4 pt-20">
+          <VideoApresentacao />
+        </section>
+
         <section id="o-que-automatizamos" className="mx-auto max-w-6xl px-4 py-20">
           <h2 className="max-w-[24ch] text-3xl font-bold tracking-tight md:text-4xl">O que te tiramos das mãos</h2>
           <p className="mt-3 max-w-[62ch] text-zinc-400">
