@@ -358,13 +358,14 @@ export function decidirOperacoes(entrada: {
         continue
       }
       const v = entrada.vantagens.get(chaveCombo(s.estrategia, symbol))
-      const explorar = !v?.aprovada &&
+      const livre = regua.livre > 0
+      const explorar = !v?.aprovada && !livre &&
         regua.exploracao > 0 &&
         (v?.n ?? 0) < regua.minAmostra &&
         rr >= regua.exploracaoMinRR &&
         exploracoesAbertas < regua.exploracaoMax
       if (explorar) paraExplorar.add(s)
-      else if (!v?.aprovada) {
+      else if (!v?.aprovada && !livre) {
         decisoes.push({
           ...recusar(s, 'sem_vantagem'),
           porque: v ? v.porque : `Sem histórico medido de ${s.estrategia} em ${symbol}.`,
@@ -580,6 +581,8 @@ export async function correrTrader(
           cfg: d.exploracao
             ? { ...CONFIG_PADRAO, lotePor1000: CONFIG_PADRAO.lotePor1000 * regua.exploracaoLote }
             : CONFIG_PADRAO,
+          // Risco fixo por operação (régua `riscoPct`); a exploração continua a lote reduzido.
+          riscoPct: !d.exploracao && regua.riscoPct > 0 ? regua.riscoPct : null,
         })
         feitas.push({ chave: d.sinal.chave, estado: r.estado, motivo: r.motivo })
         if (!r.ok && r.estado === 'erro') erros.push(`${d.sinal.chave}: ${r.motivo ?? 'erro'}`)

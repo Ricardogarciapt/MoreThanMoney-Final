@@ -348,6 +348,23 @@ export function loteParaConta(saldo: number, cfg: Pick<ConfigSinais, 'lotePor100
 }
 
 /**
+ * Lote para arriscar `riscoPct` % do saldo até ao SL. `perdaPorLote` é o resultado em USD de 1 lote
+ * da entrada ao SL (negativo). Arredonda PARA BAIXO ao passo (nunca arrisca mais do que o pedido),
+ * respeita mínimo e máximo do símbolo. Sem perda mensurável devolve null (quem chama usa outro lote).
+ */
+export function loteParaRisco(
+  saldo: number, riscoPct: number, perdaPorLote: number | null,
+  s: Pick<Simbolo, 'volume_min' | 'volume_step' | 'volume_max'>,
+): number | null {
+  const perda = Math.abs(Number(perdaPorLote))
+  if (!(saldo > 0) || !(riscoPct > 0) || !Number.isFinite(perda) || perda <= 0) return null
+  const bruto = (saldo * riscoPct) / 100 / perda
+  const passos = Math.floor(bruto / s.volume_step + 1e-9)
+  const v = Math.round(passos * s.volume_step * 100) / 100
+  return Math.min(s.volume_max, Math.max(s.volume_min, v))
+}
+
+/**
  * O lote nunca abaixo do mínimo da conta (coluna `lote_minimo`, 197 — a «Todos os sinais» pediu 0,02
  * a 07/10 para que o TP1 parta a posição). Arredonda ao passo do símbolo e respeita o máximo.
  * Sem mínimo (nulo/0), devolve o lote como veio.

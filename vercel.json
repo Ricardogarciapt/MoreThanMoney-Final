@@ -197,6 +197,10 @@
       "schedule": "0 7 * * *"
     },
     {
+      "path": "/api/cron/estrategias-semanas",
+      "schedule": "30 9 * * 6"
+    },
+    {
       "path": "/api/cron/weekly-flyer",
       "schedule": "0 10 * * 6"
     },
@@ -319,6 +323,10 @@
     {
       "path": "/api/cron/contas-saldos",
       "schedule": "20 * * * *"
+    },
+    {
+      "path": "/api/cron/mestres-desbloquear",
+      "schedule": "*/10 * * * *"
     }
   ]
 }

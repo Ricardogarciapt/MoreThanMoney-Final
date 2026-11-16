@@ -15,7 +15,7 @@
  */
 import { getSupabaseAdmin } from '@/lib/supabase-admin-client'
 import {
-  aplicarLoteMinimo, ambitoDoDuplicado, decidirDuplicado, impressaoNoAmbito, gestaoDoSinal, loteParaConta, niveisAncorados,
+  aplicarLoteMinimo, ambitoDoDuplicado, decidirDuplicado, impressaoNoAmbito, gestaoDoSinal, loteParaConta, loteParaRisco, niveisAncorados,
   type ConfigSinais, type PonteAberta,
 } from './calculo'
 import type { Direcao } from '../simulado/matematica'
@@ -44,6 +44,11 @@ export interface PedidoAbrir {
    * Quando a conta não parte o lote em dois, a 2.ª camada é recusada e a 1.ª leva o lote todo.
    */
   camada?: { camada: 1 | 2; fracao: number } | null
+  /**
+   * Risco por operação em % do saldo (agente trader, 16/11/2026). Com SL, o lote sai da distância
+   * ao SL; sem SL ou sem conversão para USD, cai no lote por saldo. Ignorado com `loteFixo`.
+   */
+  riscoPct?: number | null
 }
 
 export interface ResultadoAbrir {
@@ -172,13 +177,20 @@ export async function abrirSinalNaConta(p: PedidoAbrir): Promise<ResultadoAbrir>
     const precoExec = fill.preco
 
     // 4. lote, níveis ao nosso preço e gestão
+    const niveis = niveisAncorados({ direcao: p.direcao, entrada: p.entrada, sl: p.sl, tps: p.tps }, precoExec, s.digits)
+    const saldoConta = Number(conta.sim_saldo ?? conta.saldo_inicial ?? 0)
+    let volumePorRisco: number | null = null
+    if (!(p.loteFixo && p.loteFixo > 0) && p.riscoPct && p.riscoPct > 0 && niveis.sl != null) {
+      const { lucroUsd } = await import('../simulado/matematica')
+      const perdaPorLote = lucroUsd(s, p.direcao, 1, precoExec, niveis.sl, precos)
+      volumePorRisco = loteParaRisco(saldoConta, p.riscoPct, perdaPorLote, s)
+    }
     const volumeBase = p.loteFixo && p.loteFixo > 0
       ? Math.max(s.volume_min, Math.round(p.loteFixo / s.volume_step) * s.volume_step)
-      : loteParaConta(Number(conta.sim_saldo ?? conta.saldo_inicial ?? 0), p.cfg, s)
+      : volumePorRisco ?? loteParaConta(saldoConta, p.cfg, s)
     const volumeCheio = aplicarLoteMinimo(volumeBase, p.loteMinimo, s)
     const volume = p.camada ? loteDaCamada(volumeCheio, p.camada, s, p.loteMinimo) : volumeCheio
     if (volume == null) throw new Error('o lote desta conta não parte em duas camadas: fica só a 1.ª, com o lote inteiro')
-    const niveis = niveisAncorados({ direcao: p.direcao, entrada: p.entrada, sl: p.sl, tps: p.tps }, precoExec, s.digits)
     const { gestao, tpFinal } = gestaoDoSinal({ simbolo: s, direcao: p.direcao, precoExecucao: precoExec, volume, sl: niveis.sl, tps: niveis.tps, cfg: p.cfg })
 
     const entrada = { symbol, direcao: p.direcao, volume, sl: niveis.sl, tp: tpFinal, ideiaRef: `sinal:${p.chave}`, comentario: p.comentario, referencia }
