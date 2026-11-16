@@ -5,11 +5,17 @@ import { usePathname } from "next/navigation"
 import Navbar from "@/components/navbar"
 import Footer from "@/components/footer"
 import BotaoAprendeAUsar from "@/components/intro/botao-aprende-a-usar"
+import { ehAnfitriaoSolucoes } from "@/lib/site-solucoes/dominio"
 
 export default function ConditionalNavbarFooter({ children }: { children: React.ReactNode }) {
   const pathname = usePathname()
   // True while running in the native iOS/Android WKWebView shell
   const [isNativeApp, setIsNativeApp] = useState(false)
+  // No domínio próprio do site de apresentação o caminho no browser é «/», não «/solucoes».
+  const [naSolucoes, setNaSolucoes] = useState(false)
+  useEffect(() => {
+    setNaSolucoes(ehAnfitriaoSolucoes(window.location.host))
+  }, [])
 
   // Re-check on every client-side navigation so the flag is picked up after
   // the app-mobile page sets it and the user navigates to e.g. /member-area
@@ -31,8 +37,8 @@ export default function ConditionalNavbarFooter({ children }: { children: React.
   // FAQ e políticas próprias, sem caminho de regresso a morethanmoney.pt. Herdar a navbar
   // global misturava as duas marcas — e, num produto financiado, misturar quem responde
   // pelo quê não é uma questão de estética.
-  const standalonePaths = ["/charts-primeverse", "/app-mobile", "/work", "/tradingfloor", "/apresentacao", "/FreeSession", "/mtmfunded", "/webtrader"]
-  const isStandalonePage = standalonePaths.some(isExactOrChildPath)
+  const standalonePaths = ["/charts-primeverse", "/app-mobile", "/work", "/tradingfloor", "/apresentacao", "/FreeSession", "/mtmfunded", "/webtrader", "/solucoes"]
+  const isStandalonePage = naSolucoes || standalonePaths.some(isExactOrChildPath)
 
   /**
    * O botão «Aprende a usar …» vive aqui e não em cada página.
@@ -43,7 +49,7 @@ export default function ConditionalNavbarFooter({ children }: { children: React.
    * lado. Fica de fora das superfícies que têm barras próprias coladas ao fundo (a PWA, o
    * webtrader, os charts) e da app nativa, onde um botão flutuante taparia a navegação.
    */
-  const semBotaoIntro = ["/app-mobile", "/webtrader", "/charts-primeverse"].some(isExactOrChildPath)
+  const semBotaoIntro = naSolucoes || ["/app-mobile", "/webtrader", "/charts-primeverse", "/solucoes"].some(isExactOrChildPath)
   const botaoIntro = !isNativeApp && !semBotaoIntro ? <BotaoAprendeAUsar /> : null
 
   // In the native app every route is standalone — hide Navbar & Footer site-wide
