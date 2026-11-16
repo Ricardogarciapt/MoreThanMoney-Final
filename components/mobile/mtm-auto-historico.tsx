@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react"
 import { supabase } from "@/lib/supabase"
-import { useT } from "@/components/i18n-provider"
+import { useT, useI18n } from "@/components/i18n-provider"
 import { Loader2 } from "lucide-react"
 
 /**
@@ -120,6 +120,7 @@ const ESCOPOS: { id: Escopo; chave: string }[] = [
 
 export default function MtmAutoHistorico({ dias = 30 }: { dias?: number }) {
   const t = useT()
+  const { lang } = useI18n()
   /**
    * O período é DESTE separador, não do feed.
    *
@@ -373,7 +374,7 @@ export default function MtmAutoHistorico({ dias = 30 }: { dias?: number }) {
                 )}
               </p>
               <p className="mt-0.5 text-[11.5px] texto-mais-fraco">
-                {new Date(l.quando).toLocaleString("pt-PT", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" })}
+                {new Date(l.quando).toLocaleString(lang === "en" ? "en-GB" : "pt-PT", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" })}
                 {l.estrategia && ` · ${l.estrategia}`}
                 {l.conta && ` · ${l.conta}`}
                 {/* Uma saída parcial TEM resultado, por isso a etiqueta de estado lá em baixo

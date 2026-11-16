@@ -7,18 +7,20 @@
  */
 import { CalendarPlus } from "lucide-react"
 import { linksSubscricao } from "@/lib/aulas-ics"
+import { useT } from "@/components/i18n-provider"
 
 const FEED = "https://www.morethanmoney.pt/api/aulas/agenda.ics"
 
 export default function AdicionarAgendaAulas() {
+  const t = useT()
   const { google, apple } = linksSubscricao(FEED)
   return (
     <div className="mt-3 rounded-xl border border-[#D2A63C]/25 bg-[#D2A63C]/5 p-3">
       <p className="flex items-center gap-2 text-sm font-medium text-white">
         <CalendarPlus className="h-4 w-4 text-[#D2A63C]" aria-hidden />
-        Recebe as aulas na tua agenda
+        {t("amC.agenda.agendaTitle")}
       </p>
-      <p className="mt-1 text-xs text-white/60">O horário entra no teu calendário e atualiza sozinho. Avisa 15 minutos antes.</p>
+      <p className="mt-1 text-xs text-white/60">{t("amC.agenda.agendaBody")}</p>
       <div className="mt-2 flex flex-wrap gap-2">
         <a href={google} target="_blank" rel="noopener noreferrer" className="rounded-lg bg-[#D2A63C] px-3 py-1.5 text-xs font-semibold text-black">
           Google Calendar

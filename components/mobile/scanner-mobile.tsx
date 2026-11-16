@@ -186,6 +186,19 @@ const assetCategories = {
   }
 }
 
+// Rótulos de ativos que vêm em português no catálogo: traduzem-se no ecrã (ver assetLabel).
+const ASSET_LABEL_KEYS: Record<string, string> = {
+  "Ouro (XAU/USD)": "amC.scanner.assetGoldXau",
+  "Ouro": "amC.scanner.assetGold",
+  "Prata": "amC.scanner.assetSilver",
+  "Platina": "amC.scanner.assetPlatinum",
+  "Paládio": "amC.scanner.assetPalladium",
+  "Petróleo WTI": "amC.scanner.assetWti",
+  "Petróleo Brent": "amC.scanner.assetBrent",
+  "Gás Natural": "amC.scanner.assetNatGas",
+  "Cobre": "amC.scanner.assetCopper",
+}
+
 export type ScannerMobileIntegration = "standalone" | "scanner-access"
 
 export type ScannerMobileProps = {
@@ -226,6 +239,7 @@ export default function ScannerMobile({
     indices: "scanner.catIndices",
     commodities: "scanner.catCommodities",
   }
+  const assetLabel = (label: string) => (ASSET_LABEL_KEYS[label] ? t(ASSET_LABEL_KEYS[label]) : label)
   const containerRef = useRef<HTMLDivElement>(null)
   const controlsRef = useRef<HTMLDivElement>(null)
   const scannerAccessWrapRef = useRef<HTMLDivElement>(null)
@@ -1075,7 +1089,7 @@ export default function ScannerMobile({
             <SelectContent className="bg-gray-800 border-gray-700 text-white">
               {assetCategories[selectedCategory].symbols.map((s) => (
                 <SelectItem key={s.value} value={s.value} className={isDesktop ? "text-sm" : "text-xs"}>
-                  {s.label}
+                  {assetLabel(s.label)}
                 </SelectItem>
               ))}
             </SelectContent>
@@ -1348,7 +1362,7 @@ export default function ScannerMobile({
             className="inline-flex items-center gap-1 text-xs text-gray-400 underline-offset-2 hover:text-[#D2A63C] hover:underline"
           >
             <CandlestickChart style={{ width: 13, height: 13 }} />
-            Negociar no Web trader
+            {t("amC.scanner.tradeWebtrader")}
           </Link>
         </div>
       )}

@@ -164,18 +164,18 @@ function normalizeChatMessage(raw: ChatMessage): ChatMessage {
   }
 }
 
-async function shareMessage(msg: ChatMessage) {
+async function shareMessage(msg: ChatMessage, t: (key: string) => string) {
   const origin = typeof window !== "undefined" ? window.location.origin : undefined
   const url = getChatMessageShareUrl(msg, origin)
   const text =
     msg.content?.trim() ||
     (msg.message_type === "video"
-      ? "Vídeo partilhado no chat MTM"
+      ? t("amC.chat.shareVideo")
       : msg.image_url
-        ? "Imagem partilhada no chat MTM"
+        ? t("amC.chat.shareImage")
         : url
-          ? "Link partilhado no chat MTM"
-          : "Mensagem MTM")
+          ? t("amC.chat.shareLink")
+          : t("amC.chat.shareFallback"))
 
   if (typeof navigator !== "undefined" && navigator.share) {
     try {
@@ -831,7 +831,7 @@ function MessageBubble({
     setAnimating(true)
     setSwipeOffset(0)
     if (key === "reply") onReply(msg)
-    else if (key === "share") shareMessage(msg)
+    else if (key === "share") shareMessage(msg, t)
     else if (key === "copy") {
       const toCopy = getChatCopyText(msg)
       if (toCopy) { try { navigator.clipboard.writeText(toCopy) } catch {} }
@@ -1965,7 +1965,7 @@ function ChannelView({
           onClose={() => setContextMsg(null)}
           onReply={() => { setReplyTo(contextMsg); setContextMsg(null) }}
           onDelete={() => { handleDelete(contextMsg.id); setContextMsg(null) }}
-          onShare={() => shareMessage(contextMsg)}
+          onShare={() => shareMessage(contextMsg, t)}
         />
       )}
     </div>

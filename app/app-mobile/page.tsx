@@ -40,12 +40,14 @@ import { useCapacitor } from "@/hooks/use-capacitor"
 import { usePushNotifications, type ForegroundMessage } from "@/hooks/use-push-notifications"
 import { supabase } from "@/lib/supabase"
 import AvisoNotificacoes from "@/components/mobile/aviso-notificacoes"
+import { useT } from "@/components/i18n-provider"
 
 function AppMobileContent() {
   const STUDIO_URL = "https://mtmbrandbuilder.lovable.app"
   const searchParams = useSearchParams()
   const router = useRouter()
   const { user, isAppOnlyUser, isPrimeverse, isLoading: authLoading } = useAuth()
+  const t = useT()
 
   // ── Capacitor native bridge (iOS/Android) ──────────────────────────
   const { isNative, isIOS: isIOSDevice } = useCapacitor({
@@ -377,7 +379,7 @@ function AppMobileContent() {
   }
 
   return (
-    <ProtectedPage redirectPath="/app-mobile/login" loadingMessage="A carregar app mobile...">
+    <ProtectedPage redirectPath="/app-mobile/login" loadingMessage={t("amC.page.loading")}>
       <main className="app-mobile-page app-mobile-container bg-gray-900 h-[100dvh] overflow-hidden flex flex-col">
         {/* Onboarding Tutorial (first use) */}
         {userLoaded && showOnboarding && (
@@ -451,7 +453,7 @@ function AppMobileContent() {
                 setUnreadCount(0)
               }}
               className="relative w-10 h-10 bg-white/10 backdrop-blur-sm rounded-xl flex items-center justify-center hover:bg-white/20 transition-all active:scale-95 border border-white/10"
-              title="Notificações"
+              title={t("amC.page.notifications")}
             >
               <Bell className="w-5 h-5 text-white" />
               {unreadCount > 0 && (
@@ -546,7 +548,7 @@ function AppMobileContent() {
             }`}
           >
             <Users className={`w-5 h-5 mx-auto mb-0.5 ${activeTab === "social" ? "text-[#D2A63C]" : ""}`} />
-            <div className={`text-[10px] font-medium leading-tight ${activeTab === "social" ? "text-[#D2A63C]" : ""}`}>Feed</div>
+            <div className={`text-[10px] font-medium leading-tight ${activeTab === "social" ? "text-[#D2A63C]" : ""}`}>{t("amC.page.tabFeed")}</div>
           </button>
 
           <button
@@ -559,7 +561,7 @@ function AppMobileContent() {
             }`}
           >
             <MessageSquare className={`w-5 h-5 mx-auto mb-0.5 ${activeTab === "chat" ? "text-[#D2A63C]" : ""}`} />
-            <div className={`text-[10px] font-medium leading-tight ${activeTab === "chat" ? "text-[#D2A63C]" : ""}`}>Chat</div>
+            <div className={`text-[10px] font-medium leading-tight ${activeTab === "chat" ? "text-[#D2A63C]" : ""}`}>{t("amC.page.tabChat")}</div>
           </button>
 
           <button
@@ -576,7 +578,7 @@ function AppMobileContent() {
                 desse horário quem lá entrava achava que não havia nada. O id do tab
                 continua `live` de propósito: é o que está nos links e nas notificações. */}
             <Video className={`w-5 h-5 mx-auto mb-0.5 ${activeTab === "live" ? "text-[#D2A63C]" : ""}`} />
-            <div className={`text-[10px] font-medium leading-tight ${activeTab === "live" ? "text-[#D2A63C]" : ""}`}>Aulas</div>
+            <div className={`text-[10px] font-medium leading-tight ${activeTab === "live" ? "text-[#D2A63C]" : ""}`}>{t("amC.page.tabClasses")}</div>
           </button>
 
           {/* «Alertas» ocupa o lugar do antigo botão «T2T» (05/10/2026). O Tap to Trade passou a
@@ -592,7 +594,7 @@ function AppMobileContent() {
             }`}
           >
             <Bell className={`w-5 h-5 mx-auto mb-0.5 ${activeTab === "trading-alerts" ? "text-[#D2A63C]" : ""}`} />
-            <div className={`text-[10px] font-medium leading-tight ${activeTab === "trading-alerts" ? "text-[#D2A63C]" : ""}`}>Alertas</div>
+            <div className={`text-[10px] font-medium leading-tight ${activeTab === "trading-alerts" ? "text-[#D2A63C]" : ""}`}>{t("amC.page.tabAlerts")}</div>
           </button>
 
           <button
@@ -605,7 +607,7 @@ function AppMobileContent() {
             }`}
           >
             <Wallet className={`w-5 h-5 mx-auto mb-0.5 ${activeTab === "portfolio" ? "text-[#D2A63C]" : ""}`} />
-            <div className={`text-[10px] font-medium leading-tight ${activeTab === "portfolio" ? "text-[#D2A63C]" : ""}`}>Portfólio</div>
+            <div className={`text-[10px] font-medium leading-tight ${activeTab === "portfolio" ? "text-[#D2A63C]" : ""}`}>{t("amC.page.tabPortfolio")}</div>
           </button>
 
           <button
@@ -639,7 +641,7 @@ function AppMobileContent() {
               <div className="flex items-center justify-between px-4 py-3 border-b border-gray-800 flex-shrink-0">
                 <div className="flex items-center gap-2">
                   <Bell className="w-5 h-5 text-[#D2A63C]" />
-                  <span className="text-white font-semibold text-base">Notificações</span>
+                  <span className="text-white font-semibold text-base">{t("amC.page.notifications")}</span>
                 </div>
                 <button
                   onClick={() => setIsNotificationsOpen(false)}
@@ -700,9 +702,9 @@ function AppMobileContent() {
                 <Bell className="w-5 h-5 text-[#D2A63C]" />
               </div>
               <div className="flex-1 min-w-0">
-                <p className="text-sm font-semibold text-white mb-0.5">Activar notificações</p>
+                <p className="text-sm font-semibold text-white mb-0.5">{t("amC.page.enablePushTitle")}</p>
                 <p className="text-xs text-gray-400 mb-3 leading-relaxed">
-                  Alertas de mercado, oportunidades DCA e avisos de subscrição em tempo real.
+                  {t("amC.page.enablePushBody")}
                 </p>
                 <div className="flex gap-2">
                   <button
@@ -712,7 +714,7 @@ function AppMobileContent() {
                     }}
                     className="flex-1 py-2 bg-[#D2A63C] hover:bg-[#c49a2e] text-black text-sm font-bold rounded-xl transition-colors"
                   >
-                    Activar
+                    {t("amC.page.enable")}
                   </button>
                   <button
                     onClick={() => {
@@ -721,7 +723,7 @@ function AppMobileContent() {
                     }}
                     className="px-4 py-2 bg-white/10 hover:bg-white/15 text-white text-sm rounded-xl transition-colors border border-white/10"
                   >
-                    Agora não
+                    {t("amC.page.notNow")}
                   </button>
                 </div>
               </div>

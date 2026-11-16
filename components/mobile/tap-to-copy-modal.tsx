@@ -17,8 +17,22 @@
 import { useState } from "react"
 import { X, Copy, Check } from "lucide-react"
 import { camposDoSinal, copiarTexto, type CampoCopiavel, type ParametrosSinal } from "@/lib/mtmcopy/t2t-copiar"
+import { useT } from "@/components/i18n-provider"
 
 type Campo = CampoCopiavel
+
+/**
+ * Rótulos VISÍVEIS dos campos. O `rotulo` continua em português (é o que vai para o texto copiado
+ * e o que identifica o campo); aqui só se muda o que se lê no ecrã.
+ */
+const CHAVE_ROTULO: Record<string, string> = {
+  "Símbolo": "amB.tap.lbl.symbol",
+  "Par": "amB.tap.lbl.pair",
+  "Direção": "amB.tap.lbl.direction",
+  "Entrada": "amB.tap.lbl.entry",
+  "Stop loss": "amB.tap.lbl.sl",
+  "Stop Loss": "amB.tap.lbl.slCap",
+}
 
 /**
  * Extrai os parâmetros do texto canónico do sinal (webhook TradingView).
@@ -58,6 +72,7 @@ export default function TapToCopyModal({
   titulo?: string
   aoFechar: () => void
 }) {
+  const t = useT()
   const campos = parametros ? camposDoSinal(parametros) : parseCamposDoSinal(content ?? "")
   const [copiado, setCopiado] = useState<string | null>(null)
 
@@ -84,17 +99,16 @@ export default function TapToCopyModal({
       >
         <div className="mb-3 flex items-center justify-between">
           <h3 className="text-[15px] font-bold text-white">{titulo ?? "Tap to copy"}</h3>
-          <button onClick={aoFechar} aria-label="Fechar" className="rounded-full p-1.5 text-zinc-400 hover:text-white">
+          <button onClick={aoFechar} aria-label={t("amB.common.close")} className="rounded-full p-1.5 text-zinc-400 hover:text-white">
             <X className="h-5 w-5" />
           </button>
         </div>
         <p className="mb-3 text-[12px] leading-snug text-zinc-400">
-          Copia os parâmetros para o MT5 ou para a tua corretora. Conteúdo educativo — o risco e o lote
-          são teus.
+          {t("amB.tap.intro")}
         </p>
 
         {campos.length === 0 ? (
-          <p className="py-6 text-center text-[13px] text-zinc-500">Não consegui ler os parâmetros deste sinal.</p>
+          <p className="py-6 text-center text-[13px] text-zinc-500">{t("amB.tap.unreadable")}</p>
         ) : (
           <>
             <button
@@ -102,13 +116,13 @@ export default function TapToCopyModal({
               className="mb-2.5 flex w-full items-center justify-center gap-1.5 rounded-xl bg-[#D2A63C] py-2.5 text-[13px] font-bold text-black active:scale-[0.98]"
             >
               {copiado === "__tudo__" ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
-              {copiado === "__tudo__" ? "Copiado" : "Copiar tudo"}
+              {copiado === "__tudo__" ? t("amB.common.copied") : t("amB.tap.copyAll")}
             </button>
             <div className="space-y-2">
               {campos.map((c) => (
                 <div key={c.rotulo} className="flex items-center justify-between gap-3 rounded-xl border border-zinc-800 bg-black/40 px-3 py-2.5">
                   <div className="min-w-0">
-                    <p className="text-[11px] uppercase tracking-wider text-zinc-500">{c.rotulo}</p>
+                    <p className="text-[11px] uppercase tracking-wider text-zinc-500">{CHAVE_ROTULO[c.rotulo] ? t(CHAVE_ROTULO[c.rotulo]) : c.rotulo}</p>
                     <p className="truncate font-mono text-[15px] font-semibold text-white">{c.valor}</p>
                   </div>
                   <button
@@ -116,7 +130,7 @@ export default function TapToCopyModal({
                     className="flex shrink-0 items-center gap-1.5 rounded-lg border border-[#D2A63C]/40 px-3 py-2 text-[12px] font-bold text-[#D2A63C] active:scale-95"
                   >
                     {copiado === c.rotulo ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
-                    {copiado === c.rotulo ? "Copiado" : "Copy"}
+                    {copiado === c.rotulo ? t("amB.common.copied") : t("amB.tap.copy")}
                   </button>
                 </div>
               ))}

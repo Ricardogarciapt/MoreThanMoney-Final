@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react"
 import { semCripto } from "@/lib/ios-sem-cripto"
 import { Bell, X } from "lucide-react"
+import { useT } from "@/components/i18n-provider"
 
 /**
  * Aviso único da mudança de 2026-08-21: as notificações passaram a ser "só o que segues".
@@ -14,6 +15,7 @@ import { Bell, X } from "lucide-react"
 const CHAVE = "mtm_aviso_notificacoes_2026_08"
 
 export default function AvisoNotificacoes({ onAbrirDefinicoes }: { onAbrirDefinicoes?: () => void }) {
+  const t = useT()
   const [visivel, setVisivel] = useState(false)
 
   useEffect(() => {
@@ -46,36 +48,34 @@ export default function AvisoNotificacoes({ onAbrirDefinicoes }: { onAbrirDefini
             <div className="w-9 h-9 rounded-xl bg-[#D2A63C]/15 border border-[#D2A63C]/30 flex items-center justify-center">
               <Bell className="w-4.5 h-4.5 text-[#D2A63C]" />
             </div>
-            <h3 className="text-[16px] font-bold text-white leading-tight">Menos ruído,<br />o que interessa</h3>
+            <h3 className="text-[16px] font-bold text-white leading-tight">{t("amB.aviso.title1")}<br />{t("amB.aviso.title2")}</h3>
           </div>
-          <button onClick={fechar} aria-label="Fechar" className="w-7 h-7 flex items-center justify-center rounded-lg bg-white/5 hover:bg-white/10">
+          <button onClick={fechar} aria-label={t("amB.common.close")} className="w-7 h-7 flex items-center justify-center rounded-lg bg-white/5 hover:bg-white/10">
             <X className="w-3.5 h-3.5 text-gray-400" />
           </button>
         </div>
 
         <p className="text-[13px] leading-relaxed text-gray-300">
-          Estavas a receber tudo: cada mensagem de cada canal e cada atualização de cada trade.
-          Eram dezenas por dia — e o aviso que te importava ficava enterrado no meio.
+          {t("amB.aviso.p1")}
         </p>
         <p className="text-[13px] leading-relaxed text-gray-300 mt-2.5">
-          A partir de hoje chega-te só o essencial:
+          {t("amB.aviso.p2")}
         </p>
         <ul className="mt-2 mb-3 flex flex-col gap-1.5">
           {[
-            ["⚡", "Sinais que podes aceitar num toque"],
-            ["🔴", "Sessões ao vivo, quando começam"],
+            ["⚡", "amB.aviso.item1"],
+            ["🔴", "amB.aviso.item2"],
             // App iOS: sem o ₿ (Apple 3.1.5(iii)) — ver lib/ios-sem-cripto.ts.
-            [semCripto() ? "📊" : "₿", "Oportunidades de DCA no portefólio"],
+            [semCripto() ? "📊" : "₿", "amB.aviso.item3"],
           ].map(([emoji, texto]) => (
             <li key={texto} className="flex items-start gap-2 text-[13px] text-gray-200">
               <span className="mt-0.5">{emoji}</span>
-              <span>{texto}</span>
+              <span>{t(texto)}</span>
             </li>
           ))}
         </ul>
         <p className="text-[12px] leading-relaxed text-gray-500">
-          Não perdeste nada — o resto continua no chat e nos alertas, como sempre. Se quiseres
-          voltar a ser avisado de algum, ligas nas Definições, categoria a categoria.
+          {t("amB.aviso.p3")}
         </p>
 
         <div className="mt-4 flex gap-2">
@@ -83,13 +83,13 @@ export default function AvisoNotificacoes({ onAbrirDefinicoes }: { onAbrirDefini
             onClick={fechar}
             className="flex-1 rounded-xl border border-zinc-700 py-2.5 text-[13px] font-medium text-zinc-300 active:scale-95"
           >
-            Está bem assim
+            {t("amB.aviso.keep")}
           </button>
           <button
             onClick={() => { fechar(); onAbrirDefinicoes?.() }}
             className="flex-1 rounded-xl bg-[#D2A63C] py-2.5 text-[13px] font-bold text-black active:scale-95"
           >
-            Escolher o que recebo
+            {t("amB.aviso.openSettings")}
           </button>
         </div>
       </div>

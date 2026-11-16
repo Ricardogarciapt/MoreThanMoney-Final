@@ -14,12 +14,14 @@
  */
 
 import Vitrine from "@/components/marketplace/vitrine"
+import { useT } from "@/components/i18n-provider"
 
 export default function MarketplaceMobile() {
+  const t = useT()
   return (
     <div className="px-3 py-4">
       <h1 className="mb-1 text-lg font-semibold text-zinc-100">Marketplace</h1>
-      <p className="mb-5 text-xs text-zinc-500">Produtos dos educadores MTM.</p>
+      <p className="mb-5 text-xs text-zinc-500">{t("amA.marketplace.subtitle")}</p>
       <Vitrine compacto />
     </div>
   )
