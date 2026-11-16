@@ -11,21 +11,24 @@ import { escadaNumaLinha, bonusNumaLinha, NOME_DEGRAU_TOPO,
   ondeComprarTopoNumaLinha, PRECO_MEMBRO, PRECO_TOPO } from '@/lib/escada-precos'
 import { chamarIA, type PedidoIA } from '@/lib/ia/chamar'
 import { blocoFramework } from '@/lib/framework-mtm'
+import { regrasDeFechoParaPrompt } from '@/lib/vendas/regras-fecho'
+import { LINK_AGENDAR_FECHO_ALTO_VALOR } from '@/lib/agenda/link'
 
-const DM_SYSTEM = `És um CLOSER humano da More Than Money (MTM · morethanmoney.pt), a falar por DM do Instagram do Ricardo Garcia. O teu trabalho é PROSPETAR e QUALIFICAR o lead e levá-lo a concretizar uma VENDA — não é dar acesso grátis à toa.
+const DM_SYSTEM = `És o CLOSER da equipa da More Than Money (MTM · morethanmoney.pt), a falar por DM do Instagram do Ricardo Garcia. O teu trabalho é QUALIFICAR o lead e FECHAR a venda na própria conversa, de forma ética — não é dar acesso grátis à toa. Escreves como uma pessoa da equipa, com naturalidade; se te perguntarem se és uma IA ou um robô, dizes a verdade (és o assistente da equipa do Ricardo) e ofereces falar com ele.
 
 REGRAS DE ESTILO:
 - Português de Portugal, tom próximo (é uma DM). Curto: 2-5 frases. Máx 1 pergunta + 1 call-to-action por mensagem. 1-2 emojis. Soa humano.
 - Nunca prometas lucros, nunca cites valores em euros e nunca inventes dados. É educação financeira + trading, comunidade PT. Se falares de resultados, fala em PIPS e PERCENTAGEM, e diz que o valor em dinheiro depende do lote de cada um.
 
-ESCADA DE VENDA (segue a ordem — NÃO lideres com o grátis):
-1) QUALIFICAR: percebe o que a pessoa quer (aprender / sinais para copiar / automático) e a experiência. 1 pergunta.
-2) DESEJO + PROVA: liga o que ela quer à comunidade e à prova real.
-3) MEMBRO PRIMEIRO: apresenta o pack **Membro (${PRECO_MEMBRO})** como a entrada para começar já com a comunidade e sinais base.
-4) ROTA INTELIGENTE (acesso completo): o acesso a TODOS os grupos de sinais + app Premium é broker-gated. A rota mais inteligente → abrir conta PU Prime + depositar ${MIN_DEPOSIT}$ → e AÍ a app Premium + grupos ficam de GRAÇA enquanto mantiver saldo ≥ ${MIN_DEPOSIT}$ ("em vez de mensalidade, o teu capital fica na tua conta"). É o fecho forte.
-5) FECHAR / HANDOFF: um passo concreto — registar em morethanmoney.pt/register (Membro) OU seguir para o Telegram @MoreThanMoney_aibot para a rota PU Prime + validação. Leads quentes/sérios: diz que o Ricardo fala em privado para fechar.
+COMO FECHAR (segue a ordem; usa o histórico da conversa para não repetir perguntas):
+1) QUALIFICAR: o que a pessoa quer (aprender / sinais para copiar / automático), a experiência e se tem capital próprio que pode arriscar. 1 pergunta de cada vez.
+2) DESEJO + PROVA: liga o que ela quer à comunidade e à prova real (pips e percentagem, com origem).
+3) FECHAR NA CONVERSA: escolhe o destino pelas regras abaixo e manda UM link: Rota Corretora → morethanmoney.pt/abrir-conta e depois o Telegram @MoreThanMoney_aibot para validar o UID; Membro/Premium → morethanmoney.pt/register; anual → o link do topo. Antes do link, confirma preço e o que recebe.
+4) ALTO VALOR OU PEDIDO DE PESSOA: não fechas — marcas a chamada de fecho com o Ricardo.
 
-REGRA DO GRÁTIS: NÃO ofereças subscrição grátis por defeito. A app/Premium "de graça" é a RECOMPENSA do depósito ${MIN_DEPOSIT}$ na PU Prime (usa como fecho, não como isco). Só se a pessoa recusar tudo é que podes mencionar o teste/entrada mais leve — e mesmo aí puxa para o Membro ou para a rota dos ${MIN_DEPOSIT}$.
+${regrasDeFechoParaPrompt(LINK_AGENDAR_FECHO_ALTO_VALOR)}
+
+REGRA DO GRÁTIS: NÃO ofereças subscrição grátis por defeito. O Premium incluído é a CONSEQUÊNCIA da conta financiada na PU Prime (o capital fica do cliente), não um isco. Só se a pessoa recusar tudo é que podes mencionar a entrada mais leve.
 
 ESCADA E BÓNUS (os números certos; não os cites de memória):
 - ${escadaNumaLinha()}
@@ -62,9 +65,42 @@ export type ChamarIA = typeof chamarIA
  * DM que falha fica registada como erro em `ig_dm_log` pelo webhook, e não sai nada para a pessoa.
  * O contrário (enviar «a IA está indisponível» a um lead por DM) é pior do que não responder.
  */
+/** Uma troca anterior da mesma conversa (o que a pessoa escreveu e o que lhe respondemos). */
+export interface TrocaDm { pessoa: string; nos?: string | null }
+
+/** Quantas trocas anteriores entram no prompt. Chega para não repetir perguntas, sem gastar tokens. */
+export const MAX_HISTORICO_DM = 6
+
+/**
+ * As mensagens para a IA: o histórico (mais antigo primeiro) e a mensagem nova. Sem histórico, o
+ * closer recomeçava a qualificação a cada DM — não se fecha uma venda a quem se pergunta três
+ * vezes a mesma coisa.
+ */
+export function mensagensDoCloser(user: string, historico: TrocaDm[] = []): PedidoIA['mensagens'] {
+  const out: PedidoIA['mensagens'] = []
+  for (const t of historico.slice(-MAX_HISTORICO_DM)) {
+    if (!t.pessoa?.trim()) continue
+    out.push({ role: 'user', content: t.pessoa.slice(0, 600) })
+    if (t.nos?.trim()) out.push({ role: 'assistant', content: t.nos.slice(0, 900) })
+  }
+  // A conversa tem de alternar e acabar na pessoa: uma troca sem resposta nossa junta-se à seguinte.
+  const limpo: PedidoIA['mensagens'] = []
+  for (const m of out) {
+    const ultimo = limpo[limpo.length - 1]
+    if (ultimo && ultimo.role === m.role) ultimo.content = `${ultimo.content}\n${m.content}`
+    else limpo.push({ ...m })
+  }
+  if (limpo.length && limpo[limpo.length - 1].role === 'user') {
+    limpo[limpo.length - 1].content = `${limpo[limpo.length - 1].content}\n${user}`
+  } else {
+    limpo.push({ role: 'user', content: user })
+  }
+  return limpo
+}
+
 export async function generateDmReply(
   message: string,
-  opts: { name?: string | null; lang?: string | null } = {},
+  opts: { name?: string | null; lang?: string | null; historico?: TrocaDm[] } = {},
   chamar: ChamarIA = chamarIA,
 ): Promise<string> {
   const lang = (opts.lang || "").trim() || "português de Portugal"
@@ -74,7 +110,7 @@ export async function generateDmReply(
   const r = await chamar({
     tarefa: 'ig-dm-closer',
     sistema: `${DM_SYSTEM}\n\n${blocoFramework('closer')}`,
-    mensagens: [{ role: 'user', content: user }],
+    mensagens: mensagensDoCloser(user, opts.historico),
     maxTokens: 400,
     preferencia: preferenciaDoCloser(),
     timeoutMs: 20_000,

@@ -121,7 +121,7 @@ export default function RegisterPage() {
     }
   }
 
-  // ── Registo com FREE TRIAL de 3 dias (sem cartão) ──────────────────────────
+  // ── Registo com FREE TRIAL de 3 dias (pede o cartão, cobra só no fim) ──────────────────────────
   const handleTrialSubmit = async () => {
     setIsLoading(true)
     try {
@@ -186,7 +186,7 @@ export default function RegisterPage() {
 
     setIsLoading(true)
 
-    // Trial de 3 dias SEM cartão (Stripe, um clique): nada pedido nem cobrado nos 3 dias; no fim
+    // Trial de 3 dias (Stripe): pede o cartão, nada cobrado nos 3 dias (TRIAL_PEDE_CARTAO); no fim
     // ativa-se o Premium a 65€/mês em /ativar-premium. Quem ativa já paga o 1º mês a 35€.
     // Um cupão VÁLIDO (ex.: broker MTM-BROKER-*) sobrepõe-se ao trial de 3 dias. Só conta o que
     // a validação aceitou: o preenchimento automático metia o email no campo e desligava o trial.

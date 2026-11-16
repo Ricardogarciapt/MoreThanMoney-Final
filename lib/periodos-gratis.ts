@@ -8,7 +8,7 @@ import {
 } from '@/lib/stripe-checkout-premium'
 
 /**
- * Períodos grátis com subscrição Stripe: o trial de 3 dias (sem cartão) e a campanha 90 dias.
+ * Períodos grátis com subscrição Stripe: o trial de 3 dias (com cartão desde 16/11/2026, cobra só no fim) e a campanha 90 dias.
  *
  * A fonte de verdade é a subscrição no Stripe (trial_end, estado). A tabela `periodos_gratis`
  * (migração 237) é o espelho que o admin, o backoffice e o MLM lêem sem ir ao Stripe.
