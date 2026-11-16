@@ -36,6 +36,7 @@ import {
   Menu,
   X,
   Bitcoin,
+  LifeBuoy,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
@@ -155,6 +156,7 @@ const GRUPOS: Grupo[] = [
       // leads passa o dia nesta categoria.
       { tipo: "tab", id: "agenda", rotulo: "Agenda de chamadas", icone: CalendarClock },
       { tipo: "tab", id: "whatsapp", rotulo: "WhatsApp (conversas)", icone: MessageSquare },
+      { tipo: "link", href: "/admin/suporte", rotulo: "Ronda de suporte", icone: LifeBuoy },
       { tipo: "link", href: "/admin/backoffice", rotulo: "MLM / Afiliados", icone: Network },
       // Desde 08/2026 esta página é só agentes, n8n e streaming — e a maior parte dos agentes
       // é de prospeção, setting e conteúdo. É aqui que pertence, não ao pé do Centro de comando.
