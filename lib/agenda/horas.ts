@@ -33,6 +33,19 @@ export interface JanelaSemanal {
   /** 'HH:MM' no fuso do anfitrião. */
   inicio: string
   fim: string
+  /**
+   * Janela reservada ao fecho de alto valor (16/11, o dono: «no arco noturno só 1 hora, só
+   * high-ticket»). Só os tipos de chamada com `alto_valor` a podem usar.
+   */
+  so_alto_valor?: boolean
+}
+
+/**
+ * As janelas que um tipo de chamada pode usar. Um tipo normal nunca cai numa janela de alto valor;
+ * um tipo de alto valor usa as duas (o fecho de alto valor também pode ser à tarde).
+ */
+export function janelasDoTipo(janelas: JanelaSemanal[], altoValor: boolean): JanelaSemanal[] {
+  return altoValor ? janelas : janelas.filter((j) => j.so_alto_valor !== true)
 }
 
 export interface Intervalo {

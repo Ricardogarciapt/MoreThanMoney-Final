@@ -30,6 +30,8 @@ export type AssuntoDaChamada =
   | 'parcerias'
   | 'corretora'
   | 'negocios'
+  /** Fecho de alto valor (a partir de 1.200 €) com o Ricardo — só nos blocos de alto valor (16/11). */
+  | 'fecho-alto-valor'
 
 /**
  * O link para marcar. Sem assunto, abre a lista toda; com assunto, salta o primeiro ecrã.
@@ -50,3 +52,6 @@ export const LINK_AGENDAR_ONBOARDING = linkAgendar('onboarding')
 
 /** A lista toda. É este que vai no Beacons e no botão «Agenda já». */
 export const LINK_AGENDAR = linkAgendar()
+
+/** A chamada de fecho de alto valor: é para onde o closer manda o que sobe para o Ricardo. */
+export const LINK_AGENDAR_FECHO_ALTO_VALOR = linkAgendar('fecho-alto-valor', AG.CLOSER)

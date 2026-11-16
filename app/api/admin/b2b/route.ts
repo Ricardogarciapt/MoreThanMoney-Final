@@ -5,7 +5,8 @@ import { avisarDono, carregarConfig, contarEnviados, excluir } from '@/lib/b2b/e
 import { recolherDaPagina } from '@/lib/b2b/recolha'
 import { importarDaApollo } from '@/lib/b2b/apollo'
 import { apolloConfigurada } from '@/lib/apollo/cliente'
-import { AGENTE_B2B, SEGMENTOS, type Pais, type Segmento } from '@/lib/b2b/sequencias'
+import { AGENTE_B2B, SEGMENTOS, lerPais, type Segmento } from '@/lib/b2b/sequencias'
+import { adicionarCandidatos } from '@/lib/b2b/candidatos'
 
 /**
  * PROSPEÇÃO B2B — painel (/admin/sales-machine), cron (Bearer CRON_SECRET) e o motor dos agentes
@@ -13,6 +14,8 @@ import { AGENTE_B2B, SEGMENTOS, type Pais, type Segmento } from '@/lib/b2b/seque
  *  GET  → contagens por estado, prospectos, envios recentes, configuração.
  *  POST → { action: 'excluir'|'estado'|'confirmar_pc'|'config'|'recolher'|'apollo', ... }
  *  'apollo' (15/11): descobre empresas na Apollo e recolhe o email da página de contacto de cada uma.
+ *  'candidatos' (16/11): { candidatos: [{ empresa, url, segmento, pais?, pessoa_colectiva?, identificacao?, origem?, nota? }] }
+ *    → fila `b2b_candidatos`; o cron /api/cron/b2b-recolha lê cada página e passa os emails à lista.
  */
 export const dynamic = 'force-dynamic'
 export const maxDuration = 300
@@ -30,11 +33,12 @@ export async function GET(req: NextRequest) {
   const negado = await autorizar(req)
   if (negado) return negado
   const db = getSupabaseAdmin()
-  const [pros, envs, cfg, cont] = await Promise.all([
+  const [pros, envs, cfg, cont, cand] = await Promise.all([
     db.from('b2b_prospectos').select('id, empresa, site, segmento, pais, email, email_tipo, fonte_url, pessoa_colectiva, estado, agente, toques, ultimo_toque_em, respondeu_em, nota').order('atualizado_em', { ascending: false }).limit(500),
     db.from('b2b_envios').select('id, email, toque, assunto, decisao, motivo, enviado_em, erro, criado_em').order('criado_em', { ascending: false }).limit(50),
     carregarConfig(db),
     contarEnviados(db).catch(() => ({ hoje: -1, sempre: -1 })),
+    db.from('b2b_candidatos').select('estado'),
   ])
   if (pros.error) return NextResponse.json({ ok: false, error: pros.error.message }, { status: 500 })
   const porEstado: Record<string, number> = Object.fromEntries(ESTADOS.map((e) => [e, 0]))
@@ -43,7 +47,9 @@ export async function GET(req: NextRequest) {
     porEstado[p.estado] = (porEstado[p.estado] ?? 0) + 1
     porSegmento[p.segmento] = (porSegmento[p.segmento] ?? 0) + 1
   }
-  return NextResponse.json({ ok: true, config: cfg, enviados: cont, porEstado, porSegmento, prospectos: pros.data ?? [], envios: envs.data ?? [] })
+  const candidatos: Record<string, number> = {}
+  for (const c of (cand.data ?? []) as Array<{ estado: string }>) candidatos[c.estado] = (candidatos[c.estado] ?? 0) + 1
+  return NextResponse.json({ ok: true, config: cfg, enviados: cont, porEstado, porSegmento, candidatos, prospectos: pros.data ?? [], envios: envs.data ?? [] })
 }
 
 export async function POST(req: NextRequest) {
@@ -91,7 +97,7 @@ export async function POST(req: NextRequest) {
     }
     case 'recolher': {
       const segmento = String(b.segmento ?? '') as Segmento
-      const pais = (String(b.pais ?? 'PT').toUpperCase() === 'BR' ? 'BR' : 'PT') as Pais
+      const pais = lerPais(b.pais)
       if (!SEGMENTOS.includes(segmento)) return NextResponse.json({ ok: false, error: 'segmento inválido' }, { status: 400 })
       const empresa = String(b.empresa ?? '').trim()
       if (!empresa) return NextResponse.json({ ok: false, error: 'falta a empresa' }, { status: 400 })
@@ -117,7 +123,7 @@ export async function POST(req: NextRequest) {
     case 'apollo': {
       if (!apolloConfigurada()) return NextResponse.json({ ok: false, error: 'APOLLO_API_KEY em falta neste ambiente' }, { status: 503 })
       const segmento = String(b.segmento ?? '') as Segmento
-      const pais = (String(b.pais ?? 'PT').toUpperCase() === 'BR' ? 'BR' : 'PT') as Pais
+      const pais = lerPais(b.pais)
       if (!SEGMENTOS.includes(segmento)) return NextResponse.json({ ok: false, error: 'segmento inválido' }, { status: 400 })
       const r = await importarDaApollo(db, {
         segmento, pais,
@@ -127,6 +133,10 @@ export async function POST(req: NextRequest) {
         pessoaColectiva: b.pessoa_colectiva === true,
       })
       return NextResponse.json(r, { status: r.ok ? 200 : 502 })
+    }
+    case 'candidatos': {
+      const r = await adicionarCandidatos(db, Array.isArray(b.candidatos) ? b.candidatos : [])
+      return NextResponse.json({ ok: !r.erro, ...r }, { status: r.erro ? 500 : 200 })
     }
     default:
       return NextResponse.json({ ok: false, error: 'acção desconhecida' }, { status: 400 })

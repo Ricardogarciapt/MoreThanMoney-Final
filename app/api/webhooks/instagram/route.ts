@@ -108,7 +108,33 @@ export async function POST(request: NextRequest) {
         const { registarMensagemDeAgente } = await import("@/lib/agentes/mensagem-livro")
         // Quem pede para falar recebe o link da agenda na resposta (AG-SETTER, 06/10).
         const { comLinkDaAgenda } = await import("@/lib/agenda/pedido-de-chamada")
-        const bruta = comLinkDaAgenda(await generateDmReply(msg.text), msg.text)
+        // O closer vê as últimas trocas desta pessoa (16/11): sem histórico recomeçava a qualificação a cada DM.
+        let historico: { pessoa: string; nos: string | null }[] = []
+        try {
+          const { data: antes } = await supabase
+            .from("ig_dm_log")
+            .select("message, reply, created_at")
+            .eq("sender_id", senderId)
+            .neq("mid", mid)
+            .order("created_at", { ascending: false })
+            .limit(6)
+          historico = ((antes ?? []) as Array<{ message: string | null; reply: string | null }>)
+            .reverse()
+            .map((r) => ({ pessoa: String(r.message ?? ""), nos: r.reply }))
+        } catch {}
+        // Quantos áudios já levou esta pessoa (no máximo 2 por conversa: quebra-gelo e fecho).
+        let audiosAntes = 0
+        try {
+          const { count } = await supabase
+            .from("ig_dm_log")
+            .select("mid", { count: "exact", head: true })
+            .eq("sender_id", senderId)
+            .not("audio_motivo", "is", null)
+          audiosAntes = count ?? 0
+        } catch {
+          audiosAntes = 99 // sem contagem não se arrisca um terceiro áudio
+        }
+        const bruta = comLinkDaAgenda(await generateDmReply(msg.text, { historico }), msg.text)
         const marcacao = prepararMensagem({ canal: "instagram", texto: bruta, funil: "instagram:dm-closer" })
         const reply = marcacao.texto
         const sent = await sendInstagramDmResilient(accountId, senderId, reply)
@@ -133,7 +159,23 @@ export async function POST(request: NextRequest) {
           referencia: mid,
           marcacao,
         })
-        if (sent.ok) handled++
+        if (sent.ok) {
+          handled++
+          // Áudio na voz do Ricardo: quebra-gelo depois de 2 mensagens dela, e no fecho (interruptor vendas_audio_dm).
+          const { talvezAudioInstagram } = await import("@/lib/vendas/audio-dm")
+          const audio = await talvezAudioInstagram(supabase as never, {
+            accountId,
+            destino: senderId,
+            resposta: reply,
+            referencia: mid,
+            conversa: { mensagensAntes: historico.length, audiosAntes },
+          })
+          if (audio.enviado && audio.momento) {
+            try {
+              await supabase.from("ig_dm_log").update({ audio_motivo: audio.momento }).eq("mid", mid)
+            } catch {}
+          }
+        }
       } catch (e) {
         try {
           await supabase
