@@ -321,10 +321,10 @@ export default function PrivacidadePage() {
               <p className="mt-4">
                 Para exercer qualquer um destes direitos, contacte-nos através de{" "}
                 <a
-                  href="mailto:support@morethanmoney.pt"
+                  href="mailto:suporte@morethanmoney.pt"
                   className="text-[#D2A63C] hover:underline"
                 >
-                  support@morethanmoney.pt
+                  suporte@morethanmoney.pt
                 </a>
                 . Responderemos no prazo de 30 dias.
               </p>
@@ -426,10 +426,10 @@ export default function PrivacidadePage() {
                 <li>
                   <strong className="text-white">Por e-mail:</strong> Envie um e-mail para{" "}
                   <a
-                    href="mailto:support@morethanmoney.pt?subject=Pedido%20de%20Elimin%C3%A7%C3%A3o%20de%20Conta"
+                    href="mailto:suporte@morethanmoney.pt?subject=Pedido%20de%20Elimin%C3%A7%C3%A3o%20de%20Conta"
                     className="text-[#D2A63C] hover:underline"
                   >
-                    support@morethanmoney.pt
+                    suporte@morethanmoney.pt
                   </a>{" "}
                   com o assunto <em>&quot;Pedido de Eliminação de Conta&quot;</em> e o endereço de
                   email associado à sua conta.
@@ -470,10 +470,10 @@ export default function PrivacidadePage() {
               <p className="mb-1">
                 <strong className="text-white">Email:</strong>{" "}
                 <a
-                  href="mailto:support@morethanmoney.pt"
+                  href="mailto:suporte@morethanmoney.pt"
                   className="text-[#D2A63C] hover:underline"
                 >
-                  support@morethanmoney.pt
+                  suporte@morethanmoney.pt
                 </a>
               </p>
               <p className="mb-4">
