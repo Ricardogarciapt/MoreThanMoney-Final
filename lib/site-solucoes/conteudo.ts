@@ -89,20 +89,67 @@ export interface Caso {
   cliente: string
   setor: string
   problema: string
-  feito: string
-  resultado: string
-  /** Só com autorização escrita do cliente para publicar o nome e o resultado. */
+  /** O que construímos, em factos. */
+  feito: string[]
+  /** Em que ponto está. Sem números de resultado até o cliente os medir e autorizar. */
+  estado: 'Entregue' | 'Em curso' | 'Protótipo apresentado'
+  /** Publicação autorizada pelo Ricardo (16/11/2026). Anónimo = sem nome do cliente. */
   autorizado: boolean
-  img?: string
+  anonimo?: boolean
   url?: string
 }
 
 /**
- * Casos reais. Vazio de propósito até haver autorização de cada cliente.
- * Candidatos falados (16/11): projecto Liliana Faria (página + app), projectos do Ulisses e do
- * Pedro Gonçalves. Preencher com o que o cliente aprovar, e pôr `autorizado: true`.
+ * Projectos reais. Nomes publicados por indicação do Ricardo (16/11/2026); a autorização escrita
+ * de cada cliente fica com ele (DL 57/2008). Projectos anónimos: reais, sem nome do cliente.
+ * Nada de números de resultado até o cliente os ter medidos.
  */
-export const CASOS: Caso[] = []
+export const CASOS: Caso[] = [
+  {
+    cliente: 'Plurinstal',
+    setor: 'Climatização e energia solar · Leiria',
+    problema: 'Orçamentos que levavam semanas, e cada cliente a perguntar o mesmo antes de decidir.',
+    feito: [
+      'Site novo com simulador da casa em planta 2D e vista 3D, com preço na hora',
+      'Simulador de painéis solares e de poupança, com os pressupostos à vista',
+      'Diagnóstico com fotos e área de cliente com faturas e certificados',
+      'Back-office para a equipa receber cada pedido no momento',
+    ],
+    estado: 'Entregue',
+    autorizado: true,
+  },
+  {
+    cliente: 'Liliana Faria',
+    setor: 'Venda directa e artesanato · Alpiarça',
+    problema: 'Equipa, encomendas, conteúdos e contactos espalhados pelo telemóvel e por grupos.',
+    feito: [
+      'Site com domínio próprio e app da equipa',
+      'Painel com encomendas, contactos, equipa e catálogo de produtos',
+      'Estúdio de vídeos, textos e flyers com QR gerados com IA',
+      'Lista de lojas para prospeção recolhida automaticamente',
+    ],
+    estado: 'Entregue',
+    autorizado: true,
+    url: 'https://www.lilianafaria.pt',
+  },
+  {
+    cliente: 'Next Evolution',
+    setor: 'Ginásios',
+    problema: 'Sócios, horários e renovações geridos à mão, em cada ginásio.',
+    feito: ['Diagnóstico das tarefas repetidas da receção', 'App do sócio com horários e reservas', 'Agente que responde a preços e horários'],
+    estado: 'Em curso',
+    autorizado: true,
+  },
+  {
+    cliente: 'Clube desportivo',
+    setor: 'Associação desportiva',
+    problema: 'Quotas cobradas à porta e avisos espalhados por vários grupos.',
+    feito: ['Site do clube', 'App do sócio com quotas, avisos e eventos', 'Vídeo de apresentação narrado com voz de IA'],
+    estado: 'Protótipo apresentado',
+    autorizado: true,
+    anonimo: true,
+  },
+]
 
 export const FAQ: { p: string; r: string }[] = [
   { p: 'Preciso de perceber de tecnologia?', r: 'Não. Fazemos o diagnóstico contigo, construímos e entregamos a funcionar. Tu usas.' },
