@@ -61,6 +61,7 @@ const DESTINOS: Array<{ grupo: string; itens: Array<{ nome: string; href: string
     itens: [
       { nome: "Máquina de vendas", href: "/admin/sales-machine", nota: "funil, conversões, links de corretora" },
       { nome: "Conteúdo e funis", href: "/admin/social", nota: "posts, automações, mapa, radar, tokens" },
+      { nome: "Redes novas", href: "/admin/redes", nota: "TikTok, YouTube Shorts e LinkedIn" },
       { nome: "Leads", href: "/admin/social/leads", nota: "de onde vêm e onde param" },
       { nome: "Cupões", href: "/admin/coupons", nota: "descontos e ofertas" },
       { nome: "Licenças do EA", href: "/admin/licencas", nota: "MTM Sensei para MetaTrader 5" },
