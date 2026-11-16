@@ -24,6 +24,7 @@ import { useT } from "@/components/i18n-provider"
 import { Button } from "@/components/ui/button"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import LiveFinancialDisclaimer from "@/components/live/live-financial-disclaimer"
+import AdicionarAgendaAulas from "./adicionar-agenda-aulas"
 import LiveCaptions from "./live-captions"
 import LiveDubAudio from "./live-dub-audio"
 import EmojiChatPicker from "@/components/live/emoji-chat-picker"
@@ -760,6 +761,7 @@ export default function LiveSessionsMobile({
               tier: s.tier,
             }))}
           />
+          <AdicionarAgendaAulas />
         </div>
       )}
 
