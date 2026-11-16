@@ -9,8 +9,13 @@
  *
  *  1. Interruptor `site_settings.vendas_audio_dm` ({ ligado, tecto_dia }) — nasce DESLIGADO. Liga-o
  *     o Ricardo; sem isso nada sai.
- *  2. Só no momento do fecho: a resposta tem de levar um link de fecho (registo, abrir conta,
- *     upgrade ou agenda). Um áudio a cada «olá» gastava créditos Fish e cansava a pessoa.
+ *  2. Só em dois momentos da conversa (o Ricardo, 16/11: «algumas mensagens de texto, depois
+ *     quebrar o gelo ali com áudio [...] e no fecho»):
+ *       · quebra-gelo — depois de pelo menos 2 mensagens da pessoa, se ainda não houve áudio e a
+ *         resposta não é já o fecho. Nunca a abrir conversa fria (o que se faz lá fora: 2 a 3
+ *         trocas de texto primeiro, voz de 20 a 45 s, com o nome e o que a pessoa disse);
+ *       · fecho — a resposta leva um link de fecho (registo, abrir conta, upgrade ou agenda).
+ *     No máximo 2 áudios por conversa (`ig_dm_log.audio_motivo`).
  *  3. Tecto diário (por omissão 30 áudios), contado pelos ficheiros do dia no storage.
  *
  * ═══ TRANSPARÊNCIA ═════════════════════════════════════════════════════════════════════════
@@ -24,18 +29,43 @@ import { candidateTokensForIgAccount } from '@/lib/instagram/dm-closer'
 
 export const CHAVE_AUDIO_DM = 'vendas_audio_dm'
 export const TECTO_DIA_OMISSAO = 30
-export const MAX_CARACTERES_AUDIO = 600
+export const MAX_CARACTERES_AUDIO = 450 // ~30–35 s de voz
+export const MAX_AUDIOS_CONVERSA = 2
+export const MIN_MENSAGENS_QUEBRA_GELO = 2
 export const AVISO_AUDIO_IA = '🎙️ Áudio com a voz do Ricardo, gerada por IA.'
 
 const LINKS_DE_FECHO = /\/(register|abrir-conta|upgrade|agendar|ativar-premium)\b/i
 
 export interface ConfigAudio { ligado: boolean; tectoDia: number }
 
-/** Pode sair um áudio com esta resposta? Puro. */
-export function deveMandarAudio(p: { config: ConfigAudio; resposta: string; audiosHoje: number }): boolean {
-  if (!p.config.ligado) return false
-  if (p.audiosHoje >= p.config.tectoDia) return false
-  return LINKS_DE_FECHO.test(p.resposta)
+export type MomentoAudio = 'quebra_gelo' | 'fecho'
+
+export interface ConversaAudio {
+  /** Mensagens que a pessoa já tinha mandado antes desta. */
+  mensagensAntes: number
+  /** Áudios que já lhe mandámos nesta conversa. */
+  audiosAntes: number
+}
+
+/** Que áudio sai com esta resposta, se algum. Puro. */
+export function momentoDoAudio(p: {
+  config: ConfigAudio
+  resposta: string
+  audiosHoje: number
+  conversa?: ConversaAudio
+}): MomentoAudio | null {
+  if (!p.config.ligado) return null
+  if (p.audiosHoje >= p.config.tectoDia) return null
+  const c = p.conversa ?? { mensagensAntes: 0, audiosAntes: 0 }
+  if (c.audiosAntes >= MAX_AUDIOS_CONVERSA) return null
+  if (LINKS_DE_FECHO.test(p.resposta)) return 'fecho'
+  if (c.audiosAntes === 0 && c.mensagensAntes >= MIN_MENSAGENS_QUEBRA_GELO) return 'quebra_gelo'
+  return null
+}
+
+/** Compatível com a versão anterior: só diz se sai algum áudio. */
+export function deveMandarAudio(p: { config: ConfigAudio; resposta: string; audiosHoje: number; conversa?: ConversaAudio }): boolean {
+  return momentoDoAudio(p) !== null
 }
 
 /** O texto que se lê em voz alta: sem links, sem emojis, sem marcação, com tecto. Puro. */
@@ -111,13 +141,14 @@ async function enviarAudioInstagram(accountId: string, destino: string, url: str
  */
 export async function talvezAudioInstagram(
   db: Db,
-  p: { accountId: string; destino: string; resposta: string; referencia: string },
-): Promise<{ enviado: boolean; motivo?: string }> {
+  p: { accountId: string; destino: string; resposta: string; referencia: string; conversa?: ConversaAudio },
+): Promise<{ enviado: boolean; momento?: MomentoAudio; motivo?: string }> {
   try {
     const config = await lerConfigAudio(db)
     if (!config.ligado) return { enviado: false, motivo: 'desligado' }
     const hoje = await audiosHoje(db)
-    if (!deveMandarAudio({ config, resposta: p.resposta, audiosHoje: hoje })) return { enviado: false, motivo: 'travas' }
+    const momento = momentoDoAudio({ config, resposta: p.resposta, audiosHoje: hoje, conversa: p.conversa })
+    if (!momento) return { enviado: false, motivo: 'travas' }
     const texto = textoParaAudio(p.resposta)
     if (texto.length < 20) return { enviado: false, motivo: 'texto-curto' }
     const ref = p.referencia.replace(/[^A-Za-z0-9_-]/g, '').slice(0, 80) || String(Date.now())
@@ -127,7 +158,7 @@ export async function talvezAudioInstagram(
     if (!r.ok) return { enviado: false, motivo: r.error }
     const { sendInstagramDmResilient } = await import('@/lib/instagram/dm-closer')
     await sendInstagramDmResilient(p.accountId, p.destino, AVISO_AUDIO_IA)
-    return { enviado: true }
+    return { enviado: true, momento }
   } catch (e) {
     return { enviado: false, motivo: e instanceof Error ? e.message : 'erro' }
   }

@@ -46,9 +46,23 @@ Segunda a sexta 15h00–18h30; 21h30–22h00 **só** para o tipo `fecho-alto-val
 ## Áudios na voz do Ricardo
 
 `lib/vendas/audio-dm.ts`: depois da resposta de texto na DM do Instagram, um áudio com o clone Fish
-(`lib/voz`), só quando a resposta leva um link de fecho, com tecto diário e a linha «voz gerada por
-IA» (AI Act, art. 50.º). Interruptor `site_settings.vendas_audio_dm` = `{"ligado": true, "tecto_dia": 30}`;
-nasce desligado.
+(`lib/voz`, até ~35 s) em dois momentos, no máximo dois por conversa (`ig_dm_log.audio_motivo`):
+
+- **quebra-gelo:** depois de pelo menos 2 mensagens da pessoa, para ela sentir que há alguém do
+  outro lado. Nunca a abrir conversa fria. É o que fazem as automações de DM que funcionam: 2 a 3
+  trocas de texto, depois voz curta e personalizada, depois o link.
+- **fecho:** quando a resposta leva um link de fecho (registo, abrir conta, upgrade, agenda).
+
+Cada áudio leva a linha «voz gerada por IA» (AI Act, art. 50.º) e há tecto diário. Interruptor
+`site_settings.vendas_audio_dm` = `{"ligado": true, "tecto_dia": 30}`.
+
+## Trial Premium de 3 dias (com cartão desde 16/11)
+
+O Ricardo: «pedir logo os dados e só cobrar ao fim de 3 dias». `TRIAL_PEDE_CARTAO` em
+`lib/stripe-checkout-premium.ts` põe o Checkout em `payment_method_collection: 'always'`; nada é
+cobrado nos 3 dias. O cron `check-trials` manda um email na véspera da primeira cobrança (data,
+65 €/mês, como cancelar), uma vez só (`periodos_gratis.lembrete_enviado_em`, migração 254). Os
+textos do registo, da apresentação e das IAs já não dizem «sem cartão».
 
 ## Funis por oferta e teste de público
 

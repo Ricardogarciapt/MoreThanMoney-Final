@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
-import { deveMandarAudio, textoParaAudio, AVISO_AUDIO_IA, MAX_CARACTERES_AUDIO } from './audio-dm'
+import { deveMandarAudio, momentoDoAudio, textoParaAudio, AVISO_AUDIO_IA, MAX_CARACTERES_AUDIO } from './audio-dm'
 import { mensagensDoCloser, MAX_HISTORICO_DM } from '@/lib/instagram/dm-closer'
 
 /**
@@ -20,6 +20,17 @@ caso('MAU: desligado não manda nada', () => {
 caso('só no momento do fecho (resposta com link de fecho)', () => {
   assert.equal(deveMandarAudio({ config: ligado, resposta: fecho, audiosHoje: 0 }), true)
   assert.equal(deveMandarAudio({ config: ligado, resposta: 'Olá! Já negoceias hoje?', audiosHoje: 0 }), false)
+})
+caso('quebra-gelo: só depois de 2 mensagens dela e sem áudio antes', () => {
+  const r = 'Percebo bem isso. E hoje, quanto tempo tens por dia para isto?'
+  assert.equal(momentoDoAudio({ config: ligado, resposta: r, audiosHoje: 0, conversa: { mensagensAntes: 0, audiosAntes: 0 } }), null)
+  assert.equal(momentoDoAudio({ config: ligado, resposta: r, audiosHoje: 0, conversa: { mensagensAntes: 1, audiosAntes: 0 } }), null)
+  assert.equal(momentoDoAudio({ config: ligado, resposta: r, audiosHoje: 0, conversa: { mensagensAntes: 2, audiosAntes: 0 } }), 'quebra_gelo')
+  assert.equal(momentoDoAudio({ config: ligado, resposta: r, audiosHoje: 0, conversa: { mensagensAntes: 5, audiosAntes: 1 } }), null)
+})
+caso('fecho depois do quebra-gelo; nunca um terceiro áudio', () => {
+  assert.equal(momentoDoAudio({ config: ligado, resposta: fecho, audiosHoje: 0, conversa: { mensagensAntes: 4, audiosAntes: 1 } }), 'fecho')
+  assert.equal(momentoDoAudio({ config: ligado, resposta: fecho, audiosHoje: 0, conversa: { mensagensAntes: 6, audiosAntes: 2 } }), null)
 })
 caso('MAU: passar o tecto diário', () => {
   assert.equal(deveMandarAudio({ config: ligado, resposta: fecho, audiosHoje: 30 }), false)
@@ -43,4 +54,4 @@ caso('o closer recebe o histórico a alternar e a acabar na pessoa', () => {
   assert.equal(mensagensDoCloser('x', muitos).length, MAX_HISTORICO_DM * 2 + 1)
   assert.deepEqual(mensagensDoCloser('só', []), [{ role: 'user', content: 'só' }])
 })
-console.log(`audio-dm: ${n} casos — voz só no fecho, com aviso de IA e tecto ✓`)
+console.log(`audio-dm: ${n} casos — voz no quebra-gelo e no fecho, com aviso de IA e tecto ✓`)

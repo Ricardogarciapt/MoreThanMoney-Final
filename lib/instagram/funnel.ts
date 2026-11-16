@@ -113,8 +113,8 @@ const INTENTS: Intent[] = [
   {
     key: "trial",
     kw: ["MUNDO", "EU VOU", "EUVOU", "DISCIPLINA", "PREMIUM", "APP", "TRIAL", "GRÁTIS", "GRATIS", "QUERO", "COMEÇAR", "COMECAR", "BORA"],
-    dm: (h) => `Boa${h}! 🙌 Começa GRÁTIS: 3 dias de Premium, sem cartão 👉 ${REGISTER} — qualquer dúvida diz-me aqui na DM que ajudo. 🚀`,
-    pub: (h) => `Boa${h}! 🚀 Começa GRÁTIS 3 dias de Premium (sem cartão) 👉 ${REGISTER} — qualquer dúvida, comenta aqui que ajudo! 🙌`,
+    dm: (h) => `Boa${h}! 🙌 Começa com 3 dias de Premium grátis (nada cobrado nos 3 dias, cancelas quando quiseres) 👉 ${REGISTER} — qualquer dúvida diz-me aqui na DM que ajudo. 🚀`,
+    pub: (h) => `Boa${h}! 🚀 Começa com 3 dias de Premium grátis (nada cobrado nos 3 dias) 👉 ${REGISTER} — qualquer dúvida, comenta aqui que ajudo! 🙌`,
   },
 ]
 
