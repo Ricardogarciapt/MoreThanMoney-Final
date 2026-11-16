@@ -9,7 +9,7 @@
  * corrige com um deploy.
  */
 import {
-  chocam, diaNoFuso, escolherAnfitriao, horasLivres, instanteDe, minutosDoRelogio,
+  chocam, diaNoFuso, escolherAnfitriao, horasLivres, instanteDe, janelasDoTipo, minutosDoRelogio,
   type RegrasDoAnfitriao,
 } from './horas'
 
@@ -199,6 +199,24 @@ teste('minutos fora de escala não passam', minutosDoRelogio('12:99') === null)
   teste('empate desfaz-se pela ordem', escolherAnfitriao(equipa, new Map([['a', 2], ['b', 2], ['c', 5]]))?.id === 'a')
   teste('quem não aparece no mapa tem zero e ganha', escolherAnfitriao(equipa, new Map([['a', 2], ['b', 2]]))?.id === 'c')
   teste('sem ninguém, não se inventa', escolherAnfitriao([], new Map()) === null)
+}
+
+// ── Janelas de alto valor (16/11): o bloco das 21h30–22h00 é só para high-ticket ──
+{
+  const janelas = [
+    { dia: 2, inicio: '15:00', fim: '18:30' },
+    { dia: 2, inicio: '21:30', fim: '22:00', so_alto_valor: true },
+  ]
+  teste('tipo normal não vê a janela de alto valor', janelasDoTipo(janelas, false).length === 1)
+  teste('alto valor vê as duas', janelasDoTipo(janelas, true).length === 2)
+  const agora = instanteDe('Europe/Lisbon', 2026, 11, 16, 9, 0) // segunda
+  const de = agora, ate = new Date(agora.getTime() + 3 * 86_400_000)
+  const normal = horasLivres({ regras: { ...BASE, janelas: janelasDoTipo(janelas, false) }, agora, de, ate, ocupado: [] })
+  const alto = horasLivres({ regras: { ...BASE, janelas: janelasDoTipo(janelas, true) }, agora, de, ate, ocupado: [] })
+  const noite = instanteDe('Europe/Lisbon', 2026, 11, 17, 21, 30).getTime()
+  teste('MAU: uma apresentação às 21h30', !normal.some((d) => d.getTime() === noite))
+  teste('o fecho de alto valor pode ser às 21h30', alto.some((d) => d.getTime() === noite))
+  teste('nada depois das 22h00', !alto.some((d) => d.getTime() > noite))
 }
 
 if (falhas.length) {

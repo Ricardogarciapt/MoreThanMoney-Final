@@ -1,5 +1,6 @@
 import { getSupabaseAdmin } from '@/lib/supabase-admin-client'
 import { proximoPassoPago, textoDoToque, AGENTE_DO_PASSO } from '@/lib/vendas/escada-followup'
+import { TOQUES, toqueDevido } from '@/lib/vendas/cadencia-seguimento'
 
 /**
  * FOLLOW-UP de reactivação de leads calados no funil do Telegram (bot próprio).
@@ -14,16 +15,15 @@ import { proximoPassoPago, textoDoToque, AGENTE_DO_PASSO } from '@/lib/vendas/es
  *    `pendente` em `aios_tasks` (kind `envio:telegram_followup`) e só sai por `aprovar_envio`
  *    (/admin/social/leads ou a API do agente) — ver `lib/envios-aprovacao.ts`.
  *
- * Três toques (~6 h, +24 h, +48 h). O `followup_count` só avança quando um toque aprovado sai.
+ * 16/11 (dono): QUATRO toques — no dia, +24 h, +48 h e +72 h — pela cadência única de
+ * `lib/vendas/cadencia-seguimento.ts`. Depois do 4.º, só email com consentimento (executor do
+ * pipeline). O `followup_count` só avança quando um toque aprovado sai.
  */
-const MAX_TOUCHES = 3
+const MAX_TOUCHES = TOQUES
 
 export async function runLeadFollowups(): Promise<{ ok: boolean; sent: number; rascunhos: number; scanned: number }> {
   const supabase = getSupabaseAdmin()
   const now = Date.now()
-  const T1_MS = 6 * 3600 * 1000 // 6h de silêncio → toque 1
-  const T2_MS = 24 * 3600 * 1000 // 24h após toque 1 → toque 2
-  const T3_MS = 48 * 3600 * 1000 // 48h após toque 2 → toque 3
 
   // Leads ativos no funil, ainda sem o depósito validado, dentro do limite de toques.
   const { data: leads } = await supabase
@@ -54,12 +54,9 @@ export async function runLeadFollowups(): Promise<{ ok: boolean; sent: number; r
 
   for (const l of leads ?? []) {
     const fc = Number(l.followup_count || 0)
-    const lastActivity = l.updated_at ? new Date(l.updated_at as string).getTime() : 0
-    const lastFollow = l.last_followup_at ? new Date(l.last_followup_at as string).getTime() : 0
-    let due = false
-    if (fc === 0) due = now - lastActivity >= T1_MS
-    else if (fc === 1) due = now - lastFollow >= T2_MS
-    else if (fc === 2) due = now - lastFollow >= T3_MS
+    // Toque 1: desde a última actividade do lead; os seguintes: desde o toque anterior.
+    const desde = fc === 0 ? (l.updated_at as string | null) : ((l.last_followup_at as string | null) ?? null)
+    const due = toqueDevido(fc + 1, desde, now)
     if (!due) continue
 
     const passo = proximoPassoPago({

@@ -34,7 +34,7 @@ import { regrasPtPtParaPrompt } from './pt-pt'
 import { TRIAL_DAYS } from './trial-access'
 import { CUPAO_CAMPANHA_90D, DIAS_CAMPANHA_90D } from './stripe-checkout-premium'
 
-export const FRAMEWORK_VERSAO = '2026-11-04'
+export const FRAMEWORK_VERSAO = '2026-11-16'
 
 const SITE = 'https://www.morethanmoney.pt'
 
@@ -89,7 +89,7 @@ export function frameworkSetter(linkAgendar?: string): string {
     'PROTOCOLO SETTER: triagem rápida, uma pergunta de cada vez.',
     '1. Descobre a dor do CUSTO FIXO: quanto paga hoje todos os meses (subscrições, cursos, mensalidades de rede) e o que recebeu em troca.',
     '2. Descobre onde está: nunca operou, opera sozinho, ou vem de um modelo de rede/recrutamento e quer passar a operar por conta própria.',
-    `3. Objectivo da conversa: marcar a chamada de Onboarding${linkAgendar ? ` (${linkAgendar})` : ''}. Não fechas venda no setter: qualificas e agendas.`,
+    `3. Objectivo da conversa: qualificar e passar ao fecho. Os packs da escada e a Rota Corretora fecham-se na própria conversa (o closer trata disso); a chamada de Onboarding${linkAgendar ? ` (${linkAgendar})` : ''} é para quem já entrou ou pede para falar.`,
     'Para quem vem de um modelo de rede: sem julgamentos e sem nomear empresas. O ângulo é deixar de pagar para recrutar e passar a investir na própria formação e na própria conta.',
   ].join('\n')
 }
@@ -97,11 +97,13 @@ export function frameworkSetter(linkAgendar?: string): string {
 /** Protocolo do closer (chamadas e DMs de fecho). */
 export function frameworkCloser(): string {
   return [
-    'PROTOCOLO CLOSER: apresentação técnica e fecho assistido.',
+    'PROTOCOLO CLOSER: apresentação técnica e fecho assistido, por um agente, de forma ética.',
     '· Mostra como funciona o WebTrader / MTM System: análise, filtros, gestão de risco, o que o cliente controla.',
-    '· Os dois destinos principais do fecho são o Premium MTM e a Rota Corretora (conta própria PU Prime financiada). Segue a ordem da escada que te for dada: degraus pagos primeiro, a rota da corretora no fim, nunca a abrir.',
+    '· O produto principal é a Rota Corretora: conta própria na PU Prime, aberta pelo nosso link e financiada com o depósito mínimo. O dinheiro é do cliente e fica na conta dele; com a conta validada, o Premium fica incluído. Não a vendas como «grátis»: vende-a como «o teu capital fica teu, em vez de pagares mensalidade».',
+    '· Quem prefere manter a corretora que já tem fecha Membro ou Premium; quem quer o ano inteiro fecha o anual da escada.',
+    '· O agente fecha sozinho os packs mensais, o anual e a Rota Corretora. O alto valor e tudo o que for feito à medida sobe para o Ricardo, numa chamada de fecho marcada na agenda.',
     '· Quem não tem capital próprio vai para o MTM Funded (conta simulada), não para uma rota paga.',
-    '· Urgência só se for verdadeira (campanha em vigor). Nada de prazos inventados nem de promessas de resultado.',
+    '· Fecho ético: confirma que a pessoa percebeu o preço e que cancela quando quiser; diz que trading tem risco de perda; urgência só se for verdadeira (campanha em vigor). Nada de prazos inventados, pressão ou promessas de resultado.',
   ].join('\n')
 }
 

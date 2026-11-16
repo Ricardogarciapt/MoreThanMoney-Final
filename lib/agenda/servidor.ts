@@ -18,7 +18,7 @@
  */
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { getSupabaseAdmin } from '@/lib/supabase-admin-client'
-import { escolherAnfitriao, horasLivres, type Intervalo, type JanelaSemanal, type RegrasDoAnfitriao } from './horas'
+import { escolherAnfitriao, horasLivres, janelasDoTipo, type Intervalo, type JanelaSemanal, type RegrasDoAnfitriao } from './horas'
 
 const db = () => getSupabaseAdmin()
 
@@ -41,6 +41,8 @@ export interface Anfitriao {
   /** Agendas extra cujo «ocupado» também conta (ex.: a pessoal do anfitrião). Só freeBusy. */
   google_calendarios_ocupado: string[] | null
   google_refresh_token: string | null
+  /** O educador (lms_educators) que é esta pessoa: as aulas ao vivo dele contam como ocupado. */
+  lms_educador_id?: string | null
 }
 
 export interface TipoDeChamada {
@@ -58,6 +60,8 @@ export interface TipoDeChamada {
   cor: string
   ativo: boolean
   ordem: number
+  /** Chamada de fecho de alto valor: é a única que pode usar as janelas `so_alto_valor`. */
+  alto_valor?: boolean
 }
 
 /** O que a montra pública pode saber. Sem tokens, sem emails da equipa, sem telefones. */
@@ -91,7 +95,7 @@ export async function anfitrioesDoTipo(tipo: TipoDeChamada): Promise<Anfitriao[]
 function regrasDe(a: Anfitriao, tipo: TipoDeChamada): RegrasDoAnfitriao {
   return {
     fuso: a.fuso || 'Europe/Lisbon',
-    janelas: Array.isArray(a.janelas) ? a.janelas : [],
+    janelas: janelasDoTipo(Array.isArray(a.janelas) ? a.janelas : [], tipo.alto_valor === true),
     duracaoMin: tipo.duracao_min,
     intervaloMin: a.intervalo_min,
     antecedenciaHoras: a.antecedencia_horas,
@@ -129,6 +133,15 @@ export async function ocupadoDoAnfitriao(a: Anfitriao, de: Date, ate: Date): Pro
     out.push({ inicio: new Date(String(linha.inicio)), fim: new Date(String(linha.fim)) })
   }
 
+  // As aulas ao vivo que esta pessoa dá contam como ocupado (16/11: «nunca por cima das aulas»).
+  if (a.lms_educador_id) {
+    try {
+      out.push(...(await aulasDoEducador(a.lms_educador_id, de, ate)))
+    } catch (e) {
+      console.error('[agenda] não consegui ler as aulas; a agenda segue com o que sabe:', e instanceof Error ? e.message : e)
+    }
+  }
+
   if (a.google_refresh_token) {
     try {
       const { ocupadoNoGoogle } = await import('./google')
@@ -136,6 +149,42 @@ export async function ocupadoDoAnfitriao(a: Anfitriao, de: Date, ate: Date): Pro
     } catch (e) {
       console.error('[agenda] o Google não respondeu; a agenda segue com o que sabe:', e instanceof Error ? e.message : e)
     }
+  }
+  return out
+}
+
+/** As aulas (horário recorrente + avulsas) de um educador entre duas datas, como intervalos. */
+async function aulasDoEducador(educadorId: string, de: Date, ate: Date): Promise<Intervalo[]> {
+  const { projectSchedule } = await import('@/lib/lms-schedule')
+  const dias = Math.max(1, Math.ceil((ate.getTime() - de.getTime()) / 86_400_000) + 1)
+  const [{ data: salas }, { data: avulsas }] = await Promise.all([
+    db().from('lms_stream_schedules')
+      .select('id, stream_id, weekday, start_time, duration_min, timezone, access_tier, stream:lms_streams!inner(educator_id)')
+      .eq('is_active', true)
+      .eq('stream.educator_id', educadorId),
+    db().from('lms_streams').select('scheduled_start_at')
+      .eq('educator_id', educadorId)
+      .gte('scheduled_start_at', de.toISOString())
+      .lte('scheduled_start_at', ate.toISOString()),
+  ])
+  const slots = ((salas ?? []) as Array<Record<string, unknown>>).map((r) => ({
+    id: String(r.id),
+    stream_id: String(r.stream_id),
+    weekday: Number(r.weekday),
+    start_time: String(r.start_time),
+    duration_min: (r.duration_min as number | null) ?? null,
+    timezone: (r.timezone as string | null) ?? null,
+    access_tier: (r.access_tier as string | null) ?? null,
+    is_active: true,
+  }))
+  const out: Intervalo[] = projectSchedule(slots, { from: de, days: dias }).map((p) => {
+    const inicio = new Date(p.scheduledAt)
+    return { inicio, fim: new Date(inicio.getTime() + (p.durationMin && p.durationMin > 0 ? p.durationMin : 60) * 60_000) }
+  })
+  for (const s of (avulsas ?? []) as Array<{ scheduled_start_at: string | null }>) {
+    if (!s.scheduled_start_at) continue
+    const inicio = new Date(s.scheduled_start_at)
+    out.push({ inicio, fim: new Date(inicio.getTime() + 60 * 60_000) })
   }
   return out
 }
