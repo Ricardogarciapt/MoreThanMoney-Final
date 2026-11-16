@@ -20,6 +20,7 @@ import PostLinkPreview from "./post-link-preview"
 import { getPrimaryUrlFromText } from "@/lib/url-utils"
 import type { LinkPreviewData } from "@/lib/link-preview-types"
 import { useAuth } from "@/contexts/auth-context"
+import { useT } from "@/components/i18n-provider"
 import { ehAdminUi, ehVipUi, type PerfilUi } from "@/lib/perfil-ui"
 import { notifyXpFromResponse } from "@/lib/xp-client"
 
@@ -68,18 +69,19 @@ interface StoryPreview {
 }
 
 const CATEGORIES = [
-  { id: "updates", label: "Updates", icon: "🆕", color: "from-blue-500 to-cyan-500" },
-  { id: "forex", label: "Forex", icon: "💹", color: "from-green-500 to-emerald-500" },
-  { id: "crypto", label: "Criptomoedas", icon: "₿", color: "from-yellow-500 to-orange-500" },
-  { id: "mindset", label: "Mindset", icon: "🧠", color: "from-purple-500 to-pink-500" },
-  { id: "lideranca", label: "Liderança", icon: "👑", color: "from-amber-500 to-yellow-500" },
-  { id: "network", label: "Network", icon: "🌐", color: "from-indigo-500 to-blue-500" },
-  { id: "social", label: "Social", icon: "🤝", color: "from-rose-500 to-red-500" },
+  { id: "updates", label: "amC.feed.cat.updates", icon: "🆕", color: "from-blue-500 to-cyan-500" },
+  { id: "forex", label: "amC.feed.cat.forex", icon: "💹", color: "from-green-500 to-emerald-500" },
+  { id: "crypto", label: "amC.feed.cat.crypto", icon: "₿", color: "from-yellow-500 to-orange-500" },
+  { id: "mindset", label: "amC.feed.cat.mindset", icon: "🧠", color: "from-purple-500 to-pink-500" },
+  { id: "lideranca", label: "amC.feed.cat.lideranca", icon: "👑", color: "from-amber-500 to-yellow-500" },
+  { id: "network", label: "amC.feed.cat.network", icon: "🌐", color: "from-indigo-500 to-blue-500" },
+  { id: "social", label: "amC.feed.cat.social", icon: "🤝", color: "from-rose-500 to-red-500" },
 ]
 
 export default function SocialFeed({ initialCategory }: { initialCategory?: string | null }) {
   const { user: authUser } = useAuth()
   const semCriptoNoFeed = useSemCripto()
+  const t = useT()
   const [mounted, setMounted] = useState(false)
   const [posts, setPosts] = useState<Post[]>([])
   const [newPost, setNewPost] = useState("")
@@ -388,7 +390,7 @@ export default function SocialFeed({ initialCategory }: { initialCategory?: stri
               hint: fallbackError.hint,
               code: fallbackError.code
             })
-            alert(`❌ Erro ao carregar posts: ${fallbackError.message}\n\nVerifica as políticas RLS no Supabase.`)
+            alert(`${t("amC.feed.errLoadPosts")}: ${fallbackError.message}\n\n${t("amC.feed.checkRls")}`)
             setPosts([])
           } else {
             console.log(`✅ [SOCIAL FEED] ${fallbackData?.length || 0} posts carregados (fallback)`)
@@ -397,11 +399,11 @@ export default function SocialFeed({ initialCategory }: { initialCategory?: stri
           }
         } else if (error.message?.includes("permission") || error.message?.includes("policy") || error.message?.includes("RLS")) {
           console.error("❌ [SOCIAL FEED] Erro de permissão/RLS:", error.message)
-          alert(`❌ Erro de permissão ao carregar posts.\n\nVerifica as políticas RLS no Supabase.\n\nErro: ${error.message}`)
+          alert(`${t("amC.feed.errPermLoad")}\n\n${t("amC.feed.checkRls")}\n\n${t("amC.feed.errLabel")}: ${error.message}`)
           setPosts([])
         } else {
           console.error("❌ [SOCIAL FEED] Erro desconhecido:", error)
-          alert(`❌ Erro ao carregar posts: ${error.message}`)
+          alert(`${t("amC.feed.errLoadPosts")}: ${error.message}`)
           setPosts([])
         }
       } else {
@@ -693,7 +695,7 @@ export default function SocialFeed({ initialCategory }: { initialCategory?: stri
 
   const handleCreatePost = async () => {
     if (!newPost.trim()) {
-      alert('❌ Por favor, escreve algo antes de publicar!')
+      alert(t("amC.feed.pleaseWrite"))
       return
     }
 
@@ -701,7 +703,7 @@ export default function SocialFeed({ initialCategory }: { initialCategory?: stri
     try {
       const { data: { session } } = await supabase.auth.getSession()
       if (!session?.user) {
-        alert('❌ Deves estar autenticado para publicar!')
+        alert(t("amC.feed.mustAuth"))
         setUploading(false)
         return
       }
@@ -735,13 +737,13 @@ export default function SocialFeed({ initialCategory }: { initialCategory?: stri
             console.error('❌ [SOCIAL FEED] Erro ao fazer upload:', uploadError)
             
             if (uploadError.message?.includes('bucket') || uploadError.message?.includes('not found')) {
-              alert('❌ Erro: Bucket "uploads" não existe no Supabase Storage.\n\n📋 SOLUÇÃO:\n1. Executa: scripts/fix-posts-storage-completo.sql\n2. Ou cria bucket manualmente no Dashboard')
+              alert(t("amC.feed.uploadBucket"))
             } else if (uploadError.message?.includes('policy') || uploadError.message?.includes('permission')) {
-              alert('❌ Erro: Sem permissão para fazer upload.\n\n📋 SOLUÇÃO:\n1. Executa: scripts/fix-posts-storage-completo.sql\n2. Verifica políticas RLS do Storage')
+              alert(t("amC.feed.uploadPerm"))
             } else if (uploadError.message?.includes('size') || uploadError.message?.includes('limit')) {
-              alert('❌ Erro: Ficheiro muito grande. Tamanho máximo: 50MB')
+              alert(t("amC.feed.fileTooBig"))
             } else {
-              alert(`❌ Erro ao fazer upload: ${uploadError.message}\n\nVerifica o console para mais detalhes.`)
+              alert(`${t("amC.feed.uploadFail")}: ${uploadError.message}\n\n${t("amC.feed.checkConsole")}`)
             }
             setUploading(false)
             return
@@ -838,13 +840,13 @@ export default function SocialFeed({ initialCategory }: { initialCategory?: stri
           
           // Mensagens de erro mais específicas
           if (fallbackError.message?.includes('relation') && fallbackError.message?.includes('does not exist')) {
-            alert('❌ Erro: Tabela "posts" não existe no Supabase.\n\n📋 SOLUÇÃO:\n1. Executa: scripts/fix-posts-storage-completo.sql\n2. Ou: scripts/create-posts-table-with-categories.sql')
+            alert(t("amC.feed.tableMissing"))
           } else if (fallbackError.message?.includes('permission') || fallbackError.message?.includes('policy')) {
-            alert('❌ Erro: Sem permissão para criar posts.\n\n📋 SOLUÇÃO:\n1. Verifica se és VIP ou Admin\n2. Executa: scripts/fix-posts-storage-completo.sql para configurar RLS')
+            alert(t("amC.feed.noPermPost"))
           } else if (fallbackError.message?.includes('violates check constraint')) {
-            alert('❌ Erro: Categoria inválida. Categorias válidas: updates, forex, crypto, mindset, lideranca, network, social')
+            alert(t("amC.feed.badCategory"))
           } else {
-            alert(`❌ Erro ao publicar: ${fallbackError.message}\n\n💡 Execute o script: scripts/fix-posts-media-urls.sql no Supabase`)
+            alert(t("amC.feed.publishErrScript").replace("{m}", fallbackError.message))
           }
           
           setUploading(false)
@@ -863,15 +865,15 @@ export default function SocialFeed({ initialCategory }: { initialCategory?: stri
         
         // Mensagens de erro mais específicas
         if (error.message?.includes('relation') && error.message?.includes('does not exist')) {
-          alert('❌ Erro: Tabela "posts" não existe no Supabase.\n\n📋 SOLUÇÃO:\n1. Executa: scripts/fix-posts-storage-completo.sql\n2. Ou: scripts/create-posts-table-with-categories.sql')
+          alert(t("amC.feed.tableMissing"))
         } else if (error.message?.includes('permission') || error.message?.includes('policy')) {
-          alert('❌ Erro: Sem permissão para criar posts.\n\n📋 SOLUÇÃO:\n1. Verifica se és VIP ou Admin\n2. Executa: scripts/fix-posts-storage-completo.sql para configurar RLS')
+          alert(t("amC.feed.noPermPost"))
         } else if (error.message?.includes('violates check constraint')) {
-          alert('❌ Erro: Categoria inválida. Categorias válidas: updates, forex, crypto, mindset, lideranca, network, social')
+          alert(t("amC.feed.badCategory"))
         } else {
-          let errorMessage = `❌ Erro ao publicar: ${error.message}`
+          let errorMessage = t("amC.feed.publishErrMsg").replace("{m}", error.message)
           if (error.message?.includes("media_urls") || error.message?.includes("column")) {
-            errorMessage += "\n\n💡 SOLUÇÃO:\nExecute o script SQL no Supabase:\nscripts/fix-posts-media-urls.sql"
+            errorMessage += "\n\n" + t("amC.feed.publishSqlHint")
           }
           alert(errorMessage)
         }
@@ -919,7 +921,7 @@ export default function SocialFeed({ initialCategory }: { initialCategory?: stri
       }, 1000)
     } catch (error) {
       console.error("❌ [SOCIAL FEED] Erro ao criar post:", error)
-      alert('❌ Erro ao publicar. Tenta novamente.')
+      alert(t("amC.feed.publishFail"))
     } finally {
       setUploading(false)
     }
@@ -1100,7 +1102,7 @@ export default function SocialFeed({ initialCategory }: { initialCategory?: stri
           const textToCopy = `${fullShareText}${mediaUrlsText}`
           
           await navigator.clipboard.writeText(textToCopy)
-          alert("✅ Conteúdo copiado para área de transferência!\n\nInclui preview da publicação com links para as imagens.")
+          alert(t("amC.feed.copied"))
           // Regressar a app-mobile após copiar
           if (window.location.pathname !== '/app-mobile') {
             window.location.href = '/app-mobile?tab=social'
@@ -1117,7 +1119,7 @@ export default function SocialFeed({ initialCategory }: { initialCategory?: stri
         const textToCopy = `${fullShareText}${mediaUrlsText}`
         
         await navigator.clipboard.writeText(textToCopy)
-        alert("✅ Conteúdo copiado para área de transferência!\n\nInclui preview da publicação com links para as imagens.")
+        alert(t("amC.feed.copied"))
         // Regressar a app-mobile após copiar
         if (window.location.pathname !== '/app-mobile') {
           window.location.href = '/app-mobile?tab=social'
@@ -1125,7 +1127,7 @@ export default function SocialFeed({ initialCategory }: { initialCategory?: stri
       }
     } catch (error) {
       console.error('❌ [SHARE] Erro ao partilhar post:', error)
-      alert('❌ Erro ao partilhar. Tenta novamente.')
+      alert(t("amC.feed.shareFail"))
       // Regressar a app-mobile mesmo em caso de erro
       if (window.location.pathname !== '/app-mobile') {
         window.location.href = '/app-mobile?tab=social'
@@ -1221,7 +1223,7 @@ export default function SocialFeed({ initialCategory }: { initialCategory?: stri
       const data = await res.json().catch(() => ({}))
       if (!res.ok) {
         console.error("❌ [SOCIAL FEED] Erro ao adicionar comentário:", data.error)
-        alert("Erro ao adicionar comentário")
+        alert(t("amC.feed.commentFail"))
         return
       }
 
@@ -1247,7 +1249,7 @@ export default function SocialFeed({ initialCategory }: { initialCategory?: stri
       ))
     } catch (error) {
       console.error('❌ [SOCIAL FEED] Erro ao processar comentário:', error)
-      alert('Erro ao adicionar comentário')
+      alert(t("amC.feed.commentFail"))
     }
   }
 
@@ -1276,10 +1278,10 @@ export default function SocialFeed({ initialCategory }: { initialCategory?: stri
 
   const formatTimeAgo = (date: string) => {
     const seconds = Math.floor((new Date().getTime() - new Date(date).getTime()) / 1000)
-    if (seconds < 60) return "agora"
-    if (seconds < 3600) return `${Math.floor(seconds / 60)}min`
-    if (seconds < 86400) return `${Math.floor(seconds / 3600)}h`
-    if (seconds < 604800) return `${Math.floor(seconds / 86400)}d`
+    if (seconds < 60) return t("amC.feed.timeNow")
+    if (seconds < 3600) return t("amC.feed.timeMin").replace("{n}", String(Math.floor(seconds / 60)))
+    if (seconds < 86400) return t("amC.feed.timeHour").replace("{n}", String(Math.floor(seconds / 3600)))
+    if (seconds < 604800) return t("amC.feed.timeDay").replace("{n}", String(Math.floor(seconds / 86400)))
     return new Date(date).toLocaleDateString("pt-PT", { day: "numeric", month: "short" })
   }
 
@@ -1410,7 +1412,7 @@ export default function SocialFeed({ initialCategory }: { initialCategory?: stri
                         } transition-opacity duration-300`}>
                           <Image
                             src={currentPost.media_url}
-                            alt={`Preview ${cat.label}`}
+                            alt={`Preview ${t(cat.label)}`}
                             width={80}
                             height={80}
                             className="w-full h-full object-cover"
@@ -1443,7 +1445,7 @@ export default function SocialFeed({ initialCategory }: { initialCategory?: stri
               <p className={`text-gray-300 text-xs mt-2 font-medium transition-colors ${
                 isActive ? "text-[#D2A63C]" : ""
               }`}>
-                {cat.label}
+                {t(cat.label)}
               </p>
             </div>
           )
@@ -1459,12 +1461,12 @@ export default function SocialFeed({ initialCategory }: { initialCategory?: stri
               className="w-full bg-gradient-to-r from-[#D2A63C] to-[#BB8525] text-black hover:opacity-90 transition-all"
             >
               <Plus className="w-4 h-4 mr-2" />
-              Criar Nova Publicação
+              {t("amC.feed.createPost")}
             </Button>
           ) : (
             <div className="space-y-3">
               <div className="flex items-center justify-between">
-                <h3 className="text-lg font-bold text-[#D2A63C]">Nova Publicação</h3>
+                <h3 className="text-lg font-bold text-[#D2A63C]">{t("amC.feed.newPost")}</h3>
                 <button
                   onClick={() => {
                     setShowCreatePost(false)
@@ -1487,7 +1489,7 @@ export default function SocialFeed({ initialCategory }: { initialCategory?: stri
               <MentionInput
                 value={newPost}
                 onChange={setNewPost}
-                placeholder="Partilha algo com a comunidade... (usa @ para mencionar membros)"
+                placeholder={t("amC.feed.sharePlaceholder")}
                 className="w-full bg-gray-900 border border-gray-700 rounded-lg p-3 text-sm text-white focus:border-[#D2A63C] outline-none resize-none transition-colors"
                 rows={4}
                 onMentionsChange={setPostMentions}
@@ -1499,7 +1501,7 @@ export default function SocialFeed({ initialCategory }: { initialCategory?: stri
                   {fetchingDraftPreview && !draftLinkPreview ? (
                     <div className="flex items-center gap-2 text-xs text-gray-400">
                       <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                      <span>A carregar pré-visualização do link...</span>
+                      <span>{t("amC.feed.loadingPreview")}</span>
                     </div>
                   ) : draftLinkPreview ? (
                     <div className="flex items-start gap-2">
@@ -1528,7 +1530,7 @@ export default function SocialFeed({ initialCategory }: { initialCategory?: stri
                           setDraftLinkPreview(null)
                         }}
                         className="p-1 hover:bg-gray-700 rounded transition-colors flex-shrink-0"
-                        title="Remover pré-visualização (usar média em alternativa)"
+                        title={t("amC.feed.removePreview")}
                       >
                         <X className="w-3.5 h-3.5 text-gray-400" />
                       </button>
@@ -1599,7 +1601,7 @@ export default function SocialFeed({ initialCategory }: { initialCategory?: stri
                   className="cursor-pointer px-4 py-2 bg-gray-800 hover:bg-gray-700 rounded-lg transition-colors flex items-center gap-2"
                 >
                   <Plus className="w-4 h-4 text-[#D2A63C]" />
-                  <span className="text-sm">Adicionar Mídia</span>
+                  <span className="text-sm">{t("amC.feed.addMedia")}</span>
                 </label>
 
                 <select
@@ -1607,10 +1609,10 @@ export default function SocialFeed({ initialCategory }: { initialCategory?: stri
                   onChange={(e) => setSelectedCategory(e.target.value)}
                   className="flex-1 bg-gray-800 border border-[#D2A63C]/30 text-gray-300 rounded-lg p-2 text-sm focus:border-[#D2A63C] outline-none transition-colors"
                 >
-                  <option value="">Seleciona categoria</option>
+                  <option value="">{t("amC.feed.selectCategory")}</option>
                   {categoriasVisiveis.map((cat) => (
                     <option key={cat.id} value={cat.id}>
-                      {cat.icon} {cat.label}
+                      {cat.icon} {t(cat.label)}
                     </option>
                   ))}
                 </select>
@@ -1624,12 +1626,12 @@ export default function SocialFeed({ initialCategory }: { initialCategory?: stri
                 {uploading ? (
                   <>
                     <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                    A publicar...
+                    {t("amC.feed.posting")}
                   </>
                 ) : (
                   <>
                     <Send className="w-4 h-4 mr-2" />
-                    Publicar
+                    {t("amC.feed.publish")}
                   </>
                 )}
               </Button>
@@ -1646,10 +1648,10 @@ export default function SocialFeed({ initialCategory }: { initialCategory?: stri
               {CATEGORIES.find(c => c.id === activeCategory)?.icon}
             </span>
             <span className="text-[#D2A63C] font-semibold">
-              Filtrado: {CATEGORIES.find(c => c.id === activeCategory)?.label}
+              t("amC.feed.filtered"): {t(CATEGORIES.find(c => c.id === activeCategory)?.label ?? "")}
             </span>
             <span className="text-gray-400 text-sm">
-              ({filteredPosts.length} {filteredPosts.length === 1 ? 'publicação' : 'publicações'})
+              ({filteredPosts.length} {filteredPosts.length === 1 ? t("amC.feed.postSingular") : t("amC.feed.postPlural")})
             </span>
           </div>
           <button
@@ -1708,9 +1710,9 @@ export default function SocialFeed({ initialCategory }: { initialCategory?: stri
                         <DropdownMenuContent className="bg-gray-800 border-gray-700">
                           <DropdownMenuItem
                             onClick={async () => {
-                              if (confirm('Tens a certeza que queres editar esta publicação?')) {
+                              if (confirm(t("amC.feed.confirmEdit"))) {
                                 // TODO: Implement edit functionality
-                                const newContent = prompt('Edita o conteúdo:', post.content)
+                                const newContent = prompt(t("amC.feed.promptEdit"), post.content)
                                 if (newContent && newContent !== post.content) {
                                   try {
                                     const { error } = await supabase
@@ -1722,7 +1724,7 @@ export default function SocialFeed({ initialCategory }: { initialCategory?: stri
                                     loadPosts()
                                   } catch (error) {
                                     console.error('Erro ao editar:', error)
-                                    alert('Erro ao editar publicação')
+                                    alert(t("amC.feed.editFail"))
                                   }
                                 }
                               }
@@ -1730,11 +1732,11 @@ export default function SocialFeed({ initialCategory }: { initialCategory?: stri
                             className="text-white hover:bg-blue-500/20 cursor-pointer flex items-center gap-2"
                           >
                             <Edit className="w-4 h-4" />
-                            Editar
+                            {t("amC.feed.edit")}
                           </DropdownMenuItem>
                           <DropdownMenuItem
                             onClick={async () => {
-                              if (confirm('Tens a certeza que queres apagar esta publicação? Esta ação não pode ser desfeita.')) {
+                              if (confirm(t("amC.feed.confirmDelete"))) {
                                 try {
                                   const { error } = await supabase
                                     .from('posts')
@@ -1745,14 +1747,14 @@ export default function SocialFeed({ initialCategory }: { initialCategory?: stri
                                   loadPosts()
                                 } catch (error) {
                                   console.error('Erro ao apagar:', error)
-                                  alert('Erro ao apagar publicação')
+                                  alert(t("amC.feed.deleteFail"))
                                 }
                               }
                             }}
                             className="text-white hover:bg-red-500/20 cursor-pointer flex items-center gap-2"
                           >
                             <Trash2 className="w-4 h-4" />
-                            Apagar
+                            {t("amC.feed.delete")}
                           </DropdownMenuItem>
                         </DropdownMenuContent>
                       </DropdownMenu>
@@ -1924,7 +1926,7 @@ export default function SocialFeed({ initialCategory }: { initialCategory?: stri
                         }}
                         className="text-white hover:bg-gray-700 cursor-pointer"
                       >
-                        Mais opções...
+                        {t("amC.feed.moreOptions")}
                       </DropdownMenuItem>
                     </DropdownMenuContent>
                   </DropdownMenu>
@@ -1963,7 +1965,7 @@ export default function SocialFeed({ initialCategory }: { initialCategory?: stri
                       </div>
                     ) : (
                       <div className="text-center text-gray-500 py-4">
-                        <p className="text-sm">Ainda não há comentários.</p>
+                        <p className="text-sm">{t("amC.feed.noComments")}</p>
                       </div>
                     )}
 
@@ -1980,7 +1982,7 @@ export default function SocialFeed({ initialCategory }: { initialCategory?: stri
                                 return newMap
                               })
                             }}
-                            placeholder="Escreve um comentário... (usa @ para mencionar)"
+                            placeholder={t("amC.feed.commentPlaceholder")}
                             className="w-full bg-gray-800/50 border border-gray-700 rounded-lg px-3 py-2 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-[#D2A63C]/50"
                             rows={1}
                             onMentionsChange={(mentions) => {
@@ -1997,7 +1999,7 @@ export default function SocialFeed({ initialCategory }: { initialCategory?: stri
                           disabled={!commentText.get(post.id)?.trim()}
                           className="bg-[#D2A63C] text-black px-4 py-2 rounded-lg font-semibold hover:bg-[#BB8525] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                         >
-                          Publicar
+                          {t("amC.feed.publish")}
                         </button>
                       </div>
                     )}
@@ -2013,18 +2015,18 @@ export default function SocialFeed({ initialCategory }: { initialCategory?: stri
                 <div className="text-6xl mb-4">
                   {CATEGORIES.find(c => c.id === activeCategory)?.icon}
                 </div>
-                <p className="text-lg">Ainda não há publicações nesta categoria.</p>
+                <p className="text-lg">{t("amC.feed.noPostsCategory")}</p>
                 <p className="text-sm text-gray-600">
-                  Sê o primeiro a partilhar algo sobre{" "}
-                  {CATEGORIES.find(c => c.id === activeCategory)?.label.toLowerCase()}!
+                  {t("amC.feed.beFirstAbout")}{" "}
+                  {t(CATEGORIES.find(c => c.id === activeCategory)?.label ?? "").toLowerCase()}!
                 </p>
               </div>
             ) : (
               <div className="space-y-2">
                 <div className="text-6xl mb-4">📭</div>
-                <p className="text-lg">Ainda não há publicações.</p>
+                <p className="text-lg">{t("amC.feed.noPosts")}</p>
                 <p className="text-sm text-gray-600">
-                  Sê o primeiro a partilhar algo com a comunidade!
+                  {t("amC.feed.beFirstCommunity")}
                 </p>
               </div>
             )}

@@ -13,6 +13,7 @@ import { Badge } from "@/components/ui/badge"
 import { Switch } from "@/components/ui/switch"
 import { supabase } from "@/lib/supabase"
 import { useToast } from "@/hooks/use-toast"
+import { useT } from "@/components/i18n-provider"
 // O catálogo (estratégias, grupos de activos, timeframes) vive em lib/alertas/catalogo — era
 // mantido à mão aqui e no desktop, e já não batiam certo. A guarda catalogo.check.ts falha se voltar.
 import {
@@ -170,15 +171,15 @@ interface MtmAlert {
 }
 
 const TRADE_STATE_META: Record<string, { label: string; cls: string }> = {
-  pending: { label: "Pendente", cls: "border-amber-500/40 bg-amber-500/10 text-amber-300" },
-  active: { label: "Ativa", cls: "border-blue-500/40 bg-blue-500/10 text-blue-300" },
+  pending: { label: "amC.tradingAlerts.stPending", cls: "border-amber-500/40 bg-amber-500/10 text-amber-300" },
+  active: { label: "amC.tradingAlerts.stActive", cls: "border-blue-500/40 bg-blue-500/10 text-blue-300" },
   be: { label: "BreakEven", cls: "border-amber-500/40 bg-amber-500/10 text-amber-300" },
   exit_1: { label: "Exit 1", cls: "border-green-500/40 bg-green-500/10 text-green-300" },
   exit_2: { label: "Exit 2", cls: "border-green-500/40 bg-green-500/10 text-green-300" },
   exit_3: { label: "Exit 3", cls: "border-green-500/40 bg-green-500/10 text-green-300" },
   exit_4: { label: "Exit 4", cls: "border-green-600/50 bg-green-600/15 text-green-300" },
   loss: { label: "Loss", cls: "border-red-500/40 bg-red-500/15 text-red-400" },
-  closed: { label: "Fechada", cls: "border-gray-500/40 bg-gray-500/10 text-gray-300" },
+  closed: { label: "amC.tradingAlerts.stClosed", cls: "border-gray-500/40 bg-gray-500/10 text-gray-300" },
 }
 interface Subscription {
   enabled: boolean
@@ -206,9 +207,9 @@ const semAlertasCripto = <T extends { ticker?: string | null; tvSymbol?: string 
   semCripto() ? lista.filter((a) => !alertaCripto(a)) : lista
 
 const DIR = {
-  buy: { label: "COMPRA", cls: "border-green-500/40 bg-green-500/15 text-green-400", Icon: TrendingUp },
-  sell: { label: "VENDA", cls: "border-red-500/40 bg-red-500/15 text-red-400", Icon: TrendingDown },
-  neutral: { label: "NEUTRO", cls: "border-gray-500/40 bg-gray-500/15 text-gray-300", Icon: Minus },
+  buy: { label: "amC.tradingAlerts.dirBuy", cls: "border-green-500/40 bg-green-500/15 text-green-400", Icon: TrendingUp },
+  sell: { label: "amC.tradingAlerts.dirSell", cls: "border-red-500/40 bg-red-500/15 text-red-400", Icon: TrendingDown },
+  neutral: { label: "amC.tradingAlerts.dirNeutral", cls: "border-gray-500/40 bg-gray-500/15 text-gray-300", Icon: Minus },
 } as const
 
 type StateCat = "pending" | "active" | "win" | "loss"
@@ -219,18 +220,20 @@ function stateCategory(tradeStatus: string | null): StateCat {
   return "active"
 }
 
-function fmt(n: number | null) {
+type TFn = (key: string) => string
+
+function fmt(t: TFn, n: number | null) {
   // Entrada a ZERO não é um preço: o MTM Scanner manda 0 quando entra a mercado (visto na
   // app a 05/10/2026: «Entrada 0»). Diz-se «a mercado» — igual ao ecrã nativo iOS.
-  if (n === 0) return "a mercado"
+  if (n === 0) return t("amC.tradingAlerts.atMarket")
   return n == null ? "—" : n.toLocaleString("pt-PT", { maximumFractionDigits: 6 })
 }
-function timeAgo(iso: string) {
+function timeAgo(t: TFn, iso: string) {
   const min = Math.floor((Date.now() - new Date(iso).getTime()) / 60000)
-  if (min < 1) return "agora"
-  if (min < 60) return `há ${min}min`
+  if (min < 1) return t("amC.tradingAlerts.timeNow")
+  if (min < 60) return t("amC.tradingAlerts.timeMin").replace("{n}", String(min))
   const h = Math.floor(min / 60)
-  return h < 24 ? `há ${h}h` : `há ${Math.floor(h / 24)}d`
+  return h < 24 ? t("amC.tradingAlerts.timeHour").replace("{n}", String(h)) : t("amC.tradingAlerts.timeDay").replace("{n}", String(Math.floor(h / 24)))
 }
 
 function Chip({ label, active, onClick }: { label: string; active: boolean; onClick: () => void }) {
@@ -250,6 +253,7 @@ function Chip({ label, active, onClick }: { label: string; active: boolean; onCl
 
 /** Acompanhamento da ação de preço de um sinal seguido (sem execução). */
 function MobileSignalTracker({ alert }: { alert: MtmAlert }) {
+  const t = useT()
   const [price, setPrice] = useState<number | null>(null)
   const [loading, setLoading] = useState(true)
   useEffect(() => {
@@ -290,23 +294,23 @@ function MobileSignalTracker({ alert }: { alert: MtmAlert }) {
   return (
     <div className="mt-2 rounded-lg border border-cyan-500/30 bg-cyan-500/5 p-2 text-xs">
       <div className="mb-1 flex items-center justify-between">
-        <span className="flex items-center gap-1 text-cyan-300"><BellRing className="h-3 w-3 animate-pulse" /> A acompanhar</span>
-        {loading ? <Loader2 className="h-3 w-3 animate-spin text-cyan-300" /> : <span className="font-mono font-bold text-white">{fmt(price)}</span>}
+        <span className="flex items-center gap-1 text-cyan-300"><BellRing className="h-3 w-3 animate-pulse" /> {t("amC.tradingAlerts.tracking")}</span>
+        {loading ? <Loader2 className="h-3 w-3 animate-spin text-cyan-300" /> : <span className="font-mono font-bold text-white">{fmt(t, price)}</span>}
       </div>
       {pnlPct != null && (
         <p className={`text-center font-bold ${pnlPct >= 0 ? "text-green-400" : "text-red-400"}`}>
-          {pnlPct >= 0 ? "+" : ""}{pnlPct.toFixed(2)}% desde a entrada
+          {pnlPct >= 0 ? "+" : ""}{pnlPct.toFixed(2)}% {t("amC.tradingAlerts.sinceEntry")}
         </p>
       )}
       <div className="mt-1 space-y-0.5">
         {alert.stopLoss != null && (
-          <div className="flex justify-between"><span className="text-gray-400">🛑 Stop</span><span className="font-mono text-red-300">{fmt(alert.stopLoss)}{slHit && " • atingido"}</span></div>
+          <div className="flex justify-between"><span className="text-gray-400">🛑 Stop</span><span className="font-mono text-red-300">{fmt(t, alert.stopLoss)}{slHit && ` • ${t("amC.tradingAlerts.hit")}`}</span></div>
         )}
         {alert.takeProfits.map((tp, i) => (
-          <div key={i} className="flex justify-between"><span className="text-gray-400">🎯 Exit {i + 1}</span><span className="font-mono text-green-300">{fmt(tp)}{reached(tp) && " • atingido"}</span></div>
+          <div key={i} className="flex justify-between"><span className="text-gray-400">🎯 Exit {i + 1}</span><span className="font-mono text-green-300">{fmt(t, tp)}{reached(tp) && ` • ${t("amC.tradingAlerts.hit")}`}</span></div>
         ))}
       </div>
-      <p className="mt-1 text-center text-[9px] text-gray-500">Só acompanhamento — sem execução.</p>
+      <p className="mt-1 text-center text-[9px] text-gray-500">{t("amC.tradingAlerts.trackingOnly")}</p>
     </div>
   )
 }
@@ -323,6 +327,7 @@ function MobileAlertCard({
   defaultShowChart?: boolean
 }) {
   const d = DIR[alert.direction]
+  const t = useT()
   const passed = alert.confirmations.filter((c) => c.passed).length
   const [showAnalysis, setShowAnalysis] = useState(false)
   const [analysis, setAnalysis] = useState<string | null>(alert.aiAnalysis)
@@ -344,10 +349,10 @@ function MobileAlertCard({
           body: JSON.stringify({ id: alert.id }),
         })
         const data = await res.json()
-        if (!res.ok) throw new Error(data.error || "Falha ao gerar gestão IA")
+        if (!res.ok) throw new Error(data.error || t("amC.tradingAlerts.aiFail"))
         setAnalysis(data.analysis)
       } catch (err: any) {
-        setAnalysisError(err?.message || "Falha ao gerar gestão IA")
+        setAnalysisError(err?.message || t("amC.tradingAlerts.aiFail"))
       } finally {
         setLoadingAnalysis(false)
       }
@@ -361,7 +366,7 @@ function MobileAlertCard({
           <span className="font-bold text-white">{alert.ticker || "—"}</span>
           <Badge className={`border text-[10px] font-semibold ${d.cls}`}>
             <d.Icon className="mr-1 h-3 w-3" />
-            {d.label}
+            {t(d.label)}
           </Badge>
           {alert.timeframe && (
             <span className="rounded border border-gray-700 px-1.5 py-0.5 text-[10px] text-gray-400">
@@ -370,7 +375,7 @@ function MobileAlertCard({
           )}
           {alert.tradeStatus && TRADE_STATE_META[alert.tradeStatus] && (
             <Badge className={`border text-[10px] font-semibold ${TRADE_STATE_META[alert.tradeStatus].cls}`}>
-              {TRADE_STATE_META[alert.tradeStatus].label}
+              {t(TRADE_STATE_META[alert.tradeStatus].label)}
             </Badge>
           )}
           {alert.outcomePips != null && (
@@ -391,7 +396,7 @@ function MobileAlertCard({
         </div>
         <span className="flex items-center gap-1 text-[10px] text-gray-500">
           <Clock className="h-3 w-3" />
-          {timeAgo(alert.createdAt)}
+          {timeAgo(t, alert.createdAt)}
         </span>
       </div>
       {alert.strategy && (
@@ -419,17 +424,17 @@ function MobileAlertCard({
       ) : (
       <div className="mt-2 space-y-1 rounded-lg bg-black/30 p-2 text-xs">
         <div className="flex items-center justify-between">
-          <span className="flex items-center gap-1 text-gray-400"><Pin className="h-3 w-3 text-[#D2A63C]" /> Entrada</span>
-          <span className="font-mono text-white">{fmt(alert.entry)}</span>
+          <span className="flex items-center gap-1 text-gray-400"><Pin className="h-3 w-3 text-[#D2A63C]" /> {t("amC.tradingAlerts.entry")}</span>
+          <span className="font-mono text-white">{fmt(t, alert.entry)}</span>
         </div>
         <div className="flex items-center justify-between">
           <span className="flex items-center gap-1 text-gray-400"><Ban className="h-3 w-3 text-red-400" /> Stop</span>
-          <span className="font-mono text-red-300">{fmt(alert.stopLoss)}</span>
+          <span className="font-mono text-red-300">{fmt(t, alert.stopLoss)}</span>
         </div>
         {alert.takeProfits.map((tp, i) => (
           <div key={i} className="flex items-center justify-between">
             <span className="flex items-center gap-1 text-gray-400"><Crosshair className="h-3 w-3 text-green-400" /> Exit {i + 1}</span>
-            <span className="font-mono text-green-300">{fmt(tp)}</span>
+            <span className="font-mono text-green-300">{fmt(t, tp)}</span>
           </div>
         ))}
       </div>
@@ -446,12 +451,12 @@ function MobileAlertCard({
           {alert.crypto && (
             <>
               <span className="rounded border border-[#D2A63C]/30 bg-[#D2A63C]/10 px-1.5 py-0.5 text-[#D2A63C]">
-                ⚡ Alav: {alert.crypto.leverage}x
+                ⚡ {t("amC.tradingAlerts.leverage")}: {alert.crypto.leverage}x
               </span>
               <span className="rounded border border-blue-500/30 bg-blue-500/10 px-1.5 py-0.5 text-blue-300">
-                💵 Margem ${alert.crypto.margin} · Posição ${alert.crypto.notionalUsd}
+                💵 {t("amC.tradingAlerts.margin")} ${alert.crypto.margin} · {t("amC.tradingAlerts.position")} ${alert.crypto.notionalUsd}
                 {alert.crypto.quantity != null
-                  ? ` (${alert.crypto.quantity.toLocaleString("pt-PT", { maximumFractionDigits: 4 })} un)`
+                  ? ` (${alert.crypto.quantity.toLocaleString("pt-PT", { maximumFractionDigits: 4 })} ${t("amC.tradingAlerts.unitsShort")})`
                   : ""}
               </span>
             </>
@@ -484,7 +489,7 @@ function MobileAlertCard({
           className="flex items-center justify-center gap-1 rounded-lg border border-purple-500/40 bg-purple-500/10 px-2 py-1.5 text-[11px] font-medium text-purple-300"
         >
           {loadingAnalysis ? <Loader2 className="h-3 w-3 animate-spin" /> : <Sparkles className="h-3 w-3" />}
-          Gestão IA
+          {t("amC.tradingAlerts.aiManage")}
         </button>
         <button
           onClick={() => onToggleFollow(alert.id, !following)}
@@ -493,7 +498,7 @@ function MobileAlertCard({
           }`}
         >
           <BellRing className="h-3 w-3" />
-          {following ? "A seguir ✓" : "Seguir sinal"}
+          {following ? t("amC.tradingAlerts.following") : t("amC.tradingAlerts.followSignal")}
         </button>
       </div>
       )}
@@ -510,7 +515,7 @@ function MobileAlertCard({
           className="mt-2 flex w-full items-center justify-center gap-1 rounded-lg border border-emerald-500/40 bg-emerald-500/10 px-2 py-1.5 text-[11px] font-semibold text-emerald-300"
         >
           <TrendingUp className="h-3 w-3" />
-          Negociar no Web trader
+          {t("amC.tradingAlerts.tradeWebtrader")}
         </a>
       )}
       {alert.tvSymbol && (
@@ -519,20 +524,20 @@ function MobileAlertCard({
           className="mt-2 flex w-full items-center justify-center gap-1 rounded-lg border border-[#D2A63C]/40 bg-[#D2A63C]/10 px-2 py-1.5 text-[11px] font-medium text-[#D2A63C]"
         >
           <LineChart className="h-3 w-3" />
-          {showChart ? "Ver imagem do sinal" : "Gráfico ao vivo"}
+          {showChart ? t("amC.tradingAlerts.viewSignalImage") : t("amC.tradingAlerts.liveChart")}
         </button>
       )}
       {following && !alert.bloqueado && <MobileSignalTracker alert={alert} />}
       {showAnalysis && (
         <div className="mt-2 rounded-lg border border-purple-500/20 bg-purple-500/5 p-2 text-xs">
           {loadingAnalysis ? (
-            <p className="flex items-center gap-2 text-purple-300"><Loader2 className="h-3 w-3 animate-spin" /> A analisar...</p>
+            <p className="flex items-center gap-2 text-purple-300"><Loader2 className="h-3 w-3 animate-spin" /> {t("amC.tradingAlerts.analysing")}</p>
           ) : analysisError ? (
             <p className="text-red-300">{analysisError}</p>
           ) : analysis ? (
             <MarkdownRenderer content={analysis} />
           ) : (
-            <p className="text-gray-400">Sem análise disponível.</p>
+            <p className="text-gray-400">{t("amC.tradingAlerts.noAnalysis")}</p>
           )}
         </div>
       )}
@@ -543,6 +548,7 @@ function MobileAlertCard({
 export default function TradingAlertsMobile() {
   const searchParams = useSearchParams()
   const { toast } = useToast()
+  const t = useT()
   /**
    * «Só o que sigo» — DESLIGADO por omissão.
    *
@@ -677,11 +683,11 @@ export default function TradingAlertsMobile() {
         body: JSON.stringify(sub),
       })
       const data = await res.json()
-      if (!res.ok) throw new Error(data.error || "Falha ao guardar")
-      toast({ title: "✅ Preferências guardadas", description: "Vais receber alertas dos ativos escolhidos." })
+      if (!res.ok) throw new Error(data.error || t("amC.tradingAlerts.saveFail"))
+      toast({ title: t("amC.tradingAlerts.prefsSaved"), description: t("amC.tradingAlerts.prefsSavedDesc") })
       setShowManager(false)
     } catch (err: any) {
-      toast({ title: "❌ Erro", description: err?.message || "Falha ao guardar", variant: "destructive" })
+      toast({ title: t("amC.tradingAlerts.errorTitle"), description: err?.message || t("amC.tradingAlerts.saveFail"), variant: "destructive" })
     } finally {
       setSaving(false)
     }
@@ -709,9 +715,9 @@ export default function TradingAlertsMobile() {
   )
   const visible = vista.visiveis
   const STATE_TABS: { key: "all" | StateCat; label: string; count: number; cls: string }[] = [
-    { key: "all", label: "Ativos", count: perf.pending + perf.active, cls: "border-[#D2A63C] bg-[#D2A63C]/15 text-[#D2A63C]" },
-    { key: "pending", label: "Pendentes", count: perf.pending, cls: "border-amber-500 bg-amber-500/15 text-amber-300" },
-    { key: "active", label: "Ativas", count: perf.active, cls: "border-blue-500 bg-blue-500/15 text-blue-300" },
+    { key: "all", label: "amC.tradingAlerts.tabLive", count: perf.pending + perf.active, cls: "border-[#D2A63C] bg-[#D2A63C]/15 text-[#D2A63C]" },
+    { key: "pending", label: "amC.tradingAlerts.tabPending", count: perf.pending, cls: "border-amber-500 bg-amber-500/15 text-amber-300" },
+    { key: "active", label: "amC.tradingAlerts.tabActive", count: perf.active, cls: "border-blue-500 bg-blue-500/15 text-blue-300" },
     { key: "win", label: "Wins", count: perf.win, cls: "border-green-500 bg-green-500/15 text-green-300" },
     { key: "loss", label: "Loss", count: perf.loss, cls: "border-red-500 bg-red-500/15 text-red-300" },
   ]
@@ -726,12 +732,12 @@ export default function TradingAlertsMobile() {
         >
           <div className="w-full max-w-md" onClick={(e) => e.stopPropagation()}>
             <div className="mb-2 flex items-center justify-between">
-              <span className="text-sm font-semibold text-[#D2A63C]">📍 Sinal seguido</span>
+              <span className="text-sm font-semibold text-[#D2A63C]">📍 {t("amC.tradingAlerts.followedSignal")}</span>
               <button
                 onClick={() => setFocusAlert(null)}
                 className="rounded-full bg-white/10 px-3 py-1 text-sm font-medium text-white"
               >
-                Fechar ✕
+                {t("amC.tradingAlerts.close")}
               </button>
             </div>
             <MobileAlertCard
@@ -762,7 +768,7 @@ export default function TradingAlertsMobile() {
             className="border-gray-600 text-gray-300"
           >
             <ArrowLeft className="mr-1 h-4 w-4" />
-            Voltar
+            {t("amC.tradingAlerts.back")}
           </Button>
           <Button
             size="sm"
@@ -771,7 +777,7 @@ export default function TradingAlertsMobile() {
             className="border-[#D2A63C]/40 text-[#D2A63C]"
           >
             <SlidersHorizontal className="mr-1 h-4 w-4" />
-            Gerir
+            {t("amC.tradingAlerts.manage")}
           </Button>
         </div>
       </div>
@@ -781,13 +787,13 @@ export default function TradingAlertsMobile() {
         <div className="space-y-4 rounded-xl border border-[#D2A63C]/20 bg-black/50 p-4">
           <div className="flex items-center justify-between">
             <span className="flex items-center gap-2 text-sm text-white">
-              <Bell className="h-4 w-4 text-[#D2A63C]" /> Receber alertas
+              <Bell className="h-4 w-4 text-[#D2A63C]" /> {t("amC.tradingAlerts.receiveAlerts")}
             </span>
             <Switch checked={sub.enabled} onCheckedChange={(v) => setSub({ ...sub, enabled: v })} />
           </div>
           <div className="flex items-center justify-between">
             <span className="flex items-center gap-2 text-sm text-white">
-              <BellRing className="h-4 w-4 text-[#D2A63C]" /> Notificações push
+              <BellRing className="h-4 w-4 text-[#D2A63C]" /> {t("amC.tradingAlerts.pushNotifications")}
             </span>
             <Switch checked={sub.push_enabled} onCheckedChange={(v) => setSub({ ...sub, push_enabled: v })} />
           </div>
@@ -795,7 +801,7 @@ export default function TradingAlertsMobile() {
           <div>
             <p className="mb-1.5 text-xs font-semibold uppercase tracking-wider text-gray-500">
               {/* «ATIVOS (7)» lia-se como 7 categorias; eram 7 símbolos seleccionados. Agora diz de quantos. */}
-              {cabecalhoDoSelector("Ativos", sub.symbols.length, TOTAL_DE_ACTIVOS)}
+              {cabecalhoDoSelector(t("amC.tradingAlerts.assets"), sub.symbols.length, TOTAL_DE_ACTIVOS)}
             </p>
             <div className="space-y-1.5">
               {GRUPOS_DE_ACTIVOS.filter((g) => !(g.chave === "crypto" && semCripto())).map((g) => {
@@ -806,7 +812,7 @@ export default function TradingAlertsMobile() {
                   <details key={g.chave} className="rounded-lg border border-[#D2A63C]/15 bg-black/30">
                     <summary className="flex cursor-pointer list-none items-center justify-between px-3 py-2 text-xs font-semibold text-gray-300">
                       <span>{g.rotulo}</span>
-                      <span className="text-[10px] text-gray-500">{selected ? `${selected}/${simbolos.length}` : `${simbolos.length} ativos`}</span>
+                      <span className="text-[10px] text-gray-500">{selected ? `${selected}/${simbolos.length}` : `${simbolos.length} ${t("amC.tradingAlerts.assetsLower")}`}</span>
                     </summary>
                     <div className="flex flex-wrap gap-1.5 px-3 pb-3">
                       {simbolos.map((s) => (
@@ -821,7 +827,7 @@ export default function TradingAlertsMobile() {
 
           <div>
             <p className="mb-1.5 text-xs font-semibold uppercase tracking-wider text-gray-500">
-              {cabecalhoDoSelector("Estratégias", sub.strategies.length, ESTRATEGIAS.length)}
+              {cabecalhoDoSelector(t("amC.tradingAlerts.strategies"), sub.strategies.length, ESTRATEGIAS.length)}
             </p>
             <div className="flex flex-wrap gap-1.5">
               {ESTRATEGIAS.map((s) => (
@@ -848,7 +854,7 @@ export default function TradingAlertsMobile() {
 
           <Button onClick={save} disabled={saving} className="w-full bg-[#D2A63C] font-semibold text-black hover:bg-[#BB8525]">
             {saving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
-            Guardar preferências
+            {t("amC.tradingAlerts.savePrefs")}
           </Button>
         </div>
       )}
@@ -856,7 +862,7 @@ export default function TradingAlertsMobile() {
       {/* Estado / desempenho: Pendentes · Ativas · Wins · Loss + win rate */}
       <div className="rounded-xl border border-[#D2A63C]/20 bg-black/40 p-2">
         <div className="flex items-center justify-between px-1 pb-1.5">
-          <span className="text-[11px] font-semibold uppercase tracking-wider text-gray-500">Desempenho</span>
+          <span className="text-[11px] font-semibold uppercase tracking-wider text-gray-500">{t("amC.tradingAlerts.performance")}</span>
           <span className="text-[11px] text-gray-400">
             Win rate{" "}
             <span className={`font-mono font-bold ${winRate == null ? "text-gray-500" : winRate >= 50 ? "text-green-400" : "text-red-400"}`}>
@@ -866,16 +872,16 @@ export default function TradingAlertsMobile() {
           </span>
         </div>
         <div className="flex flex-wrap gap-1.5">
-          {STATE_TABS.map((t) => (
+          {STATE_TABS.map((tab) => (
             <button
-              key={t.key}
-              onClick={() => setStateFilter(t.key)}
+              key={tab.key}
+              onClick={() => setStateFilter(tab.key)}
               className={`flex items-center gap-1 rounded-md border px-2 py-1 text-[11px] font-medium transition-colors ${
-                stateFilter === t.key ? t.cls : "border-gray-700 text-gray-400"
+                stateFilter === tab.key ? tab.cls : "border-gray-700 text-gray-400"
               }`}
             >
-              {t.label}
-              <span className="rounded bg-black/40 px-1 text-[9px]">{t.count}</span>
+              {t(tab.label)}
+              <span className="rounded bg-black/40 px-1 text-[9px]">{tab.count}</span>
             </button>
           ))}
         </div>
@@ -895,13 +901,13 @@ export default function TradingAlertsMobile() {
             soOQueSigo ? "border-[#D2A63C] bg-[#D2A63C]/10 text-[#E9C46A]" : "border-gray-700 text-gray-400",
           )}
         >
-          <span>{soOQueSigo ? "Só o que sigo" : "Todos os alertas"}</span>
+          <span>{soOQueSigo ? t("amC.tradingAlerts.onlyFollowed") : t("amC.tradingAlerts.allAlerts")}</span>
           <span className="text-gray-500">
             {soOQueSigo
               ? vista.escondidosPelaSubscricao > 0
-                ? `+${vista.escondidosPelaSubscricao} escondidos · toca para ver todos`
-                : "toca para ver todos"
-              : "toca para filtrar pelos teus"}
+                ? t("amC.tradingAlerts.hiddenTapAll").replace("{n}", String(vista.escondidosPelaSubscricao))
+                : t("amC.tradingAlerts.tapSeeAll")
+              : t("amC.tradingAlerts.tapFilter")}
           </span>
         </button>
       )}
@@ -909,7 +915,7 @@ export default function TradingAlertsMobile() {
       {/* Feed */}
       {loading ? (
         <div className="flex items-center gap-2 py-10 text-gray-400">
-          <Loader2 className="h-4 w-4 animate-spin text-[#D2A63C]" /> A carregar alertas...
+          <Loader2 className="h-4 w-4 animate-spin text-[#D2A63C]" /> {t("amC.tradingAlerts.loadingAlerts")}
         </div>
       ) : visible.length === 0 ? (
         <div className="rounded-xl border border-gray-700 bg-black/40 py-12 text-center text-gray-500">
@@ -919,19 +925,19 @@ export default function TradingAlertsMobile() {
             chegar — e um vazio que não se explica manda a pessoa recarregar a página para sempre.
           */}
           <p className="px-6 text-sm">
-            {vista.motivoDoVazio === "nada_chegou" && "Ainda não chegou nenhum alerta."}
+            {vista.motivoDoVazio === "nada_chegou" && t("amC.tradingAlerts.noAlertsYet")}
             {vista.motivoDoVazio === "subscricao" && (
               <>
-                Há alertas, mas nenhum nos teus ativos.{" "}
+                {t("amC.tradingAlerts.noneInAssets")}{" "}
                 <button type="button" onClick={() => setSoOQueSigo(false)} className="text-[#D2A63C] underline">
-                  Ver todos
+                  {t("amC.tradingAlerts.seeAll")}
                 </button>
               </>
             )}
             {vista.motivoDoVazio === "estado" && (
               <>
-                Nenhum alerta neste estado agora.
-                {vista.escondidosPeloEstado > 0 && ` Há ${vista.escondidosPeloEstado} noutros separadores.`}
+                {t("amC.tradingAlerts.noneInState")}
+                {vista.escondidosPeloEstado > 0 && t("amC.tradingAlerts.otherTabs").replace("{n}", String(vista.escondidosPeloEstado))}
               </>
             )}
           </p>
@@ -950,7 +956,7 @@ export default function TradingAlertsMobile() {
       )}
 
       <p className="px-4 text-center text-[10px] text-gray-600">
-        ⚠️ Sinais educativos dos scanners MTM. Não constituem aconselhamento financeiro.
+        {t("amC.tradingAlerts.footerDisclaimer")}
       </p>
     </div>
   )

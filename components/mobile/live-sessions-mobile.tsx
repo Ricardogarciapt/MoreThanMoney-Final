@@ -630,8 +630,8 @@ export default function LiveSessionsMobile({
         <div>
           {/* «Aulas» e não «Ao vivo»: o que aqui está são as academias e as suas salas, e as
               lives são uma parte delas. O nome antigo prometia só a parte que acontece a horas. */}
-          <h2 className="text-lg font-bold tracking-tight text-[#D2A63C]">Aulas</h2>
-          <p className="text-xs text-gray-500">Academias, salas e gravações para rever</p>
+          <h2 className="text-lg font-bold tracking-tight text-[#D2A63C]">{t("amC.live.classes")}</h2>
+          <p className="text-xs text-gray-500">{t("amC.live.classesSubtitle")}</p>
         </div>
         <div className="flex flex-wrap gap-2">
           <Button
@@ -661,7 +661,7 @@ export default function LiveSessionsMobile({
             <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-red-500 opacity-75" />
             <span className="relative inline-flex h-2 w-2 rounded-full bg-red-600" />
           </span>
-          A decorrer agora
+          {t("amC.live.liveNow")}
         </h3>
       )}
 
@@ -739,7 +739,7 @@ export default function LiveSessionsMobile({
       {!loading && grupos.length > 0 && (
         <div className="mt-6">
           <h3 className="mb-2 text-sm font-semibold text-white">
-            {aberta ? aberta.nome : "Academias e horários"}
+            {aberta ? aberta.nome : t("amC.live.academiesAndSchedule")}
           </h3>
 
           {/* O HORÁRIO, aqui e não no fundo da página. Estava depois de tudo, e quem queria
@@ -795,7 +795,7 @@ export default function LiveSessionsMobile({
               className="inline-flex min-h-[44px] items-center gap-2 rounded-full border border-[#D2A63C]/40 px-4 text-sm font-semibold text-[#E9C46A] active:scale-[0.99]"
             >
               <ChevronLeft className="h-4 w-4 shrink-0" aria-hidden />
-              Todas as academias
+              {t("amC.live.allAcademies")}
             </button>
                 <div id="pasta-academia" className="space-y-2.5">
             {aberta.salas.map((s) => {
@@ -833,7 +833,7 @@ export default function LiveSessionsMobile({
                       )}
                       <p className="mt-0.5 text-[10px] uppercase tracking-wide text-gray-600">
                         {s.academy?.name ?? "—"}
-                        {r.temGravacoes ? " · com gravações" : ""}
+                        {r.temGravacoes ? " · " + t("amC.live.withRecordings") : ""}
                       </p>
                     </div>
                     {!r.podeEntrar && (
@@ -856,10 +856,10 @@ export default function LiveSessionsMobile({
                       className="flex w-full items-center justify-between border-t border-zinc-800/80 px-3 py-2 text-left"
                     >
                       <span className="text-[11px] text-gray-400">
-                        {s.playlist_title?.trim() || "Aulas gravadas"}
+                        {s.playlist_title?.trim() || t("amC.live.recordedClasses")}
                       </span>
                       <span className="text-[11px] text-[#D2A63C]">
-                        {salasAbertas[s.id] ? "fechar" : "ver aulas"}
+                        {salasAbertas[s.id] ? t("amC.live.close") : t("amC.live.viewClasses")}
                       </span>
                     </button>
                   )}
@@ -895,7 +895,7 @@ export default function LiveSessionsMobile({
             {/* Pasta vazia diz-se pelo que é. A academia está pronta; o que falta é o horário. */}
             {aberta.salas.length === 0 && (
               <p className="rounded-2xl border border-dashed border-zinc-800 p-6 text-center text-sm text-gray-500">
-                Ainda não há salas nesta academia.
+                {t("amC.live.noRooms")}
               </p>
             )}
           </div>
@@ -1252,14 +1252,15 @@ function PastaAcademia({
   academia: AcademiaComSalas
   onAbrir: () => void
 }) {
-  const etiqueta = academia.salas.length === 1 ? "1 sala" : `${academia.salas.length} salas`
+  const t = useT()
+  const etiqueta = academia.salas.length === 1 ? t("amC.live.oneRoom") : t("amC.live.manyRooms").replace("{n}", String(academia.salas.length))
   return (
     <button
       type="button"
       onClick={onAbrir}
       aria-expanded={false}
       aria-controls="pasta-academia"
-      aria-label={`Abrir a academia ${academia.nome} · ${etiqueta}`}
+      aria-label={`${t("amC.live.openAcademy")} ${academia.nome} · ${etiqueta}`}
       className="flex min-h-[44px] flex-col overflow-hidden rounded-xl border border-[#D2A63C]/15 bg-gray-950/80 text-left active:scale-[0.99]"
     >
       <div className="relative aspect-video w-full bg-gray-900">

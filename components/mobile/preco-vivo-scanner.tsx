@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from "react"
 import { usePrecos } from "@/components/funded/use-precos"
 import { candidatosDeTicker } from "@/lib/mtmfunded/simulado/ordens"
+import { useT } from "@/components/i18n-provider"
 
 /**
  * PREÇO AO VIVO DA CASA sobre o gráfico do scanner.
@@ -25,6 +26,7 @@ function casas(n: number): number {
 }
 
 export default function PrecoVivoScanner({ symbol, className = "" }: { symbol: string; className?: string }) {
+  const t = useT()
   const candidatos = useMemo(() => candidatosDeTicker(symbol).slice(0, 3), [symbol])
   const { precos } = usePrecos(candidatos)
   const preco = candidatos.map((c) => precos[c]).find((p) => p && p.fresco) ?? null
@@ -49,7 +51,7 @@ export default function PrecoVivoScanner({ symbol, className = "" }: { symbol: s
     <div
       className={`pointer-events-none select-none rounded-md border border-[#D2A63C]/40 bg-black/80 px-2 py-1 font-mono text-[11px] leading-tight shadow-lg backdrop-blur-sm ${className}`}
       aria-live="off"
-      title="Preço da corretora MTM, ao vivo"
+      title={t("amB.preco.title")}
     >
       <div className="flex items-center gap-1.5 text-[9px] uppercase tracking-wide text-[#D2A63C]">
         <span className="inline-block h-1.5 w-1.5 animate-pulse rounded-full bg-emerald-400" />

@@ -12,6 +12,7 @@ import {
   Sparkles,
 } from "lucide-react"
 import { useAuth } from "@/contexts/auth-context"
+import { useT } from "@/components/i18n-provider"
 import type { User } from "@/contexts/auth-context"
 import { podeAcederPremiumUi, type PerfilUi } from "@/lib/perfil-ui"
 
@@ -41,21 +42,21 @@ const APPS = [
      */
     id: "social" as const,
     title: "MTM Social",
-    description: "Cria cartões e carrosséis com a tua marca",
+    descriptionKey: "amA.apps.socialDesc",
     icon: Sparkles,
     url: "/mtmsocial",
   },
   {
     id: "studio" as const,
     title: "MTM Studio",
-    description: "Brand builder e conteúdo visual MTM",
+    descriptionKey: "amA.apps.studioDesc",
     icon: Rocket,
     url: MTM_STUDIO_URL,
   },
   {
     id: "partnership" as const,
     title: "MTM Partnership Engine",
-    description: "Parcerias, UGC e colaborações",
+    descriptionKey: "amA.apps.partnershipDesc",
     icon: Handshake,
     url: MTM_PARTNERSHIP_URL,
   },
@@ -70,6 +71,7 @@ function isAppId(value: string | null): value is AppId {
 export default function AppsMobile() {
   const searchParams = useSearchParams()
   const router = useRouter()
+  const t = useT()
   const { user } = useAuth()
   const appParam = searchParams.get("app")
   const selected = isAppId(appParam) ? appParam : null
@@ -91,11 +93,10 @@ export default function AppsMobile() {
         <div className="mb-5 flex h-16 w-16 items-center justify-center rounded-2xl border border-[#D2A63C]/30 bg-[#D2A63C]/10">
           <Lock className="h-8 w-8 text-[#D2A63C]" />
         </div>
-        <h2 className="mb-2 text-xl font-bold text-white">Apps MTM</h2>
-        <p className="mb-1 text-sm font-medium text-[#D2A63C]">Acesso exclusivo</p>
+        <h2 className="mb-2 text-xl font-bold text-white">{t("amA.apps.title")}</h2>
+        <p className="mb-1 text-sm font-medium text-[#D2A63C]">{t("amA.apps.lockedLabel")}</p>
         <p className="mb-6 max-w-xs text-sm text-gray-400">
-          Esta secção está disponível para membros Premium (65€), IQ, VIP e Admin.
-          Faz upgrade do teu plano para aceder às apps MTM.
+          {t("amA.apps.lockedBody")}
         </p>
         <div className="flex w-full max-w-xs flex-col gap-3">
           <a
@@ -103,7 +104,7 @@ export default function AppsMobile() {
             className="inline-flex items-center justify-center gap-2 rounded-xl bg-[#D2A63C] px-5 py-3 text-sm font-semibold text-black transition-opacity hover:opacity-90 active:scale-95"
           >
             <Sparkles className="h-4 w-4" />
-            Ver planos de upgrade
+            {t("amA.apps.viewUpgradePlans")}
           </a>
         </div>
       </div>
@@ -119,7 +120,7 @@ export default function AppsMobile() {
             type="button"
             onClick={backToLauncher}
             className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-gray-800 text-white transition-colors hover:bg-gray-700 active:scale-95"
-            aria-label="Voltar às apps"
+            aria-label={t("amA.apps.backAria")}
           >
             <ArrowLeft className="h-5 w-5" />
           </button>
@@ -135,7 +136,7 @@ export default function AppsMobile() {
             rel="noopener noreferrer"
             className="inline-flex shrink-0 items-center gap-1 rounded-md border border-[#D2A63C]/40 bg-black/70 px-2 py-1.5 text-[11px] text-[#D2A63C] hover:opacity-80"
           >
-            Abrir fora
+            {t("amA.apps.openOutside")}
             <ExternalLink className="h-3 w-3" />
           </a>
         </div>
@@ -156,9 +157,9 @@ export default function AppsMobile() {
         <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-2xl border border-[#D2A63C]/30 bg-[#D2A63C]/10">
           <LayoutGrid className="h-6 w-6 text-[#D2A63C]" />
         </div>
-        <h2 className="text-lg font-bold text-white">Apps MTM</h2>
+        <h2 className="text-lg font-bold text-white">{t("amA.apps.title")}</h2>
         <p className="mt-1 text-sm text-gray-400">
-          Escolhe uma aplicação para abrir dentro da app
+          {t("amA.apps.pickApp")}
         </p>
       </div>
 
@@ -174,7 +175,7 @@ export default function AppsMobile() {
           </div>
           <div className="min-w-0 flex-1">
             <div className="font-semibold text-white">Web trader · MTM Funded</div>
-            <p className="mt-0.5 text-sm text-gray-400">Negoceia as tuas contas simuladas (desafios e torneios)</p>
+            <p className="mt-0.5 text-sm text-gray-400">{t("amA.apps.webTraderDesc")}</p>
           </div>
         </button>
         {APPS.map((app) => {
@@ -191,7 +192,7 @@ export default function AppsMobile() {
               </div>
               <div className="min-w-0 flex-1">
                 <div className="font-semibold text-white">{app.title}</div>
-                <p className="mt-0.5 text-sm text-gray-400">{app.description}</p>
+                <p className="mt-0.5 text-sm text-gray-400">{t(app.descriptionKey)}</p>
               </div>
             </button>
           )

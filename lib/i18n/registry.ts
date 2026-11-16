@@ -19,6 +19,9 @@ import { FREESESSION_MESSAGES } from "./messages/freesession"
 import { MTMFUNDED_MESSAGES } from "./messages/mtmfunded"
 import { MTMFUNDED_AVISO_MESSAGES } from "./messages/mtmfunded-aviso"
 import { WEBTRADER_ENTRAR_MESSAGES } from "./messages/webtrader-entrar"
+import { APPMOBILE_A_MESSAGES } from "./messages/appmobile-a"
+import { APPMOBILE_B_MESSAGES } from "./messages/appmobile-b"
+import { APPMOBILE_C_MESSAGES } from "./messages/appmobile-c"
 
 type NsSource = Partial<Record<Lang, Record<string, string>>>
 
@@ -55,4 +58,7 @@ export const ALL_MESSAGES = merge(
   MTMFUNDED_MESSAGES,
   MTMFUNDED_AVISO_MESSAGES,
   WEBTRADER_ENTRAR_MESSAGES,
+  APPMOBILE_A_MESSAGES,
+  APPMOBILE_B_MESSAGES,
+  APPMOBILE_C_MESSAGES,
 )

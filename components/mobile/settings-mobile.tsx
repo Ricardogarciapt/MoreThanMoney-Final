@@ -44,7 +44,7 @@ import {
 } from "lucide-react"
 import Image from "next/image"
 import LanguageSelectorEnhanced from "@/components/language-selector-enhanced"
-import { useT } from "@/components/i18n-provider"
+import { useT, useI18n } from "@/components/i18n-provider"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
@@ -63,16 +63,17 @@ function xpProgressInLevel(totalXp: number): number {
  * «📱 App Member (€35)» e — pior — recebiam o convite para comprar o upgrade logo por baixo.
  * Quem paga Premium pelo `subscription_plan` via o preço errado pela mesma razão.
  */
+// `label` é uma chave de tradução (amB.settings.plan.*), resolvida no render com t().
 function planLabel(perfil: PerfilUi | null | undefined): { label: string; color: string; bg: string } {
   const map: Record<ChavePerfil, { label: string; color: string; bg: string }> = {
-    admin:   { label: '🔴 Admin',            color: 'text-red-400',    bg: 'bg-red-500/10 border-red-500/30'    },
-    membro:  { label: '📱 App Member (€35)', color: 'text-green-400',  bg: 'bg-green-500/10 border-green-500/30' },
-    premium: { label: '💎 Premium (€65)',    color: 'text-cyan-400',   bg: 'bg-cyan-500/10 border-cyan-500/30'  },
-    iq:      { label: '🎓 IQ Member',        color: 'text-blue-400',   bg: 'bg-blue-500/10 border-blue-500/30'  },
-    skool:   { label: '📚 Skool Member',     color: 'text-purple-400', bg: 'bg-purple-500/10 border-purple-500/30' },
-    vip:     { label: '⭐ VIP',              color: 'text-yellow-400', bg: 'bg-yellow-500/10 border-yellow-500/30' },
-    trial:   { label: '⏳ Trial',            color: 'text-orange-400', bg: 'bg-orange-500/10 border-orange-500/30' },
-    inativo: { label: '⏸ Conta em pausa',   color: 'text-gray-400',   bg: 'bg-gray-500/10 border-gray-500/30'  },
+    admin:   { label: 'amB.settings.plan.admin',    color: 'text-red-400',    bg: 'bg-red-500/10 border-red-500/30'    },
+    membro:  { label: 'amB.settings.plan.membro',   color: 'text-green-400',  bg: 'bg-green-500/10 border-green-500/30' },
+    premium: { label: 'amB.settings.plan.premium',  color: 'text-cyan-400',   bg: 'bg-cyan-500/10 border-cyan-500/30'  },
+    iq:      { label: 'amB.settings.plan.iq',       color: 'text-blue-400',   bg: 'bg-blue-500/10 border-blue-500/30'  },
+    skool:   { label: 'amB.settings.plan.skool',    color: 'text-purple-400', bg: 'bg-purple-500/10 border-purple-500/30' },
+    vip:     { label: 'amB.settings.plan.vip',      color: 'text-yellow-400', bg: 'bg-yellow-500/10 border-yellow-500/30' },
+    trial:   { label: 'amB.settings.plan.trial',    color: 'text-orange-400', bg: 'bg-orange-500/10 border-orange-500/30' },
+    inativo: { label: 'amB.settings.plan.inativo',  color: 'text-gray-400',   bg: 'bg-gray-500/10 border-gray-500/30'  },
   }
   return map[chavePerfilUi(perfil)]
 }
@@ -81,6 +82,8 @@ function planLabel(perfil: PerfilUi | null | undefined): { label: string; color:
 
 export default function SettingsMobile() {
   const t = useT()
+  const { lang } = useI18n()
+  const locale = lang === "en" ? "en-GB" : "pt-PT"
   const { user, isPrimeverse } = useAuth()
   const { toast } = useToast()
   const fileRef = useRef<HTMLInputElement>(null)
@@ -191,12 +194,12 @@ export default function SettingsMobile() {
       if (!res.ok) throw new Error(data.error || "Falha")
       mtmSubRef.current = data.subscription
       toast({
-        title: next ? "Trading Alerts activados" : "Trading Alerts desactivados",
-        description: next ? "Vais receber alertas dos teus ativos." : "Deixas de receber notificações de Trading Alerts.",
+        title: next ? t("amB.settings.alertsOn") : t("amB.settings.alertsOff"),
+        description: next ? t("amB.settings.alertsOnDesc") : t("amB.settings.alertsOffDesc"),
       })
     } catch {
       setMtmAlertsOn(!next)
-      toast({ title: "Erro", description: "Não foi possível guardar.", variant: "destructive" })
+      toast({ title: t("amB.settings.error"), description: t("amB.settings.cantSave"), variant: "destructive" })
     } finally {
       setMtmAlertsBusy(false)
     }
@@ -219,14 +222,14 @@ export default function SettingsMobile() {
       })
       if (!res.ok) throw new Error("Falha ao guardar")
       toast({
-        title: next[key] ? "Notificações activadas" : "Notificações desactivadas",
-        description: NOTIFICATION_CATEGORY_LABELS[key].title,
+        title: next[key] ? t("amB.settings.notifOn") : t("amB.settings.notifOff"),
+        description: t(`amB.settings.notif.${key}.title`),
       })
     } catch {
       setNotifPrefs(notifPrefs)
       toast({
-        title: "Erro",
-        description: "Não foi possível guardar a preferência.",
+        title: t("amB.settings.error"),
+        description: t("amB.settings.prefCantSave"),
         variant: "destructive",
       })
     } finally {
@@ -241,7 +244,7 @@ export default function SettingsMobile() {
 
   const handleThemeChange = (next: "dark" | "light") => {
     setTheme(next)
-    toast({ title: "Tema actualizado", description: `Tema ${next === "dark" ? "escuro" : "claro"} activado.` })
+    toast({ title: t("amB.settings.themeUpdated"), description: next === "dark" ? t("amB.settings.themeOnDark") : t("amB.settings.themeOnLight") })
   }
 
   /**
@@ -261,11 +264,11 @@ export default function SettingsMobile() {
         body: JSON.stringify({ preferences: { sound_enabled: next } }),
       })
       if (!res.ok) throw new Error("Falha ao guardar")
-      toast({ title: next ? "Som activado" : "Som desactivado", description: next ? "As notificações terão som." : "As notificações serão silenciosas." })
+      toast({ title: next ? t("amB.settings.soundOn") : t("amB.settings.soundOff"), description: next ? t("amB.settings.soundOnDesc") : t("amB.settings.soundOffDesc") })
     } catch {
       setSoundEnabled(!next)
       try { localStorage.setItem("mtm_notif_sound", !next ? "1" : "0") } catch {}
-      toast({ title: "Erro", description: "Não foi possível guardar a preferência de som.", variant: "destructive" })
+      toast({ title: t("amB.settings.error"), description: t("amB.settings.soundCantSave"), variant: "destructive" })
     }
   }
 
@@ -307,9 +310,9 @@ export default function SettingsMobile() {
           }
           await PushNotifications.register()
           persistPush(true)
-          toast({ title: "Notificações activadas", description: "Vais receber alertas na app." })
+          toast({ title: t("amB.settings.notifOn"), description: t("amB.settings.pushOnDesc") })
         } else {
-          toast({ title: "Notificações bloqueadas", description: "Activa nas definições do dispositivo.", variant: "destructive" })
+          toast({ title: t("amB.settings.blocked"), description: t("amB.settings.blockedNative"), variant: "destructive" })
         }
       } catch (e) {
         console.warn("[PUSH] Erro Capacitor:", e)
@@ -320,7 +323,7 @@ export default function SettingsMobile() {
     // ── Web / browser (FCM) ───────────────────────────────────────
     if (typeof window === "undefined" || !("Notification" in window)) return
     if (Notification.permission === "denied") {
-      toast({ title: "Notificações bloqueadas", description: "Activa as notificações nas definições do browser.", variant: "destructive" })
+      toast({ title: t("amB.settings.blocked"), description: t("amB.settings.blockedWeb"), variant: "destructive" })
       return
     }
     try {
@@ -330,15 +333,15 @@ export default function SettingsMobile() {
         const uid = user?.id
         if (uid) await saveFCMToken(uid, fcmToken)
         persistPush(true)
-        toast({ title: "Notificações activadas", description: "Vais receber alertas em tempo real." })
+        toast({ title: t("amB.settings.notifOn"), description: t("amB.settings.realtimeDesc") })
       } else {
-        toast({ title: "Notificações não activadas", description: "Não foi possível registar as notificações neste browser.", variant: "destructive" })
+        toast({ title: t("amB.settings.notActive"), description: t("amB.settings.notActiveDesc"), variant: "destructive" })
       }
     } catch {
       const permission = await Notification.requestPermission()
       if (permission === "granted") {
         persistPush(true)
-        toast({ title: "Notificações activadas", description: "Vais receber alertas em tempo real." })
+        toast({ title: t("amB.settings.notifOn"), description: t("amB.settings.realtimeDesc") })
       }
     }
   }
@@ -363,9 +366,9 @@ export default function SettingsMobile() {
         })
       }
       persistPush(false)
-      toast({ title: "Notificações desactivadas", description: "Já não vais receber push neste perfil." })
+      toast({ title: t("amB.settings.notifOff"), description: t("amB.settings.pushOffDesc") })
     } catch {
-      toast({ title: "Erro", description: "Não foi possível desactivar as notificações.", variant: "destructive" })
+      toast({ title: t("amB.settings.error"), description: t("amB.settings.cantDisablePush"), variant: "destructive" })
     }
   }
 
@@ -374,7 +377,7 @@ export default function SettingsMobile() {
     const denied =
       typeof window !== "undefined" && "Notification" in window && Notification.permission === "denied"
     if (denied && !pushEnabled) {
-      toast({ title: "Notificações bloqueadas", description: "Activa as notificações nas definições do browser/dispositivo.", variant: "destructive" })
+      toast({ title: t("amB.settings.blocked"), description: t("amB.settings.blockedAny"), variant: "destructive" })
       return
     }
     setPushBusy(true)
@@ -391,7 +394,7 @@ export default function SettingsMobile() {
       localStorage.removeItem("mtm_onboarding_done")
     } catch {}
     window.dispatchEvent(new Event("mtm-replay-tutorial"))
-    toast({ title: "Tutorial reiniciado", description: "O tutorial vai aparecer em breve." })
+    toast({ title: t("amB.settings.tutorialReset"), description: t("amB.settings.tutorialResetDesc") })
   }
 
   // ── Broker UID ────────────────────────────────────────────────────────────
@@ -423,10 +426,10 @@ export default function SettingsMobile() {
         .update({ broker_uid: brokerUid.trim() })
         .eq("id", user.id)
       if (error) throw error
-      toast({ title: "UID guardado", description: "Número de conta da corretora actualizado." })
+      toast({ title: t("amB.settings.uidSaved"), description: t("amB.settings.uidSavedDesc") })
       setEditingUid(false)
     } catch {
-      toast({ title: "Erro", description: "Não foi possível guardar o UID.", variant: "destructive" })
+      toast({ title: t("amB.settings.error"), description: t("amB.settings.cantSaveUid"), variant: "destructive" })
     } finally {
       setSavingUid(false)
     }
@@ -467,10 +470,10 @@ export default function SettingsMobile() {
         .update({ full_name: newName.trim() })
         .eq("id", user.id)
       if (error) throw error
-      toast({ title: "Nome actualizado", description: "O teu nome foi guardado com sucesso." })
+      toast({ title: t("amB.settings.nameUpdated"), description: t("amB.settings.nameUpdatedDesc") })
       setEditingName(false)
     } catch {
-      toast({ title: "Erro", description: "Não foi possível guardar o nome.", variant: "destructive" })
+      toast({ title: t("amB.settings.error"), description: t("amB.settings.cantSaveName"), variant: "destructive" })
     } finally {
       setSavingName(false)
     }
@@ -479,24 +482,24 @@ export default function SettingsMobile() {
   // ── Alterar password ───────────────────────────────────────────────────────
   const savePassword = async () => {
     if (!newPw || newPw !== confirmPw) {
-      toast({ title: "Erro", description: "As passwords não coincidem.", variant: "destructive" })
+      toast({ title: t("amB.settings.error"), description: t("amB.settings.pwMismatch"), variant: "destructive" })
       return
     }
     if (newPw.length < 8) {
-      toast({ title: "Erro", description: "A password deve ter pelo menos 8 caracteres.", variant: "destructive" })
+      toast({ title: t("amB.settings.error"), description: t("amB.settings.pwTooShort"), variant: "destructive" })
       return
     }
     setSavingPw(true)
     try {
       const { error } = await supabase.auth.updateUser({ password: newPw })
       if (error) throw error
-      toast({ title: "Password alterada", description: "Usa a nova password na próxima sessão." })
+      toast({ title: t("amB.settings.pwChanged"), description: t("amB.settings.pwChangedDesc") })
       setChangingPw(false)
       setCurrentPw("")
       setNewPw("")
       setConfirmPw("")
     } catch (err: any) {
-      toast({ title: "Erro", description: err?.message ?? "Não foi possível alterar a password.", variant: "destructive" })
+      toast({ title: t("amB.settings.error"), description: err?.message ?? t("amB.settings.cantChangePw"), variant: "destructive" })
     } finally {
       setSavingPw(false)
     }
@@ -507,7 +510,7 @@ export default function SettingsMobile() {
     const file = e.target.files?.[0]
     if (!file || !user?.id) return
     if (file.size > 2 * 1024 * 1024) {
-      toast({ title: "Ficheiro demasiado grande", description: "Máximo 2 MB.", variant: "destructive" })
+      toast({ title: t("amB.settings.fileTooBig"), description: t("amB.settings.fileTooBigDesc"), variant: "destructive" })
       return
     }
     setUploadingAvatar(true)
@@ -525,9 +528,9 @@ export default function SettingsMobile() {
         .update({ avatar_url: publicUrl })
         .eq("id", user.id)
       if (profileError) throw profileError
-      toast({ title: "Foto actualizada", description: "A tua foto de perfil foi guardada." })
+      toast({ title: t("amB.settings.photoUpdated"), description: t("amB.settings.photoUpdatedDesc") })
     } catch {
-      toast({ title: "Erro", description: "Não foi possível actualizar a foto.", variant: "destructive" })
+      toast({ title: t("amB.settings.error"), description: t("amB.settings.cantUpdatePhoto"), variant: "destructive" })
     } finally {
       setUploadingAvatar(false)
       if (fileRef.current) fileRef.current.value = ""
@@ -551,7 +554,7 @@ export default function SettingsMobile() {
     setDeletingAccount(true)
     try {
       const token = await getAccessToken()
-      if (!token) throw new Error("Sessão inválida")
+      if (!token) throw new Error(t("amB.settings.sessionInvalid"))
 
       const res = await fetch("/api/user/delete-account", {
         method: "DELETE",
@@ -560,18 +563,18 @@ export default function SettingsMobile() {
 
       if (!res.ok) {
         const data = await res.json()
-        throw new Error(data.error ?? "Erro ao eliminar conta")
+        throw new Error(data.error ?? t("amB.settings.errDelete"))
       }
 
       // Limpar sessão local e redirecionar
       clearCachedSession()
       await supabase.auth.signOut()
-      toast({ title: "Conta eliminada", description: "Os teus dados foram removidos permanentemente." })
+      toast({ title: t("amB.settings.accountDeleted"), description: t("amB.settings.accountDeletedDesc") })
       window.location.href = "/"
     } catch (err: any) {
       toast({
-        title: "Erro",
-        description: err?.message ?? "Não foi possível eliminar a conta. Tenta novamente.",
+        title: t("amB.settings.error"),
+        description: err?.message ?? t("amB.settings.cantDeleteAccount"),
         variant: "destructive",
       })
     } finally {
@@ -590,7 +593,7 @@ export default function SettingsMobile() {
     setRedeeming(true)
     try {
       const token = await getAccessToken()
-      if (!token) throw new Error("Sessão inválida")
+      if (!token) throw new Error(t("amB.settings.sessionInvalid"))
       const res = await fetch("/api/partnership/redeem", {
         method: "POST",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
@@ -598,15 +601,15 @@ export default function SettingsMobile() {
       })
       const data = await res.json()
       if (!res.ok || !data.success) {
-        throw new Error(data.message ?? "Não foi possível resgatar o código.")
+        throw new Error(data.message ?? t("amB.settings.cantRedeem"))
       }
-      toast({ title: "Código ativado 🎉", description: data.message })
+      toast({ title: t("amB.settings.codeActivated"), description: data.message })
       setRedeemCode("")
       // Recarregar para refletir o novo acesso Premium/VIP em toda a app.
       clearCachedSession()
       setTimeout(() => window.location.reload(), 1200)
     } catch (err: any) {
-      toast({ title: "Código inválido", description: err?.message ?? "Tenta novamente.", variant: "destructive" })
+      toast({ title: t("amB.settings.codeInvalid"), description: err?.message ?? t("amB.settings.tryAgain"), variant: "destructive" })
     } finally {
       setRedeeming(false)
     }
@@ -623,10 +626,10 @@ export default function SettingsMobile() {
       }
       // Web e app: re-sincronizar o entitlement a partir do Supabase.
       clearCachedSession()
-      toast({ title: "Compras restauradas", description: "Sincronizámos o teu acesso. A atualizar…" })
+      toast({ title: t("amB.settings.purchasesRestored"), description: t("amB.settings.purchasesRestoredDesc") })
       setTimeout(() => window.location.reload(), 1200)
     } catch {
-      toast({ title: "Não foi possível restaurar", description: "Tenta novamente ou contacta o suporte.", variant: "destructive" })
+      toast({ title: t("amB.settings.cantRestore"), description: t("amB.settings.cantRestoreDesc"), variant: "destructive" })
       setRestoring(false)
     }
   }
@@ -679,10 +682,10 @@ export default function SettingsMobile() {
           <p className="text-white font-semibold text-lg leading-tight">{user?.full_name ?? user?.username ?? "—"}</p>
           <p className="text-gray-400 text-sm">{user?.email}</p>
           <div className="mt-1.5 flex items-center justify-center gap-2 flex-wrap">
-            <Badge className={`border text-xs ${plan.bg} ${plan.color}`}>{plan.label}</Badge>
+            <Badge className={`border text-xs ${plan.bg} ${plan.color}`}>{t(plan.label)}</Badge>
             <span className="inline-flex items-center gap-1 rounded-full border border-yellow-500/30 bg-yellow-500/10 px-2 py-0.5 text-xs font-semibold text-yellow-400">
               <Zap className="w-3 h-3" />
-              {xpData.total_xp.toLocaleString("pt-PT")} XP · {t("appmobile.levelShort")} {xpData.current_level}
+              {xpData.total_xp.toLocaleString(locale)} XP · {t("appmobile.levelShort")} {xpData.current_level}
             </span>
           </div>
         </div>
@@ -699,7 +702,7 @@ export default function SettingsMobile() {
                 <div className="flex items-center gap-1">
                   <Zap className="w-3 h-3 text-yellow-400" />
                   <span className="text-xs font-semibold text-yellow-400">
-                    {xpData.total_xp.toLocaleString("pt-PT")} XP
+                    {xpData.total_xp.toLocaleString(locale)} XP
                   </span>
                 </div>
               </div>
@@ -835,10 +838,10 @@ export default function SettingsMobile() {
           <div className={`rounded-xl border p-4 ${plan.bg}`}>
             <div className="flex items-start justify-between">
               <div>
-                <p className={`font-semibold text-sm ${plan.color}`}>{plan.label}</p>
+                <p className={`font-semibold text-sm ${plan.color}`}>{t(plan.label)}</p>
                 {user?.subscription_expires_at && (
                   <p className="text-xs text-gray-400 mt-0.5">
-                    {t("appmobile.validUntil")} {new Date(user.subscription_expires_at).toLocaleDateString("pt-PT")}
+                    {t("appmobile.validUntil")} {new Date(user.subscription_expires_at).toLocaleDateString(locale)}
                   </p>
                 )}
               </div>
@@ -1051,16 +1054,12 @@ export default function SettingsMobile() {
               resto liga aqui — e é aqui que tem de perceber porquê, não numa mensagem que já
               desapareceu do feed. */}
           <div className="mt-3 mb-2 rounded-xl border border-[#D2A63C]/30 bg-[#D2A63C]/[0.07] p-3">
-            <p className="text-[13px] font-semibold text-[#D2A63C] mb-1">Mudámos o que te avisamos</p>
+            <p className="text-[13px] font-semibold text-[#D2A63C] mb-1">{t("amB.settings.mud.title")}</p>
             <p className="text-[12px] leading-relaxed text-gray-300">
-              Estavas a receber tudo: cada mensagem de cada canal e cada atualização de cada trade.
-              Eram dezenas por dia, e o que interessava perdia-se no meio.
+              {t("amB.settings.mud.p1")}
             </p>
             <p className="text-[12px] leading-relaxed text-gray-300 mt-2">
-              Agora chega-te só o essencial — <strong className="text-white">sinais que podes aceitar</strong>,
-              <strong className="text-white"> sessões ao vivo</strong> e as
-              <strong className="text-white"> oportunidades de DCA</strong>. O resto está aqui em baixo,
-              e ligas o que quiseres. Nada foi apagado: continua tudo no chat e nos alertas.
+              {t("amB.settings.mud.p2a")}<strong className="text-white">{t("amB.settings.mud.s1")}</strong>{t("amB.settings.mud.p2b")}<strong className="text-white">{t("amB.settings.mud.s2")}</strong>{t("amB.settings.mud.p2c")}<strong className="text-white">{t("amB.settings.mud.s3")}</strong>{t("amB.settings.mud.p2d")}
             </p>
           </div>
 
@@ -1069,7 +1068,6 @@ export default function SettingsMobile() {
           </p>
           <div className="bg-gray-800/50 rounded-xl divide-y divide-gray-700/50">
             {(Object.keys(NOTIFICATION_CATEGORY_LABELS) as NotificationCategory[]).map((key) => {
-              const meta = NOTIFICATION_CATEGORY_LABELS[key]
               const enabled = notifPrefs[key]
               const saving = savingNotifPref === key
               return (
@@ -1080,9 +1078,9 @@ export default function SettingsMobile() {
                   className="w-full flex items-start gap-3 px-4 py-3 hover:bg-gray-700/40 transition-colors text-left disabled:opacity-60"
                 >
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm text-white font-medium">{meta.title}</p>
+                    <p className="text-sm text-white font-medium">{t(`amB.settings.notif.${key}.title`)}</p>
                     {/* App iOS: sem «Cripto» na lista de canais (Apple 3.1.5(iii)). */}
-                    <p className="text-xs text-gray-500 mt-0.5">{semCripto() ? meta.description.replace(/,?\s*Cripto\b/, "") : meta.description}</p>
+                    <p className="text-xs text-gray-500 mt-0.5">{semCripto() ? t(`amB.settings.notif.${key}.description`).replace(/,?\s*(Cripto|Crypto)\b/, "") : t(`amB.settings.notif.${key}.description`)}</p>
                   </div>
                   <span className={`text-xs px-2 py-0.5 rounded-full flex-shrink-0 mt-0.5 ${
                     enabled ? "bg-green-500/20 text-green-400" : "bg-gray-700 text-gray-400"
