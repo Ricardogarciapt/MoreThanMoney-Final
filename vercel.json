@@ -323,6 +323,10 @@
     {
       "path": "/api/cron/contas-saldos",
       "schedule": "20 * * * *"
+    },
+    {
+      "path": "/api/cron/financas-fecho",
+      "schedule": "10 7 * * *"
     }
   ]
 }
