@@ -24,18 +24,21 @@ const PALAVRAS: Record<Segmento, string[]> = {
   criador: ['finance content creator', 'youtube finance', 'personal finance media'],
   escola: ['trading school', 'financial education', 'investment courses'],
   prop_firm: ['prop trading', 'proprietary trading', 'funded trader'],
+  negocio_local: ['beauty salon', 'personal trainer', 'clinic', 'studio'],
+  licenca_scanners: ['trading education', 'trading academy', 'forex education', 'trading courses'],
+  parceria_redes: ['personal finance media', 'entrepreneurship', 'business podcast', 'fintech'],
 }
 
 export function filtrosDoSegmento(segmento: Segmento, pais: Pais, extra: string[] = []) {
   const palavras = [...PALAVRAS[segmento], ...extra.map((x) => x.trim()).filter(Boolean)].slice(0, 8)
-  return { palavras, locais: [pais === 'BR' ? 'Brazil' : 'Portugal'] }
+  return { palavras, locais: pais === 'BR' ? ['Brazil'] : pais === 'INT' ? ['United Kingdom', 'Spain', 'Italy', 'Germany', 'United Arab Emirates'] : ['Portugal'] }
 }
 
 /** As páginas onde uma empresa costuma pôr o contacto, por ordem. Só 2: o ritmo é de 10 s por pedido. */
 export function paginasDeContacto(site: string, pais: Pais): string[] {
   let origem: string
   try { origem = new URL(/^https?:\/\//i.test(site) ? site : `https://${site}`).origin } catch { return [] }
-  return [`${origem}${pais === 'BR' ? '/contato' : '/contactos'}`, `${origem}/`]
+  return [`${origem}${pais === 'BR' ? '/contato' : pais === 'INT' ? '/contact' : '/contactos'}`, `${origem}/`]
 }
 
 export interface ResultadoImportacao {
