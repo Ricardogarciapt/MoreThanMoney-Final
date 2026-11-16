@@ -14,7 +14,7 @@ const caso = (nome: string, f: () => void) => { f(); n++; console.log(`  ok  ${n
 
 caso('MAU: nenhum texto de follow-up oferece grátis/trial/teste', () => {
   for (const p of ['membro', 'corretora'] as PassoPago[]) {
-    for (const t of [1, 2, 3]) {
+    for (const t of [1, 2, 3, 4]) {
       const tx = textoDoToque(p, t, 'Ana')
       assert.ok(!PALAVRAS_DE_GRATIS.test(tx), `${p}/${t} oferece grátis: ${tx}`)
     }
@@ -40,7 +40,7 @@ caso('o link é do passo pago, assinado pelo dono da oferta (nunca AG-SAAS)', ()
     assert.ok(linkTemAg(l), l)
     assert.ok(l.includes(`ag=${AGENTE_DO_PASSO[p]}`), l)
     assert.ok(!l.includes('AG-SAAS'), l)
-    for (const t of [1, 2, 3]) assert.ok(textoDoToque(p, t).includes(l))
+    for (const t of [1, 2, 3, 4]) assert.ok(textoDoToque(p, t).includes(l))
   }
   assert.ok(linkDoPasso('membro').includes('plano=membro'), 'o Membro abre no pack pago, não no teste')
 })

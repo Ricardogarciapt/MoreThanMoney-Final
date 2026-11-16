@@ -48,7 +48,7 @@ export function linkDoPasso(passo: PassoPago): string {
 }
 
 /**
- * O texto de cada toque. Três toques, sem pressão inventada, sem lucro prometido, sem euros de
+ * O texto de cada toque. Quatro toques (16/11: no dia, +24 h, +48 h, +72 h), sem pressão inventada, sem lucro prometido, sem euros de
  * resultado. O preço do Membro diz-se (é o que se vende); o Premium aparece como o que o
  * depósito DESBLOQUEIA, nunca como oferta grátis.
  */
@@ -62,10 +62,16 @@ export function textoDoToque(passo: PassoPago, toque: number, primeiroNome?: str
     if (toque === 2) {
       return `${ola}quem entra como Membro começa logo pelas sessões desta semana. São ${PRECO_MEMBRO} e cancelas quando quiseres. Queres que te guie no registo? 👉 ${link}`
     }
+    if (toque === 3) {
+      return `${ola}uma pergunta só: o que te está a travar — o preço, o tempo, ou não saberes se é para ti? Diz-me e eu respondo-te com franqueza. Se já estiveres decidido, é aqui 👉 ${link}`
+    }
     return `${ola}não te volto a chatear com isto 🙏 Se quiseres avançar, o pack Membro está aqui: ${link}. Fico por aqui para qualquer dúvida.`
   }
   if (toque <= 1) {
     return `${ola}o passo seguinte é abrir a tua conta na PU Prime e depositar a partir de $${MIN_DEPOSIT} — com a conta validada, o Premium e os grupos de sinais ficam incluídos. Abres aqui 👉 ${link}`
+  }
+  if (toque === 3) {
+    return `${ola}uma dúvida comum: o depósito fica na TUA conta, em teu nome, numa corretora regulada — a MTM não toca no teu dinheiro. Só deves depositar o que podes arriscar, porque trading tem risco. Se tiveres dúvidas, pergunta-me aqui. Abres em 👉 ${link}`
   }
   if (toque === 2) {
     return `${ola}ficou a faltar a conta na corretora. É o que desbloqueia o Premium e os sinais. Abres em 2 minutos 👉 ${link} e depois mandas-me o UID aqui.`
