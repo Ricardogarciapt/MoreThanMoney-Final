@@ -34,7 +34,16 @@ export async function GET(req: NextRequest) {
   const hoje = agora.toISOString().slice(0, 10)
 
   const { data: cfg } = await db.from('site_settings').select('value').eq('key', 'financas_regime').maybeSingle()
-  const regime: Regime = { entidade: null, iva: null, ...((cfg?.value as Partial<Regime>) ?? {}) }
+  // `site_settings.value` pode vir como jsonb ou como texto JSON, conforme a coluna.
+  let guardado: unknown = cfg?.value ?? null
+  if (typeof guardado === 'string') {
+    try {
+      guardado = JSON.parse(guardado)
+    } catch {
+      guardado = null
+    }
+  }
+  const regime: Regime = { entidade: null, iva: null, ...((guardado as Partial<Regime> | null) ?? {}) }
 
   const out: Record<string, unknown> = { hoje, regime }
 
