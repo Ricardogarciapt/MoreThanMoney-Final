@@ -17,7 +17,7 @@ import { destinoPorCaminho } from "@/lib/navegacao"
  *
  * Sem vídeo ligado para o destino atual não desenha nada.
  */
-export default function BotaoAprendeAUsar({ destinoFixo }: { destinoFixo?: string }) {
+export default function BotaoAprendeAUsar({ destinoFixo, acimaDoApoio = false }: { destinoFixo?: string; acimaDoApoio?: boolean }) {
   const caminho = usePathname()
   const config = useConfigIntro()
   const [aberto, setAberto] = useState(false)
@@ -33,7 +33,7 @@ export default function BotaoAprendeAUsar({ destinoFixo }: { destinoFixo?: strin
       <button
         type="button"
         onClick={() => setAberto(true)}
-        className="fixed bottom-5 right-4 z-[2147483630] inline-flex items-center gap-2 rounded-full border border-[#D2A63C]/50 bg-[#0a0a0c]/95 px-4 py-2.5 text-[13px] font-semibold text-[#D2A63C] shadow-lg shadow-black/50 backdrop-blur transition hover:bg-[#D2A63C] hover:text-black sm:bottom-6 sm:right-6"
+        className={`fixed ${acimaDoApoio ? "bottom-[calc(5.25rem+env(safe-area-inset-bottom))] sm:bottom-[calc(6rem+env(safe-area-inset-bottom))]" : "bottom-5 sm:bottom-6"} right-4 z-[2147483630] inline-flex items-center gap-2 rounded-full border border-[#D2A63C]/50 bg-[#0a0a0c]/95 px-4 py-2.5 text-[13px] font-semibold text-[#D2A63C] shadow-lg shadow-black/50 backdrop-blur transition hover:bg-[#D2A63C] hover:text-black sm:right-6`}
       >
         <GraduationCap className="h-4 w-4" />
         {video.texto}

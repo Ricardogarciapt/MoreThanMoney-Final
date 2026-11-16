@@ -319,6 +319,10 @@
     {
       "path": "/api/cron/contas-saldos",
       "schedule": "20 * * * *"
+    },
+    {
+      "path": "/api/cron/suporte-prazos",
+      "schedule": "*/5 * * * *"
     }
   ]
 }
