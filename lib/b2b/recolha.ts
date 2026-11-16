@@ -10,12 +10,65 @@
  *
  * `robotsPermite` e `extrairEmails` são puros (a guarda prende-os); `recolherDaPagina` faz a rede.
  */
-import { dominioDe, eGenerico, validarProspecto } from './validador'
+import { dominioDe, eGenerico, eWebmailPessoal, validarProspecto } from './validador'
 import type { Pais, Segmento } from './sequencias'
 
 export const USER_AGENT = 'MTM-B2B-Recolha/1.0 (+https://www.morethanmoney.pt)'
 export const RITMO_MS = 10_000
 const PROIBIDOS = /(^|\.)(linkedin\.com|lnkd\.in|facebook\.com|instagram\.com|x\.com|twitter\.com|tiktok\.com)$/i
+
+/**
+ * 16/11 — PÁGINAS DE LINKS (Beacons, Linktree e afins). São o alvo do produto de entrada: o negócio
+ * ainda não tem página própria. A página é PÚBLICA e foi o próprio negócio que lá pôs o email; mas o
+ * email não é do domínio da página, por isso aqui aceita-se qualquer domínio que NÃO seja webmail
+ * pessoal (um negócio com email no seu domínio e sem site é exactamente o cliente certo). Os de
+ * gmail/hotmail ficam de fora — por email não se lhes escreve (regra do dono e Lei 41/2004).
+ */
+export const PAGINAS_DE_LINKS = /(^|\.)(linktr\.ee|beacons\.ai|beacons\.page|bio\.link|lnk\.bio|campsite\.bio|taplink\.cc|taplink\.at|solo\.to|linkin\.bio|linkbio\.co|direct\.me)$/i
+export function ePaginaDeLinks(host: string): boolean {
+  return PAGINAS_DE_LINKS.test(String(host ?? '').toLowerCase())
+}
+
+/** Emails de uma página de links: qualquer domínio que não seja webmail pessoal. Puro. */
+export function extrairEmailsDeLinks(html: string): string[] {
+  const limpo = String(html ?? '')
+    .replace(/&#64;|&#x40;|\s\[at\]\s|\s\(at\)\s/gi, '@')
+    .replace(/&#46;|\s\[dot\]\s|\s\(dot\)\s/gi, '.')
+  const achados = limpo.match(/[A-Za-z0-9._%+-]+@[A-Za-z0-9-]+(?:\.[A-Za-z0-9-]+)*\.[A-Za-z]{2,}/g) ?? []
+  const out = new Set<string>()
+  for (const a of achados) {
+    const e = a.toLowerCase()
+    if (/\.(png|jpg|jpeg|gif|webp|svg)$/.test(e)) continue
+    if (ePaginaDeLinks(dominioDe(e)) || /(^|\.)(sentry|wixpress|cloudflare)\./.test(dominioDe(e))) continue
+    if (eWebmailPessoal(e)) continue
+    out.add(e)
+  }
+  return [...out]
+}
+
+/**
+ * A PROVA DE PESSOA COLECTIVA escrita na própria página: NIPC português (9 dígitos a começar por 5),
+ * CNPJ brasileiro, ou uma forma jurídica (Lda., Unipessoal, S.A., Ltd, LLC, GmbH, S.L., B.V., Inc.).
+ * Devolve o trecho encontrado (fica gravado como `identificacao`) ou null. Um NIF de pessoa singular
+ * (começa por 1, 2 ou 3) NÃO conta. Puro.
+ */
+export function evidenciaPessoaColectiva(html: string, empresa?: string): string | null {
+  const t = String(html ?? '').replace(/<[^>]+>/g, ' ').replace(/&nbsp;|&#160;/g, ' ').replace(/\s+/g, ' ')
+  const cnpj = t.match(/CNPJ[:\s.º°n]*\d{2}\.?\d{3}\.?\d{3}\/?\d{4}-?\d{2}/i)
+  if (cnpj) return cnpj[0].trim()
+  const nipc = t.match(/\b(NIPC|NIF|Contribuinte|VAT|NIF\/NIPC)[:\s.º°nN]*(PT\s?)?(5\d{8})\b/i)
+  if (nipc) return nipc[0].trim()
+  // Uma forma jurídica só conta se trouxer o nome da empresa: «site feito por Agência X, Lda.» no
+  // rodapé é a agência, não o prospecto.
+  const chave = String(empresa ?? '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').split(/[^a-z0-9]+/).find((w) => w.length >= 4)
+  const re = /[A-Z0-9À-Ý][\wÀ-ÿ&.,'\- ]{1,60}?\s(Lda\.?|Unipessoal,?\s+Lda\.?|S\.A\.|Ltda\.?|Ltd\.?|LLC|GmbH|S\.L\.|B\.V\.|Inc\.)(?=[\s,.;)]|$)/g
+  for (const m of t.matchAll(re)) {
+    const trecho = m[0].trim().slice(0, 120)
+    const plano = trecho.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+    if (chave && plano.includes(chave)) return trecho
+  }
+  return null
+}
 
 /** robots.txt → este caminho pode ser lido por nós? Puro. Regra mais longa vence; Allow ganha empates. */
 export function robotsPermite(robots: string, caminho: string, ua = 'MTM-B2B-Recolha'): boolean {
@@ -94,6 +147,8 @@ export interface PedidoRecolha {
 export interface ResultadoRecolha {
   ok: boolean
   motivo?: string
+  /** O trecho da página que prova a pessoa colectiva (NIPC, CNPJ, forma jurídica), se houver. */
+  evidenciaPc?: string | null
   aceites: Array<{ email: string; tipo: 'generico' | 'comercial_publicado' }>
   recusados: Array<{ email: string; motivo: string }>
 }
@@ -127,9 +182,12 @@ export async function recolherDaPagina(p: PedidoRecolha): Promise<ResultadoRecol
   }
 
   const comerciais = new Set((p.comerciaisPublicados ?? []).map((x) => x.trim().toLowerCase()))
-  const res: ResultadoRecolha = { ok: true, aceites: [], recusados: [] }
-  for (const email of extrairEmails(html, u.hostname)) {
-    const tipo = eGenerico(email) ? 'generico' : comerciais.has(email) ? 'comercial_publicado' : null
+  const deLinks = ePaginaDeLinks(u.hostname)
+  const res: ResultadoRecolha = { ok: true, aceites: [], recusados: [], evidenciaPc: evidenciaPessoaColectiva(html, p.empresa) }
+  for (const email of deLinks ? extrairEmailsDeLinks(html) : extrairEmails(html, u.hostname)) {
+    // Numa página de links o email foi posto lá pelo próprio negócio como o contacto dele: conta como
+    // publicado para contacto (mas webmail pessoal já ficou de fora no extractor).
+    const tipo = eGenerico(email) ? 'generico' : comerciais.has(email) || deLinks ? 'comercial_publicado' : null
     if (!tipo) { res.recusados.push({ email, motivo: 'Endereço nominal sem indicação de contacto comercial.' }); continue }
     // A pessoa colectiva pode estar por confirmar: valida-se o resto como se estivesse, e guarda-se a flag real.
     const v = validarProspecto({ email, emailTipo: tipo, fonteUrl: u.toString(), pessoaColectiva: true })

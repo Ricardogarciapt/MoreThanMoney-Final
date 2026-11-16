@@ -1,5 +1,5 @@
 /**
- * Free trial de 3 dias (sem cartão) — inserido na política de acesso existente.
+ * Free trial de 3 dias (pede o cartão, cobra só no fim; era sem cartão até 16/11/2026) — inserido na política de acesso existente.
  *
  * Modelo: ao registar em /register (opção "grátis"), o utilizador nasce como
  * `user_type="guest"` + `subscription_platform="trial"` + `subscription_status="trialing"`

@@ -1586,12 +1586,12 @@ export const hotLeadInviteTemplate = (params: { name?: string; siteUrl?: string 
   )
   const ctaTrial = buttonComponent('Começar o meu teste grátis →', `${site}/register`, 'primary')
   const landing = textComponent(
-    `Ainda a decidir? <a href="${site}/new-landing" style="color:${COLORS.primaryDark};font-weight:700;text-decoration:none">Conhece a MTM →</a> · 3 dias grátis · sem cartão · cancela quando quiseres.`,
+    `Ainda a decidir? <a href="${site}/new-landing" style="color:${COLORS.primaryDark};font-weight:700;text-decoration:none">Conhece a MTM →</a> · 3 dias grátis · nada cobrado nos 3 dias · cancela quando quiseres.`,
   )
 
   return createCustomTemplate(
     header + hero + intro + systems + proof + ctaTrial + landing,
-    'Scanner, alertas e cópia automática + comunidade. Testa grátis, sem cartão.',
+    'Scanner, alertas e cópia automática + comunidade. Testa 3 dias grátis, cancelas quando quiseres.',
     params.siteUrl,
   )
 }

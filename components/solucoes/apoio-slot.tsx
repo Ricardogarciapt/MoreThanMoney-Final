@@ -1,12 +1,12 @@
 "use client"
 
+import BalaoApoio from "@/components/suporte/balao-apoio"
+
 /**
  * Ponto de montagem do balão de apoio no site de apresentação.
- *
- * O balão é construído no thread «Pôr o chat de apoio no site» como componente reutilizável.
- * Quando existir, este ficheiro passa a renderizá-lo (com origem="solucoes" para a triagem).
- * Até lá não desenha nada: um botão que não responde é pior do que nenhum.
+ * O balão é o mesmo do site principal (components/suporte/balao-apoio), com a mesma API e CRM;
+ * `origem="solucoes"` diz à triagem de onde veio o pedido. O site principal não monta o seu aqui.
  */
 export default function ApoioSlot() {
-  return null
+  return <BalaoApoio origem="solucoes" />
 }
