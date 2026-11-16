@@ -131,22 +131,45 @@ async function tokenDeAcesso(a: Anfitriao): Promise<string> {
   return String(j.access_token)
 }
 
-/** O «ocupado» real da agenda, sem ver o que lá está escrito. É tudo o que precisamos de saber. */
+/**
+ * O «ocupado» real da agenda, sem ver o que lá está escrito. É tudo o que precisamos de saber.
+ *
+ * Conta a agenda principal do anfitrião E as agendas extra em `google_calendarios_ocupado` — no
+ * caso do Ricardo, a pessoal (ricardo.subtilgarcia@gmail.com) partilhada com a profissional em
+ * «ver só disponibilidade». Assim uma consulta no médico tira a hora ao /agendar sem o site saber o
+ * que é. Uma agenda extra que o Google recuse (partilha retirada) não derruba a principal: fica de
+ * fora e avisa no log.
+ */
 export async function ocupadoNoGoogle(a: Anfitriao, de: Date, ate: Date): Promise<Intervalo[]> {
   const token = await tokenDeAcesso(a)
+  const principal = a.google_calendar_id || 'primary'
+  const extra = (a.google_calendarios_ocupado ?? []).map((c) => String(c).trim()).filter(Boolean)
+  const ids = [principal, ...extra.filter((c) => c !== principal)]
   const r = await fetch('https://www.googleapis.com/calendar/v3/freeBusy', {
     method: 'POST',
     headers: { authorization: `Bearer ${token}`, 'content-type': 'application/json' },
     body: JSON.stringify({
       timeMin: de.toISOString(),
       timeMax: ate.toISOString(),
-      items: [{ id: a.google_calendar_id || 'primary' }],
+      items: ids.map((id) => ({ id })),
     }),
   })
   if (!r.ok) throw new Error(`freeBusy falhou (${r.status})`)
-  const j = (await r.json()) as { calendars?: Record<string, { busy?: Array<{ start: string; end: string }> }> }
-  const chave = a.google_calendar_id || 'primary'
-  const ocupado = j.calendars?.[chave]?.busy ?? Object.values(j.calendars ?? {})[0]?.busy ?? []
+  const j = (await r.json()) as {
+    calendars?: Record<string, { busy?: Array<{ start: string; end: string }>; errors?: unknown[] }>
+  }
+  const cals = j.calendars ?? {}
+  const ocupado: Array<{ start: string; end: string }> = []
+  for (const id of ids) {
+    const c = cals[id] ?? (id === principal ? Object.values(cals)[0] : undefined)
+    if (!c) continue
+    if (c.errors?.length) {
+      if (id === principal) throw new Error('freeBusy recusou a agenda principal')
+      console.warn(`[agenda] agenda extra sem acesso ao ocupado: ${id}`)
+      continue
+    }
+    ocupado.push(...(c.busy ?? []))
+  }
   return ocupado.map((b) => ({ inicio: new Date(b.start), fim: new Date(b.end) }))
 }
 
