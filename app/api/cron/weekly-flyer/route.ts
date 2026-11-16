@@ -18,7 +18,7 @@ import { NextRequest, NextResponse } from "next/server"
 import { isCronAuthorized } from "@/lib/cron-auth"
 import { getSupabaseAdmin } from "@/lib/supabase-admin-client"
 import { getMtmcopyBotToken } from "@/lib/mtmcopy/telegram-bot"
-import { getWeeklyFlyerStats, fmtSigned, fmtPt } from "@/lib/mtm-flyer/weekly-stats"
+import { getWeeklyFlyerStats, fmtSigned, fmtPt, resumoEstrategias } from "@/lib/mtm-flyer/weekly-stats"
 
 export const dynamic = "force-dynamic"
 export const runtime = "nodejs"
@@ -67,8 +67,8 @@ export async function GET(request: NextRequest) {
   const site = process.env.NEXT_PUBLIC_SITE_URL?.trim() || "https://www.morethanmoney.pt"
   const chatId = await adminChatId()
   const summary =
-    `${fmtSigned(stats.totalPips)} pips em sinais fechados · ≈ $${fmtPt(stats.minLotUsd)} a lote mínimo\n` +
-    `Premium ${fmtSigned(stats.premium.netPips)} · Scanner ${fmtSigned(stats.scanner.pips)} · Sensei ${fmtSigned(stats.sensei.pips)} · GoldKiller ${fmtSigned(stats.goldkiller.pips)}`
+    `${fmtSigned(stats.totalPips)} pips em trades fechadas (${stats.estrategias.length} estratégias) · ≈ $${fmtPt(stats.minLotUsd)} a lote mínimo\n` +
+    (resumoEstrategias(stats) || "Sem trades fechadas nas contas-mestre esta semana.")
 
   // Sai SEMPRE em dois flyers separados, PT e EN (pedido Ricardo 2026-08-22).
   const results: Record<string, { telegram: string; story: string; url: string }> = {}

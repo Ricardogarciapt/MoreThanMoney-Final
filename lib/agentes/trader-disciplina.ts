@@ -86,6 +86,17 @@ export const REGUA_PADRAO = {
   exploracaoLote: 0.25,
   /** Máximo de posições de exploração abertas ao mesmo tempo. */
   exploracaoMax: 2,
+  /**
+   * LIVRE (16/11/2026, ordem do Ricardo: «pode operar à vontade na MTM Funded»). 1 = ligado.
+   * Deixa de exigir vantagem medida por combinação: abre qualquer sinal que passe o resto da
+   * disciplina (SL, RR mínimo, travão diário, tectos por símbolo e por conta). Só conta de papel.
+   */
+  livre: 0,
+  /**
+   * Risco por operação em % do saldo (16/11/2026: 1 %). 0 = lote por saldo, como antes.
+   * O lote passa a sair da distância ao SL: perder no SL custa esta fracção do saldo.
+   */
+  riscoPct: 0,
 } as const
 
 export type Regua = { -readonly [K in keyof typeof REGUA_PADRAO]: number }

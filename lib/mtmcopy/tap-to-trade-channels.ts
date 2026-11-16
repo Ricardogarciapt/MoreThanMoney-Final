@@ -1,4 +1,5 @@
 import { getSignalSourcesConfig } from './signal-sources-config'
+import { getSupabaseAdmin } from '@/lib/supabase-admin-client'
 import type { ProviderRoute } from './signal-sources-config'
 import { normalizeProviderRoutes } from './provider-routes'
 
@@ -30,7 +31,8 @@ export const T2T_SENDER_TO_CHAT: Record<string, string[]> = {
 // rejeitava-os com 'provider_off' quando a configuração de rotas não estivesse disponível.
 // 'ideias-e-sinais' (Forex Swings) saiu a 04/10/2026: o canal fechou com a fonte (fs-relay).
 // 'sinais-premium-ii' (27/10): MTM Auto Premium II, só Tap to Trade para os clientes, como o GoldKiller.
-export const T2T_SIGNAL_CHANNELS = ['sinais-scanner-mtm', 'trade-ideas', 'sinais-goldkiller', 'premium-ideas', 'sensei-scanner', 'aurum-flow', 'cripto-perps', 'sinais-premium-ii']
+// 'sinais-trendshot' (16/11): MTM Auto Trendshot, estratégia activa que ficara sem botão.
+export const T2T_SIGNAL_CHANNELS = ['sinais-scanner-mtm', 'trade-ideas', 'sinais-goldkiller', 'premium-ideas', 'sensei-scanner', 'aurum-flow', 'cripto-perps', 'sinais-premium-ii', 'sinais-trendshot']
 
 /**
  * Canais ACOMPANHADOS pelo motor de seguimento (`signal-tracker`) — quais sinais são MEDIDOS.
@@ -110,8 +112,28 @@ export async function tapToTradeEnabledChannels(): Promise<Set<string> | null> {
       const slug = String(ch).trim()
       if (slug) set.add(slug)
     }
+    // 16/11/2026: as estratégias ACTIVAS do MTM Auto entram sempre no T2T pelo seu canal de sinais.
+    // Antes só entravam se alguém se lembrasse de lhes ligar uma rota com tap_to_trade — e o
+    // Premium II e o Trendshot, as que mais pips fazem, ficaram semanas sem botão. Arquivada ou
+    // desligada sai daqui sozinha (o interruptor do admin continua a valer para as outras fontes).
+    for (const ch of await canaisDasEstrategiasActivas()) set.add(ch)
     return set
   } catch {
     return null
+  }
+}
+
+/** Canal de sinais (`canal_chat`) de cada estratégia MTM Auto activa, não arquivada nem apagada. */
+async function canaisDasEstrategiasActivas(): Promise<string[]> {
+  try {
+    const { data } = await getSupabaseAdmin()
+      .from('mtmauto_providers')
+      .select('canal_chat')
+      .eq('ativo', true)
+      .is('arquivada_em', null)
+      .is('apagado_em', null)
+    return (data ?? []).map((p) => String(p.canal_chat ?? '').trim()).filter(Boolean)
+  } catch {
+    return []
   }
 }

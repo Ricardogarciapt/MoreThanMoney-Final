@@ -22,6 +22,8 @@ type Linha = {
   estado: string
   resultado: number | null
   pips: number | null
+  /** A estratégia que abriu a trade (cópia das mestres, espelho MTM Funded ou execução da app). */
+  estrategia?: string | null
 }
 type Ponto = { quando: string; valor: number; pct?: number | null }
 type Curva = {
@@ -53,6 +55,8 @@ type Dados = {
     resultadoPct?: number | null
     winrate: number | null
     porOrigem: { origem: string; trades: number }[]
+    /** O histórico de cada estratégia nesta janela: trades terminadas, acerto e pips. */
+    porEstrategia?: { estrategia: string; trades: number; ganhas: number; pips: number; winrate: number | null }[]
   }
 }
 
@@ -336,6 +340,24 @@ export default function MtmAutoHistorico({ dias = 30 }: { dias?: number }) {
               </span>
             ))}
         </div>
+
+        {/* O histórico das estratégias: o que cada uma deu nas contas desta pessoa, nesta janela.
+            Só pips e acerto — o dinheiro já está no total acima, conta a conta. */}
+        {!!resumo.porEstrategia?.length && (
+          <div className="mt-3 space-y-1">
+            {resumo.porEstrategia.map((e) => (
+              <div key={e.estrategia} className="flex items-center justify-between text-[12px]">
+                <span className="truncate font-medium">{e.estrategia}</span>
+                <span className="shrink-0 tabular-nums texto-mais-fraco">
+                  {e.trades} · {e.winrate != null ? `${e.winrate}%` : "—"} ·{" "}
+                  <span style={{ color: e.pips >= 0 ? "var(--sucesso)" : "var(--perigo)" }}>
+                    {e.pips >= 0 ? "+" : ""}{e.pips}p
+                  </span>
+                </span>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
 
       <div className="space-y-1.5">
@@ -352,6 +374,7 @@ export default function MtmAutoHistorico({ dias = 30 }: { dias?: number }) {
               </p>
               <p className="mt-0.5 text-[11.5px] texto-mais-fraco">
                 {new Date(l.quando).toLocaleString("pt-PT", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" })}
+                {l.estrategia && ` · ${l.estrategia}`}
                 {l.conta && ` · ${l.conta}`}
                 {/* Uma saída parcial TEM resultado, por isso a etiqueta de estado lá em baixo
                     (que só aparece sem resultado) nunca a mostrava: ficava indistinguível de uma

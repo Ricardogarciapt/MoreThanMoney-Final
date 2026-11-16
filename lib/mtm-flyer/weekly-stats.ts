@@ -1,42 +1,38 @@
 /**
- * Estatísticas semanais dos sinais para o FLYER "Resultados da Semana".
+ * Estatísticas semanais para o FLYER "Resultados da Semana".
  *
- * Uma única fonte de números para a imagem (/api/flyer/weekly) e para o cron
- * que a distribui (Telegram + Instagram Stories). Replica a lógica canónica de
- * desfecho do /api/mtm-alerts (outcomeInfo): exit_N → preço do TP N · loss → SL ·
- * be → entrada · closed → último TP, com pip por classe (0.0001 forex · 0.01 JPY ·
- * 0.1 XAU · pontos em índices/cripto) e limite de sanidade |12%| por trade —
- * sem ele, um ticker mal classificado (ex.: BTC com pip forex) rebenta a soma.
+ * Uma única fonte de números para a imagem (/api/flyer/weekly) e para os crons que a distribuem
+ * (Telegram + Instagram Stories + grupo de leads).
  *
- * O Premium NÃO vem do TradingView: vem do canal SIGNAL MASTER ELITE (gmi-relay →
- * chat premium-ideas). Preferimos os resumos diários do próprio canal ("Total Net :
- * N PIPS WIN"); nos dias sem resumo (ex.: relay caiu antes do fecho) somamos os
- * marcos finais "HIT TP3 ✅ +N PIPS" e penalizamos cada "HIT SL" com −50 pips
- * (a zona típica dos setups é ~50 pips) — estimativa conservadora, sem runners.
+ * ── 16/11/2026 (pedido do Ricardo): todas as estratégias em uso ─────────────────────────────────
+ * Até aqui o flyer tinha quatro cartões fixos (Premium do canal Signal Master, MTM Scanner V3.4,
+ * Sensei X e GoldKiller, lidos dos alertas do TradingView e do chat premium-ideas). Entretanto o
+ * MTM Auto passou a correr Premium II, Trendshot, Aurum Flow, DEFY… e nenhuma delas aparecia; o
+ * Premium antigo foi arquivado e continuava no cartão de cima.
+ *
+ * Agora o flyer mostra UM CARTÃO POR ESTRATÉGIA que esteve em uso na semana: não arquivada e com
+ * trades fechadas na conta-mestre. Os números são os de `lib/mtmauto/semanas-estrategias.ts` — o
+ * MESMO cálculo da regra das três semanas negativas, para o flyer e o arquivo nunca discordarem.
+ * Pips pesados pelos parciais; índices e cripto em pontos, à parte e fora do total.
+ *
+ * As contas-mestre são do motor simulado da casa (é delas que os clientes copiam): o rodapé diz.
  */
 
 import { getSupabaseAdmin } from '@/lib/supabase-admin-client'
+import { medirSemanas, segundaDe } from '@/lib/mtmauto/semanas-estrategias'
 
-export interface ScannerStat {
-  signals: number
-  wins: number
-  losses: number
-  /** Pips (forex + ouro). */
-  pips: number
-  /** Pontos (índices/cripto), separados porque a unidade é outra. */
-  points: number
-  bestPips: number
-  bestSymbol: string | null
-}
-
-export interface PremiumStat {
+export interface EstrategiaDaSemana {
+  slug: string
+  nome: string
   trades: number
   wins: number
   losses: number
-  netPips: number
+  /** Pips (forex + metais). */
+  pips: number
+  /** Pontos (índices/cripto) — unidade diferente, nunca somada aos pips. */
+  points: number
   bestPips: number
-  /** Quantos dias da semana ficaram cobertos por resumo oficial do canal. */
-  summaryDays: number
+  bestSymbol: string | null
 }
 
 export interface WeeklyFlyerStats {
@@ -47,47 +43,17 @@ export interface WeeklyFlyerStats {
   periodLabel: string
   /** O flyer sai SEMPRE em PT e EN (pedido Ricardo 2026-08-22) — rótulo EN pronto. */
   periodLabelEn: string
-  premium: PremiumStat
-  scanner: ScannerStat
-  sensei: ScannerStat
-  goldkiller: ScannerStat
-  /** Soma de pips de todas as fontes (sem os pontos de índices). */
+  /** As estratégias em uso na semana, da que mais pips fez para a que menos. */
+  estrategias: EstrategiaDaSemana[]
+  /** Soma de pips de todas as estratégias (sem os pontos). */
   totalPips: number
-  /** Simulação a lote mínimo: ≈$0,10/pip (0.01) e ≈$0,10/ponto (0.1 índices). */
+  /** Simulação a lote mínimo 0.01: ≈$0,10/pip (só forex/metais — os pontos não se convertem). */
   minLotUsd: number
-}
-
-const TERMINAL = new Set(['exit_1', 'exit_2', 'exit_3', 'exit_4', 'loss', 'be', 'closed'])
-const FX = new Set(['EUR', 'USD', 'GBP', 'JPY', 'CHF', 'AUD', 'NZD', 'CAD'])
-
-function num(v: unknown): number | null {
-  if (typeof v === 'number' && Number.isFinite(v)) return v
-  if (typeof v === 'string' && /^[0-9]+\.?[0-9]*$/.test(v.trim())) return Number(v)
-  return null
-}
-
-function pipInfo(ticker: string): { pip: number; isPoints: boolean } {
-  const tk = ticker.toUpperCase()
-  if (tk.includes('JPY')) return { pip: 0.01, isPoints: false }
-  if (tk.startsWith('XAU')) return { pip: 0.1, isPoints: false }
-  const letters = tk.replace(/[^A-Z]/g, '')
-  if (letters.length === 6 && FX.has(letters.slice(0, 3)) && FX.has(letters.slice(3, 6))) {
-    return { pip: 0.0001, isPoints: false }
-  }
-  return { pip: 1, isPoints: true }
-}
-
-function emptyScanner(): ScannerStat {
-  return { signals: 0, wins: 0, losses: 0, pips: 0, points: 0, bestPips: 0, bestSymbol: null }
 }
 
 /** Segunda-feira 00:00 UTC da semana que contém `ref` (num sábado/domingo, a semana que fechou). */
 export function weekStartFor(ref: Date): Date {
-  const d = new Date(Date.UTC(ref.getUTCFullYear(), ref.getUTCMonth(), ref.getUTCDate()))
-  const dow = d.getUTCDay() // 0=Dom
-  const back = dow === 0 ? 6 : dow - 1
-  d.setUTCDate(d.getUTCDate() - back)
-  return d
+  return segundaDe(ref)
 }
 
 const MESES = ['JANEIRO', 'FEVEREIRO', 'MARÇO', 'ABRIL', 'MAIO', 'JUNHO', 'JULHO', 'AGOSTO', 'SETEMBRO', 'OUTUBRO', 'NOVEMBRO', 'DEZEMBRO']
@@ -105,156 +71,49 @@ export function winRatePct(wins: number, losses: number): number | null {
 }
 
 export async function getWeeklyFlyerStats(weekStartParam?: string | null): Promise<WeeklyFlyerStats> {
-  const supabase = getSupabaseAdmin()
-
   const weekStart = weekStartParam && /^\d{4}-\d{2}-\d{2}$/.test(weekStartParam)
-    ? new Date(`${weekStartParam}T00:00:00Z`)
+    ? segundaDe(new Date(`${weekStartParam}T00:00:00Z`))
     : weekStartFor(new Date())
-  const weekEnd = new Date(weekStart.getTime() + 5 * 86400_000) // sábado 00:00 (Seg–Sex)
   const friday = new Date(weekStart.getTime() + 4 * 86400_000)
+  // Mede-se a semana pedida: o «agora» da medição é o fim dela (ou já, se ainda não acabou).
+  const fimDaSemana = new Date(weekStart.getTime() + 7 * 86400_000 - 1)
+  const agora = new Date(Math.min(Date.now(), fimDaSemana.getTime()))
 
-  const periodLabel = buildPeriodLabel(weekStart, friday, MESES)
-  const periodLabelEn = buildPeriodLabel(weekStart, friday, MONTHS_EN)
+  const retrato = await medirSemanas(getSupabaseAdmin(), agora, 1)
+  const estrategias: EstrategiaDaSemana[] = retrato.estrategias
+    .filter((e) => !e.arquivada)
+    .map((e) => ({ e, w: e.semanas[e.semanas.length - 1]! }))
+    .filter(({ w }) => w && w.trades > 0)
+    .map(({ e, w }) => ({
+      slug: e.slug,
+      nome: e.nome,
+      trades: w.trades,
+      wins: w.ganhas,
+      losses: w.perdas,
+      pips: Math.round(w.pips),
+      points: Math.round(w.pontos),
+      bestPips: Math.round(w.melhorPips),
+      bestSymbol: w.melhorSimbolo,
+    }))
+    .sort((a, b) => b.pips + b.points / 10 - (a.pips + a.points / 10))
 
-  // ── Scanners (TradingView) ────────────────────────────────────────────────
-  const { data: rows } = await supabase
-    .from('tradingview_signals')
-    .select('ticker, alert_name, action, trade_status, price, sl, tp, raw_payload')
-    .gte('received_at', weekStart.toISOString())
-    .lt('received_at', weekEnd.toISOString())
-    .eq('signal_kind', 'entry')
-    .in('trade_status', [...TERMINAL])
-
-  const scanner = emptyScanner()
-  const sensei = emptyScanner()
-  const goldkiller = emptyScanner()
-
-  for (const row of rows ?? []) {
-    const act = String(row.action ?? '').toLowerCase()
-    if (act !== 'buy' && act !== 'sell') continue
-    const name = String(row.alert_name ?? '').toLowerCase()
-    const bucket = name.includes('sensei')
-      ? sensei
-      : /gold\s*killer|goldkiller/.test(name)
-        ? goldkiller
-        : name.includes('scanner')
-          ? scanner
-          : null
-    if (!bucket) continue // Aurum/Perps e desconhecidos ficam fora do flyer
-
-    const raw = (row.raw_payload && typeof row.raw_payload === 'object' ? row.raw_payload : {}) as Record<string, unknown>
-    const entry = num(row.price) ?? num(raw.entry)
-    const sl = num(row.sl) ?? num(raw.sl)
-    const tps = [num(raw.tp1) ?? num(row.tp), num(raw.tp2), num(raw.tp3), num(raw.tp4)]
-    const st = String(row.trade_status)
-    let exit: number | null = null
-    const m = st.match(/^exit_(\d)$/)
-    if (m) exit = tps[Number(m[1]) - 1] ?? tps.filter((t) => t != null).pop() ?? null
-    else if (st === 'loss') exit = sl
-    else if (st === 'be') exit = entry
-    else if (st === 'closed') exit = tps.filter((t) => t != null).pop() ?? null
-    if (entry == null || entry <= 0 || exit == null || exit <= 0) continue
-
-    const move = act === 'buy' ? exit - entry : entry - exit
-    const pct = (move / entry) * 100
-    if (Math.abs(pct) > 12) continue // sanidade — ver cabeçalho
-
-    const ticker = String(row.ticker ?? '')
-    const { pip, isPoints } = pipInfo(ticker)
-    const pips = move / pip
-    bucket.signals++
-    if (move > 0) bucket.wins++
-    else if (move < 0) bucket.losses++
-    if (isPoints) bucket.points += pips
-    else bucket.pips += pips
-    if (!isPoints && pips > bucket.bestPips) {
-      bucket.bestPips = pips
-      bucket.bestSymbol = ticker
-    }
-  }
-
-  // ── Premium (Signal Master Elite → chat premium-ideas) ────────────────────
-  const { data: msgs } = await supabase
-    .from('chat_messages')
-    .select('content, created_at')
-    .eq('channel_slug', 'premium-ideas')
-    .gte('created_at', weekStart.toISOString())
-    .lt('created_at', new Date(weekEnd.getTime() + 86400_000).toISOString()) // resumo de sexta pode sair sábado
-    .order('created_at', { ascending: true })
-
-  const premium: PremiumStat = { trades: 0, wins: 0, losses: 0, netPips: 0, bestPips: 0, summaryDays: 0 }
-  const summarizedDays = new Set<string>()
-
-  for (const msg of msgs ?? []) {
-    const c = String(msg.content ?? '')
-    const netMatch = c.match(/Total\s+Net\s*:\s*(\d+)\s*PIPS\s*(WIN|LOSS)?/i)
-    if (!netMatch) continue
-    // O resumo refere o dia das trades — a data no corpo ("19 August 2026"); senão, o dia da msg.
-    const dayMatch = c.match(/(\d{1,2})\s+(January|February|March|April|May|June|July|August|September|October|November|December|\w+)\s+(\d{4})/i)
-    const dayKey = dayMatch ? dayMatch[0] : String(msg.created_at).slice(0, 10)
-    if (summarizedDays.has(dayKey)) continue
-    summarizedDays.add(dayKey)
-    premium.summaryDays++
-    const net = Number(netMatch[1]) * (/LOSS/i.test(netMatch[2] ?? '') ? -1 : 1)
-    premium.netPips += net
-    for (const line of c.split('\n')) {
-      if (/^\s*\d+\s*-/.test(line)) {
-        premium.trades++
-        const won = line.match(/(\d+)\s*PIPS/i)
-        if (won) {
-          premium.wins++
-          premium.bestPips = Math.max(premium.bestPips, Number(won[1]))
-        } else if (/HIT\s*SL/i.test(line)) {
-          premium.losses++
-        }
-      }
-    }
-  }
-
-  // Dias SEM resumo: marcos finais TP3 + penalização de SL (~zona de 50 pips).
-  if (premium.summaryDays < 5) {
-    for (const msg of msgs ?? []) {
-      const c = String(msg.content ?? '')
-      const day = String(msg.created_at).slice(0, 10)
-      const dayCovered = [...summarizedDays].some((k) => k.includes(day.slice(8, 10)) || k === day)
-      if (dayCovered) continue
-      const tp3 = c.match(/HIT\s*TP3\s*✅?\s*\+(\d+)\s*PIPS/i)
-      if (tp3) {
-        const v = Number(tp3[1])
-        premium.trades++
-        premium.wins++
-        premium.netPips += v
-        premium.bestPips = Math.max(premium.bestPips, v)
-      } else if (/^HIT\s*SL\s*$/i.test(c.trim())) {
-        premium.trades++
-        premium.losses++
-        premium.netPips -= 50
-      }
-    }
-  }
-
-  const totalPips = Math.round(premium.netPips + scanner.pips + sensei.pips + goldkiller.pips)
-  const minLotUsd = Math.round(0.1 * totalPips + 0.1 * (scanner.points + sensei.points + goldkiller.points))
-
-  const r = (s: ScannerStat): ScannerStat => ({
-    ...s,
-    pips: Math.round(s.pips),
-    points: Math.round(s.points),
-    bestPips: Math.round(s.bestPips),
-  })
-
+  const totalPips = Math.round(estrategias.reduce((a, e) => a + e.pips, 0))
   return {
     weekStart: weekStart.toISOString().slice(0, 10),
     weekEndLabel: friday.toISOString().slice(0, 10),
-    periodLabel,
-    periodLabelEn,
-    premium: { ...premium, netPips: Math.round(premium.netPips) },
-    scanner: r(scanner),
-    sensei: r(sensei),
-    goldkiller: r(goldkiller),
+    periodLabel: buildPeriodLabel(weekStart, friday, MESES),
+    periodLabelEn: buildPeriodLabel(weekStart, friday, MONTHS_EN),
+    estrategias,
     totalPips,
-    minLotUsd,
+    minLotUsd: Math.round(0.1 * totalPips),
   }
+}
+
+/** Uma linha por estratégia para as legendas («Premium II +687 · Trendshot +2.584 …»). */
+export function resumoEstrategias(stats: WeeklyFlyerStats, lang: FlyerLang = 'pt'): string {
+  return stats.estrategias
+    .map((e) => `${e.nome} ${e.pips !== 0 || e.points === 0 ? fmtSignedNum(e.pips, lang) : `${fmtSignedNum(e.points, lang)} pts`}`)
+    .join(' · ')
 }
 
 export type FlyerLang = 'pt' | 'en'

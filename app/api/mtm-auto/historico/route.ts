@@ -6,6 +6,7 @@ import { contasDoUtilizador } from '@/lib/mtm-auto-bridge'
 import { lerInfoContaCache } from '@/lib/mtmcopy/metaapi-cache'
 import { recebeT2T } from '@/lib/mtmcopy/alvo-t2t'
 import { ehContaDaCasa, normalizarEscopo } from '@/lib/mtmfunded/contas-da-casa'
+import { tradesDosNegocios, estrategiaDaPosicao, resumoPorEstrategia, type CopiaConhecida } from '@/lib/mtmauto/historico-estrategias'
 import {
   agruparParciais,
   entradaMaisAntiga,
@@ -40,6 +41,8 @@ interface Linha {
    * Omitido (undefined) = conta, que é o caso de tudo o que vem da corretora.
    */
   contaParaTaxa?: boolean
+  /** A estratégia que abriu a trade (motor de cópia, espelho MTM Funded ou execução da app). */
+  estrategia?: string | null
 }
 
 /**
@@ -96,7 +99,7 @@ export async function GET(request: NextRequest) {
   // ── As contas do cliente no site (Tap to Trade e MTM Copy) ─────────────────────────────────
   const { data: minhas } = await db
     .from('mtmcopy_connections')
-    .select('metaapi_account_id, account_label, mt5_login_last4, copy_method, purpose, t2t_enabled, mt5_status')
+    .select('id, metaapi_account_id, account_label, mt5_login_last4, copy_method, purpose, t2t_enabled, mt5_status')
     .eq('user_id', userId!)
     .neq('mt5_status', 'disconnected')
 
@@ -130,6 +133,7 @@ export async function GET(request: NextRequest) {
    * pelo Tap to Trade — e é assim que a mesma conta pode aparecer nas duas origens sem misturar.
    */
   const desdeData = new Date(Date.now() - dias * 86_400_000)
+  const { pipSizeForSymbol: pipDoSimbolo } = await import('@/lib/mtmcopy/trade-outcome')
   const fechos = await Promise.all(
     // Um cliente tem duas ou três contas; o teto de 6 é só para o caso patológico não estourar
     // o tempo da rota e deixar toda a gente sem histórico.
@@ -138,29 +142,38 @@ export async function GET(request: NextRequest) {
       if (!deals) return [] // null = não se conseguiu ler; [] = leu e não havia nada
       const rotulo = contaDe.get(String(c.metaapi_account_id)) ?? 'Conta'
       const t2tPorDefeito = recebeT2T(c)
-      return deals
-        // Só os fechos: a abertura não tem resultado, e contá-la duplicava cada trade.
-        .filter((d) => d.entryType === 'DEAL_ENTRY_OUT' || d.entryType === 'DEAL_ENTRY_INOUT')
-        .filter((d) => d.type === 'DEAL_TYPE_BUY' || d.type === 'DEAL_TYPE_SELL')
-        .map((d): Linha => {
-          const comentario = String(d.comment ?? '')
-          const doT2T = /^t2t[-_ ]/i.test(comentario)
-          return {
-            quando: new Date(d.time ?? Date.now()).toISOString(),
+      // UMA TRADE POR POSIÇÃO (lib/mtmauto/historico-estrategias.ts): o motor de cópia sai aos
+      // parciais, e contar cada fecho como uma trade dava três ganhos por posição e nenhum pip.
+      return tradesDosNegocios(deals, pipDoSimbolo).map((tr) => {
+        const doT2T = /^t2t[-_ ]/i.test(tr.comentario ?? '')
+        return {
+          linha: {
+            quando: tr.quando,
             origem: doT2T || t2tPorDefeito ? 'Tap to Trade' : 'MTM Copy',
             conta: rotulo,
-            symbol: String(d.symbol ?? ''),
-            // O fecho é a operação inversa da entrada: um fecho a VENDER fechou uma COMPRA.
-            direction: d.type === 'DEAL_TYPE_SELL' ? 'buy' : 'sell',
-            estado: 'fechada',
-            resultado:
-              Math.round((Number(d.profit ?? 0) + Number(d.commission ?? 0) + Number(d.swap ?? 0)) * 100) / 100,
-            pips: null,
-          }
-        })
+            symbol: tr.symbol,
+            direction: tr.direcao,
+            estado: tr.terminada ? 'fechada' : 'parcial',
+            resultado: tr.resultado,
+            pips: tr.pips,
+            contaParaTaxa: tr.terminada,
+          } as Linha,
+          destinoRef: `site:${String(c.id)}`,
+          positionId: tr.positionId,
+        }
+      })
     }),
   )
-  for (const lote of fechos) linhas.push(...lote)
+  /** As linhas de corretora, com a posição e a conta de destino — para lhes pôr a estratégia. */
+  const daCorretora: Array<{ linha: Linha; destinoRef: string; positionId: string }> = []
+  /** Slugs de estratégia que ainda têm de ser trocados pelo nome que o cliente conhece. */
+  const slugsPorNomear = new Set<string>()
+  for (const lote of fechos) {
+    for (const x of lote) {
+      linhas.push(x.linha)
+      daCorretora.push(x)
+    }
+  }
 
   // ── Contas MTM Funded no MTM Auto (plataforma 'mtmfunded', migração 070) ───────────────────
   //
@@ -235,8 +248,25 @@ export async function GET(request: NextRequest) {
     const maisAntiga = entradaMaisAntiga(trades)
     if (maisAntiga && (!entradaFunded || maisAntiga < entradaFunded)) entradaFunded = maisAntiga
 
+    // De que estratégia é cada posição: o espelho da mestre e a ponte dos sinais gravam-na.
+    const raizes = trades.map((t) => t.raiz)
+    const estrategiaDaRaiz = new Map<string, string>()
+    for (let i = 0; i < raizes.length; i += 300) {
+      const lote = raizes.slice(i, i + 300)
+      const [{ data: esp }, { data: sin }] = await Promise.all([
+        db.from('funded_espelho_posicoes').select('funded_position_id, estrategia').in('funded_position_id', lote),
+        db.from('funded_sinal_posicoes').select('funded_position_id, estrategia').in('funded_position_id', lote),
+      ])
+      for (const x of [...(esp ?? []), ...(sin ?? [])]) {
+        if (x.estrategia) estrategiaDaRaiz.set(String(x.funded_position_id), String(x.estrategia))
+      }
+    }
+
     for (const tr of trades) {
+      const slugFunded = estrategiaDaRaiz.get(tr.raiz) ?? null
+      if (slugFunded) slugsPorNomear.add(slugFunded)
       linhas.push({
+        estrategia: slugFunded,
         quando: tr.quando,
         origem: 'MTM Auto',
         conta: rotuloDe.get(tr.accountId) ?? 'MTM Funded',
@@ -249,6 +279,7 @@ export async function GET(request: NextRequest) {
         pips: tr.pips,
         contaParaTaxa: tr.terminada,
       })
+      daCorretora.push({ linha: linhas[linhas.length - 1]!, destinoRef: `funded:${tr.accountId}`, positionId: tr.raiz })
     }
   }
 
@@ -273,6 +304,9 @@ export async function GET(request: NextRequest) {
     const contaId = l.contaId ? String(l.contaId) : null
     // Uma posição aberta numa conta da casa segue a mesma regra do resto do ecrã.
     if (contaId && escopo !== 'todas' && casaNoAuto.has(contaId) !== (escopo === 'casa')) continue
+    // `provedor` é o nome da estratégia quando a linha veio de uma execução da app; nas linhas da
+    // corretora é o rótulo da conta + comentário — esse não é estratégia, e a cópia diz-se abaixo.
+    const provedor = typeof l.provedor === 'string' && l.provedor !== '—' && !id.startsWith('broker:') ? l.provedor : null
     linhas.push({
       quando: String(l.quando ?? l.created_at ?? ''),
       origem: 'MTM Auto',
@@ -282,7 +316,65 @@ export async function GET(request: NextRequest) {
       estado,
       resultado: l.resultado != null ? Number(l.resultado) : null,
       pips: l.resultadoPips != null ? Number(l.resultadoPips) : l.pips != null ? Number(l.pips) : null,
+      estrategia: provedor,
+      // Um parcial de corretora (posição ainda aberta) entra no dinheiro, não na taxa de acerto.
+      ...(estado === 'partial' ? { contaParaTaxa: false } : {}),
     })
+    const m = id.match(/^broker:([^:]+):(.+)$/)
+    if (m) daCorretora.push({ linha: linhas[linhas.length - 1]!, destinoRef: `auto:${m[1]}`, positionId: m[2]! })
+  }
+
+  // ── A ESTRATÉGIA de cada posição aberta pelo motor de cópia ─────────────────────────────────
+  // Desde 23/09 é o motor das mestres que abre nas contas dos clientes; a posição de destino de
+  // cada cópia está em `copia_posicoes`, e a rota diz a estratégia. Ver historico-estrategias.ts.
+  const idsPosicao = [...new Set(daCorretora.map((x) => x.positionId).filter(Boolean))]
+  const copias: CopiaConhecida[] = []
+  for (let i = 0; i < idsPosicao.length; i += 300) {
+    const { data: cps } = await db
+      .from('copia_posicoes')
+      .select('destino_posicao_id, rota_id')
+      .in('destino_posicao_id', idsPosicao.slice(i, i + 300))
+    const rotaIds = [...new Set((cps ?? []).map((c) => String(c.rota_id)))]
+    if (!rotaIds.length) continue
+    const { data: rotas } = await db
+      .from('copia_rotas').select('id, destino_ref, estrategia_slug, origem_ref, tipo_rota').in('id', rotaIds)
+    const rotaDe = new Map((rotas ?? []).map((r) => [String(r.id), r]))
+    for (const c of cps ?? []) {
+      const r = rotaDe.get(String(c.rota_id))
+      if (!r) continue
+      const prov = String(r.origem_ref ?? '').match(/^prov:(.+)$/)?.[1] ?? null
+      copias.push({
+        destinoPosicaoId: String(c.destino_posicao_id),
+        destinoRef: String(r.destino_ref ?? ''),
+        estrategia: (r.estrategia_slug as string | null) ?? (prov ? `prov:${prov}` : null),
+        tipoRota: (r.tipo_rota as string | null) ?? null,
+      })
+    }
+  }
+  for (const x of daCorretora) {
+    const e = estrategiaDaPosicao(copias, x.destinoRef, x.positionId)
+    if (!e) continue
+    if (e.estrategia) {
+      x.linha.estrategia = e.estrategia
+      slugsPorNomear.add(e.estrategia)
+    }
+    // Uma cópia da estratégia é MTM Auto, mesmo numa conta ligada no site; T2T pelo motor é T2T.
+    if (!x.destinoRef.startsWith('funded:')) x.linha.origem = e.t2t ? 'Tap to Trade' : 'MTM Auto'
+  }
+  if (slugsPorNomear.size) {
+    const chaves = [...slugsPorNomear]
+    const ids = chaves.filter((k) => k.startsWith('prov:')).map((k) => k.slice(5))
+    const slugs = chaves.filter((k) => !k.startsWith('prov:'))
+    const [{ data: porSlug }, { data: porId }] = await Promise.all([
+      slugs.length ? db.from('mtmauto_providers').select('id, slug, nome').in('slug', slugs) : Promise.resolve({ data: [] as Record<string, unknown>[] }),
+      ids.length ? db.from('mtmauto_providers').select('id, slug, nome').in('id', ids) : Promise.resolve({ data: [] as Record<string, unknown>[] }),
+    ])
+    const nomeDe = new Map<string, string>()
+    for (const p of [...(porSlug ?? []), ...(porId ?? [])]) {
+      nomeDe.set(String(p.slug), String(p.nome ?? p.slug))
+      nomeDe.set(`prov:${String(p.id)}`, String(p.nome ?? p.slug))
+    }
+    for (const l of linhas) if (l.estrategia && nomeDe.has(l.estrategia)) l.estrategia = nomeDe.get(l.estrategia)!
   }
 
   // ── E o que ainda está aberto ou por abrir: sem resultado, mas com estado ───────────────────
@@ -443,6 +535,8 @@ export async function GET(request: NextRequest) {
       })(),
       // Sem trades fechadas não se inventa uma taxa de acerto.
       winrate: fechadas ? Math.round((ganhas / fechadas) * 100) : null,
+      // O histórico das estratégias: quantas trades e quantos pips cada uma deu NESTE histórico.
+      porEstrategia: resumoPorEstrategia(linhas),
       porOrigem: ['MTM Auto', 'Tap to Trade', 'MTM Copy'].map((o) => ({
         origem: o,
         trades: linhas.filter((l) => l.origem === o).length,

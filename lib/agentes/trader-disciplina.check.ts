@@ -140,3 +140,17 @@ if (falhas.length) {
   process.exit(1)
 }
 console.log('agentes/trader-disciplina: só abre com vantagem medida, RR que paga o risco e dentro do travão do dia ✓')
+
+// 16/11/2026 — risco fixo por operação: perder no SL custa riscoPct % do saldo.
+{
+  const { loteParaRisco } = require('../mtmfunded/estrategias-sinais/calculo') as typeof import('../mtmfunded/estrategias-sinais/calculo')
+  const sim = { volume_min: 0.01, volume_step: 0.01, volume_max: 50 }
+  const igual = (a: unknown, b: unknown, m: string) => { if (a !== b) { console.error(`FALHOU ${m}: ${a} ≠ ${b}`); process.exit(1) } }
+  // 10 000 $ a 1 % = 100 $; 1 lote de ouro com SL a 5 $ = −500 $ → 0,20 lote.
+  igual(loteParaRisco(10_000, 1, -500, sim), 0.2, 'ouro 1 %')
+  // arredonda para BAIXO: 100 $ / 333 $ = 0,3003 → 0,30
+  igual(loteParaRisco(10_000, 1, -333, sim), 0.3, 'arredonda para baixo')
+  igual(loteParaRisco(10_000, 1, null, sim), null, 'sem conversão → null')
+  igual(loteParaRisco(100, 1, -5000, sim), 0.01, 'nunca abaixo do mínimo do símbolo')
+  console.log('loteParaRisco: ok')
+}
