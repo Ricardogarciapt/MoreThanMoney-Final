@@ -1,5 +1,6 @@
 "use client"
 
+import { TextoTraduzido } from "@/components/mobile/texto-traduzido"
 import { useState, useEffect, useRef } from "react"
 import Image from "next/image"
 import { supabase } from "@/lib/supabase"
@@ -1764,7 +1765,7 @@ export default function SocialFeed({ initialCategory }: { initialCategory?: stri
 
                 {/* Content */}
                 <div className="text-gray-200 whitespace-pre-wrap leading-relaxed mb-3">
-                  <RichPostText text={post.content} />
+                  <TextoTraduzido texto={post.content} render={(texto) => <RichPostText text={texto} />} />
                 </div>
 
                 {/* Pré-visualização de link: cartão grande sem média (estilo WhatsApp);

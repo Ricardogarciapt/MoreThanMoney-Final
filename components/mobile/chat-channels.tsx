@@ -1,5 +1,6 @@
 "use client"
 
+import { TextoTraduzido } from "@/components/mobile/texto-traduzido"
 import { useState, useEffect, useRef, useCallback } from "react"
 import { supabase } from "@/lib/supabase"
 import { isT2TEntrySignal } from "@/lib/mtmcopy/t2t-source"
@@ -1006,9 +1007,14 @@ function MessageBubble({
                 </a>
               ) : null}
               {msg.content && (
-                <p className="whitespace-pre-wrap break-words leading-relaxed text-[13.5px]">
-                  <MentionText text={msg.content} />
-                </p>
+                <TextoTraduzido
+                  texto={msg.content}
+                  render={(texto) => (
+                    <p className="whitespace-pre-wrap break-words leading-relaxed text-[13.5px]">
+                      <MentionText text={texto} />
+                    </p>
+                  )}
+                />
               )}
               {msg.link_preview && msg.link_url && (
                 <LinkPreviewCard preview={msg.link_preview} url={msg.link_url} />

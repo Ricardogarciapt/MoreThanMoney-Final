@@ -6,6 +6,15 @@ import type { Lang } from "@/lib/i18n/config"
  */
 export const APPMOBILE_C_MESSAGES: Partial<Record<Lang, Record<string, string>>> = {
   pt: {
+    "chatTr.seeOriginal": "Ver original",
+    "chatTr.seeTranslation": "Ver tradução",
+    "amC.tradingAlerts.headerAll": "{nome} · todos ({total})",
+    "amC.tradingAlerts.headerSome": "{nome} · {n} de {total}",
+    "amC.tradingAlerts.group.commodity": "Metais / Commodities",
+    "amC.tradingAlerts.group.index": "Índices",
+    "amC.tradingAlerts.group.forex": "Forex",
+    "amC.tradingAlerts.group.crypto": "Cripto",
+    "amC.tradingAlerts.group.stock": "Ações",
     "amC.agenda.agendaBody": "O horário entra no teu calendário e atualiza sozinho. Avisa 15 minutos antes.",
     "amC.agenda.agendaTitle": "Recebe as aulas na tua agenda",
     "amC.captions.captionsAria": "Legendas",
@@ -171,6 +180,15 @@ export const APPMOBILE_C_MESSAGES: Partial<Record<Lang, Record<string, string>>>
     "amC.tradingAlerts.viewSignalImage": "Ver imagem do sinal",
   },
   en: {
+    "chatTr.seeOriginal": "See original",
+    "chatTr.seeTranslation": "See translation",
+    "amC.tradingAlerts.headerAll": "{nome} · all ({total})",
+    "amC.tradingAlerts.headerSome": "{nome} · {n} of {total}",
+    "amC.tradingAlerts.group.commodity": "Metals / Commodities",
+    "amC.tradingAlerts.group.index": "Indices",
+    "amC.tradingAlerts.group.forex": "Forex",
+    "amC.tradingAlerts.group.crypto": "Crypto",
+    "amC.tradingAlerts.group.stock": "Stocks",
     "amC.agenda.agendaBody": "The timetable goes into your calendar and updates by itself. You get a reminder 15 minutes before.",
     "amC.agenda.agendaTitle": "Get the classes in your calendar",
     "amC.captions.captionsAria": "Captions",

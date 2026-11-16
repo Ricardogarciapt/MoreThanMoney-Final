@@ -21,7 +21,6 @@ import {
   GRUPOS_DE_ACTIVOS,
   TIMEFRAMES,
   TOTAL_DE_ACTIVOS,
-  cabecalhoDoSelector,
   normalizarEstrategiasSubscricao,
 } from "@/lib/alertas/catalogo"
 import { semCripto, ehSimboloCripto } from "@/lib/ios-sem-cripto"
@@ -549,6 +548,10 @@ export default function TradingAlertsMobile() {
   const searchParams = useSearchParams()
   const { toast } = useToast()
   const t = useT()
+  const cabecalho = (nome: string, n: number, total: number) =>
+    n === 0
+      ? t("amC.tradingAlerts.headerAll").replace("{nome}", nome).replace("{total}", String(total))
+      : t("amC.tradingAlerts.headerSome").replace("{nome}", nome).replace("{n}", String(n)).replace("{total}", String(total))
   /**
    * «Só o que sigo» — DESLIGADO por omissão.
    *
@@ -801,7 +804,7 @@ export default function TradingAlertsMobile() {
           <div>
             <p className="mb-1.5 text-xs font-semibold uppercase tracking-wider text-gray-500">
               {/* «ATIVOS (7)» lia-se como 7 categorias; eram 7 símbolos seleccionados. Agora diz de quantos. */}
-              {cabecalhoDoSelector(t("amC.tradingAlerts.assets"), sub.symbols.length, TOTAL_DE_ACTIVOS)}
+              {cabecalho(t("amC.tradingAlerts.assets"), sub.symbols.length, TOTAL_DE_ACTIVOS)}
             </p>
             <div className="space-y-1.5">
               {GRUPOS_DE_ACTIVOS.filter((g) => !(g.chave === "crypto" && semCripto())).map((g) => {
@@ -811,7 +814,7 @@ export default function TradingAlertsMobile() {
                 return (
                   <details key={g.chave} className="rounded-lg border border-[#D2A63C]/15 bg-black/30">
                     <summary className="flex cursor-pointer list-none items-center justify-between px-3 py-2 text-xs font-semibold text-gray-300">
-                      <span>{g.rotulo}</span>
+                      <span>{t(`amC.tradingAlerts.group.${g.chave}`)}</span>
                       <span className="text-[10px] text-gray-500">{selected ? `${selected}/${simbolos.length}` : `${simbolos.length} ${t("amC.tradingAlerts.assetsLower")}`}</span>
                     </summary>
                     <div className="flex flex-wrap gap-1.5 px-3 pb-3">
@@ -827,7 +830,7 @@ export default function TradingAlertsMobile() {
 
           <div>
             <p className="mb-1.5 text-xs font-semibold uppercase tracking-wider text-gray-500">
-              {cabecalhoDoSelector(t("amC.tradingAlerts.strategies"), sub.strategies.length, ESTRATEGIAS.length)}
+              {cabecalho(t("amC.tradingAlerts.strategies"), sub.strategies.length, ESTRATEGIAS.length)}
             </p>
             <div className="flex flex-wrap gap-1.5">
               {ESTRATEGIAS.map((s) => (
@@ -843,7 +846,7 @@ export default function TradingAlertsMobile() {
 
           <div>
             <p className="mb-1.5 text-xs font-semibold uppercase tracking-wider text-gray-500">
-              {cabecalhoDoSelector("Timeframes", sub.timeframes.length, TIMEFRAMES.length)}
+              {cabecalho("Timeframes", sub.timeframes.length, TIMEFRAMES.length)}
             </p>
             <div className="flex flex-wrap gap-1.5">
               {TIMEFRAMES.map((t) => (
