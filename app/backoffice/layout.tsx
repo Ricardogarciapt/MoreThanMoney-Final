@@ -24,6 +24,7 @@ const TRABALHO: Array<{ href: string; label: string; exige: Capacidade }> = [
   { href: '/backoffice', label: 'Hoje', exige: 'bo.entrar' },
   { href: '/backoffice/pipeline', label: 'Pipeline', exige: 'bo.pipeline_proprio' },
   { href: '/backoffice/tarefas', label: 'Tarefas', exige: 'bo.tarefas_proprias' },
+  { href: '/backoffice/chamadas', label: 'Chamadas', exige: 'bo.pipeline_proprio' },
   { href: '/backoffice/extracto', label: 'O meu extracto', exige: 'bo.extracto_proprio' },
   { href: '/backoffice/equipa', label: 'A minha equipa', exige: 'bo.equipa_ver' },
   { href: '/backoffice/material', label: 'Materiais', exige: 'bo.material' },
