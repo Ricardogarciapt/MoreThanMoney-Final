@@ -78,6 +78,7 @@
     "glob": "latest",
     "hls.js": "^1.6.15",
     "iconv-lite": "^0.7.2",
+    "imapflow": "^1.7.8",
     "immer": "latest",
     "input-otp": "1.4.1",
     "jose": "^6.2.3",
