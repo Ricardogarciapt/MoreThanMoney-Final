@@ -1,3 +1,5 @@
+import { escolherIdioma } from '@/lib/site-solucoes/i18n/base'
+import { tradutorServidor } from '@/lib/site-solucoes/i18n/servidor'
 import { NextRequest, NextResponse } from 'next/server'
 import { getSupabaseAdmin } from '@/lib/supabase-admin-client'
 import { chamarIAGratis } from '@/lib/ia/chamar'
@@ -50,10 +52,11 @@ export async function POST(req: NextRequest) {
     }
   }
 
-  const { relatorio } = relatorioBase(pedido)
+  const idioma = escolherIdioma({ pedido: typeof (corpo as { idioma?: unknown }).idioma === 'string' ? ((corpo as { idioma?: string }).idioma ?? null) : null })
+  const { relatorio } = relatorioBase(pedido, tradutorServidor(idioma))
   let fornecedor: string | null = null
   try {
-    const { sistema, mensagem } = promptLeitura(pedido, relatorio)
+    const { sistema, mensagem } = promptLeitura(pedido, relatorio, idioma)
     const r = await chamarIAGratis({
       sistema,
       mensagens: [{ role: 'user', content: mensagem }],
