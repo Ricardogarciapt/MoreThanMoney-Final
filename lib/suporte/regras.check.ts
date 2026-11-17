@@ -49,4 +49,40 @@ assert.equal(prometeReembolso('Para cancelar, vai a Definições > Subscrição.
 assert.notEqual(respostaSegura('Vou reembolsar-te já.'), 'Vou reembolsar-te já.')
 assert.equal(respostaSegura('Olá!'), 'Olá!')
 
+// 21 idiomas (17/11): reembolsos e reclamações sobem em qualquer idioma.
+for (const [t, a] of [
+  ['I want a refund for my subscription', 'reembolso'],
+  ['Quiero que me devolváis el dinero, quiero un reembolso', 'reembolso'],
+  ['Je veux être remboursé', 'reembolso'],
+  ['Ich möchte eine Rückerstattung', 'reembolso'],
+  ['Voglio il rimborso', 'reembolso'],
+  ['Ik wil mijn geld terug', 'reembolso'],
+  ['Proszę o zwrot pieniędzy', 'reembolso'],
+  ['Vreau rambursarea banilor', 'reembolso'],
+  ['Para iadesi istiyorum', 'reembolso'],
+  ['Хочу возврат денег', 'reembolso'],
+  ['Прошу повернення коштів', 'reembolso'],
+  ['我要退款', 'reembolso'],
+  ['返金してください', 'reembolso'],
+  ['أريد استرداد أموالي', 'reembolso'],
+  ['मुझे रिफंड चाहिए', 'reembolso'],
+  ['This is a scam', 'reclamacao'],
+  ['Das ist Betrug, ich schreibe eine Beschwerde', 'reclamacao'],
+  ['C’est une arnaque', 'reclamacao'],
+  ['Es una estafa', 'reclamacao'],
+  ['Это мошенничество, будет жалоба', 'reclamacao'],
+  ['Ovo je prevara', 'reclamacao'],
+  ['我要投诉', 'reclamacao'],
+  ['Şikayet etmek istiyorum', 'reclamacao'],
+] as const) assert.equal(triar(t), a, t)
+assert.equal(triar('How much is Premium?'), 'vendas')
+assert.equal(triar('Guten Tag'), 'outro')
+assert.equal(pedePessoa('Can I talk to a human?'), true)
+assert.equal(pedePessoa('Хочу поговорить с оператором'), true)
+assert.equal(pedePessoa('Quiero hablar con una persona'), true)
+assert.equal(prometeReembolso("We'll refund you tomorrow."), true)
+assert.equal(prometeReembolso('Te devolveremos el dinero.'), true)
+assert.equal(prometeReembolso('Wir werden Ihnen das Geld zurückerstatten.'), true)
+assert.equal(prometeReembolso('Ricardo will review your request.'), false)
+
 console.log('suporte/regras: ok')

@@ -12,6 +12,9 @@ import {
   deveEscalar, NOME_ASSUNTO, pedePessoa, proximoPrazo, respostaSegura, textoEscalada, textoEsperaEquipa,
   textoIaIndisponivel, triar, type Assunto, type Estado,
 } from './regras'
+import { idiomaApoio, textosApoio } from './idiomas'
+import { LANGUAGE_NAMES_EN } from '@/lib/chat-traducao-idiomas'
+import { languageOption } from '@/lib/i18n/languages'
 
 type Db = { from: (t: string) => any }
 
@@ -30,6 +33,38 @@ export type Conversa = {
   nivel_aviso: number
   primeira_resposta_em: string | null
   ultima_mensagem_em: string
+  /** Idioma da conversa (um dos 21 do site). Decide as frases fixas e a tradução da equipa. */
+  idioma?: string | null
+}
+
+/**
+ * As frases fixas no idioma da conversa. Em português ficam as de `regras.ts` (que distinguem
+ * reembolso de reclamação); nos outros 20 idiomas vêm de `idiomas.ts`.
+ */
+function frases(idioma: string | null | undefined) {
+  const l = idiomaApoio(idioma)
+  const t = textosApoio(l)
+  const pt = l === 'pt'
+  return {
+    escalada: (a: Assunto) => (pt ? textoEscalada(a) : t.escalada),
+    jaRegistado: (comEmail: boolean) => (pt && comEmail ? 'Obrigado, ficou registado. O Ricardo responde-te por aqui ou por email.' : t.jaRegistado),
+    recebido: (comEmail: boolean) => (pt && comEmail ? 'Obrigado, guardei o teu email. A equipa responde-te em breve.' : t.recebido),
+    esperaEquipa: () => (pt ? textoEsperaEquipa() : t.esperaEquipa),
+    iaIndisponivel: () => (pt ? textoIaIndisponivel() : t.iaIndisponivel),
+    seguro: (texto: string) => {
+      const s = respostaSegura(texto)
+      return s === texto || pt ? s : t.guardaReembolso
+    },
+    naoPercebi: t.naoPercebi,
+  }
+}
+
+/** «🇩🇪 Deutsch» para os avisos ao dono; vazio em português (é o normal). */
+function etiquetaIdioma(idioma: string | null | undefined): string {
+  const l = idiomaApoio(idioma)
+  if (l === 'pt') return ''
+  const o = languageOption(l)
+  return o ? ` · ${o.flag} ${o.nativeName}` : ` · ${l}`
 }
 
 export type Mensagem = { id: number; autor: 'cliente' | 'agente' | 'equipa' | 'sistema'; texto: string; criado_em: string }
@@ -91,8 +126,16 @@ function linkCrm(id: string) {
 }
 
 /** O que o agente sabe. Curto de propósito: é a primeira linha, não o manual inteiro. */
-export function contextoAgente(quem: 'membro' | 'visitante', assunto: Assunto): string {
-  return `És o Apoio ao Cliente da MoreThanMoney (MTM), no chat do site. Respondes sozinho a membros, visitantes, leads e prospects.
+export function contextoAgente(quem: 'membro' | 'visitante', assunto: Assunto, idioma: string = 'pt'): string {
+  const l = idiomaApoio(idioma)
+  const nome = LANGUAGE_NAMES_EN[l] || 'European Portuguese (Portugal)'
+  const blocoIdioma =
+    l === 'pt'
+      ? 'IDIOMA: o site está em português. Responde em português de Portugal; se o cliente escrever noutro idioma, responde no idioma dele.'
+      : `IDIOMA (obrigatório): o site está em ${nome}. Responde SEMPRE no idioma em que o cliente escreve; se a mensagem não deixar claro, responde em ${nome}. Nunca respondas em português a quem não escreve em português. Tom próximo e informal, como é natural nesse idioma. Não traduzas nomes de produtos, scanners nem educadores (MTM, MoreThanMoney, Premium, MTM Auto, MTM Funded, WebTrader, GoldKiller, Sensei, DEFY, Tap to Trade, PU Prime). As regras abaixo valem em qualquer idioma: nunca prometes reembolso, em nenhuma língua.`
+  return `${blocoIdioma}
+
+És o Apoio ao Cliente da MoreThanMoney (MTM), no chat do site. Respondes sozinho a membros, visitantes, leads e prospects.
 
 QUEM ESTÁ A FALAR: ${quem === 'membro' ? 'um membro com sessão iniciada' : 'um visitante sem sessão (pode ser lead ou cliente sem login)'}.
 ASSUNTO DA TRIAGEM: ${NOME_ASSUNTO[assunto]}.
@@ -105,7 +148,7 @@ O QUE SABES
 · Falar com alguém ao vivo / onboarding: ${SITE}/agendar.
 
 COMO RESPONDES
-· Português de Portugal, por tu, curto (2 a 5 frases), claro, com o próximo passo concreto e o link certo.
+· No idioma do cliente (ver IDIOMA). Em português: de Portugal, por tu. Curto (2 a 5 frases), claro, com o próximo passo concreto e o link certo.
 · Se não sabes, dizes que não sabes e que passas à equipa. Não inventas funcionalidades, preços nem prazos.
 · Nunca pedes palavras-passe, códigos, dados de cartão nem credenciais de corretora.
 · Nunca dás conselho de investimento, sinais, nem prometes resultados ou retornos.
@@ -127,7 +170,7 @@ export type ResultadoMensagem = {
  */
 export async function receberMensagem(
   db: Db,
-  p: { chave: string; texto: string; userId: string | null; nome?: string | null; email?: string | null; pagina?: string | null; site?: string | null; historico?: MensagemIA[]; assuntoSugerido?: Assunto | null },
+  p: { chave: string; texto: string; userId: string | null; nome?: string | null; email?: string | null; pagina?: string | null; site?: string | null; historico?: MensagemIA[]; assuntoSugerido?: Assunto | null; idioma?: string | null },
 ): Promise<ResultadoMensagem> {
   const agora = new Date().toISOString()
   // A triagem por palavras manda; o botão escolhido no balão só conta quando as palavras não dizem nada.
@@ -146,6 +189,7 @@ export async function receberMensagem(
         assunto: assuntoMsg,
         pagina_origem: p.pagina ?? null,
         site: p.site ?? null,
+        idioma: idiomaApoio(p.idioma),
       })
       .select('*')
       .single()
@@ -163,6 +207,10 @@ export async function receberMensagem(
   if (p.nome && !conversa.nome) patch.nome = p.nome
   if (p.email) patch.email = p.email
   if (!conversa.primeira_resposta_em) patch.primeira_resposta_em = agora
+  // O idioma segue o do site de quem escreve (se mudar de idioma a meio, as frases mudam com ele).
+  const idioma = p.idioma ? idiomaApoio(p.idioma) : idiomaApoio(conversa.idioma)
+  if (idioma !== conversa.idioma) patch.idioma = idioma
+  const f = frases(idioma)
 
   let estado: Estado = conversa.estado === 'resolvida' ? 'com_agente' : conversa.estado
   let resposta: string
@@ -174,48 +222,48 @@ export async function receberMensagem(
     if (estado !== 'escalada') {
       estado = 'escalada'
       Object.assign(patch, { escalada: true, escalada_motivo: assunto, em_espera_desde: agora, nivel_aviso: 0, prazo_em: proximoPrazo(agora, 0) })
-      resposta = textoEscalada(assunto)
+      resposta = f.escalada(assunto)
       await avisarDono(
-        `🚨 Apoio do site · ${NOME_ASSUNTO[assunto]}\n` +
+        `🚨 Apoio do site · ${NOME_ASSUNTO[assunto]}${etiquetaIdioma(idioma)}\n` +
           `${p.nome || conversa.nome || 'Sem nome'}${p.email || conversa.email ? ` · ${p.email || conversa.email}` : ''}\n\n` +
           `«${p.texto.slice(0, 600)}»\n\nResponder: ${linkCrm(conversa.id)}`,
       )
     } else {
-      resposta = p.email ? 'Obrigado, ficou registado. O Ricardo responde-te por aqui ou por email.' : 'Ficou registado e junto ao teu pedido. O Ricardo responde-te por aqui.'
+      resposta = f.jaRegistado(Boolean(p.email))
     }
   } else if (jaEmEspera) {
     // Já está com pessoas: o agente não se mete por cima da equipa, só confirma que recebeu.
-    resposta = p.email ? 'Obrigado, guardei o teu email. A equipa responde-te em breve.' : 'Recebido, juntei à conversa. A equipa responde-te aqui em breve.'
+    resposta = f.recebido(Boolean(p.email))
   } else if (pedePessoa(p.texto)) {
     estado = 'a_aguardar_equipa'
     Object.assign(patch, { em_espera_desde: agora, nivel_aviso: 0, prazo_em: proximoPrazo(agora, 0) })
-    resposta = textoEsperaEquipa()
+    resposta = f.esperaEquipa()
   } else {
     try {
       const historico = (p.historico ?? []).slice(-8)
       const r = await chamarIA({
         tarefa: 'suporte-site',
-        sistema: contextoAgente(p.userId ? 'membro' : 'visitante', assunto),
+        sistema: contextoAgente(p.userId ? 'membro' : 'visitante', assunto, idioma),
         mensagens: [...historico, { role: 'user', content: p.texto }],
         maxTokens: 500,
         preferencia: 'rapido',
         temperatura: 0.3,
         timeoutMs: 12_000,
       })
-      resposta = respostaSegura(r.texto.trim() || 'Não consegui perceber. Podes dizer-me de outra forma?')
+      resposta = f.seguro(r.texto.trim() || f.naoPercebi)
       fornecedor = r.fornecedor
       // Se a guarda trocou o texto, é porque o modelo foi para reembolso: escala.
-      if (resposta !== r.texto.trim()) {
+      if (r.texto.trim() && resposta !== r.texto.trim()) {
         estado = 'escalada'
         Object.assign(patch, { escalada: true, escalada_motivo: 'reembolso', assunto: 'reembolso', em_espera_desde: agora, nivel_aviso: 0, prazo_em: proximoPrazo(agora, 0) })
-        await avisarDono(`🚨 Apoio do site · Reembolso (detetado na resposta)\n«${p.texto.slice(0, 600)}»\n\nResponder: ${linkCrm(conversa.id)}`)
+        await avisarDono(`🚨 Apoio do site · Reembolso (detetado na resposta)${etiquetaIdioma(idioma)}\n«${p.texto.slice(0, 600)}»\n\nResponder: ${linkCrm(conversa.id)}`)
       } else {
         estado = 'com_agente'
       }
     } catch {
       estado = 'a_aguardar_equipa'
       Object.assign(patch, { em_espera_desde: agora, nivel_aviso: 0, prazo_em: proximoPrazo(agora, 0) })
-      resposta = textoIaIndisponivel()
+      resposta = f.iaIndisponivel()
     }
   }
 
@@ -233,9 +281,29 @@ async function ultimoIdMensagem(db: Db, conversaId: string): Promise<number> {
 }
 
 /** A resposta de uma pessoa da equipa: pára os prazos e devolve a conversa ao agente (ou fecha). */
-export async function responderEquipa(db: Db, p: { conversaId: string; texto: string; userId: string; fechar?: boolean }) {
+export async function responderEquipa(
+  db: Db,
+  p: { conversaId: string; texto: string; userId: string; fechar?: boolean },
+): Promise<{ idioma: string; traduzida: boolean }> {
   const agora = new Date().toISOString()
-  await gravar(db, p.conversaId, 'equipa', p.texto, { autor_user_id: p.userId })
+  // A equipa escreve em português; o cliente lê no idioma da conversa. O original fica guardado.
+  const { data: c } = await db.from('suporte_conversas').select('idioma').eq('id', p.conversaId).maybeSingle()
+  const idioma = idiomaApoio((c as { idioma?: string } | null)?.idioma)
+  let texto = p.texto
+  let traduzida = false
+  if (idioma !== 'pt') {
+    try {
+      const { traduzirLote } = await import('@/lib/chat-traducao')
+      const [t] = await traduzirLote([p.texto], idioma)
+      if (t?.traducao?.trim() && !t.mesmoIdioma) {
+        texto = t.traducao.trim()
+        traduzida = true
+      }
+    } catch {
+      /* sem tradução: segue o original, e o CRM avisa */
+    }
+  }
+  await gravar(db, p.conversaId, 'equipa', texto, { autor_user_id: p.userId, ...(traduzida ? { texto_original: p.texto } : {}) })
   await db
     .from('suporte_conversas')
     .update({
@@ -248,6 +316,43 @@ export async function responderEquipa(db: Db, p: { conversaId: string; texto: st
       ...(p.fechar ? { estado: 'resolvida' } : {}),
     })
     .eq('id', p.conversaId)
+  return { idioma, traduzida }
+}
+
+/**
+ * Para o CRM: as mensagens do cliente (e do agente) em português, para quem responde perceber.
+ * Traduz só o que ainda não tem tradução e guarda-a em `texto_pt`, para não pagar duas vezes.
+ */
+export async function mensagensParaEquipa(db: Db, conversaId: string, idioma: string | null | undefined) {
+  const { data } = await db
+    .from('suporte_mensagens')
+    .select('id, autor, texto, texto_original, texto_pt, criado_em')
+    .eq('conversa_id', conversaId)
+    .order('id', { ascending: true })
+    .limit(200)
+  const msgs = (data ?? []) as Array<Mensagem & { texto_original: string | null; texto_pt: string | null }>
+  if (idiomaApoio(idioma) === 'pt') return msgs
+  const faltam = msgs.filter((m) => (m.autor === 'cliente' || m.autor === 'agente') && !m.texto_pt).slice(-25)
+  if (faltam.length) {
+    try {
+      const { traduzirLote } = await import('@/lib/chat-traducao')
+      const r = await traduzirLote(
+        faltam.map((m) => m.texto.slice(0, 2000)),
+        'pt',
+      )
+      await Promise.all(
+        faltam.map(async (m, i) => {
+          const t = r[i]
+          if (!t?.traducao?.trim()) return
+          m.texto_pt = t.mesmoIdioma ? m.texto : t.traducao.trim()
+          await db.from('suporte_mensagens').update({ texto_pt: m.texto_pt }).eq('id', m.id)
+        }),
+      )
+    } catch {
+      /* o CRM mostra o original */
+    }
+  }
+  return msgs
 }
 
 /**
@@ -258,7 +363,7 @@ export async function vigiarPrazos(db: Db, agoraMs = Date.now()): Promise<{ avis
   const agora = new Date(agoraMs).toISOString()
   const { data } = await db
     .from('suporte_conversas')
-    .select('id, nome, email, assunto, estado, em_espera_desde, nivel_aviso, prazo_em')
+    .select('id, nome, email, assunto, estado, em_espera_desde, nivel_aviso, prazo_em, idioma')
     .in('estado', ['a_aguardar_equipa', 'escalada'])
     .not('prazo_em', 'is', null)
     .lte('prazo_em', agora)
@@ -271,7 +376,7 @@ export async function vigiarPrazos(db: Db, agoraMs = Date.now()): Promise<{ avis
     const minutos = Math.round((agoraMs - new Date(desde).getTime()) / 60_000)
     await avisarDono(
       `⏰ Apoio do site · ${minutos} min sem resposta da equipa\n` +
-        `${NOME_ASSUNTO[c.assunto]} · ${c.estado === 'escalada' ? 'escalada ao Ricardo' : 'à espera da equipa'}\n` +
+        `${NOME_ASSUNTO[c.assunto]}${etiquetaIdioma(c.idioma)} · ${c.estado === 'escalada' ? 'escalada ao Ricardo' : 'à espera da equipa'}\n` +
         `${c.nome || 'Sem nome'}${c.email ? ` · ${c.email}` : ''}\n\nResponder: ${linkCrm(c.id)}`,
     )
     await db.from('suporte_conversas').update({ nivel_aviso: nivel, prazo_em: proximoPrazo(desde, nivel) }).eq('id', c.id)

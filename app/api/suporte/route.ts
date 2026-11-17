@@ -4,6 +4,7 @@ import { userIdDoPedido } from '@/lib/sessao-do-pedido'
 import { chaveValida, conversaPorChave, mensagensDe, novaChave, receberMensagem } from '@/lib/suporte/servidor'
 import { ASSUNTOS_DO_BALAO, emailValido, type Assunto } from '@/lib/suporte/regras'
 import type { MensagemIA } from '@/lib/ia/chamar'
+import { idiomaApoio } from '@/lib/suporte/idiomas'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -88,6 +89,8 @@ export async function POST(req: NextRequest) {
   const nome = typeof body?.nome === 'string' ? body.nome.trim().slice(0, 120) || null : null
   const assuntoSugerido = (ASSUNTOS_DO_BALAO as readonly string[]).includes(body?.assunto) ? (body.assunto as Assunto) : null
   const pagina = typeof body?.pagina === 'string' ? body.pagina.slice(0, 300) : null
+  // O idioma do site de quem escreve (um dos 21). Sem ele, a conversa fica no idioma que já tinha.
+  const idioma = typeof body?.idioma === 'string' ? idiomaApoio(body.idioma) : null
   const historico: MensagemIA[] = Array.isArray(body?.historico)
     ? (body.historico as Array<{ role: string; content: string }>)
         .filter((m) => (m.role === 'user' || m.role === 'assistant') && typeof m.content === 'string')
@@ -101,7 +104,7 @@ export async function POST(req: NextRequest) {
   const site = origem && origensPermitidas().includes(origem) ? origem : null
 
   try {
-    const r = await receberMensagem(getSupabaseAdmin(), { chave, texto, userId, nome, email, pagina, site, historico, assuntoSugerido })
+    const r = await receberMensagem(getSupabaseAdmin(), { chave, texto, userId, nome, email, pagina, site, historico, assuntoSugerido, idioma })
     return cors(req, NextResponse.json({ chave, ...r }))
   } catch (e) {
     console.error('[suporte]', e)

@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { exigirGestao } from '@/lib/backoffice-sessao'
 import { getSupabaseAdmin } from '@/lib/supabase-admin-client'
-import { mensagensDe, responderEquipa } from '@/lib/suporte/servidor'
+import { mensagensParaEquipa, responderEquipa } from '@/lib/suporte/servidor'
 import { ESTADOS, type Estado } from '@/lib/suporte/regras'
 
 export const runtime = 'nodejs'
@@ -12,7 +12,7 @@ export const dynamic = 'force-dynamic'
  *
  * GET              → a ronda: conversas por ordem de urgência + contagens.
  * GET ?id=<uuid>   → uma conversa com as mensagens.
- * POST             → responder como equipa ({ conversaId, texto, fechar? }).
+ * POST             → responder como equipa ({ conversaId, texto, fechar? }); traduzida para o idioma da conversa.
  * PATCH            → mudar estado/notas ({ conversaId, estado?, notas? }).
  *
  * Fechar uma conversa NÃO devolve dinheiro nenhum. Reembolsos ficam sempre com o Ricardo, fora daqui.
@@ -35,14 +35,15 @@ export async function GET(req: NextRequest) {
       const { data } = await db.from('profiles').select('full_name, email, user_type, subscription_plan').eq('id', conversa.user_id).maybeSingle()
       perfil = data ?? null
     }
-    const mensagens = await mensagensDe(db, id)
+    // Conversas noutro idioma: o CRM recebe também a tradução para português (texto_pt).
+    const mensagens = await mensagensParaEquipa(db, id, conversa.idioma)
     return NextResponse.json({ conversa, perfil, mensagens })
   }
 
   const filtro = req.nextUrl.searchParams.get('estado')
   let q = db
     .from('suporte_conversas')
-    .select('id, nome, email, user_id, assunto, estado, escalada, prazo_em, nivel_aviso, ultima_mensagem_em, ultima_resposta_equipa_em, site, pagina_origem, criado_em')
+    .select('id, nome, email, user_id, assunto, estado, escalada, prazo_em, nivel_aviso, ultima_mensagem_em, ultima_resposta_equipa_em, site, pagina_origem, idioma, criado_em')
     .order('ultima_mensagem_em', { ascending: false })
     .limit(200)
   if (filtro && (ESTADOS as readonly string[]).includes(filtro)) q = q.eq('estado', filtro)
@@ -80,8 +81,9 @@ export async function POST(req: NextRequest) {
   const conversaId = String(body?.conversaId ?? '')
   const texto = String(body?.texto ?? '').trim().slice(0, 4000)
   if (!UUID.test(conversaId) || !texto) return NextResponse.json({ error: 'Falta a conversa ou o texto' }, { status: 400 })
-  await responderEquipa(getSupabaseAdmin(), { conversaId, texto, userId: g.userId, fechar: body?.fechar === true })
-  return NextResponse.json({ ok: true })
+  // Em conversas noutro idioma, a resposta segue traduzida e o original fica guardado.
+  const r = await responderEquipa(getSupabaseAdmin(), { conversaId, texto, userId: g.userId, fechar: body?.fechar === true })
+  return NextResponse.json({ ok: true, ...r })
 }
 
 export async function PATCH(req: NextRequest) {
