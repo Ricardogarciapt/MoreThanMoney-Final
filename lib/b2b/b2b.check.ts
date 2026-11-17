@@ -173,6 +173,16 @@ teste('respostas vão para geral@', readFileSync(join(__dirname, 'envio.ts'), 'u
   teste('Prospector respeita o tecto', decidirEnvioB2B(pros('geral@exemplo.pt'), { cfg, enviadosHoje: 20, exclusao: [], segredo: SEG }).decisao !== 'sai')
 }
 
+{
+  // 17/11: a demo do dia entra no 1.º toque, assinada com ?ag=, só para o segmento que serve.
+  const m = montarMensagem({ segmento: 'negocio_local', pais: 'PT', toque: 1, empresa: 'Estúdio X', email: 'geral@estudiox.pt', segredo: SEG, hoje: '2026-11-19' })
+  teste('demo do dia no 1.º toque', /\/solucoes\/demos\/marcacoes-whatsapp\?ag=AG-PROSPECTOR/.test(m.texto) && validarMensagem(m.texto).ok)
+  const m2 = montarMensagem({ segmento: 'negocio_local', pais: 'PT', toque: 2, empresa: 'Estúdio X', email: 'geral@estudiox.pt', segredo: SEG, hoje: '2026-11-19' })
+  teste('sem demo nos toques 2 e 3', !/solucoes\/demos/.test(m2.texto))
+  const m3 = montarMensagem({ segmento: 'licenca_scanners', pais: 'INT', toque: 1, empresa: 'Acme', email: 'info@acme.com', segredo: SEG, hoje: '2026-11-19' })
+  teste('sem demo quando nenhuma serve o segmento', !/solucoes\/demos/.test(m3.texto))
+}
+
 if (falhas.length) {
   console.error(`✗ ${falhas.length} falha(s):\n - ` + falhas.join('\n - '))
   process.exit(1)

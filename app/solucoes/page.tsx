@@ -11,6 +11,10 @@ import { AreasInterativas } from "@/components/solucoes/areas-interativas"
 import { CasosCiclo } from "@/components/solucoes/casos-ciclo"
 import { VideoApresentacao } from "@/components/solucoes/video-apresentacao"
 import { MenuTrabalhos } from "@/components/solucoes/menu-trabalhos"
+import { demoDoDia } from "@/lib/site-solucoes/demos-diarias"
+
+// A «demo de hoje» muda sozinha à meia-noite de Lisboa.
+export const revalidate = 3600
 
 /**
  * /solucoes: o site de apresentação dos modelos de negócio da MTM (pedido do Ricardo, 16/11/2026).
@@ -37,6 +41,7 @@ const CTA_LABEL = "Marcar diagnóstico"
 export default function SolucoesPage() {
   const agendar = linkAgendar("negocios")
   const casos = CASOS.filter((c) => c.autorizado)
+  const demoHoje = demoDoDia()
 
   return (
     <div className="min-h-[100dvh] bg-[#08090C] text-zinc-100 antialiased">
@@ -51,6 +56,7 @@ export default function SolucoesPage() {
             <a href="#o-que-automatizamos" className="hover:text-white">Soluções</a>
             <a href="#simulador" className="hover:text-white">Simulador</a>
             <a href="#casos" className="hover:text-white">Casos</a>
+            <Link href="/solucoes/demos" className="hover:text-white">Demos</Link>
             <a href="#trabalhos" className="hover:text-white">Trabalhos</a>
           </div>
           <a
@@ -214,6 +220,24 @@ export default function SolucoesPage() {
         </section>
 
         {/* Demos: o sistema que a MTM usa todos os dias */}
+        {demoHoje && (
+          <section aria-label="Demo de hoje" className="px-4 pt-16">
+            <Link
+              href={`/solucoes/demos/${demoHoje.slug}`}
+              className="group mx-auto flex max-w-6xl flex-col gap-3 rounded-3xl border border-[#D2A63C]/40 bg-gradient-to-br from-[#D2A63C]/10 to-transparent p-6 md:flex-row md:items-center md:justify-between md:p-8"
+            >
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[#D2A63C]">Demo de hoje · uma nova todos os dias</p>
+                <p className="mt-2 text-xl font-bold md:text-2xl">{demoHoje.titulo}</p>
+                <p className="mt-1 text-zinc-400">{demoHoje.promessa}</p>
+              </div>
+              <span className="inline-flex shrink-0 items-center gap-2 font-semibold text-[#E9C46A]">
+                Ver em 1 minuto <ArrowRight className="h-4 w-4 transition group-hover:translate-x-1" aria-hidden="true" />
+              </span>
+            </Link>
+          </section>
+        )}
+
         <section id="demos" className="py-20">
           <div className="mx-auto max-w-6xl px-4">
             <h2 className="text-3xl font-bold tracking-tight md:text-4xl">A primeira cliente somos nós</h2>

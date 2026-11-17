@@ -13,6 +13,7 @@
 import { createHmac, timingSafeEqual } from 'crypto'
 import { AG, linkAssinado, linkTemAg } from '@/lib/agentes/codigos'
 import { identificaMtm, temSaida } from '@/lib/agentes/contacto-inicial'
+import { demoDoDia } from '@/lib/site-solucoes/demos-diarias'
 
 export type Segmento =
   | 'ib_afiliado' | 'comunidade' | 'criador' | 'escola' | 'prop_firm'
@@ -397,6 +398,8 @@ export interface PedidoMensagem {
   agente?: string
   segredo: string
   identificacao?: Identificacao
+  /** Dia (YYYY-MM-DD, Lisboa) para escolher a demo do dia. Por omissão, hoje. */
+  hoje?: string
 }
 
 export interface Mensagem {
@@ -420,7 +423,17 @@ export function montarMensagem(p: PedidoMensagem): Mensagem {
       : p.pais === 'INT'
         ? `You are receiving this email because it is the business contact published by ${p.empresa.trim()}. To stop receiving any email from MTM, unsubscribe here (one click): ${sair}`
         : `Recebem este email por ser o contacto profissional publicado pela ${p.empresa.trim()}. Para deixar de receber qualquer email da MTM, saiam aqui (um clique): ${sair}`
-  const texto = `${corpo}\n\n—\n${id.assinante}\n${id.linhaLegal}\n\n${linhaSaida}`
+  // 17/11 (Ricardo): o 1.º toque mostra a demo do dia que serve o segmento, se houver uma.
+  const demo = p.toque === 1 ? demoDoDia(p.hoje, p.segmento) : null
+  const linkDemo = demo ? linkAssinado(`/solucoes/demos/${demo.slug}`, AGENTE_B2B) : ''
+  const ps = !demo
+    ? ''
+    : p.pais === 'BR'
+      ? `\n\nPS: preparamos uma demonstração de 1 minuto que mostra uma automação destas funcionando (${demo.titulo}): ${linkDemo}`
+      : p.pais === 'INT'
+        ? `\n\nPS: here is a 1-minute demo of one of these automations at work (in Portuguese): ${linkDemo}`
+        : `\n\nPS: preparámos uma demonstração de 1 minuto que mostra uma automação destas a funcionar (${demo.titulo}): ${linkDemo}`
+  const texto = `${corpo}${ps}\n\n—\n${id.assinante}\n${id.linhaLegal}\n\n${linhaSaida}`
   return { assunto, texto, linkOferta, linkSair: sair }
 }
 
