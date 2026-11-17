@@ -22,6 +22,7 @@
  *   npx tsx lib/__tests__/telegram-admin-hoje.check.ts
  */
 import { escaparHtml as esc } from '@/lib/telegram-admin-porta'
+import { linhaDoResumo, type ResumoRecuperacao } from '@/lib/cobranca/recuperar-falhados'
 
 // ─────────────────────────────── O QUE SE LÊ ───────────────────────────────
 
@@ -56,6 +57,8 @@ export interface FontesDeHoje {
   nomes: Record<string, string>
   aExpirar: AssinaturaAExpirar[]
   comFalhaDePagamento: Array<{ nome: string; falhas: number }>
+  /** Linha pronta do cron cobranca-recuperar (recuperado este mês · em recuperação). */
+  recuperacao?: string | null
   paradas: ContaParada[]
   sinaisHoje: number
   pedidosDeAcesso: number
@@ -72,6 +75,7 @@ export interface Hoje {
   quemPagou: Array<{ nome: string; valor: number; plano: string | null }>
   aExpirar: AssinaturaAExpirar[]
   comFalhaDePagamento: Array<{ nome: string; falhas: number }>
+  recuperacao: string | null
   paradas: ContaParada[]
   sinaisHoje: number
   aMinhaEspera: Array<{ o_que: string; quantos: number; callback: string }>
@@ -112,6 +116,7 @@ export function montarHoje(f: FontesDeHoje): Hoje {
       .sort((a, b) => b.valor - a.valor),
     aExpirar: [...f.aExpirar].sort((a, b) => a.quandoIso.localeCompare(b.quandoIso)),
     comFalhaDePagamento: [...f.comFalhaDePagamento].sort((a, b) => b.falhas - a.falhas),
+    recuperacao: f.recuperacao ?? null,
     paradas: f.paradas,
     sinaisHoje: f.sinaisHoje,
     aMinhaEspera: [
@@ -147,6 +152,7 @@ export function textoHoje(h: Hoje): string {
     linhas.push('', `🔴 <b>Com pagamento em falha (${h.comFalhaDePagamento.length})</b>`)
     for (const p of h.comFalhaDePagamento.slice(0, 5)) linhas.push(`   • ${esc(p.nome)} — ${p.falhas} tentativa(s)`)
   }
+  if (h.recuperacao) linhas.push('', `🔁 <b>Recuperação automática:</b> ${esc(h.recuperacao)}`)
 
   if (h.aExpirar.length) {
     linhas.push('', `⏳ <b>A expirar nos próximos 7 dias (${h.aExpirar.length})</b>`)
@@ -220,7 +226,7 @@ export async function carregarHoje(supabase: unknown, agoraMs: number = Date.now
     }
   }
 
-  const [pagamentos, expiram, falhas, copy, auto, sinais, pendentes, levantamentos] = await Promise.all([
+  const [pagamentos, expiram, falhas, copy, auto, sinais, pendentes, levantamentos, recuperacao] = await Promise.all([
     tentar(
       db.from('payment_history').select('user_id, amount, currency, status, plan, created_at').gte('created_at', inicioDoDia).limit(200),
     ),
@@ -256,6 +262,7 @@ export async function carregarHoje(supabase: unknown, agoraMs: number = Date.now
     tentar(
       db.from('mtm_funded_withdrawals').select('id', { count: 'exact', head: true }).in('estado', ['pedido', 'em_analise', 'aprovado']),
     ),
+    tentar(db.from('site_settings').select('value').eq('key', 'cobranca_recuperacao').maybeSingle()),
   ])
 
   const linhas = <T>(r: unknown): T[] => ((r as { data?: T[] | null })?.data ?? []) as T[]
@@ -314,6 +321,7 @@ export async function carregarHoje(supabase: unknown, agoraMs: number = Date.now
     sinaisHoje: conta(sinais),
     pedidosDeAcesso: conta(pendentes),
     levantamentosAbertos: conta(levantamentos),
+    recuperacao: linhaDoResumo((recuperacao as { data?: { value?: { resumo?: ResumoRecuperacao } } | null })?.data?.value?.resumo),
     agoraMs,
   })
 }

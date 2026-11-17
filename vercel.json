@@ -13,6 +13,10 @@
       "schedule": "0 11 * * *"
     },
     {
+      "path": "/api/cron/cobranca-recuperar",
+      "schedule": "40 8 * * *"
+    },
+    {
       "path": "/api/cron/vendas-reconciliar",
       "schedule": "20 6,13 * * *"
     },
