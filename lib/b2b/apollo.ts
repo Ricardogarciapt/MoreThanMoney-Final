@@ -29,16 +29,27 @@ const PALAVRAS: Record<Segmento, string[]> = {
   parceria_redes: ['personal finance media', 'entrepreneurship', 'business podcast', 'fintech'],
 }
 
+// 17/11: só mercados onde o email frio a empresas é permitido sem consentimento prévio (ver exigeConsentimento).
+const LOCAIS: Record<Pais, string[]> = {
+  PT: ['Portugal', 'Angola', 'Mozambique', 'Cape Verde'],
+  BR: ['Brazil'],
+  INT: ['United States', 'United Kingdom', 'Ireland'],
+  FR: ['France', 'Belgium', 'Luxembourg'],
+  DE: ['Germany', 'Austria'],
+  IT: ['Italy'],
+}
+const CONTACTO: Record<Pais, string> = { PT: '/contactos', BR: '/contato', INT: '/contact', FR: '/contact', DE: '/kontakt', IT: '/contatti' }
+
 export function filtrosDoSegmento(segmento: Segmento, pais: Pais, extra: string[] = []) {
   const palavras = [...PALAVRAS[segmento], ...extra.map((x) => x.trim()).filter(Boolean)].slice(0, 8)
-  return { palavras, locais: pais === 'BR' ? ['Brazil'] : pais === 'INT' ? ['United Kingdom', 'Spain', 'Italy', 'Germany', 'United Arab Emirates'] : ['Portugal'] }
+  return { palavras, locais: LOCAIS[pais] }
 }
 
 /** As páginas onde uma empresa costuma pôr o contacto, por ordem. Só 2: o ritmo é de 10 s por pedido. */
 export function paginasDeContacto(site: string, pais: Pais): string[] {
   let origem: string
   try { origem = new URL(/^https?:\/\//i.test(site) ? site : `https://${site}`).origin } catch { return [] }
-  return [`${origem}${pais === 'BR' ? '/contato' : pais === 'INT' ? '/contact' : '/contactos'}`, `${origem}/`]
+  return [`${origem}${CONTACTO[pais]}`, `${origem}/`]
 }
 
 export interface ResultadoImportacao {
