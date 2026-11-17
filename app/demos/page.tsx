@@ -1,9 +1,9 @@
 import type { Metadata } from "next"
 import Link from "next/link"
-import { ArrowLeft, ArrowRight, CalendarCheck, Check } from "lucide-react"
+import { ArrowLeft, ArrowRight, ArrowUpRight, CalendarCheck, Check } from "lucide-react"
 import { linkAgendar } from "@/lib/agenda/link"
 import { demosPublicadas } from "@/lib/site-solucoes/demos-diarias"
-import { KITS, ROTULO_ESTADO, type EstadoKit } from "@/lib/site-solucoes/showroom"
+import { KITS, PROTOTIPOS, ROTULO_ESTADO, type EstadoKit } from "@/lib/site-solucoes/showroom"
 import { LOCALE } from "@/lib/site-solucoes/i18n/base"
 import { dicionario } from "@/lib/site-solucoes/i18n/dicionarios"
 import { alternativas, idiomaDoPedido, tradutorServidor } from "@/lib/site-solucoes/i18n/servidor"
@@ -71,6 +71,7 @@ export default async function ShowroomDemos({ searchParams }: Props) {
             </div>
             <nav aria-label={t("Nesta página")} className="mt-8 flex flex-wrap gap-x-6 gap-y-2 text-sm text-zinc-400">
               <a href="#demos-diarias" className="hover:text-white">{t("Demos do dia")}</a>
+              <a href="#prototipos" className="hover:text-white">{t("Protótipos completos")}</a>
               <a href="#modelos" className="hover:text-white">{t("Modelos por sector")}</a>
               <a href="#kits" className="hover:text-white">{t("Kits prontos")}</a>
             </nav>
@@ -104,6 +105,37 @@ export default async function ShowroomDemos({ searchParams }: Props) {
                 <p className="font-semibold text-zinc-300">{t("Amanhã há outra")}</p>
                 <p className="mt-1">{t("Entra uma demo nova todos os dias. Guarda esta página.")}</p>
               </div>
+            </div>
+          </section>
+
+          {/* Protótipos completos, feitos para um negócio concreto */}
+          <section id="prototipos" className="scroll-mt-8 pt-20">
+            <h2 className="text-2xl font-bold tracking-tight md:text-4xl">{t("Protótipos completos")}</h2>
+            <p className="mt-2 max-w-2xl text-zinc-400">{t("Feitos de raiz para um negócio concreto, com a marca dele, para lhe mostrar como ficaria. Abre e mexe à vontade.")}</p>
+            <div className="mt-8 grid gap-4 md:grid-cols-2">
+              {PROTOTIPOS.map((p) => (
+                <a key={p.id} href={p.url} target="_blank" rel="noopener noreferrer" className="group flex flex-col rounded-3xl border border-white/10 p-6 transition hover:border-[#D2A63C]/60">
+                  <div className="flex items-start justify-between gap-3">
+                    <div>
+                      <p className="text-xs text-zinc-500">{t(p.sector)}</p>
+                      <p className="mt-1 text-xl font-bold">{p.marca}</p>
+                    </div>
+                    <span className="shrink-0 rounded-full border border-white/15 px-2.5 py-1 text-[11px] text-zinc-400">{t("Proposta · ainda não é cliente")}</span>
+                  </div>
+                  <p className="mt-3 text-sm text-zinc-300">{t(p.resumo)}</p>
+                  <ul className="mt-4 grid gap-1.5 text-sm text-zinc-300 sm:grid-cols-2">
+                    {p.partes.map((x) => (
+                      <li key={x} className="flex gap-2">
+                        <Check className="mt-0.5 h-3.5 w-3.5 shrink-0 text-[#D2A63C]" aria-hidden="true" /> {t(x)}
+                      </li>
+                    ))}
+                  </ul>
+                  <span className="mt-auto inline-flex items-center gap-2 pt-5 text-sm font-semibold text-[#E9C46A]">
+                    {t("Abrir o protótipo")} <ArrowUpRight className="h-4 w-4 transition group-hover:-translate-y-0.5 group-hover:translate-x-0.5" aria-hidden="true" />
+                    {p.codigo ? <span className="font-normal text-zinc-500">· {t("back-office:")} {p.codigo}</span> : null}
+                  </span>
+                </a>
+              ))}
             </div>
           </section>
 
@@ -165,7 +197,7 @@ export default async function ShowroomDemos({ searchParams }: Props) {
               </a>
             </div>
             <p className="mt-6 text-xs text-zinc-500">
-              {t("Todas as demos usam dados e negócios fictícios. Não são casos de clientes nem garantem resultados.")}
+              {t("As demos e os modelos usam dados e negócios fictícios. Os protótipos são propostas a negócios que ainda não são clientes. Nada aqui garante resultados.")}
             </p>
           </section>
         </div>

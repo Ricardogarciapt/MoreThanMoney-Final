@@ -10,10 +10,10 @@ import { AREAS, CASO_MTM, SECTORES, TAREFAS } from '../automacao'
 import { DEMOS_DIARIAS } from '../demos-diarias'
 import { EQUIPAS } from '../analise'
 import { sectorGenerico } from '../sector-livre'
-import { KITS, MODELOS, ROTULO_ESTADO } from '../showroom'
+import { KITS, MODELOS, PROTOTIPOS, ROTULO_ESTADO } from '../showroom'
 
 /** Campos que não são texto para ler: identificadores, ligações e datas. */
-const NAO_TEXTO = new Set(['id', 'img', 'url', 'slug', 'data', 'segmentos', 'quem', 'area', 'kit', 'demo', 'marca', 'corPrincipal', 'corFundo', 'corTexto', 'estado'])
+const NAO_TEXTO = new Set(['id', 'img', 'url', 'slug', 'data', 'segmentos', 'quem', 'area', 'kit', 'demo', 'marca', 'corPrincipal', 'corFundo', 'corTexto', 'estado', 'codigo'])
 
 /** Textos que o código escolhe em tempo real (não aparecem como t("…") literal). */
 export const TEXTOS_SOLTOS = [
@@ -64,7 +64,7 @@ export function textosDoCodigo(raiz = process.cwd()): string[] {
 
 export function textosParaTraduzir(raiz = process.cwd()): string[] {
   const out = new Set<string>()
-  recolher({ PERFIS, DEMOS, CASOS: CASOS.filter((c) => c.autorizado), FAQ, PROXIMOS, MENU, AREAS, TAREFAS, SECTORES, CASO_MTM, DEMOS_DIARIAS, EQUIPAS, g: sectorGenerico(''), KITS, MODELOS, ROTULO_ESTADO }, '', out)
+  recolher({ PERFIS, DEMOS, CASOS: CASOS.filter((c) => c.autorizado), FAQ, PROXIMOS, MENU, AREAS, TAREFAS, SECTORES, CASO_MTM, DEMOS_DIARIAS, EQUIPAS, g: sectorGenerico(''), KITS, MODELOS, PROTOTIPOS, ROTULO_ESTADO }, '', out)
   for (const x of TEXTOS_SOLTOS) out.add(x)
   for (const x of textosDoCodigo(raiz)) out.add(x)
   return [...out].sort()
