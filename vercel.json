@@ -201,6 +201,10 @@
       "schedule": "0 7 * * *"
     },
     {
+      "path": "/api/cron/ig-auditoria",
+      "schedule": "40 6 * * *"
+    },
+    {
       "path": "/api/cron/estrategias-semanas",
       "schedule": "30 9 * * 6"
     },

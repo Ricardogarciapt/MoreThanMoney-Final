@@ -61,7 +61,7 @@ export function normalizar(bruto: unknown, perfil: Perfil, tema: Tema, id: strin
   const cta =
     perfil === 'ricardo'
       ? ['Guarda este post para releres antes da próxima decisão e partilha com quem precisa de o ler.', 'Segue @ricardogarciapt para mais.']
-      : [`💬 Comenta «${tema.palavraChave}» e envio-te ${tema.oQue} por mensagem.`]
+      : [`💬 Comenta «${tema.palavraChave}» e envio-te ${tema.oQue} por mensagem.`, ...(tema.fecho ?? [])]
   const legenda = [gancho, '', ...resumo.map((r) => `▪️ ${r}`), '', ...cta, '', `⚠️ ${DISCLAIMER_PT}`, '', hashtags].join('\n')
   const carrossel: Carrossel = { id, perfil, area: tema.area, laminas, legenda, palavraChave: tema.palavraChave, educador: tema.educador }
   return { carrossel }
@@ -82,6 +82,7 @@ export async function gerarCarrossel(perfil: Perfil, tema: Tema, id: string): Pr
   ].join('\n\n')
   const utilizador = [
     `TEMA: ${tema.tema}`,
+    ...(tema.objetivo ? [`OBJETIVO DESTE POST: ${tema.objetivo}`] : []),
     ...(tema.educador
       ? [`Este carrossel apresenta o educador ${tema.tema.split(' ensina')[0]}: fala dele na terceira pessoa na capa e no fecho, e o conteúdo do meio é o que ele ensina. Sem inventar factos biográficos nem resultados.`]
       : []),

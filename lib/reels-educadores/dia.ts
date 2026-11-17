@@ -1,7 +1,7 @@
 import { getSupabaseAdmin } from '@/lib/supabase-admin-client'
 import { tokenForAccount } from '@/lib/instagram/publish'
 import { ESTILO_POR_OMISSAO } from '@/lib/videocliper/estilos'
-import { AVISO, EDUCADORES, HORA_CORTE, HORAS_ANIMADOS, educador, type EducadorReel } from './config'
+import { AVISO, EDUCADORES, HORA_CORTE, HORAS_ANIMADOS, LINHAS_REELS, SLOTS_MTM, educador, type EducadorReel } from './config'
 import { gerarRoteiro, textoDoGancho, type Historico, type Roteiro } from './roteiro'
 import { listarAulas } from './aulas'
 
@@ -45,6 +45,36 @@ async function publicaveis(db: Db): Promise<Set<string>> {
   const { data } = await db.from('site_settings').select('value').eq('key', 'reels_educadores').maybeSingle()
   const extra = ((data?.value as { publicar?: Record<string, boolean> } | null)?.publicar) ?? {}
   return new Set(EDUCADORES.filter((e) => extra[e.slug] ?? e.publicar).map((e) => e.slug))
+}
+
+/**
+ * Quem faz os reels do dia: as linhas da marca (omissão desde 17/11/2026, ordem do Ricardo) ou os
+ * educadores (o ciclo antigo). `site_settings.reels_educadores.modo = "educadores"` volta atrás.
+ */
+async function modo(db: Db): Promise<'mtm' | 'educadores'> {
+  const { data } = await db.from('site_settings').select('value').eq('key', 'reels_educadores').maybeSingle()
+  return (data?.value as { modo?: string } | null)?.modo === 'educadores' ? 'educadores' : 'mtm'
+}
+
+const ehLinha = (slug: string) => LINHAS_REELS.some((l) => l.slug === slug)
+
+/**
+ * Ao passar para as linhas da marca: os reels de educadores ainda por publicar passam a RASCUNHO
+ * (nada se apaga; o dono pode voltar a aprová-los em /admin/social) e os roteiros de educadores
+ * por desenhar nos slots da marca saem da frente.
+ */
+async function pararEducadores(db: Db, dia: string, notas: string[]): Promise<void> {
+  const slugs = EDUCADORES.map((e) => e.slug)
+  const { data: comPost } = await db.from('reels_auto').select('post_id')
+    .in('educador', slugs).gte('dia', new Date(Date.now() - 86_400_000).toISOString().slice(0, 10)).not('post_id', 'is', null)
+  const ids = (comPost ?? []).map((r) => String(r.post_id))
+  if (ids.length) {
+    const { data: parados } = await db.from('social_scheduled_posts').update({ status: 'draft', approved_by: null, approved_at: null })
+      .in('id', ids).eq('status', 'approved').gt('scheduled_at', new Date().toISOString()).select('id')
+    if (parados?.length) notas.push(`${parados.length} reel(s) de educadores passaram a rascunho (linhas da marca ligadas)`)
+  }
+  await db.from('reels_auto').delete().gte('dia', dia).eq('tipo', 'animado').in('educador', slugs)
+    .lte('slot', SLOTS_MTM.length).is('post_id', null)
 }
 
 function quando(dia: string, hora: string): Date {
@@ -110,6 +140,20 @@ export async function planearDia(dia: string): Promise<{ dia: string; renders: P
   const { data: existentes } = await db.from('reels_auto').select('slot, educador').eq('dia', dia)
   const usados = new Set((existentes ?? []).map((r) => Number(r.slot)))
 
+  // ── linhas da marca: 6 reels (3 funis, 2 seguidores, 1 CTA); educadores fora do ciclo ──
+  if ((await modo(db)) === 'mtm') {
+    await pararEducadores(db, dia, notas)
+    const { data: ocupados } = await db.from('reels_auto').select('slot').eq('dia', dia)
+    const livres = new Set((ocupados ?? []).map((r) => Number(r.slot)))
+    for (let i = 0; i < SLOTS_MTM.length; i++) {
+      const slot = i + 1
+      const ed = educador(SLOTS_MTM[i].linha)
+      if (!ed || livres.has(slot)) continue
+      await novoRoteiro(db, dia, slot, ed, orc)
+    }
+    return { dia, renders: await porDesenhar(db, dia), notas, completo: !orc.parado }
+  }
+
   // ── 3 animados: um por educador publicável, a ordem roda todos os dias ──
   const ja = await jaNaFila(db, dia)
   const ordem = EDUCADORES.filter((e) => pub.has(e.slug))
@@ -139,6 +183,12 @@ export async function planearDia(dia: string): Promise<{ dia: string; renders: P
 
   await garantirCortes(db, dia, pub, notas)
 
+  const renders = await porDesenhar(db, dia)
+  if (orc.parado) notas.push('roteiros por acabar: a IA está no limite ou o tempo acabou; o robô volta a pedir')
+  return { dia, renders, notas, completo: !orc.parado }
+}
+
+async function porDesenhar(db: Db, dia: string): Promise<ParaRender[]> {
   const { data: porFazer } = await db.from('reels_auto').select('id, roteiro, educador')
     .eq('tipo', 'animado').eq('estado', 'roteiro').gte('dia', dia).order('slot')
   const renders: ParaRender[] = []
@@ -147,8 +197,7 @@ export async function planearDia(dia: string): Promise<{ dia: string; renders: P
     if (!ed || !r.roteiro) continue
     renders.push({ id: r.id as string, roteiro: r.roteiro as Roteiro, educador: { nome: ed.nome, area: ed.area, marca: ed.marca, foto: ed.foto } })
   }
-  if (orc.parado) notas.push('roteiros por acabar: a IA está no limite ou o tempo acabou; o robô volta a pedir')
-  return { dia, renders, notas, completo: !orc.parado }
+  return renders
 }
 
 /** Depois de o robô subir o vídeo: entra na fila (aprovado) ou fica como rascunho. */
@@ -158,13 +207,17 @@ export async function entregar(id: string, videoUrl: string, capaUrl: string | n
   if (!r) throw new Error('reel desconhecido')
   if (r.post_id) return { estado: r.estado as string, postId: r.post_id as string }
   const pub = await publicaveis(db)
-  const vai = pub.has(String(r.educador))
+  const linha = ehLinha(String(r.educador))
+  // Um reel de educador que chega depois de as linhas da marca ligarem fica como rascunho.
+  const vai = linha || (pub.has(String(r.educador)) && (await modo(db)) === 'educadores')
   const slot = Number(r.slot)
-  const hora = slot <= HORAS_ANIMADOS.length ? HORAS_ANIMADOS[slot - 1] : HORAS_ANIMADOS[1]
+  const hora = linha
+    ? (SLOTS_MTM[slot - 1]?.hora ?? SLOTS_MTM[1].hora)
+    : slot <= HORAS_ANIMADOS.length ? HORAS_ANIMADOS[slot - 1] : HORAS_ANIMADOS[1]
   const agora = new Date().toISOString()
   const { data: post, error } = await db.from('social_scheduled_posts').insert({
     ...IG,
-    pillar: 'reels-educadores',
+    pillar: linha ? `reels-mtm:${r.educador}` : 'reels-educadores',
     media_type: 'REELS',
     media_urls: [videoUrl],
     caption: (r.roteiro as Roteiro).legenda,

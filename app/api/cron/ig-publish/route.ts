@@ -23,6 +23,8 @@ import {
 import { CHAVE_AUTO_PUBLICAR, lerAutoPublicar } from "@/lib/agentes/social-agente"
 import { lerInterruptor } from "@/lib/carrossel-diario/interruptor"
 import { garantirCarrosselDoDia } from "@/lib/carrossel-diario/rede"
+import { garantirLinhasDoDia } from "@/lib/carrossel-diario/linhas"
+import { auditarInstagram, CHAVE_AUDITORIA } from "@/lib/instagram/auditoria"
 
 export const dynamic = "force-dynamic"
 export const maxDuration = 300
@@ -54,6 +56,22 @@ export async function GET(request: NextRequest) {
     if (rede.length) console.log("[ig-publish] carrossel do dia pela rede de segurança:", JSON.stringify(rede.map((r) => ({ perfil: r.perfil, estado: r.estado, motivo: r.motivo }))))
   } catch (e) {
     console.error("[ig-publish] rede do carrossel falhou:", e instanceof Error ? e.message : e)
+  }
+
+  // As 5 publicações diárias por linha (3 funis, seguidores, CTA): no máximo uma por ronda.
+  try {
+    const linhas = await garantirLinhasDoDia()
+    if (linhas.length) console.log("[ig-publish] linhas diárias:", JSON.stringify(linhas.map((r) => ({ linha: r.linha, estado: r.estado, motivo: r.motivo }))))
+  } catch (e) {
+    console.error("[ig-publish] linhas diárias falharam:", e instanceof Error ? e.message : e)
+  }
+
+  // A primeira auditoria do perfil corre aqui, logo a seguir ao deploy; depois é o cron diário.
+  try {
+    const { data: aud } = await supabase.from("site_settings").select("key").eq("key", CHAVE_AUDITORIA).maybeSingle()
+    if (!aud) console.log("[ig-publish] primeira auditoria do Instagram:", JSON.stringify(await auditarInstagram()))
+  } catch (e) {
+    console.error("[ig-publish] auditoria falhou:", e instanceof Error ? e.message : e)
   }
 
   // Elegíveis: aprovados cuja hora chegou, ou já em processamento (ex.: Reels em encoding).

@@ -127,7 +127,9 @@ export async function gerarRoteiro(ed: EducadorReel, historico: Historico[], id:
   const recentes = historico.slice(0, 12).map((h) => h.tema).filter(Boolean).join('; ')
 
   const pedido =
-    `Educador: ${ed.nome} — ${ed.area}${ed.marca ? ` (${ed.marca})` : ''}.\n` +
+    (ed.objetivo
+      ? `Reel da marca (sem educador, fala a MoreThanMoney): ${ed.area}.\nOBJETIVO DESTE REEL: ${ed.objetivo}\n`
+      : `Educador: ${ed.nome} — ${ed.area}${ed.marca ? ` (${ed.marca})` : ''}.\n`) +
     `Temas possíveis (escolhe um, ou um ângulo novo da mesma área): ${ed.temas.join('; ')}.\n` +
     `Demos assinatura deste educador: ${ed.demos.length ? ed.demos.join(', ') : 'nenhuma — usa uma genérica'}.\n` +
     `Temas já usados nos últimos dias (não repitas o mesmo ângulo): ${recentes || 'nenhum'}.\n` +
