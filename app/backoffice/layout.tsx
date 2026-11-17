@@ -15,6 +15,7 @@ import { getSupabaseAdmin } from '@/lib/supabase-admin-client'
 import { AREA_GESTAO_NOME, pode, PAPEL_NOME, type Capacidade } from '@/lib/backoffice-papeis'
 import { GRUPOS_GESTAO, modulosVisiveis } from '@/lib/backoffice-gestao'
 import { MenuBackoffice, type SeccaoMenu } from './_partes/menu'
+import { BotaoVoz } from './_partes/botao-voz'
 
 export const dynamic = 'force-dynamic'
 
@@ -107,6 +108,7 @@ export default async function BackofficeLayout({ children }: { children: React.R
           <div className="mx-auto max-w-6xl has-[[data-largo]]:max-w-none">{children}</div>
         </main>
       </div>
+      {entra && <BotaoVoz />}
     </div>
   )
 }
