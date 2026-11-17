@@ -18,10 +18,12 @@ import {
   usernameForAccount,
   isAutoPublishBlocked,
   autorizadoNaPessoal,
+  CRIADOR_REELS_PESSOAL,
   type ScheduledPost,
 } from "@/lib/instagram/publish"
 import { CHAVE_AUTO_PUBLICAR, lerAutoPublicar } from "@/lib/agentes/social-agente"
 import { lerInterruptor } from "@/lib/carrossel-diario/interruptor"
+import { lerInterruptorReels, type EstadoReelsRicardo } from "@/lib/reels-ricardo/interruptor"
 import { garantirCarrosselDoDia } from "@/lib/carrossel-diario/rede"
 
 export const dynamic = "force-dynamic"
@@ -81,6 +83,7 @@ export async function GET(request: NextRequest) {
   const { data: autoRow } = await supabase.from("site_settings").select("value").eq("key", CHAVE_AUTO_PUBLICAR).maybeSingle()
   const autoAgentes = lerAutoPublicar(autoRow?.value)
   let carrosselLigado: Record<"ricardo" | "mtm", boolean> | undefined
+  let reelsRicardo: EstadoReelsRicardo | undefined
 
   for (const row of due) {
     if (String(row.created_by || "").startsWith("agente:") && !autoAgentes.ligado) {
@@ -102,6 +105,18 @@ export async function GET(request: NextRequest) {
           .update({ status: "draft", error: "Carrossel diário desligado pelo dono.", updated_at: new Date().toISOString() })
           .eq("id", row.id)
         results.push({ id: row.id, status: "draft", reason: "carrossel diário desligado" })
+        continue
+      }
+    }
+    // Reels de marca pessoal (services/reels-ricardo): só com o interruptor ligado.
+    if (row.created_by === CRIADOR_REELS_PESSOAL) {
+      reelsRicardo ??= await lerInterruptorReels().catch(() => ({ ligado: false, teste: true, porDia: 1 }))
+      if (!reelsRicardo.ligado) {
+        await supabase
+          .from("social_scheduled_posts")
+          .update({ status: "draft", error: "Reels do @ricardogarciapt desligados pelo dono.", updated_at: new Date().toISOString() })
+          .eq("id", row.id)
+        results.push({ id: row.id, status: "draft", reason: "reels ricardo desligados" })
         continue
       }
     }
@@ -140,6 +155,7 @@ export async function GET(request: NextRequest) {
       caption: row.caption && parecePortugues(row.caption) ? corrigirPtPt(row.caption).texto : row.caption,
       creation_id: row.creation_id,
       child_creation_ids: row.child_creation_ids,
+      trial: row.created_by === CRIADOR_REELS_PESSOAL && reelsRicardo?.teste ? "SS_PERFORMANCE" : null,
     }
 
     try {
