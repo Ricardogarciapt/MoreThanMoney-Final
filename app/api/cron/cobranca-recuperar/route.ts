@@ -10,7 +10,8 @@
  *
  * Não cancela, não corta acesso e não anula faturas.
  * `?ensaio=1` devolve o que faria sem enviar nem gravar. `?backlog=1` alarga a janela a 120 dias
- * (só para correr uma vez, com o OK do Ricardo).
+ * (só para correr uma vez, com o OK do Ricardo). O mesmo efeito, sem segredo: pôr
+ * `backlog_uma_vez: true` em `site_settings.cobranca_recuperacao` — a corrida seguinte usa-o e desliga-o.
  */
 import { NextRequest, NextResponse } from 'next/server'
 import type Stripe from 'stripe'
@@ -38,7 +39,6 @@ type Perfil = { id: string; email: string | null; full_name: string | null; stri
 export async function GET(req: NextRequest) {
   if (!isCronAuthorized(req)) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   const ensaio = req.nextUrl.searchParams.get('ensaio') === '1'
-  const backlog = req.nextUrl.searchParams.get('backlog') === '1'
   const agoraMs = Date.now()
   const db = getSupabaseAdmin()
   const stripe = getStripeClient()
@@ -55,8 +55,11 @@ export async function GET(req: NextRequest) {
   const estado = (guardado?.value && typeof guardado.value === 'object' ? guardado.value : {}) as {
     marcas?: string[]
     reativar?: boolean
+    /** Ligado à mão (SQL) para uma corrida com janela de 120 dias; o cron desliga-o a seguir. */
+    backlog_uma_vez?: boolean
   }
   const reativarLigado = estado.reativar !== false
+  const backlog = req.nextUrl.searchParams.get('backlog') === '1' || estado.backlog_uma_vez === true
 
   const clientes = [...new Set(brutas.map((i) => String(i.customer)))]
   const { data: perfis } = clientes.length
@@ -141,7 +144,7 @@ export async function GET(req: NextRequest) {
     await db.from('site_settings').upsert(
       {
         key: CHAVE,
-        value: { ...estado, marcas: marcasGlobais, resumo },
+        value: { ...estado, backlog_uma_vez: false, marcas: marcasGlobais, resumo },
         description: 'Recuperação de pagamentos falhados: marcas de envio, interruptor «reativar» e o último resumo',
         updated_at: new Date().toISOString(),
       },
