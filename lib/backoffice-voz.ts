@@ -13,6 +13,7 @@
  */
 import { ESTADOS_PIPELINE, ESTADO_PIPELINE_NOME, type EstadoPipeline } from './backoffice-vista'
 import { FUNIS, FUNIL_NOME, ehFunil, type Funil } from './backoffice-funis'
+import { TIPOS_CHAMADA, ehTipoChamada, type TipoChamada } from './backoffice-chamada'
 
 export type AccaoVoz =
   | { tipo: 'procurar_negocio'; texto: string }
@@ -21,8 +22,16 @@ export type AccaoVoz =
   | { tipo: 'mover_negocio'; negocio: string; estado: EstadoPipeline; motivo_perda?: string }
   | { tipo: 'criar_tarefa'; titulo: string; prazo: string | null; negocio: string | null }
   | { tipo: 'mudar_funil'; negocio: string; funil: Funil | null }
+  | { tipo: 'nota_negocio'; negocio: string; texto: string }
+  | { tipo: 'concluir_tarefa'; tarefa: string }
+  | { tipo: 'adiar_tarefa'; tarefa: string; prazo: string }
+  | { tipo: 'preparar_chamada'; negocio: string | null; tipo_chamada: TipoChamada }
+  | { tipo: 'rascunho_mensagem'; negocio: string; canal: CanalRascunho; objetivo: string }
   | { tipo: 'abrir'; pagina: PaginaVoz }
   | { tipo: 'responder'; texto: string }
+
+export const CANAIS_RASCUNHO = ['whatsapp', 'email'] as const
+export type CanalRascunho = (typeof CANAIS_RASCUNHO)[number]
 
 export const PAGINAS_VOZ = {
   hoje: '/backoffice',
@@ -52,11 +61,17 @@ export function sistemaDoComando(hojeISO: string, podeGestao: boolean): string {
     `{"tipo":"mover_negocio","negocio":"<nome>","estado":"<estado>","motivo_perda":"<só se perdido>"}  — estados: ${estados}`,
     `{"tipo":"mudar_funil","negocio":"<nome>","funil":"<funil ou null>"}  — funis: ${FUNIS.map((f) => `${f} (${FUNIL_NOME[f]})`).join(', ')}; null tira o funil`,
     '{"tipo":"criar_tarefa","titulo":"<curto>","prazo":"AAAA-MM-DD ou null","negocio":"<nome ou null>"}',
+    '{"tipo":"nota_negocio","negocio":"<nome>","texto":"<o que se quer anotar, por palavras da pessoa>"}  — acrescentar uma nota a um negócio',
+    '{"tipo":"concluir_tarefa","tarefa":"<parte do título>"}  — marcar uma tarefa como feita',
+    '{"tipo":"adiar_tarefa","tarefa":"<parte do título>","prazo":"AAAA-MM-DD"}  — mudar o prazo de uma tarefa',
+    `{"tipo":"preparar_chamada","negocio":"<nome ou null>","tipo_chamada":"${Object.keys(TIPOS_CHAMADA).join('|')}"}  — abrir a sala de chamadas (Google Meet) já com o negócio`,
+    '{"tipo":"rascunho_mensagem","negocio":"<nome>","canal":"whatsapp|email","objetivo":"<o que a mensagem deve conseguir>"}  — escrever um RASCUNHO para a pessoa copiar; nunca se envia daqui',
     `{"tipo":"abrir","pagina":"${Object.keys(PAGINAS_VOZ).join('|')}"}  — ir para uma página`,
     '{"tipo":"responder","texto":"<resposta curta>"}  — quando nada acima serve ou falta informação; pergunta o que falta',
     '',
-    'Regras: nunca inventes nomes nem datas. Se a pessoa pedir para enviar mensagens, pagar, apagar',
-    'ou algo fora desta lista, usa "responder" e diz que isso ainda se faz no ecrã.',
+    'Regras: nunca inventes nomes nem datas. Se a pessoa pedir para ENVIAR uma mensagem, usa',
+    '"rascunho_mensagem" (ela revê e envia). Pagar, apagar ou algo fora desta lista: usa "responder"',
+    'e diz que isso ainda se faz no ecrã.',
     'Responde no "texto" na mesma língua em que a pessoa falou.',
   ].join('\n')
 }
@@ -114,6 +129,30 @@ export function interpretarAccao(bruto: string, podeGestao: boolean): AccaoVoz {
       if (!negocio || (funil !== null && !ehFunil(funil))) return naoPercebi
       return { tipo: 'mudar_funil', negocio, funil }
     }
+    case 'nota_negocio': {
+      const negocio = textoCurto(j.negocio, 80)
+      const texto = textoCurto(j.texto, 1000)
+      return negocio && texto ? { tipo: 'nota_negocio', negocio, texto } : naoPercebi
+    }
+    case 'concluir_tarefa': {
+      const tarefa = textoCurto(j.tarefa, 120)
+      return tarefa ? { tipo: 'concluir_tarefa', tarefa } : naoPercebi
+    }
+    case 'adiar_tarefa': {
+      const tarefa = textoCurto(j.tarefa, 120)
+      if (!tarefa || !ehData(j.prazo)) return naoPercebi
+      return { tipo: 'adiar_tarefa', tarefa, prazo: j.prazo }
+    }
+    case 'preparar_chamada': {
+      const tipo_chamada = ehTipoChamada(j.tipo_chamada) ? j.tipo_chamada : 'followup'
+      return { tipo: 'preparar_chamada', negocio: textoCurto(j.negocio, 80), tipo_chamada }
+    }
+    case 'rascunho_mensagem': {
+      const negocio = textoCurto(j.negocio, 80)
+      const canal = j.canal === 'email' ? 'email' : 'whatsapp'
+      const objetivo = textoCurto(j.objetivo, 300) ?? 'seguimento'
+      return negocio ? { tipo: 'rascunho_mensagem', negocio, canal, objetivo } : naoPercebi
+    }
     case 'abrir': {
       const pagina = j.pagina as PaginaVoz
       return pagina in PAGINAS_VOZ ? { tipo: 'abrir', pagina } : naoPercebi
@@ -130,4 +169,29 @@ export function interpretarAccao(bruto: string, podeGestao: boolean): AccaoVoz {
 /** Limpa o texto de procura para um `ilike` — sem curingas vindos da voz. */
 export function padraoDeProcura(texto: string): string {
   return `%${texto.replace(/[%_\\]/g, ' ').trim().replace(/\s+/g, '%')}%`
+}
+
+/** Tecto da coluna `vendas_negocios.nota` (o PATCH recusa acima disto). */
+export const MAX_NOTA = 2000
+
+/** A nota nova: o que se disse por cima, a nota antiga por baixo. Nunca passa do tecto. */
+export function notaDaVoz(dia: string, texto: string, antiga: string | null): string {
+  const topo = `🎙 ${dia} · ${texto.trim()}`
+  const resto = antiga?.trim() ? `\n\n${antiga.trim()}` : ''
+  return (topo + resto).slice(0, MAX_NOTA)
+}
+
+/** Procura de tarefas pelo título — sem curingas vindos da voz (mesma limpeza dos negócios). */
+export const padraoDeTarefa = padraoDeProcura
+
+/** O prompt do rascunho: tom da casa, sem promessas, sem números, para a pessoa rever. */
+export function sistemaDoRascunho(canal: CanalRascunho, framework: string): string {
+  return [
+    framework,
+    '',
+    `Escreve um RASCUNHO de ${canal === 'email' ? 'email (primeira linha «Assunto: …», depois o corpo)' : 'mensagem de WhatsApp (curta, 2 a 5 frases)'}`,
+    'que um membro da equipa MoreThanMoney vai rever e enviar ele próprio a um lead.',
+    'PT-PT, «tu», tom humano e próximo, um único pedido claro no fim. Nunca prometas resultados nem',
+    'inventes números, datas ou factos que não estejam nos dados. Devolve só o texto do rascunho.',
+  ].join('\n')
 }

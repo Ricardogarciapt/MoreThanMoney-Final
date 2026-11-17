@@ -10,14 +10,45 @@
  */
 import { NextRequest, NextResponse } from 'next/server'
 import { exigirCapacidade } from '@/lib/backoffice-sessao'
-import { procurarNegocios } from '@/lib/backoffice-procura'
+import { notaDoNegocio, procurarNegocios, type NegocioCurto } from '@/lib/backoffice-procura'
 import { getSupabaseAdmin } from '@/lib/supabase-admin-client'
 import { pode } from '@/lib/backoffice-papeis'
 import { ESTADO_PIPELINE_NOME, type EstadoPipeline } from '@/lib/backoffice-vista'
 import { FUNIL_NOME } from '@/lib/backoffice-funis'
 import { chamarIAGratis, mensagemIndisponivel } from '@/lib/ia/chamar'
 import { ferramentaPorNome } from '@/lib/mcp/ferramentas'
-import { MAX_TEXTO_COMANDO, PAGINAS_VOZ, interpretarAccao, sistemaDoComando } from '@/lib/backoffice-voz'
+import { blocoFramework } from '@/lib/framework-mtm'
+import { TIPOS_CHAMADA } from '@/lib/backoffice-chamada'
+import type { ContextoBackoffice } from '@/lib/backoffice-sessao'
+import {
+  MAX_TEXTO_COMANDO,
+  PAGINAS_VOZ,
+  interpretarAccao,
+  notaDaVoz,
+  padraoDeTarefa,
+  sistemaDoComando,
+  sistemaDoRascunho,
+} from '@/lib/backoffice-voz'
+
+/** As tarefas ABERTAS da própria pessoa cujo título bate com o que disse. */
+async function procurarTarefas(ctx: ContextoBackoffice, texto: string) {
+  const { data } = await getSupabaseAdmin()
+    .from('vendas_tarefas')
+    .select('id, titulo, prazo')
+    .eq('responsavel_id', ctx.userId)
+    .eq('estado', 'aberta')
+    .ilike('titulo', padraoDeTarefa(texto))
+    .order('prazo', { ascending: true, nullsFirst: false })
+    .limit(5)
+  return (data ?? []) as { id: string; titulo: string; prazo: string | null }[]
+}
+
+/** De vários candidatos, o que tem exactamente o nome dito; senão, o único; senão nenhum. */
+function escolherUm(candidatos: NegocioCurto[], dito: string): NegocioCurto | null {
+  const exacto = candidatos.filter((c) => c.nome.trim().toLowerCase() === dito.trim().toLowerCase())
+  if (exacto.length === 1) return exacto[0]
+  return candidatos.length === 1 ? candidatos[0] : null
+}
 
 export const runtime = 'nodejs'
 
@@ -119,6 +150,114 @@ export async function POST(request: NextRequest) {
         accao,
         resposta: `Pôr no funil «${nome}». Confirma o negócio certo:`,
         proposta: { tipo: 'mudar_funil', funil: accao.funil, nome_funil: nome, candidatos },
+      })
+    }
+
+    case 'nota_negocio': {
+      const candidatos = await procurarNegocios(ctx, accao.negocio)
+      if (!candidatos) return NextResponse.json({ texto, accao, resposta: 'Esta conta não tem acesso ao pipeline.' })
+      if (!candidatos.length) return NextResponse.json({ texto, accao, resposta: `Não encontrei «${accao.negocio}» no teu pipeline.` })
+      // A nota nova é composta aqui (a antiga fica por baixo); o toque grava pela rota de sempre.
+      const comNota = await Promise.all(
+        candidatos.slice(0, 4).map(async (n) => {
+          const atual = await notaDoNegocio(ctx, n.id)
+          return { ...n, nota_nova: notaDaVoz(hoje, accao.texto, atual?.nota ?? null) }
+        }),
+      )
+      return NextResponse.json({
+        texto,
+        accao,
+        resposta: `Acrescentar à nota: «${accao.texto}». Confirma o negócio certo:`,
+        proposta: { tipo: 'nota_negocio', texto: accao.texto, candidatos: comNota },
+      })
+    }
+
+    case 'concluir_tarefa':
+    case 'adiar_tarefa': {
+      if (!pode(ctx.capacidades, 'bo.tarefas_proprias')) return NextResponse.json({ texto, accao, resposta: 'Esta conta não tem tarefas.' })
+      const tarefas = await procurarTarefas(ctx, accao.tarefa)
+      if (!tarefas.length) return NextResponse.json({ texto, accao, resposta: `Não encontrei nenhuma tarefa aberta tua com «${accao.tarefa}».` })
+      return NextResponse.json({
+        texto,
+        accao,
+        resposta: accao.tipo === 'concluir_tarefa' ? 'Marcar como feita. Confirma a tarefa:' : `Mudar o prazo para ${accao.prazo}. Confirma a tarefa:`,
+        proposta: accao.tipo === 'concluir_tarefa' ? { tipo: 'concluir_tarefa', tarefas } : { tipo: 'adiar_tarefa', prazo: accao.prazo, tarefas },
+      })
+    }
+
+    case 'preparar_chamada': {
+      const base = `/backoffice/chamadas?tipo=${accao.tipo_chamada}`
+      if (!accao.negocio) return NextResponse.json({ texto, accao, navegar: base })
+      const candidatos = (await procurarNegocios(ctx, accao.negocio)) ?? []
+      const um = escolherUm(candidatos, accao.negocio)
+      const link = (n: NegocioCurto) => `${base}&negocio=${n.id}&nome=${encodeURIComponent(n.nome)}`
+      if (um) return NextResponse.json({ texto, accao, navegar: link(um) })
+      return NextResponse.json({
+        texto,
+        accao,
+        resposta: candidatos.length
+          ? `Chamada de ${TIPOS_CHAMADA[accao.tipo_chamada].toLowerCase()}. Com quem?`
+          : `Não encontrei «${accao.negocio}». Abre a sala e escolhe lá.`,
+        ligacoes: (candidatos.length ? candidatos : []).map((n) => ({ href: link(n), nome: n.nome })),
+        ...(candidatos.length ? {} : { navegar: base }),
+      })
+    }
+
+    case 'rascunho_mensagem': {
+      const candidatos = await procurarNegocios(ctx, accao.negocio)
+      if (!candidatos) return NextResponse.json({ texto, accao, resposta: 'Esta conta não tem acesso ao pipeline.' })
+      const um = escolherUm(candidatos, accao.negocio)
+      if (!um) {
+        return NextResponse.json({
+          texto,
+          accao,
+          resposta: candidatos.length
+            ? `Há ${candidatos.length} negócios com «${accao.negocio}»: ${candidatos.map((c) => c.nome).join(', ')}. Diz o nome completo.`
+            : `Não encontrei «${accao.negocio}» no teu pipeline.`,
+        })
+      }
+      const ficha = await notaDoNegocio(ctx, um.id)
+      if (!ficha) return NextResponse.json({ texto, accao, resposta: `Não encontrei «${accao.negocio}» no teu pipeline.` })
+      const { data: contacto } = await getSupabaseAdmin().from('vendas_negocios').select('telefone, email').eq('id', um.id).maybeSingle()
+      let rascunho: string
+      try {
+        const r = await chamarIAGratis({
+          sistema: sistemaDoRascunho(accao.canal, blocoFramework('setter')),
+          mensagens: [
+            {
+              role: 'user',
+              content: [
+                `Lead: ${um.nome} · etapa: ${um.estado}`,
+                `Nota do CRM: ${(ficha.nota ?? '(sem nota)').slice(0, 1500)}`,
+                `Objectivo da mensagem: ${accao.objetivo}`,
+              ].join('\n'),
+            },
+          ],
+          temperatura: 0.5,
+          maxTokens: 500,
+          tarefa: 'backoffice-rascunho',
+        })
+        rascunho = r.texto.trim()
+      } catch (e) {
+        return NextResponse.json({ texto, accao, resposta: mensagemIndisponivel(e) })
+      }
+      const digitos = String(contacto?.telefone ?? '').replace(/\D/g, '')
+      const tel = digitos.length === 9 ? `351${digitos}` : digitos
+      const email = String(contacto?.email ?? '').trim()
+      return NextResponse.json({
+        texto,
+        accao,
+        resposta: `Rascunho para ${um.nome}. Revê, copia e envia tu.`,
+        rascunho: {
+          canal: accao.canal,
+          texto: rascunho,
+          abrir:
+            accao.canal === 'whatsapp' && tel.length >= 9
+              ? `https://wa.me/${tel}?text=${encodeURIComponent(rascunho)}`
+              : accao.canal === 'email' && email
+                ? `mailto:${email}`
+                : null,
+        },
       })
     }
 

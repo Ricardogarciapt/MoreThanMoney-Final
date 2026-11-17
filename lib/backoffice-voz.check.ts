@@ -1,6 +1,6 @@
 /** Guarda do comando por voz: `npx tsx lib/backoffice-voz.check.ts`. */
 import assert from 'node:assert/strict'
-import { interpretarAccao, padraoDeProcura, sistemaDoComando } from './backoffice-voz'
+import { MAX_NOTA, interpretarAccao, notaDaVoz, padraoDeProcura, sistemaDoComando } from './backoffice-voz'
 
 // Lixo e JSON partido nunca viram acção.
 assert.equal(interpretarAccao('olá', true).tipo, 'responder')
@@ -54,3 +54,34 @@ assert.equal(interpretarAccao('{"tipo":"abrir","pagina":"../admin"}', true).tipo
 assert.equal(padraoDeProcura('João 100%_Silva'), '%João%100%Silva%')
 
 console.log('backoffice-voz: ok')
+
+// ── Fase 2: nota, tarefas, chamada, rascunho ──────────────────────────────────
+assert.deepEqual(interpretarAccao('{"tipo":"nota_negocio","negocio":"Ana","texto":" quer começar em janeiro "}', true), {
+  tipo: 'nota_negocio',
+  negocio: 'Ana',
+  texto: 'quer começar em janeiro',
+})
+assert.equal(interpretarAccao('{"tipo":"nota_negocio","negocio":"Ana","texto":""}', true).tipo, 'responder')
+assert.deepEqual(interpretarAccao('{"tipo":"concluir_tarefa","tarefa":"ligar Pedro"}', true), { tipo: 'concluir_tarefa', tarefa: 'ligar Pedro' })
+// Adiar sem data válida não chega à rota.
+assert.equal(interpretarAccao('{"tipo":"adiar_tarefa","tarefa":"x","prazo":"sexta"}', true).tipo, 'responder')
+assert.deepEqual(interpretarAccao('{"tipo":"adiar_tarefa","tarefa":"x","prazo":"2026-11-20"}', true), { tipo: 'adiar_tarefa', tarefa: 'x', prazo: '2026-11-20' })
+// Tipo de chamada desconhecido cai para follow-up; negócio é opcional.
+assert.deepEqual(interpretarAccao('{"tipo":"preparar_chamada","negocio":null,"tipo_chamada":"zoom"}', true), {
+  tipo: 'preparar_chamada',
+  negocio: null,
+  tipo_chamada: 'followup',
+})
+// Rascunho: canal desconhecido cai para WhatsApp; nunca há acção de enviar.
+assert.deepEqual(interpretarAccao('{"tipo":"rascunho_mensagem","negocio":"Rui","canal":"sms","objetivo":"marcar chamada"}', true), {
+  tipo: 'rascunho_mensagem',
+  negocio: 'Rui',
+  canal: 'whatsapp',
+  objetivo: 'marcar chamada',
+})
+assert.equal(interpretarAccao('{"tipo":"enviar_mensagem","negocio":"Rui"}', true).tipo, 'responder')
+// Nota: o novo vai por cima, o antigo fica, nunca passa do tecto.
+assert.equal(notaDaVoz('2026-11-17', 'ligou', null), '🎙 2026-11-17 · ligou')
+assert.equal(notaDaVoz('2026-11-17', 'ligou', 'antiga'), '🎙 2026-11-17 · ligou\n\nantiga')
+assert.equal(notaDaVoz('2026-11-17', 'x', 'a'.repeat(5000)).length, MAX_NOTA)
+console.log('backoffice-voz (fase 2): ok')

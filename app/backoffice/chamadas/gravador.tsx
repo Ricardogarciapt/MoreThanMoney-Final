@@ -11,7 +11,7 @@
  * Guardar no negócio e criar tarefas são toques de «Confirmar» que chamam as rotas de sempre.
  */
 import { useEffect, useRef, useState } from 'react'
-import { TIPOS_CHAMADA, type TipoChamada } from '@/lib/backoffice-chamada'
+import { TIPOS_CHAMADA, ehTipoChamada, type TipoChamada } from '@/lib/backoffice-chamada'
 
 type Negocio = { id: string; nome: string; estado: string }
 type Tarefa = { titulo: string; prazo: string | null }
@@ -55,6 +55,17 @@ export function SalaDeChamadas() {
   const gravador = useRef<MediaRecorder | null>(null)
   const temporizador = useRef<ReturnType<typeof setInterval> | null>(null)
   const ativo = useRef(false)
+
+  // Vindo do microfone («prepara a chamada com o João»): ?tipo=&negocio=&nome= já preenchem a sala.
+  // O id só serve para ligar o resumo; o servidor volta a verificar o âmbito ao resumir.
+  useEffect(() => {
+    const q = new URLSearchParams(window.location.search)
+    const t = q.get('tipo')
+    if (ehTipoChamada(t)) setTipo(t)
+    const id = q.get('negocio')
+    const nome = q.get('nome')
+    if (id && nome && /^[0-9a-f-]{36}$/i.test(id)) setNegocio({ id, nome: nome.slice(0, 120), estado: '' })
+  }, [])
 
   // Procura de negócio (só no teu âmbito — o servidor filtra).
   useEffect(() => {
