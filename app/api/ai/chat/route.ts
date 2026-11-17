@@ -2,8 +2,10 @@ import { NextRequest, NextResponse } from "next/server"
 import { createServerClient } from "@supabase/ssr"
 import { cookies } from "next/headers"
 import { buildLocalMtmCoachReply } from "@/lib/mtm-ai-coach-fallback"
-import { chamarIA, mensagemIndisponivel } from "@/lib/ia/chamar"
-import { blocoFramework } from "@/lib/framework-mtm"
+import { chamarIAGratis, mensagemIndisponivel } from "@/lib/ia/chamar"
+import { normalizeLang } from "@/lib/i18n/config"
+import { montarSistema, type ContextoAluno } from "@/lib/mentor/prompt"
+import { contextoDoAluno, salasDaSemana } from "@/lib/mentor/contexto-servidor"
 
 type ChatContext = {
   pathname?: string
@@ -13,38 +15,37 @@ type ChatContext = {
   onboarding_focus?: boolean
 }
 
-function buildSystemPrompt(
+/**
+ * Assistente dos membros (app). Desde 17/11 usa o MESMO cérebro do Mentor (`lib/mentor/prompt.ts`):
+ * mesma base de conhecimento, mesmo tom humano, mesma regra de língua (a da mensagem do membro,
+ * não PT-PT à força) e nada de network marketing. Sem notas escondidas: aqui não se guardam sinais.
+ */
+async function buildSystemPrompt(
   dcaContext: string,
   additionalContext: string,
-  ctx: ChatContext
-): string {
-  const mtmBlocks: string[] = []
-
-  if (ctx.mentor_mode) {
-    mtmBlocks.push(
-      "O utilizador está no modo Mentor (app-mobile). Prioriza o plano 72h de onboarding: conhecer a app, configurar conta demo ou ligar a corretora, definir gestão de risco por operação, sessão ao vivo com o mentor e primeira semana com plano escrito."
-    )
+  ctx: ChatContext,
+  userId: string,
+  idioma: string | undefined
+): Promise<string> {
+  const extras: string[] = []
+  if (ctx.mentor_mode || ctx.onboarding_focus) {
+    extras.push("## Foco desta conversa\nOnboarding: liga as respostas ao próximo passo concreto dos 5 passos e a hábitos diários.")
   }
-  if (ctx.onboarding_focus) {
-    mtmBlocks.push(
-      "Contexto: onboarding / fast-start MoreThanMoney. Liga respostas a execução prática, hábitos diários e próximos passos claros."
-    )
-  }
-
-  return `És o assistente oficial **MoreThanMoney (MTM)** — educação, trading, copytrading e crescimento de negócio com acompanhamento.
-
-${mtmBlocks.join("\n")}
-
-Áreas:
-1. **Aprender e aplicar:** plano 72h de onboarding (app, conta demo ou corretora, gestão de risco, sessão ao vivo) e rotina de estudo com revisão semanal dos resultados.
-2. **Trading / investimento:** visão geral, DCA, gestão de risco — sem promessas de retorno; lembra riscos.
-3. **Mindset & fitness** (se houver dados do utilizador abaixo).
-
-${dcaContext}${additionalContext}
-
-Responde em **português de Portugal**, de forma concisa e acionável. Se faltar informação, pergunta 1 coisa específica em vez de generalizar.
-
-${blocoFramework("apoio")}`
+  if (dcaContext || additionalContext) extras.push(`## Dados do membro\n${dcaContext}${additionalContext}`)
+  const [{ contexto, idiomaPerfil }, salas] = await Promise.all([
+    contextoDoAluno(userId).catch(() => ({ contexto: {} as ContextoAluno, idiomaPerfil: null as string | null })),
+    salasDaSemana(),
+  ])
+  const base = montarSistema({
+    langApp: normalizeLang(idioma || idiomaPerfil || undefined),
+    ultimaPorBotao: false,
+    contexto,
+    salas,
+    comNotas: false,
+  })
+  // Os extras entram ANTES do bloco da língua (que tem de ficar em último).
+  const i = base.lastIndexOf("## Língua")
+  return extras.length ? `${base.slice(0, i)}${extras.join("\n\n")}\n\n${base.slice(i)}` : base
 }
 
 // AI Chat: OpenAI (prioridade em auto) → Anthropic → resposta local
@@ -79,7 +80,7 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json()
-    const { message, context } = body as { message?: string; context?: ChatContext }
+    const { message, context, idioma } = body as { message?: string; context?: ChatContext; idioma?: string }
 
     if (!message || typeof message !== "string") {
       return NextResponse.json({ error: "Mensagem é obrigatória" }, { status: 400 })
@@ -175,7 +176,7 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    const systemPrompt = buildSystemPrompt(dcaContext, additionalContext, context || {})
+    const systemPrompt = await buildSystemPrompt(dcaContext, additionalContext, context || {}, authUser.id, idioma)
 
     // 04/10: saem as chamadas à mão (OpenAI → Anthropic); entra a porta única da IA, grátis
     // primeiro. Se a cadeia falhar toda, o guia local responde — mas a DIZER que a IA está em
@@ -183,7 +184,7 @@ export async function POST(request: NextRequest) {
     let aiMessage: string
     let source: "groq" | "gemini" | "ollama" | "openai" | "anthropic" | "local"
     try {
-      const resposta = await chamarIA({
+      const resposta = await chamarIAGratis({
         tarefa: "ai-chat",
         sistema: systemPrompt,
         mensagens: [{ role: "user", content: message }],
