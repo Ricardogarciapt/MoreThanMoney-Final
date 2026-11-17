@@ -9,7 +9,7 @@
  */
 
 import { ImageResponse } from 'next/og'
-import { getWeeklyFlyerStats, fmtSignedNum, fmtNum, winRatePct, type FlyerLang } from '@/lib/mtm-flyer/weekly-stats'
+import { getWeeklyFlyerStats, fmtSignedNum, fmtNum, fmtUsd, winRatePct, type FlyerLang } from '@/lib/mtm-flyer/weekly-stats'
 
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
@@ -49,14 +49,15 @@ const STR = {
     title1: 'RESULTADOS ',
     title2: 'DA SEMANA',
     days: 'SEG–SEX',
-    sub: 'PIPS EM TRADES FECHADAS · TODAS AS ESTRATÉGIAS',
+    sub: 'PIPS EM TRADES FECHADAS',
+    ptsTotal: (n: string) => `${n} pontos em índices e cripto`,
     trades: 'trades',
     winRate: 'win rate',
     with: 'c/',
     pts: 'pontos',
     vazio: 'Sem trades fechadas nesta semana.',
     best: 'Melhores trades',
-    minLot: (usd: string) => `💰 Com lote mínimo 0.01 (forex/ouro): ≈ $${usd} na semana`,
+    minLot: (usd: string) => `💰 Com lote mínimo 0.01 (forex/ouro): ≈ ${usd} na semana`,
     cta: 'QUERO RECEBER OS SINAIS 🚀',
     disc0: 'Medido nas contas-mestre MTM (simuladas) que o MTM Auto copia. Índices e cripto em pontos, fora do total.',
     disc1: 'Conteúdo educativo — não constitui consultoria financeira. Simulação aproximada: ≈$0,10/pip a 0.01 lote.',
@@ -66,14 +67,15 @@ const STR = {
     title1: 'WEEKLY ',
     title2: 'RESULTS',
     days: 'MON–FRI',
-    sub: 'PIPS ON CLOSED TRADES · ALL STRATEGIES',
+    sub: 'PIPS ON CLOSED TRADES',
+    ptsTotal: (n: string) => `${n} points on indices and crypto`,
     trades: 'trades',
     winRate: 'win rate',
     with: 'w/',
     pts: 'points',
     vazio: 'No closed trades this week.',
     best: 'Best trades',
-    minLot: (usd: string) => `💰 With minimum lot 0.01 (forex/gold): ≈ $${usd} this week`,
+    minLot: (usd: string) => `💰 With minimum lot 0.01 (forex/gold): ≈ ${usd} this week`,
     cta: 'GET THE SIGNALS 🚀',
     disc0: 'Measured on the MTM master accounts (simulated) that MTM Auto copies. Indices and crypto in points, outside the total.',
     disc1: 'Educational content — not financial advice. Approximate simulation: ≈$0.10/pip at 0.01 lot.',
@@ -98,11 +100,12 @@ export async function GET(request: Request) {
   const periodLabel = lang === 'en' ? stats.periodLabelEn : stats.periodLabel
   const EMOJIS = ['🥇', '🥈', '🥉', '📡', '⚔️', '🧠', '🌀', '🎯']
   const lista = stats.estrategias.slice(0, 8)
-  const compacto = lista.length > 5
+  const compacto = lista.length > 4
+  const apertado = lista.length > 6
   const bests = [...stats.estrategias]
     .filter((e) => e.bestPips > 0)
     .sort((x, y) => y.bestPips - x.bestPips)
-    .slice(0, 2)
+    .slice(0, compacto ? 1 : 2)
     .map((e) => `+${fmt(e.bestPips)} pips (${e.nome}${e.bestSymbol ? ` · ${e.bestSymbol}` : ''})`)
 
   return new ImageResponse(
@@ -136,7 +139,7 @@ export async function GET(request: Request) {
 
         <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 8 }}>
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={`${origin}/logo-mtm-transparent.png`} alt="" width={190} height={190} />
+          <img src={`${origin}/logo-mtm-transparent.png`} alt="" width={compacto ? 130 : 190} height={compacto ? 130 : 190} />
         </div>
 
         <div style={{ display: 'flex', justifyContent: 'center', fontSize: 64, fontWeight: 700 }}>
@@ -161,13 +164,16 @@ export async function GET(request: Request) {
           </div>
         </div>
 
-        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', marginBottom: 26 }}>
-          <div style={{ display: 'flex', fontSize: 128, fontWeight: 700, color: GOLD, lineHeight: 1 }}>
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', marginBottom: compacto ? 18 : 26 }}>
+          <div style={{ display: 'flex', fontSize: compacto ? 104 : 128, fontWeight: 700, color: GOLD, lineHeight: 1 }}>
             {fmtS(stats.totalPips)}
           </div>
           <div style={{ display: 'flex', fontSize: 34, letterSpacing: 4, fontWeight: 700, marginTop: 8 }}>
             {t.sub}
           </div>
+          {stats.totalPoints !== 0 ? (
+            <div style={{ display: 'flex', fontSize: 28, color: GREY, marginTop: 6 }}>{t.ptsTotal(fmtS(stats.totalPoints))}</div>
+          ) : null}
         </div>
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: compacto ? 10 : 18 }}>
@@ -177,7 +183,7 @@ export async function GET(request: Request) {
           {lista.map((e, i) => {
             const emPips = e.pips !== 0 || e.points === 0
             const unit = emPips
-              ? `pips ≈ $${fmt(Math.round(e.pips * 0.1))} ${t.with} 0.01${e.points !== 0 ? ` · ${fmtS(e.points)} ${t.pts}` : ''}`
+              ? `pips ≈ ${fmtUsd(Math.round(e.pips * 0.1), lang)} ${t.with} 0.01${e.points !== 0 ? ` · ${fmtS(e.points)} ${t.pts}` : ''}`
               : t.pts
             return (
               <Card
@@ -193,7 +199,7 @@ export async function GET(request: Request) {
           })}
         </div>
 
-        {bests.length > 0 ? (
+        {bests.length > 0 && !apertado ? (
           <div
             style={{
               display: 'flex',
@@ -210,6 +216,7 @@ export async function GET(request: Request) {
           </div>
         ) : null}
 
+        {apertado ? null : (
         <div
           style={{
             display: 'flex',
@@ -222,8 +229,9 @@ export async function GET(request: Request) {
             padding: '18px 24px',
           }}
         >
-          {t.minLot(fmt(stats.minLotUsd))}
+          {t.minLot(fmtUsd(stats.minLotUsd, lang))}
         </div>
+        )}
 
         <div style={{ display: 'flex', flexGrow: 1 }} />
 

@@ -47,6 +47,8 @@ export interface WeeklyFlyerStats {
   estrategias: EstrategiaDaSemana[]
   /** Soma de pips de todas as estratégias (sem os pontos). */
   totalPips: number
+  /** Soma de pontos (índices/cripto), à parte dos pips. */
+  totalPoints: number
   /** Simulação a lote mínimo 0.01: ≈$0,10/pip (só forex/metais — os pontos não se convertem). */
   minLotUsd: number
 }
@@ -81,7 +83,9 @@ export async function getWeeklyFlyerStats(weekStartParam?: string | null): Promi
 
   const retrato = await medirSemanas(getSupabaseAdmin(), agora, 1)
   const estrategias: EstrategiaDaSemana[] = retrato.estrategias
-    .filter((e) => !e.arquivada)
+    // «Em uso» = ligada no MTM Auto (ativo) e não arquivada. As desligadas continuam a ser medidas
+    // pela regra do arquivo, mas não se anunciam: ninguém as pode copiar.
+    .filter((e) => e.ativo && !e.arquivada)
     .map((e) => ({ e, w: e.semanas[e.semanas.length - 1]! }))
     .filter(({ w }) => w && w.trades > 0)
     .map(({ e, w }) => ({
@@ -105,6 +109,7 @@ export async function getWeeklyFlyerStats(weekStartParam?: string | null): Promi
     periodLabelEn: buildPeriodLabel(weekStart, friday, MONTHS_EN),
     estrategias,
     totalPips,
+    totalPoints: Math.round(estrategias.reduce((a, e) => a + e.points, 0)),
     minLotUsd: Math.round(0.1 * totalPips),
   }
 }
@@ -123,6 +128,11 @@ export function fmtNum(n: number, lang: FlyerLang = 'pt'): string {
   const sign = n < 0 ? '-' : ''
   const sep = lang === 'en' ? ',' : '.'
   return sign + Math.abs(Math.round(n)).toString().replace(/\B(?=(\d{3})+(?!\d))/g, sep)
+}
+
+/** Dólares com o sinal à frente: "$12" / "-$4". */
+export function fmtUsd(n: number, lang: FlyerLang = 'pt'): string {
+  return (n < 0 ? '-' : '') + '$' + fmtNum(Math.abs(n), lang)
 }
 
 /** Pips com sinal: "+23.900" / "-120". */
