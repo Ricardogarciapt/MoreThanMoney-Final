@@ -100,7 +100,7 @@ export default function LiveSessionsLobby() {
    * O CATÁLOGO DE ACADEMIAS, pedido à parte das salas.
    *
    * É o que dá capa e lugar às academias que ainda não têm educador. Sem ele, agrupar pelas salas
-   * fazia a pasta do Imobiliário (e da IA, e do Network Marketing) desaparecer da grelha — uma
+   * fazia a pasta do Imobiliário (e da IA) desaparecer da grelha — uma
    * área que a casa deixou de vender sem ninguém decidir isso.
    */
   const [catalogo, setCatalogo] = useState<AcademiaDoCatalogo[]>([])

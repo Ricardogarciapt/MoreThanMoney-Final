@@ -188,7 +188,7 @@ function extras(lang: Lang) {
       {
         nome: "MTM Content & Business", href: "/contentbussiness",
         def: en ? "Building an audience and building a business: personal brand, content, and ways to earn here without opening a trade." : "Construir audiência e construir negócio: marca pessoal, conteúdo, e as formas de ganhar aqui sem abrir uma ordem.",
-        areas: en ? ["Social media & UGC", "Faceless marketing", "Artificial intelligence", "Network marketing", "Mindset & leadership"] : ["Social Media e UGC", "Faceless Marketing", "Inteligência Artificial", "Network Marketing", "Mindset e Liderança"],
+        areas: en ? ["Social media & UGC", "Faceless marketing", "Artificial intelligence", "Mindset & leadership"] : ["Social Media e UGC", "Faceless Marketing", "Inteligência Artificial", "Mindset e Liderança"],
         mais: en ? ["MTM Social Studio", "Creator programme", "Invite & earn", "Marketing material"] : ["Estúdio MTM Social", "Programa de criadores", "Convida e ganha", "Material de marketing"],
       },
     ],

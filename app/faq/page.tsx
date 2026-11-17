@@ -132,8 +132,8 @@ Não. Há duas formas de ganhar dinheiro aqui, e aulas ao vivo nas duas. Com os 
                       <li><b className="text-white">Social Media e UGC</b> — MTM Social Media &amp; UGC. Começou agora: uma sala, um horário semanal.</li>
                       <li><b className="text-white">Mindset e Liderança</b> — MTM Mindset &amp; Liderança. Começou agora, com acesso livre.</li>
                     </ul>
-Em preparação, com a academia criada e à espera de educador: Imobiliário (em Markets), Inteligência
-                    Artificial e Network Marketing (em Content &amp; Business). Não damos data porque ainda não a
+Em preparação, com a academia criada e à espera de educador: Imobiliário (em Markets) e Inteligência
+                    Artificial (em Content &amp; Business). Não damos data porque ainda não a
                     temos.
                   </AccordionContent>
                 </AccordionItem>
