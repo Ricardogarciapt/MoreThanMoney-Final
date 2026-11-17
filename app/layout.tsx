@@ -50,10 +50,10 @@ export const metadata: Metadata = {
     siteName: "MoreThanMoney",
     images: [
       {
-        url: '/icon-512x512.png',
-        width: 500,
-        height: 500,
-        alt: 'MoreThanMoney Logo',
+        url: '/images/og/morethanmoney.jpg',
+        width: 1200,
+        height: 630,
+        alt: 'Pré-visualização do site MoreThanMoney',
       },
     ],
     locale: 'pt_PT',
@@ -63,7 +63,7 @@ export const metadata: Metadata = {
     card: 'summary_large_image',
     title: "MoreThanMoney - Plataforma de Trading e Educação Financeira",
     description: "Plataforma integrada de formação financeira e serviços de automatização com inteligência artificial.",
-    images: ['/icon-512x512.png'],
+    images: ['/images/og/morethanmoney.jpg'],
   },
 }
 

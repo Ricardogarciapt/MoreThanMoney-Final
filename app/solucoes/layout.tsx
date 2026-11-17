@@ -9,7 +9,17 @@ export const metadata: Metadata = {
   openGraph: {
     title: "MoreThanMoney Soluções",
     description: "Sites, apps e agentes de IA para pequenos negócios, traders e educadores.",
-    images: ["/images/apresentacao/app-chat.jpg"],
+    url: "https://www.morethanmoney.pt/solucoes",
+    siteName: "MoreThanMoney",
+    locale: "pt_PT",
+    type: "website",
+    images: [{ url: "/images/og/solucoes.jpg", width: 1200, height: 630, alt: "Pré-visualização de morethanmoney.pt/solucoes" }],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "MoreThanMoney Soluções",
+    description: "Sites, apps e agentes de IA para pequenos negócios, traders e educadores.",
+    images: ["/images/og/solucoes.jpg"],
   },
 }
 
