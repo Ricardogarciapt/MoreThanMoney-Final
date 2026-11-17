@@ -157,6 +157,32 @@ class TestesMaquina(unittest.TestCase):
             for k in ("MOTOR_DESLIGAR_APOS_MIN", "MOTOR_CMD_DESLIGAR", "MOTOR_INTERVALO"):
                 os.environ.pop(k, None)
 
+    def test_janela_noturna(self):
+        os.environ["MOTOR_JANELA"] = "1-7"
+        try:
+            w = carregar("ensaio")
+            self.assertTrue(w.dentro_da_janela(3))
+            self.assertFalse(w.dentro_da_janela(12))
+            os.environ["MOTOR_JANELA"] = "22-6"
+            w = carregar("ensaio")
+            self.assertTrue(w.dentro_da_janela(23) and w.dentro_da_janela(2))
+            self.assertFalse(w.dentro_da_janela(9))
+        finally:
+            os.environ.pop("MOTOR_JANELA", None)
+
+    def test_memoria_baixa_nao_pega_trabalho(self):
+        os.environ["MOTOR_MEM_MIN_GB"] = "1e9"
+        try:
+            w = carregar("ensaio")
+            ESTADO["fila"].append(trabalho("voz", {"texto": "olá"}, imagem=False, ext="wav", mime="audio/wav"))
+            sys.argv = ["worker.py", "--uma-vez"]
+            w.main()
+            self.assertEqual(ESTADO["pulsos"], [])      # nem sequer pediu trabalho
+            self.assertEqual(len(ESTADO["fila"]), 1)
+        finally:
+            os.environ.pop("MOTOR_MEM_MIN_GB", None)
+            sys.argv = ["worker.py"]
+
     def test_pesos_do_manifest(self):
         out = subprocess.run([sys.executable, str(AQUI / "pesos.py"), str(AQUI / "workflows" / "manifest.json"), "angle", "move"], capture_output=True, text=True, check=True).stdout
         linhas = [l.split("\t") for l in out.strip().splitlines()]

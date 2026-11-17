@@ -25,10 +25,12 @@ async function quem(request: NextRequest): Promise<{ userId: string | null } | {
   return 'erro' in r && r.erro ? { erro: r.erro } : { userId: r.quem!.userId }
 }
 
-async function estadoMotores(db: ReturnType<typeof getSupabaseAdmin>) {
+/** `online` só conta motores ligados que sabem fazer o tipo pedido (o Mac à noite só faz voz/imagem). */
+async function estadoMotores(db: ReturnType<typeof getSupabaseAdmin>, tipo?: string) {
   const { data } = await db.from('estudio_motores').select('nome, visto_em, gpu, capacidades').order('visto_em', { ascending: false }).limit(5)
   const motores = (data ?? []).map((m) => ({ ...m, online: motorOnline(m.visto_em) }))
-  return { motores, online: motores.some((m) => m.online) }
+  const servem = motores.filter((m) => m.online && (!tipo || (m.capacidades ?? []).includes(tipo)))
+  return { motores, online: servem.length > 0 }
 }
 
 /**
@@ -94,7 +96,7 @@ export async function POST(request: NextRequest) {
     .single()
   if (error || !g) return NextResponse.json({ erro: 'Não consegui registar o pedido.' }, { status: 500 })
 
-  const { online } = await estadoMotores(db)
+  const { online } = await estadoMotores(db, p.tipo)
   const gpu = !online && !g.ensaio ? await acordarGpu() : null
   return NextResponse.json({
     ok: true,
