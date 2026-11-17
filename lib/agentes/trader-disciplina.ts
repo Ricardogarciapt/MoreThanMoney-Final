@@ -28,6 +28,7 @@
  *
  * Nenhum número aqui é inventado: o limiar é configurável e a prova vem da base.
  */
+import { pipDe } from '../mestres/pips'
 
 /** Uma linha de `agente_trader_vantagem`: o histórico real de uma estratégia num símbolo. */
 export interface HistoricoCombo {
@@ -212,21 +213,45 @@ export interface MetricasAgente {
   /** Σpnl / Σrisco — quantos riscos inteiros ganhou (ou perdeu) no total. */
   rTotal: number | null
   pnlHoje: number
+  /**
+   * Resultado em PIPS pela convenção da casa (ouro 0,1 · JPY 0,01 · forex 0,0001 · índices e cripto em
+   * PONTOS). Ouro/forex e pontos ficam separados: somá-los misturava unidades (1 ponto de BTC ≠ 1 pip).
+   */
+  pips: number
+  pontos: number
+  pipsHoje: number
+  /** pips (ou pontos) por símbolo, do melhor para o pior */
+  porSimbolo: Array<{ symbol: string; n: number; pips: number; unidade: 'pips' | 'pontos' }>
 }
 
 export function metricasDoAgente(
-  posicoes: Array<{ estado?: string | null; pnl?: number | string | null; risco_inicial?: number | string | null; fechada_em?: string | null }>,
+  posicoes: Array<{
+    estado?: string | null; pnl?: number | string | null; risco_inicial?: number | string | null; fechada_em?: string | null
+    symbol?: string | null; direcao?: string | null; preco_entrada?: number | string | null; preco_fecho?: number | string | null
+  }>,
   agora: Date = new Date(),
 ): MetricasAgente {
   const fechadas = posicoes.filter((p) => String(p.estado ?? '') === 'fechada')
   const hoje = agora.toISOString().slice(0, 10)
-  let pnl = 0, risco = 0, ganhos = 0, pnlHoje = 0
+  let pnl = 0, risco = 0, ganhos = 0, pnlHoje = 0, pips = 0, pontos = 0, pipsHoje = 0
+  const porSimbolo = new Map<string, { n: number; pips: number; unidade: 'pips' | 'pontos' }>()
   for (const p of fechadas) {
     const v = Number(p.pnl) || 0
     pnl += v
     risco += Math.abs(Number(p.risco_inicial) || 0)
     if (v > 0) ganhos++
-    if (String(p.fechada_em ?? '').slice(0, 10) === hoje) pnlHoje += v
+    const eHoje = String(p.fechada_em ?? '').slice(0, 10) === hoje
+    if (eHoje) pnlHoje += v
+    const entrada = Number(p.preco_entrada), fecho = Number(p.preco_fecho), sym = String(p.symbol ?? '')
+    const dir = p.direcao === 'sell' ? 'sell' : p.direcao === 'buy' ? 'buy' : null
+    if (!sym || !dir || !(entrada > 0) || !(fecho > 0)) continue
+    const tam = pipDe(sym)
+    const q = Math.round(((dir === 'buy' ? fecho - entrada : entrada - fecho) / tam) * 10) / 10
+    const unidade = tam >= 1 ? 'pontos' : 'pips'
+    if (unidade === 'pips') { pips += q; if (eHoje) pipsHoje += q } else pontos += q
+    const s = porSimbolo.get(sym) ?? { n: 0, pips: 0, unidade }
+    s.n++; s.pips += q
+    porSimbolo.set(sym, s)
   }
   return {
     fechadas: fechadas.length,
@@ -235,5 +260,11 @@ export function metricasDoAgente(
     pnl: Math.round(pnl * 100) / 100,
     rTotal: risco > 0 ? Math.round((pnl / risco) * 1000) / 1000 : null,
     pnlHoje: Math.round(pnlHoje * 100) / 100,
+    pips: Math.round(pips * 10) / 10,
+    pontos: Math.round(pontos * 10) / 10,
+    pipsHoje: Math.round(pipsHoje * 10) / 10,
+    porSimbolo: [...porSimbolo.entries()]
+      .map(([symbol, v]) => ({ symbol, n: v.n, pips: Math.round(v.pips * 10) / 10, unidade: v.unidade }))
+      .sort((a, b) => b.pips - a.pips),
   }
 }

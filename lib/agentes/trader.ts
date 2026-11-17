@@ -543,7 +543,7 @@ export async function correrTrader(
   let metricas: MetricasAgente = metricasDoAgente([], agora)
   if (ids.length) {
     const { data: pos, error: erroPos } = await db
-      .from('funded_positions').select('estado, pnl, risco_inicial, fechada_em').in('id', ids.slice(0, 1000))
+      .from('funded_positions').select('estado, pnl, risco_inicial, fechada_em, symbol, direcao, preco_entrada, preco_fecho').in('id', ids.slice(0, 1000))
     if (erroPos) erros.push(`funded_positions: ${erroPos.message ?? 'erro'}`)
     metricas = metricasDoAgente((pos ?? []) as Record<string, string | null>[], agora)
   }
@@ -646,6 +646,10 @@ export async function registarDecisoesNoLivro(
       `Desempenho em papel: ${m.fechadas} fechada(s)` +
         (m.acerto == null ? '' : `, ${(m.acerto * 100).toFixed(1)}% de acerto`) +
         `, PnL ${m.pnl.toFixed(2)}` + (m.rTotal == null ? '' : ` (${m.rTotal}R)`) + `, hoje ${m.pnlHoje.toFixed(2)}.`,
+      `Em pips (MTM Funded): ${m.pips >= 0 ? '+' : ''}${m.pips} pips ouro/forex` +
+        (m.pontos ? ` · ${m.pontos >= 0 ? '+' : ''}${m.pontos} pontos índices/cripto` : '') +
+        ` · hoje ${m.pipsHoje >= 0 ? '+' : ''}${m.pipsHoje} pips.` +
+        (m.porSimbolo.length ? ` Por símbolo: ${m.porSimbolo.slice(0, 6).map((x) => `${x.symbol} ${x.pips >= 0 ? '+' : ''}${x.pips} ${x.unidade} (${x.n})`).join(' · ')}.` : ''),
     )
   }
   if (resultado.aprovadas) {

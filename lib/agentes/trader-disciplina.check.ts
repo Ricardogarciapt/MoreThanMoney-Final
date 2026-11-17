@@ -140,3 +140,15 @@ if (falhas.length) {
   process.exit(1)
 }
 console.log('agentes/trader-disciplina: só abre com vantagem medida, RR que paga o risco e dentro do travão do dia ✓')
+
+// ── pips (17/11): ouro em pips de 0,1, índices/cripto em pontos, separados ──
+{
+  const m = metricasDoAgente([
+    { estado: 'fechada', pnl: 10, risco_inicial: 5, symbol: 'XAUUSD', direcao: 'buy', preco_entrada: 4000, preco_fecho: 4002.5, fechada_em: '2026-11-17T09:00:00Z' },
+    { estado: 'fechada', pnl: -3, risco_inicial: 5, symbol: 'EURUSD', direcao: 'sell', preco_entrada: 1.1, preco_fecho: 1.1012, fechada_em: '2026-11-16T09:00:00Z' },
+    { estado: 'fechada', pnl: 4, risco_inicial: 5, symbol: 'US500', direcao: 'buy', preco_entrada: 6000, preco_fecho: 6012 },
+  ], new Date('2026-11-17T12:00:00Z'))
+  if (m.pips !== 13 || m.pontos !== 12 || m.pipsHoje !== 25) throw new Error(`pips errados: ${JSON.stringify(m)}`)
+  if (m.porSimbolo[0].symbol !== 'XAUUSD' || m.porSimbolo[0].unidade !== 'pips') throw new Error('ordem por símbolo')
+  console.log('ok · métricas em pips')
+}
