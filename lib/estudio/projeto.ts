@@ -5,7 +5,8 @@
  *   · o motor no Mac (services/estudio-editor/editor.mjs → renderProjeto), que monta o MP4 com ffmpeg.
  * Tudo o que entra passa por `normalizarProjeto`, por isso um campo estranho nunca chega ao ffmpeg.
  */
-import type { Corte } from './texto'
+import type { Corte, Palavra } from './texto'
+import { reelCurto, type Comando } from './comando'
 
 export const FORMATOS_VIDEO = {
   '9:16': { w: 1080, h: 1920, nome: 'Reel / Story (9:16)' },
@@ -240,6 +241,9 @@ export function montarDeTake(args: {
   ativos?: { id: string; caminho: string; tipo: string; nome: string; animacao?: string | null; segmento?: number | null }[]
   musica?: { id: string; caminho: string; nome: string } | null
   formato?: FormatoVideo
+  /** Palavras da transcrição do take e o pedido escrito («3 planos, 15 s»): reel curto plano a plano. */
+  palavras?: Palavra[]
+  comando?: Comando | null
 }): Projeto {
   const dur = Math.max(1, Number(args.take.duracao_s) || 30)
   const mantidas: { ini: number; fim: number }[] = []
@@ -257,6 +261,28 @@ export function montarDeTake(args: {
     pedacos.push({ ini: i, fim: z.fim })
   }
   const fonteTake: FonteClip = { tipo: 'take', ref: args.take.id, caminho: args.take.caminho, url: null }
+  const cmd = args.comando
+  if (cmd && args.palavras?.length) {
+    // Reel curto: frases sem pausas até à duração pedida, repartidas pelos planos pedidos.
+    const zonas = reelCurto(args.palavras, mantidas, cmd)
+    if (zonas.length) {
+      const clipsC: Clip[] = zonas.map((z, k) => normalizarClip({
+        id: novoId(), media: 'video', fonte: fonteTake, nome: `${args.take.nome ?? 'Take'} · ${k + 1}`,
+        duracao_fonte: dur, de: z.ini, ate: z.fim, zoom: z.zoom,
+        transicao: k > 0 && z.entraPlano ? 'zoomin' : 'corte', trans_dur: 0.2,
+      })!)
+      const pc = normalizarProjeto({ ...PROJETO_VAZIO, formato: args.formato ?? '9:16', clips: clipsC })
+      const tot = duracaoProjeto(pc)
+      const gancho = cmd.gancho || args.gancho
+      const tx: TextoSobreposto[] = []
+      if (gancho) tx.push({ id: novoId(), texto: gancho, inicio: 0, fim: Math.min(2.2, tot), posicao: 'cima', estilo: 'titulo', animacao: 'subir' })
+      if (args.cta && tot > 4) tx.push({ id: novoId(), texto: args.cta, inicio: Math.max(0, tot - 2.5), fim: tot, posicao: 'baixo', estilo: 'cta', animacao: 'aparecer' })
+      return normalizarProjeto({
+        ...pc, textos: tx,
+        musica: args.musica ? { fonte: { tipo: 'ativo', ref: args.musica.id, caminho: args.musica.caminho, url: null }, nome: args.musica.nome, volume: 0.15, duck: true } : null,
+      })
+    }
+  }
   const imagens = (args.ativos ?? []).filter((a) => a.tipo === 'imagem' || a.tipo === 'video')
   const clips: Clip[] = []
   pedacos.forEach((z, k) => {

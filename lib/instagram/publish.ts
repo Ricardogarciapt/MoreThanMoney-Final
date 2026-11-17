@@ -49,8 +49,16 @@ export function isAutoPublishBlocked(igAccountId: string | null | undefined): bo
  * Nada mais — funil, setter, repost, agentes — escreve ou publica na conta pessoal.
  */
 export const CRIADOR_AUTORIZADO_PESSOAL = "carrossel-diario:ricardo"
+/**
+ * Segunda excepção, pedida pelo Ricardo a 17/11/2026: «reels de @ricardogarciapt (…) publicares já
+ * em modo teste». Só REELS feitos pelo motor services/reels-ricardo (gémeo IA com a voz dele), e só
+ * enquanto `site_settings.reels_ricardo.ligado` for true (o ig-publish verifica). Em modo teste
+ * (`teste: true`) saem como «reels de teste» do Instagram: mostrados primeiro a não seguidores.
+ */
+export const CRIADOR_REELS_PESSOAL = "reels-ricardo:ricardo"
 export function autorizadoNaPessoal(row: { created_by?: string | null; media_type?: string | null }): boolean {
-  return row.created_by === CRIADOR_AUTORIZADO_PESSOAL && row.media_type === "CAROUSEL"
+  if (row.created_by === CRIADOR_AUTORIZADO_PESSOAL && row.media_type === "CAROUSEL") return true
+  return row.created_by === CRIADOR_REELS_PESSOAL && row.media_type === "REELS"
 }
 
 export type IgMediaType = "IMAGE" | "CAROUSEL" | "STORIES" | "REELS"
@@ -64,6 +72,8 @@ export interface ScheduledPost {
   caption?: string | null
   creation_id?: string | null
   child_creation_ids?: string[] | null
+  /** Só REELS: publica como «reel de teste» (mostrado primeiro a não seguidores). */
+  trial?: "MANUAL" | "SS_PERFORMANCE" | null
 }
 
 export interface PublishResult {
@@ -221,8 +231,18 @@ async function createStoriesContainer(igId: string, url: string, isVideo: boolea
   return j.id as string
 }
 
-async function createReelsContainer(igId: string, url: string, caption: string, token: string) {
-  const j = await graphPost(igId, "media", { media_type: "REELS", video_url: url, caption }, token)
+async function createReelsContainer(
+  igId: string,
+  url: string,
+  caption: string,
+  token: string,
+  extra: { coverUrl?: string; trial?: "MANUAL" | "SS_PERFORMANCE" | null } = {},
+) {
+  const params: Record<string, string> = { media_type: "REELS", video_url: url, caption }
+  if (extra.coverUrl) params.cover_url = extra.coverUrl
+  // Reels de teste (Graph API): graduação automática pelo desempenho ou manual na app.
+  if (extra.trial) params.trial_params = JSON.stringify({ graduation_strategy: extra.trial })
+  const j = await graphPost(igId, "media", params, token)
   return j.id as string
 }
 
@@ -334,7 +354,9 @@ export async function publishScheduledPost(post: ScheduledPost): Promise<Publish
       break
     }
     case "REELS": {
-      creationId = await createReelsContainer(igId, urls[0], caption, token)
+      // media_urls[1], se for imagem, é a capa do reel.
+      const coverUrl = urls[1] && /\.(jpe?g|png)(\?|$)/i.test(urls[1]) ? urls[1] : undefined
+      creationId = await createReelsContainer(igId, urls[0], caption, token, { coverUrl, trial: post.trial })
       needsWait = true
       break
     }
