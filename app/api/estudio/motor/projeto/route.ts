@@ -23,8 +23,10 @@ export async function GET(request: NextRequest) {
   await db.from('estudio_projetos').update({ estado: 'a_render' }).eq('estado', 'a_montar')
     .lt('reclamado_em', new Date(Date.now() - 40 * 60_000).toISOString())
 
-  const { data: cand } = await db.from('estudio_projetos').select('id, titulo, marca, projeto')
-    .eq('estado', 'a_render').order('atualizado_em', { ascending: true }).limit(1).maybeSingle()
+  // ?robo=0 → o Mac está fora da janela nocturna: só monta o que alguém exportou à mão.
+  let q = db.from('estudio_projetos').select('id, titulo, marca, projeto').eq('estado', 'a_render')
+  if (request.nextUrl.searchParams.get('robo') === '0') q = q.not('titulo', 'like', '%· robô')
+  const { data: cand } = await q.order('atualizado_em', { ascending: true }).limit(1).maybeSingle()
   if (!cand) return NextResponse.json({ ok: true, trabalho: null })
   const { data: meu } = await db.from('estudio_projetos')
     .update({ estado: 'a_montar', reclamado_em: new Date().toISOString() })

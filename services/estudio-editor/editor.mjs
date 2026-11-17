@@ -14,7 +14,8 @@
 //
 // Variáveis: CRON_SECRET e/ou LMS_CAPTION_WORKER_SECRET (pelo menos um), MTM_SITE (omissão https://www.morethanmoney.pt),
 //            ESTUDIO_EDIT_CMD (opcional), ESTUDIO_TRANSCREVER_CMD (opcional: «cmd {in} {out}» que
-//            escreve { palavras: [{w,ini,fim}], lingua }), ESTUDIO_INTERVALO_S (omissão 120).
+//            escreve { palavras: [{w,ini,fim}], lingua }), ESTUDIO_INTERVALO_S (omissão 120), ESTUDIO_JANELA_ROBO (omissão «1-7»: os
+//            reels do robô só se montam entre a 1h e as 7h).
 import { spawn } from 'node:child_process'
 import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
@@ -34,6 +35,11 @@ const auth = {
   ...(SEGREDO_WORKER ? { 'x-caption-secret': SEGREDO_WORKER } : {}),
 }
 const dormir = (ms) => new Promise((r) => setTimeout(r, ms))
+// Reels do robô só de noite (ESTUDIO_JANELA_ROBO=«1-7», hora local do Mac); os exportados à mão
+// montam sempre. «0-24» desliga a janela.
+const [J_INI, J_FIM] = (process.env.ESTUDIO_JANELA_ROBO || '1-7').split('-').map(Number)
+export const dentroDaJanela = (h = new Date().getHours()) =>
+  !(Number.isFinite(J_INI) && Number.isFinite(J_FIM)) || (J_INI <= J_FIM ? h >= J_INI && h < J_FIM : h >= J_INI || h < J_FIM)
 const log = (...a) => console.log(new Date().toISOString(), ...a)
 
 function correr(cmd, args, opts = {}) {
@@ -261,7 +267,7 @@ async function umTrabalho() {
 
 /** Monta um projecto do Editor de vídeo do /estudio (timeline → MP4). */
 async function umProjeto() {
-  const r = await fetch(`${SITE}/api/estudio/motor/projeto`, { headers: auth })
+  const r = await fetch(`${SITE}/api/estudio/motor/projeto${dentroDaJanela() ? '' : '?robo=0'}`, { headers: auth })
   if (r.status === 404) return false // site ainda sem o editor
   if (!r.ok) throw new Error(`projeto GET ${r.status}`)
   const { trabalho: t } = await r.json()
