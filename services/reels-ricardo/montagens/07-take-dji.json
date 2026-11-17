@@ -1,0 +1,16 @@
+{"n": 7, "palavra": "APP", "capa_t": 14.0, "centro": [780, 1010],
+ "linhas_capa": [["w", "O que é"], ["c", "a MoreThanMoney"], ["box", "em 40 segundos"]],
+ "correcoes": {"1-2": "MoreThanMoney", "43-43": "", "48-48": "a", "85-86": "WebTrader,", "94-96": "Tap to Trade", "208-208": "MoreThanMoney,"},
+ "planos": [
+  {"i0": 0, "i1": 12, "plano": "fechado"},
+  {"i0": 13, "i1": 23, "plano": "medio"},
+  {"i0": 24, "i1": 29, "plano": "fechado"},
+  {"i0": 36, "i1": 44, "plano": "medio"},
+  {"i0": 45, "i1": 50, "plano": "fechado"},
+  {"i0": 77, "i1": 83, "plano": "aberto"},
+  {"i0": 84, "i1": 90, "plano": "medio"},
+  {"i0": 91, "i1": 99, "plano": "fechado"},
+  {"i0": 106, "i1": 117, "plano": "medio"},
+  {"i0": 118, "i1": 127, "plano": "fechado"},
+  {"i0": 208, "i1": 216, "plano": "medio"}
+ ]}
