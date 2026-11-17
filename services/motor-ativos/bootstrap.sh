@@ -44,25 +44,7 @@ case "$PERFIL" in
   *) echo "perfil desconhecido: $PERFIL"; exit 2 ;;
 esac
 [ "${ANGLE_VARIANTE:-}" = "gguf" ] && ETAPAS="${ETAPAS/angle/angle:gguf}"
-python3 - "$AQUI/workflows/manifest.json" $ETAPAS > "$BASE/pesos.tsv" <<'PY'
-import json, os, sys
-m = json.load(open(sys.argv[1]))
-cams = os.environ.get("CAMERA_LORAS", "all")
-cam_files = {c["lora"] for c in m["cameraMoves"] if c["lora"]}
-quero = None if cams == "all" else {next((c["lora"] for c in m["cameraMoves"] if c["id"] == i), None) for i in cams.split(",")}
-vistos = set()
-for arg in sys.argv[2:]:
-    etapa, _, var = arg.partition(":")
-    modelos = m[etapa]["models"]
-    if var:
-        v = m[etapa]["variants"][var]
-        modelos = [x for x in modelos if x["folder"] != v["replaces"]] + v["models"]
-    for x in modelos:
-        if x["file"] in cam_files and quero is not None and x["file"] not in quero: continue
-        if x["file"] in vistos: continue
-        vistos.add(x["file"])
-        print(f'{x["folder"]}\t{x["file"]}\t{x["url"]}\t{x["sizeGB"]}')
-PY
+python3 "$AQUI/pesos.py" "$AQUI/workflows/manifest.json" $ETAPAS > "$BASE/pesos.tsv"
 log "a descarregar $(wc -l < "$BASE/pesos.tsv") pesos ($(awk -F'\t' '{s+=$4} END {printf "%.0f", s}' "$BASE/pesos.tsv") GB)"
 while IFS=$'\t' read -r pasta ficheiro url _; do
   mkdir -p "$COMFY_DIR/models/$pasta"
@@ -108,7 +90,7 @@ VOZ_REF=$BASE/voz/ricardo.wav
 LATENTSYNC_DIR=$LATENTSYNC_DIR
 LATENTSYNC_PY=$LATENTSYNC_PY
 MOTOR_DESLIGAR_APOS_MIN=${MOTOR_DESLIGAR_APOS_MIN:-10}
-MOTOR_CMD_DESLIGAR=${MOTOR_CMD_DESLIGAR:-$( [ -n "${RUNPOD_POD_ID:-}" ] && echo "runpodctl stop pod $RUNPOD_POD_ID" )}
+MOTOR_CMD_DESLIGAR='${MOTOR_CMD_DESLIGAR:-$( [ -n "${RUNPOD_POD_ID:-}" ] && echo "runpodctl stop pod $RUNPOD_POD_ID" )}'
 FISH_API_KEY=${FISH_API_KEY:-}
 FISH_VOICE_RICARDO=${FISH_VOICE_RICARDO:-}
 ENV
