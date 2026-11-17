@@ -37,6 +37,8 @@ export const MODULOS_GESTAO: readonly ModuloGestao[] = [
     descricao: 'As conversas do balão de apoio: o que o agente resolveu, o que espera pela equipa (15 min / 1 h) e o que foi escalado ao Ricardo.' },
   { slug: 'leads', nome: 'Leads sociais', grupo: 'Clientes & CRM', exige: 'bo.gestao_crm',
     descricao: 'Quem comentou ou escreveu no Instagram, com os envios por aprovar.' },
+  { slug: 'conversao', nome: 'Conversão', grupo: 'Clientes & CRM', exige: 'bo.gestao_crm',
+    descricao: 'Leads quentes à espera de resposta, e por origem: trabalhados, avançados, ganhos e tempo até ao 1.º contacto.' },
   { slug: 'formularios', nome: 'Formulários', grupo: 'Clientes & CRM', exige: 'bo.gestao_crm',
     descricao: 'Criar formulários de captação e ler as submissões — cada submissão entra no pipeline.' },
   { slug: 'trafego', nome: 'Tráfego', grupo: 'Comercial', exige: 'bo.gestao_comercial',

@@ -5,6 +5,10 @@
   ],
   "crons": [
     {
+      "path": "/api/cron/lead-instantaneo",
+      "schedule": "*/5 * * * *"
+    },
+    {
       "path": "/api/notifications/check-alerts",
       "schedule": "*/5 * * * *"
     },
