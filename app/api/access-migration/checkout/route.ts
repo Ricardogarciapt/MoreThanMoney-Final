@@ -6,7 +6,7 @@ import { requireStripePriceId } from '@/lib/stripe-prices'
 import { buildStripeReturnUrl } from '@/lib/site-url'
 import { needsAccessRevalidation } from '@/lib/access-migration'
 import { isIosAppRequest, IOS_IAP_REQUIRED } from '@/lib/is-native-request'
-import { CUSTOM_TEXT_ACESSO_IMEDIATO } from '@/lib/legal/checkout-acesso-imediato'
+import { CUSTOM_TEXT_ACESSO_IMEDIATO, criarSessaoCheckout } from '@/lib/legal/checkout-acesso-imediato'
 
 const supabase = getSupabaseAdmin()
 
@@ -86,7 +86,7 @@ export async function POST(request: NextRequest) {
     },
   }
 
-  const session = await stripe.checkout.sessions.create(sessionParams)
+  const session = await criarSessaoCheckout(stripe, sessionParams)
 
   return NextResponse.json({ url: session.url, sessionId: session.id })
 }

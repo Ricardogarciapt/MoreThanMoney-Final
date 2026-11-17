@@ -9,7 +9,7 @@ import { isIosAppRequest, IOS_IAP_REQUIRED } from '@/lib/is-native-request'
 import type Stripe from 'stripe'
 import { COOKIE_ATRIBUICAO, normalizar as normalizarAgente } from '@/lib/agentes/atribuicao'
 import { registarConsentimentoDaCompra } from '@/lib/captacao-consentimento-registo'
-import { CUSTOM_TEXT_ACESSO_IMEDIATO } from '@/lib/legal/checkout-acesso-imediato'
+import { CUSTOM_TEXT_ACESSO_IMEDIATO, criarSessaoCheckout } from '@/lib/legal/checkout-acesso-imediato'
 import {
   CUPAO_INTRO_PREMIUM,
   PLANO_DURANTE_CAMPANHA,
@@ -160,7 +160,7 @@ export async function POST(request: NextRequest) {
         metadata: { ...(sessionParams.subscription_data?.metadata ?? {}), agente_codigo: agenteCodigo },
       }
     }
-    const session = await stripe.checkout.sessions.create(sessionParams)
+    const session = await criarSessaoCheckout(stripe, sessionParams)
 
     // Funil Opinly: inicio de checkout (best-effort; anonId via cookie do pixel)
     await opinlyTrack('begin_checkout', { plan: planId }, {

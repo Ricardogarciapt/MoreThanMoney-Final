@@ -11,7 +11,7 @@ import { getSupabaseAdmin } from "@/lib/supabase-admin-client"
 import { isIosAppRequest, IOS_IAP_REQUIRED } from "@/lib/is-native-request"
 import type Stripe from 'stripe'
 import { COOKIE_ATRIBUICAO, normalizar as normalizarAgente } from "@/lib/agentes/atribuicao"
-import { CUSTOM_TEXT_ACESSO_IMEDIATO } from '@/lib/legal/checkout-acesso-imediato'
+import { CUSTOM_TEXT_ACESSO_IMEDIATO, criarSessaoCheckout } from '@/lib/legal/checkout-acesso-imediato'
 
 const SUPABASE_URL = (process.env.NEXT_PUBLIC_SUPABASE_URL || "").trim()
 const SUPABASE_ANON_KEY = (process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "").trim()
@@ -171,7 +171,7 @@ export async function POST(request: NextRequest) {
         metadata: { ...(sessionParams.subscription_data?.metadata ?? {}), agente_codigo: agenteCodigo },
       }
     }
-    const session = await stripe.checkout.sessions.create(sessionParams)
+    const session = await criarSessaoCheckout(stripe, sessionParams)
 
     const json = NextResponse.json({ url: session.url, sessionId: session.id })
     response.cookies.getAll().forEach((cookie) => {
