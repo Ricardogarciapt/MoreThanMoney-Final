@@ -187,6 +187,25 @@ export const DEMOS_DIARIAS: DemoDiaria[] = [
     pecas: ['Telegram, app ou site', 'IA com a base de conhecimento do teu método', 'Painel do educador'],
     segmentos: ['licenca_scanners', 'parceria_redes'],
   },
+  {
+    slug: 'checkin-alojamento-local',
+    data: '2026-11-25',
+    titulo: 'Check-in do alojamento local sem telefonemas',
+    para: 'Alojamento local, guest houses, turismo rural',
+    dor: 'Passo o dia a responder à mesma pergunta: a que horas posso entrar e como chego aí?',
+    promessa: 'O hóspede recebe tudo antes de chegar e tu só sabes dele quando já está instalado.',
+    roteiro: [
+      { quem: 'sistema', texto: 'Reserva confirmada · Anne, 2 noites, chega sexta.' },
+      { quem: 'agente', texto: 'Olá Anne! Na véspera envio-te o código da porta, a morada no mapa e onde estacionar.' },
+      { quem: 'cliente', texto: 'Posso deixar as malas antes da hora de entrada?' },
+      { quem: 'agente', texto: 'Podes. Há um cacifo à entrada; o código segue com as instruções.' },
+      { quem: 'sistema', texto: 'Dados de registo do hóspede recolhidos e prontos para comunicar.' },
+      { quem: 'dono', texto: 'Recebi o aviso de entrada. Nem precisei de pegar no telefone.' },
+    ],
+    fica: ['Instruções de chegada enviadas sozinhas', 'Respostas às perguntas de sempre, em várias línguas', 'Dados dos hóspedes recolhidos antes da chegada'],
+    pecas: ['WhatsApp e email', 'Agente de IA com as regras da casa', 'Formulário de registo de hóspedes'],
+    segmentos: ['negocio_local'],
+  },
 ]
 
 /** YYYY-MM-DD em Lisboa. */
