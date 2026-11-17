@@ -12,6 +12,7 @@
  * Escrever (mover, mudar o funil, contactar) faz-se com os mesmos componentes da lista: uma escrita,
  * um sítio. O consentimento aparece SEMPRE, porque contactar sem ele é a linha que não se passa.
  */
+import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { getSupabaseAdmin } from '@/lib/supabase-admin-client'
 import { ambitoDaPagina, nomesDe } from '@/lib/backoffice-equipa'
@@ -227,7 +228,7 @@ export default async function FichaPage({ params }: { params: Promise<{ id: stri
                 <span className="block text-[11px] text-zinc-500">
                   entrou {quando(w.ultima_entrada)} · saiu {quando(w.ultima_saida)}
                 </span>
-                <a href="/backoffice/gestao/whatsapp" className="text-[11px] text-[#D2A63C] hover:underline">abrir conversas</a>
+                <Link href="/backoffice/gestao/whatsapp" className="text-[11px] text-[#D2A63C] hover:underline">abrir conversas</Link>
               </p>
             ))
           }
