@@ -9,6 +9,8 @@ assert.equal(interpretarAccao('{"tipo":"apagar_tudo"}', true).tipo, 'responder')
 
 // JSON com texto à volta é aceite.
 assert.deepEqual(interpretarAccao('Aqui vai: {"tipo":"minhas_tarefas"} ok', false), { tipo: 'minhas_tarefas' })
+assert.deepEqual(interpretarAccao('{"tipo":"proxima_accao"}', false), { tipo: 'proxima_accao' })
+assert.match(sistemaDoComando('2026-11-17', false), /proxima_accao/)
 
 // Mover: estado tem de existir; motivo só em perdido.
 assert.equal(interpretarAccao('{"tipo":"mover_negocio","negocio":"João","estado":"fechado"}', true).tipo, 'responder')

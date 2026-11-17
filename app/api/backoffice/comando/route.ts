@@ -11,6 +11,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { exigirCapacidade } from '@/lib/backoffice-sessao'
 import { notaDoNegocio, procurarNegocios, type NegocioCurto } from '@/lib/backoffice-procura'
+import { filaDoUtilizador } from '@/lib/backoffice-prioridade'
 import { getSupabaseAdmin } from '@/lib/supabase-admin-client'
 import { pode } from '@/lib/backoffice-papeis'
 import { ESTADO_PIPELINE_NOME, type EstadoPipeline } from '@/lib/backoffice-vista'
@@ -115,6 +116,19 @@ export async function POST(request: NextRequest) {
         .limit(10)
       const tarefas = data ?? []
       return NextResponse.json({ texto, accao, resposta: tarefas.length ? `Tens ${tarefas.length} tarefa(s) abertas.` : 'Não tens tarefas abertas.', tarefas })
+    }
+
+    case 'proxima_accao': {
+      const fila = await filaDoUtilizador(ctx, 5)
+      if (!fila) return NextResponse.json({ texto, accao, resposta: 'Esta conta não tem acesso ao pipeline.' })
+      if (!fila.length) return NextResponse.json({ texto, accao, resposta: 'Não tens negócios abertos à espera de ti. Bom momento para prospectar.' })
+      const [primeiro] = fila
+      return NextResponse.json({
+        texto,
+        accao,
+        resposta: `Começa por ${primeiro.nome}: ${primeiro.accao.toLowerCase()}${primeiro.porque.length ? ` (${primeiro.porque.join('; ')})` : ''}.`,
+        ligacoes: fila.map((i) => ({ href: `/backoffice/pipeline/ficha/${i.id}`, nome: i.nome, rotulo: `${i.nome} · ${i.accao}` })),
+      })
     }
 
     case 'resumo_pipeline': {

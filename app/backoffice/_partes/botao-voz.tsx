@@ -26,7 +26,7 @@ type Resultado = {
   negocios?: Negocio[]
   tarefas?: Tarefa[]
   proposta?: Proposta
-  ligacoes?: { href: string; nome: string }[]
+  ligacoes?: { href: string; nome: string; rotulo?: string }[]
   rascunho?: { canal: 'whatsapp' | 'email'; texto: string; abrir: string | null }
   error?: string
 }
@@ -249,7 +249,7 @@ export function BotaoVoz() {
 
           {res?.ligacoes?.map((l) => (
             <a key={l.href} href={l.href} className={BOTAO} style={{ background: OURO }}>
-              Abrir chamada com {l.nome}
+              {l.rotulo ?? `Abrir chamada com ${l.nome}`}
             </a>
           ))}
 

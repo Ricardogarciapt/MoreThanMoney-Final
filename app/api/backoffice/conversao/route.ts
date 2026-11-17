@@ -5,6 +5,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { exigirCapacidade } from '@/lib/backoffice-sessao'
 import { getSupabaseAdmin } from '@/lib/supabase-admin-client'
+import { filaDoUtilizador } from '@/lib/backoffice-prioridade'
 import { conversaoPorOrigem, quentesSemResposta, type LinhaNegocio, type PrimeiroContacto } from '@/lib/vendas/conversao'
 
 export const dynamic = 'force-dynamic'
@@ -28,15 +29,17 @@ export async function GET(request: NextRequest) {
   if (ctx instanceof NextResponse) return ctx
   const db = getSupabaseAdmin()
   try {
-    const [negocios, primeiros] = await Promise.all([
+    const [negocios, primeiros, prioridade] = await Promise.all([
       tudo<LinhaNegocio>((a, b) => db.from('vendas_negocios').select('id, nome, origem, estado, criado_em').order('criado_em').range(a, b)),
       tudo<PrimeiroContacto>((a, b) => db.from('vendas_negocio_eventos').select('negocio_id, em').eq('de', 'lead').order('em').range(a, b)),
+      filaDoUtilizador(ctx, 10),
     ])
     return NextResponse.json({
       ok: true,
       porOrigem: conversaoPorOrigem(negocios, primeiros),
       quentesParados: quentesSemResposta(negocios, new Date()),
       total: negocios.length,
+      prioridade: prioridade ?? [],
     })
   } catch (e) {
     return NextResponse.json({ error: e instanceof Error ? e.message : 'Falhou' }, { status: 500 })

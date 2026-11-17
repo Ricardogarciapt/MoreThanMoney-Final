@@ -6,11 +6,13 @@
  */
 import { useEffect, useState } from 'react'
 import type { PorOrigem } from '@/lib/vendas/conversao'
+import type { ItemPrioridade } from '@/lib/vendas/prioridade'
 
 type Dados = {
   porOrigem: PorOrigem[]
   quentesParados: { id: string; nome: string; origem: string | null; horas: number }[]
   total: number
+  prioridade: ItemPrioridade[]
 }
 
 const OURO = '#D2A63C'
@@ -35,6 +37,27 @@ export default function ConversaoPainel() {
 
   return (
     <div className="space-y-6 text-sm text-zinc-200">
+      <section className="rounded-2xl border border-white/10 bg-black/30 p-4">
+        <h2 className="mb-1 text-base font-semibold" style={{ color: OURO }}>
+          O que fazer agora
+        </h2>
+        <p className="mb-3 text-xs text-zinc-500">Negócios abertos por ordem de prioridade: etapa, tempo de espera, tarefas atrasadas. Também por voz: «o que faço agora?».</p>
+        {d.prioridade.length === 0 ? (
+          <p className="text-emerald-400">Nada em espera.</p>
+        ) : (
+          <ol className="space-y-1">
+            {d.prioridade.map((i, k) => (
+              <li key={i.id}>
+                <a href={`/backoffice/pipeline/ficha/${i.id}`} className="block rounded-lg border border-white/5 px-3 py-2 hover:border-white/20">
+                  <span className="text-zinc-500">{k + 1}.</span> <strong>{i.nome}</strong> <span style={{ color: OURO }}>· {i.accao}</span>
+                  {i.porque.length > 0 && <span className="block text-xs text-zinc-500">{i.porque.join(' · ')}</span>}
+                </a>
+              </li>
+            ))}
+          </ol>
+        )}
+      </section>
+
       <section className="rounded-2xl border border-white/10 bg-black/30 p-4">
         <h2 className="mb-1 text-base font-semibold" style={{ color: OURO }}>
           Leads quentes à espera de resposta
