@@ -12,6 +12,7 @@ import { dicionario } from "@/lib/site-solucoes/i18n/dicionarios"
 import { alternativas, idiomaDoPedido, tradutorServidor } from "@/lib/site-solucoes/i18n/servidor"
 import { IdiomaSolucoes, SeletorIdioma } from "@/components/solucoes/idioma"
 import { MontraModelos } from "@/components/solucoes/montra-modelos"
+import { MiniTelemovel } from "@/components/solucoes/mini-telemovel"
 
 /**
  * Showroom de demos: tudo o que se pode mostrar a um negócio num só sítio.
@@ -21,7 +22,7 @@ import { MontraModelos } from "@/components/solucoes/montra-modelos"
  * Ordem do Ricardo (17/11): nunca mostrar «em montagem»/«em breve» — entregamos todas.
  */
 
-type Props = { searchParams: Promise<{ lang?: string | string[] }> }
+type Props = { searchParams: Promise<{ lang?: string | string[]; modelo?: string | string[] }> }
 
 export async function generateMetadata({ searchParams }: Props): Promise<Metadata> {
   const idioma = await idiomaDoPedido((await searchParams).lang)
@@ -53,38 +54,21 @@ const ICONE: Record<string, React.ComponentType<{ className?: string }>> = {
 /** Três telemóveis pequenos no topo: o mesmo kit com a cara de três sectores. */
 function TelemoveisTopo({ t }: { t: (s: string) => string }) {
   const tres = ["restaurante", "barbearia", "clinica"].map((id) => MODELOS.find((m) => m.id === id)!)
+  const pos = ["left-0 top-10 -rotate-6", "left-1/2 top-0 z-10 -translate-x-1/2", "right-0 top-10 rotate-6"]
   return (
-    <div className="relative mx-auto h-[360px] w-full max-w-[420px] md:h-[440px]" aria-hidden="true">
-      {tres.map((m, i) => {
-        const pos = ["left-0 top-10 -rotate-6", "left-1/2 top-0 z-10 -translate-x-1/2", "right-0 top-10 rotate-6"][i]
-        const escuro = parseInt(m.corFundo.slice(1, 3), 16) < 80
-        return (
-          <div key={m.id} className={`absolute ${pos} w-[150px] rounded-[1.75rem] border border-white/15 bg-black p-1.5 shadow-2xl shadow-black/60 md:w-[180px]`}>
-            <div className="overflow-hidden rounded-[1.4rem]" style={{ background: m.corFundo, color: m.corTexto }}>
-              <div className="px-3 pb-4 pt-6" style={{ background: m.corPrincipal, color: "#fff" }}>
-                <div className="h-7 w-7 rounded-lg bg-white/25" />
-                <p className="mt-2 text-sm font-bold leading-tight">{m.marca}</p>
-                <p className="mt-0.5 text-[9px] opacity-90">{t(m.slogan)}</p>
-              </div>
-              <div className="space-y-1.5 p-2.5">
-                {m.servicos.map((s) => (
-                  <div key={s.s} className="flex justify-between rounded-md border px-2 py-1.5 text-[9px]" style={{ borderColor: escuro ? "rgba(255,255,255,.12)" : "rgba(0,0,0,.08)" }}>
-                    <span>{t(s.s)}</span>
-                    <span className="opacity-60">{t(s.p)}</span>
-                  </div>
-                ))}
-                <div className="rounded-md py-1.5 text-center text-[9px] font-bold text-white" style={{ background: m.corPrincipal }}>{t("Marcar pelo WhatsApp")}</div>
-              </div>
-            </div>
-          </div>
-        )
-      })}
+    <div className="relative mx-auto h-[360px] w-full max-w-[420px] md:h-[440px]">
+      {tres.map((m, i) => (
+        <MiniTelemovel key={m.id} m={m} t={t} className={`absolute ${pos[i]}`} />
+      ))}
     </div>
   )
 }
 
 export default async function ShowroomDemos({ searchParams }: Props) {
-  const idioma = await idiomaDoPedido((await searchParams).lang)
+  const sp = await searchParams
+  const idioma = await idiomaDoPedido(sp.lang)
+  const pedido = Array.isArray(sp.modelo) ? sp.modelo[0] : sp.modelo
+  const modeloInicial = MODELOS.some((m) => m.id === pedido) ? pedido : undefined
   const { t, ligar } = tradutorServidor(idioma)
   const fmt = (d: string) => new Intl.DateTimeFormat(LOCALE[idioma], { day: "numeric", month: "long" }).format(new Date(`${d}T12:00:00Z`))
   const demos = demosPublicadas()
@@ -149,7 +133,7 @@ export default async function ShowroomDemos({ searchParams }: Props) {
             <h2 className="text-3xl font-bold tracking-tight md:text-5xl">{t("Modelos por sector")}</h2>
             <p className="mt-3 max-w-2xl text-zinc-400">{t("A mesma base, a cara de cada negócio. Escolhe um sector e mexe no telemóvel.")}</p>
             <div className="mt-8">
-              <MontraModelos publicadas={publicadas} agendar={agendar} />
+              <MontraModelos publicadas={publicadas} agendar={agendar} inicial={modeloInicial} />
             </div>
           </section>
 
