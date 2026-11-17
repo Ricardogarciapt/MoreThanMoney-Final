@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { FileAudio, ImagePlus, Loader2, Trash2 } from 'lucide-react'
 import { authHeaders } from '@/lib/auth-token'
+import GerarComIA from './gerar-ia'
 
 /**
  * ATIVOS do Estúdio: fotos, vídeos, capturas, logos e áudios para o editor usar num guião.
@@ -275,6 +276,7 @@ export default function AtivosEstudio({ pecaInicial }: { pecaInicial?: string | 
                           {ANIMACOES.map(([v, t]) => <option key={v} value={v}>{t}</option>)}
                         </select>
                       )}
+                      <GerarComIA ativoId={a.id} tipoAtivo={a.tipo} onPronto={() => void carregar()} />
                       <button
                         type="button"
                         onClick={() => void apagar(a)}

@@ -1,9 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getSupabaseAdmin } from '@/lib/supabase-admin-client'
 import { exigirEstudio } from '@/lib/estudio/acesso'
-import { normalizarCortes, normalizarPalavras } from '@/lib/estudio/texto'
-import { lerComando } from '@/lib/estudio/comando'
-import { montarDeTake, normalizarProjeto, PROJETO_VAZIO, type Projeto } from '@/lib/estudio/projeto'
+import { projetoDoTake } from '@/lib/estudio/auto-reel'
+import { normalizarProjeto, PROJETO_VAZIO, type Projeto } from '@/lib/estudio/projeto'
 import { MARCAS_CASA } from '@/lib/conteudo-magnetico/acesso'
 
 export const runtime = 'nodejs'
@@ -89,29 +88,11 @@ export async function POST(request: NextRequest) {
   let projeto: Projeto = normalizarProjeto({ ...PROJETO_VAZIO, formato: b.formato })
 
   if (typeof b.take_id === 'string') {
-    const { data: t } = await db.from('estudio_gravacoes')
-      .select('id, peca_id, marca, caminho, duracao_s, cortes, transcricao').eq('id', b.take_id).maybeSingle()
-    if (!t) return NextResponse.json({ erro: 'Take não encontrado.' }, { status: 404 })
-    marca = MARCAS_CASA.includes(t.marca) ? t.marca : marca
-    const [{ data: peca }, { data: ativos }] = await Promise.all([
-      t.peca_id ? db.from('conteudo_magnetico_pecas').select('guiao').eq('id', t.peca_id).maybeSingle() : Promise.resolve({ data: null }),
-      t.peca_id
-        ? db.from('estudio_ativos').select('id, tipo, nome, caminho, animacao, segmento').eq('peca_id', t.peca_id).eq('estado', 'pronto').order('segmento', { ascending: true }).limit(20)
-        : Promise.resolve({ data: [] as any[] }),
-    ])
-    const g = (peca?.guiao ?? {}) as any
-    const seg0 = Array.isArray(g.reel?.segmentos) ? g.reel.segmentos[0] : null
-    const gancho = (seg0?.texto_ecra || g.laminas?.[0]?.titulo || '').toString().slice(0, 90) || null
-    const cta = g.palavra_chave ? `Comenta «${String(g.palavra_chave)}»` : null
-    const lista = (ativos ?? []) as any[]
-    const musica = lista.find((a) => a.tipo === 'audio') ?? null
-    projeto = montarDeTake({
-      take: { id: t.id, caminho: t.caminho, duracao_s: Number(t.duracao_s) || 30, cortes: normalizarCortes(t.cortes), nome: 'Take' },
-      gancho, cta, ativos: lista, musica, formato: projeto.formato,
-      palavras: normalizarPalavras((t as any).transcricao?.palavras ?? (t as any).transcricao),
-      comando: typeof b.comando === 'string' && b.comando.trim() ? lerComando(b.comando) : null,
-    })
-    if (titulo === 'Projecto sem título') titulo = (g.nicho ? `Reel · ${String(g.nicho).slice(0, 60)}` : 'Reel montado com IA')
+    const m = await projetoDoTake(db, b.take_id, { comando: typeof b.comando === 'string' ? b.comando : null, formato: projeto.formato })
+    if (!m) return NextResponse.json({ erro: 'Take não encontrado.' }, { status: 404 })
+    marca = m.marca
+    projeto = m.projeto
+    if (titulo === 'Projecto sem título') titulo = m.titulo
   }
 
   const { data, error } = await db.from('estudio_projetos')

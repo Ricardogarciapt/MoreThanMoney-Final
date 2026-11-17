@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { roboReelDoTake } from '@/lib/estudio/auto-reel'
 import { getSupabaseAdmin } from '@/lib/supabase-admin-client'
 import { ehMotor } from '@/lib/conteudo-magnetico/acesso'
 import { normalizarPalavras } from '@/lib/estudio/texto'
@@ -65,5 +66,7 @@ export async function POST(request: NextRequest) {
     : { transcricao_estado: 'falhou', notas: `transcrição: ${String(b.erro || 'sem palavras').slice(0, 300)}` }
   const { error } = await db.from('estudio_gravacoes').update(upd).eq('id', b.id).eq('transcricao_estado', 'a_transcrever')
   if (error) return NextResponse.json({ erro: 'Não consegui guardar.' }, { status: 500 })
-  return NextResponse.json({ ok: true, palavras: palavras.length })
+  // Robô dos reels do Ricardo: take ligado a um guião → projecto curto já a renderizar no Mac.
+  const projeto = palavras.length ? await roboReelDoTake(db, b.id) : null
+  return NextResponse.json({ ok: true, palavras: palavras.length, projeto })
 }
