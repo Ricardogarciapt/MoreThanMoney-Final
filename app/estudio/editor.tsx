@@ -92,7 +92,7 @@ export default function EditorVideo() {
           className="flex min-h-16 items-center gap-3 rounded-2xl border border-zinc-800 bg-zinc-900/60 px-4 text-left hover:border-[#D2A63C]/60">
           <Plus className="h-5 w-5 text-[#E9C46A]" /> <span><b className="block text-sm text-white">Projecto vazio</b><span className="text-xs text-zinc-400">Começas do zero e escolhes o material.</span></span>
         </button>
-        <MontarComIA takes={bib?.takes ?? []} aCriar={aCriar} onMontar={(take_id) => void criar({ take_id })} />
+        <MontarComIA takes={bib?.takes ?? []} aCriar={aCriar} onMontar={(take_id, comando) => void criar({ take_id, comando })} />
       </section>
 
       <section className="space-y-2">
@@ -118,18 +118,23 @@ export default function EditorVideo() {
   )
 }
 
-function MontarComIA({ takes, aCriar, onMontar }: { takes: Take[]; aCriar: boolean; onMontar: (id: string) => void }) {
+function MontarComIA({ takes, aCriar, onMontar }: { takes: Take[]; aCriar: boolean; onMontar: (id: string, comando: string) => void }) {
   const [take, setTake] = useState('')
+  const [comando, setComando] = useState('Cria um reel do Ricardo em 3 planos, 15 s')
   return (
     <div className="flex flex-col gap-2 rounded-2xl border border-[#D2A63C]/30 bg-[#D2A63C]/[0.05] p-3">
       <p className="flex items-center gap-2 text-sm font-semibold text-[#E9C46A]"><Sparkles className="h-4 w-4" /> Montar com IA</p>
       <p className="text-xs text-zinc-400">Parte de um take: mantém o que não cortaste no texto, alterna planos, mete o gancho, o CTA, os ativos do guião e a música.</p>
+      <input value={comando} onChange={(e) => setComando(e.target.value)} maxLength={400}
+        placeholder="Ex.: Cria um reel em 3 planos, 7 s, gancho: Pagas demais por sinais?"
+        className="min-h-10 rounded-lg border border-zinc-700 bg-black/40 px-2 text-sm" />
+      <p className="text-[11px] text-zinc-500">Percebe: nº de planos (2 a 6), duração (7 a 60 s) e «gancho: …». Com o take transcrito, escolhe as frases e tira as pausas.</p>
       <div className="flex gap-2">
         <select value={take} onChange={(e) => setTake(e.target.value)} className="min-h-10 flex-1 rounded-lg border border-zinc-700 bg-black/40 px-2 text-sm">
           <option value="">Escolhe um take…</option>
           {takes.map((t) => <option key={t.id} value={t.id}>{new Date(t.criado_em).toLocaleString('pt-PT')} · {t.duracao_s ? `${Math.round(t.duracao_s)} s` : '?'} · {t.marca}</option>)}
         </select>
-        <button type="button" disabled={!take || aCriar} onClick={() => onMontar(take)} className="inline-flex min-h-10 items-center gap-1 rounded-lg bg-[#D2A63C] px-3 text-sm font-semibold text-black disabled:opacity-50">
+        <button type="button" disabled={!take || aCriar} onClick={() => onMontar(take, comando)} className="inline-flex min-h-10 items-center gap-1 rounded-lg bg-[#D2A63C] px-3 text-sm font-semibold text-black disabled:opacity-50">
           {aCriar ? <Loader2 className="h-4 w-4 animate-spin" /> : <Wand2 className="h-4 w-4" />} Montar
         </button>
       </div>

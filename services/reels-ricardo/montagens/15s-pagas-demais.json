@@ -1,0 +1,11 @@
+{"n": 10, "palavra": "APP", "capa_t": 14.0, "centro": [780, 1010],
+ "gancho": "Pagas demais por isto?",
+ "linhas_capa": [["w", "Pagas demais"], ["c", "por sinais"], ["box", "e scanners?"]],
+ "correcoes": {"48-48": "a", "94-96": "Tap to Trade", "208-208": "MoreThanMoney,"},
+ "planos": [
+  {"i0": 36, "i1": 42, "plano": "fechado"},
+  {"i0": 44, "i1": 50, "plano": "medio"},
+  {"i0": 77, "i1": 83, "plano": "aberto", "cartoes": ["Comunidade", "WebTrader", "Sinais e alertas"]},
+  {"i0": 94, "i1": 99, "plano": "fechado"},
+  {"i0": 208, "i1": 216, "plano": "medio"}
+ ]}

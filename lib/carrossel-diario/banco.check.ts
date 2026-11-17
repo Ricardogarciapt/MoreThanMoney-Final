@@ -64,5 +64,8 @@ assert.ok(autorizadoNaPessoal({ created_by: 'carrossel-diario:ricardo', media_ty
 assert.ok(!autorizadoNaPessoal({ created_by: 'carrossel-diario:ricardo', media_type: 'IMAGE' }))
 assert.ok(!autorizadoNaPessoal({ created_by: 'agente:AG-SOCIAL', media_type: 'CAROUSEL' }))
 assert.ok(!autorizadoNaPessoal({ created_by: 'content-repost', media_type: 'CAROUSEL' }))
+assert.ok(autorizadoNaPessoal({ created_by: 'reels-ricardo:ricardo', media_type: 'REELS' }))
+assert.ok(!autorizadoNaPessoal({ created_by: 'reels-ricardo:ricardo', media_type: 'CAROUSEL' }))
+assert.ok(!autorizadoNaPessoal({ created_by: 'agente:AG-SOCIAL', media_type: 'REELS' }))
 
 console.log(`carrossel-diario: OK (${BANCO.ricardo.length} Ricardo + ${BANCO.mtm.length} MTM no banco, ${TEMAS.ricardo.length + TEMAS.mtm.length} temas)`)
