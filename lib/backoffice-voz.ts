@@ -18,6 +18,7 @@ import { TIPOS_CHAMADA, ehTipoChamada, type TipoChamada } from './backoffice-cha
 export type AccaoVoz =
   | { tipo: 'procurar_negocio'; texto: string }
   | { tipo: 'minhas_tarefas' }
+  | { tipo: 'proxima_accao' }
   | { tipo: 'resumo_pipeline'; dias: number }
   | { tipo: 'mover_negocio'; negocio: string; estado: EstadoPipeline; motivo_perda?: string }
   | { tipo: 'criar_tarefa'; titulo: string; prazo: string | null; negocio: string | null }
@@ -57,6 +58,7 @@ export function sistemaDoComando(hojeISO: string, podeGestao: boolean): string {
     'Acções possíveis:',
     '{"tipo":"procurar_negocio","texto":"<nome ou parte do nome>"}  — encontrar um lead/negócio',
     '{"tipo":"minhas_tarefas"}  — as tarefas abertas da pessoa',
+    '{"tipo":"proxima_accao"}  — «o que faço agora?», «com quem falo primeiro?»: a fila de prioridade do pipeline',
     ...(podeGestao ? ['{"tipo":"resumo_pipeline","dias":30}  — números do pipeline por etapa e origem'] : []),
     `{"tipo":"mover_negocio","negocio":"<nome>","estado":"<estado>","motivo_perda":"<só se perdido>"}  — estados: ${estados}`,
     `{"tipo":"mudar_funil","negocio":"<nome>","funil":"<funil ou null>"}  — funis: ${FUNIS.map((f) => `${f} (${FUNIL_NOME[f]})`).join(', ')}; null tira o funil`,
@@ -106,6 +108,8 @@ export function interpretarAccao(bruto: string, podeGestao: boolean): AccaoVoz {
     }
     case 'minhas_tarefas':
       return { tipo: 'minhas_tarefas' }
+    case 'proxima_accao':
+      return { tipo: 'proxima_accao' }
     case 'resumo_pipeline': {
       if (!podeGestao) return { tipo: 'responder', texto: 'Os números do pipeline inteiro só estão abertos à Gestão.' }
       const dias = Math.min(Math.max(Number(j.dias) || 30, 1), 180)
