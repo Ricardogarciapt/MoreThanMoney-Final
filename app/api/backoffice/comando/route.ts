@@ -9,37 +9,16 @@
  * IA: cadeia GRÁTIS (`chamarIAGratis`). Se falhar, diz-se que falhou; não se inventa acção.
  */
 import { NextRequest, NextResponse } from 'next/server'
-import { exigirCapacidade, type ContextoBackoffice } from '@/lib/backoffice-sessao'
+import { exigirCapacidade } from '@/lib/backoffice-sessao'
+import { procurarNegocios } from '@/lib/backoffice-procura'
 import { getSupabaseAdmin } from '@/lib/supabase-admin-client'
-import { ambitoDaEquipa } from '@/lib/backoffice-equipas'
 import { pode } from '@/lib/backoffice-papeis'
-import { COLUNAS_DE_PARTICIPACAO } from '@/lib/backoffice-negocios'
-import { podeMexerNoNegocio, type AtribuicoesDoNegocio } from '@/lib/backoffice-escrita'
 import { ESTADO_PIPELINE_NOME, type EstadoPipeline } from '@/lib/backoffice-vista'
 import { chamarIAGratis, mensagemIndisponivel } from '@/lib/ia/chamar'
 import { ferramentaPorNome } from '@/lib/mcp/ferramentas'
-import { MAX_TEXTO_COMANDO, PAGINAS_VOZ, interpretarAccao, padraoDeProcura, sistemaDoComando } from '@/lib/backoffice-voz'
+import { MAX_TEXTO_COMANDO, PAGINAS_VOZ, interpretarAccao, sistemaDoComando } from '@/lib/backoffice-voz'
 
 export const runtime = 'nodejs'
-
-type NegocioCurto = { id: string; nome: string; estado: string }
-
-async function procurarNegocios(ctx: ContextoBackoffice, texto: string): Promise<NegocioCurto[] | null> {
-  if (!pode(ctx.capacidades, 'bo.pipeline_proprio')) return null
-  const supabase = getSupabaseAdmin()
-  const ambito = await ambitoDaEquipa(supabase, ctx, 'pipeline')
-  const { data } = await supabase
-    .from('vendas_negocios')
-    .select(`id, nome, estado, ${COLUNAS_DE_PARTICIPACAO.join(', ')}`)
-    .ilike('nome', padraoDeProcura(texto))
-    .order('atualizado_em', { ascending: false, nullsFirst: false })
-    .limit(40)
-  const linhas = (data ?? []) as unknown as Array<AtribuicoesDoNegocio & NegocioCurto>
-  return linhas
-    .filter((n) => podeMexerNoNegocio(n, ambito))
-    .slice(0, 8)
-    .map((n) => ({ id: n.id, nome: n.nome, estado: n.estado }))
-}
 
 export async function POST(request: NextRequest) {
   const ctx = await exigirCapacidade(request, 'bo.entrar')
