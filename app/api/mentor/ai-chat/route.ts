@@ -1,70 +1,62 @@
-import { NextRequest, NextResponse } from "next/server"
+import { NextRequest, NextResponse, after } from "next/server"
 import { createServerClient } from "@supabase/ssr"
 import { cookies } from "next/headers"
-import { chamarIA, mensagemIndisponivel } from "@/lib/ia/chamar"
-import { blocoFramework } from "@/lib/framework-mtm"
+import { chamarIAGratis, mensagemIndisponivel } from "@/lib/ia/chamar"
 import { normalizeLang } from "@/lib/i18n/config"
-import { LANGUAGE_NAMES_EN } from "@/lib/chat-traducao-idiomas"
+import { getSupabaseAdmin } from "@/lib/supabase-admin-client"
+import { juntarMemoria, montarSistema, separarNotas, type ContextoAluno } from "@/lib/mentor/prompt"
 
-const MTM_MENTOR_SYSTEM_PROMPT = `És o Mentor MTM — o assistente de inteligência artificial da More Than Money (MTM). Acompanhas cada membro no seu percurso, com um princípio: aprender, aplicar com gestão de risco e evoluir como trader independente.
+/**
+ * MENTOR MTM — o agente pessoal de cada aluno (revisão de 17/11, ver `lib/mentor/prompt.ts`).
+ *
+ *  · Só IA GRÁTIS (`chamarIAGratis`: Groq → Gemini → Ollama). Se todas falharem, o aluno vê uma
+ *    frase honesta; nunca cai num fornecedor pago. Custo zero para a MTM, por decisão do dono.
+ *  · O contexto do aluno vem do SERVIDOR (perfil, plano, memória, tarefas), não do browser.
+ *  · A conversa fica guardada em `mentor_mensagens` (o Mentor lembra-se; o aluno pode apagar) e
+ *    os sinais das notas escondidas vão para `mentor_sinais` (educação, follow-up, upgrade,
+ *    testemunhos). Guardar nunca atrasa nem impede a resposta.
+ *
+ * O cliente continua a receber SSE `text`/`done`/`error` como antes.
+ */
 
-## A tua missão
-Ajudar o membro a (1) DOMINAR a app MTM, (2) APRENDER e APLICAR com gestão de risco, e (3) EVOLUIR como trader independente, com consistência e sem pressa.
-
-## A app MTM (guia o membro a usá-la)
-- Feed — novidades e performance da comunidade.
-- Chat — canais da comunidade + suporte.
-- Ao Vivo — sessões live de trading e formação.
-- Tap to Trade (T2T) — recebe um sinal e executa com um toque na tua conta.
-- MTM Copy — copytrading automático das estratégias com histórico.
-- Scanner / Trading Alerts — sinais das estratégias MTM (Sensei, Goldkiller, MTM Scanner, MTM Aurum Flow Cripto — esta SÓ cripto) por ativo e timeframe.
-- Abrir Conta — abrir conta na corretora parceira PU Prime (grátis) para ligar copytrading/T2T.
-- Mais — Portfólio, Afiliados, definições.
-
-## Caminho cliente
-1. Aprender o essencial (comunidade + sessões ao vivo).
-2. Abrir conta PU Prime (grátis) na app -> "Abrir Conta".
-3. Ligar MTM Copy ou T2T e começar PEQUENO (valor que não tire o sono).
-4. Gestão de risco sempre: definir risco por operação antes de entrar.
-5. Acompanhar resultados e crescer com consistência (o que conta é o mês, não uma operação).
-
-Afiliados: só menciona se o membro perguntar. Existe um programa de afiliados (Mais -> Afiliados) para quem quiser recomendar a MTM; ganha-se apenas por clientes reais que subscrevem, nunca por recrutar pessoas. Não há ranks nem árvore de equipa. Não faças disto um caminho nem uma meta.
-
-## Prova real (usa com honestidade)
-- NUNCA cites "675 operações, 63%, +7.060€": estava congelado em 30/06 e em euros, que não são
-  comparáveis (o mesmo sinal vale ~8 $ a 0,01 lote e ~800 $ a 1 lote). Está fora.
-- Fala de pips e percentagens, medidos na conta que abre TODOS os sinais publicados. Se não
-  tiveres um número à mão, não inventes nenhum: descreve o método.
-- NUNCA prometas retornos garantidos. Investir/tradar envolve risco de perda. Resultados passados não garantem futuros.
-
-## Como agires
-- Português de Portugal, tom próximo e directo ("tu").
-- Percebe primeiro onde o membro está (é novo? já ligou conta? quer aprender ou já opera?).
-- Dá planos concretos com passos, datas e o ecrã exato da app a usar.
-- Celebra pequenas vitórias; quando ele não sabe o que fazer, dá 3 ações prioritárias.
-- Se detetares um bloqueio (não abriu conta, não ligou copy, medo do risco), resolve-o passo a passo.
-- Encaminha para a app sempre que possível (ex.: "vai a Abrir Conta e liga o MTM Copy").
-
-Responde estruturado quando dás planos, emojis com moderação, respostas focadas e acionáveis.`
+type MensagemCliente = { role: "user" | "assistant"; content: string }
 
 async function getAuthedClient() {
   const cookieStore = await cookies()
-  return createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    {
-      cookies: {
-        getAll() {
-          return cookieStore.getAll()
-        },
-        setAll(cookiesToSet) {
-          cookiesToSet.forEach(({ name, value, options }) =>
-            cookieStore.set(name, value, options)
-          )
-        },
+  return createServerClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!, {
+    cookies: {
+      getAll() {
+        return cookieStore.getAll()
       },
-    }
-  )
+      setAll(cookiesToSet) {
+        cookiesToSet.forEach(({ name, value, options }) => cookieStore.set(name, value, options))
+      },
+    },
+  })
+}
+
+async function contextoDoAluno(userId: string): Promise<{ contexto: ContextoAluno; memoria: string }> {
+  const db = getSupabaseAdmin()
+  const [{ data: perfil }, { data: mentor }, { data: tarefas }] = await Promise.all([
+    db.from("profiles").select("full_name, user_type, created_at").eq("id", userId).maybeSingle(),
+    db.from("mentor_profiles").select("objetivo, tempo_diario, fase_trading, memoria").eq("user_id", userId).maybeSingle(),
+    db.from("mentor_tasks").select("title").eq("user_id", userId).eq("status", "pending").order("due_at").limit(3),
+  ])
+  const dias = perfil?.created_at ? Math.floor((Date.now() - new Date(perfil.created_at).getTime()) / 86_400_000) : null
+  const memoria = (mentor?.memoria as string | null) || ""
+  return {
+    memoria,
+    contexto: {
+      primeiroNome: (perfil?.full_name as string | null)?.trim().split(/\s+/)[0] || null,
+      plano: (perfil?.user_type as string | null) || null,
+      diasDesdeEntrada: dias,
+      objetivo: mentor?.objetivo ?? null,
+      tempoDiario: mentor?.tempo_diario ?? null,
+      faseTrading: mentor?.fase_trading ?? null,
+      memoria,
+      tarefasPendentes: (tarefas || []).map((t) => t.title as string),
+    },
+  }
 }
 
 export async function POST(request: NextRequest) {
@@ -73,86 +65,102 @@ export async function POST(request: NextRequest) {
     const {
       data: { session },
     } = await supabase.auth.getSession()
-    if (!session) {
-      return NextResponse.json({ error: "Não autenticado" }, { status: 401 })
-    }
+    if (!session) return NextResponse.json({ error: "Não autenticado" }, { status: 401 })
+    const userId = session.user.id
 
     const body = await request.json()
-    // Os campos de rank/PE/CV continuam aceites para não partir clientes antigos, mas já não são usados.
-    const { messages, mentorContext, idioma } = body as {
-      idioma?: string
-      messages: Array<{ role: "user" | "assistant"; content: string }>
-      mentorContext?: {
-        current_rank?: string
-        target_rank?: string
-        pe_left?: number
-        pe_right?: number
-        cv_left?: number
-        cv_right?: number
-        phase?: string
-        pendingTasks?: string[]
-      }
-    }
-
+    // `mentorContext` (ranks/PE/CV) de clientes antigos é ignorado: o contexto vem do servidor.
+    const { messages, idioma, porBotao } = body as { idioma?: string; porBotao?: boolean; messages: MensagemCliente[] }
     if (!messages || !Array.isArray(messages) || messages.length === 0) {
       return NextResponse.json({ error: "Mensagens inválidas" }, { status: 400 })
     }
+    // Só as últimas 20 trocas seguem para a IA (os gratuitos têm janela curta); a memória cobre o resto.
+    const conversa = messages
+      .filter((m) => (m.role === "user" || m.role === "assistant") && typeof m.content === "string" && m.content.trim())
+      .slice(-20)
+      .map((m) => ({ role: m.role, content: m.content.slice(0, 4000) }))
+    const ultima = conversa[conversa.length - 1]
+    if (!ultima || ultima.role !== "user") return NextResponse.json({ error: "Mensagens inválidas" }, { status: 400 })
 
-    // Build context block from mentor profile
-    let contextBlock = ""
-    if (mentorContext) {
-      const { phase, pendingTasks = [] } = mentorContext
-      contextBlock = `\n\n## Contexto actual do aluno
-- Fase actual: ${phase || "onboarding"}
-- Tarefas pendentes: ${pendingTasks.length > 0 ? pendingTasks.join(", ") : "Nenhuma"}`
-    }
+    const langApp = normalizeLang(idioma)
+    const { contexto, memoria } = await contextoDoAluno(userId).catch(() => ({ contexto: {} as ContextoAluno, memoria: "" }))
+    const sistema = montarSistema({ langApp, ultimaPorBotao: Boolean(porBotao), contexto })
 
-    // Idioma de quem pergunta (17/11): um aluno alemão recebia o Mentor em português. Os nomes de
-    // produtos, scanners, educadores e cursos ficam sempre como estão.
-    const lang = normalizeLang(idioma)
-    const blocoIdioma =
-      lang === "pt"
-        ? ""
-        : `\n\n## Idioma\nResponde SEMPRE em ${LANGUAGE_NAMES_EN[lang] || lang} (código ${lang}), mesmo que estas instruções estejam em português. Nunca traduzas nomes de produtos, scanners, educadores ou cursos (MTM, MTM Auto, Premium, GoldKiller, Sensei, DEFY, WebTrader, MTM Funded…).`
-    const systemPrompt = MTM_MENTOR_SYSTEM_PROMPT + contextBlock + `\n\n${blocoFramework("apoio")}` + blocoIdioma
-
-    // SSE — o cliente continua a receber `text`/`done`/`error` como antes. A diferença (04/10):
-    // a resposta vem pela porta única da IA (Groq → Gemini → Ollama → OpenAI → Anthropic) em vez
-    // de só da Anthropic, que estava sem crédito. O núcleo não faz streaming por token, por isso o
-    // texto chega num só evento — a troca é ter resposta em vez de um erro cru.
     const encoder = new TextEncoder()
     const stream = new ReadableStream({
       async start(controller) {
         try {
-          const resposta = await chamarIA({
+          const r = await chamarIAGratis({
             tarefa: "mentor",
-            sistema: systemPrompt,
-            mensagens: messages.map((m) => ({ role: m.role, content: m.content })),
-            maxTokens: 1024,
+            sistema,
+            mensagens: conversa,
+            maxTokens: 900,
+            temperatura: 0.7,
             preferencia: "qualidade",
           })
-          controller.enqueue(encoder.encode(`data: ${JSON.stringify({ type: "text", text: resposta.texto })}\n\n`))
-          controller.enqueue(encoder.encode(`data: ${JSON.stringify({ type: "done", fornecedor: resposta.fornecedor, emReserva: resposta.emReserva })}\n\n`))
-        } catch (err) {
-          // Mensagem honesta («a IA está indisponível: groq (…), openai (…)») — nunca o JSON cru de um fornecedor.
-          controller.enqueue(
-            encoder.encode(`data: ${JSON.stringify({ type: "error", message: mensagemIndisponivel(err) })}\n\n`)
+          const { resposta, notas } = separarNotas(r.texto)
+          controller.enqueue(encoder.encode(`data: ${JSON.stringify({ type: "text", text: resposta })}\n\n`))
+          controller.enqueue(encoder.encode(`data: ${JSON.stringify({ type: "done", fornecedor: r.fornecedor, emReserva: r.emReserva })}\n\n`))
+          controller.close()
+          // Guardar DEPOIS de entregar (`after` mantém a função viva na Vercel): a base de dados
+          // nunca atrasa nem impede a resposta.
+          after(() =>
+            guardar(userId, ultima.content, resposta, notas, memoria, r.fornecedor, Boolean(porBotao)).catch((e) =>
+              console.error("[mentor] guardar falhou:", e?.message || e)
+            )
           )
-        } finally {
+        } catch (err) {
+          controller.enqueue(encoder.encode(`data: ${JSON.stringify({ type: "error", message: mensagemIndisponivel(err) })}\n\n`))
           controller.close()
         }
       },
     })
 
     return new Response(stream, {
-      headers: {
-        "Content-Type": "text/event-stream",
-        "Cache-Control": "no-cache",
-        Connection: "keep-alive",
-      },
+      headers: { "Content-Type": "text/event-stream", "Cache-Control": "no-cache", Connection: "keep-alive" },
     })
   } catch (error) {
     console.error("Erro no Mentor AI Chat:", error)
     return NextResponse.json({ error: "Erro interno do servidor" }, { status: 500 })
+  }
+}
+
+async function guardar(
+  userId: string,
+  pergunta: string,
+  resposta: string,
+  notas: ReturnType<typeof separarNotas>["notas"],
+  memoria: string,
+  fornecedor: string,
+  porBotao: boolean
+) {
+  const db = getSupabaseAdmin()
+  const lingua = notas?.lingua || null
+  const { data: msgs } = await db
+    .from("mentor_mensagens")
+    .insert([
+      { user_id: userId, role: "user", content: pergunta, idioma: lingua, por_botao: porBotao },
+      { user_id: userId, role: "assistant", content: resposta, idioma: lingua, fornecedor },
+    ])
+    .select("id, role")
+  const idPergunta = msgs?.find((m) => m.role === "user")?.id ?? null
+
+  const updates: Record<string, unknown> = { ultima_conversa_em: new Date().toISOString() }
+  if (lingua) updates.idioma = lingua
+  if (notas?.lembrar) updates.memoria = juntarMemoria(memoria, notas.lembrar)
+  await db.from("mentor_profiles").upsert({ user_id: userId, ...updates }, { onConflict: "user_id" })
+
+  if (notas?.sinais.length) {
+    await db.from("mentor_sinais").insert(
+      notas.sinais.map((s) => ({
+        user_id: userId,
+        mensagem_id: idPergunta,
+        tipo: s.tipo,
+        tema: s.tema,
+        resumo: s.resumo,
+        consentiu: s.consentiu ?? null,
+        idioma: lingua,
+      }))
+    )
   }
 }
