@@ -24,7 +24,7 @@ export type Pais = 'PT' | 'BR' | 'INT'
 export const SEGMENTOS: readonly Segmento[] = ['ib_afiliado', 'comunidade', 'criador', 'escola', 'prop_firm', 'negocio_local', 'licenca_scanners', 'parceria_redes']
 export const PAISES: readonly Pais[] = ['PT', 'BR', 'INT']
 /** Os segmentos que têm textos em inglês. Os outros não saem para INT (ficam bloqueados com motivo). */
-export const SEGMENTOS_INT: readonly Segmento[] = ['licenca_scanners', 'parceria_redes']
+export const SEGMENTOS_INT: readonly Segmento[] = ['negocio_local', 'licenca_scanners', 'parceria_redes']
 export function lerPais(v: unknown): Pais {
   const p = String(v ?? 'PT').toUpperCase()
   return p === 'BR' ? 'BR' : p === 'INT' || p === 'EN' ? 'INT' : 'PT'
@@ -206,6 +206,20 @@ const NOVOS_BR: Record<'negocio_local' | 'licenca_scanners' | 'parceria_redes', 
 
 /** Inglês: só os segmentos que fazem sentido fora do espaço lusófono. */
 const INT: Partial<Record<Segmento, Tres>> = {
+  negocio_local: [
+    (e, l) => ({
+      assunto: `A website and an app with ${e}'s own brand`,
+      corpo: `Hi ${e} team,\n\nI'm Ricardo, from More Than Money (MTM), in Portugal. I noticed that people looking for you today land on a generic link page, not on a place with your own brand.\n\nWe do both in one go: a page on your own domain, built to turn visits into requests, and a small app where your clients book and follow what they do with you. One fixed setup price and a small yearly renewal, no monthly fees.\n\nWant to see an example in 15 minutes? You can book here: ${l}`,
+    }),
+    (e, l) => ({
+      assunto: `Re: A website and an app with ${e}'s own brand`,
+      corpo: `Hi again,\n\nOne quick question: today, can someone who finds ${e} on social media book or ask for a quote without messaging you? If not, that's exactly what the page and the app solve.\n\nIf it makes sense, you can book here: ${l}`,
+    }),
+    (e, l) => ({
+      assunto: `Closing the loop`,
+      corpo: `Hi,\n\nLast email about this. If the timing isn't right for ${e}, I won't follow up again.\n\nIf you ever want your own page and app, you can book here: ${l}`,
+    }),
+  ],
   licenca_scanners: [
     (e, l) => ({
       assunto: `Licensed trading scanners for ${e}`,
