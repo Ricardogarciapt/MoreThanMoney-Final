@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server"
 import { createServerClient } from "@supabase/ssr"
 import { cookies } from "next/headers"
 import { MENTOR_72H_TASKS } from "@/lib/mentor-plan"
+import { getSupabaseAdmin } from "@/lib/supabase-admin-client"
 
 async function getAuthedClient() {
   const cookieStore = await cookies()
@@ -43,8 +44,6 @@ export async function GET() {
         .insert({
           user_id: userId,
           phase: "onboarding",
-          target_rank: "rising_star",
-          current_rank: "starter",
         })
         .select("*")
         .single()
@@ -65,6 +64,28 @@ export async function GET() {
     }))
     await supabase.from("mentor_tasks").upsert(tasksPayload, { onConflict: "user_id,code", ignoreDuplicates: true })
 
+    // Até 17/11 o plano era de network marketing («Registar 10 leads», «Plano Rising Star»…): 41 alunos
+    // ainda tinham esses títulos guardados. As tarefas de sistema seguem SEMPRE o texto actual do plano.
+    const { data: antigas } = await supabase
+      .from("mentor_tasks")
+      .select("id, code, title, description")
+      .eq("user_id", userId)
+      .eq("source", "system")
+    for (const t of antigas || []) {
+      const seed = MENTOR_72H_TASKS.find((s) => s.code === t.code)
+      if (seed && (t.title !== seed.title || t.description !== seed.description)) {
+        await supabase.from("mentor_tasks").update({ title: seed.title, description: seed.description }).eq("id", t.id)
+      }
+    }
+
+    // A conversa guardada (o Mentor lembra-se de ti entre sessões e aparelhos).
+    const { data: historico } = await supabase
+      .from("mentor_mensagens")
+      .select("id, role, content, created_at")
+      .eq("user_id", userId)
+      .order("created_at", { ascending: false })
+      .limit(40)
+
     const { data: tasks, error: tasksErr } = await supabase
       .from("mentor_tasks")
       .select("*")
@@ -83,10 +104,7 @@ export async function GET() {
         profile,
         tasks: tasks || [],
         progressPercent,
-        rankGoals: {
-          rising_star: "Primeira semana com plano escrito e risco definido",
-          bronze_star: "Revisão semanal feita 4 semanas seguidas",
-        },
+        historico: (historico || []).reverse(),
       },
     })
   } catch (error: any) {
@@ -102,9 +120,10 @@ export async function PATCH(request: NextRequest) {
 
     const body = await request.json()
     const updates: Record<string, unknown> = {}
-    const allowed = ["phase", "target_rank", "current_rank", "pe_left", "pe_right", "cv_left", "cv_right"] as const
+    // As respostas do arranque do Mentor. Os campos de rank/PE/CV saíram (17/11): eram de network marketing.
+    const allowed = ["phase", "objetivo", "tempo_diario", "fase_trading"] as const
     for (const field of allowed) {
-      if (body[field] !== undefined) updates[field] = body[field]
+      if (typeof body[field] === "string") updates[field] = body[field].slice(0, 200)
     }
     if (Object.keys(updates).length === 0) {
       return NextResponse.json({ error: "Nada para atualizar" }, { status: 400 })
@@ -112,8 +131,7 @@ export async function PATCH(request: NextRequest) {
 
     const { data, error } = await supabase
       .from("mentor_profiles")
-      .update(updates)
-      .eq("user_id", session.user.id)
+      .upsert({ user_id: session.user.id, ...updates }, { onConflict: "user_id" })
       .select("*")
       .single()
     if (error) return NextResponse.json({ error: error.message }, { status: 500 })
@@ -124,3 +142,21 @@ export async function PATCH(request: NextRequest) {
   }
 }
 
+
+/** O aluno apaga a conversa e o que o Mentor guardou dele (RGPD: direito ao apagamento). */
+export async function DELETE() {
+  try {
+    const supabase = await getAuthedClient()
+    const { data: { session } } = await supabase.auth.getSession()
+    if (!session) return NextResponse.json({ error: "Não autenticado" }, { status: 401 })
+    const userId = session.user.id
+    const { error } = await supabase.from("mentor_mensagens").delete().eq("user_id", userId)
+    if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+    await supabase.from("mentor_profiles").update({ memoria: null }).eq("user_id", userId)
+    // Os sinais derivados das conversas também saem (só o servidor lhes chega).
+    await getSupabaseAdmin().from("mentor_sinais").delete().eq("user_id", userId)
+    return NextResponse.json({ success: true })
+  } catch (error: any) {
+    return NextResponse.json({ error: error.message || "Erro interno" }, { status: 500 })
+  }
+}

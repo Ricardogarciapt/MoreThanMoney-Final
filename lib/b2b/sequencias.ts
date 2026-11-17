@@ -13,20 +13,35 @@
 import { createHmac, timingSafeEqual } from 'crypto'
 import { AG, linkAssinado, linkTemAg } from '@/lib/agentes/codigos'
 import { identificaMtm, temSaida } from '@/lib/agentes/contacto-inicial'
+import { demoDoDia } from '@/lib/site-solucoes/demos-diarias'
 
 export type Segmento =
   | 'ib_afiliado' | 'comunidade' | 'criador' | 'escola' | 'prop_firm'
   // 16/11 (ronda B2B do dono): o produto de entrada, as licenças de scanners e as parcerias das redes.
   | 'negocio_local' | 'licenca_scanners' | 'parceria_redes'
-/** PT = pt-PT · BR = pt-BR · INT = inglês (empresas fora do espaço lusófono). */
-export type Pais = 'PT' | 'BR' | 'INT'
+/** A LÍNGUA do email: PT = pt-PT (Portugal e PALOP) · BR = pt-BR · INT = inglês · FR · DE · IT. */
+export type Pais = 'PT' | 'BR' | 'INT' | 'FR' | 'DE' | 'IT'
 export const SEGMENTOS: readonly Segmento[] = ['ib_afiliado', 'comunidade', 'criador', 'escola', 'prop_firm', 'negocio_local', 'licenca_scanners', 'parceria_redes']
-export const PAISES: readonly Pais[] = ['PT', 'BR', 'INT']
+export const PAISES: readonly Pais[] = ['PT', 'BR', 'INT', 'FR', 'DE', 'IT']
 /** Os segmentos que têm textos em inglês. Os outros não saem para INT (ficam bloqueados com motivo). */
-export const SEGMENTOS_INT: readonly Segmento[] = ['licenca_scanners', 'parceria_redes']
+export const SEGMENTOS_INT: readonly Segmento[] = ['negocio_local', 'licenca_scanners', 'parceria_redes']
 export function lerPais(v: unknown): Pais {
   const p = String(v ?? 'PT').toUpperCase()
-  return p === 'BR' ? 'BR' : p === 'INT' || p === 'EN' ? 'INT' : 'PT'
+  if (p === 'BR' || p === 'FR' || p === 'DE' || p === 'IT') return p
+  return p === 'INT' || p === 'EN' ? 'INT' : 'PT'
+}
+
+/**
+ * Países onde o email comercial não pedido exige consentimento prévio MESMO a empresas (opt-in B2B):
+ * Alemanha e Áustria (UWG §7, TKG §174), Itália (Codice privacy art. 130), Espanha (LSSI art. 21),
+ * Países Baixos (Telecommunicatiewet 11.7). Lido pelo domínio do email e pela língua. Orientação geral,
+ * não substitui advogado. O envio fica parado com motivo até haver consentimento ou decisão do dono.
+ */
+export const TLD_OPT_IN = ['de', 'at', 'it', 'es', 'nl'] as const
+export function exigeConsentimento(email: string, pais: Pais): boolean {
+  if (pais === 'DE' || pais === 'IT') return true
+  const tld = String(email ?? '').trim().toLowerCase().split('.').pop() ?? ''
+  return (TLD_OPT_IN as readonly string[]).includes(tld)
 }
 
 /**
@@ -205,6 +220,20 @@ const NOVOS_BR: Record<'negocio_local' | 'licenca_scanners' | 'parceria_redes', 
 
 /** Inglês: só os segmentos que fazem sentido fora do espaço lusófono. */
 const INT: Partial<Record<Segmento, Tres>> = {
+  negocio_local: [
+    (e, l) => ({
+      assunto: `A website and an app with ${e}'s own brand`,
+      corpo: `Hi ${e} team,\n\nI'm Ricardo, from More Than Money (MTM), in Portugal. I noticed that people looking for you today land on a generic link page, not on a place with your own brand.\n\nWe do both in one go: a page on your own domain, built to turn visits into requests, and a small app where your clients book and follow what they do with you. One fixed setup price and a small yearly renewal, no monthly fees.\n\nWant to see an example in 15 minutes? You can book here: ${l}`,
+    }),
+    (e, l) => ({
+      assunto: `Re: A website and an app with ${e}'s own brand`,
+      corpo: `Hi again,\n\nOne quick question: today, can someone who finds ${e} on social media book or ask for a quote without messaging you? If not, that's exactly what the page and the app solve.\n\nIf it makes sense, you can book here: ${l}`,
+    }),
+    (e, l) => ({
+      assunto: `Closing the loop`,
+      corpo: `Hi,\n\nLast email about this. If the timing isn't right for ${e}, I won't follow up again.\n\nIf you ever want your own page and app, you can book here: ${l}`,
+    }),
+  ],
   licenca_scanners: [
     (e, l) => ({
       assunto: `Licensed trading scanners for ${e}`,
@@ -235,9 +264,148 @@ const INT: Partial<Record<Segmento, Tres>> = {
   ],
 }
 
+/** Francês (17/11, Ricardo): França, Bélgica francófona, Suíça romanda, Luxemburgo. Tratamento por «vous». */
+const FR: Partial<Record<Segmento, Tres>> = {
+  negocio_local: [
+    (e, l) => ({
+      assunto: `Un site et une application à l'image de ${e}`,
+      corpo: `Bonjour à l'équipe de ${e},\n\nJe suis Ricardo, de More Than Money (MTM), au Portugal. J'ai remarqué qu'aujourd'hui, les personnes qui vous cherchent arrivent sur une page de liens générique, et non sur un espace à votre image.\n\nNous faisons les deux en une fois : une page sur votre propre nom de domaine, pensée pour transformer les visites en demandes, et une petite application où vos clients réservent et suivent ce qu'ils font avec vous. Un prix de création fixe et un petit renouvellement annuel, sans abonnement mensuel.\n\nVoulez-vous voir un exemple en 15 minutes ? Vous pouvez réserver ici : ${l}`,
+    }),
+    (e, l) => ({
+      assunto: `Re: Un site et une application à l'image de ${e}`,
+      corpo: `Bonjour,\n\nUne seule question : aujourd'hui, quelqu'un qui découvre ${e} sur les réseaux peut-il réserver ou demander un devis sans vous écrire ? Si ce n'est pas le cas, c'est exactement ce que la page et l'application résolvent.\n\nSi cela vous parle, l'agenda est ici : ${l}`,
+    }),
+    (e, l) => ({
+      assunto: `Je clôture ici`,
+      corpo: `Bonjour,\n\nDernier e-mail à ce sujet. Si ce n'est pas le moment pour ${e}, je n'insisterai plus.\n\nSi un jour vous voulez votre propre page et votre application, l'agenda reste ici : ${l}`,
+    }),
+  ],
+  licenca_scanners: [
+    (e, l) => ({
+      assunto: `Des scanners de trading sous licence pour ${e}`,
+      corpo: `Bonjour à l'équipe de ${e},\n\nJe suis Ricardo, de More Than Money (MTM), au Portugal. Nous développons des scanners de trading pour TradingView et nous les concédons sous licence aux entreprises de formation au trading, en pack et par semestre, pour vos élèves.\n\nPour aller plus loin, nous concevons et programmons la stratégie de votre maison, qui reste la vôtre, ainsi qu'un mentor IA entraîné sur elle pour votre communauté. C'est ce qu'un cours gratuit sur YouTube ne peut pas copier.\n\nUne démonstration de 20 minutes aurait-elle du sens ? ${l}`,
+    }),
+    (e, l) => ({
+      assunto: `Re: Des scanners de trading sous licence pour ${e}`,
+      corpo: `Bonjour,\n\nJe reviens vers vous : la licence est par équipe, les accès sont gérés par nous et les alertes arrivent là où vos élèves sont déjà.\n\nQui s'occupe des partenariats et du produit chez ${e} ? Si c'est vous, vous pouvez réserver ici : ${l}`,
+    }),
+    (e, l) => ({
+      assunto: `Je clôture ici`,
+      corpo: `Bonjour,\n\nDernier e-mail au sujet des licences. Si ce n'est pas une priorité pour ${e}, je n'insisterai plus.\n\nSi cela change, vous pouvez réserver ici : ${l}`,
+    }),
+  ],
+  parceria_redes: [
+    (e, l) => ({
+      assunto: `Une collaboration avec @ricardogarciapt ?`,
+      corpo: `Bonjour à l'équipe de ${e},\n\nJe suis Ricardo Garcia, de More Than Money (MTM), au Portugal. Sur Instagram (@ricardogarciapt), je parle d'éducation financière, de trading réfléchi et d'IA au service des petites entreprises.\n\nJe voudrais proposer une collaboration à ${e} : un contenu commun, une interview ou une courte série qui apporte de la valeur aux deux audiences. Aucun engagement tant que nous ne voyons pas que cela convient.\n\nEst-ce que cela vaut un échange ? ${l}`,
+    }),
+    (e, l) => ({
+      assunto: `Re: Une collaboration avec @ricardogarciapt ?`,
+      corpo: `Bonjour,\n\nJe reviens vers vous : qui s'occupe des collaborations et du contenu chez ${e} ? Si c'est vous, nous pouvons en parler 15 minutes : ${l}`,
+    }),
+    (e, l) => ({
+      assunto: `Je clôture ici`,
+      corpo: `Bonjour,\n\nDernier e-mail au sujet de cette collaboration. Si le moment n'est pas le bon pour ${e}, je n'insisterai plus.\n\nSi un jour cela a du sens : ${l}`,
+    }),
+  ],
+}
+
+/** Alemão (17/11, Ricardo). Tratamento por «Sie». Na Alemanha e na Áustria o email frio a empresas exige consentimento: ver `exigeConsentimento`. */
+const DE: Partial<Record<Segmento, Tres>> = {
+  negocio_local: [
+    (e, l) => ({
+      assunto: `Eine Website und eine App im Auftritt von ${e}`,
+      corpo: `Guten Tag, liebes Team von ${e},\n\nich bin Ricardo von More Than Money (MTM) aus Portugal. Mir ist aufgefallen, dass Menschen, die Sie suchen, heute auf einer allgemeinen Linkseite landen und nicht auf einer Seite mit Ihrer eigenen Marke.\n\nWir erledigen beides in einem Schritt: eine Seite unter Ihrer eigenen Domain, die Besuche in Anfragen verwandelt, und eine kleine App, in der Ihre Kunden Termine buchen und verfolgen. Ein fester Einrichtungspreis und eine kleine jährliche Verlängerung, ohne monatliche Gebühren.\n\nMöchten Sie in 15 Minuten ein Beispiel sehen? Hier können Sie einen Termin buchen: ${l}`,
+    }),
+    (e, l) => ({
+      assunto: `Re: Eine Website und eine App im Auftritt von ${e}`,
+      corpo: `Guten Tag,\n\nnur eine Frage: Kann jemand, der ${e} in den sozialen Netzwerken findet, heute einen Termin buchen oder ein Angebot anfragen, ohne Ihnen zu schreiben? Wenn nicht, genau das lösen die Seite und die App.\n\nWenn es passt, finden Sie den Kalender hier: ${l}`,
+    }),
+    (e, l) => ({
+      assunto: `Ich schließe hier ab`,
+      corpo: `Guten Tag,\n\nletzte E-Mail zu diesem Thema. Wenn es für ${e} gerade nicht passt, melde ich mich nicht mehr.\n\nWenn Sie irgendwann Ihre eigene Seite und App möchten, bleibt der Kalender hier: ${l}`,
+    }),
+  ],
+  licenca_scanners: [
+    (e, l) => ({
+      assunto: `Lizenzierte Trading-Scanner für ${e}`,
+      corpo: `Guten Tag, liebes Team von ${e},\n\nich bin Ricardo von More Than Money (MTM) aus Portugal. Wir entwickeln Trading-Scanner für TradingView und lizenzieren sie an Unternehmen der Trading-Ausbildung, als Paket und pro Semester, für den Einsatz mit Ihren Teilnehmern.\n\nWenn Sie weiter gehen möchten, entwerfen und programmieren wir Ihre hauseigene Strategie, die Ihnen gehört, dazu einen KI-Mentor, der darauf trainiert ist. Das kann kein kostenloser YouTube-Kurs kopieren.\n\nWäre eine Demo von 20 Minuten sinnvoll? ${l}`,
+    }),
+    (e, l) => ({
+      assunto: `Re: Lizenzierte Trading-Scanner für ${e}`,
+      corpo: `Guten Tag,\n\nich komme auf meine letzte E-Mail zurück: Die Lizenz gilt pro Team, die Zugänge verwalten wir, und die Signale kommen dort an, wo Ihre Teilnehmer schon sind.\n\nWer kümmert sich bei ${e} um Partnerschaften und Produkt? Wenn Sie es sind, können Sie hier buchen: ${l}`,
+    }),
+    (e, l) => ({
+      assunto: `Ich schließe hier ab`,
+      corpo: `Guten Tag,\n\nletzte E-Mail zu den Lizenzen. Wenn es für ${e} keine Priorität ist, melde ich mich nicht mehr.\n\nWenn sich das ändert, können Sie hier buchen: ${l}`,
+    }),
+  ],
+  parceria_redes: [
+    (e, l) => ({
+      assunto: `Eine Zusammenarbeit mit @ricardogarciapt?`,
+      corpo: `Guten Tag, liebes Team von ${e},\n\nich bin Ricardo Garcia von More Than Money (MTM) aus Portugal. Auf Instagram (@ricardogarciapt) spreche ich über Finanzbildung, bewusstes Trading und KI im Dienst kleiner Unternehmen.\n\nIch möchte ${e} eine Zusammenarbeit vorschlagen: ein gemeinsamer Beitrag, ein Interview oder eine kurze Serie, die beiden Zielgruppen etwas bringt. Keine Verpflichtung, bevor wir sehen, dass es passt.\n\nWäre ein kurzes Gespräch sinnvoll? ${l}`,
+    }),
+    (e, l) => ({
+      assunto: `Re: Eine Zusammenarbeit mit @ricardogarciapt?`,
+      corpo: `Guten Tag,\n\nkurz nachgefragt: Wer kümmert sich bei ${e} um Kooperationen und Inhalte? Wenn Sie es sind, können wir 15 Minuten sprechen: ${l}`,
+    }),
+    (e, l) => ({
+      assunto: `Ich schließe hier ab`,
+      corpo: `Guten Tag,\n\nletzte E-Mail zu dieser Zusammenarbeit. Wenn der Zeitpunkt für ${e} nicht passt, melde ich mich nicht mehr.\n\nWenn es irgendwann passt: ${l}`,
+    }),
+  ],
+}
+
+/** Italiano (17/11, Ricardo). Tratamento por «voi». Em Itália o email frio a empresas exige consentimento: ver `exigeConsentimento`. */
+const IT: Partial<Record<Segmento, Tres>> = {
+  negocio_local: [
+    (e, l) => ({
+      assunto: `Un sito e un'app con il marchio di ${e}`,
+      corpo: `Buongiorno al team di ${e},\n\nsono Ricardo, di More Than Money (MTM), in Portogallo. Ho notato che oggi chi vi cerca arriva su una pagina di link generica, e non su uno spazio con il vostro marchio.\n\nFacciamo entrambe le cose in una volta: una pagina sul vostro dominio, pensata per trasformare le visite in richieste, e una piccola app dove i vostri clienti prenotano e seguono ciò che fanno con voi. Un prezzo di creazione fisso e un piccolo rinnovo annuale, senza canoni mensili.\n\nVolete vedere un esempio in 15 minuti? Potete prenotare qui: ${l}`,
+    }),
+    (e, l) => ({
+      assunto: `Re: Un sito e un'app con il marchio di ${e}`,
+      corpo: `Buongiorno,\n\nsolo una domanda: oggi chi trova ${e} sui social può prenotare o chiedere un preventivo senza scrivervi? Se non può, è proprio questo che la pagina e l'app risolvono.\n\nSe vi interessa, l'agenda è qui: ${l}`,
+    }),
+    (e, l) => ({
+      assunto: `Chiudo qui`,
+      corpo: `Buongiorno,\n\nultima email su questo tema. Se non è il momento per ${e}, non insisterò.\n\nSe un giorno vorrete la vostra pagina e la vostra app, l'agenda resta qui: ${l}`,
+    }),
+  ],
+  licenca_scanners: [
+    (e, l) => ({
+      assunto: `Scanner di trading in licenza per ${e}`,
+      corpo: `Buongiorno al team di ${e},\n\nsono Ricardo, di More Than Money (MTM), in Portogallo. Sviluppiamo scanner di trading per TradingView e li concediamo in licenza alle aziende di formazione sul trading, in pacchetto e a semestre, da usare con i vostri studenti.\n\nSe volete andare oltre, progettiamo e programmiamo la strategia della vostra casa, che resta vostra, insieme a un mentore IA addestrato su di essa per la vostra community. È ciò che un corso gratuito su YouTube non può copiare.\n\nAvrebbe senso una demo di 20 minuti? ${l}`,
+    }),
+    (e, l) => ({
+      assunto: `Re: Scanner di trading in licenza per ${e}`,
+      corpo: `Buongiorno,\n\nriprendo la mia email precedente: la licenza è per team, gli accessi li gestiamo noi e gli avvisi arrivano dove i vostri studenti sono già.\n\nChi segue partnership e prodotto in ${e}? Se siete voi, potete prenotare qui: ${l}`,
+    }),
+    (e, l) => ({
+      assunto: `Chiudo qui`,
+      corpo: `Buongiorno,\n\nultima email sulle licenze. Se non è una priorità per ${e}, non insisterò.\n\nSe cambia qualcosa, potete prenotare qui: ${l}`,
+    }),
+  ],
+  parceria_redes: [
+    (e, l) => ({
+      assunto: `Una collaborazione con @ricardogarciapt?`,
+      corpo: `Buongiorno al team di ${e},\n\nsono Ricardo Garcia, di More Than Money (MTM), in Portogallo. Su Instagram (@ricardogarciapt) parlo di educazione finanziaria, trading consapevole e IA al servizio delle piccole imprese.\n\nVorrei proporre a ${e} una collaborazione: un contenuto insieme, un'intervista o una breve serie che porti valore a entrambi i pubblici. Nessun impegno finché non vediamo che funziona.\n\nHa senso parlarne? ${l}`,
+    }),
+    (e, l) => ({
+      assunto: `Re: Una collaborazione con @ricardogarciapt?`,
+      corpo: `Buongiorno,\n\nriprendo brevemente: chi segue collaborazioni e contenuti in ${e}? Se siete voi, possiamo parlarne 15 minuti: ${l}`,
+    }),
+    (e, l) => ({
+      assunto: `Chiudo qui`,
+      corpo: `Buongiorno,\n\nultima email su questa collaborazione. Se non è il momento giusto per ${e}, non insisterò.\n\nSe un giorno avrà senso: ${l}`,
+    }),
+  ],
+}
+
 /** Há textos para este segmento nesta língua? */
 export function temTextos(segmento: Segmento, pais: Pais): boolean {
-  return pais === 'INT' ? !!INT[segmento] : true
+  const outra = { INT, FR, DE, IT } as Record<string, Partial<Record<Segmento, Tres>>>
+  return pais === 'PT' || pais === 'BR' ? true : !!outra[pais]?.[segmento]
 }
 
 const PT: Record<Segmento, [Escritor, Escritor, Escritor]> = {
@@ -397,6 +565,8 @@ export interface PedidoMensagem {
   agente?: string
   segredo: string
   identificacao?: Identificacao
+  /** Dia (YYYY-MM-DD, Lisboa) para escolher a demo do dia. Por omissão, hoje. */
+  hoje?: string
 }
 
 export interface Mensagem {
@@ -411,16 +581,33 @@ export function montarMensagem(p: PedidoMensagem): Mensagem {
   const caminho = p.toque === 1 ? PAGINA_DA_OFERTA[p.segmento] : paginaDoSeguimento(p.segmento)
   const linkOferta = linkAssinado(caminho, AGENTE_B2B)
   const sair = linkSaida(p.email, p.segredo)
-  const textos = p.pais === 'BR' ? BR[p.segmento] : p.pais === 'INT' ? INT[p.segmento] : PT[p.segmento]
-  if (!textos) throw new Error(`Sem textos em inglês para o segmento ${p.segmento}.`)
+  const porLingua = { PT, BR, INT, FR, DE, IT } as Record<Pais, Partial<Record<Segmento, Tres>>>
+  const textos = porLingua[p.pais][p.segmento]
+  if (!textos) throw new Error(`Sem textos na língua ${p.pais} para o segmento ${p.segmento}.`)
   const { assunto, corpo } = textos[p.toque - 1](p.empresa.trim(), linkOferta)
-  const linhaSaida =
-    p.pais === 'BR'
-      ? `Você recebeu este e-mail por ser o contato profissional publicado pela ${p.empresa.trim()}. Para não receber mais nada da MTM, saia aqui (um clique): ${sair}`
-      : p.pais === 'INT'
-        ? `You are receiving this email because it is the business contact published by ${p.empresa.trim()}. To stop receiving any email from MTM, unsubscribe here (one click): ${sair}`
-        : `Recebem este email por ser o contacto profissional publicado pela ${p.empresa.trim()}. Para deixar de receber qualquer email da MTM, saiam aqui (um clique): ${sair}`
-  const texto = `${corpo}\n\n—\n${id.assinante}\n${id.linhaLegal}\n\n${linhaSaida}`
+  const emp = p.empresa.trim()
+  const saidas: Record<Pais, string> = {
+    PT: `Recebem este email por ser o contacto profissional publicado pela ${emp}. Para deixar de receber qualquer email da MTM, saiam aqui (um clique): ${sair}`,
+    BR: `Você recebeu este e-mail por ser o contato profissional publicado pela ${emp}. Para não receber mais nada da MTM, saia aqui (um clique): ${sair}`,
+    INT: `You are receiving this email because it is the business contact published by ${emp}. To stop receiving any email from MTM, unsubscribe here (one click): ${sair}`,
+    FR: `Vous recevez cet e-mail car c'est le contact professionnel publié par ${emp}. Pour ne plus recevoir aucun e-mail de MTM, désinscrivez-vous ici (un clic) : ${sair}`,
+    DE: `Sie erhalten diese E-Mail, weil es der von ${emp} veröffentlichte geschäftliche Kontakt ist. Um keine E-Mails mehr von MTM zu erhalten, melden Sie sich hier ab (ein Klick): ${sair}`,
+    IT: `Ricevete questa email perché è il contatto professionale pubblicato da ${emp}. Per non ricevere più nessuna email da MTM, annullate l'iscrizione qui (un clic): ${sair}`,
+  }
+  const linhaSaida = saidas[p.pais]
+  // 17/11 (Ricardo): o 1.º toque mostra a demo do dia que serve o segmento, se houver uma.
+  const demo = p.toque === 1 ? demoDoDia(p.hoje, p.segmento) : null
+  const linkDemo = demo ? linkAssinado(`/solucoes/demos/${demo.slug}`, AGENTE_B2B) : ''
+  const psPorLingua: Record<Pais, string> = {
+    PT: `PS: preparámos uma demonstração de 1 minuto que mostra uma automação destas a funcionar (${demo?.titulo}): ${linkDemo}`,
+    BR: `PS: preparamos uma demonstração de 1 minuto que mostra uma automação destas funcionando (${demo?.titulo}): ${linkDemo}`,
+    INT: `PS: here is a 1-minute demo of one of these automations at work (in Portuguese): ${linkDemo}`,
+    FR: `PS : voici une démo d'une minute d'une de ces automatisations en action (en portugais) : ${linkDemo}`,
+    DE: `PS: Hier ist eine einminütige Demo einer dieser Automatisierungen in Aktion (auf Portugiesisch): ${linkDemo}`,
+    IT: `PS: ecco una demo di un minuto di una di queste automazioni in azione (in portoghese): ${linkDemo}`,
+  }
+  const ps = demo ? `\n\n${psPorLingua[p.pais]}` : ''
+  const texto = `${corpo}${ps}\n\n—\n${id.assinante}\n${id.linhaLegal}\n\n${linhaSaida}`
   return { assunto, texto, linkOferta, linkSair: sair }
 }
 

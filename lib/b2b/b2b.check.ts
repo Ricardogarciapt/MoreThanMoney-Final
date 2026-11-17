@@ -8,7 +8,7 @@
 import { readFileSync } from 'fs'
 import { join } from 'path'
 import { validarProspecto, eWebmailPessoal } from './validador'
-import { montarMensagem, validarMensagem, lerSaida, linkSaida, lerPais, SEGMENTOS, SEGMENTOS_INT, type Pais } from './sequencias'
+import { montarMensagem, validarMensagem, lerSaida, linkSaida, lerPais, exigeConsentimento, temTextos, SEGMENTOS, type Pais } from './sequencias'
 import { decidirEnvioB2B, vagasHoje, prontoParaToque, remetenteB2B, CONFIG_PADRAO, type ConfigB2B, type ProspectoLinha } from './envio'
 import { robotsPermite, extrairEmails, extrairEmailsDeLinks, evidenciaPessoaColectiva, ePaginaDeLinks } from './recolha'
 import { normalizarCandidato } from './candidatos'
@@ -91,7 +91,7 @@ teste('desligado: nada sai', decidirEnvioB2B(pros('info@exemplo.pt'), { cfg: { .
 
 // ── BONS: as 30 mensagens passam a porta e não inventam números ──────────────────────────────
 for (const segmento of SEGMENTOS) {
-  for (const pais of (SEGMENTOS_INT.includes(segmento) ? ['PT', 'BR', 'INT'] : ['PT', 'BR']) as Pais[]) {
+  for (const pais of (['PT', 'BR', 'INT', 'FR', 'DE', 'IT'] as Pais[]).filter((x) => temTextos(segmento, x))) {
     for (const toque of [1, 2, 3] as const) {
       const m = montarMensagem({ segmento, pais, toque, empresa: 'Exemplo', email: 'info@exemplo.pt', segredo: SEG })
       const n = `${segmento}/${pais}/T${toque}`
@@ -99,13 +99,18 @@ for (const segmento of SEGMENTOS) {
       teste(`${n}: link com ?ag=AG-PROSPECTOR`, m.linkOferta.includes('ag=AG-PROSPECTOR'))
       teste(`${n}: sem €/%/R$ (nada de números de resultado)`, !/[€%]|R\$|\+\d/.test(m.texto))
       teste(`${n}: curto (< 1300 caracteres)`, m.texto.length < 1300)
-      teste(`${n}: idioma`, pais === 'BR' ? /você|vocês|Oi/.test(m.texto) : pais === 'INT' ? /\bHi\b/.test(m.texto) && /unsubscribe/.test(m.texto) : /Olá/.test(m.texto))
+      const idioma: Record<Pais, RegExp[]> = { PT: [/Olá/], BR: [/você|vocês|Oi/], INT: [/\bHi\b/, /unsubscribe/], FR: [/Bonjour/, /désinscrivez/], DE: [/Guten Tag/, /melden Sie sich hier ab/], IT: [/Buongiorno/, /annullate/] }
+      teste(`${n}: idioma`, idioma[pais].every((r) => r.test(m.texto)))
       // Em público é «educação em trading»: nunca network marketing, MLM nem pirâmide.
       teste(`${n}: sem network marketing`, !/network|marketing multin|\bMLM\b|pir[âa]mide/i.test(m.texto))
       teste(`${n}: sem promessa de lucro`, !/lucro garantido|garantid|guaranteed|rendimento passivo/i.test(m.texto))
     }
   }
 }
+teste('DE/IT exigem consentimento', exigeConsentimento('info@x.fr', 'DE') && exigeConsentimento('info@x.com', 'IT'))
+teste('domínios .de/.es/.it/.at/.nl exigem consentimento', ['info@a.de', 'info@b.es', 'info@c.it', 'info@d.at', 'info@e.nl'].every((e) => exigeConsentimento(e, 'INT')))
+teste('FR, PT e EUA sem opt-in B2B', !exigeConsentimento('contact@a.fr', 'FR') && !exigeConsentimento('geral@b.pt', 'PT') && !exigeConsentimento('hello@c.com', 'INT'))
+teste('lerPais aceita FR/DE/IT', lerPais('fr') === 'FR' && lerPais('DE') === 'DE' && lerPais('it') === 'IT')
 teste('2.º toque só depois de 4 dias', !prontoParaToque({ estado: 'contactado', toques: 1, ultimo_toque_em: new Date(Date.now() - 2 * 86_400_000).toISOString() }, cfg))
 teste('2.º toque ao fim de 4 dias', prontoParaToque({ estado: 'contactado', toques: 1, ultimo_toque_em: new Date(Date.now() - 5 * 86_400_000).toISOString() }, cfg))
 teste('depois do 3.º toque, acabou', !prontoParaToque({ estado: 'contactado', toques: 3, ultimo_toque_em: null }, cfg))
@@ -171,6 +176,16 @@ teste('respostas vão para geral@', readFileSync(join(__dirname, 'envio.ts'), 'u
   teste('registo do envio grava o Prospector', src.includes('agente: AGENTE_B2B, base_legal') && !src.includes('p.agente || AGENTE_B2B'))
   // O tecto continua: com 20 hoje, mesmo o Prospector não envia o 21.º.
   teste('Prospector respeita o tecto', decidirEnvioB2B(pros('geral@exemplo.pt'), { cfg, enviadosHoje: 20, exclusao: [], segredo: SEG }).decisao !== 'sai')
+}
+
+{
+  // 17/11: a demo do dia entra no 1.º toque, assinada com ?ag=, só para o segmento que serve.
+  const m = montarMensagem({ segmento: 'negocio_local', pais: 'PT', toque: 1, empresa: 'Estúdio X', email: 'geral@estudiox.pt', segredo: SEG, hoje: '2026-11-19' })
+  teste('demo do dia no 1.º toque', /\/solucoes\/demos\/marcacoes-whatsapp\?ag=AG-PROSPECTOR/.test(m.texto) && validarMensagem(m.texto).ok)
+  const m2 = montarMensagem({ segmento: 'negocio_local', pais: 'PT', toque: 2, empresa: 'Estúdio X', email: 'geral@estudiox.pt', segredo: SEG, hoje: '2026-11-19' })
+  teste('sem demo nos toques 2 e 3', !/solucoes\/demos/.test(m2.texto))
+  const m3 = montarMensagem({ segmento: 'licenca_scanners', pais: 'INT', toque: 1, empresa: 'Acme', email: 'info@acme.com', segredo: SEG, hoje: '2026-11-19' })
+  teste('sem demo quando nenhuma serve o segmento', !/solucoes\/demos/.test(m3.texto))
 }
 
 if (falhas.length) {

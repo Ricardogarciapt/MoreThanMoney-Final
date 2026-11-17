@@ -41,6 +41,8 @@ export async function DELETE(req: NextRequest) {
       'xp_log',
       'notifications',
       'mentor_tasks',
+      'mentor_mensagens',
+      'mentor_sinais',
       'mentor_profiles',
       'fast_start_progress',
       'trading_plan_trades',

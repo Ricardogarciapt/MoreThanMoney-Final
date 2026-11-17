@@ -155,7 +155,9 @@ export default async function PipelinePage({ searchParams }: { searchParams: Pro
 
       <p className="text-xs text-zinc-500">
         Guiões de setter e closer (triagem, chamada, objecções, follow-up):{' '}
-        <a href="/backoffice/material#kit" className="text-[#D2A63C] hover:underline">abrir o teu kit</a>.
+        <a href="/backoffice/material#kit" className="text-[#D2A63C] hover:underline">abrir o teu kit</a>.{' '}
+        Vista por funil:{' '}
+        <a href="/backoffice/pipeline/quadro" className="text-[#D2A63C] hover:underline">quadro do pipeline</a>.
       </p>
 
       {aviso && <Aviso>{aviso}</Aviso>}
@@ -292,7 +294,9 @@ export default async function PipelinePage({ searchParams }: { searchParams: Pro
                         }`}
                       >
                         <div className="flex flex-wrap items-baseline justify-between gap-2">
-                          <span className="font-semibold text-white">{n.nome}</span>
+                          <a href={`${BASE}/ficha/${n.id}`} className="font-semibold text-white hover:text-[#E9C46A]">
+                            {n.nome}
+                          </a>
                           <span className="text-xs text-zinc-500">
                             mexeu {dataCurta(n.atualizado_em)}
                             {dias !== null && dias > 0 ? ` · há ${dias} dia${dias === 1 ? '' : 's'}` : ''}

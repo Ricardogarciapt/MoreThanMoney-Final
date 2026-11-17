@@ -281,6 +281,10 @@
       "schedule": "25 * * * *"
     },
     {
+      "path": "/api/cron/copia-resultados",
+      "schedule": "15 7 * * *"
+    },
+    {
       "path": "/api/cron/backoffice-dia",
       "schedule": "0 7 * * 1-5"
     },
@@ -351,6 +355,10 @@
     {
       "path": "/api/cron/financas-por-faturar",
       "schedule": "0 8 * * *"
+    },
+    {
+      "path": "/api/cron/mentor-populacao",
+      "schedule": "*/10 0-6 * * *"
     }
   ]
 }

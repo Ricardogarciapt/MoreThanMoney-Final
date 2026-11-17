@@ -13,7 +13,7 @@
 import { lerConfigOs, orcamentoB2BDb } from '@/lib/agentes/os/os-db'
 import { decidirContacto, type Tectos } from '@/lib/agentes/contacto-inicial'
 import { validarProspecto } from './validador'
-import { montarMensagem, segredoSaida, temTextos, validarMensagem, AGENTE_B2B, type Pais, type Segmento } from './sequencias'
+import { exigeConsentimento, montarMensagem, segredoSaida, temTextos, validarMensagem, AGENTE_B2B, type Pais, type Segmento } from './sequencias'
 
 export const BASE_LEGAL_B2B = 'b2b_pessoa_colectiva' as const
 
@@ -119,7 +119,9 @@ export function decidirEnvioB2B(
 
   const toque = (Math.min(3, p.toques + 1)) as 1 | 2 | 3
   if (!ctx.segredo) return { decisao: 'bloqueado', motivo: 'Sem segredo para o link de saída (B2B_SAIR_SEGREDO/CRON_SECRET).' }
-  if (!temTextos(p.segmento, p.pais)) return { decisao: 'bloqueado', motivo: `Sem textos em inglês para ${p.segmento} — não sai.`, retirar: true }
+  if (!temTextos(p.segmento, p.pais)) return { decisao: 'bloqueado', motivo: `Sem textos na língua ${p.pais} para ${p.segmento} — não sai.`, retirar: true }
+  // 17/11: países com opt-in B2B (DE, AT, IT, ES, NL) ficam parados até haver consentimento ou decisão do dono.
+  if (exigeConsentimento(p.email, p.pais)) return { decisao: 'fila', motivo: 'País onde o email frio a empresas exige consentimento prévio — parado até decisão do dono.' }
   const m = montarMensagem({ segmento: p.segmento, pais: p.pais, toque, empresa: p.empresa, email: p.email, agente: AGENTE_B2B, segredo: ctx.segredo })
   const texto = ctx.textoForcado ?? m.texto
   const porta = validarMensagem(texto)
