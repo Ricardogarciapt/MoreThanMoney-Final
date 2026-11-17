@@ -347,6 +347,10 @@
     {
       "path": "/api/cron/agenda-aulas-google",
       "schedule": "7 * * * *"
+    },
+    {
+      "path": "/api/cron/financas-por-faturar",
+      "schedule": "0 8 * * *"
     }
   ]
 }
