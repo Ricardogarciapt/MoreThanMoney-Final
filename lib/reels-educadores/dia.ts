@@ -32,7 +32,7 @@ type Db = ReturnType<typeof getSupabaseAdmin>
 export interface ParaRender {
   id: string
   roteiro: Roteiro
-  educador: { nome: string; area: string; marca?: string; foto: string }
+  educador: { slug: string; nome: string; area: string; marca?: string; foto: string }
 }
 
 /** Amanhã, em Lisboa (fuso de quem vê os posts). */
@@ -195,7 +195,7 @@ async function porDesenhar(db: Db, dia: string): Promise<ParaRender[]> {
   for (const r of porFazer ?? []) {
     const ed = educador(String(r.educador))
     if (!ed || !r.roteiro) continue
-    renders.push({ id: r.id as string, roteiro: r.roteiro as Roteiro, educador: { nome: ed.nome, area: ed.area, marca: ed.marca, foto: ed.foto } })
+    renders.push({ id: r.id as string, roteiro: r.roteiro as Roteiro, educador: { slug: ed.slug, nome: ed.nome, area: ed.area, marca: ed.marca, foto: ed.foto } })
   }
   return renders
 }
