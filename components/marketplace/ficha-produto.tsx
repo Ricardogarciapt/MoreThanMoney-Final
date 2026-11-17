@@ -27,6 +27,8 @@ import { euros, galeriaDoProduto, lojaExternaDe, nomeDoAutor, planoScannerDe, pr
 import { supabase } from "@/lib/supabase"
 import { codigoDeAgenteGuardado } from "@/lib/agentes/atribuicao-browser"
 import Sufixo from "@/components/marketplace/sufixo-periodo"
+import { useI18n } from "@/components/i18n-provider"
+import { comLegendasYouTube } from "@/lib/i18n/youtube-legendas"
 import { CaixaConsentimentoEmail } from "@/components/consentimento-email-caixa"
 import { CAIXA_PRE_MARCADA } from "@/lib/captacao-consentimento"
 import { ordenarVariantes, poupancaPct, varianteInicial } from "@/lib/marketplace/grupos"
@@ -79,6 +81,7 @@ const PORQUE_NAO: Record<string, string> = {
 }
 
 export default function FichaProduto({ slug }: { slug: string }) {
+  const { lang } = useI18n()
   /**
    * AS VARIANTES (195). A rota devolve o produto pedido e as outras opções do grupo dele; cada uma
    * vem com o seu preço efectivo (campanha, preço de membro), o seu `podeComprar` e o seu
@@ -324,7 +327,7 @@ export default function FichaProduto({ slug }: { slug: string }) {
                 {video.tipo === "youtube" ? (
                   <div className="relative w-full" style={{ aspectRatio: "16 / 9" }}>
                     <iframe
-                      src={video.embed}
+                      src={comLegendasYouTube(video.embed, lang)}
                       title={`Apresentação · ${p.titulo}`}
                       className="absolute inset-0 h-full w-full"
                       allow="accelerometer; encrypted-media; gyroscope; picture-in-picture"

@@ -3,6 +3,8 @@ import { createServerClient } from "@supabase/ssr"
 import { cookies } from "next/headers"
 import { chamarIA, mensagemIndisponivel } from "@/lib/ia/chamar"
 import { blocoFramework } from "@/lib/framework-mtm"
+import { normalizeLang } from "@/lib/i18n/config"
+import { LANGUAGE_NAMES_EN } from "@/lib/chat-traducao-idiomas"
 
 const MTM_MENTOR_SYSTEM_PROMPT = `És o Mentor MTM — o assistente de inteligência artificial da More Than Money (MTM). Acompanhas cada membro no seu percurso, com um princípio: aprender, aplicar com gestão de risco e evoluir como trader independente.
 
@@ -77,7 +79,8 @@ export async function POST(request: NextRequest) {
 
     const body = await request.json()
     // Os campos de rank/PE/CV continuam aceites para não partir clientes antigos, mas já não são usados.
-    const { messages, mentorContext } = body as {
+    const { messages, mentorContext, idioma } = body as {
+      idioma?: string
       messages: Array<{ role: "user" | "assistant"; content: string }>
       mentorContext?: {
         current_rank?: string
@@ -104,7 +107,14 @@ export async function POST(request: NextRequest) {
 - Tarefas pendentes: ${pendingTasks.length > 0 ? pendingTasks.join(", ") : "Nenhuma"}`
     }
 
-    const systemPrompt = MTM_MENTOR_SYSTEM_PROMPT + contextBlock + `\n\n${blocoFramework("apoio")}`
+    // Idioma de quem pergunta (17/11): um aluno alemão recebia o Mentor em português. Os nomes de
+    // produtos, scanners, educadores e cursos ficam sempre como estão.
+    const lang = normalizeLang(idioma)
+    const blocoIdioma =
+      lang === "pt"
+        ? ""
+        : `\n\n## Idioma\nResponde SEMPRE em ${LANGUAGE_NAMES_EN[lang] || lang} (código ${lang}), mesmo que estas instruções estejam em português. Nunca traduzas nomes de produtos, scanners, educadores ou cursos (MTM, MTM Auto, Premium, GoldKiller, Sensei, DEFY, WebTrader, MTM Funded…).`
+    const systemPrompt = MTM_MENTOR_SYSTEM_PROMPT + contextBlock + `\n\n${blocoFramework("apoio")}` + blocoIdioma
 
     // SSE — o cliente continua a receber `text`/`done`/`error` como antes. A diferença (04/10):
     // a resposta vem pela porta única da IA (Groq → Gemini → Ollama → OpenAI → Anthropic) em vez

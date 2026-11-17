@@ -20,7 +20,7 @@ import {
 } from "lucide-react"
 import { useAuth } from "@/contexts/auth-context"
 import { podeAcederAoTier, type PerfilUi } from "@/lib/perfil-ui"
-import { useT } from "@/components/i18n-provider"
+import { useI18n, useT } from "@/components/i18n-provider"
 import { Button } from "@/components/ui/button"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import LiveFinancialDisclaimer from "@/components/live/live-financial-disclaimer"
@@ -53,6 +53,8 @@ import { notifyXpFromResponse } from "@/lib/xp-client"
 import { cn } from "@/lib/utils"
 import { useToast } from "@/hooks/use-toast"
 import { supabase } from "@/lib/supabase"
+import { TextoAuto } from "@/components/mobile/texto-auto"
+import { comLegendasYouTube } from "@/lib/i18n/youtube-legendas"
 
 type StreamListItem = {
   id: string
@@ -123,6 +125,7 @@ export default function LiveSessionsMobile({
   const router = useRouter()
   const { toast } = useToast()
   const t = useT()
+  const { lang } = useI18n()
 
   // Upsell de sessões/aulas bloqueadas. No app iOS nativo a compra é por Apple IAP
   // (ecrã nativo) — nunca abrir checkout Stripe dentro do WebView (política Apple).
@@ -492,11 +495,12 @@ export default function LiveSessionsMobile({
       const u = new URL(raw)
       u.searchParams.set("autoplay", "1")
       u.searchParams.set("mute", "1")
-      return u.toString()
+      // Aluno estrangeiro: legendas do YouTube ligadas na língua dele.
+      return comLegendasYouTube(u.toString(), lang)
     } catch {
       return raw
     }
-  }, [stream?.playback_url])
+  }, [stream?.playback_url, lang])
 
   useEffect(() => {
     if (!open) {
@@ -715,7 +719,7 @@ export default function LiveSessionsMobile({
                   )}
                 </div>
                 <div className="p-2.5">
-                  <p className="line-clamp-2 text-xs font-semibold text-white">{s.title}</p>
+                  <p className="line-clamp-2 text-xs font-semibold text-white"><TextoAuto texto={s.title} /></p>
                   {s.educator?.display_name ? (
                     <p
                       className="mt-0.5 truncate text-[10px] text-gray-400"
@@ -827,7 +831,7 @@ export default function LiveSessionsMobile({
                       )}
                     </div>
                     <div className="min-w-0 flex-1">
-                      <p className="truncate text-sm font-medium text-white">{s.title}</p>
+                      <p className="truncate text-sm font-medium text-white"><TextoAuto texto={s.title} /></p>
                       {s.educator?.display_name && (
                         <p className="truncate text-[11px] text-gray-400">{s.educator.display_name}</p>
                       )}
@@ -928,7 +932,7 @@ export default function LiveSessionsMobile({
           <DialogHeader className="flex shrink-0 flex-row items-start justify-between gap-2 border-b border-[#D2A63C]/15 bg-black/40 px-2 py-2 pr-2 sm:px-3">
             <div className="min-w-0 flex-1 text-left">
               <DialogTitle className="line-clamp-2 text-left text-[13px] font-semibold text-white sm:text-sm">
-                {stream?.title || t("live.streamTitleFallback")}
+                {stream?.title ? <TextoAuto texto={stream.title} /> : t("live.streamTitleFallback")}
               </DialogTitle>
               <div className="mt-0.5 flex flex-wrap items-center gap-2">
                 <p className="text-[9px] text-gray-500 sm:text-[10px]">
@@ -1169,7 +1173,7 @@ export default function LiveSessionsMobile({
                         <p className={msg.sender_type === "educator" ? "text-[#D2A63C]" : "text-blue-300"}>
                           {msg.sender_name}
                         </p>
-                        <p className="text-gray-200">{msg.message}</p>
+                        <p className="text-gray-200"><TextoAuto texto={msg.message} /></p>
                       </div>
                     ))}
                     {messages.length === 0 && <p className="text-xs text-gray-500">{t("live.noMessages")}</p>}

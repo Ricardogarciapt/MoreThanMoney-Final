@@ -3,7 +3,8 @@
 import { useState, useEffect, useRef, useCallback } from "react"
 import { Send, Bot, User, Loader2, ChevronDown, Target, TrendingUp, CheckCircle2, RotateCcw } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
-import { useT } from "@/components/i18n-provider"
+import { useI18n, useT } from "@/components/i18n-provider"
+import { TextoAuto } from "@/components/mobile/texto-auto"
 
 type Message = {
   role: "user" | "assistant"
@@ -112,6 +113,8 @@ function FormattedText({ text, isUser }: { text: string; isUser: boolean }) {
 export default function MentorMobile() {
   const { toast } = useToast()
   const t = useT()
+  // O Mentor responde no idioma da app (17/11): um aluno alemão recebia-o em português.
+  const { lang } = useI18n()
   const [messages, setMessages] = useState<Message[]>([])
   const [input, setInput] = useState("")
   const [streaming, setStreaming] = useState(false)
@@ -213,6 +216,7 @@ export default function MentorMobile() {
           body: JSON.stringify({
             messages: newMessages.map((m) => ({ role: m.role, content: m.content })),
             mentorContext,
+            idioma: lang,
           }),
           signal: abortRef.current.signal,
         })
@@ -267,7 +271,7 @@ export default function MentorMobile() {
         abortRef.current = null
       }
     },
-    [messages, streaming, profile, tasks, toast, t]
+    [messages, streaming, profile, tasks, toast, t, lang]
   )
 
   const handleOnboardingAnswer = async (questionId: string, answer: string) => {
@@ -460,7 +464,7 @@ export default function MentorMobile() {
                 {pendingTasks.slice(0, 3).map((t) => (
                   <div key={t.id} className="flex items-center gap-2">
                     <div className="w-4 h-4 rounded-full border border-gray-600 flex-shrink-0" />
-                    <p className="text-[12px] text-gray-300 truncate">{t.title}</p>
+                    <p className="text-[12px] text-gray-300 truncate"><TextoAuto texto={t.title} /></p>
                   </div>
                 ))}
               </div>

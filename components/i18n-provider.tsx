@@ -11,6 +11,7 @@ import {
 } from "@/lib/i18n/config"
 import { translate } from "@/lib/i18n/translate"
 import { applyGoogleTranslate } from "@/lib/i18n/googtrans"
+import { actualizarAuto, carregarAutoLocal } from "@/lib/i18n/auto-cliente"
 import { useAuth } from "@/contexts/auth-context"
 import type { MessageKey } from "@/lib/i18n/messages"
 
@@ -67,6 +68,21 @@ export function I18nProvider({
     if (detected !== lang) setLangState(detected)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
+
+  // Idiomas sem tradução à mão completa: junta o dicionário automático (IA, em cache). A cópia
+  // local entra logo; a do servidor chega depois e, se trouxer textos novos, re-desenha.
+  const [versaoAuto, setVersaoAuto] = useState(0)
+  useEffect(() => {
+    if (lang === "pt" || lang === "en") return
+    if (carregarAutoLocal(lang)) setVersaoAuto((v) => v + 1)
+    let vivo = true
+    void actualizarAuto(lang).then((mudou) => {
+      if (vivo && mudou) setVersaoAuto((v) => v + 1)
+    })
+    return () => {
+      vivo = false
+    }
+  }, [lang])
 
   useEffect(() => {
     if (typeof document === "undefined") return
@@ -127,7 +143,9 @@ export function I18nProvider({
 
   const value = useMemo<I18nContextValue>(
     () => ({ lang, t: (key) => translate(key, lang), setLang }),
-    [lang, setLang],
+    // versaoAuto: um novo objecto (e um novo `t`) quando chega o dicionário automático.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [lang, setLang, versaoAuto],
   )
 
   return <I18nContext.Provider value={value}>{children}</I18nContext.Provider>
