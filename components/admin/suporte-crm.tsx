@@ -13,13 +13,21 @@
 import { useCallback, useEffect, useState } from "react"
 import { AlertTriangle, CheckCircle2, Clock, Loader2, RefreshCw, Send, User } from "lucide-react"
 import { NOME_ASSUNTO, NOME_ESTADO, type Assunto, type Estado } from "@/lib/suporte/regras"
+import { languageOption } from "@/lib/i18n/languages"
+
+/** «🇩🇪 Deutsch» numa conversa que não é em português; nada em português. */
+function Idioma({ codigo }: { codigo?: string | null }) {
+  if (!codigo || codigo === "pt") return null
+  const o = languageOption(codigo)
+  return <span className="rounded-full border border-sky-500/30 bg-sky-500/10 px-2 py-0.5 text-sky-200" title="Idioma da conversa">{o ? `${o.flag} ${o.nativeName}` : codigo}</span>
+}
 
 type Linha = {
   id: string; nome: string | null; email: string | null; user_id: string | null
   assunto: Assunto; estado: Estado; escalada: boolean; prazo_em: string | null; nivel_aviso: number
-  ultima_mensagem_em: string; ultima_resposta_equipa_em: string | null; site: string | null; pagina_origem: string | null; criado_em: string
+  ultima_mensagem_em: string; ultima_resposta_equipa_em: string | null; site: string | null; pagina_origem: string | null; criado_em: string; idioma?: string | null
 }
-type Msg = { id: number; autor: string; texto: string; criado_em: string }
+type Msg = { id: number; autor: string; texto: string; criado_em: string; texto_pt?: string | null; texto_original?: string | null }
 type Detalhe = { conversa: Linha & { notas: string | null }; perfil: { full_name?: string; email?: string; user_type?: string; subscription_plan?: string } | null; mensagens: Msg[] }
 
 const COR_ESTADO: Record<Estado, string> = {
@@ -82,6 +90,8 @@ export default function SuporteCrm() {
     const r = await fetch("/api/admin/suporte", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ conversaId: sel, texto: resposta, fechar }) })
     setACarregar(false)
     if (!r.ok) { setAviso("A resposta não foi gravada."); return }
+    const j = await r.json().catch(() => ({}))
+    if (j?.idioma && j.idioma !== "pt" && !j.traduzida) setAviso("A tradução falhou: a resposta seguiu em português.")
     setResposta(""); await abrir(sel); await carregar()
   }
 
@@ -138,6 +148,7 @@ export default function SuporteCrm() {
                   <div className="mt-1.5 flex flex-wrap items-center gap-1.5 text-[11px]">
                     <span className={`rounded-full border px-2 py-0.5 ${COR_ESTADO[c.estado]}`}>{NOME_ESTADO[c.estado]}</span>
                     <span className="rounded-full border border-white/10 px-2 py-0.5 text-zinc-300">{NOME_ASSUNTO[c.assunto]}</span>
+                    <Idioma codigo={c.idioma} />
                     {atrasada && <span className="rounded-full border border-red-500/40 px-2 py-0.5 text-red-300">fora de prazo</span>}
                   </div>
                 </button>
@@ -154,7 +165,7 @@ export default function SuporteCrm() {
               <div className="flex flex-wrap items-start gap-3 border-b border-white/10 pb-3">
                 <User className="mt-0.5 h-4 w-4 text-zinc-400" />
                 <div className="min-w-0 flex-1 text-sm">
-                  <p className="font-medium">{det.perfil?.full_name || det.conversa.nome || "Visitante"}</p>
+                  <p className="flex flex-wrap items-center gap-2 font-medium">{det.perfil?.full_name || det.conversa.nome || "Visitante"} <span className="text-[11px] font-normal"><Idioma codigo={det.conversa.idioma} /></span></p>
                   <p className="text-xs text-zinc-400">
                     {det.conversa.email || det.perfil?.email || "sem email"}
                     {det.perfil?.subscription_plan ? ` · ${det.perfil.subscription_plan}` : ""}
@@ -177,12 +188,19 @@ export default function SuporteCrm() {
                     <div className={`max-w-[80%] whitespace-pre-wrap rounded-xl px-3 py-2 text-sm [overflow-wrap:anywhere] ${m.autor === "cliente" ? "bg-white/[0.06]" : m.autor === "equipa" ? "bg-[#D2A63C]/20" : "bg-zinc-800"}`}>
                       <span className="mb-0.5 block text-[10px] uppercase tracking-wide text-zinc-500">{m.autor} · {quando(m.criado_em)}</span>
                       {m.texto}
+                      {/* Noutro idioma: a tradução para português por baixo (cliente e agente) ou o original da equipa. */}
+                      {m.texto_pt && m.texto_pt !== m.texto && (
+                        <span className="mt-1.5 block border-t border-white/10 pt-1.5 text-xs text-zinc-400"><span className="text-[10px] uppercase tracking-wide text-zinc-500">PT · </span>{m.texto_pt}</span>
+                      )}
+                      {m.texto_original && (
+                        <span className="mt-1.5 block border-t border-white/10 pt-1.5 text-xs text-zinc-400"><span className="text-[10px] uppercase tracking-wide text-zinc-500">Escreveste · </span>{m.texto_original}</span>
+                      )}
                     </div>
                   </div>
                 ))}
               </div>
               <div className="space-y-2 border-t border-white/10 pt-3">
-                <label htmlFor="suporte-resposta" className="text-xs text-zinc-400">Responder como equipa (aparece no balão do cliente)</label>
+                <label htmlFor="suporte-resposta" className="text-xs text-zinc-400">Responder como equipa (aparece no balão do cliente{det.conversa.idioma && det.conversa.idioma !== "pt" ? `, traduzido para ${languageOption(det.conversa.idioma)?.nativeName ?? det.conversa.idioma}` : ""}). Escreve em português.</label>
                 <textarea id="suporte-resposta" value={resposta} onChange={(e) => setResposta(e.target.value)} rows={3}
                   className="w-full rounded-lg border border-white/10 bg-black/40 px-3 py-2 text-sm outline-none focus:border-[#D2A63C]" />
                 <div className="flex gap-2">

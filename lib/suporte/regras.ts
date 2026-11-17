@@ -59,10 +59,30 @@ const PADROES: Array<[Assunto, RegExp]> = [
   ['vendas', /\b(prec\w*|quanto custa|planos?|premium|membro|elite|comprar|aderir|trial|experimentar|desconto|cupao|bootcamp|curso\w*|mentoria|corretora|pu prime)\b/],
 ]
 
+/**
+ * O apoio fala os 21 idiomas do site (pedido de 17/11/2026), e a regra «reembolsos e reclamações
+ * sobem sempre» tem de valer em todos. Estas palavras apanham-nas noutros idiomas. As de alfabeto
+ * latino vêm já sem acentos; as outras (cirílico, árabe, devanágari, chinês, japonês) procuram-se
+ * como pedaço de texto, porque o `\b` do JavaScript só conhece letras ASCII.
+ */
+const ESCALAR_OUTROS_IDIOMAS: Array<[Assunto, RegExp]> = [
+  [
+    'reembolso',
+    /\b(rembours\w*|ruckerstatt\w*|erstattung\w*|geld zuruck|rimbors\w*|restituzione|terugbetal\w*|geld terug|zwrot\w*|rambursa\w*|banii inapoi|povrat novca|iade|rimbursim\w*|para iadesi)\b|возврат|вернуть деньги|верните деньги|повернення кошт|повернути гроші|възстановяване на сума|върнете парите|поврат новца|повраћај новца|退款|退钱|返金|払い戻し|استرداد|استرجاع المبلغ|रिफंड|धनवापसी|पैसे वापस/,
+  ],
+  [
+    'reclamacao',
+    /\b(reclamo|plainte\w*|arnaque\w*|escroquer\w*|estafa\w*|truffa\w*|beschwerde\w*|betrug\w*|abzocke|klacht\w*|oplichting|oszust\w*|skarg\w*|reklamacj\w*|teapa|inselatorie|zalba|prevar\w*|sikayet\w*|dolandiric\w*|ankes\w*|mashtrim\w*|fraud\w*)\b|жалоб|мошенни|обман|скарг|шахрай|оплакване|измама|жалб|превар|投诉|诈骗|骗子|苦情|詐欺|شكوى|احتيال|शिकायत|धोखा/,
+  ],
+]
+
 /** Triagem imediata por palavras. Sem correspondência → 'outro' (a IA trata do resto). */
 export function triar(texto: string): Assunto {
   const t = semAcentos(texto)
-  for (const [assunto, re] of PADROES) if (re.test(t)) return assunto
+  // Reembolso e reclamação primeiro, em qualquer idioma: são os que sobem ao Ricardo.
+  for (const [assunto, re] of PADROES.slice(0, 2)) if (re.test(t)) return assunto
+  for (const [assunto, re] of ESCALAR_OUTROS_IDIOMAS) if (re.test(t)) return assunto
+  for (const [assunto, re] of PADROES.slice(2)) if (re.test(t)) return assunto
   return 'outro'
 }
 
@@ -76,7 +96,11 @@ export function deveEscalar(assunto: Assunto): boolean {
  * com os prazos de 15 min / 1 h.
  */
 export function pedePessoa(texto: string): boolean {
-  return /\b(falar com (uma )?(pessoa|humano|alguem|ricardo|equipa)|pessoa real|humano|atendente|operador)\b/.test(semAcentos(texto))
+  const t = semAcentos(texto)
+  return (
+    /\b(falar com (uma )?(pessoa|humano|alguem|ricardo|equipa)|pessoa real|humano|atendente|operador|(speak|talk) to (a |an )?(person|human|someone|agent|ricardo)|real person|human agent|hablar con (una persona|alguien)|persona real|parler a (quelqu.un|une personne|un humain)|personne reelle|mit (einem menschen|einer person|jemandem) sprechen|echter mensch|persona reale|operatore|echt persoon|met een mens|prawdziwa osoba|z czlowiekiem|persoana reala|gercek kisi|bir insanla)\b/.test(t) ||
+    /живо[йи] человек|с человеком|оператор|з людиною|жива людина|с човек|са човеком|人工|真人|担当者|人間と|شخص حقيقي|موظف|इंसान से|व्यक्ति से/.test(t)
+  )
 }
 
 // ─────────────────────────────── prazos (SLA) ───────────────────────────────
@@ -175,8 +199,13 @@ export function textoIaIndisponivel(): string {
 const PROMESSA_REEMBOLSO =
   /\b(vou|vamos|iremos|irei|ja) (proceder ao |processar o |emitir o |fazer o )?(reembols\w*|devolv\w*|estornar)|reembolso (foi |esta |fica )?(aprovad\w*|garantid\w*|confirmad\w*|processad\w*)|(tens|tem) direito (a|ao) reembolso|devolvemos o (teu )?dinheiro|o dinheiro (sera|vai ser) devolvid\w*/
 
+/** A mesma guarda nos idiomas onde o modelo mais escreve. A primeira barreira continua a ser o prompt. */
+const PROMESSA_REEMBOLSO_OUTROS =
+  /\b(we(.ll| will) (refund|issue (you )?a refund|process (your|the) refund|return your money)|refund (has been |is )?(approved|confirmed|processed|guaranteed)|(you are|you.re) entitled to a refund|te (devolveremos|reembolsaremos)|reembolso (aprobado|confirmado|garantizado)|tienes derecho a (un )?reembolso|nous (allons )?(vous )?rembours\w*|remboursement (est )?(approuve|confirme|garanti)|vous avez droit a un remboursement|wir (werden )?(dir |ihnen )?(das geld )?(zuruckerstatten|erstatten)|erstattung (ist )?(genehmigt|bestatigt|garantiert)|anspruch auf (eine )?(ruck)?erstattung|ti rimborser\w*|rimborso (approvato|confermato|garantito)|hai diritto a un rimborso)/
+
 export function prometeReembolso(texto: string): boolean {
-  return PROMESSA_REEMBOLSO.test(semAcentos(texto))
+  const t = semAcentos(texto)
+  return PROMESSA_REEMBOLSO.test(t) || PROMESSA_REEMBOLSO_OUTROS.test(t)
 }
 
 export function respostaSegura(texto: string): string {
