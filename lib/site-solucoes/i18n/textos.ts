@@ -10,10 +10,10 @@ import { AREAS, CASO_MTM, SECTORES, TAREFAS } from '../automacao'
 import { DEMOS_DIARIAS } from '../demos-diarias'
 import { EQUIPAS } from '../analise'
 import { sectorGenerico } from '../sector-livre'
-import { KITS, MODELOS, PROTOTIPOS, ROTULO_ESTADO } from '../showroom'
+import { KITS, MODELOS, PROTOTIPOS } from '../showroom'
 
 /** Campos que não são texto para ler: identificadores, ligações e datas. */
-const NAO_TEXTO = new Set(['id', 'img', 'url', 'slug', 'data', 'segmentos', 'quem', 'area', 'kit', 'demo', 'marca', 'corPrincipal', 'corFundo', 'corTexto', 'estado', 'codigo'])
+const NAO_TEXTO = new Set(['id', 'img', 'url', 'slug', 'data', 'segmentos', 'quem', 'area', 'kit', 'demo', 'marca', 'corPrincipal', 'corFundo', 'corTexto', 'estado', 'codigo', 'letra', 'layout']) 
 
 /** Textos que o código escolhe em tempo real (não aparecem como t("…") literal). */
 export const TEXTOS_SOLTOS = [
@@ -21,6 +21,9 @@ export const TEXTOS_SOLTOS = [
   'Cliente', 'Agente MTM', 'Sistema', 'Tu',
   'Marcação confirmada', 'Lembrete agendado para amanhã', 'Orçamento enviado', 'PDF gerado a partir do pedido', 'Fatura paga', 'Arrumada na pasta do mês',
   'Presença', 'Atendimento e vendas', 'Operação', 'Conteúdo', 'Trading',
+  // /demos: escolhidos em tempo real.
+  'aparelho de parede pequeno', 'aparelho de parede médio', 'duas unidades ou conduta', 'Demo com a tua marca', 'Preço fechado', '14 soluções entregáveis',
+  'Pedir orçamento', 'Agendar visita', 'Marcar reunião', 'Marcar agora', 'Reservar mesa', 'Enviado', 'Entrar', 'Avisa-me',
   // Erros do servidor, traduzidos no browser.
   'Diz-nos o teu nome.', 'Precisamos de um email válido para te enviar a análise.', 'Deixa o teu telemóvel para te ligarmos com a análise.',
   'Como se chama o negócio?', 'Indica o site ou o Instagram do negócio.', 'Escolhe o tamanho da equipa.',
@@ -64,7 +67,7 @@ export function textosDoCodigo(raiz = process.cwd()): string[] {
 
 export function textosParaTraduzir(raiz = process.cwd()): string[] {
   const out = new Set<string>()
-  recolher({ PERFIS, DEMOS, CASOS: CASOS.filter((c) => c.autorizado), FAQ, PROXIMOS, MENU, AREAS, TAREFAS, SECTORES, CASO_MTM, DEMOS_DIARIAS, EQUIPAS, g: sectorGenerico(''), KITS, MODELOS, PROTOTIPOS, ROTULO_ESTADO }, '', out)
+  recolher({ PERFIS, DEMOS, CASOS: CASOS.filter((c) => c.autorizado), FAQ, PROXIMOS, MENU, AREAS, TAREFAS, SECTORES, CASO_MTM, DEMOS_DIARIAS, EQUIPAS, g: sectorGenerico(''), KITS, MODELOS, PROTOTIPOS }, '', out)
   for (const x of TEXTOS_SOLTOS) out.add(x)
   for (const x of textosDoCodigo(raiz)) out.add(x)
   return [...out].sort()
