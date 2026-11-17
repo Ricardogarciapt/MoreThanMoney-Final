@@ -89,7 +89,9 @@ async function bloco<T>(p: PromiseLike<{ data: unknown; error: { message: string
   }
 }
 
-const vazio = <T>(): Promise<Bloco<T>> => Promise.resolve({ ok: true, linhas: [] })
+function vazio<T>(): Promise<Bloco<T>> {
+  return Promise.resolve({ ok: true, linhas: [] as T[] })
+}
 
 export interface Ficha {
   eventos: Bloco<{ id: number; de: string | null; para: string | null; nota: string | null; em: string; por: string | null; agente_id: string | null }>
@@ -136,17 +138,17 @@ export async function lerFicha(db: SupabaseClient, n: NegocioDaFicha): Promise<F
             .or([tgId ? `chat_id.eq.${tgId}` : null, tgUser ? `username.ilike.${tgUser}` : null].filter(Boolean).join(','))
             .limit(3),
         )
-      : vazio(),
+      : vazio<Ficha['telegram'] extends Bloco<infer T> ? T : never>(),
     ig
       ? bloco<Ficha['instagram'] extends Bloco<infer T> ? T : never>(
           db.from('ig_leads').select('comment_id, keyword, intent, comment_text, dm_status, created_at').ilike('commenter', ig).order('created_at', { ascending: false }).limit(10),
         )
-      : vazio(),
+      : vazio<Ficha['instagram'] extends Bloco<infer T> ? T : never>(),
     email
       ? bloco<Ficha['conta'] extends Bloco<infer T> ? T : never>(
           db.from('profiles').select('id, email, user_type, subscription_status, subscription_plan, trial_expires_at, broker_verified, created_at, last_login').ilike('email', email).limit(1),
         )
-      : vazio(),
+      : vazio<Ficha['conta'] extends Bloco<infer T> ? T : never>(),
     bloco<Ficha['vendas'] extends Bloco<infer T> ? T : never>(
       db.from('vendas_vendas').select('id, pack, valor_cents, moeda, pago_em, estornada_em').eq('negocio_id', n.id).order('pago_em', { ascending: false }).limit(10),
     ),
@@ -167,7 +169,7 @@ export async function lerFicha(db: SupabaseClient, n: NegocioDaFicha): Promise<F
             )
             .limit(10),
         )
-      : vazio(),
+      : vazio<Ficha['consentimentos'] extends Bloco<infer T> ? T : never>(),
   ])
 
   return { eventos, tarefas, agenda, whatsapp, telegram, instagram, conta, vendas, consentimentos }
