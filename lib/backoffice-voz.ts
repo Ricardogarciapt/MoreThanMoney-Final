@@ -12,6 +12,7 @@
  * frase mal ouvida não pode ter consequências fora da casa (ver o cabeçalho de lib/mcp/ferramentas.ts).
  */
 import { ESTADOS_PIPELINE, ESTADO_PIPELINE_NOME, type EstadoPipeline } from './backoffice-vista'
+import { FUNIS, FUNIL_NOME, ehFunil, type Funil } from './backoffice-funis'
 
 export type AccaoVoz =
   | { tipo: 'procurar_negocio'; texto: string }
@@ -19,6 +20,7 @@ export type AccaoVoz =
   | { tipo: 'resumo_pipeline'; dias: number }
   | { tipo: 'mover_negocio'; negocio: string; estado: EstadoPipeline; motivo_perda?: string }
   | { tipo: 'criar_tarefa'; titulo: string; prazo: string | null; negocio: string | null }
+  | { tipo: 'mudar_funil'; negocio: string; funil: Funil | null }
   | { tipo: 'abrir'; pagina: PaginaVoz }
   | { tipo: 'responder'; texto: string }
 
@@ -48,6 +50,7 @@ export function sistemaDoComando(hojeISO: string, podeGestao: boolean): string {
     '{"tipo":"minhas_tarefas"}  — as tarefas abertas da pessoa',
     ...(podeGestao ? ['{"tipo":"resumo_pipeline","dias":30}  — números do pipeline por etapa e origem'] : []),
     `{"tipo":"mover_negocio","negocio":"<nome>","estado":"<estado>","motivo_perda":"<só se perdido>"}  — estados: ${estados}`,
+    `{"tipo":"mudar_funil","negocio":"<nome>","funil":"<funil ou null>"}  — funis: ${FUNIS.map((f) => `${f} (${FUNIL_NOME[f]})`).join(', ')}; null tira o funil`,
     '{"tipo":"criar_tarefa","titulo":"<curto>","prazo":"AAAA-MM-DD ou null","negocio":"<nome ou null>"}',
     `{"tipo":"abrir","pagina":"${Object.keys(PAGINAS_VOZ).join('|')}"}  — ir para uma página`,
     '{"tipo":"responder","texto":"<resposta curta>"}  — quando nada acima serve ou falta informação; pergunta o que falta',
@@ -104,6 +107,12 @@ export function interpretarAccao(bruto: string, podeGestao: boolean): AccaoVoz {
       const titulo = textoCurto(j.titulo, 160)
       if (!titulo) return naoPercebi
       return { tipo: 'criar_tarefa', titulo, prazo: ehData(j.prazo) ? j.prazo : null, negocio: textoCurto(j.negocio, 80) }
+    }
+    case 'mudar_funil': {
+      const negocio = textoCurto(j.negocio, 80)
+      const funil = j.funil === null || j.funil === '' ? null : j.funil
+      if (!negocio || (funil !== null && !ehFunil(funil))) return naoPercebi
+      return { tipo: 'mudar_funil', negocio, funil }
     }
     case 'abrir': {
       const pagina = j.pagina as PaginaVoz

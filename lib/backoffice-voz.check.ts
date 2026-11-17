@@ -40,6 +40,12 @@ assert.deepEqual(interpretarAccao('{"tipo":"resumo_pipeline","dias":9999}', true
 assert.ok(!sistemaDoComando('2026-11-17', false).includes('resumo_pipeline'))
 assert.ok(sistemaDoComando('2026-11-17', true).includes('resumo_pipeline'))
 
+// Funil: só do catálogo; null tira.
+assert.deepEqual(interpretarAccao('{"tipo":"mudar_funil","negocio":"Ana","funil":"corretora"}', false), { tipo: 'mudar_funil', negocio: 'Ana', funil: 'corretora' })
+assert.deepEqual(interpretarAccao('{"tipo":"mudar_funil","negocio":"Ana","funil":null}', false), { tipo: 'mudar_funil', negocio: 'Ana', funil: null })
+assert.equal(interpretarAccao('{"tipo":"mudar_funil","negocio":"Ana","funil":"prop"}', false).tipo, 'responder')
+assert.ok(sistemaDoComando('2026-11-17', false).includes('mudar_funil'))
+
 // Páginas: só as conhecidas.
 assert.deepEqual(interpretarAccao('{"tipo":"abrir","pagina":"tarefas"}', true), { tipo: 'abrir', pagina: 'tarefas' })
 assert.equal(interpretarAccao('{"tipo":"abrir","pagina":"../admin"}', true).tipo, 'responder')

@@ -14,6 +14,7 @@ import { procurarNegocios } from '@/lib/backoffice-procura'
 import { getSupabaseAdmin } from '@/lib/supabase-admin-client'
 import { pode } from '@/lib/backoffice-papeis'
 import { ESTADO_PIPELINE_NOME, type EstadoPipeline } from '@/lib/backoffice-vista'
+import { FUNIL_NOME } from '@/lib/backoffice-funis'
 import { chamarIAGratis, mensagemIndisponivel } from '@/lib/ia/chamar'
 import { ferramentaPorNome } from '@/lib/mcp/ferramentas'
 import { MAX_TEXTO_COMANDO, PAGINAS_VOZ, interpretarAccao, sistemaDoComando } from '@/lib/backoffice-voz'
@@ -105,6 +106,19 @@ export async function POST(request: NextRequest) {
         accao,
         resposta: `Passar para «${ESTADO_PIPELINE_NOME[accao.estado]}». Confirma o negócio certo:`,
         proposta: { tipo: 'mover_negocio', estado: accao.estado, motivo_perda: accao.motivo_perda ?? null, candidatos },
+      })
+    }
+
+    case 'mudar_funil': {
+      const candidatos = await procurarNegocios(ctx, accao.negocio)
+      if (!candidatos) return NextResponse.json({ texto, accao, resposta: 'Esta conta não tem acesso ao pipeline.' })
+      if (!candidatos.length) return NextResponse.json({ texto, accao, resposta: `Não encontrei «${accao.negocio}» no teu pipeline.` })
+      const nome = accao.funil ? FUNIL_NOME[accao.funil] : 'sem funil'
+      return NextResponse.json({
+        texto,
+        accao,
+        resposta: `Pôr no funil «${nome}». Confirma o negócio certo:`,
+        proposta: { tipo: 'mudar_funil', funil: accao.funil, nome_funil: nome, candidatos },
       })
     }
 

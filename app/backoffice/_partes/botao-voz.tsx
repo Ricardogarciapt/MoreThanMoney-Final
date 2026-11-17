@@ -15,6 +15,7 @@ type Tarefa = { id: string; titulo: string; prazo: string | null }
 type Proposta =
   | { tipo: 'mover_negocio'; estado: string; motivo_perda: string | null; candidatos: Negocio[] }
   | { tipo: 'criar_tarefa'; titulo: string; prazo: string | null; negocio: string | null; candidatos: Negocio[] }
+  | { tipo: 'mudar_funil'; funil: string | null; nome_funil: string; candidatos: Negocio[] }
 type Resultado = {
   texto?: string
   resposta?: string
@@ -185,6 +186,22 @@ export function BotaoVoz() {
                 style={{ background: OURO }}
               >
                 Confirmar: {n.nome} ({n.estado} → {p.estado})
+              </button>
+            ))}
+
+          {p?.tipo === 'mudar_funil' &&
+            p.candidatos.map((n) => (
+              <button
+                key={n.id}
+                type="button"
+                disabled={estado !== 'parado'}
+                onClick={() =>
+                  void confirmar(`/api/backoffice/negocios/${n.id}/funil`, 'PATCH', { funil: p.funil }, `${n.nome} ficou no funil ${p.nome_funil}.`)
+                }
+                className="mb-1 block w-full rounded-lg px-3 py-2 text-left font-medium text-black disabled:opacity-50"
+                style={{ background: OURO }}
+              >
+                Confirmar: {n.nome} → {p.nome_funil}
               </button>
             ))}
 
