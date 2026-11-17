@@ -36,6 +36,9 @@ export default async function DemosPage({ searchParams }: Props) {
         </div>
         <h1 className="mt-6 text-3xl font-bold tracking-tight md:text-5xl">{t("Uma demo nova por dia")}</h1>
         <p className="mt-3 max-w-2xl text-zinc-400">{t("Trabalho repetido que um agente faz por ti. Vê em 1 minuto como fica no ecrã.")}</p>
+        <Link href={ligar("/demos")} className="mt-4 inline-flex min-h-[44px] items-center gap-2 text-sm font-semibold text-[#E9C46A]">
+          {t("Ver todas as demos no showroom")} <ArrowRight className="h-4 w-4" aria-hidden="true" />
+        </Link>
 
         {hoje && (
           <Link href={ligar(`/solucoes/demos/${hoje.slug}`)} className="group mt-10 block rounded-3xl border border-[#D2A63C]/40 bg-gradient-to-br from-[#D2A63C]/10 to-transparent p-6 md:p-10">

@@ -309,7 +309,7 @@ export const LANDING2_MESSAGES: Partial<Record<Lang, Record<string, string>>> = 
        lugar na lista da landing, porque é a primeira coisa que trava quem chega. */
     "l2.faq9Q": "Isto é só para quem quer fazer trading?",
     "l2.faq9A":
-      "Não. São oito áreas em duas frentes. Nos mercados: Forex com o Ricardo Garcia, Criptomoedas com o Ruben Pereira, Ações e ETF, e Imobiliário. Do outro lado: Social Media e UGC, Mindset e Liderança, Inteligência Artificial e Network Marketing. Umas têm sala ao vivo com horário semanal, outras são percurso organizado para fazeres ao teu ritmo — e há quem venha para cá e nunca abra uma ordem.",
+      "Não. São oito áreas em duas frentes. Nos mercados: Forex com o Ricardo Garcia, Criptomoedas com o Ruben Pereira, Ações e ETF, e Imobiliário. Do outro lado: Social Media e UGC, Faceless Marketing, Mindset e Liderança, e Inteligência Artificial. Umas têm sala ao vivo com horário semanal, outras são percurso organizado para fazeres ao teu ritmo — e há quem venha para cá e nunca abra uma ordem.",
     "l2.faq10Q": "Consigo ganhar aqui sem abrir uma única ordem?",
     "l2.faq10A":
       "Consegues, por duas vias. Se produzes conteúdo, alojamos e vendemos o teu curso ou mentoria e ficas com 80% do que vender, sem entrada e sem exclusividade — candidatas-te e falamos. E se trazes pessoas, o Convida & Ganha dá-te dias de Premium por cada amigo que entre pelo teu link, com comissão sobre as subscrições que resultem. A parceria de corretora (IB) é outra coisa e não se faz por formulário: é uma conversa, e só depois é que entras na rede.",
@@ -654,7 +654,7 @@ export const LANDING2_MESSAGES: Partial<Record<Lang, Record<string, string>>> = 
       "The site and the app are translated into 21 languages, and live sessions carry subtitles translated into Portuguese, English, Spanish, French and German — live, while the educator is speaking.",
     "l2.faq9Q": "Is this only for people who want to trade?",
     "l2.faq9A":
-      "No. Eight areas across two fronts. On the markets side: Forex with Ricardo Garcia, Crypto with Ruben Pereira, Stocks and ETFs, and Real Estate. On the other: Social Media and UGC, Mindset and Leadership, Artificial Intelligence and Network Marketing. Some have a live room with a weekly slot, others are self-paced tracks you work through on your own time — and plenty of people come here and never place a single order.",
+      "No. Eight areas across two fronts. On the markets side: Forex with Ricardo Garcia, Crypto with Ruben Pereira, Stocks and ETFs, and Real Estate. On the other: Social Media and UGC, Faceless Marketing, Mindset and Leadership, and Artificial Intelligence. Some have a live room with a weekly slot, others are self-paced tracks you work through on your own time — and plenty of people come here and never place a single order.",
     "l2.faq10Q": "Can I earn here without opening a single order?",
     "l2.faq10A":
       "You can, two ways. If you make content, we host and sell your course or mentorship and you keep 80% of what it sells, with no entry fee and no exclusivity — you apply and we talk. And if you bring people, Refer and Earn gives you Premium days for every friend who joins through your link, with commission on the subscriptions that follow. The broker partnership (IB) is a different thing and isn't done through a form: it's a conversation, and only then do you join the network.",

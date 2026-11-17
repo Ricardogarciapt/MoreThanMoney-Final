@@ -270,7 +270,7 @@ export function extrasOutra(l: Outra) {
       defM: "Los mercados y el dinero: aprender a operarlos, y las herramientas que los operan por ti cuando no puedes estar.",
       areasM: ["Forex y metales", "Criptomonedas", "Acciones y ETF", "Inmobiliario"], maisM: ["Alertas y Tap to Trade", "MTM Auto", "Scanners", "Terminal MTM con IA", "MTM Funded"],
       defC: "Crear audiencia y crear negocio: marca personal, contenido y formas de ganar aquí sin abrir una orden.",
-      areasC: ["Redes sociales y UGC", "Faceless Marketing", "Inteligencia artificial", "Network Marketing", "Mindset y liderazgo"], maisC: ["Estudio MTM Social", "Programa de creadores", "Invita y gana", "Material de marketing"],
+      areasC: ["Redes sociales y UGC", "Faceless Marketing", "Inteligencia artificial", "Mindset y liderazgo"], maisC: ["Estudio MTM Social", "Programa de creadores", "Invita y gana", "Material de marketing"],
       academias: "Academias", ferramentas: "Herramientas", verPilar: "Ver el pilar",
     },
     de: {
@@ -281,7 +281,7 @@ export function extrasOutra(l: Outra) {
       defM: "Märkte und Geld: lernen, sie zu handeln, und die Werkzeuge, die für dich handeln, wenn du nicht da sein kannst.",
       areasM: ["Forex & Metalle", "Krypto", "Aktien & ETFs", "Immobilien"], maisM: ["Alerts & Tap to Trade", "MTM Auto", "Scanner", "Terminal MTM mit KI", "MTM Funded"],
       defC: "Reichweite und Business aufbauen: Personal Brand, Content und Wege, hier zu verdienen, ohne eine Order zu eröffnen.",
-      areasC: ["Social Media & UGC", "Faceless Marketing", "Künstliche Intelligenz", "Network Marketing", "Mindset & Führung"], maisC: ["Studio MTM Social", "Creator-Programm", "Einladen & verdienen", "Marketingmaterial"],
+      areasC: ["Social Media & UGC", "Faceless Marketing", "Künstliche Intelligenz", "Mindset & Führung"], maisC: ["Studio MTM Social", "Creator-Programm", "Einladen & verdienen", "Marketingmaterial"],
       academias: "Akademien", ferramentas: "Werkzeuge", verPilar: "Zur Säule",
     },
     it: {
@@ -292,7 +292,7 @@ export function extrasOutra(l: Outra) {
       defM: "I mercati e il denaro: imparare a operarli, e gli strumenti che li operano per te quando non puoi esserci.",
       areasM: ["Forex e metalli", "Criptovalute", "Azioni ed ETF", "Immobiliare"], maisM: ["Alert e Tap to Trade", "MTM Auto", "Scanner", "Terminal MTM con IA", "MTM Funded"],
       defC: "Costruire un pubblico e un business: personal brand, contenuti e modi di guadagnare qui senza aprire un ordine.",
-      areasC: ["Social media e UGC", "Faceless Marketing", "Intelligenza artificiale", "Network Marketing", "Mindset e leadership"], maisC: ["Studio MTM Social", "Programma creator", "Invita e guadagna", "Materiale di marketing"],
+      areasC: ["Social media e UGC", "Faceless Marketing", "Intelligenza artificiale", "Mindset e leadership"], maisC: ["Studio MTM Social", "Programma creator", "Invita e guadagna", "Materiale di marketing"],
       academias: "Accademie", ferramentas: "Strumenti", verPilar: "Vedi il pilastro",
     },
     nl: {
@@ -303,7 +303,7 @@ export function extrasOutra(l: Outra) {
       defM: "Markten en geld: leren erin te handelen, en de tools die voor je handelen als jij er niet bij kunt zijn.",
       areasM: ["Forex & metalen", "Crypto", "Aandelen & ETF’s", "Vastgoed"], maisM: ["Alerts & Tap to Trade", "MTM Auto", "Scanners", "Terminal MTM met AI", "MTM Funded"],
       defC: "Een publiek en een bedrijf opbouwen: personal brand, content en manieren om hier te verdienen zonder een order te openen.",
-      areasC: ["Social media & UGC", "Faceless Marketing", "Kunstmatige intelligentie", "Network Marketing", "Mindset & leiderschap"], maisC: ["Studio MTM Social", "Creatorprogramma", "Nodig uit en verdien", "Marketingmateriaal"],
+      areasC: ["Social media & UGC", "Faceless Marketing", "Kunstmatige intelligentie", "Mindset & leiderschap"], maisC: ["Studio MTM Social", "Creatorprogramma", "Nodig uit en verdien", "Marketingmateriaal"],
       academias: "Academies", ferramentas: "Tools", verPilar: "Bekijk de pijler",
     },
     pl: {
@@ -314,7 +314,7 @@ export function extrasOutra(l: Outra) {
       defM: "Rynki i pieniądze: nauka handlu na nich i narzędzia, które handlują za ciebie, gdy nie możesz być obecny.",
       areasM: ["Forex i metale", "Kryptowaluty", "Akcje i ETF", "Nieruchomości"], maisM: ["Alerty i Tap to Trade", "MTM Auto", "Scannery", "Terminal MTM z AI", "MTM Funded"],
       defC: "Budowanie odbiorców i biznesu: marka osobista, treści i sposoby zarabiania tutaj bez otwierania zlecenia.",
-      areasC: ["Social media i UGC", "Faceless Marketing", "Sztuczna inteligencja", "Network Marketing", "Mindset i przywództwo"], maisC: ["Studio MTM Social", "Program dla twórców", "Zaproś i zarabiaj", "Materiały marketingowe"],
+      areasC: ["Social media i UGC", "Faceless Marketing", "Sztuczna inteligencja", "Mindset i przywództwo"], maisC: ["Studio MTM Social", "Program dla twórców", "Zaproś i zarabiaj", "Materiały marketingowe"],
       academias: "Akademie", ferramentas: "Narzędzia", verPilar: "Zobacz filar",
     },
   }[l]

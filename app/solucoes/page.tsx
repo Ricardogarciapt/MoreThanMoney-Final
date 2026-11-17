@@ -77,7 +77,7 @@ export default async function SolucoesPage({ searchParams }: Props) {
             <a href="#o-que-automatizamos" className="hover:text-white">{t("Soluções")}</a>
             <a href="#simulador" className="hover:text-white">{t("Simulador")}</a>
             <a href="#casos" className="hover:text-white">{t("Casos")}</a>
-            <Link href={ligar("/solucoes/demos")} className="hover:text-white">{t("Demos")}</Link>
+            <Link href={ligar("/demos")} className="hover:text-white">{t("Demos")}</Link>
             <a href="#trabalhos" className="hover:text-white">{t("Trabalhos")}</a>
           </div>
           <div className="flex items-center gap-2">
@@ -249,6 +249,11 @@ export default async function SolucoesPage({ searchParams }: Props) {
                 {t("Ver em 1 minuto")} <ArrowRight className="h-4 w-4 transition group-hover:translate-x-1" aria-hidden="true" />
               </span>
             </Link>
+            <div className="mx-auto mt-3 flex max-w-6xl justify-end">
+              <Link href={ligar("/demos")} className="inline-flex min-h-[44px] items-center gap-2 text-sm font-semibold text-zinc-300 hover:text-[#E9C46A]">
+                {t("Ver todas as demos no showroom")} <ArrowRight className="h-4 w-4" aria-hidden="true" />
+              </Link>
+            </div>
           </section>
         )}
 

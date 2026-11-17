@@ -341,6 +341,10 @@
       "schedule": "30 10 * * 1-5"
     },
     {
+      "path": "/api/cron/b2b-respostas",
+      "schedule": "5 8,13,18 * * *"
+    },
+    {
       "path": "/api/cron/i18n-auto",
       "schedule": "*/10 * * * *"
     },
