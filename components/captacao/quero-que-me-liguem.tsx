@@ -43,6 +43,8 @@ export interface QueroQueMeLiguemProps {
   interesseInicial?: Interesse
   /** `secao` (com fundo e margens próprias) ou `solto` (dentro de outra página/cartão). */
   variante?: 'secao' | 'solto'
+  /** Chamado uma vez quando o servidor aceita o pedido (ex.: evento Lead do pixel nos funis). */
+  onEnviado?: (info: { interesse: Interesse; canais: CanalContacto[] }) => void
 }
 
 type Estado = 'idle' | 'enviando' | 'feito' | 'erro'
@@ -54,6 +56,7 @@ export default function QueroQueMeLiguem({
   subtitulo = 'Deixa o teu número e escolhe como preferes ser contactado. Uma pessoa da equipa fala contigo sobre o que te interessa.',
   interesseInicial,
   variante = 'secao',
+  onEnviado,
 }: QueroQueMeLiguemProps) {
   const uid = useId()
   const [nome, setNome] = useState('')
@@ -117,6 +120,11 @@ export default function QueroQueMeLiguem({
       const j = (await r.json().catch(() => ({}))) as { ok?: boolean; erros?: Record<string, string>; erro?: string }
       if (r.ok && j.ok) {
         setEstado('feito')
+        try {
+          onEnviado?.({ interesse: interesse as Interesse, canais: (Object.keys(consent) as CanalContacto[]).filter((c) => consent[c]) })
+        } catch {
+          /* a medição nunca estraga o pedido */
+        }
         return
       }
       if (j.erros) setErros(j.erros)
