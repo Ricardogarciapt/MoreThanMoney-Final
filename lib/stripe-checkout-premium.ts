@@ -1,4 +1,5 @@
 import type Stripe from 'stripe'
+import { TEXTO_ACESSO_IMEDIATO } from '@/lib/legal/checkout-acesso-imediato'
 
 /**
  * As duas portas do Premium mensal (decisão do Ricardo, 26/10/2026):
@@ -31,6 +32,13 @@ export const DIAS_CAMPANHA_90D = 90
  */
 export const CAMPANHA_90D_PEDE_CARTAO = true
 
+/**
+ * 16/11/2026 (dono): o trial de 3 dias passa a pedir os dados de pagamento logo no início e só cobra
+ * no fim dos 3 dias, se a pessoa não cancelar. Um dia antes da cobrança sai um email de lembrete
+ * (cron check-trials). Pôr a `false` volta ao trial sem cartão de 06/11.
+ */
+export const TRIAL_PEDE_CARTAO = true
+
 /** Etiqueta gravada no metadata da subscrição e na tabela `periodos_gratis`. */
 export type OrigemPeriodoGratis = 'trial_3d' | 'campanha_90d'
 export const ORIGEM_TRIAL: OrigemPeriodoGratis = 'trial_3d'
@@ -55,7 +63,9 @@ export function origemDoPeriodoGratis(metadata?: Record<string, string> | null):
  */
 export function notaMetodoPagamento(trial: boolean): string {
   if (trial) {
-    return `Não pedimos cartão nem cobramos nada nos ${DIAS_TRIAL_PREMIUM} dias grátis. Ao fim deles, se quiseres continuar, ativas o Premium a 65 €/mês. Cancelas quando quiseres, sem compromisso.`
+    return TRIAL_PEDE_CARTAO
+      ? `Não cobramos nada nos ${DIAS_TRIAL_PREMIUM} dias grátis. Se não cancelares antes do fim, a subscrição Premium começa a 65 €/mês. Avisamos-te por email um dia antes. Cancelas quando quiseres, sem compromisso.`
+      : `Não pedimos cartão nem cobramos nada nos ${DIAS_TRIAL_PREMIUM} dias grátis. Ao fim deles, se quiseres continuar, ativas o Premium a 65 €/mês. Cancelas quando quiseres, sem compromisso.`
   }
   const porque =
     'Nos termos da nossa Política de Privacidade e da Política de Devolução, o método de pagamento tem de ser inserido para ativar o acesso.'
@@ -69,6 +79,11 @@ export function notaCampanha90d(): string {
     : `Não pedimos cartão nem cobramos nada nos ${DIAS_CAMPANHA_90D} dias. Ao fim deles, se quiseres continuar, ativas o Premium a 65 €/mês.`
 }
 
+/** Junta à nota o aviso de acesso imediato (livre resolução); o Stripe só mostra um texto por botão. */
+function comAcessoImediato(nota: string): string {
+  return `${nota} ${TEXTO_ACESSO_IMEDIATO}`
+}
+
 /**
  * Recolha completa no Stripe: morada de faturação, telemóvel e a nota do cartão.
  * Junta-se a qualquer sessão de subscrição Premium.
@@ -77,12 +92,12 @@ export function recolhaCompleta(trial: boolean): Pick<
   Stripe.Checkout.SessionCreateParams,
   'billing_address_collection' | 'phone_number_collection' | 'custom_text'
 > {
-  // Trial sem cartão: um clique. A morada e o telemóvel pedem-se quando a pessoa ativar.
-  if (trial) return { custom_text: { submit: { message: notaMetodoPagamento(true) } } }
+  // Trial: só o cartão (desde 16/11) e a nota. A morada e o telemóvel pedem-se quando a pessoa ativar.
+  if (trial) return { custom_text: { submit: { message: comAcessoImediato(notaMetodoPagamento(true)) } } }
   return {
     billing_address_collection: 'required',
     phone_number_collection: { enabled: true },
-    custom_text: { submit: { message: notaMetodoPagamento(trial) } },
+    custom_text: { submit: { message: comAcessoImediato(notaMetodoPagamento(trial)) } },
   }
 }
 
@@ -97,16 +112,17 @@ export function pareceCupao(codigo: unknown): codigo is string {
 }
 
 /**
- * Parâmetros do trial de 3 dias SEM cartão numa sessão de checkout de subscrição.
- * O Stripe não mostra campos de cartão (`if_required`) e, se no fim não houver método de
- * pagamento, cancela a subscrição — o webhook fecha o acesso com `trial_sem_pagamento`.
+ * Parâmetros do trial de 3 dias numa sessão de checkout de subscrição.
+ * Desde 16/11 pede o cartão (`always`, ver {@link TRIAL_PEDE_CARTAO}) e só cobra no fim dos 3 dias.
+ * Se no fim não houver método de pagamento (ex.: a pessoa removeu-o), o Stripe cancela a
+ * subscrição — o webhook fecha o acesso com `trial_sem_pagamento`. O nome ficou por compatibilidade.
  */
 export function paramsTrialSemCartao(): Pick<
   Stripe.Checkout.SessionCreateParams,
   'payment_method_collection' | 'subscription_data'
 > {
   return {
-    payment_method_collection: 'if_required',
+    payment_method_collection: TRIAL_PEDE_CARTAO ? 'always' : 'if_required',
     subscription_data: {
       trial_period_days: DIAS_TRIAL_PREMIUM,
       trial_settings: { end_behavior: { missing_payment_method: 'cancel' } },
@@ -122,7 +138,7 @@ export function paramsCampanha90d(): Pick<
 > {
   return {
     payment_method_collection: CAMPANHA_90D_PEDE_CARTAO ? 'always' : 'if_required',
-    custom_text: { submit: { message: notaCampanha90d() } },
+    custom_text: { submit: { message: comAcessoImediato(notaCampanha90d()) } },
     subscription_data: {
       trial_period_days: DIAS_CAMPANHA_90D,
       trial_settings: { end_behavior: { missing_payment_method: 'cancel' } },

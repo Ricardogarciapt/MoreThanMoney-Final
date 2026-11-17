@@ -2,6 +2,7 @@
 
 import { authHeaders } from "@/lib/auth-token"
 import { useEffect, useMemo, useRef, useState } from "react"
+import { useT } from "@/components/i18n-provider"
 import { Subtitles, Check, ChevronDown } from "lucide-react"
 import {
   CAPTION_LANGUAGE_LABELS,
@@ -46,6 +47,7 @@ export default function LiveCaptions({
   streamId: string
   sourceLanguage?: string
 }) {
+  const t = useT()
   const [enabled, setEnabled] = useState(initialEnabled)
   const [lang, setLang] = useState<string>(initialLang)
   const [menuOpen, setMenuOpen] = useState(false)
@@ -148,7 +150,7 @@ export default function LiveCaptions({
             })
             setMenuOpen(false)
           }}
-          aria-label="Legendas"
+          aria-label={t("amC.captions.captionsAria")}
           className={`rounded-lg border px-2 py-1 text-[11px] font-semibold transition-colors ${
             enabled
               ? "border-[#D2A63C]/60 bg-[#D2A63C]/20 text-[#D2A63C]"
@@ -187,7 +189,7 @@ export default function LiveCaptions({
                     <span>
                       {CAPTION_LANGUAGE_LABELS[l] || l.toUpperCase()}
                       {l === sourceLanguage.toLowerCase().slice(0, 2) && (
-                        <span className="ml-1 text-[10px] text-gray-500">(original)</span>
+                        <span className="ml-1 text-[10px] text-gray-500">({t("amC.captions.original")})</span>
                       )}
                     </span>
                     {l === lang && <Check className="h-3.5 w-3.5" />}

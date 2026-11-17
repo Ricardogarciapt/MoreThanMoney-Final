@@ -33,6 +33,8 @@ export const MODULOS_GESTAO: readonly ModuloGestao[] = [
   { slug: 'whatsapp', nome: 'WhatsApp', grupo: 'Clientes & CRM', exige: 'bo.gestao_crm',
     descricao: 'As conversas e o envio — com a janela das 24 h e o consentimento decididos no servidor.',
     vistas: [{ id: 'conversas', nome: 'Conversas' }, { id: 'escrever', nome: 'Escrever a alguém' }] },
+  { slug: 'suporte', nome: 'Ronda de suporte', grupo: 'Clientes & CRM', exige: 'bo.gestao_crm',
+    descricao: 'As conversas do balão de apoio: o que o agente resolveu, o que espera pela equipa (15 min / 1 h) e o que foi escalado ao Ricardo.' },
   { slug: 'leads', nome: 'Leads sociais', grupo: 'Clientes & CRM', exige: 'bo.gestao_crm',
     descricao: 'Quem comentou ou escreveu no Instagram, com os envios por aprovar.' },
   { slug: 'formularios', nome: 'Formulários', grupo: 'Clientes & CRM', exige: 'bo.gestao_crm',

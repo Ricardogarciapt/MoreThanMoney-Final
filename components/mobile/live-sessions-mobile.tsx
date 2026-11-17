@@ -20,10 +20,11 @@ import {
 } from "lucide-react"
 import { useAuth } from "@/contexts/auth-context"
 import { podeAcederAoTier, type PerfilUi } from "@/lib/perfil-ui"
-import { useT } from "@/components/i18n-provider"
+import { useI18n, useT } from "@/components/i18n-provider"
 import { Button } from "@/components/ui/button"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import LiveFinancialDisclaimer from "@/components/live/live-financial-disclaimer"
+import AdicionarAgendaAulas from "./adicionar-agenda-aulas"
 import LiveCaptions from "./live-captions"
 import LiveDubAudio from "./live-dub-audio"
 import EmojiChatPicker from "@/components/live/emoji-chat-picker"
@@ -52,6 +53,8 @@ import { notifyXpFromResponse } from "@/lib/xp-client"
 import { cn } from "@/lib/utils"
 import { useToast } from "@/hooks/use-toast"
 import { supabase } from "@/lib/supabase"
+import { TextoAuto } from "@/components/mobile/texto-auto"
+import { comLegendasYouTube } from "@/lib/i18n/youtube-legendas"
 
 type StreamListItem = {
   id: string
@@ -122,6 +125,7 @@ export default function LiveSessionsMobile({
   const router = useRouter()
   const { toast } = useToast()
   const t = useT()
+  const { lang } = useI18n()
 
   // Upsell de sessões/aulas bloqueadas. No app iOS nativo a compra é por Apple IAP
   // (ecrã nativo) — nunca abrir checkout Stripe dentro do WebView (política Apple).
@@ -491,11 +495,12 @@ export default function LiveSessionsMobile({
       const u = new URL(raw)
       u.searchParams.set("autoplay", "1")
       u.searchParams.set("mute", "1")
-      return u.toString()
+      // Aluno estrangeiro: legendas do YouTube ligadas na língua dele.
+      return comLegendasYouTube(u.toString(), lang)
     } catch {
       return raw
     }
-  }, [stream?.playback_url])
+  }, [stream?.playback_url, lang])
 
   useEffect(() => {
     if (!open) {
@@ -629,8 +634,8 @@ export default function LiveSessionsMobile({
         <div>
           {/* «Aulas» e não «Ao vivo»: o que aqui está são as academias e as suas salas, e as
               lives são uma parte delas. O nome antigo prometia só a parte que acontece a horas. */}
-          <h2 className="text-lg font-bold tracking-tight text-[#D2A63C]">Aulas</h2>
-          <p className="text-xs text-gray-500">Academias, salas e gravações para rever</p>
+          <h2 className="text-lg font-bold tracking-tight text-[#D2A63C]">{t("amC.live.classes")}</h2>
+          <p className="text-xs text-gray-500">{t("amC.live.classesSubtitle")}</p>
         </div>
         <div className="flex flex-wrap gap-2">
           <Button
@@ -660,7 +665,7 @@ export default function LiveSessionsMobile({
             <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-red-500 opacity-75" />
             <span className="relative inline-flex h-2 w-2 rounded-full bg-red-600" />
           </span>
-          A decorrer agora
+          {t("amC.live.liveNow")}
         </h3>
       )}
 
@@ -714,7 +719,7 @@ export default function LiveSessionsMobile({
                   )}
                 </div>
                 <div className="p-2.5">
-                  <p className="line-clamp-2 text-xs font-semibold text-white">{s.title}</p>
+                  <p className="line-clamp-2 text-xs font-semibold text-white"><TextoAuto texto={s.title} /></p>
                   {s.educator?.display_name ? (
                     <p
                       className="mt-0.5 truncate text-[10px] text-gray-400"
@@ -738,7 +743,7 @@ export default function LiveSessionsMobile({
       {!loading && grupos.length > 0 && (
         <div className="mt-6">
           <h3 className="mb-2 text-sm font-semibold text-white">
-            {aberta ? aberta.nome : "Academias e horários"}
+            {aberta ? aberta.nome : t("amC.live.academiesAndSchedule")}
           </h3>
 
           {/* O HORÁRIO, aqui e não no fundo da página. Estava depois de tudo, e quem queria
@@ -760,6 +765,7 @@ export default function LiveSessionsMobile({
               tier: s.tier,
             }))}
           />
+          <AdicionarAgendaAulas />
         </div>
       )}
 
@@ -793,7 +799,7 @@ export default function LiveSessionsMobile({
               className="inline-flex min-h-[44px] items-center gap-2 rounded-full border border-[#D2A63C]/40 px-4 text-sm font-semibold text-[#E9C46A] active:scale-[0.99]"
             >
               <ChevronLeft className="h-4 w-4 shrink-0" aria-hidden />
-              Todas as academias
+              {t("amC.live.allAcademies")}
             </button>
                 <div id="pasta-academia" className="space-y-2.5">
             {aberta.salas.map((s) => {
@@ -825,13 +831,13 @@ export default function LiveSessionsMobile({
                       )}
                     </div>
                     <div className="min-w-0 flex-1">
-                      <p className="truncate text-sm font-medium text-white">{s.title}</p>
+                      <p className="truncate text-sm font-medium text-white"><TextoAuto texto={s.title} /></p>
                       {s.educator?.display_name && (
                         <p className="truncate text-[11px] text-gray-400">{s.educator.display_name}</p>
                       )}
                       <p className="mt-0.5 text-[10px] uppercase tracking-wide text-gray-600">
                         {s.academy?.name ?? "—"}
-                        {r.temGravacoes ? " · com gravações" : ""}
+                        {r.temGravacoes ? " · " + t("amC.live.withRecordings") : ""}
                       </p>
                     </div>
                     {!r.podeEntrar && (
@@ -854,10 +860,10 @@ export default function LiveSessionsMobile({
                       className="flex w-full items-center justify-between border-t border-zinc-800/80 px-3 py-2 text-left"
                     >
                       <span className="text-[11px] text-gray-400">
-                        {s.playlist_title?.trim() || "Aulas gravadas"}
+                        {s.playlist_title?.trim() || t("amC.live.recordedClasses")}
                       </span>
                       <span className="text-[11px] text-[#D2A63C]">
-                        {salasAbertas[s.id] ? "fechar" : "ver aulas"}
+                        {salasAbertas[s.id] ? t("amC.live.close") : t("amC.live.viewClasses")}
                       </span>
                     </button>
                   )}
@@ -893,7 +899,7 @@ export default function LiveSessionsMobile({
             {/* Pasta vazia diz-se pelo que é. A academia está pronta; o que falta é o horário. */}
             {aberta.salas.length === 0 && (
               <p className="rounded-2xl border border-dashed border-zinc-800 p-6 text-center text-sm text-gray-500">
-                Ainda não há salas nesta academia.
+                {t("amC.live.noRooms")}
               </p>
             )}
           </div>
@@ -926,7 +932,7 @@ export default function LiveSessionsMobile({
           <DialogHeader className="flex shrink-0 flex-row items-start justify-between gap-2 border-b border-[#D2A63C]/15 bg-black/40 px-2 py-2 pr-2 sm:px-3">
             <div className="min-w-0 flex-1 text-left">
               <DialogTitle className="line-clamp-2 text-left text-[13px] font-semibold text-white sm:text-sm">
-                {stream?.title || t("live.streamTitleFallback")}
+                {stream?.title ? <TextoAuto texto={stream.title} /> : t("live.streamTitleFallback")}
               </DialogTitle>
               <div className="mt-0.5 flex flex-wrap items-center gap-2">
                 <p className="text-[9px] text-gray-500 sm:text-[10px]">
@@ -1167,7 +1173,7 @@ export default function LiveSessionsMobile({
                         <p className={msg.sender_type === "educator" ? "text-[#D2A63C]" : "text-blue-300"}>
                           {msg.sender_name}
                         </p>
-                        <p className="text-gray-200">{msg.message}</p>
+                        <p className="text-gray-200"><TextoAuto texto={msg.message} /></p>
                       </div>
                     ))}
                     {messages.length === 0 && <p className="text-xs text-gray-500">{t("live.noMessages")}</p>}
@@ -1250,14 +1256,15 @@ function PastaAcademia({
   academia: AcademiaComSalas
   onAbrir: () => void
 }) {
-  const etiqueta = academia.salas.length === 1 ? "1 sala" : `${academia.salas.length} salas`
+  const t = useT()
+  const etiqueta = academia.salas.length === 1 ? t("amC.live.oneRoom") : t("amC.live.manyRooms").replace("{n}", String(academia.salas.length))
   return (
     <button
       type="button"
       onClick={onAbrir}
       aria-expanded={false}
       aria-controls="pasta-academia"
-      aria-label={`Abrir a academia ${academia.nome} · ${etiqueta}`}
+      aria-label={`${t("amC.live.openAcademy")} ${academia.nome} · ${etiqueta}`}
       className="flex min-h-[44px] flex-col overflow-hidden rounded-xl border border-[#D2A63C]/15 bg-gray-950/80 text-left active:scale-[0.99]"
     >
       <div className="relative aspect-video w-full bg-gray-900">

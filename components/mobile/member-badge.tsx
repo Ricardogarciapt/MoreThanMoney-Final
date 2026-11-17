@@ -1,13 +1,15 @@
 "use client"
 
 import { chavePerfilUi, type ChavePerfil, type PerfilUi } from "@/lib/perfil-ui"
+import { useT } from "@/components/i18n-provider"
 
 export type MemberBadgeProfile = PerfilUi & {
   full_name?: string | null
 }
 
 type BadgeStyle = {
-  label: string
+  /** Chave i18n (amA.badge.*) do rótulo — traduzida no render. */
+  labelKey: string
   emoji: string
   bg: string
   text: string
@@ -16,56 +18,56 @@ type BadgeStyle = {
 
 const BADGE_STYLES: Record<ChavePerfil, BadgeStyle> = {
   admin: {
-    label: "Admin",
+    labelKey: "amA.badge.admin",
     emoji: "🔴",
     bg: "bg-red-500/15",
     text: "text-red-400",
     border: "border-red-500/35",
   },
   vip: {
-    label: "VIP",
+    labelKey: "amA.badge.vip",
     emoji: "⭐",
     bg: "bg-yellow-500/15",
     text: "text-yellow-400",
     border: "border-yellow-500/35",
   },
   iq: {
-    label: "IQ",
+    labelKey: "amA.badge.iq",
     emoji: "🎓",
     bg: "bg-blue-500/15",
     text: "text-blue-400",
     border: "border-blue-500/35",
   },
   skool: {
-    label: "Skool",
+    labelKey: "amA.badge.skool",
     emoji: "📚",
     bg: "bg-purple-500/15",
     text: "text-purple-400",
     border: "border-purple-500/35",
   },
   premium: {
-    label: "Premium",
+    labelKey: "amA.badge.premium",
     emoji: "💎",
     bg: "bg-cyan-500/15",
     text: "text-cyan-400",
     border: "border-cyan-500/35",
   },
   membro: {
-    label: "App",
+    labelKey: "amA.badge.app",
     emoji: "📱",
     bg: "bg-green-500/15",
     text: "text-green-400",
     border: "border-green-500/35",
   },
   trial: {
-    label: "Trial",
+    labelKey: "amA.badge.trial",
     emoji: "⏳",
     bg: "bg-orange-500/15",
     text: "text-orange-400",
     border: "border-orange-500/35",
   },
   inativo: {
-    label: "Em pausa",
+    labelKey: "amA.badge.paused",
     emoji: "⏸",
     bg: "bg-gray-500/15",
     text: "text-gray-400",
@@ -93,6 +95,7 @@ export default function MemberBadge({
   profile?: MemberBadgeProfile | null
   size?: "sm" | "xs"
 }) {
+  const t = useT()
   const badge = resolveMemberBadge(profile)
   if (!badge) return null
 
@@ -106,7 +109,7 @@ export default function MemberBadge({
       className={`inline-flex items-center font-bold rounded-full border ${sizeClass} ${badge.bg} ${badge.text} ${badge.border}`}
     >
       <span className="leading-none">{badge.emoji}</span>
-      <span className="leading-none uppercase tracking-wide">{badge.label}</span>
+      <span className="leading-none uppercase tracking-wide">{t(badge.labelKey)}</span>
     </span>
   )
 }

@@ -785,19 +785,38 @@ function planoAB(palavras, estilo, enfase, duracao) {
 const par = (n) => Math.max(2, Math.floor(n / 2) * 2)
 const preso = (v, a, b) => Math.min(Math.max(v, a), b)
 
-/** Janela com a proporção pedida, centrada na cara (um pouco acima, para ficar no terço de cima). */
-function janelaNaCara(enq, proporcao, alturaEmCaras) {
+/**
+ * O quadrado da câmara numa chamada. O detector do Vision já o dá; senão estima-se pela cara
+ * (numa grelha 16:9 a cara ocupa ~1/3 da largura do quadrado e fica um pouco acima do meio).
+ */
+function caixaCamara(enq) {
   const { w, h, cara } = enq
-  let ch = Math.min(h, cara.h * alturaEmCaras)
+  const c = enq.camara
+  if (c && c.w > cara.w && c.h > cara.h) {
+    const x = preso(c.x, 0, w - 2), y = preso(c.y, 0, h - 2)
+    return { x, y, w: Math.min(c.w, w - x), h: Math.min(c.h, h - y) }
+  }
+  let bw = Math.min(w, cara.w * 3.2)
+  let bh = Math.min(h, bw * 9 / 16)
+  bw = Math.min(bw, bh * 16 / 9)
+  const x = preso(cara.x + cara.w / 2 - bw / 2, 0, w - bw)
+  const y = preso(cara.y + cara.h / 2 - bh * 0.45, 0, h - bh)
+  return { x, y, w: bw, h: bh }
+}
+
+/** Janela com a proporção pedida, só dentro de `zona`, centrada na cara (no terço de cima). */
+function janelaNaCara(enq, proporcao, zona = { x: 0, y: 0, w: enq.w, h: enq.h }) {
+  const { cara } = enq
+  let ch = zona.h
   let cw = ch * proporcao
-  if (cw > w) {
-    cw = w
+  if (cw > zona.w) {
+    cw = zona.w
     ch = cw / proporcao
   }
   cw = par(cw)
   ch = par(ch)
-  const cx = par(preso(cara.x + cara.w / 2 - cw / 2, 0, w - cw))
-  const cy = par(preso(cara.y + cara.h / 2 - ch * 0.4, 0, h - ch))
+  const cx = par(preso(cara.x + cara.w / 2 - cw / 2, zona.x, zona.x + zona.w - cw))
+  const cy = par(preso(cara.y + cara.h / 2 - ch * 0.4, zona.y, zona.y + zona.h - ch))
   return `crop=${cw}:${ch}:${cx}:${cy}`
 }
 
@@ -824,13 +843,22 @@ function argsDaMontagem({ fonte, recuo, duracao, L, A, ass, broll, estilo = {}, 
   if (ab) {
     const TOPO = par(A * 0.42)
     const altEcra = par(L * enq.h / enq.w)
+    // Plano A: o quadrado da câmara inteiro, à largura do ecrã e nítido, por cima de um fundo
+    // desfocado do próprio quadrado. Nunca recorta para fora dele (senão apanha o ecrã partilhado).
+    const cam = caixaCamara(enq)
+    const camCrop = `crop=${par(cam.w)}:${par(cam.h)}:${par(cam.x)}:${par(cam.y)}`
+    const altCam = par(Math.min(A, L * cam.h / cam.w))
+    const yCam = par(preso(A * 0.38 - altCam / 2, 0, A - altCam))
     partes.push(
       `[0:v]fps=30,split=4[s1][s2][s3][s4]`,
-      `[s1]${janelaNaCara(enq, L / A, 4.2)},scale=${L}:${A},setsar=1[pa]`,
+      `[s1]${camCrop},setsar=1,split[c1][c2]`,
+      `[c1]scale=${L}:${A}:force_original_aspect_ratio=increase,crop=${L}:${A},gblur=sigma=30,eq=brightness=-0.25[cf]`,
+      `[c2]scale=${L}:${altCam}:flags=lanczos,setsar=1[cn]`,
+      `[cf][cn]overlay=0:${yCam}[pa]`,
       `[s2]scale=${L}:${A}:force_original_aspect_ratio=increase,crop=${L}:${A},gblur=sigma=28,eq=brightness=-0.22,split[f1][f2]`,
       `[s3]scale=${L}:${altEcra},setsar=1,split[e1][e2]`,
       `[f1][e1]overlay=0:${par((A - altEcra) / 2)}[pb]`,
-      `[s4]${janelaNaCara(enq, L / TOPO, 3)},scale=${L}:${TOPO},setsar=1[topo]`,
+      `[s4]${janelaNaCara(enq, L / TOPO, cam)},scale=${L}:${TOPO}:flags=lanczos,setsar=1[topo]`,
       `[f2][e2]overlay=0:${par(TOPO + Math.max(0, (A - TOPO - altEcra) / 2))}[base]`,
       `[base][topo]overlay=0:0[pc]`,
       `[pb][pc]overlay=0:0:enable='${entre(planos, "C")}'[pbc]`,

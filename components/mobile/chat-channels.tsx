@@ -1,5 +1,6 @@
 "use client"
 
+import { TextoTraduzido } from "@/components/mobile/texto-traduzido"
 import { useState, useEffect, useRef, useCallback } from "react"
 import { supabase } from "@/lib/supabase"
 import { isT2TEntrySignal } from "@/lib/mtmcopy/t2t-source"
@@ -59,6 +60,7 @@ import { getAccessToken } from "@/lib/auth-token"
 import { getChatMessageShareUrl } from "@/lib/chat-short-link"
 import { notifyXpFromResponse } from "@/lib/xp-client"
 import { useT } from "@/components/i18n-provider"
+import { TextoAuto } from "@/components/mobile/texto-auto"
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -164,18 +166,18 @@ function normalizeChatMessage(raw: ChatMessage): ChatMessage {
   }
 }
 
-async function shareMessage(msg: ChatMessage) {
+async function shareMessage(msg: ChatMessage, t: (key: string) => string) {
   const origin = typeof window !== "undefined" ? window.location.origin : undefined
   const url = getChatMessageShareUrl(msg, origin)
   const text =
     msg.content?.trim() ||
     (msg.message_type === "video"
-      ? "Vídeo partilhado no chat MTM"
+      ? t("amC.chat.shareVideo")
       : msg.image_url
-        ? "Imagem partilhada no chat MTM"
+        ? t("amC.chat.shareImage")
         : url
-          ? "Link partilhado no chat MTM"
-          : "Mensagem MTM")
+          ? t("amC.chat.shareLink")
+          : t("amC.chat.shareFallback"))
 
   if (typeof navigator !== "undefined" && navigator.share) {
     try {
@@ -831,7 +833,7 @@ function MessageBubble({
     setAnimating(true)
     setSwipeOffset(0)
     if (key === "reply") onReply(msg)
-    else if (key === "share") shareMessage(msg)
+    else if (key === "share") shareMessage(msg, t)
     else if (key === "copy") {
       const toCopy = getChatCopyText(msg)
       if (toCopy) { try { navigator.clipboard.writeText(toCopy) } catch {} }
@@ -1006,9 +1008,14 @@ function MessageBubble({
                 </a>
               ) : null}
               {msg.content && (
-                <p className="whitespace-pre-wrap break-words leading-relaxed text-[13.5px]">
-                  <MentionText text={msg.content} />
-                </p>
+                <TextoTraduzido
+                  texto={msg.content}
+                  render={(texto) => (
+                    <p className="whitespace-pre-wrap break-words leading-relaxed text-[13.5px]">
+                      <MentionText text={texto} />
+                    </p>
+                  )}
+                />
               )}
               {msg.link_preview && msg.link_url && (
                 <LinkPreviewCard preview={msg.link_preview} url={msg.link_url} />
@@ -1683,7 +1690,7 @@ function ChannelView({
             </h2>
           </div>
           {channel.description && (
-            <p className="text-[11px] text-gray-500 truncate mt-0.5">{channel.description}</p>
+            <p className="text-[11px] text-gray-500 truncate mt-0.5"><TextoAuto texto={channel.description} /></p>
           )}
         </div>
         {isPremiumChannel(channel.slug, channel) && (
@@ -1965,7 +1972,7 @@ function ChannelView({
           onClose={() => setContextMsg(null)}
           onReply={() => { setReplyTo(contextMsg); setContextMsg(null) }}
           onDelete={() => { handleDelete(contextMsg.id); setContextMsg(null) }}
-          onShare={() => shareMessage(contextMsg)}
+          onShare={() => shareMessage(contextMsg, t)}
         />
       )}
     </div>
@@ -2134,7 +2141,7 @@ function ChannelInfoSheet({
             <div className="min-w-0">
               <h3 className="text-lg font-bold text-white">#{channel.name}</h3>
               {channel.description && (
-                <p className="text-sm text-gray-400 mt-1">{channel.description}</p>
+                <p className="text-sm text-gray-400 mt-1"><TextoAuto texto={channel.description} /></p>
               )}
               <div className="flex flex-wrap gap-1.5 mt-2">
                 {meta.tag && (
@@ -2270,7 +2277,7 @@ function ChannelRow({
             {previewText}
           </p>
         ) : channel.description ? (
-          <p className="text-[11px] text-gray-500 truncate mt-0.5">{channel.description}</p>
+          <p className="text-[11px] text-gray-500 truncate mt-0.5"><TextoAuto texto={channel.description} /></p>
         ) : null}
       </div>
       {!locked && <ChevronRight className="w-4 h-4 text-gray-600 flex-shrink-0" />}
@@ -2755,7 +2762,7 @@ export default function ChatChannels({
                         {channel.name}
                       </span>
                       {channel.description && (
-                        <p className="text-[11px] text-gray-600 mt-0.5">{channel.description}</p>
+                        <p className="text-[11px] text-gray-600 mt-0.5"><TextoAuto texto={channel.description} /></p>
                       )}
                     </div>
                     {channel.children.map((sub) => (

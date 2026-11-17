@@ -16,6 +16,7 @@ import {
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Loader2, Download, RotateCcw, Wallet, Sparkles } from "lucide-react"
 import { cn } from "@/lib/utils"
+import { useT } from "@/components/i18n-provider"
 
 export type PersonalPositionForAi = {
   symbol: string
@@ -115,6 +116,7 @@ function newRow(): ManualRow {
 export function PortfolioRebalanceAssistant({ personalPositions, mtmSnapshot, onImportToPortfolio }: Props) {
   const csvInputId = useId()
   const imgInputId = useId()
+  const t = useT()
 
   const [method, setMethod] = useState<Method>("manual")
   // App iOS: sem a opção cripto (Apple 3.1.5(iii)) — ver lib/ios-sem-cripto.ts.
@@ -243,19 +245,19 @@ export function PortfolioRebalanceAssistant({ personalPositions, mtmSnapshot, on
         }))
         .filter((a) => a.ticker && a.qty > 0)
       if (manualAssets.length === 0) {
-        setError("Adiciona pelo menos um ativo com ticker e quantidade.")
+        setError(t("amA.rebalance.errAddAsset"))
         return
       }
       payload.manualAssets = manualAssets
     } else if (method === "csv") {
       if (!csvText.trim()) {
-        setError("Carrega ou cola um CSV.")
+        setError(t("amA.rebalance.errCsv"))
         return
       }
       payload.csvText = csvText
     } else {
       if (imageFiles.length === 0) {
-        setError("Carrega pelo menos uma imagem.")
+        setError(t("amA.rebalance.errImage"))
         return
       }
       const imageParts = await Promise.all(imageFiles.map((f) => fileToBase64(f)))
@@ -272,17 +274,17 @@ export function PortfolioRebalanceAssistant({ personalPositions, mtmSnapshot, on
       })
       const data = await res.json()
       if (!res.ok) {
-        setError(data.error || "Erro na análise.")
+        setError(data.error || t("amA.rebalance.errAnalysis"))
         return
       }
       const pa = data.portfolioAi as PortfolioAiResult
       if (!pa) {
-        setError("Resposta inválida.")
+        setError(t("amA.rebalance.errInvalid"))
         return
       }
       setResult(pa)
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Erro de rede.")
+      setError(e instanceof Error ? e.message : t("amA.rebalance.errNetwork"))
     } finally {
       setLoading(false)
     }
@@ -297,6 +299,7 @@ export function PortfolioRebalanceAssistant({ personalPositions, mtmSnapshot, on
     notes,
     includeMtm,
     mtmSnapshot,
+    t,
   ])
 
   const exportCsv = () => {
@@ -305,11 +308,23 @@ export function PortfolioRebalanceAssistant({ personalPositions, mtmSnapshot, on
     ;(result.allocations || []).forEach((a) => {
       if (a.ticker) allocMap[String(a.ticker).toUpperCase()] = a
     })
-    const header = ["Ticker", "Nome", "Qtd", "Preço médio", "Preço atual", "Valor", "P&L", "Alocação %", "Alvo %", "Ação", "DCA $"]
+    const header = [
+      "Ticker",
+      t("amA.rebalance.csvName"),
+      t("amA.rebalance.csvQty"),
+      t("amA.rebalance.csvAvg"),
+      t("amA.rebalance.csvCurrent"),
+      t("amA.rebalance.csvValue"),
+      "P&L",
+      t("amA.rebalance.csvAlloc"),
+      t("amA.rebalance.csvTarget"),
+      t("amA.rebalance.csvAction"),
+      "DCA $",
+    ]
     const lines = [header.join(",")]
     for (const a of result.assets) {
-      const t = String(a.ticker || "")
-      const al = allocMap[t.toUpperCase()] || {}
+      const tk = String(a.ticker || "")
+      const al = allocMap[tk.toUpperCase()] || {}
       const qty = Number(a.qty || 0)
       const cur = Number(a.currentPrice || 0)
       const avg = Number(a.avgPrice || 0)
@@ -317,8 +332,8 @@ export function PortfolioRebalanceAssistant({ personalPositions, mtmSnapshot, on
       const pnl = val - qty * avg
       lines.push(
         [
-          t,
-          `"${String(a.name || t).replace(/"/g, '""')}"`,
+          tk,
+          `"${String(a.name || tk).replace(/"/g, '""')}"`,
           qty,
           avg,
           cur,
@@ -377,10 +392,10 @@ export function PortfolioRebalanceAssistant({ personalPositions, mtmSnapshot, on
             <div className="w-2 h-2 rounded-full bg-[#D2A63C] shrink-0 animate-pulse shadow-[0_0_8px_#D2A63C]" />
             <div className="min-w-0">
               <CardTitle className="text-base font-black text-white tracking-tight truncate">
-                Assistente IA · Reequilíbrio
+                {t("amA.rebalance.title")}
               </CardTitle>
               <p className="text-[10px] text-gray-500 uppercase tracking-wider font-bold mt-0.5 hidden sm:block">
-                Claude · servidor MTM
+                {t("amA.rebalance.subtitle")}
               </p>
             </div>
           </div>
@@ -393,7 +408,7 @@ export function PortfolioRebalanceAssistant({ personalPositions, mtmSnapshot, on
             disabled={personalPositions.length === 0}
           >
             <Wallet className="w-3.5 h-3.5 mr-1" />
-            Meu Portfolio
+            {t("amA.rebalance.myPortfolio")}
           </Button>
         </div>
       </CardHeader>
@@ -404,21 +419,20 @@ export function PortfolioRebalanceAssistant({ personalPositions, mtmSnapshot, on
             <Sparkles className="w-3 h-3" /> Powered by Claude
           </div>
           <h2 className="text-lg font-black text-white leading-tight">
-            Reequilibra e recupera o <span className="text-[#D2A63C]">preço médio</span>
+            {t("amA.rebalance.heroPre")}<span className="text-[#D2A63C]">{t("amA.rebalance.heroHighlight")}</span>
           </h2>
           <p className="text-xs text-gray-400 mt-1 max-w-md mx-auto leading-relaxed">
-            Importação manual, CSV ou screenshot — análise no nosso backend (chave segura). Complemento ao teu portfólio
-            na app.
+            {t("amA.rebalance.heroBody")}
           </p>
         </div>
 
-        <p className="text-[10px] text-gray-500 uppercase tracking-widest font-bold">Método de importação</p>
+        <p className="text-[10px] text-gray-500 uppercase tracking-widest font-bold">{t("amA.rebalance.methodLabel")}</p>
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
           {(
             [
-              ["manual", "⌨️", "Manual", "Ticker, quantidade e preço médio."],
-              ["csv", "📄", "CSV / Excel", "Exportações Binance, Coinbase, T212, DEGIRO…"],
-              ["image", "🖼️", "Imagem", "Screenshots — a IA extrai os dados."],
+              ["manual", "⌨️", "amA.rebalance.methodManual", "amA.rebalance.methodManualDesc"],
+              ["csv", "📄", "amA.rebalance.methodCsv", "amA.rebalance.methodCsvDesc"],
+              ["image", "🖼️", "amA.rebalance.methodImage", "amA.rebalance.methodImageDesc"],
             ] as const
           ).map(([m, icon, title, desc]) => (
             <button
@@ -433,26 +447,26 @@ export function PortfolioRebalanceAssistant({ personalPositions, mtmSnapshot, on
               )}
             >
               <div className="text-xl mb-1">{icon}</div>
-              <div className="text-sm font-black text-white">{title}</div>
-              <div className="text-[11px] text-gray-400 leading-snug mt-0.5">{desc}</div>
+              <div className="text-sm font-black text-white">{t(title)}</div>
+              <div className="text-[11px] text-gray-400 leading-snug mt-0.5">{t(desc)}</div>
             </button>
           ))}
         </div>
 
         <div className="flex gap-1.5">
-          {(iosSemCripto ? (["etf"] as const) : (["crypto", "etf", "mixed"] as const)).map((t) => (
+          {(iosSemCripto ? (["etf"] as const) : (["crypto", "etf", "mixed"] as const)).map((pt) => (
             <button
-              key={t}
+              key={pt}
               type="button"
-              onClick={() => setPortfolioType(t)}
+              onClick={() => setPortfolioType(pt)}
               className={cn(
                 "flex-1 py-2 rounded-xl text-xs font-bold border-2 transition-colors",
-                portfolioType === t
+                portfolioType === pt
                   ? "border-[#D2A63C] bg-[#D2A63C]/15 text-[#D2A63C]"
                   : "border-white/10 bg-black/25 text-gray-400",
               )}
             >
-              {t === "crypto" ? "₿ Cripto" : t === "etf" ? "📈 ETFs" : "⚡ Misto"}
+              {pt === "crypto" ? t("amA.rebalance.typeCrypto") : pt === "etf" ? t("amA.rebalance.typeEtf") : t("amA.rebalance.typeMixed")}
             </button>
           ))}
         </div>
@@ -461,8 +475,8 @@ export function PortfolioRebalanceAssistant({ personalPositions, mtmSnapshot, on
           <div className="space-y-2">
             <div className="grid grid-cols-[1fr_72px_72px_36px] gap-1.5 text-[10px] text-gray-500 uppercase tracking-wider font-bold px-1">
               <span>Ticker</span>
-              <span className="text-center">Qtd</span>
-              <span className="text-center">PM $</span>
+              <span className="text-center">{t("amA.rebalance.colQty")}</span>
+              <span className="text-center">{t("amA.rebalance.colAvgShort")}</span>
               <span />
             </div>
             {rows.map((row) => (
@@ -504,7 +518,7 @@ export function PortfolioRebalanceAssistant({ personalPositions, mtmSnapshot, on
               className="w-full border-dashed border-[#D2A63C]/35 text-gray-300 text-xs h-9 rounded-xl hover:bg-[#D2A63C]/10 hover:text-white"
               onClick={addRow}
             >
-              + Adicionar ativo
+              {t("amA.rebalance.addAsset")}
             </Button>
           </div>
         )}
@@ -532,17 +546,17 @@ export function PortfolioRebalanceAssistant({ personalPositions, mtmSnapshot, on
                 onChange={(e) => e.target.files?.[0] && processCsvFile(e.target.files[0])}
               />
               <div className="text-3xl mb-2 opacity-70">📊</div>
-              <p className="text-sm font-black text-white">Arrasta CSV ou toca para escolher</p>
-              <p className="text-xs text-gray-400 mt-1">Também podes colar abaixo</p>
+              <p className="text-sm font-black text-white">{t("amA.rebalance.csvDrop")}</p>
+              <p className="text-xs text-gray-400 mt-1">{t("amA.rebalance.csvAlso")}</p>
             </div>
             <Textarea
               value={csvText}
               onChange={(e) => setCsvText(e.target.value)}
-              placeholder="Ou cola aqui o conteúdo do ficheiro…"
+              placeholder={t("amA.rebalance.csvPaste")}
               className="min-h-[100px] bg-black/40 border-white/15 text-xs text-gray-200 rounded-xl placeholder:text-gray-500"
             />
             {csvName && (
-              <p className="text-[11px] text-[#D2A63C] font-semibold">✓ {csvName} carregado</p>
+              <p className="text-[11px] text-[#D2A63C] font-semibold">{t("amA.rebalance.csvLoaded").replace("{name}", csvName)}</p>
             )}
           </div>
         )}
@@ -571,8 +585,8 @@ export function PortfolioRebalanceAssistant({ personalPositions, mtmSnapshot, on
                 onChange={(e) => e.target.files?.length && processImageFiles(e.target.files)}
               />
               <div className="text-3xl mb-2 opacity-70">📸</div>
-              <p className="text-sm font-black text-white">Screenshot do portfólio</p>
-              <p className="text-xs text-gray-400 mt-1">Várias imagens (máx. 6)</p>
+              <p className="text-sm font-black text-white">{t("amA.rebalance.imgDrop")}</p>
+              <p className="text-xs text-gray-400 mt-1">{t("amA.rebalance.imgMulti")}</p>
             </div>
             {imagePreviews.length > 0 && (
               <div className="flex flex-wrap gap-2">
@@ -586,7 +600,7 @@ export function PortfolioRebalanceAssistant({ personalPositions, mtmSnapshot, on
 
         <div className="grid grid-cols-2 gap-2">
           <div>
-            <Label className="text-[10px] text-gray-500 uppercase tracking-wider font-bold">Capital DCA ($)</Label>
+            <Label className="text-[10px] text-gray-500 uppercase tracking-wider font-bold">{t("amA.rebalance.dcaCapital")}</Label>
             <Input
               className="mt-1 h-9 bg-black/40 border-white/15 text-white text-xs rounded-lg placeholder:text-gray-500"
               inputMode="decimal"
@@ -596,15 +610,15 @@ export function PortfolioRebalanceAssistant({ personalPositions, mtmSnapshot, on
             />
           </div>
           <div>
-            <Label className="text-[10px] text-gray-500 uppercase tracking-wider font-bold">Frequência</Label>
+            <Label className="text-[10px] text-gray-500 uppercase tracking-wider font-bold">{t("amA.rebalance.frequency")}</Label>
             <Select value={dcaFreq} onValueChange={(v) => setDcaFreq(v as DcaFreq)}>
               <SelectTrigger className="mt-1 h-9 bg-black/40 border-white/15 text-white text-xs rounded-lg">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="weekly">Semanal</SelectItem>
-                <SelectItem value="biweekly">Quinzenal</SelectItem>
-                <SelectItem value="monthly">Mensal</SelectItem>
+                <SelectItem value="weekly">{t("amA.rebalance.weekly")}</SelectItem>
+                <SelectItem value="biweekly">{t("amA.rebalance.biweekly")}</SelectItem>
+                <SelectItem value="monthly">{t("amA.rebalance.monthly")}</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -617,16 +631,16 @@ export function PortfolioRebalanceAssistant({ personalPositions, mtmSnapshot, on
             onChange={(e) => setIncludeMtm(e.target.checked)}
             className="rounded border-[#D2A63C]/50 text-[#D2A63C] accent-[#D2A63C]"
           />
-          Incluir referência MTM Pro (contexto)
+          {t("amA.rebalance.includeMtm")}
         </label>
 
         <div>
-          <Label className="text-[10px] text-gray-500 uppercase tracking-wider font-bold">Notas (opcional)</Label>
+          <Label className="text-[10px] text-gray-500 uppercase tracking-wider font-bold">{t("amA.rebalance.notesLabel")}</Label>
           <Textarea
             value={notes}
             onChange={(e) => setNotes(e.target.value)}
             className="mt-1 min-h-[52px] bg-black/40 border-white/15 text-xs text-gray-200 rounded-xl placeholder:text-gray-500"
-            placeholder="Objetivos, horizonte, restrições…"
+            placeholder={t("amA.rebalance.notesPlaceholder")}
           />
         </div>
 
@@ -636,7 +650,7 @@ export function PortfolioRebalanceAssistant({ personalPositions, mtmSnapshot, on
           className="w-full h-12 bg-gradient-to-r from-[#D2A63C] to-[#BB8525] hover:opacity-90 text-black font-black text-sm rounded-xl shadow-lg shadow-[#D2A63C]/20"
           onClick={runAnalyze}
         >
-          {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : "✦ Analisar portfólio com IA"}
+          {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : t("amA.rebalance.analyze")}
         </Button>
 
         {error && <p className="text-xs text-red-400 text-center font-medium">{error}</p>}
@@ -645,8 +659,8 @@ export function PortfolioRebalanceAssistant({ personalPositions, mtmSnapshot, on
           <div className="space-y-4 pt-4 border-t border-white/10">
             <div className="flex items-start justify-between gap-2">
               <div>
-                <p className="text-[10px] text-gray-500 uppercase tracking-wider font-bold">Resultados</p>
-                <h3 className="text-base font-black text-white">Análise do portfólio</h3>
+                <p className="text-[10px] text-gray-500 uppercase tracking-wider font-bold">{t("amA.rebalance.results")}</p>
+                <h3 className="text-base font-black text-white">{t("amA.rebalance.resultTitle")}</h3>
               </div>
               <div className="flex gap-1 shrink-0">
                 <Button
@@ -667,21 +681,21 @@ export function PortfolioRebalanceAssistant({ personalPositions, mtmSnapshot, on
                   onClick={resetResults}
                 >
                   <RotateCcw className="w-3 h-3 mr-1" />
-                  Novo
+                  {t("amA.rebalance.newBtn")}
                 </Button>
               </div>
             </div>
 
             <div className="grid grid-cols-2 gap-2">
               <div className="rounded-2xl border-2 border-white/10 bg-gradient-to-br from-gray-900/90 to-black/80 p-3">
-                <p className="text-[10px] text-gray-500 uppercase tracking-wider font-bold mb-1">Valor total</p>
+                <p className="text-[10px] text-gray-500 uppercase tracking-wider font-bold mb-1">{t("amA.rebalance.totalValue")}</p>
                 <p className="text-xl font-black text-white">
                   ${Number(result.totalValue || 0).toLocaleString("pt-PT", { maximumFractionDigits: 0 })}
                 </p>
-                <p className="text-[11px] text-gray-400">{result.assets?.length ?? 0} ativos</p>
+                <p className="text-[11px] text-gray-400">{t("amA.rebalance.assetsCount").replace("{n}", String(result.assets?.length ?? 0))}</p>
               </div>
               <div className="rounded-2xl border-2 border-white/10 bg-gradient-to-br from-gray-900/90 to-black/80 p-3">
-                <p className="text-[10px] text-gray-500 uppercase tracking-wider font-bold mb-1">P&amp;L total</p>
+                <p className="text-[10px] text-gray-500 uppercase tracking-wider font-bold mb-1">{t("amA.rebalance.pnlTotal")}</p>
                 <p className={cn("text-xl font-black", pnlColor)}>
                   {(result.totalPnL ?? 0) >= 0 ? "+" : ""}$
                   {Number(result.totalPnL || 0).toLocaleString("pt-PT", { maximumFractionDigits: 0 })}
@@ -697,19 +711,19 @@ export function PortfolioRebalanceAssistant({ personalPositions, mtmSnapshot, on
                 <p className="text-[11px] text-gray-400 line-clamp-2">{result.marketSentiment || ""}</p>
               </div>
               <div className="rounded-2xl border-2 border-white/10 bg-gradient-to-br from-gray-900/90 to-black/80 p-3">
-                <p className="text-[10px] text-gray-500 uppercase tracking-wider font-bold mb-1">Risco / Diversif.</p>
+                <p className="text-[10px] text-gray-500 uppercase tracking-wider font-bold mb-1">{t("amA.rebalance.riskDiv")}</p>
                 <p className="text-xl font-black text-amber-300">
                   {result.riskScore ?? "—"}
                   <span className="text-sm text-gray-500">/10</span>
                 </p>
-                <p className="text-[11px] text-gray-400">Div. {result.diversificationScore ?? "—"}/10</p>
+                <p className="text-[11px] text-gray-400">{t("amA.rebalance.div")} {result.diversificationScore ?? "—"}/10</p>
               </div>
             </div>
 
             <div className="rounded-3xl border-2 border-[#D2A63C]/25 bg-gradient-to-br from-gray-900/90 via-black/80 to-gray-900/90 p-4 relative overflow-hidden shadow-xl">
               <div className="absolute top-0 left-0 right-0 h-0.5 bg-gradient-to-r from-[#D2A63C] via-[#BB8525] to-amber-500" />
               <div className="flex items-center gap-2 mb-2">
-                <span className="text-sm font-black text-white">Análise IA</span>
+                <span className="text-sm font-black text-white">{t("amA.rebalance.aiAnalysis")}</span>
                 <span className="text-[9px] font-bold uppercase tracking-wider bg-[#D2A63C]/20 text-[#D2A63C] px-2 py-0.5 rounded-full border border-[#D2A63C]/35">
                   Claude
                 </span>
@@ -719,7 +733,7 @@ export function PortfolioRebalanceAssistant({ personalPositions, mtmSnapshot, on
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div className="rounded-2xl border-2 border-white/10 bg-black/30 p-3">
-                <p className="text-xs font-black text-white mb-3">Alocação atual</p>
+                <p className="text-xs font-black text-white mb-3">{t("amA.rebalance.currentAlloc")}</p>
                 <div className="space-y-2">
                   {[...allocs].sort((a, b) => (b.currentPct || 0) - (a.currentPct || 0)).slice(0, 8).map((a, i) => (
                     <div key={i}>
@@ -741,7 +755,7 @@ export function PortfolioRebalanceAssistant({ personalPositions, mtmSnapshot, on
                 </div>
               </div>
               <div className="rounded-2xl border-2 border-white/10 bg-black/30 p-3">
-                <p className="text-xs font-black text-white mb-3">Alocação recomendada</p>
+                <p className="text-xs font-black text-white mb-3">{t("amA.rebalance.targetAlloc")}</p>
                 <div className="space-y-2">
                   {[...allocs].sort((a, b) => (b.targetPct || 0) - (a.targetPct || 0)).slice(0, 8).map((a, i) => (
                     <div key={i}>
@@ -764,23 +778,23 @@ export function PortfolioRebalanceAssistant({ personalPositions, mtmSnapshot, on
               </div>
             </div>
 
-            <p className="text-[10px] text-gray-500 uppercase tracking-wider font-bold">Detalhes por ativo</p>
+            <p className="text-[10px] text-gray-500 uppercase tracking-wider font-bold">{t("amA.rebalance.detailsByAsset")}</p>
             <div className="overflow-x-auto rounded-2xl border-2 border-white/10 bg-black/20">
               <table className="w-full text-[11px]">
                 <thead>
                   <tr className="text-gray-500 text-left border-b border-white/10 uppercase tracking-wider text-[10px] font-bold">
-                    <th className="p-2">Ativo</th>
-                    <th className="p-2 text-right">Qtd</th>
-                    <th className="p-2 text-right">PM</th>
-                    <th className="p-2 text-right">Atual</th>
+                    <th className="p-2">{t("amA.rebalance.thAsset")}</th>
+                    <th className="p-2 text-right">{t("amA.rebalance.colQty")}</th>
+                    <th className="p-2 text-right">{t("amA.rebalance.thAvg")}</th>
+                    <th className="p-2 text-right">{t("amA.rebalance.thCurrent")}</th>
                     <th className="p-2 text-right">P&amp;L</th>
-                    <th className="p-2 text-right">Ação</th>
+                    <th className="p-2 text-right">{t("amA.rebalance.thAction")}</th>
                   </tr>
                 </thead>
                 <tbody>
                   {(result.assets || []).map((a, i) => {
-                    const t = String(a.ticker || "")
-                    const al = allocs.find((x) => String(x.ticker || "").toUpperCase() === t.toUpperCase())
+                    const tk = String(a.ticker || "")
+                    const al = allocs.find((x) => String(x.ticker || "").toUpperCase() === tk.toUpperCase())
                     const qty = Number(a.qty || 0)
                     const cur = Number(a.currentPrice || 0)
                     const avg = Number(a.avgPrice || 0)
@@ -799,12 +813,12 @@ export function PortfolioRebalanceAssistant({ personalPositions, mtmSnapshot, on
                             : "bg-blue-500/20 text-blue-300 border border-blue-500/40"
                     const label =
                       action === "buy"
-                        ? "Comprar"
+                        ? t("amA.rebalance.actionBuy")
                         : action === "sell"
-                          ? "Vender"
+                          ? t("amA.rebalance.actionSell")
                           : action === "reduce"
-                            ? "Reduzir"
-                            : "Manter"
+                            ? t("amA.rebalance.actionReduce")
+                            : t("amA.rebalance.actionHold")
                     return (
                       <tr key={i} className="border-b border-white/5 hover:bg-white/[0.03]">
                         <td className="p-2">
@@ -813,11 +827,11 @@ export function PortfolioRebalanceAssistant({ personalPositions, mtmSnapshot, on
                               className="w-7 h-7 rounded-full flex items-center justify-center text-[10px] font-black shrink-0 border border-white/10"
                               style={{ background: `${COLORS[i % COLORS.length]}22`, color: COLORS[i % COLORS.length] }}
                             >
-                              {t.slice(0, 2)}
+                              {tk.slice(0, 2)}
                             </div>
                             <div>
-                              <div className="text-white font-bold text-[11px]">{a.name || t}</div>
-                              <div className="text-gray-500 text-[10px]">{t}</div>
+                              <div className="text-white font-bold text-[11px]">{a.name || tk}</div>
+                              <div className="text-gray-500 text-[10px]">{tk}</div>
                             </div>
                           </div>
                         </td>
@@ -850,7 +864,7 @@ export function PortfolioRebalanceAssistant({ personalPositions, mtmSnapshot, on
               onClick={applyToMyPortfolio}
               disabled={!result.assets?.some((a) => a.ticker && (a.qty || 0) > 0 && (a.avgPrice || 0) > 0)}
             >
-              Guardar ativos analisados em «Meu Portfolio»
+              {t("amA.rebalance.applyBtn")}
             </Button>
           </div>
         )}

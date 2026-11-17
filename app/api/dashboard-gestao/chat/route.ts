@@ -7,7 +7,7 @@
  */
 import { createClient } from "@supabase/supabase-js"
 import { NextRequest, NextResponse } from "next/server"
-import { requireAdmin } from "@/lib/admin-api-helpers"
+import { requireSuperAdmin } from "@/lib/super-admin"
 import { FERRAMENTAS, ferramentaPorNome } from "@/lib/mcp/ferramentas"
 import { chamarIA, mensagemIndisponivel, type MensagemIA } from "@/lib/ia/chamar"
 import { blocoFramework } from "@/lib/framework-mtm"
@@ -615,7 +615,7 @@ async function tectoDoMes(agent: string): Promise<string | null> {
 
 // ── Main handler ──────────────────────────────────────────────────────────────
 export async function POST(req: NextRequest) {
-  const guarda = await requireAdmin(req)
+  const guarda = await requireSuperAdmin(req)
   if (guarda) return guarda
 
   let body: { agent?: string; agentId?: string; messages: Array<{ role: string; content: string }> }

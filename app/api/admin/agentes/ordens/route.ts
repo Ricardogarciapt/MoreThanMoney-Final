@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { requireAdmin } from '@/lib/admin-api-helpers'
+import { requireSuperAdmin } from '@/lib/super-admin'
 import { getSupabaseAdmin } from '@/lib/supabase-admin-client'
 import { cancelarOrdem, darOrdem, listarOrdens } from '@/lib/agentes/ordens'
 
@@ -10,7 +10,7 @@ import { cancelarOrdem, darOrdem, listarOrdens } from '@/lib/agentes/ordens'
 export const dynamic = 'force-dynamic'
 
 export async function GET(request: NextRequest) {
-  const negado = await requireAdmin(request)
+  const negado = await requireSuperAdmin(request)
   if (negado) return negado
   const db = getSupabaseAdmin()
   const agenteId = request.nextUrl.searchParams.get('agente') || undefined
@@ -24,7 +24,7 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
-  const negado = await requireAdmin(request)
+  const negado = await requireSuperAdmin(request)
   if (negado) return negado
   const db = getSupabaseAdmin()
   const body = (await request.json().catch(() => ({}))) as Record<string, unknown>

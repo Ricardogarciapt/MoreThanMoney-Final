@@ -2,6 +2,7 @@
 
 import { authHeaders } from "@/lib/auth-token"
 import { useEffect, useRef, useState } from "react"
+import { useT } from "@/components/i18n-provider"
 import { Volume2, ChevronDown, Check } from "lucide-react"
 
 // Dobragem ao vivo: seletor de canal de ÁUDIO. Ao escolher um idioma dobrado, silencia
@@ -10,7 +11,7 @@ import { Volume2, ChevronDown, Check } from "lucide-react"
 // ATRASAMOS o vídeo ~DUB_VIDEO_DELAY_S para as vozes sincronizarem. O PT original fica rápido.
 
 const DUB_LANGS: [string, string][] = [
-  ["", "Português (original)"],
+  ["", "amC.dub.original"],
   ["en", "English"],
   ["es", "Español"],
   ["fr", "Français"],
@@ -42,6 +43,9 @@ export default function LiveDubAudio({
   streamId: string
   videoRef: React.RefObject<HTMLVideoElement | null>
 }) {
+  const t = useT()
+  // Só o rótulo do idioma original vem como chave; os nomes das línguas ficam no seu idioma.
+  const langName = (code: string, name: string) => (code === "" ? t(name) : name)
   const [lang, setLang] = useState("") // "" = original (áudio do vídeo)
   const [menu, setMenu] = useState(false)
   const [active, setActive] = useState(false) // a tocar dobragem
@@ -204,10 +208,10 @@ export default function LiveDubAudio({
             ? "border-[#D2A63C]/60 bg-[#D2A63C]/20 text-[#D2A63C]"
             : "border-gray-700 bg-black/60 text-gray-200"
         }`}
-        aria-label="Idioma do áudio"
+        aria-label={t("amC.dub.langAria")}
       >
         <Volume2 className="h-3.5 w-3.5" />
-        {(DUB_LANGS.find((l) => l[0] === lang)?.[1] || "Áudio").slice(0, 3)}
+        {langName(lang, DUB_LANGS.find((l) => l[0] === lang)?.[1] ?? t("amC.dub.audio")).slice(0, 3)}
         <ChevronDown className="h-3 w-3" />
       </button>
       {menu && (
@@ -225,7 +229,7 @@ export default function LiveDubAudio({
                 code === lang ? "text-[#D2A63C]" : "text-gray-200"
               }`}
             >
-              <span>{name}</span>
+              <span>{langName(code, name)}</span>
               {code === lang && <Check className="h-3.5 w-3.5" />}
             </button>
           ))}

@@ -3,6 +3,8 @@
 import { useState, useEffect, useRef, useCallback } from "react"
 import { Send, Bot, User, Loader2, ChevronDown, Target, TrendingUp, CheckCircle2, RotateCcw } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
+import { useI18n, useT } from "@/components/i18n-provider"
+import { TextoAuto } from "@/components/mobile/texto-auto"
 
 type Message = {
   role: "user" | "assistant"
@@ -27,41 +29,48 @@ type MentorTask = {
   phase: string
 }
 
+// `value` é o texto que segue para a IA (fica em português); `labelKey` é o que se mostra no ecrã.
 const STARTER_QUESTIONS = [
   {
     id: "q_goals",
-    text: "Qual é o teu principal objetivo agora? 🎯",
+    textKey: "amB.mentor.q.goals",
     suggestions: [
-      "Atingir Rising Star",
-      "Fazer os primeiros recrutamentos",
-      "Perceber como funciona o plano",
-      "Criar uma rotina diária",
+      { value: "Atingir Rising Star", labelKey: "amB.mentor.sug.goalRising" },
+      { value: "Fazer os primeiros recrutamentos", labelKey: "amB.mentor.sug.goalRecruit" },
+      { value: "Perceber como funciona o plano", labelKey: "amB.mentor.sug.goalPlan" },
+      { value: "Criar uma rotina diária", labelKey: "amB.mentor.sug.goalRoutine" },
     ],
   },
   {
     id: "q_time",
-    text: "Quanto tempo tens disponível por dia para o MTM? ⏰",
-    suggestions: ["1-2 horas", "2-4 horas", "Mais de 4 horas", "Depende do dia"],
+    textKey: "amB.mentor.q.time",
+    suggestions: [
+      { value: "1-2 horas", labelKey: "amB.mentor.sug.time1" },
+      { value: "2-4 horas", labelKey: "amB.mentor.sug.time2" },
+      { value: "Mais de 4 horas", labelKey: "amB.mentor.sug.time3" },
+      { value: "Depende do dia", labelKey: "amB.mentor.sug.timeVaries" },
+    ],
   },
   {
     id: "q_stage",
-    text: "Em que fase estás agora? 📍",
+    textKey: "amB.mentor.q.stage",
     suggestions: [
-      "Acabei de entrar",
-      "Já tenho leads, mas sem PE ainda",
-      "Tenho PE Left, preciso de PE Right",
-      "Já sou Rising Star",
+      { value: "Acabei de entrar", labelKey: "amB.mentor.sug.stageNew" },
+      { value: "Já tenho leads, mas sem PE ainda", labelKey: "amB.mentor.sug.stageLeads" },
+      { value: "Tenho PE Left, preciso de PE Right", labelKey: "amB.mentor.sug.stageLeft" },
+      { value: "Já sou Rising Star", labelKey: "amB.mentor.sug.stageRising" },
     ],
   },
 ]
 
+// `prompt` é enviado à IA (e aparece como mensagem do utilizador): fica em português.
 const QUICK_ACTIONS = [
-  { label: "📋 Plano semanal", prompt: "Cria-me um plano de acção para esta semana com base no meu progresso actual." },
-  { label: "💬 Script de abordagem", prompt: "Dá-me um script para abordar novos contactos sobre o MTM, sem ser forçado." },
-  { label: "🔄 Como fazer follow-up", prompt: "Como devo fazer follow-up com alguém que ficou interessado mas não respondeu?" },
-  { label: "🚀 Próximos passos", prompt: "Com base no meu progresso, quais são os 3 próximos passos mais importantes?" },
-  { label: "❓ Gerir objecções", prompt: "Como respondo quando alguém diz que não tem dinheiro ou que não tem tempo?" },
-  { label: "🏆 Rising Star em 30 dias", prompt: "Cria um plano concreto para eu atingir Rising Star em 30 dias a partir de hoje." },
+  { id: "plan", labelKey: "amB.mentor.qa.plan", prompt: "Cria-me um plano de acção para esta semana com base no meu progresso actual." },
+  { id: "script", labelKey: "amB.mentor.qa.script", prompt: "Dá-me um script para abordar novos contactos sobre o MTM, sem ser forçado." },
+  { id: "followup", labelKey: "amB.mentor.qa.followup", prompt: "Como devo fazer follow-up com alguém que ficou interessado mas não respondeu?" },
+  { id: "next", labelKey: "amB.mentor.qa.next", prompt: "Com base no meu progresso, quais são os 3 próximos passos mais importantes?" },
+  { id: "objections", labelKey: "amB.mentor.qa.objections", prompt: "Como respondo quando alguém diz que não tem dinheiro ou que não tem tempo?" },
+  { id: "rising30", labelKey: "amB.mentor.qa.rising30", prompt: "Cria um plano concreto para eu atingir Rising Star em 30 dias a partir de hoje." },
 ]
 
 function generateId() {
@@ -103,6 +112,9 @@ function FormattedText({ text, isUser }: { text: string; isUser: boolean }) {
 
 export default function MentorMobile() {
   const { toast } = useToast()
+  const t = useT()
+  // O Mentor responde no idioma da app (17/11): um aluno alemão recebia-o em português.
+  const { lang } = useI18n()
   const [messages, setMessages] = useState<Message[]>([])
   const [input, setInput] = useState("")
   const [streaming, setStreaming] = useState(false)
@@ -132,7 +144,7 @@ export default function MentorMobile() {
         const res = await fetch("/api/mentor/overview", { cache: "no-store" })
         const json = await res.json()
         if (json?.success && json.data) {
-          const { profile: p, tasks: t } = json.data
+          const { profile: p, tasks: tarefas } = json.data
           setProfile({
             current_rank: p.current_rank || "starter",
             target_rank: p.target_rank || "rising_star",
@@ -142,16 +154,16 @@ export default function MentorMobile() {
             cv_right: p.cv_right || 0,
             phase: p.phase || "onboarding",
           })
-          setTasks(t || [])
+          setTasks(tarefas || [])
 
-          const hasProgress = (t || []).some((task: MentorTask) => task.status === "completed")
+          const hasProgress = (tarefas || []).some((task: MentorTask) => task.status === "completed")
           const storedOnboarded = sessionStorage.getItem("mtm_mentor_onboarded")
           if (storedOnboarded || hasProgress) {
             setOnboarded(true)
             setMessages([
               {
                 role: "assistant",
-                content: `Olá! Estou aqui para te ajudar a crescer no MTM. 💪\n\nO teu progresso actual: **${p.pe_left || 0} PE Left · ${p.pe_right || 0} PE Right**\n\nO que queres trabalhar hoje?`,
+                content: `${t("amB.mentor.greeting")}\n\n${t("amB.mentor.progress").replace("{left}", String(p.pe_left || 0)).replace("{right}", String(p.pe_right || 0))}\n\n${t("amB.mentor.askToday")}`,
                 id: generateId(),
               },
             ])
@@ -204,6 +216,7 @@ export default function MentorMobile() {
           body: JSON.stringify({
             messages: newMessages.map((m) => ({ role: m.role, content: m.content })),
             mentorContext,
+            idioma: lang,
           }),
           signal: abortRef.current.signal,
         })
@@ -211,7 +224,7 @@ export default function MentorMobile() {
         if (!res.ok || !res.body) {
           // A rota responde JSON com `error` quando não chega a abrir o stream (401/400/500).
           const j = (await res.json().catch(() => null)) as { error?: string } | null
-          throw new Error(j?.error || "Não foi possível contactar o Mentor AI.")
+          throw new Error(j?.error || t("amB.mentor.errContact"))
         }
 
         const reader = res.body.getReader()
@@ -245,12 +258,12 @@ export default function MentorMobile() {
           }
         }
         if (!accumulated.trim()) {
-          throw new Error(erroDaRota || "O Mentor não devolveu resposta. Tenta outra vez daqui a pouco.")
+          throw new Error(erroDaRota || t("amB.mentor.errEmpty"))
         }
       } catch (err) {
         if ((err as Error).name === "AbortError") return
-        const motivo = (err as Error).message || "Não foi possível contactar o Mentor AI."
-        toast({ title: "Mentor indisponível", description: motivo, variant: "destructive" })
+        const motivo = (err as Error).message || t("amB.mentor.errContact")
+        toast({ title: t("amB.mentor.unavailable"), description: motivo, variant: "destructive" })
         // A frase fica na conversa, no lugar da resposta — não desaparece com o toast.
         setMessages((prev) => prev.map((m) => (m.id === assistantId ? { ...m, content: motivo } : m)))
       } finally {
@@ -258,7 +271,7 @@ export default function MentorMobile() {
         abortRef.current = null
       }
     },
-    [messages, streaming, profile, tasks, toast]
+    [messages, streaming, profile, tasks, toast, t, lang]
   )
 
   const handleOnboardingAnswer = async (questionId: string, answer: string) => {
@@ -297,7 +310,7 @@ export default function MentorMobile() {
     setMessages([
       {
         role: "assistant",
-        content: `Olá! Vamos recomeçar. 🚀\n\nO que queres trabalhar hoje?`,
+        content: `${t("amB.mentor.restartGreeting")}\n\n${t("amB.mentor.askToday")}`,
         id: generateId(),
       },
     ])
@@ -327,7 +340,7 @@ export default function MentorMobile() {
           </div>
           <div>
             <p className="text-sm font-semibold text-white">Mentor MTM</p>
-            <p className="text-[11px] text-gray-400">Agente de crescimento pessoal</p>
+            <p className="text-[11px] text-gray-400">{t("amB.mentor.agentSubtitle")}</p>
           </div>
         </div>
 
@@ -353,24 +366,24 @@ export default function MentorMobile() {
                 <div className="w-8 h-8 rounded-full bg-gradient-to-br from-[#D2A63C] to-amber-600 flex items-center justify-center flex-shrink-0 mt-0.5">
                   <Bot className="w-4 h-4 text-black" />
                 </div>
-                <p className="text-white text-[15px] leading-relaxed">{currentQ.text}</p>
+                <p className="text-white text-[15px] leading-relaxed">{t(currentQ.textKey)}</p>
               </div>
 
               <div className="space-y-2 mt-4">
                 {currentQ.suggestions.map((s) => (
                   <button
-                    key={s}
-                    onClick={() => handleOnboardingAnswer(currentQ.id, s)}
+                    key={s.value}
+                    onClick={() => handleOnboardingAnswer(currentQ.id, s.value)}
                     className="w-full text-left px-4 py-3 rounded-xl border border-gray-700 bg-gray-800/50 text-[13px] text-gray-200 hover:border-[#D2A63C]/50 hover:bg-gray-800 transition-all active:scale-[0.98]"
                   >
-                    {s}
+                    {t(s.labelKey)}
                   </button>
                 ))}
               </div>
             </div>
 
             <p className="text-center text-[11px] text-gray-500">
-              Passo {onboardingStep + 1} de {STARTER_QUESTIONS.length}
+              {t("amB.mentor.step").replace("{n}", String(onboardingStep + 1)).replace("{total}", String(STARTER_QUESTIONS.length))}
             </p>
           </div>
         </div>
@@ -401,7 +414,7 @@ export default function MentorMobile() {
           <button
             onClick={resetChat}
             className="p-2 rounded-lg text-gray-400 hover:text-white hover:bg-gray-800 transition-all"
-            title="Reiniciar conversa"
+            title={t("amB.mentor.restart")}
           >
             <RotateCcw className="w-4 h-4" />
           </button>
@@ -415,7 +428,7 @@ export default function MentorMobile() {
             <div className="bg-gray-900 rounded-xl p-3">
               <div className="flex items-center gap-1.5 mb-2">
                 <Target className="w-3.5 h-3.5 text-[#D2A63C]" />
-                <p className="text-[10px] uppercase tracking-wide text-gray-400 font-medium">Parceiros</p>
+                <p className="text-[10px] uppercase tracking-wide text-gray-400 font-medium">{t("amB.mentor.partners")}</p>
               </div>
               <div className="flex justify-between text-xs text-gray-300">
                 <span>
@@ -430,7 +443,7 @@ export default function MentorMobile() {
             <div className="bg-gray-900 rounded-xl p-3">
               <div className="flex items-center gap-1.5 mb-2">
                 <TrendingUp className="w-3.5 h-3.5 text-[#D2A63C]" />
-                <p className="text-[10px] uppercase tracking-wide text-gray-400 font-medium">Progresso</p>
+                <p className="text-[10px] uppercase tracking-wide text-gray-400 font-medium">{t("amB.mentor.progressLabel")}</p>
               </div>
               <div className="flex items-center gap-2">
                 <div className="flex-1 h-1.5 bg-gray-700 rounded-full overflow-hidden">
@@ -446,12 +459,12 @@ export default function MentorMobile() {
 
           {pendingTasks.length > 0 && (
             <div className="mt-3">
-              <p className="text-[10px] uppercase tracking-wide text-gray-500 mb-2">Próximas tarefas</p>
+              <p className="text-[10px] uppercase tracking-wide text-gray-500 mb-2">{t("amB.mentor.upcoming")}</p>
               <div className="space-y-1.5">
                 {pendingTasks.slice(0, 3).map((t) => (
                   <div key={t.id} className="flex items-center gap-2">
                     <div className="w-4 h-4 rounded-full border border-gray-600 flex-shrink-0" />
-                    <p className="text-[12px] text-gray-300 truncate">{t.title}</p>
+                    <p className="text-[12px] text-gray-300 truncate"><TextoAuto texto={t.title} /></p>
                   </div>
                 ))}
               </div>
@@ -461,8 +474,7 @@ export default function MentorMobile() {
             <div className="mt-2 flex items-center gap-1.5">
               <CheckCircle2 className="w-3.5 h-3.5 text-green-500" />
               <p className="text-[11px] text-gray-400">
-                {completedTasks.length} tarefa{completedTasks.length > 1 ? "s" : ""} concluída
-                {completedTasks.length > 1 ? "s" : ""}
+                {t(completedTasks.length > 1 ? "amB.mentor.tasksDoneMany" : "amB.mentor.tasksDoneOne").replace("{n}", String(completedTasks.length))}
               </p>
             </div>
           )}
@@ -524,15 +536,15 @@ export default function MentorMobile() {
       {/* Quick actions — shown when conversation is fresh */}
       {messages.length <= 1 && !streaming && (
         <div className="px-4 pb-3 flex-shrink-0">
-          <p className="text-[10px] uppercase tracking-wide text-gray-500 mb-2">Acções rápidas</p>
+          <p className="text-[10px] uppercase tracking-wide text-gray-500 mb-2">{t("amB.mentor.quickActions")}</p>
           <div className="grid grid-cols-2 gap-2">
             {QUICK_ACTIONS.slice(0, 4).map((a) => (
               <button
-                key={a.label}
+                key={a.id}
                 onClick={() => sendMessage(a.prompt, true)}
                 className="text-left px-3 py-2.5 rounded-xl bg-gray-900 border border-gray-800 text-[12px] text-gray-300 hover:border-[#D2A63C]/40 hover:text-white transition-all active:scale-[0.97]"
               >
-                {a.label}
+                {t(a.labelKey)}
               </button>
             ))}
           </div>
@@ -545,11 +557,11 @@ export default function MentorMobile() {
           <div className="flex gap-2 pb-1">
             {QUICK_ACTIONS.map((a) => (
               <button
-                key={a.label}
+                key={a.id}
                 onClick={() => sendMessage(a.prompt, true)}
                 className="flex-shrink-0 px-3 py-1.5 rounded-full bg-gray-900 border border-gray-800 text-[11px] text-gray-400 hover:border-[#D2A63C]/40 hover:text-white transition-all"
               >
-                {a.label}
+                {t(a.labelKey)}
               </button>
             ))}
           </div>
@@ -565,7 +577,7 @@ export default function MentorMobile() {
               value={input}
               onChange={(e) => setInput(e.target.value)}
               onKeyDown={handleKeyDown}
-              placeholder="Escreve a tua pergunta ao Mentor..."
+              placeholder={t("amB.mentor.placeholder")}
               className="w-full bg-transparent text-white text-[13.5px] placeholder-gray-500 resize-none outline-none leading-relaxed max-h-24"
               rows={1}
               disabled={streaming}

@@ -13,9 +13,20 @@
 import { lerConfigOs, orcamentoB2BDb } from '@/lib/agentes/os/os-db'
 import { decidirContacto, type Tectos } from '@/lib/agentes/contacto-inicial'
 import { validarProspecto } from './validador'
-import { montarMensagem, segredoSaida, validarMensagem, AGENTE_B2B, type Pais, type Segmento } from './sequencias'
+import { exigeConsentimento, montarMensagem, segredoSaida, temTextos, validarMensagem, AGENTE_B2B, type Pais, type Segmento } from './sequencias'
 
 export const BASE_LEGAL_B2B = 'b2b_pessoa_colectiva' as const
+
+/**
+ * Para onde vão as respostas: SEMPRE a caixa oficial da casa (decisão do dono a 16/11: o B2B sai
+ * de geral@morethanmoney.pt). O `From` só muda com `B2B_MAIL_FROM`, porque o Gmail recusa um From
+ * que não seja a conta autenticada ou um alias verificado dela.
+ */
+export const RESPOSTAS_B2B = 'geral@morethanmoney.pt'
+export function remetenteB2B(porOmissao: string, env: { B2B_MAIL_FROM?: string } = process.env as { B2B_MAIL_FROM?: string }): string {
+  const v = String(env.B2B_MAIL_FROM ?? '').trim()
+  return /^[^\s@<>]+@[^\s@<>]+\.[a-z]{2,}$/i.test(v) ? `MoreThanMoney <${v}>` : porOmissao
+}
 
 export interface ConfigB2B {
   ligado: boolean
@@ -108,6 +119,9 @@ export function decidirEnvioB2B(
 
   const toque = (Math.min(3, p.toques + 1)) as 1 | 2 | 3
   if (!ctx.segredo) return { decisao: 'bloqueado', motivo: 'Sem segredo para o link de saída (B2B_SAIR_SEGREDO/CRON_SECRET).' }
+  if (!temTextos(p.segmento, p.pais)) return { decisao: 'bloqueado', motivo: `Sem textos na língua ${p.pais} para ${p.segmento} — não sai.`, retirar: true }
+  // 17/11: países com opt-in B2B (DE, AT, IT, ES, NL) ficam parados até haver consentimento ou decisão do dono.
+  if (exigeConsentimento(p.email, p.pais)) return { decisao: 'fila', motivo: 'País onde o email frio a empresas exige consentimento prévio — parado até decisão do dono.' }
   const m = montarMensagem({ segmento: p.segmento, pais: p.pais, toque, empresa: p.empresa, email: p.email, agente: AGENTE_B2B, segredo: ctx.segredo })
   const texto = ctx.textoForcado ?? m.texto
   const porta = validarMensagem(texto)
@@ -251,7 +265,8 @@ export async function correrLote(db: Db, opts: { ensaio?: boolean; limiteExtra?:
     const linkSair = (d.texto!.match(/https?:\/\/\S+\/api\/b2b\/sair\?\S+/) ?? [])[0]
     try {
       await transporte!.sendMail({
-        from: mailFrom(),
+        from: remetenteB2B(mailFrom()),
+        replyTo: RESPOSTAS_B2B,
         to: p.email,
         subject: d.assunto!,
         text: d.texto!,

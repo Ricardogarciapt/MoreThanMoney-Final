@@ -8,9 +8,10 @@
 import { readFileSync } from 'fs'
 import { join } from 'path'
 import { validarProspecto, eWebmailPessoal } from './validador'
-import { montarMensagem, validarMensagem, lerSaida, linkSaida, SEGMENTOS, type Pais } from './sequencias'
-import { decidirEnvioB2B, vagasHoje, prontoParaToque, CONFIG_PADRAO, type ConfigB2B, type ProspectoLinha } from './envio'
-import { robotsPermite, extrairEmails } from './recolha'
+import { montarMensagem, validarMensagem, lerSaida, linkSaida, lerPais, exigeConsentimento, temTextos, SEGMENTOS, type Pais } from './sequencias'
+import { decidirEnvioB2B, vagasHoje, prontoParaToque, remetenteB2B, CONFIG_PADRAO, type ConfigB2B, type ProspectoLinha } from './envio'
+import { robotsPermite, extrairEmails, extrairEmailsDeLinks, evidenciaPessoaColectiva, ePaginaDeLinks } from './recolha'
+import { normalizarCandidato } from './candidatos'
 
 const falhas: string[] = []
 const teste = (n: string, ok: boolean) => { if (!ok) falhas.push(n) }
@@ -90,7 +91,7 @@ teste('desligado: nada sai', decidirEnvioB2B(pros('info@exemplo.pt'), { cfg: { .
 
 // ── BONS: as 30 mensagens passam a porta e não inventam números ──────────────────────────────
 for (const segmento of SEGMENTOS) {
-  for (const pais of ['PT', 'BR'] as Pais[]) {
+  for (const pais of (['PT', 'BR', 'INT', 'FR', 'DE', 'IT'] as Pais[]).filter((x) => temTextos(segmento, x))) {
     for (const toque of [1, 2, 3] as const) {
       const m = montarMensagem({ segmento, pais, toque, empresa: 'Exemplo', email: 'info@exemplo.pt', segredo: SEG })
       const n = `${segmento}/${pais}/T${toque}`
@@ -98,10 +99,18 @@ for (const segmento of SEGMENTOS) {
       teste(`${n}: link com ?ag=AG-PROSPECTOR`, m.linkOferta.includes('ag=AG-PROSPECTOR'))
       teste(`${n}: sem €/%/R$ (nada de números de resultado)`, !/[€%]|R\$|\+\d/.test(m.texto))
       teste(`${n}: curto (< 1300 caracteres)`, m.texto.length < 1300)
-      teste(`${n}: idioma`, pais === 'BR' ? /você|vocês|Oi/.test(m.texto) : /Olá/.test(m.texto))
+      const idioma: Record<Pais, RegExp[]> = { PT: [/Olá/], BR: [/você|vocês|Oi/], INT: [/\bHi\b/, /unsubscribe/], FR: [/Bonjour/, /désinscrivez/], DE: [/Guten Tag/, /melden Sie sich hier ab/], IT: [/Buongiorno/, /annullate/] }
+      teste(`${n}: idioma`, idioma[pais].every((r) => r.test(m.texto)))
+      // Em público é «educação em trading»: nunca network marketing, MLM nem pirâmide.
+      teste(`${n}: sem network marketing`, !/network|marketing multin|\bMLM\b|pir[âa]mide/i.test(m.texto))
+      teste(`${n}: sem promessa de lucro`, !/lucro garantido|garantid|guaranteed|rendimento passivo/i.test(m.texto))
     }
   }
 }
+teste('DE/IT exigem consentimento', exigeConsentimento('info@x.fr', 'DE') && exigeConsentimento('info@x.com', 'IT'))
+teste('domínios .de/.es/.it/.at/.nl exigem consentimento', ['info@a.de', 'info@b.es', 'info@c.it', 'info@d.at', 'info@e.nl'].every((e) => exigeConsentimento(e, 'INT')))
+teste('FR, PT e EUA sem opt-in B2B', !exigeConsentimento('contact@a.fr', 'FR') && !exigeConsentimento('geral@b.pt', 'PT') && !exigeConsentimento('hello@c.com', 'INT'))
+teste('lerPais aceita FR/DE/IT', lerPais('fr') === 'FR' && lerPais('DE') === 'DE' && lerPais('it') === 'IT')
 teste('2.º toque só depois de 4 dias', !prontoParaToque({ estado: 'contactado', toques: 1, ultimo_toque_em: new Date(Date.now() - 2 * 86_400_000).toISOString() }, cfg))
 teste('2.º toque ao fim de 4 dias', prontoParaToque({ estado: 'contactado', toques: 1, ultimo_toque_em: new Date(Date.now() - 5 * 86_400_000).toISOString() }, cfg))
 teste('depois do 3.º toque, acabou', !prontoParaToque({ estado: 'contactado', toques: 3, ultimo_toque_em: null }, cfg))
@@ -120,6 +129,32 @@ teste('robots: Disallow vazio permite', robotsPermite('User-agent: *\nDisallow:'
   teste('extrai só do domínio do site', e.includes('geral@exemplo.pt') && e.includes('info@exemplo.pt') && e.includes('parcerias@sub.exemplo.pt') && !e.includes('outro@gmail.com'))
   teste('ignora imagens', !e.some((x) => x.endsWith('.png')))
 }
+
+// ── 16/11: segmentos novos, páginas de links, prova de pessoa colectiva, candidatos ─────────
+teste('INT sem textos (escola) não sai', decidirEnvioB2B(pros('info@school.co.uk', { pais: 'INT', segmento: 'escola' }), { cfg, enviadosHoje: 0, exclusao: [], segredo: SEG }).decisao === 'bloqueado')
+teste('INT licenca_scanners sai', decidirEnvioB2B(pros('info@academy.co.uk', { pais: 'INT', segmento: 'licenca_scanners' }), { cfg, enviadosHoje: 0, exclusao: [], segredo: SEG }).decisao === 'sai')
+teste('negocio_local leva à agenda de negócios', /\/agendar\?t=negocios/.test(montarMensagem({ segmento: 'negocio_local', pais: 'PT', toque: 1, empresa: 'Estúdio X', email: 'geral@estudiox.pt', segredo: SEG }).texto))
+teste('parceria_redes T2 leva às parcerias', /\/agendar\?t=parcerias/.test(montarMensagem({ segmento: 'parceria_redes', pais: 'PT', toque: 2, empresa: 'Marca Y', email: 'geral@marcay.pt', segredo: SEG }).texto))
+teste('lerPais', lerPais('br') === 'BR' && lerPais('en') === 'INT' && lerPais(undefined) === 'PT')
+teste('linktr.ee é página de links', ePaginaDeLinks('linktr.ee') && ePaginaDeLinks('beacons.ai') && !ePaginaDeLinks('exemplo.pt'))
+{
+  const html = 'Marcações: <a href="mailto:reservas@estudiox.pt">x</a> ou estudiox@gmail.com · sentry@o123.ingest.sentry.io · foto@2x.png'
+  const e = extrairEmailsDeLinks(html)
+  teste('links: aceita email do domínio do negócio', e.includes('reservas@estudiox.pt'))
+  teste('links: recusa webmail pessoal', !e.includes('estudiox@gmail.com'))
+  teste('links: ignora imagens e sentry', !e.some((x) => x.endsWith('.png') || x.includes('sentry')))
+}
+teste('prova: NIPC de empresa', !!evidenciaPessoaColectiva('<footer>NIPC: 514 123 456</footer>'.replace('514 123 456', '514123456')))
+teste('prova: NIF de pessoa singular não conta', evidenciaPessoaColectiva('<footer>NIF 212345678</footer>') === null)
+teste('prova: CNPJ', !!evidenciaPessoaColectiva('CNPJ: 12.345.678/0001-90'))
+teste('prova: forma jurídica com o nome da empresa', !!evidenciaPessoaColectiva('© 2026 Estúdio Aurora, Lda. Todos os direitos', 'Estúdio Aurora'))
+teste('prova: forma jurídica de outra empresa (agência) não conta', evidenciaPessoaColectiva('Site feito por Agência Pixel, Lda.', 'Estúdio Aurora') === null)
+teste('candidato: sem segmento válido recusado', normalizarCandidato({ empresa: 'X', url: 'https://x.pt', segmento: 'nada' }) === null)
+teste('candidato: URL sem esquema corrigida', normalizarCandidato({ empresa: 'X', url: 'linktr.ee/x', segmento: 'negocio_local' })?.url === 'https://linktr.ee/x')
+teste('candidato: PC só com identificação', normalizarCandidato({ empresa: 'X', url: 'https://x.pt', segmento: 'licenca_scanners', pessoa_colectiva: true })?.pessoa_colectiva === false)
+teste('remetente: B2B_MAIL_FROM válido', remetenteB2B('MoreThanMoney <a@gmail.com>', { B2B_MAIL_FROM: 'geral@morethanmoney.pt' }) === 'MoreThanMoney <geral@morethanmoney.pt>')
+teste('remetente: sem B2B_MAIL_FROM fica o do site', remetenteB2B('MoreThanMoney <a@gmail.com>', {}) === 'MoreThanMoney <a@gmail.com>')
+teste('respostas vão para geral@', readFileSync(join(__dirname, 'envio.ts'), 'utf8').includes("replyTo: RESPOSTAS_B2B"))
 
 // ── O código: nada envia sem passar pela decisão ────────────────────────────────────────────
 {
@@ -141,6 +176,16 @@ teste('robots: Disallow vazio permite', robotsPermite('User-agent: *\nDisallow:'
   teste('registo do envio grava o Prospector', src.includes('agente: AGENTE_B2B, base_legal') && !src.includes('p.agente || AGENTE_B2B'))
   // O tecto continua: com 20 hoje, mesmo o Prospector não envia o 21.º.
   teste('Prospector respeita o tecto', decidirEnvioB2B(pros('geral@exemplo.pt'), { cfg, enviadosHoje: 20, exclusao: [], segredo: SEG }).decisao !== 'sai')
+}
+
+{
+  // 17/11: a demo do dia entra no 1.º toque, assinada com ?ag=, só para o segmento que serve.
+  const m = montarMensagem({ segmento: 'negocio_local', pais: 'PT', toque: 1, empresa: 'Estúdio X', email: 'geral@estudiox.pt', segredo: SEG, hoje: '2026-11-19' })
+  teste('demo do dia no 1.º toque', /\/solucoes\/demos\/marcacoes-whatsapp\?ag=AG-PROSPECTOR/.test(m.texto) && validarMensagem(m.texto).ok)
+  const m2 = montarMensagem({ segmento: 'negocio_local', pais: 'PT', toque: 2, empresa: 'Estúdio X', email: 'geral@estudiox.pt', segredo: SEG, hoje: '2026-11-19' })
+  teste('sem demo nos toques 2 e 3', !/solucoes\/demos/.test(m2.texto))
+  const m3 = montarMensagem({ segmento: 'licenca_scanners', pais: 'INT', toque: 1, empresa: 'Acme', email: 'info@acme.com', segredo: SEG, hoje: '2026-11-19' })
+  teste('sem demo quando nenhuma serve o segmento', !/solucoes\/demos/.test(m3.texto))
 }
 
 if (falhas.length) {

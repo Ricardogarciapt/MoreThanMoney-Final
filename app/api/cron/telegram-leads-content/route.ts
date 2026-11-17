@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server"
 import { getSupabaseAdmin } from "@/lib/supabase-admin-client"
 import { isCronAuthorized } from "@/lib/cron-auth"
 import { getMtmcopyBotToken } from "@/lib/mtmcopy/telegram-bot"
-import { getWeeklyFlyerStats, fmtSigned, fmtPt } from "@/lib/mtm-flyer/weekly-stats"
+import { getWeeklyFlyerStats, fmtSigned, fmtPt, resumoEstrategias } from "@/lib/mtm-flyer/weekly-stats"
 import { tradesGanhasRecentes } from "@/lib/pips-proof"
 import { postDoSlot, type DadosPosts } from "@/lib/telegram-leads-posts"
 import { legendaDoPost } from "@/lib/telegram-legenda-ig"
@@ -125,8 +125,8 @@ export async function GET(request: NextRequest) {
       const captions = {
         pt:
           `📊 <b>Resultados da semana ${stats.periodLabel}</b>\n\n` +
-          `<b>${fmtSigned(stats.totalPips)} pips</b> em sinais fechados · ≈ <b>$${fmtPt(stats.minLotUsd)}</b> a lote mínimo (0.01/0.1)\n` +
-          `🥇 Premium ${fmtSigned(stats.premium.netPips)} · 📡 Scanner ${fmtSigned(stats.scanner.pips)} · 🧠 Sensei ${fmtSigned(stats.sensei.pips)} · ⚔️ GoldKiller ${fmtSigned(stats.goldkiller.pips)}\n\n` +
+          `<b>${fmtSigned(stats.totalPips)} pips</b> em trades fechadas · ≈ <b>$${fmtPt(stats.minLotUsd)}</b> a lote mínimo (0.01)\n` +
+          `${resumoEstrategias(stats).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")}\n\n` +
           `Conteúdo educativo — resultados passados não garantem resultados futuros. Queres receber estes sinais? 👇`,
         en: `📊 <b>Weekly results ${stats.periodLabelEn}</b> — educational content; past results do not guarantee future results.`,
       }

@@ -9,7 +9,7 @@
  */
 
 import { ImageResponse } from 'next/og'
-import { getWeeklyFlyerStats, fmtSignedNum, fmtNum, winRatePct, type FlyerLang } from '@/lib/mtm-flyer/weekly-stats'
+import { getWeeklyFlyerStats, fmtSignedNum, fmtNum, fmtUsd, winRatePct, type FlyerLang } from '@/lib/mtm-flyer/weekly-stats'
 
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
@@ -18,7 +18,7 @@ export const maxDuration = 60
 const GOLD = '#efb810'
 const GREY = '#bdbdbd'
 
-function Card({ emoji, name, detail, value, unit }: { emoji: string; name: string; detail: string; value: string; unit: string }) {
+function Card({ emoji, name, detail, value, unit, compacto }: { emoji: string; name: string; detail: string; value: string; unit: string; compacto?: boolean }) {
   return (
     <div
       style={{
@@ -28,16 +28,16 @@ function Card({ emoji, name, detail, value, unit }: { emoji: string; name: strin
         background: 'rgba(255,255,255,0.05)',
         border: `1px solid rgba(239,184,16,0.35)`,
         borderRadius: 24,
-        padding: '22px 32px',
+        padding: compacto ? '12px 28px' : '22px 32px',
       }}
     >
       <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-        <div style={{ display: 'flex', fontSize: 36, fontWeight: 700, color: '#fff' }}>{`${emoji} ${name}`}</div>
-        <div style={{ display: 'flex', fontSize: 24, color: GREY }}>{detail}</div>
+        <div style={{ display: 'flex', fontSize: compacto ? 30 : 36, fontWeight: 700, color: '#fff' }}>{`${emoji} ${name}`}</div>
+        <div style={{ display: 'flex', fontSize: compacto ? 21 : 24, color: GREY }}>{detail}</div>
       </div>
       <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end' }}>
-        <div style={{ display: 'flex', fontSize: 52, fontWeight: 700, color: GOLD, lineHeight: 1 }}>{value}</div>
-        <div style={{ display: 'flex', fontSize: 22, color: GREY, marginTop: 4 }}>{unit}</div>
+        <div style={{ display: 'flex', fontSize: compacto ? 42 : 52, fontWeight: 700, color: GOLD, lineHeight: 1 }}>{value}</div>
+        <div style={{ display: 'flex', fontSize: compacto ? 19 : 22, color: GREY, marginTop: 4 }}>{unit}</div>
       </div>
     </div>
   )
@@ -49,18 +49,17 @@ const STR = {
     title1: 'RESULTADOS ',
     title2: 'DA SEMANA',
     days: 'SEG–SEX',
-    sub: 'PIPS ACUMULADOS EM SINAIS FECHADOS',
-    premium: 'Sinais Premium',
+    sub: 'PIPS EM TRADES FECHADAS',
+    ptsTotal: (n: string) => `${n} pontos em índices e cripto`,
     trades: 'trades',
-    signals: 'sinais',
-    closedSignals: 'sinais fechados',
-    noLosses: ' · sem perdas',
     winRate: 'win rate',
     with: 'c/',
-    idxPts: 'pts índices',
+    pts: 'pontos',
+    vazio: 'Sem trades fechadas nesta semana.',
     best: 'Melhores trades',
-    minLot: (usd: string) => `💰 Com lote mínimo 0.01 (forex/ouro) e 0.1 (índices): ≈ $${usd} na semana`,
+    minLot: (usd: string) => `💰 Com lote mínimo 0.01 (forex/ouro): ≈ ${usd} na semana`,
     cta: 'QUERO RECEBER OS SINAIS 🚀',
+    disc0: 'Medido nas contas-mestre MTM (simuladas) que o MTM Auto copia. Índices e cripto em pontos, fora do total.',
     disc1: 'Conteúdo educativo — não constitui consultoria financeira. Simulação aproximada: ≈$0,10/pip a 0.01 lote.',
     disc2: 'Resultados passados não garantem resultados futuros. Trading envolve risco de perda de capital.',
   },
@@ -68,18 +67,17 @@ const STR = {
     title1: 'WEEKLY ',
     title2: 'RESULTS',
     days: 'MON–FRI',
-    sub: 'TOTAL PIPS ON CLOSED SIGNALS',
-    premium: 'Premium Signals',
+    sub: 'PIPS ON CLOSED TRADES',
+    ptsTotal: (n: string) => `${n} points on indices and crypto`,
     trades: 'trades',
-    signals: 'signals',
-    closedSignals: 'closed signals',
-    noLosses: ' · no losses',
     winRate: 'win rate',
     with: 'w/',
-    idxPts: 'index pts',
+    pts: 'points',
+    vazio: 'No closed trades this week.',
     best: 'Best trades',
-    minLot: (usd: string) => `💰 With minimum lot 0.01 (forex/gold) and 0.1 (indices): ≈ $${usd} this week`,
+    minLot: (usd: string) => `💰 With minimum lot 0.01 (forex/gold): ≈ ${usd} this week`,
     cta: 'GET THE SIGNALS 🚀',
+    disc0: 'Measured on the MTM master accounts (simulated) that MTM Auto copies. Indices and crypto in points, outside the total.',
     disc1: 'Educational content — not financial advice. Approximate simulation: ≈$0.10/pip at 0.01 lot.',
     disc2: 'Past results do not guarantee future results. Trading involves risk of capital loss.',
   },
@@ -99,12 +97,16 @@ export async function GET(request: Request) {
     return p == null ? '' : ` · ${p}% ${t.winRate}`
   }
 
-  const s = stats.scanner
   const periodLabel = lang === 'en' ? stats.periodLabelEn : stats.periodLabel
-  const scannerUnit = s.points !== 0 ? `pips · ${fmtS(s.points)} ${t.idxPts}` : 'pips'
-  const bests: string[] = []
-  if (s.bestPips > 0) bests.push(`+${fmt(s.bestPips)} pips (Scanner · ${s.bestSymbol ?? ''})`)
-  if (stats.premium.bestPips > 0) bests.push(`+${fmt(stats.premium.bestPips)} pips (Premium · GOLD)`)
+  const EMOJIS = ['🥇', '🥈', '🥉', '📡', '⚔️', '🧠', '🌀', '🎯']
+  const lista = stats.estrategias.slice(0, 8)
+  const compacto = lista.length > 4
+  const apertado = lista.length > 6
+  const bests = [...stats.estrategias]
+    .filter((e) => e.bestPips > 0)
+    .sort((x, y) => y.bestPips - x.bestPips)
+    .slice(0, compacto ? 1 : 2)
+    .map((e) => `+${fmt(e.bestPips)} pips (${e.nome}${e.bestSymbol ? ` · ${e.bestSymbol}` : ''})`)
 
   return new ImageResponse(
     (
@@ -137,7 +139,7 @@ export async function GET(request: Request) {
 
         <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 8 }}>
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={`${origin}/logo-mtm-transparent.png`} alt="" width={190} height={190} />
+          <img src={`${origin}/logo-mtm-transparent.png`} alt="" width={compacto ? 130 : 190} height={compacto ? 130 : 190} />
         </div>
 
         <div style={{ display: 'flex', justifyContent: 'center', fontSize: 64, fontWeight: 700 }}>
@@ -162,47 +164,42 @@ export async function GET(request: Request) {
           </div>
         </div>
 
-        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', marginBottom: 26 }}>
-          <div style={{ display: 'flex', fontSize: 128, fontWeight: 700, color: GOLD, lineHeight: 1 }}>
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', marginBottom: compacto ? 18 : 26 }}>
+          <div style={{ display: 'flex', fontSize: compacto ? 104 : 128, fontWeight: 700, color: GOLD, lineHeight: 1 }}>
             {fmtS(stats.totalPips)}
           </div>
           <div style={{ display: 'flex', fontSize: 34, letterSpacing: 4, fontWeight: 700, marginTop: 8 }}>
             {t.sub}
           </div>
+          {stats.totalPoints !== 0 ? (
+            <div style={{ display: 'flex', fontSize: 28, color: GREY, marginTop: 6 }}>{t.ptsTotal(fmtS(stats.totalPoints))}</div>
+          ) : null}
         </div>
 
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
-          <Card
-            emoji="🥇"
-            name={t.premium}
-            detail={`${stats.premium.trades} ${t.trades} · ${stats.premium.wins}W/${stats.premium.losses}L${wr(stats.premium.wins, stats.premium.losses)}`}
-            value={fmtS(stats.premium.netPips)}
-            unit={`pips ≈ $${fmt(Math.round(stats.premium.netPips * 0.1))} ${t.with} 0.01`}
-          />
-          <Card
-            emoji="📡"
-            name="MTM Scanner V3.4"
-            detail={`${s.signals} ${t.closedSignals}${wr(s.wins, s.losses)}`}
-            value={fmtS(s.pips)}
-            unit={scannerUnit}
-          />
-          <Card
-            emoji="🧠"
-            name="Sensei X"
-            detail={`${stats.sensei.signals} ${t.signals} · XAUUSD${wr(stats.sensei.wins, stats.sensei.losses)}`}
-            value={fmtS(stats.sensei.pips)}
-            unit={`pips ≈ $${fmt(Math.round(stats.sensei.pips * 0.1))} ${t.with} 0.01`}
-          />
-          <Card
-            emoji="⚔️"
-            name="GoldKiller"
-            detail={`${stats.goldkiller.signals} ${t.closedSignals}${stats.goldkiller.losses === 0 && stats.goldkiller.signals > 0 ? t.noLosses : ''}${wr(stats.goldkiller.wins, stats.goldkiller.losses)}`}
-            value={fmtS(stats.goldkiller.pips)}
-            unit={`pips ≈ $${fmt(Math.round(stats.goldkiller.pips * 0.1))} ${t.with} 0.01`}
-          />
+        <div style={{ display: 'flex', flexDirection: 'column', gap: compacto ? 10 : 18 }}>
+          {lista.length === 0 ? (
+            <div style={{ display: 'flex', justifyContent: 'center', fontSize: 30, color: GREY }}>{t.vazio}</div>
+          ) : null}
+          {lista.map((e, i) => {
+            const emPips = e.pips !== 0 || e.points === 0
+            const unit = emPips
+              ? `pips ≈ ${fmtUsd(Math.round(e.pips * 0.1), lang)} ${t.with} 0.01${e.points !== 0 ? ` · ${fmtS(e.points)} ${t.pts}` : ''}`
+              : t.pts
+            return (
+              <Card
+                key={e.slug}
+                compacto={compacto}
+                emoji={EMOJIS[i] ?? '•'}
+                name={e.nome}
+                detail={`${e.trades} ${t.trades} · ${e.wins}W/${e.losses}L${wr(e.wins, e.losses)}`}
+                value={fmtS(emPips ? e.pips : e.points)}
+                unit={unit}
+              />
+            )
+          })}
         </div>
 
-        {bests.length > 0 ? (
+        {bests.length > 0 && !apertado ? (
           <div
             style={{
               display: 'flex',
@@ -219,6 +216,7 @@ export async function GET(request: Request) {
           </div>
         ) : null}
 
+        {apertado ? null : (
         <div
           style={{
             display: 'flex',
@@ -231,8 +229,9 @@ export async function GET(request: Request) {
             padding: '18px 24px',
           }}
         >
-          {t.minLot(fmt(stats.minLotUsd))}
+          {t.minLot(fmtUsd(stats.minLotUsd, lang))}
         </div>
+        )}
 
         <div style={{ display: 'flex', flexGrow: 1 }} />
 
@@ -263,6 +262,7 @@ export async function GET(request: Request) {
             textAlign: 'center',
           }}
         >
+          <div style={{ display: 'flex' }}>{t.disc0}</div>
           <div style={{ display: 'flex' }}>{t.disc1}</div>
           <div style={{ display: 'flex' }}>{t.disc2}</div>
         </div>

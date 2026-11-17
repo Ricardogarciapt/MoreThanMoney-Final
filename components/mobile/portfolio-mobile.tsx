@@ -1253,7 +1253,7 @@ www.morethanmoney.com`
                         <div>
                           <Label>{t("portfolio.symbol")}</Label>
                           <Input
-                            placeholder={semCripto() ? "Ex: SPY" : t("portfolio.symbolPlaceholder")}
+                            placeholder={semCripto() ? t("amA.portfolio.symbolSpy") : t("portfolio.symbolPlaceholder")}
                             value={newAsset.symbol}
                             onChange={(e) => setNewAsset({ ...newAsset, symbol: e.target.value })}
                             className="bg-gray-800 border-gray-700 text-white"
@@ -1262,7 +1262,7 @@ www.morethanmoney.com`
                         <div>
                           <Label>{t("portfolio.name")}</Label>
                           <Input
-                            placeholder={semCripto() ? "Ex: S&P 500" : t("portfolio.namePlaceholder")}
+                            placeholder={semCripto() ? t("amA.portfolio.nameSpy") : t("portfolio.namePlaceholder")}
                             value={newAsset.name}
                             onChange={(e) => setNewAsset({ ...newAsset, name: e.target.value })}
                             className="bg-gray-800 border-gray-700 text-white"

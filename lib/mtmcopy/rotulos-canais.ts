@@ -22,6 +22,7 @@ export const ROTULOS_CANAIS_T2T: Record<string, string> = {
   'sensei-scanner': 'MTM Auto Sensei',
   'sinais-goldkiller': 'Sinais Scanner Gold Killer',
   'sinais-premium-ii': 'MTM Auto Premium II',
+  'sinais-trendshot': 'MTM Auto Trendshot',
   // O slug é histórico; o canal visível é só a estratégia Edge (a Wolf e a King saíram das listas).
   'sinais-scanner-mtm': 'MTM Auto Edge',
   // O slug `aurum-flow` mantém-se (mudá-lo obrigava a mexer em ~95 ficheiros, no histórico de

@@ -21,7 +21,7 @@ import type { EscritorDestino, PosicaoDestinoLida } from '../motor'
 import type { ContextoDestino, Direcao, PosicaoOrigem } from '../tipos'
 import { db } from './base'
 import { lerContaPorRef, tokenDaConta, type ContaPorRef } from './refs'
-import { chaveDoSaldo, guardarSaldoLido } from './saldos-lidos'
+import { chaveDoSaldo, guardarMovimentos, guardarSaldoLido } from './saldos-lidos'
 
 /**
  * OS ESCRITORES DE DESTINO — a única porta por onde a cópia entre contas toca numa corretora.
@@ -38,7 +38,7 @@ import { chaveDoSaldo, guardarSaldoLido } from './saldos-lidos'
  * chama `contexto`, `simbolos` e `posicoes`.
  */
 
-const cacheInfo = new Map<string, { v: { equity: number | null; saldo: number | null; moeda: string | null }; em: number }>()
+const cacheInfo = new Map<string, { v: { equity: number | null; saldo: number | null; credito: number | null; moeda: string | null }; em: number }>()
 
 function depsDoToken(t: TokenResolvido): DepsMt5 {
   if (t.chave === 'casa') return DEPS_MT5
@@ -56,10 +56,10 @@ async function infoMt(accountId: string, deps: DepsMt5) {
   const c = cacheInfo.get(accountId)
   if (c && Date.now() - c.em < 5_000) return c.v
   const i = (await deps.rest(accountId, '/account-information')) as Record<string, unknown> | null
-  const v = { equity: i?.equity == null ? null : Number(i.equity), saldo: i?.balance == null ? null : Number(i.balance), moeda: (i?.currency as string) ?? null }
+  const v = { equity: i?.equity == null ? null : Number(i.equity), saldo: i?.balance == null ? null : Number(i.balance), credito: i?.credit == null ? null : Number(i.credit), moeda: (i?.currency as string) ?? null }
   cacheInfo.set(accountId, { v, em: Date.now() })
   // A cópia já leu a conta: o saldo fica guardado para as listas do admin (1×/min por conta).
-  void guardarSaldoLido({ chave: accountId, saldo: v.saldo, equity: v.equity, moeda: v.moeda, origem: 'copia' })
+  void guardarSaldoLido({ chave: accountId, saldo: v.saldo, equity: v.equity, credito: v.credito, moeda: v.moeda, origem: 'copia' })
   return v
 }
 
@@ -300,7 +300,7 @@ export async function vistaAdminConta(ref: string) {
   try {
     const [info, posicoes] = await Promise.all([adaptador.conta(), adaptador.posicoes()])
     const chave = chaveDoSaldo(conta)
-    if (chave) await guardarSaldoLido({ chave, ref: conta.ref, saldo: info.saldo, equity: info.equity, moeda: info.moeda, origem: 'vista' })
+    if (chave) await guardarSaldoLido({ chave, ref: conta.ref, saldo: info.saldo, equity: info.equity, credito: info.credito, moeda: info.moeda, origem: 'vista' })
     return { plataforma: adaptador.plataforma, real: adaptador.real, conta: info, posicoes }
   } catch (e) {
     return { erro: e instanceof Error ? e.message : String(e) }
@@ -320,7 +320,12 @@ export async function lerEGuardarSaldo(ref: string): Promise<{ ok: true; saldo: 
   if (!adaptador) return { ok: false, erro: erro ?? 'Sem forma de ler esta conta.' }
   try {
     const info = await adaptador.conta()
-    await guardarSaldoLido({ chave, ref: conta.ref, saldo: info.saldo, equity: info.equity, moeda: info.moeda, origem: 'actualizar' })
+    await guardarSaldoLido({ chave, ref: conta.ref, saldo: info.saldo, equity: info.equity, credito: info.credito, moeda: info.moeda, origem: 'actualizar' })
+    // Depósitos/levantamentos/créditos (225): 1 pedido a mais por conta, só nesta leitura de hora a hora.
+    if (adaptador.movimentos) {
+      const movs = await adaptador.movimentos(90).catch(() => [])
+      await guardarMovimentos(chave, info.moeda, movs)
+    }
     return { ok: true, saldo: info.saldo, equity: info.equity }
   } catch (e) {
     return { ok: false, erro: (e instanceof Error ? e.message : String(e)).slice(0, 200) }

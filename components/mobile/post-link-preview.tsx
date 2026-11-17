@@ -5,6 +5,7 @@ import { Loader2 } from "lucide-react"
 import type { LinkPreviewData } from "@/lib/link-preview-types"
 import { getPrimaryUrlFromText } from "@/lib/url-utils"
 import LinkPreviewCard from "./link-preview-card"
+import { useT } from "@/components/i18n-provider"
 
 interface PostLinkPreviewProps {
   content: string
@@ -38,6 +39,7 @@ export default function PostLinkPreview({
   const [preview, setPreview] = useState<LinkPreviewData | null>(
     normalizeStoredPreview(storedPreview)
   )
+  const t = useT()
   const [loading, setLoading] = useState(false)
 
   useEffect(() => {
@@ -81,7 +83,7 @@ export default function PostLinkPreview({
         className={`flex items-center justify-center gap-2 py-8 rounded-xl border border-gray-700/60 bg-gray-900/50 ${className}`}
       >
         <Loader2 className="w-5 h-5 animate-spin text-[#D2A63C]" />
-        <span className="text-xs text-gray-500">A carregar pré-visualização…</span>
+        <span className="text-xs text-gray-500">{t("amC.link.loadingPreview")}</span>
       </div>
     )
   }
