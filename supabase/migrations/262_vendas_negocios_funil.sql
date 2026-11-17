@@ -1,4 +1,4 @@
--- 261 · O FUNIL de cada negócio (CRM Fase 3, 17/11/2026).
+-- 262 · O FUNIL de cada negócio (CRM Fase 3, 17/11/2026).
 --
 -- A Conduta v2 separa a venda em três funis — Educação (Membro/Premium), Rota Corretora e
 -- MTM Funded — e o B2B corre ao lado. Até aqui o negócio não dizia a qual pertencia, e o pipeline

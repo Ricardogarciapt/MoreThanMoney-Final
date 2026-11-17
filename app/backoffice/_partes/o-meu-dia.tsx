@@ -170,7 +170,7 @@ export async function OMeuDia({ ids, pessoaId }: Props) {
   const atrasadas = brutas.filter((t) => t.prazo && t.prazo < hoje).length
 
   /**
-   * O FUNIL de cada negócio (migração 261), lido à parte: se a coluna ainda não existir, a leitura
+   * O FUNIL de cada negócio (migração 262), lido à parte: se a coluna ainda não existir, a leitura
    * falha sozinha e o dia continua de pé, só sem o funil.
    */
   const funilPorNegocio = new Map<string, string | null>()

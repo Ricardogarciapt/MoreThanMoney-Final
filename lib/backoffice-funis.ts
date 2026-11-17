@@ -1,7 +1,7 @@
 /**
  * OS FUNIS DO PIPELINE (CRM Fase 3, 17/11/2026) — Conduta v2 mais o B2B.
  *
- * Um negócio pertence a um destes quatro, guardado em `vendas_negocios.funil` (migração 261).
+ * Um negócio pertence a um destes quatro, guardado em `vendas_negocios.funil` (migração 262).
  * `null` é «por classificar» e mostra-se como tal: não se deduz um funil por palpite.
  */
 export const FUNIS = ['educacao', 'corretora', 'funded', 'b2b'] as const

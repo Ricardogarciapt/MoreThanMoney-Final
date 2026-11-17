@@ -122,7 +122,7 @@ export default async function FichaPage({ params }: { params: Promise<{ id: stri
 
       <Cabecalho titulo={n.nome} sub="Ficha única: tudo o que a casa sabe deste contacto, de todos os canais." />
 
-      {semFunil && <Aviso>Falta aplicar a migração 261 (coluna «funil»): o funil ainda não se pode escolher.</Aviso>}
+      {semFunil && <Aviso>Falta aplicar a migração 262 (coluna «funil»): o funil ainda não se pode escolher.</Aviso>}
 
       <section className="rounded-xl border border-[#D2A63C]/30 bg-[#D2A63C]/5 p-4">
         <div className="flex flex-wrap items-center gap-2">

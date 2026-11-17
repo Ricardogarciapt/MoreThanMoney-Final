@@ -37,7 +37,7 @@ export interface NegocioDaFicha {
   criado_em: string
   atualizado_em: string
   fechado_em: string | null
-  /** `undefined` quando a migração 261 ainda não está aplicada. */
+  /** `undefined` quando a migração 262 ainda não está aplicada. */
   funil?: string | null
 }
 
@@ -46,7 +46,7 @@ const COLUNAS_BASE =
   'estado, motivo_perda, nota, prospector_id, setter_id, closer_id, team_leader_id, afiliado_id, ' +
   'agente_id, agente_pontuacao, agente_qualificacao, criado_em, atualizado_em, fechado_em'
 
-/** A coluna `funil` não existe (migração 261 por aplicar)? Então lê-se sem ela, e diz-se. */
+/** A coluna `funil` não existe (migração 262 por aplicar)? Então lê-se sem ela, e diz-se. */
 export function faltaColunaFunil(erro: { message?: string } | null | undefined): boolean {
   return !!erro?.message && /funil/i.test(erro.message) && /column|coluna/i.test(erro.message)
 }

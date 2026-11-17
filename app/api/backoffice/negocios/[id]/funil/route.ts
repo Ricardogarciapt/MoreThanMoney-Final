@@ -43,7 +43,7 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
     .maybeSingle()
   if (error) {
     if (faltaColunaFunil(error)) {
-      return NextResponse.json({ error: 'Falta aplicar a migração 261 (coluna funil).' }, { status: 503 })
+      return NextResponse.json({ error: 'Falta aplicar a migração 262 (coluna funil).' }, { status: 503 })
     }
     return NextResponse.json({ error: error.message }, { status: 500 })
   }

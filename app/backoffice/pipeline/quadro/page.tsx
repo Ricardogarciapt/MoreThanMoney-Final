@@ -104,7 +104,7 @@ export default async function QuadroPage({ searchParams }: { searchParams: Promi
   try {
     let respostas = await Promise.all(ESTADOS_PIPELINE.map((e) => lerColuna(e, true)))
     if (respostas.some((r) => faltaColunaFunil(r.error))) {
-      // Migração 261 por aplicar: mostra-se o quadro sem separar por funil, e diz-se porquê.
+      // Migração 262 por aplicar: mostra-se o quadro sem separar por funil, e diz-se porquê.
       semColuna = true
       respostas = await Promise.all(ESTADOS_PIPELINE.map((e) => lerColuna(e, false)))
     }
@@ -142,7 +142,7 @@ export default async function QuadroPage({ searchParams }: { searchParams: Promi
       {aviso && <Aviso>{aviso}</Aviso>}
       {semColuna && (
         <Aviso>
-          Falta aplicar a migração 261 (coluna «funil»). Até lá o quadro mostra todos os negócios juntos e não dá para
+          Falta aplicar a migração 262 (coluna «funil»). Até lá o quadro mostra todos os negócios juntos e não dá para
           escolher o funil.
         </Aviso>
       )}
