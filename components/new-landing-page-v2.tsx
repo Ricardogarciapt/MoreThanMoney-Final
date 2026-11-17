@@ -191,12 +191,6 @@ const AREAS: Area[] = [
     d: "Pôr a IA a trabalhar no teu negócio: automatizar o que se repete, produzir conteúdo e devolver-te as horas.",
     meta: ["percurso em vídeo", "ao teu ritmo"],
   },
-  {
-    p: "content",
-    t: "Network Marketing", edu: null,
-    d: "Prospetar, comunicar e fazer crescer uma equipa — do primeiro contacto à duplicação.",
-    meta: ["percurso em vídeo", "ao teu ritmo"],
-  },
 ]
 
 const sig = (n: string) => {

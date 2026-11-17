@@ -116,10 +116,6 @@ export const AREAS: Area[] = [
     descricao:
       'Pôr a IA a trabalhar no teu negócio: automatizar o que se repete, produzir conteúdo e devolver-te as horas.',
   },
-  {
-    pilar: 'content', titulo: 'Network Marketing', academias: ['network-marketing'],
-    descricao: 'Prospetar, comunicar e fazer crescer uma equipa — do primeiro contacto à duplicação.',
-  },
 ]
 
 export function areasDoPilar(pilar: PilarId): Area[] {

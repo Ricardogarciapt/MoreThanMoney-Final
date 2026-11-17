@@ -33,7 +33,7 @@ export const TESTEMUNHOS: Testemunho[] = [
   { n: "Rui Rodrigues", l: "Chat da app · 3 jul 2026", chat: true, q: "Boas tardes, máquinas. Dá gosto ver-vos a trabalhar e a ter resultados." },
   { n: "Rúben Daniel Sousa", l: "Chat da app · 26 jun 2026", chat: true, q: "Correu bem. Consegui fazer boas trades, lucrar algum. Umas perdas mas infelizmente faz parte." },
   { n: "Tiago Pedrosa", l: "Chat da app · 24 jun 2026", chat: true, q: "Bom dia equipa! Só para registar o momento: fiz a primeira compra na app!" },
-  { n: "Rafael Bastos", l: "Leiria, Portugal", q: "Rising Star foi uma conquista 100%! Com dedicação ao máximo consegui resultados incríveis usando os scanners MTM." },
+  { n: "Rafael Bastos", l: "Leiria, Portugal", q: "Foi uma conquista 100%! Com dedicação ao máximo consegui resultados incríveis usando os scanners MTM." },
   { n: "Liliana Faria", l: "Alpiarça, Portugal", q: "A tua fundação para director foi criada! Estás a um passo de distância! Trabalhar contigo tem sido uma inspiração diária." },
   { n: "Gonçalo & Vânia", l: "Braga, Portugal", q: "Mais uma recompensa pelo bom trabalho para este casal incrível da minha equipa. Parabéns, feliz por vocês!" },
   { n: "André Dias", l: "Suíça", q: "Muito obrigado pelo vosso apoio, maltinha. Não me deixaram desistir nos momentos mais difíceis." },

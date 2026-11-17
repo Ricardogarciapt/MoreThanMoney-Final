@@ -4,6 +4,10 @@ import { sortLmsAcademiesByOfficialOrder } from "@/lib/lms-academies"
 
 const supabase = getSupabaseAdmin()
 
+// Academias que a casa deixou de mostrar em público (17/11: sem network marketing). Continuam na BD
+// e no admin; só não aparecem na grelha das aulas.
+const ACADEMIAS_FORA_DO_PUBLICO = new Set(["network-marketing"])
+
 export async function GET() {
   try {
     const { data, error } = await supabase.from("lms_academies").select("*")
@@ -12,7 +16,8 @@ export async function GET() {
       return NextResponse.json({ error: error.message }, { status: 500 })
     }
 
-    const sorted = sortLmsAcademiesByOfficialOrder(data || [])
+    const visiveis = (data || []).filter((a: { slug?: string | null }) => !ACADEMIAS_FORA_DO_PUBLICO.has(a.slug || ""))
+    const sorted = sortLmsAcademiesByOfficialOrder(visiveis)
     return NextResponse.json({ success: true, data: sorted })
   } catch (error: any) {
     return NextResponse.json({ error: error.message || "Erro interno" }, { status: 500 })
