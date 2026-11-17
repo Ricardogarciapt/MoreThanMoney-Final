@@ -76,3 +76,34 @@ export const ROTULO_ESTADO: Record<EstadoKit, string> = {
   'a-montar': 'Em montagem',
   'por-fazer': 'Em breve',
 }
+
+export interface Prototipo {
+  id: string
+  /** Nome real do negócio para quem o protótipo foi feito (OK do Ricardo a 17/11). */
+  marca: string
+  sector: string
+  resumo: string
+  partes: string[]
+  url: string
+  /** Código do back-office de demonstração, se houver. */
+  codigo?: string
+}
+
+/**
+ * Protótipos completos feitos para apresentar a um negócio concreto (Monorepo clientes/<slug>).
+ * São PROPOSTAS: o negócio ainda não é cliente, e a página diz isso em cada cartão (DL 57/2008).
+ */
+export const PROTOTIPOS: Prototipo[] = [
+  {
+    id: 'o-vitor', marca: 'O Vítor', sector: 'Restaurante e churrasqueira',
+    resumo: 'Site e app de reservas com a ementa à vista e pré-pedido, e back-office onde o dono dita a ementa por voz.',
+    partes: ['Reserva de mesa com pré-pedido', 'Ementa ditada por voz', 'Planta das mesas em tempo real', 'Da reserva ao serviço num toque'],
+    url: 'https://o-vitor-santarem.vercel.app/#/apresentacao', codigo: '1234',
+  },
+  {
+    id: 'aguias-alpiarca', marca: 'C.D. Os Águias de Alpiarça', sector: 'Clube desportivo',
+    resumo: 'Site novo e app do sócio, com canais por modalidade, escape rooms do clube e back-office da direcção.',
+    partes: ['App do sócio e dos pais', 'Canais e notícias por modalidade', 'Escape rooms com QR', 'Back-office com papéis'],
+    url: 'https://aguias-alpiarca.vercel.app',
+  },
+]
