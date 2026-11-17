@@ -1,7 +1,7 @@
 "use client"
 
 import { useEffect, useMemo, useState } from "react"
-import { Bell, CalendarCheck, Check, FileText, MessageCircle, Package, Sparkles, Users } from "lucide-react"
+import { Bell, CalendarCheck, Check, FileText, Loader2, MessageCircle, Package, Plus, Sparkles, Users } from "lucide-react"
 import {
   PRESSUPOSTOS,
   SECTORES,
@@ -27,7 +27,14 @@ function horasIniciais(s: Sector): Record<string, number> {
 
 export function SimuladorSolucoes({ agendar }: { agendar: string }) {
   const [sectorId, setSectorId] = useState(SECTORES[0].id)
-  const sector = SECTORES.find((s) => s.id === sectorId) ?? SECTORES[0]
+  // Negócio fora da lista: a IA monta-o a partir do que a pessoa escreve (e do site, se o der).
+  const [livre, setLivre] = useState<Sector | null>(null)
+  const [abrirLivre, setAbrirLivre] = useState(false)
+  const [negocio, setNegocio] = useState("")
+  const [siteLivre, setSiteLivre] = useState("")
+  const [aMontar, setAMontar] = useState(false)
+  const [erroLivre, setErroLivre] = useState("")
+  const sector = sectorId === "outro" && livre ? livre : (SECTORES.find((s) => s.id === sectorId) ?? SECTORES[0])
   const [horas, setHoras] = useState<Record<string, number>>(() => horasIniciais(SECTORES[0]))
   const [custo, setCusto] = useState(PRESSUPOSTOS.custoHoraOmissao)
   const [verTodas, setVerTodas] = useState(false)
@@ -38,6 +45,28 @@ export function SimuladorSolucoes({ agendar }: { agendar: string }) {
   const r = useMemo(() => simular(horas, custo), [horas, custo])
   const areas = r.prioridades.slice(0, 4)
   const ativa = areas[Math.min(ecra, Math.max(areas.length - 1, 0))]
+
+  async function montarLivre(ev: React.FormEvent) {
+    ev.preventDefault()
+    setErroLivre("")
+    if (negocio.trim().length < 3) return setErroLivre("Diz-nos que negócio é, em poucas palavras.")
+    setAMontar(true)
+    try {
+      const r = await fetch("/api/solucoes/sector", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ negocio, site: siteLivre }),
+      })
+      const j = await r.json()
+      if (!j.ok || !j.sector) throw new Error(j.erro || "falhou")
+      setLivre(j.sector)
+      escolher(j.sector)
+    } catch (e) {
+      setErroLivre(e instanceof Error && e.message !== "falhou" ? e.message : "Não conseguimos montar a simulação agora. Tenta outra vez.")
+    } finally {
+      setAMontar(false)
+    }
+  }
 
   function escolher(s: Sector) {
     setSectorId(s.id)
@@ -80,7 +109,59 @@ export function SimuladorSolucoes({ agendar }: { agendar: string }) {
               {s.nome}
             </button>
           ))}
+          {livre && (
+            <button
+              type="button"
+              onClick={() => escolher(livre)}
+              className={[
+                "rounded-full border px-3.5 py-1.5 text-sm transition active:scale-[0.97]",
+                sectorId === "outro" ? "border-[#D2A63C] bg-[#D2A63C] font-semibold text-[#08090C]" : "border-white/15 text-zinc-300 hover:border-[#D2A63C]/50",
+              ].join(" ")}
+            >
+              {livre.nome}
+            </button>
+          )}
+          <button
+            type="button"
+            onClick={() => setAbrirLivre((x) => !x)}
+            aria-expanded={abrirLivre}
+            className="inline-flex items-center gap-1 rounded-full border border-dashed border-[#D2A63C]/60 px-3.5 py-1.5 text-sm text-[#E9C46A] transition hover:bg-[#D2A63C]/10 active:scale-[0.97]"
+          >
+            <Plus className="h-3.5 w-3.5" /> O meu não está aqui
+          </button>
         </div>
+        {abrirLivre && (
+          <form onSubmit={montarLivre} className="mt-4 rounded-2xl border border-[#D2A63C]/30 bg-[#D2A63C]/[0.05] p-4 animate-in fade-in slide-in-from-top-1 duration-300">
+            <p className="text-sm text-zinc-300">Escreve o teu negócio e a IA monta a simulação à tua medida. Se deres o site ou o Instagram, vai lá ver o que fazes.</p>
+            <div className="mt-3 grid gap-3 sm:grid-cols-[minmax(0,1.2fr)_minmax(0,1fr)_auto]">
+              <input
+                value={negocio}
+                onChange={(e) => setNegocio(e.target.value)}
+                maxLength={80}
+                placeholder="ex.: oficina de bicicletas"
+                aria-label="O teu negócio"
+                className="w-full min-w-0 rounded-lg border border-white/15 bg-black/40 px-3 py-2 text-sm text-white placeholder:text-zinc-500 focus:border-[#D2A63C] focus:outline-none"
+              />
+              <input
+                value={siteLivre}
+                onChange={(e) => setSiteLivre(e.target.value)}
+                maxLength={160}
+                placeholder="site ou @instagram"
+                aria-label="Site ou Instagram do negócio"
+                className="w-full min-w-0 rounded-lg border border-white/15 bg-black/40 px-3 py-2 text-sm text-white placeholder:text-zinc-500 focus:border-[#D2A63C] focus:outline-none"
+              />
+              <button
+                type="submit"
+                disabled={aMontar}
+                className="inline-flex items-center justify-center gap-2 rounded-lg bg-[#D2A63C] px-4 py-2 text-sm font-semibold text-[#08090C] transition hover:bg-[#E9C46A] active:scale-[0.97] disabled:opacity-70"
+              >
+                {aMontar ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
+                {aMontar ? "A montar..." : "Simular"}
+              </button>
+            </div>
+            {erroLivre && <p className="mt-2 text-sm text-red-400">{erroLivre}</p>}
+          </form>
+        )}
         <p className="mt-4 text-sm leading-relaxed text-zinc-400">{sector.retrato}</p>
 
         <p className="mt-8 text-sm font-semibold uppercase tracking-wider text-zinc-500">2 · Horas por semana em cada tarefa</p>
@@ -216,7 +297,7 @@ export function SimuladorSolucoes({ agendar }: { agendar: string }) {
     </div>
     {analise && (
       <div id="pedir-analise" className="mt-10 scroll-mt-24">
-        <PedirAnalise sector={sectorId} horas={horas} custoHora={custo} agendar={agendar} onFechar={() => setAnalise(false)} />
+        <PedirAnalise sector={sectorId} sectorLivre={sectorId === "outro" ? livre?.nome : undefined} siteInicial={sectorId === "outro" ? siteLivre : undefined} horas={horas} custoHora={custo} agendar={agendar} onFechar={() => setAnalise(false)} />
       </div>
     )}
     </div>
