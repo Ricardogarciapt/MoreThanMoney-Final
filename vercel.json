@@ -339,6 +339,10 @@
     {
       "path": "/api/cron/suporte-prazos",
       "schedule": "*/5 * * * *"
+    },
+    {
+      "path": "/api/cron/agenda-aulas-google",
+      "schedule": "7 * * * *"
     }
   ]
 }

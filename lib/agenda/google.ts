@@ -132,6 +132,19 @@ async function tokenDeAcesso(a: Anfitriao): Promise<string> {
 }
 
 /**
+ * Um pedido à API do Calendar na agenda principal do anfitrião (`path` começa em «/events…»).
+ * Sem `sendUpdates`: quem chama decide se o Google avisa alguém.
+ */
+export async function pedidoNaAgenda(a: Anfitriao, path: string, init: RequestInit = {}): Promise<Response> {
+  const token = await tokenDeAcesso(a)
+  const cal = encodeURIComponent(a.google_calendar_id || 'primary')
+  return fetch(`https://www.googleapis.com/calendar/v3/calendars/${cal}${path}`, {
+    ...init,
+    headers: { authorization: `Bearer ${token}`, 'content-type': 'application/json', ...(init.headers ?? {}) },
+  })
+}
+
+/**
  * O «ocupado» real da agenda, sem ver o que lá está escrito. É tudo o que precisamos de saber.
  *
  * Conta a agenda principal do anfitrião E as agendas extra em `google_calendarios_ocupado` — no
