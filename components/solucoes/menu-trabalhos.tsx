@@ -3,18 +3,20 @@
 import { useState } from "react"
 import { Check } from "lucide-react"
 import { MENU, type Trabalho } from "@/lib/site-solucoes/conteudo"
+import { useT } from "@/components/solucoes/idioma"
 
 /** O menu de trabalhos, por grupo. Preço só onde está decidido; o resto é sob proposta. */
 
 const GRUPOS: Trabalho["grupo"][] = ["Presença", "Atendimento e vendas", "Operação", "Conteúdo", "Trading"]
 
 export function MenuTrabalhos({ agendar }: { agendar: string }) {
+  const { t } = useT()
   const [grupo, setGrupo] = useState<Trabalho["grupo"]>("Presença")
   const itens = MENU.filter((m) => m.grupo === grupo)
 
   return (
     <div>
-      <div className="-mx-4 flex gap-2 overflow-x-auto px-4 pb-1" role="tablist" aria-label="Grupos de trabalhos">
+      <div className="-mx-4 flex gap-2 overflow-x-auto px-4 pb-1" role="tablist" aria-label={t("Grupos de trabalhos")}>
         {GRUPOS.map((g) => (
           <button
             key={g}
@@ -27,7 +29,7 @@ export function MenuTrabalhos({ agendar }: { agendar: string }) {
               g === grupo ? "border-[#D2A63C] bg-[#D2A63C] font-semibold text-[#08090C]" : "border-white/15 text-zinc-300 hover:border-[#D2A63C]/50",
             ].join(" ")}
           >
-            {g}
+            {t(g)}
           </button>
         ))}
       </div>
@@ -41,12 +43,12 @@ export function MenuTrabalhos({ agendar }: { agendar: string }) {
             ].join(" ")}
             style={{ animationDelay: `${i * 70}ms`, animationFillMode: "both" }}
           >
-            <h3 className="text-lg font-bold">{m.nome}</h3>
-            <p className={m.destaque ? "mt-1 text-xl font-black text-[#E9C46A]" : "mt-1 font-semibold text-[#E9C46A]"}>{m.preco}</p>
+            <h3 className="text-lg font-bold">{t(m.nome)}</h3>
+            <p className={m.destaque ? "mt-1 text-xl font-black text-[#E9C46A]" : "mt-1 font-semibold text-[#E9C46A]"}>{t(m.preco)}</p>
             <ul className="mt-5 space-y-2 text-sm text-zinc-300">
               {m.inclui.map((x) => (
                 <li key={x} className="flex gap-2">
-                  <Check className="mt-0.5 h-4 w-4 shrink-0 text-[#D2A63C]" /> {x}
+                  <Check className="mt-0.5 h-4 w-4 shrink-0 text-[#D2A63C]" /> {t(x)}
                 </li>
               ))}
             </ul>
@@ -54,9 +56,9 @@ export function MenuTrabalhos({ agendar }: { agendar: string }) {
         ))}
       </div>
       <p className="mt-6 text-sm text-zinc-500">
-        Os trabalhos combinam-se. No diagnóstico montamos contigo o pacote certo e damos o preço fechado.{" "}
+        {t("Os trabalhos combinam-se. No diagnóstico montamos contigo o pacote certo e damos o preço fechado.")}{" "}
         <a href={agendar} className="font-semibold text-[#E9C46A] hover:underline">
-          Marcar diagnóstico
+          {t("Marcar diagnóstico")}
         </a>
       </p>
     </div>

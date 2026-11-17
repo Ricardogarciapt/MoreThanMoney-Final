@@ -11,13 +11,12 @@ import {
   type Sector,
 } from "@/lib/site-solucoes/automacao"
 import { PedirAnalise } from "@/components/solucoes/pedir-analise"
+import { useT } from "@/components/solucoes/idioma"
 
 /**
  * O simulador do /solucoes: escolhes o teu negócio, ajustas as horas e vês, num ecrã desenhado,
  * as automações que implementávamos, com as horas que te devolvem. Tudo no browser, nada é guardado.
  */
-
-const fmt = (n: number, casas = 0) => n.toLocaleString("pt-PT", { maximumFractionDigits: casas, minimumFractionDigits: casas })
 
 function horasIniciais(s: Sector): Record<string, number> {
   const h: Record<string, number> = {}
@@ -26,6 +25,7 @@ function horasIniciais(s: Sector): Record<string, number> {
 }
 
 export function SimuladorSolucoes({ agendar }: { agendar: string }) {
+  const { t, tf, n: fmt, idioma } = useT()
   const [sectorId, setSectorId] = useState(SECTORES[0].id)
   // Negócio fora da lista: a IA monta-o a partir do que a pessoa escreve (e do site, se o der).
   const [livre, setLivre] = useState<Sector | null>(null)
@@ -49,20 +49,20 @@ export function SimuladorSolucoes({ agendar }: { agendar: string }) {
   async function montarLivre(ev: React.FormEvent) {
     ev.preventDefault()
     setErroLivre("")
-    if (negocio.trim().length < 3) return setErroLivre("Diz-nos que negócio é, em poucas palavras.")
+    if (negocio.trim().length < 3) return setErroLivre(t("Diz-nos que negócio é, em poucas palavras."))
     setAMontar(true)
     try {
       const r = await fetch("/api/solucoes/sector", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ negocio, site: siteLivre }),
+        body: JSON.stringify({ negocio, site: siteLivre, idioma }),
       })
       const j = await r.json()
       if (!j.ok || !j.sector) throw new Error(j.erro || "falhou")
       setLivre(j.sector)
       escolher(j.sector)
     } catch (e) {
-      setErroLivre(e instanceof Error && e.message !== "falhou" ? e.message : "Não conseguimos montar a simulação agora. Tenta outra vez.")
+      setErroLivre(e instanceof Error && e.message !== "falhou" ? t(e.message) : t("Não conseguimos montar a simulação agora. Tenta outra vez."))
     } finally {
       setAMontar(false)
     }
@@ -82,7 +82,7 @@ export function SimuladorSolucoes({ agendar }: { agendar: string }) {
     return () => clearInterval(t)
   }, [tocou, areas.length])
 
-  const tarefasVisiveis = Object.values(TAREFAS).filter((t) => verTodas || (sector.horas[t.id as keyof typeof TAREFAS] ?? 0) > 0)
+  const tarefasVisiveis = Object.values(TAREFAS).filter((x) => verTodas || (sector.horas[x.id as keyof typeof TAREFAS] ?? 0) > 0)
 
   function abrirAnalise() {
     setAnalise(true)
@@ -94,7 +94,7 @@ export function SimuladorSolucoes({ agendar }: { agendar: string }) {
     <div className="grid gap-8 lg:grid-cols-[1fr_1.05fr]">
       {/* Lado esquerdo: o negócio e as horas */}
       <div className="min-w-0">
-        <p className="text-sm font-semibold uppercase tracking-wider text-zinc-500">1 · O teu negócio</p>
+        <p className="text-sm font-semibold uppercase tracking-wider text-zinc-500">{t("1 · O teu negócio")}</p>
         <div className="mt-3 flex flex-wrap gap-2">
           {SECTORES.map((s) => (
             <button
@@ -106,7 +106,7 @@ export function SimuladorSolucoes({ agendar }: { agendar: string }) {
                 s.id === sectorId ? "border-[#D2A63C] bg-[#D2A63C] font-semibold text-[#08090C]" : "border-white/15 text-zinc-300 hover:border-[#D2A63C]/50",
               ].join(" ")}
             >
-              {s.nome}
+              {t(s.nome)}
             </button>
           ))}
           {livre && (
@@ -127,27 +127,27 @@ export function SimuladorSolucoes({ agendar }: { agendar: string }) {
             aria-expanded={abrirLivre}
             className="inline-flex items-center gap-1 rounded-full border border-dashed border-[#D2A63C]/60 px-3.5 py-1.5 text-sm text-[#E9C46A] transition hover:bg-[#D2A63C]/10 active:scale-[0.97]"
           >
-            <Plus className="h-3.5 w-3.5" /> O meu não está aqui
+            <Plus className="h-3.5 w-3.5" /> {t("O meu não está aqui")}
           </button>
         </div>
         {abrirLivre && (
           <form onSubmit={montarLivre} className="mt-4 rounded-2xl border border-[#D2A63C]/30 bg-[#D2A63C]/[0.05] p-4 animate-in fade-in slide-in-from-top-1 duration-300">
-            <p className="text-sm text-zinc-300">Escreve o teu negócio e a IA monta a simulação à tua medida. Se deres o site ou o Instagram, vai lá ver o que fazes.</p>
+            <p className="text-sm text-zinc-300">{t("Escreve o teu negócio e a IA monta a simulação à tua medida. Se deres o site ou o Instagram, vai lá ver o que fazes.")}</p>
             <div className="mt-3 grid gap-3 sm:grid-cols-[minmax(0,1.2fr)_minmax(0,1fr)_auto]">
               <input
                 value={negocio}
                 onChange={(e) => setNegocio(e.target.value)}
                 maxLength={80}
-                placeholder="ex.: oficina de bicicletas"
-                aria-label="O teu negócio"
+                placeholder={t("ex.: oficina de bicicletas")}
+                aria-label={t("O teu negócio")}
                 className="w-full min-w-0 rounded-lg border border-white/15 bg-black/40 px-3 py-2 text-sm text-white placeholder:text-zinc-500 focus:border-[#D2A63C] focus:outline-none"
               />
               <input
                 value={siteLivre}
                 onChange={(e) => setSiteLivre(e.target.value)}
                 maxLength={160}
-                placeholder="site ou @instagram"
-                aria-label="Site ou Instagram do negócio"
+                placeholder={t("site ou @instagram")}
+                aria-label={t("Site ou Instagram do negócio")}
                 className="w-full min-w-0 rounded-lg border border-white/15 bg-black/40 px-3 py-2 text-sm text-white placeholder:text-zinc-500 focus:border-[#D2A63C] focus:outline-none"
               />
               <button
@@ -156,22 +156,22 @@ export function SimuladorSolucoes({ agendar }: { agendar: string }) {
                 className="inline-flex items-center justify-center gap-2 rounded-lg bg-[#D2A63C] px-4 py-2 text-sm font-semibold text-[#08090C] transition hover:bg-[#E9C46A] active:scale-[0.97] disabled:opacity-70"
               >
                 {aMontar ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
-                {aMontar ? "A montar..." : "Simular"}
+                {aMontar ? t("A montar...") : t("Simular")}
               </button>
             </div>
             {erroLivre && <p className="mt-2 text-sm text-red-400">{erroLivre}</p>}
           </form>
         )}
-        <p className="mt-4 text-sm leading-relaxed text-zinc-400">{sector.retrato}</p>
+        <p className="mt-4 text-sm leading-relaxed text-zinc-400">{t(sector.retrato)}</p>
 
-        <p className="mt-8 text-sm font-semibold uppercase tracking-wider text-zinc-500">2 · Horas por semana em cada tarefa</p>
+        <p className="mt-8 text-sm font-semibold uppercase tracking-wider text-zinc-500">{t("2 · Horas por semana em cada tarefa")}</p>
         <div className="mt-3 space-y-3">
-          {tarefasVisiveis.map((t) => {
-            const v = horas[t.id] ?? 0
+          {tarefasVisiveis.map((tarefa) => {
+            const v = horas[tarefa.id] ?? 0
             return (
-              <label key={t.id} className="block">
+              <label key={tarefa.id} className="block">
                 <span className="flex items-baseline justify-between gap-3 text-sm">
-                  <span className="text-zinc-300">{t.nome}</span>
+                  <span className="text-zinc-300">{t(tarefa.nome)}</span>
                   <span className="shrink-0 tabular-nums text-[#E9C46A]">{fmt(v)} h</span>
                 </span>
                 <input
@@ -180,20 +180,20 @@ export function SimuladorSolucoes({ agendar }: { agendar: string }) {
                   max={20}
                   step={1}
                   value={v}
-                  onChange={(e) => setHoras((h) => ({ ...h, [t.id]: Number(e.target.value) }))}
+                  onChange={(e) => setHoras((h) => ({ ...h, [tarefa.id]: Number(e.target.value) }))}
                   className="mt-1 w-full accent-[#D2A63C]"
-                  aria-label={`${t.nome}, horas por semana`}
+                  aria-label={tf("{tarefa}, horas por semana", { tarefa: t(tarefa.nome) })}
                 />
               </label>
             )
           })}
         </div>
         <button type="button" onClick={() => setVerTodas((x) => !x)} className="mt-3 text-sm text-[#E9C46A] underline-offset-4 hover:underline">
-          {verTodas ? "Mostrar só as do meu sector" : "Juntar outras tarefas"}
+          {verTodas ? t("Mostrar só as do meu sector") : t("Juntar outras tarefas")}
         </button>
 
         <label className="mt-6 flex items-center justify-between gap-3 text-sm">
-          <span className="text-zinc-300">Quanto custa uma hora da tua equipa</span>
+          <span className="text-zinc-300">{t("Quanto custa uma hora da tua equipa")}</span>
           <span className="flex items-center gap-1">
             <input
               type="number"
@@ -214,7 +214,7 @@ export function SimuladorSolucoes({ agendar }: { agendar: string }) {
             <span className="h-2.5 w-2.5 rounded-full bg-white/15" />
             <span className="h-2.5 w-2.5 rounded-full bg-white/15" />
             <span className="h-2.5 w-2.5 rounded-full bg-white/15" />
-            <span className="ml-3 truncate text-xs text-zinc-500">{sector.nome} · com a MoreThanMoney</span>
+            <span className="ml-3 truncate text-xs text-zinc-500">{tf("{sector} · com a MoreThanMoney", { sector: t(sector.nome) })}</span>
           </div>
           {areas.length > 0 ? (
             <>
@@ -234,7 +234,7 @@ export function SimuladorSolucoes({ agendar }: { agendar: string }) {
                       p.area.id === ativa?.area.id ? "bg-[#D2A63C]/15 text-[#E9C46A]" : "text-zinc-500 hover:text-zinc-300",
                     ].join(" ")}
                   >
-                    {p.area.titulo}
+                    {t(p.area.titulo)}
                   </button>
                 ))}
               </div>
@@ -243,24 +243,24 @@ export function SimuladorSolucoes({ agendar }: { agendar: string }) {
               </div>
               {ativa && (
                 <div className="border-t border-white/5 px-5 py-4 text-sm">
-                  <p className="text-zinc-300">{ativa.area.implementamos}</p>
+                  <p className="text-zinc-300">{t(ativa.area.implementamos)}</p>
                   <p className="mt-1 text-zinc-500">
-                    Devolve-te cerca de <span className="font-semibold text-[#E9C46A]">{fmt(ativa.horasAno)} h por ano</span> · {ativa.area.oferta}
+                    {t("Devolve-te cerca de")} <span className="font-semibold text-[#E9C46A]">{tf("{h} h por ano", { h: fmt(ativa.horasAno) })}</span> · {t(ativa.area.oferta)}
                   </p>
                 </div>
               )}
             </>
           ) : (
-            <p className="p-8 text-sm text-zinc-500">Mexe nas horas à esquerda para ver as automações.</p>
+            <p className="p-8 text-sm text-zinc-500">{t("Mexe nas horas à esquerda para ver as automações.")}</p>
           )}
         </div>
 
         <dl className="mt-5 grid grid-cols-2 gap-3 sm:grid-cols-4">
           {[
-            { k: "Horas por semana", v: fmt(r.recuperaveisSemana, 1) },
-            { k: "Horas por ano", v: fmt(r.recuperaveisAno) },
-            { k: "Valor por ano", v: `${fmt(r.eurosAno)} €` },
-            { k: "Pessoas a tempo inteiro", v: fmt(r.pessoas, 1) },
+            { k: t("Horas por semana"), v: fmt(r.recuperaveisSemana, 1) },
+            { k: t("Horas por ano"), v: fmt(r.recuperaveisAno) },
+            { k: t("Valor por ano"), v: `${fmt(r.eurosAno)} €` },
+            { k: t("Pessoas a tempo inteiro"), v: fmt(r.pessoas, 1) },
           ].map((x) => (
             <div key={x.k} className="rounded-2xl border border-white/10 bg-white/[0.03] p-3">
               <dt className="text-[11px] uppercase tracking-wider text-zinc-500">{x.k}</dt>
@@ -269,16 +269,15 @@ export function SimuladorSolucoes({ agendar }: { agendar: string }) {
           ))}
         </dl>
         <p className="mt-3 text-xs leading-relaxed text-zinc-500">
-          Estimativa de tempo que deixa de ser teu, não é lucro nem poupança garantida. Usa {PRESSUPOSTOS.semanasPorAno} semanas de trabalho por ano,{" "}
-          {fmt(PRESSUPOSTOS.horasPorPessoaAno)} h por pessoa e uma parte automatizável conservadora por tarefa (entre 40 e 80%). O diagnóstico usa as tuas tarefas reais.
+          {tf("Estimativa de tempo que deixa de ser teu, não é lucro nem poupança garantida. Usa {semanas} semanas de trabalho por ano, {horas} h por pessoa e uma parte automatizável conservadora por tarefa (entre 40 e 80%). O diagnóstico usa as tuas tarefas reais.", { semanas: PRESSUPOSTOS.semanasPorAno, horas: fmt(PRESSUPOSTOS.horasPorPessoaAno) })}
         </p>
 
         <div className="mt-5 rounded-2xl border border-[#D2A63C]/30 p-5">
-          <p className="text-sm font-semibold">O que fazíamos primeiro</p>
+          <p className="text-sm font-semibold">{t("O que fazíamos primeiro")}</p>
           <ul className="mt-3 space-y-2 text-sm text-zinc-300">
             {sector.plano.map((p) => (
               <li key={p} className="flex gap-2">
-                <Check className="mt-0.5 h-4 w-4 shrink-0 text-[#D2A63C]" /> {p}
+                <Check className="mt-0.5 h-4 w-4 shrink-0 text-[#D2A63C]" /> {t(p)}
               </li>
             ))}
           </ul>
@@ -287,10 +286,10 @@ export function SimuladorSolucoes({ agendar }: { agendar: string }) {
             onClick={abrirAnalise}
             className="mt-5 inline-flex w-full items-center justify-center rounded-full bg-[#D2A63C] px-5 py-3 font-semibold text-[#08090C] transition hover:bg-[#E9C46A] active:scale-[0.98]"
           >
-            Pedir análise ao meu negócio
+            {t("Pedir análise ao meu negócio")}
           </button>
           <a href={agendar} className="mt-3 block text-center text-sm font-semibold text-[#E9C46A] hover:underline">
-            Prefiro marcar já uma conversa
+            {t("Prefiro marcar já uma conversa")}
           </a>
         </div>
       </div>
@@ -341,7 +340,8 @@ function Cliente({ nome, children }: { nome: string; children: React.ReactNode }
 }
 
 export function EcraArea({ area, sector }: { area: AreaId; sector: Sector }) {
-  const e = sector.ecra
+  const { t, tf } = useT()
+  const e = { cliente: t(sector.ecra.cliente), pergunta: t(sector.ecra.pergunta), resposta: t(sector.ecra.resposta), servico: t(sector.ecra.servico) }
   switch (area) {
     case "atendimento":
       return (
@@ -352,19 +352,18 @@ export function EcraArea({ area, sector }: { area: AreaId; sector: Sector }) {
           <Cliente nome={e.cliente}>{e.pergunta}</Cliente>
           <Agente>{e.resposta}</Agente>
           <Linha className="mt-4">
-            <span className="text-zinc-400">Só chega a ti o que precisa de ti</span>
-            <Etiqueta cor="verde">Resolvido pelo agente</Etiqueta>
+            <span className="text-zinc-400">{t("Só chega a ti o que precisa de ti")}</span>
+            <Etiqueta cor="verde">{t("Resolvido pelo agente")}</Etiqueta>
           </Linha>
         </div>
       )
     case "agenda": {
-      const dias = ["Seg", "Ter", "Qua", "Qui", "Sex"]
+      const dias = [t("Seg"), t("Ter"), t("Qua"), t("Qui"), t("Sex")]
       const cheios = new Set(["0-1", "1-0", "1-2", "2-1", "3-0", "3-2", "4-1"])
       return (
         <div>
           <p className="flex items-center gap-2 text-xs text-zinc-500">
-            <CalendarCheck className="h-3.5 w-3.5" /> Agenda da semana
-          </p>
+            <CalendarCheck className="h-3.5 w-3.5" />{t("Agenda da semana")}</p>
           <div className="mt-3 grid grid-cols-5 gap-1.5">
             {dias.map((d, i) => (
               <div key={d} className="space-y-1.5">
@@ -381,19 +380,19 @@ export function EcraArea({ area, sector }: { area: AreaId; sector: Sector }) {
           <div className="mt-4 flex items-start gap-3 rounded-xl border border-white/10 bg-black/40 p-3 text-sm shadow-lg">
             <Bell className="mt-0.5 h-4 w-4 shrink-0 text-[#E9C46A]" />
             <p>
-              <span className="font-semibold">Lembrete enviado a {e.cliente}</span>
-              <span className="block text-zinc-400">{e.servico} amanhã. Responde 1 para confirmar ou 2 para remarcar.</span>
+              <span className="font-semibold">{tf("Lembrete enviado a {nome}", { nome: e.cliente })}</span>
+              <span className="block text-zinc-400">{tf("{servico} amanhã. Responde 1 para confirmar ou 2 para remarcar.", { servico: e.servico })}</span>
             </p>
           </div>
-          <p className="mt-2 text-xs text-zinc-500">A vaga tracejada foi libertada e oferecida à lista de espera.</p>
+          <p className="mt-2 text-xs text-zinc-500">{t("A vaga tracejada foi libertada e oferecida à lista de espera.")}</p>
         </div>
       )
     }
     case "vendas": {
       const col = [
-        { t: "Novo", c: [e.cliente, "Contacto do site"] },
-        { t: "Qualificado", c: ["Pedido de orçamento"] },
-        { t: "Proposta", c: [`${e.servico}`] },
+        { t: t("Novo"), c: [e.cliente, t("Contacto do site")] },
+        { t: t("Qualificado"), c: [t("Pedido de orçamento")] },
+        { t: t("Proposta"), c: [`${e.servico}`] },
       ]
       return (
         <div>
@@ -411,14 +410,14 @@ export function EcraArea({ area, sector }: { area: AreaId; sector: Sector }) {
           </div>
           <div className="mt-4 space-y-2">
             <Linha>
-              <span className="text-zinc-300">Seguimento automático 2 dias depois</span>
-              <Etiqueta cor="ouro">Enviado</Etiqueta>
+              <span className="text-zinc-300">{t("Seguimento automático 2 dias depois")}</span>
+              <Etiqueta cor="ouro">{t("Enviado")}</Etiqueta>
             </Linha>
             <Linha>
               <span className="flex items-center gap-2 text-zinc-300">
-                <FileText className="h-4 w-4 text-[#E9C46A]" /> Proposta em PDF a partir do formulário
+                <FileText className="h-4 w-4 text-[#E9C46A]" /> {t("Proposta em PDF a partir do formulário")}
               </span>
-              <Etiqueta cor="verde">Pronta</Etiqueta>
+              <Etiqueta cor="verde">{t("Pronta")}</Etiqueta>
             </Linha>
           </div>
         </div>
@@ -428,40 +427,40 @@ export function EcraArea({ area, sector }: { area: AreaId; sector: Sector }) {
       return (
         <div className="space-y-2">
           <Linha>
-            <span>Fatura FT 2026/118</span>
-            <Etiqueta cor="verde">Paga</Etiqueta>
+            <span>{t("Fatura")} FT 2026/118</span>
+            <Etiqueta cor="verde">{t("Paga")}</Etiqueta>
           </Linha>
           <Linha>
-            <span>Fatura FT 2026/121</span>
-            <Etiqueta cor="ouro">Lembrete enviado</Etiqueta>
+            <span>{t("Fatura")} FT 2026/121</span>
+            <Etiqueta cor="ouro">{t("Lembrete enviado")}</Etiqueta>
           </Linha>
           <Linha>
-            <span>Fatura FT 2026/109</span>
-            <Etiqueta cor="vermelho">2.º aviso amanhã</Etiqueta>
+            <span>{t("Fatura")} FT 2026/109</span>
+            <Etiqueta cor="vermelho">{t("2.º aviso amanhã")}</Etiqueta>
           </Linha>
           <div className="mt-4 rounded-xl border border-[#D2A63C]/30 p-3 text-sm">
-            <p className="font-semibold">Pasta de novembro pronta</p>
-            <p className="text-zinc-400">Faturas do email e fotos de recibos arrumadas para a contabilidade.</p>
+            <p className="font-semibold">{t("Pasta de novembro pronta")}</p>
+            <p className="text-zinc-400">{t("Faturas do email e fotos de recibos arrumadas para a contabilidade.")}</p>
           </div>
         </div>
       )
     case "dados":
       return (
         <div>
-          <p className="text-xs text-zinc-500">Relatório da semana · chega à segunda às 8:00</p>
+          <p className="text-xs text-zinc-500">{t("Relatório da semana · chega à segunda às 8:00")}</p>
           <div className="mt-4 flex h-32 items-end gap-2">
             {[38, 52, 45, 70, 62, 84, 76].map((h, i) => (
               <div key={i} className="flex-1 rounded-t-md bg-gradient-to-t from-[#D2A63C]/30 to-[#E9C46A]" style={{ height: `${h}%` }} />
             ))}
           </div>
-          <p className="mt-2 text-[11px] text-zinc-600">Gráfico ilustrativo</p>
+          <p className="mt-2 text-[11px] text-zinc-600">{t("Gráfico ilustrativo")}</p>
           <div className="mt-3 space-y-2">
             <Linha>
-              <span className="text-zinc-300">Formulários a entrar direto na base de dados</span>
-              <Etiqueta cor="verde">Ligado</Etiqueta>
+              <span className="text-zinc-300">{t("Formulários a entrar direto na base de dados")}</span>
+              <Etiqueta cor="verde">{t("Ligado")}</Etiqueta>
             </Linha>
             <Linha>
-              <span className="text-zinc-300">Documentos lidos com IA</span>
+              <span className="text-zinc-300">{t("Documentos lidos com IA")}</span>
               <Etiqueta cor="verde">Ligado</Etiqueta>
             </Linha>
           </div>
@@ -470,15 +469,15 @@ export function EcraArea({ area, sector }: { area: AreaId; sector: Sector }) {
     case "marketing":
       return (
         <div className="space-y-2">
-          {["Terça · dica da semana", "Quinta · bastidores", "Sábado · caso de cliente"].map((p, i) => (
+          {[t("Terça · dica da semana"), t("Quinta · bastidores"), t("Sábado · caso de cliente")].map((p, i) => (
             <Linha key={p}>
               <span className="text-zinc-300">{p}</span>
-              <Etiqueta cor={i === 0 ? "verde" : "cinza"}>{i === 0 ? "Publicado" : "Agendado"}</Etiqueta>
+              <Etiqueta cor={i === 0 ? "verde" : "cinza"}>{i === 0 ? t("Publicado") : t("Agendado")}</Etiqueta>
             </Linha>
           ))}
           <div className="mt-4">
             <Agente>
-              Olá {e.cliente}, obrigado pela visita! Se gostaste, deixas-nos uma avaliação? Leva 20 segundos.
+              {tf("Olá {nome}, obrigado pela visita! Se gostaste, deixas-nos uma avaliação? Leva 20 segundos.", { nome: e.cliente })}
             </Agente>
           </div>
         </div>
@@ -489,18 +488,18 @@ export function EcraArea({ area, sector }: { area: AreaId; sector: Sector }) {
           <div className="flex items-start gap-3 rounded-xl border border-rose-400/30 bg-rose-500/5 p-3 text-sm">
             <Package className="mt-0.5 h-4 w-4 shrink-0 text-rose-300" />
             <p>
-              <span className="font-semibold">Stock baixo em 2 artigos</span>
-              <span className="block text-zinc-400">Encomenda ao fornecedor preparada. Falta só o teu OK.</span>
+              <span className="font-semibold">{t("Stock baixo em 2 artigos")}</span>
+              <span className="block text-zinc-400">{t("Encomenda ao fornecedor preparada. Falta só o teu OK.")}</span>
             </p>
           </div>
           <div className="rounded-xl bg-white/[0.04] p-3 text-sm">
-            <p className="font-semibold">Relatório de serviço · {e.servico}</p>
+            <p className="font-semibold">{tf("Relatório de serviço · {servico}", { servico: e.servico })}</p>
             <div className="mt-2 grid grid-cols-3 gap-1.5">
               {[0, 1, 2].map((i) => (
                 <div key={i} className="aspect-square rounded-md bg-gradient-to-br from-white/10 to-white/[0.02]" />
               ))}
             </div>
-            <p className="mt-2 text-xs text-zinc-500">Fotos, notas e assinatura do cliente, feito no telemóvel.</p>
+            <p className="mt-2 text-xs text-zinc-500">{t("Fotos, notas e assinatura do cliente, feito no telemóvel.")}</p>
           </div>
         </div>
       )
@@ -508,27 +507,26 @@ export function EcraArea({ area, sector }: { area: AreaId; sector: Sector }) {
       return (
         <div>
           <p className="flex items-center gap-2 text-xs text-zinc-500">
-            <Users className="h-3.5 w-3.5" /> Escala da semana
-          </p>
+            <Users className="h-3.5 w-3.5" />{t("Escala da semana")}</p>
           <div className="mt-3 space-y-1.5 text-sm">
             {[
               ["Ana", "Manhã", "Manhã", "Folga"],
               ["Bruno", "Tarde", "Folga", "Manhã"],
               ["Carla", "Folga", "Tarde", "Tarde"],
-            ].map(([n, ...t]) => (
-              <div key={n} className="grid grid-cols-4 gap-1.5">
-                <span className="py-1.5 text-zinc-400">{n}</span>
-                {t.map((x, i) => (
+            ].map(([nome, ...turnos]) => (
+              <div key={nome} className="grid grid-cols-4 gap-1.5">
+                <span className="py-1.5 text-zinc-400">{nome}</span>
+                {turnos.map((x, i) => (
                   <span key={i} className={`rounded-md py-1.5 text-center text-xs ${x === "Folga" ? "bg-white/[0.04] text-zinc-500" : "bg-[#D2A63C]/20 text-[#E9C46A]"}`}>
-                    {x}
+                    {t(x)}
                   </span>
                 ))}
               </div>
             ))}
           </div>
           <Linha className="mt-4">
-            <span className="text-zinc-300">Bruno pediu troca de quarta</span>
-            <Etiqueta cor="ouro">Aprovar</Etiqueta>
+            <span className="text-zinc-300">{t("Bruno pediu troca de quarta")}</span>
+            <Etiqueta cor="ouro">{t("Aprovar")}</Etiqueta>
           </Linha>
         </div>
       )
@@ -538,10 +536,10 @@ export function EcraArea({ area, sector }: { area: AreaId; sector: Sector }) {
           <Cliente nome={e.cliente}>{e.pergunta}</Cliente>
           <Agente>{e.resposta}</Agente>
           <div className="mt-2 grid grid-cols-3 gap-2 text-xs">
-            {["Módulo 1", "Módulo 2", "Módulo 3"].map((m, i) => (
+            {[1, 2, 3].map((k) => tf("Módulo {n}", { n: k })).map((m, i) => (
               <div key={m} className="rounded-lg bg-white/[0.05] p-2">
                 <p className="font-semibold">{m}</p>
-                <p className="text-zinc-500">{i < 2 ? "Narrado" : "A gravar"}</p>
+                <p className="text-zinc-500">{i < 2 ? t("Narrado") : t("A gravar")}</p>
               </div>
             ))}
           </div>

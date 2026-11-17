@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react"
 import { Bot, Play, RotateCcw, Server, User, UserRound } from "lucide-react"
 import type { Passo, Quem } from "@/lib/site-solucoes/demos-diarias"
+import { useT } from "@/components/solucoes/idioma"
 
 const PASSO_MS = 1600
 
@@ -14,6 +15,7 @@ const ICONE: Record<Quem, typeof Bot> = { cliente: User, agente: Bot, sistema: S
  * tudo de uma vez. Botão para repetir; nada roda sem a pessoa ver (só arranca quando entra no ecrã).
  */
 export function DemoRoteiro({ roteiro }: { roteiro: Passo[] }) {
+  const { t } = useT()
   const [n, setN] = useState(0)
   const [a_correr, setACorrer] = useState(false)
   const raiz = useRef<HTMLDivElement>(null)
@@ -54,7 +56,7 @@ export function DemoRoteiro({ roteiro }: { roteiro: Passo[] }) {
     <div ref={raiz} className="mx-auto w-full max-w-sm">
       <div className="rounded-[2rem] border border-white/10 bg-[#0E1015] p-3 shadow-2xl shadow-black/40">
         <div className="mb-2 flex items-center justify-between px-2 pt-1 text-[11px] text-zinc-500">
-          <span>Demonstração</span>
+          <span>{t("Demonstração")}</span>
           <span>{Math.min(n, roteiro.length)}/{roteiro.length}</span>
         </div>
         <ol className="flex min-h-[420px] flex-col gap-2.5 rounded-[1.5rem] bg-[#08090C] p-3" aria-live="polite">
@@ -68,7 +70,7 @@ export function DemoRoteiro({ roteiro }: { roteiro: Passo[] }) {
                 className={`flex max-w-[88%] flex-col gap-1 animate-in fade-in slide-in-from-bottom-2 duration-300 ${direita ? "self-end items-end" : "self-start"}`}
               >
                 <span className="flex items-center gap-1 text-[11px] text-zinc-500">
-                  <Icone className="h-3 w-3" aria-hidden="true" /> {ROTULO[p.quem]}
+                  <Icone className="h-3 w-3" aria-hidden="true" /> {t(ROTULO[p.quem])}
                 </span>
                 <p
                   className={`rounded-2xl px-3 py-2 text-sm leading-relaxed ${
@@ -79,7 +81,7 @@ export function DemoRoteiro({ roteiro }: { roteiro: Passo[] }) {
                         : "rounded-bl-sm bg-white/[0.06] text-zinc-100"
                   }`}
                 >
-                  {p.texto}
+                  {t(p.texto)}
                 </p>
               </li>
             )
@@ -92,7 +94,7 @@ export function DemoRoteiro({ roteiro }: { roteiro: Passo[] }) {
         className="mx-auto mt-4 flex min-h-[44px] items-center gap-2 rounded-full border border-white/10 px-5 text-sm text-zinc-300 transition hover:border-[#D2A63C]/60 hover:text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#D2A63C]"
       >
         {n === 0 ? <Play className="h-4 w-4" aria-hidden="true" /> : <RotateCcw className="h-4 w-4" aria-hidden="true" />}
-        {n === 0 ? "Ver a demo" : "Repetir"}
+        {n === 0 ? t("Ver a demo") : t("Repetir")}
       </button>
     </div>
   )

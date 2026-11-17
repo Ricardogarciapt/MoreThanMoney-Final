@@ -8,6 +8,7 @@
  * são a única estimativa, com os pressupostos à vista). Se a IA falhar, há um sector genérico.
  */
 import { AREAS, TAREFAS, type Sector } from '@/lib/site-solucoes/automacao'
+import { instrucaoIdioma, type Idioma } from '@/lib/site-solucoes/i18n/base'
 
 export const SECTOR_LIVRE_ID = 'outro'
 export const LIMITE_SECTOR_IP_HORA = 8
@@ -44,17 +45,17 @@ export function sectorGenerico(negocio: string): Sector {
   }
 }
 
-export function promptSector(negocio: string, resumoSite: string | null): { sistema: string; mensagem: string } {
+export function promptSector(negocio: string, resumoSite: string | null, idioma: Idioma = 'pt'): { sistema: string; mensagem: string } {
   const tarefas = Object.values(TAREFAS)
     .map((t) => `${t.id}: ${t.nome}`)
     .join('; ')
   const sistema = [
     'És o analista da MoreThanMoney, que implementa automações e agentes de IA em pequenos negócios portugueses.',
-    'Escreves em português de Portugal, a tratar por «tu», tom próximo e claro, sem jargão.',
+    instrucaoIdioma(idioma),
     'Descreves um negócio pequeno típico (2 a 5 pessoas) do tipo indicado, sem inventar clientes, casos nem resultados.',
     'Nos textos NUNCA uses algarismos, percentagens, euros nem prazos.',
     `Só podes usar estas tarefas, pelo id: ${tarefas}.`,
-    'Responde só com JSON: {"nome": "nome curto do tipo de negócio", "retrato": "uma frase sobre o dia-a-dia sem IA", "horas": {"id_da_tarefa": horas por semana entre 1 e 10, de 4 a 6 tarefas}, "plano": ["3 automações que entregávamos primeiro, uma frase curta cada"], "ecra": {"cliente": "nome próprio português", "pergunta": "mensagem típica de um cliente", "resposta": "resposta do agente de IA, curta e simpática", "servico": "o serviço pedido, em poucas palavras"}}.',
+    'Responde só com JSON: {"nome": "nome curto do tipo de negócio", "retrato": "uma frase sobre o dia-a-dia sem IA", "horas": {"id_da_tarefa": horas por semana entre 1 e 10, de 4 a 6 tarefas}, "plano": ["3 automações que entregávamos primeiro, uma frase curta cada"], "ecra": {"cliente": "nome próprio comum no país dessa língua", "pergunta": "mensagem típica de um cliente", "resposta": "resposta do agente de IA, curta e simpática", "servico": "o serviço pedido, em poucas palavras"}}.',
   ].join(' ')
   const mensagem = [
     `Negócio, nas palavras do dono: «${negocio}».`,

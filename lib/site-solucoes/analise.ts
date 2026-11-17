@@ -10,6 +10,7 @@
  *    porque os únicos números do relatório são os do simulador, com os pressupostos à vista.
  */
 import { AREAS, PRESSUPOSTOS, SECTORES, TAREFAS, simular, type Simulacao } from '@/lib/site-solucoes/automacao'
+import { criarTradutor, instrucaoIdioma, type Tradutor } from '@/lib/site-solucoes/i18n/base'
 
 export const EQUIPAS = ['Só eu', '2 a 5 pessoas', '6 a 15 pessoas', 'Mais de 15'] as const
 export type Equipa = (typeof EQUIPAS)[number]
@@ -114,7 +115,10 @@ export interface RelatorioAnalise {
 
 const r1 = (n: number) => Math.round(n * 10) / 10
 
-export function relatorioBase(p: PedidoAnalise): { relatorio: RelatorioAnalise; sim: Simulacao } {
+/** `tr` traduz os textos fixos para o idioma de quem pediu (por omissão PT). */
+export function relatorioBase(p: PedidoAnalise, tr: Tradutor = criarTradutor('pt')): { relatorio: RelatorioAnalise; sim: Simulacao } {
+  const { t, tf } = tr
+  const minusc = (x: string) => (tr.idioma === 'de' ? x : x.toLowerCase())
   const livre = p.sector.startsWith('outro: ') ? p.sector.slice(7) : null
   const sector = livre ? { nome: livre } : (SECTORES.find((s) => s.id === p.sector) ?? SECTORES[0])
   const sim = simular(p.horas, p.custoHora)
@@ -127,21 +131,27 @@ export function relatorioBase(p: PedidoAnalise): { relatorio: RelatorioAnalise; 
     oferta: t.area.oferta,
   }))
   const resumo = top.length
-    ? `Pelas horas que indicaste, ${p.empresa} gasta cerca de ${r1(sim.horasSemana)} h por semana em tarefas repetidas. A maior fatia está em ${top
-        .map((t) => t.area.titulo.toLowerCase())
-        .join(', ')}, e é por aí que começávamos.`
-    : `Ainda não indicaste horas no simulador. A análise completa parte das tarefas reais de ${p.empresa}, que levantamos contigo.`
+    ? tf('Pelas horas que indicaste, {empresa} gasta cerca de {h} h por semana em tarefas repetidas. A maior fatia está em {areas}, e é por aí que começávamos.', {
+        empresa: p.empresa,
+        h: tr.n(r1(sim.horasSemana), 1),
+        areas: top.map((x) => minusc(t(x.area.titulo))).join(', '),
+      })
+    : tf('Ainda não indicaste horas no simulador. A análise completa parte das tarefas reais de {empresa}, que levantamos contigo.', { empresa: p.empresa })
   const primeiros30Dias = [
-    top[0] ? `Semana 1 e 2: pôr a correr «${top[0].area.titulo}», a parte que mais horas te devolve.` : 'Semana 1: levantar contigo as tarefas que se repetem todos os dias.',
-    top[1] ? `Semana 3: ligar «${top[1].area.titulo}» ao que já ficou a funcionar.` : 'Semana 2 e 3: montar a primeira automação e testá-la com clientes reais.',
-    'Semana 4: medir contigo as horas reais antes e depois, e decidir o passo seguinte.',
+    top[0] ? tf('Semana 1 e 2: pôr a correr «{area}», a parte que mais horas te devolve.', { area: t(top[0].area.titulo) }) : t('Semana 1: levantar contigo as tarefas que se repetem todos os dias.'),
+    top[1] ? tf('Semana 3: ligar «{area}» ao que já ficou a funcionar.', { area: t(top[1].area.titulo) }) : t('Semana 2 e 3: montar a primeira automação e testá-la com clientes reais.'),
+    t('Semana 4: medir contigo as horas reais antes e depois, e decidir o passo seguinte.'),
   ]
   const perguntas = [
-    'Por onde te chegam hoje os pedidos dos clientes (telefone, WhatsApp, Instagram, email)?',
-    'Que programas já usas para faturas, agenda e contactos?',
-    'Que tarefa farias desaparecer amanhã se pudesses escolher só uma?',
+    t('Por onde te chegam hoje os pedidos dos clientes (telefone, WhatsApp, Instagram, email)?'),
+    t('Que programas já usas para faturas, agenda e contactos?'),
+    t('Que tarefa farias desaparecer amanhã se pudesses escolher só uma?'),
   ]
-  const pressupostos = `Estimativa a partir das horas que indicaste: ${PRESSUPOSTOS.semanasPorAno} semanas de trabalho por ano, ${PRESSUPOSTOS.horasPorPessoaAno} h por pessoa a tempo inteiro, ${p.custoHora} € por hora e uma parte automatizável conservadora por tarefa (entre 40 e 80%). É tempo que deixa de ser teu, não é lucro nem poupança garantida.`
+  const pressupostos = tf('Estimativa a partir das horas que indicaste: {semanas} semanas de trabalho por ano, {horas} h por pessoa a tempo inteiro, {custo} € por hora e uma parte automatizável conservadora por tarefa (entre 40 e 80%). É tempo que deixa de ser teu, não é lucro nem poupança garantida.', {
+    semanas: PRESSUPOSTOS.semanasPorAno,
+    horas: tr.n(PRESSUPOSTOS.horasPorPessoaAno),
+    custo: tr.n(p.custoHora, p.custoHora % 1 ? 2 : 0),
+  })
   return {
     sim,
     relatorio: {
@@ -165,10 +175,10 @@ export function relatorioBase(p: PedidoAnalise): { relatorio: RelatorioAnalise; 
   }
 }
 
-export function promptLeitura(p: PedidoAnalise, rel: RelatorioAnalise): { sistema: string; mensagem: string } {
+export function promptLeitura(p: PedidoAnalise, rel: RelatorioAnalise, idioma: Tradutor['idioma'] = 'pt'): { sistema: string; mensagem: string } {
   const sistema = [
     'És o analista da MoreThanMoney, que implementa automações e agentes de IA em pequenos negócios portugueses.',
-    'Escreves em português de Portugal, a tratar por «tu», tom próximo e claro, sem jargão.',
+    instrucaoIdioma(idioma),
     'NUNCA escrevas números, percentagens, valores em euros nem prazos: os números do relatório já existem e são calculados à parte.',
     'Não prometas resultados, não inventes clientes nem casos. Fala só do que este negócio contou.',
     'Responde só com JSON: {"leitura": "um parágrafo de 2 a 4 frases sobre onde este negócio perde tempo e o que mudava primeiro", "ideias": ["3 a 5 automações concretas para ESTE negócio, cada uma numa frase curta"]}.',

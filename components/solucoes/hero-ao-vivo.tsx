@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react"
 import { Bell, CalendarCheck, FileText, Receipt, Sparkles } from "lucide-react"
 import { SECTORES } from "@/lib/site-solucoes/automacao"
+import { useT } from "@/components/solucoes/idioma"
 
 /**
  * O herói do /solucoes: um telemóvel com uma conversa real do agente, que muda de negócio de poucos
@@ -18,6 +19,7 @@ const AVISOS = [
 ]
 
 export function HeroAoVivo() {
+  const { t } = useT()
   const [i, setI] = useState(0)
   const [passo, setPasso] = useState(3)
 
@@ -52,15 +54,15 @@ export function HeroAoVivo() {
               <Sparkles className="h-4 w-4" />
             </span>
             <div className="min-w-0">
-              <p className="truncate text-sm font-semibold">{s.nome}</p>
-              <p className="text-[11px] text-emerald-300/90">Agente de IA activo</p>
+              <p className="truncate text-sm font-semibold">{t(s.nome)}</p>
+              <p className="text-[11px] text-emerald-300/90">{t("Agente de IA activo")}</p>
             </div>
           </div>
           <div className="flex h-[300px] flex-col justify-end gap-3 px-4 py-4" aria-live="polite">
             {passo >= 1 && (
               <div className="ml-auto max-w-[82%] animate-in fade-in slide-in-from-bottom-2 duration-300">
-                <p className="text-right text-[10px] text-zinc-500">{s.ecra.cliente}</p>
-                <p className="mt-0.5 rounded-2xl rounded-tr-sm bg-white/[0.08] px-3.5 py-2.5 text-[13px] leading-snug">{s.ecra.pergunta}</p>
+                <p className="text-right text-[10px] text-zinc-500">{t(s.ecra.cliente)}</p>
+                <p className="mt-0.5 rounded-2xl rounded-tr-sm bg-white/[0.08] px-3.5 py-2.5 text-[13px] leading-snug">{t(s.ecra.pergunta)}</p>
               </div>
             )}
             {passo === 2 && (
@@ -72,11 +74,11 @@ export function HeroAoVivo() {
             )}
             {passo >= 3 && (
               <p className="max-w-[88%] animate-in fade-in slide-in-from-bottom-2 rounded-2xl rounded-tl-sm bg-[#D2A63C]/15 px-3.5 py-2.5 text-[13px] leading-snug duration-300">
-                {s.ecra.resposta}
+                {t(s.ecra.resposta)}
               </p>
             )}
           </div>
-          <div className="mx-4 mb-5 rounded-full border border-white/10 px-4 py-2.5 text-xs text-zinc-600">Escreve uma mensagem</div>
+          <div className="mx-4 mb-5 rounded-full border border-white/10 px-4 py-2.5 text-xs text-zinc-600">{t("Escreve uma mensagem")}</div>
         </div>
       </div>
 
@@ -89,14 +91,14 @@ export function HeroAoVivo() {
           <div className="flex items-start gap-3">
             <aviso.Icone className="mt-0.5 h-4 w-4 shrink-0 text-[#E9C46A]" />
             <div>
-              <p className="text-sm font-semibold">{aviso.t}</p>
-              <p className="text-xs text-zinc-400">{aviso.d}</p>
+              <p className="text-sm font-semibold">{t(aviso.t)}</p>
+              <p className="text-xs text-zinc-400">{t(aviso.d)}</p>
             </div>
           </div>
         </div>
       )}
       <div className="absolute -right-4 bottom-16 hidden items-center gap-2 rounded-full border border-white/10 bg-[#12151C]/95 px-3.5 py-2 text-xs shadow-xl sm:flex md:-right-14">
-        <Bell className="h-3.5 w-3.5 text-[#E9C46A]" /> Só te chama quando precisa de ti
+        <Bell className="h-3.5 w-3.5 text-[#E9C46A]" /> {t("Só te chama quando precisa de ti")}
       </div>
     </div>
   )

@@ -1,3 +1,4 @@
+import { escolherIdioma } from '@/lib/site-solucoes/i18n/base'
 import { NextRequest, NextResponse } from 'next/server'
 import { chamarIAGratis } from '@/lib/ia/chamar'
 import { fetchLinkPreview } from '@/lib/link-preview-fetch'
@@ -16,7 +17,7 @@ const pedidos = new Map<string, number[]>()
  * já validado. Se a IA falhar, devolve um sector genérico com o nome que a pessoa escreveu.
  */
 export async function POST(req: NextRequest) {
-  let corpo: { negocio?: unknown; site?: unknown } = {}
+  let corpo: { negocio?: unknown; site?: unknown; idioma?: unknown } = {}
   try {
     corpo = await req.json()
   } catch {
@@ -41,7 +42,7 @@ export async function POST(req: NextRequest) {
   }
 
   try {
-    const { sistema, mensagem } = promptSector(v.negocio, resumo)
+    const { sistema, mensagem } = promptSector(v.negocio, resumo, escolherIdioma({ pedido: typeof corpo.idioma === 'string' ? corpo.idioma : null }))
     const r = await chamarIAGratis({
       sistema,
       mensagens: [{ role: 'user', content: mensagem }],
