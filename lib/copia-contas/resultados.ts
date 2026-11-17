@@ -19,6 +19,7 @@ export type Direcao = 'buy' | 'sell'
 export interface DealMt {
   id?: string
   positionId?: string
+  clientId?: string
   symbol?: string
   type?: string
   entryType?: string
@@ -163,4 +164,133 @@ export function resumoPorConta(linhas: LinhaResumo[]): Array<{ conta: string; n:
   return [...m.values()]
     .map((r) => ({ ...r, copia: umDecimal(r.copia), mestre: umDecimal(r.mestre), sombraB: umDecimal(r.sombraB) }))
     .sort((a, b) => (a.copia - a.mestre) - (b.copia - b.mestre))
+}
+
+// ── VIGIA DAS CÓPIAS VIVAS ─────────────────────────────────────────────────────────────────────
+// Os dados de 17/11 mostraram dois buracos que ninguém via:
+//  · cópias que ficaram «aberta» na base depois de a mestre fechar (a corretora fechou-as no SL dela
+//    mas o fecho do motor foi recusado enquanto a conta estava bloqueada) — e, pior, uma cópia que
+//    continue mesmo ABERTA na corretora sem mestre é dinheiro real sem gestão: uma órfã;
+//  · ordens enviadas que o motor deu como «não encontradas» porque só procura nas posições ABERTAS:
+//    se a corretora encheu e o stop bateu antes da confirmação, o trade existiu e não contava.
+// Aqui só se decide; o servidor lê a corretora (GET) e só escreve na NOSSA tabela. Fechar uma órfã
+// fica para o admin: é dinheiro real.
+
+export interface CopiaViva {
+  id: string
+  estado: string
+  destino_posicao_id: string | null
+  client_id: string | null
+  origem_posicao_id: string | null
+  destino_simbolo?: string | null
+  direcao?: string | null
+}
+
+export interface MestreLida { estado: string | null; fechada_em: string | null }
+
+export interface VigiaCopias {
+  /** abertas na corretora com a mestre fechada há mais do que a tolerância */
+  orfas: Array<{ copiaId: string; positionId: string; simbolo: string | null; direcao: string | null; mestreFechadaEm: string }>
+  /** correcções à base: a cópia já não está aberta (fechou na corretora) ou foi encontrada pelo clientId */
+  correcoes: Array<{ copiaId: string; estado: 'aberta' | 'fechada'; destino_posicao_id?: string; nota: string }>
+}
+
+export function vigiarCopias(p: {
+  copias: CopiaViva[]
+  abertasNoDestino: Array<{ id: string; clientId: string | null }>
+  deals: DealMt[]
+  mestres: Map<string, MestreLida>
+  agora: number
+  toleranciaMs?: number
+}): VigiaCopias {
+  const tol = p.toleranciaMs ?? 5 * 60_000
+  const abertas = new Set(p.abertasNoDestino.map((x) => String(x.id)))
+  const abertaPorCliente = new Map(p.abertasNoDestino.filter((x) => x.clientId).map((x) => [String(x.clientId), String(x.id)]))
+  const fechos = fechosPorPosicao(p.deals)
+  const posPorCliente = new Map<string, string>()
+  for (const d of p.deals) if (d.clientId && d.positionId && d.entryType === 'DEAL_ENTRY_IN') posPorCliente.set(String(d.clientId), String(d.positionId))
+
+  const out: VigiaCopias = { orfas: [], correcoes: [] }
+  const verOrfa = (c: CopiaViva, positionId: string) => {
+    const m = c.origem_posicao_id ? p.mestres.get(String(c.origem_posicao_id)) : undefined
+    const t = m?.estado === 'fechada' ? Date.parse(String(m.fechada_em)) : NaN
+    if (Number.isFinite(t) && p.agora - t > tol) {
+      out.orfas.push({ copiaId: c.id, positionId, simbolo: c.destino_simbolo ?? null, direcao: c.direcao ?? null, mestreFechadaEm: String(m!.fechada_em) })
+    }
+  }
+
+  for (const c of p.copias) {
+    if (c.estado === 'aberta' && c.destino_posicao_id) {
+      const id = String(c.destino_posicao_id)
+      if (abertas.has(id)) verOrfa(c, id)
+      else if (fechos.has(id)) out.correcoes.push({ copiaId: c.id, estado: 'fechada', nota: 'fechou na corretora (SL/TP/manual) — base acertada pela vigia' })
+      continue
+    }
+    if (c.estado === 'erro' && !c.destino_posicao_id && c.client_id) {
+      const viva = abertaPorCliente.get(String(c.client_id))
+      if (viva) {
+        out.correcoes.push({ copiaId: c.id, estado: 'aberta', destino_posicao_id: viva, nota: 'ordem encontrada pelo clientId (estava dada como não encontrada)' })
+        verOrfa(c, viva)
+        continue
+      }
+      const pos = posPorCliente.get(String(c.client_id))
+      if (pos && fechos.has(pos)) {
+        out.correcoes.push({ copiaId: c.id, estado: 'fechada', destino_posicao_id: pos, nota: 'ordem encheu e fechou antes da confirmação — encontrada no histórico pelo clientId' })
+      }
+    }
+  }
+  return out
+}
+
+// ── FACTOS PARA O AUDITOR IA ───────────────────────────────────────────────────────────────────
+// A IA recebe números já feitos (nunca as linhas cruas): menos tokens e nada para ela «calcular».
+
+export interface LinhaAuditor {
+  destino_chave: string
+  simbolo: string | null
+  pips_copia: number | null
+  pips_mestre: number | null
+  pips_sombra_b: number | null
+  custo_entrada_pips: number | null
+  saiu_antes: boolean | null
+  motivo: string | null
+  fechada_em: string | null
+}
+
+export function factosParaAuditor(linhas: LinhaAuditor[]) {
+  const porConta = new Map<string, LinhaAuditor[]>()
+  for (const l of linhas) {
+    if (l.pips_copia == null || l.pips_mestre == null) continue
+    const g = porConta.get(l.destino_chave) ?? []
+    g.push(l)
+    porConta.set(l.destino_chave, g)
+  }
+  const soma = (xs: Array<number | null>) => umDecimal(xs.reduce<number>((s, x) => s + (x ?? 0), 0))
+  const contas = [...porConta.entries()].map(([conta, g]) => {
+    const horas = new Map<number, { n: number; div: number }>()
+    for (const l of g) {
+      const h = l.fechada_em ? new Date(l.fechada_em).getUTCHours() : -1
+      const x = horas.get(h) ?? { n: 0, div: 0 }
+      x.n++
+      x.div += (l.pips_copia ?? 0) - (l.pips_mestre ?? 0)
+      horas.set(h, x)
+    }
+    const motivos: Record<string, number> = {}
+    for (const l of g) motivos[l.motivo ?? 'outro'] = (motivos[l.motivo ?? 'outro'] ?? 0) + 1
+    const custos = g.map((l) => l.custo_entrada_pips).filter((x): x is number => x != null)
+    return {
+      conta,
+      n: g.length,
+      pipsCopia: soma(g.map((l) => l.pips_copia)),
+      pipsMestre: soma(g.map((l) => l.pips_mestre)),
+      pipsSairComMestre: soma(g.map((l) => l.pips_sombra_b ?? l.pips_mestre)),
+      saiuAntesDaMestre: g.filter((l) => l.saiu_antes).length,
+      custoEntradaMedioPips: custos.length ? umDecimal(custos.reduce((s, x) => s + x, 0) / custos.length) : null,
+      motivosFecho: motivos,
+      piorHorasUtc: [...horas.entries()].filter(([h]) => h >= 0)
+        .map(([h, x]) => ({ hora: h, n: x.n, divergenciaPips: umDecimal(x.div) }))
+        .sort((a, b) => a.divergenciaPips - b.divergenciaPips).slice(0, 3),
+    }
+  }).sort((a, b) => (a.pipsCopia - a.pipsMestre) - (b.pipsCopia - b.pipsMestre))
+  return { contas }
 }

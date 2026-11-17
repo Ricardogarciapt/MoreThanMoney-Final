@@ -5,6 +5,10 @@
   ],
   "crons": [
     {
+      "path": "/api/cron/lead-instantaneo",
+      "schedule": "*/5 * * * *"
+    },
+    {
       "path": "/api/notifications/check-alerts",
       "schedule": "*/5 * * * *"
     },
@@ -291,6 +295,10 @@
     {
       "path": "/api/cron/copia-resultados",
       "schedule": "15 7 * * *"
+    },
+    {
+      "path": "/api/cron/copia-resultados?vigia=1",
+      "schedule": "40 * * * *"
     },
     {
       "path": "/api/cron/backoffice-dia",

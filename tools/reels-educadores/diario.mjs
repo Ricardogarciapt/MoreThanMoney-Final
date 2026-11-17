@@ -46,8 +46,85 @@ async function subir(ficheiro, ext) {
   return publicUrl
 }
 
-/** Desenha um reel: o mesmo motor do pacote aprovado pelo Ricardo (v2). */
-async function desenhar(browser, item, pasta) {
+// ── MOTOR DE ATIVOS (services/motor-ativos): os reels da marca pedem um clipe 9:16 para fundo.
+// Se o motor não estiver ligado ou não acabar dentro do prazo, o reel sai como sempre, com a
+// foto da app, e o pedido não se repete (fica na fila e gera quando a GPU ligar).
+// MOTOR_ATIVOS=0 desliga; MOTOR_ENSAIO=1 pede o clipe de ensaio; MOTOR_PRAZO_MIN (omissão 12).
+const MOTOR = process.env.MOTOR_ATIVOS !== '0'
+const ENSAIO = process.env.MOTOR_ENSAIO === '1'
+const PRAZO_MS = Number(process.env.MOTOR_PRAZO_MIN || 12) * 60_000
+const daMarca = (item) => String(item.educador?.slug || '').startsWith('mtm-')
+
+async function motor(metodo, corpo, id) {
+  const url = `${API}/api/estudio/geracao${id ? `?id=${encodeURIComponent(id)}` : ''}`
+  const r = await fetch(url, {
+    method: metodo,
+    headers: { Authorization: `Bearer ${SEGREDO}`, 'content-type': 'application/json' },
+    body: corpo ? JSON.stringify(corpo) : undefined,
+  })
+  const j = await r.json().catch(() => ({}))
+  if (!r.ok) throw new Error(`motor ${metodo} ${r.status}`)
+  return j
+}
+
+/** Pede um clipe por reel da marca; devolve Map(item.id → id do pedido). Nunca falha. */
+async function pedirClipes(renders) {
+  const pedidos = new Map()
+  if (!MOTOR) return pedidos
+  for (const item of renders.filter(daMarca)) {
+    try {
+      const j = await motor('POST', {
+        tipo: 'mover',
+        imagem_url: item.educador.foto,
+        prompt: `Movimento de câmara lento e cinematográfico sobre o ecrã da app, luz dourada sobre fundo quase preto, sem texto novo. Tema: ${item.roteiro.tema || ''}`.slice(0, 400),
+        aspecto: '9:16',
+        duracao_s: 4,
+        movimento: 'dolly-in',
+        origem: 'reels-diarios',
+        ...(ENSAIO ? { ensaio: true } : {}),
+      })
+      if (j.motor_online === false && !ENSAIO) {
+        log(`motor desligado: ${item.roteiro.id} fica com a foto`)
+        if (j.id) await cancelar(String(j.id))
+        continue
+      }
+      if (j.id) pedidos.set(item.id, String(j.id))
+    } catch (e) {
+      log(`motor indisponível (${e.message}): os reels ficam com a foto`)
+      return pedidos
+    }
+  }
+  return pedidos
+}
+
+/** Cancela um pedido de que se desistiu, para não gerar clipes de reels que já saíram. */
+async function cancelar(pedidoId) {
+  await motor('DELETE', null, pedidoId).catch(() => {})
+}
+
+/** Espera pelo clipe até ao prazo comum; devolve o caminho do MP4 ou null (e cancela o pedido). */
+async function clipe(pedidoId, limite, pasta) {
+  while (Date.now() < limite) {
+    try {
+      const j = await motor('GET', null, pedidoId)
+      if (j.estado === 'pronto' && j.url) {
+        const r = await fetch(j.url)
+        if (!r.ok) { await cancelar(pedidoId); return null }
+        const f = path.join(pasta, 'clipe.mp4')
+        fs.writeFileSync(f, Buffer.from(await r.arrayBuffer()))
+        return f
+      }
+      if (j.estado === 'erro' || j.estado === 'falhou') { await cancelar(pedidoId); return null }
+    } catch { /* tenta outra vez até ao prazo */ }
+    await new Promise((r) => setTimeout(r, 15_000))
+  }
+  await cancelar(pedidoId)
+  return null
+}
+
+/** Desenha um reel: o mesmo motor do pacote aprovado pelo Ricardo (v2). Com `fundo`, o clipe do
+ * motor de ativos fica por baixo da animação (a página é desenhada com fundo transparente). */
+async function desenhar(browser, item, pasta, fundo = null) {
   const foto = await fetch(item.educador.foto)
   if (!foto.ok) throw new Error(`foto ${foto.status}`)
   const tipo = foto.headers.get('content-type') || 'image/jpeg'
@@ -56,19 +133,25 @@ async function desenhar(browser, item, pasta) {
   const page = await browser.newPage({ viewport: { width: 1080, height: 1920 } })
   await page.goto('file://' + path.join(DIR, 'reel2.html'))
   const info = await page.evaluate(([d, f]) => window.iniciar(d, f), [{ ...item.roteiro, educador: item.educador }, fotoUrl])
+  if (fundo) await page.evaluate(() => document.documentElement.classList.add('sobre-video'))
   await page.evaluate(() => document.fonts.ready)
   await page.waitForTimeout(300)
 
   const som = path.join(pasta, 'som.wav')
   execFileSync('python3', [path.join(DIR, 'som.py'), som, String(info.total), JSON.stringify(info.cortes), JSON.stringify(info.palavras)])
   const mp4 = path.join(pasta, 'reel.mp4')
-  const ff = spawn('ffmpeg', ['-y', '-v', 'error', '-f', 'image2pipe', '-framerate', '30', '-c:v', 'mjpeg', '-i', '-', '-i', som,
-    '-c:v', 'libx264', '-preset', 'medium', '-crf', '20', '-pix_fmt', 'yuv420p', '-r', '30',
-    '-c:a', 'aac', '-b:a', '192k', '-t', info.total.toFixed(2), '-movflags', '+faststart', mp4], { stdio: ['pipe', 'inherit', 'inherit'] })
+  const saida = ['-c:v', 'libx264', '-preset', 'medium', '-crf', '20', '-pix_fmt', 'yuv420p', '-r', '30',
+    '-c:a', 'aac', '-b:a', '192k', '-t', info.total.toFixed(2), '-movflags', '+faststart', mp4]
+  const args = fundo
+    ? ['-y', '-v', 'error', '-stream_loop', '-1', '-i', fundo, '-f', 'image2pipe', '-framerate', '30', '-c:v', 'png', '-i', '-', '-i', som,
+      '-filter_complex', '[0:v]scale=1080:1920:force_original_aspect_ratio=increase,crop=1080:1920,setsar=1,fps=30,drawbox=c=black@0.5:t=fill[f];[f][1:v]overlay=0:0:shortest=1[v]',
+      '-map', '[v]', '-map', '2:a', ...saida]
+    : ['-y', '-v', 'error', '-f', 'image2pipe', '-framerate', '30', '-c:v', 'mjpeg', '-i', '-', '-i', som, ...saida]
+  const ff = spawn('ffmpeg', args, { stdio: ['pipe', 'inherit', 'inherit'] })
   const n = Math.ceil(info.total * 30)
   for (let i = 0; i < n; i++) {
     await page.evaluate((x) => window.renderAt(x), i / 30)
-    const buf = await page.screenshot({ type: 'jpeg', quality: 90 })
+    const buf = fundo ? await page.screenshot({ type: 'png', omitBackground: true }) : await page.screenshot({ type: 'jpeg', quality: 90 })
     if (!ff.stdin.write(buf)) await new Promise((r) => ff.stdin.once('drain', r))
   }
   ff.stdin.end()
@@ -95,11 +178,24 @@ async function animados() {
 async function desenharTodos(renders) {
   const { chromium } = createRequire(import.meta.url)('playwright')
   const browser = await chromium.launch()
+  const pedidos = await pedirClipes(renders)
+  const limite = Date.now() + PRAZO_MS
+  // Os reels sem clipe desenham-se primeiro, enquanto o motor trabalha nos outros.
+  const ordem = [...renders].sort((a, b) => Number(pedidos.has(a.id)) - Number(pedidos.has(b.id)))
   try {
-    for (const item of renders) {
+    for (const item of ordem) {
       const pasta = fs.mkdtempSync(path.join(os.tmpdir(), 'reel-'))
       try {
-        const { mp4, capa, total } = await desenhar(browser, item, pasta)
+        let fundo = null
+        if (pedidos.has(item.id)) {
+          fundo = await clipe(pedidos.get(item.id), limite, pasta)
+          log(fundo ? `motor: clipe pronto para ${item.roteiro.id}` : `motor: sem clipe a tempo para ${item.roteiro.id}, fica com a foto`)
+        }
+        const { mp4, capa, total } = await desenhar(browser, item, pasta, fundo).catch((e) => {
+          if (!fundo) throw e
+          log(`motor: o clipe falhou na montagem (${e.message}), fica com a foto`)
+          return desenhar(browser, item, pasta, null)
+        })
         const videoUrl = await subir(mp4, 'mp4')
         const capaUrl = await subir(capa, 'jpg').catch(() => null)
         const r = await api('POST', { acao: 'entregar', id: item.id, videoUrl, capaUrl })

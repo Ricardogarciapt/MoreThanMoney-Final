@@ -16,6 +16,9 @@ type Proposta =
   | { tipo: 'mover_negocio'; estado: string; motivo_perda: string | null; candidatos: Negocio[] }
   | { tipo: 'criar_tarefa'; titulo: string; prazo: string | null; negocio: string | null; candidatos: Negocio[] }
   | { tipo: 'mudar_funil'; funil: string | null; nome_funil: string; candidatos: Negocio[] }
+  | { tipo: 'nota_negocio'; texto: string; candidatos: (Negocio & { nota_nova: string })[] }
+  | { tipo: 'concluir_tarefa'; tarefas: Tarefa[] }
+  | { tipo: 'adiar_tarefa'; prazo: string; tarefas: Tarefa[] }
 type Resultado = {
   texto?: string
   resposta?: string
@@ -23,6 +26,8 @@ type Resultado = {
   negocios?: Negocio[]
   tarefas?: Tarefa[]
   proposta?: Proposta
+  ligacoes?: { href: string; nome: string }[]
+  rascunho?: { canal: 'whatsapp' | 'email'; texto: string; abrir: string | null }
   error?: string
 }
 
@@ -117,6 +122,7 @@ export function BotaoVoz() {
   }
 
   const p = res?.proposta
+  const BOTAO = 'mb-1 block w-full rounded-lg px-3 py-2 text-left font-medium text-black disabled:opacity-50'
 
   return (
     <>
@@ -204,6 +210,69 @@ export function BotaoVoz() {
                 Confirmar: {n.nome} → {p.nome_funil}
               </button>
             ))}
+
+          {p?.tipo === 'nota_negocio' &&
+            p.candidatos.map((n) => (
+              <button
+                key={n.id}
+                type="button"
+                disabled={estado !== 'parado'}
+                onClick={() => void confirmar(`/api/backoffice/negocios/${n.id}`, 'PATCH', { nota: n.nota_nova }, `Nota guardada em ${n.nome}.`)}
+                className={BOTAO}
+                style={{ background: OURO }}
+              >
+                Confirmar: nota em {n.nome}
+              </button>
+            ))}
+
+          {(p?.tipo === 'concluir_tarefa' || p?.tipo === 'adiar_tarefa') &&
+            p.tarefas.map((t) => (
+              <button
+                key={t.id}
+                type="button"
+                disabled={estado !== 'parado'}
+                onClick={() =>
+                  void confirmar(
+                    '/api/backoffice/tarefas',
+                    'PATCH',
+                    p.tipo === 'concluir_tarefa' ? { id: t.id, estado: 'feita' } : { id: t.id, prazo: p.prazo },
+                    p.tipo === 'concluir_tarefa' ? `«${t.titulo}» feita.` : `«${t.titulo}» passou para ${p.prazo}.`,
+                  )
+                }
+                className={BOTAO}
+                style={{ background: OURO }}
+              >
+                Confirmar: {t.titulo}
+                {t.prazo ? ` (prazo ${t.prazo})` : ''}
+              </button>
+            ))}
+
+          {res?.ligacoes?.map((l) => (
+            <a key={l.href} href={l.href} className={BOTAO} style={{ background: OURO }}>
+              Abrir chamada com {l.nome}
+            </a>
+          ))}
+
+          {res?.rascunho && (
+            <div className="rounded-lg border border-white/10 p-3">
+              <p className="mb-2 whitespace-pre-wrap text-zinc-200">{res.rascunho.texto}</p>
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  onClick={() => void navigator.clipboard?.writeText(res.rascunho!.texto).then(() => setFeito('Copiado.'))}
+                  className="rounded-lg px-3 py-1.5 font-medium text-black"
+                  style={{ background: OURO }}
+                >
+                  Copiar
+                </button>
+                {res.rascunho.abrir && (
+                  <a href={res.rascunho.abrir} target="_blank" rel="noreferrer" className="rounded-lg border border-white/15 px-3 py-1.5 text-zinc-200 hover:border-white/40">
+                    Abrir no {res.rascunho.canal === 'email' ? 'email' : 'WhatsApp'}
+                  </a>
+                )}
+              </div>
+            </div>
+          )}
 
           {p?.tipo === 'criar_tarefa' && (
             <div className="rounded-lg border border-white/10 p-3">

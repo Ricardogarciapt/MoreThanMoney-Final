@@ -5,7 +5,7 @@
  */
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { restMt5ComToken } from '@/lib/webtrader/corretoras/mt5'
-import { compararComMestre, fechosPorPosicao, resumoPorConta, type DealMt, type Direcao } from '../resultados'
+import { compararComMestre, fechosPorPosicao, resumoPorConta, vigiarCopias, type DealMt, type Direcao, type VigiaCopias } from '../resultados'
 import { lerContaPorRef, tokenDaConta } from './refs'
 
 type Db = SupabaseClient
@@ -16,6 +16,10 @@ export interface ResultadoLeitura {
   falhas: string[]
   gravados: number
   resumo: ReturnType<typeof resumoPorConta>
+  /** cópias abertas na corretora com a mestre já fechada (dinheiro real sem gestão) */
+  orfas: Array<VigiaCopias['orfas'][number] & { conta: string }>
+  /** linhas de copia_posicoes acertadas pela vigia */
+  corrigidas: number
 }
 
 export async function lerResultadosDasCopias(db: Db, opcoes: { horas?: number; ensaio?: boolean } = {}): Promise<ResultadoLeitura> {
@@ -38,6 +42,8 @@ export async function lerResultadosDasCopias(db: Db, opcoes: { horas?: number; e
   const falhas: string[] = []
   const linhas: Record<string, unknown>[] = []
   let contasLidas = 0
+  const orfas: ResultadoLeitura['orfas'] = []
+  let corrigidas = 0
 
   for (const d of porDestino.values()) {
     const { data: copias } = await db.from('copia_posicoes')
@@ -45,7 +51,12 @@ export async function lerResultadosDasCopias(db: Db, opcoes: { horas?: number; e
       .in('rota_id', d.rotas.map((r) => r.id))
       .not('destino_posicao_id', 'is', null)
       .gte('created_at', new Date(desde.getTime() - 7 * 86400_000).toISOString())
-    if (!copias?.length) continue
+    const { data: vivas } = await db.from('copia_posicoes')
+      .select('id, estado, destino_posicao_id, client_id, origem_posicao_id, destino_simbolo, direcao')
+      .in('rota_id', d.rotas.map((r) => r.id))
+      .in('estado', ['aberta', 'erro'])
+      .gte('created_at', new Date(desde.getTime() - 7 * 86400_000).toISOString())
+    if (!copias?.length && !vivas?.length) continue
 
     const conta = await lerContaPorRef(d.ref).catch(() => null)
     if (!conta?.metaapiAccountId) { falhas.push(`${d.chave}: sem conta MetaApi`); continue }
@@ -61,6 +72,36 @@ export async function lerResultadosDasCopias(db: Db, opcoes: { horas?: number; e
       continue
     }
     contasLidas++
+
+    // ── vigia: órfãs e base desacertada (GET /positions; só se escreve na nossa tabela) ──
+    if (vivas?.length) {
+      const abertas = await restMt5ComToken(t.token)(conta.metaapiAccountId, '/positions').catch(() => null)
+      if (Array.isArray(abertas)) {
+        const idsM = [...new Set(vivas.map((c) => c.origem_posicao_id).filter(Boolean))] as string[]
+        const { data: ms } = idsM.length
+          ? await db.from('funded_positions').select('id, estado, fechada_em').in('id', idsM)
+          : { data: [] as Array<{ id: string; estado: string | null; fechada_em: string | null }> }
+        const v = vigiarCopias({
+          copias: vivas.map((c) => ({ ...c, destino_posicao_id: c.destino_posicao_id == null ? null : String(c.destino_posicao_id) })),
+          abertasNoDestino: (abertas as Array<{ id: unknown; clientId?: string | null }>).map((x) => ({ id: String(x.id), clientId: x.clientId ?? null })),
+          deals,
+          mestres: new Map((ms ?? []).map((m) => [String(m.id), { estado: m.estado ?? null, fechada_em: m.fechada_em ?? null }])),
+          agora: ate.getTime(),
+        })
+        for (const o of v.orfas) orfas.push({ ...o, conta: d.chave })
+        if (!opcoes.ensaio) {
+          for (const c of v.correcoes) {
+            const { error: e } = await db.from('copia_posicoes').update({
+              estado: c.estado, ...(c.destino_posicao_id ? { destino_posicao_id: c.destino_posicao_id } : {}),
+              ...(c.estado === 'fechada' ? { fechado_pct: 1 } : {}), erro: c.nota, updated_at: ate.toISOString(),
+            }).eq('id', c.copiaId).in('estado', ['aberta', 'erro'])
+            if (!e) corrigidas++
+          }
+        } else corrigidas += v.correcoes.length
+      } else falhas.push(`${d.chave}: posições abertas ilegíveis (vigia saltada)`)
+    }
+    if (!copias?.length) continue
+
     const fechos = fechosPorPosicao(deals)
     const minhas = copias.filter((c) => fechos.has(String(c.destino_posicao_id)))
     if (!minhas.length) continue
@@ -113,6 +154,8 @@ export async function lerResultadosDasCopias(db: Db, opcoes: { horas?: number; e
     contasLidas,
     falhas,
     gravados,
+    orfas,
+    corrigidas,
     resumo: resumoPorConta(linhas.map((l) => ({
       destino_chave: String(l.destino_chave), pips_copia: l.pips_copia as number | null, pips_mestre: l.pips_mestre as number | null,
       pips_sombra_b: l.pips_sombra_b as number | null, saiu_antes: Boolean(l.saiu_antes),
@@ -128,7 +171,21 @@ export function textoDoResumo(r: ResultadoLeitura, horas: number): string {
   for (const c of r.resumo) {
     linhas.push(`${c.conta}: cópia ${s(c.copia)} · mestre ${s(c.mestre)} · a sair com a mestre ${s(c.sombraB)} · ${c.n} trades, ${c.saiuAntes} saíram antes`)
   }
+  if (r.orfas.length) {
+    linhas.push(`⚠️ ${r.orfas.length} cópia(s) ABERTA(S) na corretora com a mestre já fechada — fecha à mão ou confirma:`)
+    for (const o of r.orfas.slice(0, 8)) linhas.push(`  · ${o.conta} #${o.positionId} ${o.simbolo ?? ''} ${o.direcao ?? ''} (mestre fechou ${o.mestreFechadaEm.slice(0, 16).replace('T', ' ')} UTC)`)
+  }
+  if (r.corrigidas) linhas.push(`Base acertada: ${r.corrigidas} cópia(s) (fechadas na corretora ou encontradas pelo clientId).`)
   if (r.falhas.length) linhas.push(`Não lidas: ${r.falhas.slice(0, 5).join(' | ')}`)
   linhas.push('Só leitura. «A sair com a mestre» é estimativa (sem o spread do fecho).')
   return linhas.join('\n')
+}
+
+/** Só o alerta das órfãs (vigia de hora a hora). Vazio = não há nada a dizer. */
+export function textoDasOrfas(r: ResultadoLeitura): string {
+  if (!r.orfas.length) return ''
+  const l = [`⚠️ Vigia das cópias: ${r.orfas.length} posição(ões) ABERTA(S) na corretora com a mestre MTM Funded já fechada.`]
+  for (const o of r.orfas.slice(0, 10)) l.push(`· ${o.conta} #${o.positionId} ${o.simbolo ?? ''} ${o.direcao ?? ''} — mestre fechou ${o.mestreFechadaEm.slice(0, 16).replace('T', ' ')} UTC`)
+  l.push('Nada foi fechado automaticamente: confirma e fecha no MT5 ou no admin.')
+  return l.join('\n')
 }

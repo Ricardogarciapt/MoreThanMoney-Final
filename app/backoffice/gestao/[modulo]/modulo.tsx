@@ -26,6 +26,7 @@ const ECRAS: Record<string, React.ComponentType> = {
   'whatsapp:escrever': dynamic(() => import('@/app/admin/whatsapp/page'), { ssr: false, loading: carregar }),
   suporte: dynamic(() => import('@/components/admin/suporte-crm'), { ssr: false, loading: carregar }),
   leads: dynamic(() => import('@/app/admin/social/leads/page'), { ssr: false, loading: carregar }),
+  conversao: dynamic(() => import('@/components/admin/conversao-painel'), { ssr: false, loading: carregar }),
   formularios: dynamic(() => import('@/components/admin/formularios-admin'), { ssr: false, loading: carregar }),
   trafego: dynamic(() => import('@/components/admin/trafego-painel'), { ssr: false, loading: carregar }),
   'marketing:assistente': dynamic(() => import('@/components/admin/marketing/assistente'), { ssr: false, loading: carregar }),
