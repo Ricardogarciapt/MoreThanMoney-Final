@@ -16,18 +16,23 @@ const campo =
 
 export function PedirAnalise({
   sector,
+  sectorLivre,
+  siteInicial,
   horas,
   custoHora,
   agendar,
   onFechar,
 }: {
   sector: string
+  /** Nome do negócio quando não está na lista do simulador. */
+  sectorLivre?: string
+  siteInicial?: string
   horas: Record<string, number>
   custoHora: number
   agendar: string
   onFechar: () => void
 }) {
-  const [f, setF] = useState({ nome: "", email: "", telefone: "", empresa: "", site: "", equipa: "", dores: "", website: "" })
+  const [f, setF] = useState({ nome: "", email: "", telefone: "", empresa: "", site: siteInicial ?? "", equipa: "", dores: "", website: "" })
   const [consentimento, setConsentimento] = useState(false)
   const [estado, setEstado] = useState<"form" | "a_enviar" | "feito">("form")
   const [erros, setErros] = useState<Record<string, string>>({})
@@ -46,7 +51,7 @@ export function PedirAnalise({
       const res = await fetch("/api/solucoes/analise", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ...f, sector, horas, custoHora, consentimento }),
+        body: JSON.stringify({ ...f, sector, sectorLivre, horas, custoHora, consentimento }),
       })
       const j = await res.json().catch(() => ({}))
       if (res.ok && j.ok) {
@@ -117,12 +122,14 @@ export function PedirAnalise({
           <Erro k="equipa" />
         </label>
         <label className="text-sm">
-          Site ou Instagram <span className="text-zinc-500">(opcional)</span>
+          Site ou Instagram
           <input className={campo} value={f.site} onChange={muda("site")} placeholder="ex.: @onegocio ou onegocio.pt" />
+          <Erro k="site" />
         </label>
         <label className="text-sm">
-          Telemóvel <span className="text-zinc-500">(opcional)</span>
+          Telemóvel
           <input className={campo} type="tel" value={f.telefone} onChange={muda("telefone")} autoComplete="tel" />
+          <Erro k="telefone" />
         </label>
         <label className="text-sm md:col-span-2">
           O que mais te rouba tempo no dia a dia?

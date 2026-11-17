@@ -23,6 +23,8 @@ export interface EntradaAnalise {
   equipa?: unknown
   dores?: unknown
   sector?: unknown
+  /** Quando o negócio não está na lista do simulador. */
+  sectorLivre?: unknown
   horas?: unknown
   custoHora?: unknown
   consentimento?: unknown
@@ -60,15 +62,18 @@ export function validarPedidoAnalise(e: EntradaAnalise): ValidacaoAnalise {
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email)) erros.email = 'Precisamos de um email válido para te enviar a análise.'
   const telLimpo = String(e.telefone ?? '').replace(/[^\d+]/g, '').slice(0, 16)
   const telefone = telLimpo.replace(/\D/g, '').length >= 9 ? telLimpo : null
+  if (!telefone) erros.telefone = 'Deixa o teu telemóvel para te ligarmos com a análise.'
   const empresa = txt(e.empresa, 100)
   if (empresa.length < 2) erros.empresa = 'Como se chama o negócio?'
   const siteCru = txt(e.site, 160)
-  const site = siteCru && /^[\w\-.:/@?=&%#~+]+$/.test(siteCru) ? siteCru : null
+  const site = siteCru && /^[\w\-.:/@?=&%#~+]+$/.test(siteCru) && /[.@]/.test(siteCru) ? siteCru : null
+  if (!site) erros.site = 'Indica o site ou o Instagram do negócio.'
   const equipa = EQUIPAS.includes(e.equipa as Equipa) ? (e.equipa as Equipa) : null
   if (!equipa) erros.equipa = 'Escolhe o tamanho da equipa.'
   const dores = String(e.dores ?? '').trim().slice(0, 1500)
   if (dores.length < 15) erros.dores = 'Conta-nos em duas frases o que mais te rouba tempo.'
-  const sector = SECTORES.some((s) => s.id === e.sector) ? String(e.sector) : SECTORES[0].id
+  const sectorLivre = txt(e.sectorLivre, 80)
+  const sector = e.sector === 'outro' && sectorLivre.length >= 3 ? `outro: ${sectorLivre}` : SECTORES.some((s) => s.id === e.sector) ? String(e.sector) : SECTORES[0].id
   if (e.consentimento !== true) erros.consentimento = 'Precisamos da tua autorização para te responder.'
 
   const horas: Record<string, number> = {}
@@ -110,7 +115,8 @@ export interface RelatorioAnalise {
 const r1 = (n: number) => Math.round(n * 10) / 10
 
 export function relatorioBase(p: PedidoAnalise): { relatorio: RelatorioAnalise; sim: Simulacao } {
-  const sector = SECTORES.find((s) => s.id === p.sector) ?? SECTORES[0]
+  const livre = p.sector.startsWith('outro: ') ? p.sector.slice(7) : null
+  const sector = livre ? { nome: livre } : (SECTORES.find((s) => s.id === p.sector) ?? SECTORES[0])
   const sim = simular(p.horas, p.custoHora)
   const top = sim.prioridades.slice(0, 3)
   const oportunidades: Oportunidade[] = top.map((t) => ({

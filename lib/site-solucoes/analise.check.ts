@@ -5,6 +5,8 @@ const base = {
   nome: 'Ana',
   email: 'ana@exemplo.pt',
   empresa: 'Estúdio Ana',
+  telefone: '912 345 678',
+  site: '@estudioana',
   equipa: '2 a 5 pessoas',
   dores: 'Passo as tardes a responder a mensagens e a marcar aulas.',
   sector: 'ginasio',
@@ -29,6 +31,15 @@ if (v.ok) {
 const s = validarPedidoAnalise({ ...base, consentimento: false, email: 'x' })
 assert.ok(!s.ok && !('descartar' in s && s.descartar))
 if (!s.ok && 'erros' in s) assert.ok(s.erros.consentimento && s.erros.email)
+
+// Site/Instagram e telemóvel são obrigatórios.
+const sem = validarPedidoAnalise({ ...base, site: '', telefone: '12' })
+assert.ok(!sem.ok && 'erros' in sem && sem.erros.site && sem.erros.telefone)
+
+// Negócio fora da lista: o nome escrito pela pessoa chega ao relatório.
+const lv = validarPedidoAnalise({ ...base, sector: 'outro', sectorLivre: 'Oficina de bicicletas' })
+assert.ok(lv.ok)
+if (lv.ok) assert.equal(relatorioBase(lv.pedido).relatorio.sector, 'Oficina de bicicletas')
 
 // Honeypot: descartado em silêncio.
 const h = validarPedidoAnalise({ ...base, website: 'http://spam' })
