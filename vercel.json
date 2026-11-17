@@ -281,6 +281,10 @@
       "schedule": "25 * * * *"
     },
     {
+      "path": "/api/cron/copia-resultados",
+      "schedule": "15 7 * * *"
+    },
+    {
       "path": "/api/cron/backoffice-dia",
       "schedule": "0 7 * * 1-5"
     },
