@@ -30,6 +30,8 @@ export interface EducadorReel {
   /** As demonstrações «assinatura» já desenhadas para este educador. */
   demos: string[]
   hashtags: string
+  /** Só nas linhas da marca (LINHAS_REELS): o que este reel tem de conseguir, dito à IA. */
+  objetivo?: string
 }
 
 const SITE = 'https://www.morethanmoney.pt'
@@ -124,6 +126,90 @@ export const EDUCADORES: EducadorReel[] = [
   },
 ]
 
+/**
+ * AS LINHAS DA MARCA (ordem do Ricardo, 17/11/2026): os reels dos educadores deixam o ciclo
+ * automático e entram 6 reels por dia com a marca MoreThanMoney:
+ *   · um por funil (Educação, Rota Corretora, MTM Funded), cada um com a palavra que leva à página
+ *     do funil (/f/educacao, /f/corretora, /f/funded) pelas automações do Instagram;
+ *   · dois para ganhar seguidores (valor puro, para guardar e partilhar);
+ *   · um de CTA (começar hoje).
+ * O slot é a posição nesta lista (1 a 6) e a hora sai de HORAS_MTM.
+ * Voltar aos educadores: `site_settings.reels_educadores.modo = "educadores"`.
+ */
+const SEGUE = '#morethanmoney #educacaofinanceira #trading #literaciafinanceira #investimento'
+export const LINHAS_REELS: EducadorReel[] = [
+  {
+    slug: 'mtm-funil-educacao', nome: 'MoreThanMoney', area: 'Educação MTM',
+    foto: `${SITE}/images/apresentacao/app-aulas.jpg`,
+    palavra: 'APRENDER', depois: 'e recebes o caminho para começar', publicar: true, cortes: false,
+    objetivo: 'Funil Educação: mostrar que aprender trading e finanças com método, aulas organizadas e comunidade é o primeiro passo. Nada de promessas.',
+    temas: [
+      'o que aprender primeiro no trading', 'aprender sozinho vs com método', 'estudar mercados 15 minutos por dia',
+      'conta demo antes de conta real', 'os 3 erros de quem começa', 'literacia financeira que a escola não ensina',
+      'ler um gráfico pela primeira vez',
+    ],
+    demos: [], hashtags: SEGUE,
+  },
+  {
+    slug: 'mtm-funil-corretora', nome: 'MoreThanMoney', area: 'Rota Corretora',
+    foto: `${SITE}/videos/stories/corretora-pt-capa.jpg`,
+    palavra: 'CORRETORA', depois: 'e recebes o passo a passo', publicar: true, cortes: false,
+    objetivo: 'Funil Rota Corretora: o dinheiro fica numa conta EM TEU NOME numa corretora regulada (a MTM recomenda a PU Prime como parceira). A MTM nunca gere o teu dinheiro nem a tua carteira; é só uma recomendação.',
+    temas: [
+      'o teu dinheiro numa conta em teu nome', 'como ver se uma corretora é regulada', 'nunca entregues o teu dinheiro a ninguém para gerir',
+      'spread, comissão e swap explicados', 'abrir conta numa corretora passo a passo', 'da conta demo à conta real',
+    ],
+    demos: [], hashtags: '#corretora #forex #trading #contapropria #morethanmoney',
+  },
+  {
+    slug: 'mtm-funil-funded', nome: 'MoreThanMoney', area: 'MTM Funded',
+    foto: `${SITE}/images/apresentacao/app-webtrader.jpg`,
+    palavra: 'FUNDED', depois: 'e recebes como funciona', publicar: true, cortes: false,
+    objetivo: 'Funil MTM Funded: desafios em contas SIMULADAS com regras claras (perda diária, perda máxima, consistência); quem cumpre pode receber o Patrocínio de Desempenho MTM para abrir a sua própria conta. NÃO é prop firm, ninguém opera dinheiro de terceiros.',
+    temas: [
+      'as regras de um desafio em conta simulada', 'porque um desafio treina a disciplina', 'o Patrocínio de Desempenho MTM explicado',
+      'porque se chumba num desafio', 'um plano para passar um desafio sem pressa', 'treinar numa conta simulada como se fosse a sério',
+    ],
+    demos: [], hashtags: '#desafio #trading #disciplina #mtmfunded #morethanmoney',
+  },
+  {
+    slug: 'mtm-seguidores', nome: 'MoreThanMoney', area: 'Dinheiro e mercados',
+    foto: `${SITE}/images/apresentacao/app-scanner.jpg`,
+    palavra: 'GUIA', depois: 'e segue para não perderes o próximo', publicar: true, cortes: false,
+    objetivo: 'Ganhar SEGUIDORES: um reel de valor puro que dá vontade de guardar e enviar a um amigo, com um gancho forte e uma ideia só. Nada de venda.',
+    temas: [
+      'mitos do trading', 'juros compostos com um exemplo (ilustração)', 'hábitos de dinheiro aos 20 e aos 30',
+      'fundo de emergência antes de investir', 'como reconhecer um esquema de dinheiro fácil', 'FOMO e trading de vingança',
+      'a checklist antes de qualquer operação', 'inflação e o teu poder de compra', 'o lote certo para o teu risco',
+    ],
+    demos: [], hashtags: SEGUE,
+  },
+  {
+    slug: 'mtm-cta', nome: 'MoreThanMoney', area: 'Começa hoje',
+    foto: `${SITE}/images/apresentacao/app-feed.jpg`,
+    palavra: 'COMEÇAR', depois: 'e recebes o link para entrar', publicar: true, cortes: false,
+    objetivo: 'CTA directo: convidar a começar hoje (conta gratuita, aulas, app, Premium com experiência de 3 dias sem cartão). Honesto, sem urgência falsa nem promessas.',
+    temas: [
+      'começa hoje: aulas, app e comunidade', 'experimenta o Premium 3 dias sem cartão', 'três caminhos: aprender, abrir conta ou treinar num desafio',
+      'não aprendas sozinho', 'a app MTM no telemóvel',
+    ],
+    demos: [], hashtags: SEGUE,
+  },
+]
+
+/**
+ * Os 6 slots do dia da marca: linha + hora (UTC; Lisboa = UTC no inverno). O de seguidores sai
+ * duas vezes, de manhã e ao fim da tarde.
+ */
+export const SLOTS_MTM: Array<{ linha: string; hora: string }> = [
+  { linha: 'mtm-funil-educacao', hora: '08:30' },
+  { linha: 'mtm-seguidores', hora: '10:30' },
+  { linha: 'mtm-funil-corretora', hora: '13:30' },
+  { linha: 'mtm-seguidores', hora: '17:00' },
+  { linha: 'mtm-funil-funded', hora: '19:00' },
+  { linha: 'mtm-cta', hora: '21:30' },
+]
+
 /** As demonstrações genéricas que qualquer educador pode usar, preenchidas pelo roteiro. */
 export const DEMOS_GENERICAS = ['barras', 'contador', 'lista', 'versus'] as const
 
@@ -132,5 +218,5 @@ export const HORAS_ANIMADOS = ['08:30', '12:30', '19:00']
 export const HORA_CORTE = '21:00'
 
 export function educador(slug: string): EducadorReel | undefined {
-  return EDUCADORES.find((e) => e.slug === slug)
+  return EDUCADORES.find((e) => e.slug === slug) ?? LINHAS_REELS.find((e) => e.slug === slug)
 }

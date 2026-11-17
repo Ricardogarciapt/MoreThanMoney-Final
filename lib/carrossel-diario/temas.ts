@@ -9,7 +9,18 @@
  */
 import type { Educador, Perfil } from './tipos'
 
-export type Tema = { slug: string; tema: string; area: string; palavraChave?: string; oQue?: string; educador?: Educador }
+export type Tema = {
+  slug: string
+  tema: string
+  area: string
+  palavraChave?: string
+  oQue?: string
+  educador?: Educador
+  /** Só nas linhas diárias (linhas.ts): o que este post tem de conseguir, dito à IA. */
+  objetivo?: string
+  /** Só nas linhas diárias: linhas extra no fim do CTA da legenda (ex.: «Segue…»). */
+  fecho?: string[]
+}
 
 export const TEMAS_RICARDO: Tema[] = [
   { slug: 'medo-de-perder', tema: 'O medo de ficar de fora (FOMO) e como deixar de perseguir o preço', area: 'psicologia' },
