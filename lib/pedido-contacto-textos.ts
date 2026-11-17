@@ -9,6 +9,7 @@ export const CANAIS: readonly CanalContacto[] = ['chamada', 'whatsapp', 'email']
 export const INTERESSES = {
   formacao: 'Formação',
   sinais_copy: 'Sinais / copy',
+  rota_corretora: 'Rota Corretora (conta própria na corretora)',
   mtm_funded: 'MTM Funded',
   ea_sensei: 'EA Sensei',
   outro: 'Outro',

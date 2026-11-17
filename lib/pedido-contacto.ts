@@ -285,6 +285,7 @@ function campo(lead: LeadMeta, ...nomes: string[]): string {
 
 function mapearInteresse(v: string): Interesse {
   const s = v.toLowerCase()
+  if (/corretora|broker|pu ?prime|abrir conta/.test(s)) return 'rota_corretora'
   if (/funded|desafio|financiad/.test(s)) return 'mtm_funded'
   if (/sensei|\bea\b|rob[oô]|expert/.test(s)) return 'ea_sensei'
   if (/sina|copy|c[oó]pia/.test(s)) return 'sinais_copy'
