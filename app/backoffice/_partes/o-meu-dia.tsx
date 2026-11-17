@@ -4,6 +4,8 @@ import { proximoPasso, type PessoaDoNegocio } from '@/lib/vendas/abordagem'
 import { Contactar } from '@/components/backoffice-contactar'
 import { Copiar } from './copiar'
 import { Marcar } from '../tarefas/marcar'
+import { ordenarComIA } from '@/lib/backoffice-meu-dia-ia'
+import { nomeDoFunil } from '@/lib/backoffice-funis'
 
 /**
  * O MEU DIA — o que esta pessoa tem para fazer hoje, e nada mais.
@@ -134,7 +136,7 @@ export async function OMeuDia({ ids, pessoaId }: Props) {
   }
 
   const agora = new Date()
-  const tarefas: LinhaDoDia[] = brutas
+  const porUrgencia: LinhaDoDia[] = brutas
     .map((t) => {
       const n = t.negocio_id ? negocios.get(t.negocio_id) : undefined
       const atrasada = Boolean(t.prazo && t.prazo < hoje)
@@ -167,6 +169,37 @@ export async function OMeuDia({ ids, pessoaId }: Props) {
 
   const atrasadas = brutas.filter((t) => t.prazo && t.prazo < hoje).length
 
+  /**
+   * O FUNIL de cada negócio (migração 262), lido à parte: se a coluna ainda não existir, a leitura
+   * falha sozinha e o dia continua de pé, só sem o funil.
+   */
+  const funilPorNegocio = new Map<string, string | null>()
+  const idsDoTopo = [...new Set(porUrgencia.map((t) => t.negocio_id).filter(Boolean) as string[])]
+  if (idsDoTopo.length) {
+    const { data: fs, error: erroFunil } = await db.from('vendas_negocios').select('id, funil').in('id', idsDoTopo)
+    if (!erroFunil) for (const f of (fs ?? []) as Array<{ id: string; funil: string | null }>) funilPorNegocio.set(f.id, f.funil)
+  }
+
+  /**
+   * A ORDEM FINAL É DA IA (CRM Fase 3), sobre as 20 que a urgência escolheu. Ver
+   * `lib/backoffice-meu-dia-ia.ts`: ela só reordena e dá uma razão curta; se falhar, fica a ordem
+   * da urgência e a página diz isso.
+   */
+  const ordem = await ordenarComIA(
+    porUrgencia.map((t) => ({
+      id: t.id,
+      titulo: t.titulo,
+      estado: t.pessoa?.estado ?? null,
+      funil: t.negocio_id ? nomeDoFunil(funilPorNegocio.get(t.negocio_id)) : null,
+      accao: t.accao,
+      atrasada: t.atrasada,
+      urgencia: t.urgencia,
+      temNegocio: !!t.negocio_id,
+    })),
+  )
+  const porId = new Map(porUrgencia.map((t) => [t.id, t]))
+  const tarefas = ordem.ids.map((i) => porId.get(i)).filter(Boolean) as LinhaDoDia[]
+
   if (!tarefas.length) {
     return (
       <section className="rounded-2xl border border-white/[0.06] bg-zinc-950/70 p-5">
@@ -189,6 +222,11 @@ export async function OMeuDia({ ids, pessoaId }: Props) {
           {brutas.length} por fazer{atrasadas ? ` · ${atrasadas} de dias anteriores` : ''} · {hoje}
         </span>
       </div>
+      <p className="text-[11px] text-zinc-600">
+        {ordem.fonte === 'ia'
+          ? 'Ordem sugerida pela IA (gratuita) sobre as mais urgentes. Começa pela 1.'
+          : 'Ordem pela urgência: a IA não respondeu a tempo.'}
+      </p>
 
       <ol className="space-y-3">
         {tarefas.map((t, i) => (
@@ -199,6 +237,10 @@ export async function OMeuDia({ ids, pessoaId }: Props) {
               </span>
               <div className="min-w-0 flex-1 space-y-2">
                 <p className="font-medium leading-snug text-white">{t.titulo}</p>
+                {ordem.porque[t.id] && <p className="text-xs text-[#E9C46A]/80">{ordem.porque[t.id]}</p>}
+                {t.negocio_id && funilPorNegocio.has(t.negocio_id) && (
+                  <p className="text-[11px] text-zinc-500">{nomeDoFunil(funilPorNegocio.get(t.negocio_id))}</p>
+                )}
                 {t.responsavel_id !== pessoaId && (
                   <p className="text-xs text-[#D2A63C]">de alguém da tua equipa</p>
                 )}
@@ -241,12 +283,17 @@ export async function OMeuDia({ ids, pessoaId }: Props) {
                       negócio à mão numa lista de cinquenta — um link que não dá erro e não leva a
                       nenhum sítio. O `?negocio=` é o que o destaca lá (ver `pipeline/foco.ts`). */}
                   {t.negocio_id ? (
-                    <a
-                      href={`/backoffice/pipeline?negocio=${t.negocio_id}#negocio-${t.negocio_id}`}
-                      className="text-xs text-[#D2A63C] hover:underline"
-                    >
-                      abrir no pipeline →
-                    </a>
+                    <span className="flex gap-3">
+                      <a href={`/backoffice/pipeline/ficha/${t.negocio_id}`} className="text-xs text-[#D2A63C] hover:underline">
+                        ficha completa →
+                      </a>
+                      <a
+                        href={`/backoffice/pipeline?negocio=${t.negocio_id}#negocio-${t.negocio_id}`}
+                        className="text-xs text-zinc-400 hover:underline"
+                      >
+                        abrir no pipeline
+                      </a>
+                    </span>
                   ) : (
                     <span />
                   )}
