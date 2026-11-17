@@ -83,7 +83,11 @@ async function pedirClipes(renders) {
         origem: 'reels-diarios',
         ...(ENSAIO ? { ensaio: true } : {}),
       })
-      if (j.motor_online === false && !ENSAIO) { log(`motor desligado: ${item.roteiro.id} fica com a foto`); continue }
+      if (j.motor_online === false && !ENSAIO) {
+        log(`motor desligado: ${item.roteiro.id} fica com a foto`)
+        if (j.id) await cancelar(String(j.id))
+        continue
+      }
       if (j.id) pedidos.set(item.id, String(j.id))
     } catch (e) {
       log(`motor indisponível (${e.message}): os reels ficam com a foto`)
@@ -93,22 +97,28 @@ async function pedirClipes(renders) {
   return pedidos
 }
 
-/** Espera pelo clipe até ao prazo comum; devolve o caminho do MP4 ou null. */
+/** Cancela um pedido de que se desistiu, para não gerar clipes de reels que já saíram. */
+async function cancelar(pedidoId) {
+  await motor('DELETE', null, pedidoId).catch(() => {})
+}
+
+/** Espera pelo clipe até ao prazo comum; devolve o caminho do MP4 ou null (e cancela o pedido). */
 async function clipe(pedidoId, limite, pasta) {
   while (Date.now() < limite) {
     try {
       const j = await motor('GET', null, pedidoId)
       if (j.estado === 'pronto' && j.url) {
         const r = await fetch(j.url)
-        if (!r.ok) return null
+        if (!r.ok) { await cancelar(pedidoId); return null }
         const f = path.join(pasta, 'clipe.mp4')
         fs.writeFileSync(f, Buffer.from(await r.arrayBuffer()))
         return f
       }
-      if (j.estado === 'erro' || j.estado === 'falhou') return null
+      if (j.estado === 'erro' || j.estado === 'falhou') { await cancelar(pedidoId); return null }
     } catch { /* tenta outra vez até ao prazo */ }
     await new Promise((r) => setTimeout(r, 15_000))
   }
+  await cancelar(pedidoId)
   return null
 }
 
