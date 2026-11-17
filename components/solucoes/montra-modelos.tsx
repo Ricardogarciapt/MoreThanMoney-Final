@@ -32,9 +32,9 @@ function claro(hex: string): boolean {
   return 0.299 * r + 0.587 * g + 0.114 * b > 150
 }
 
-export function MontraModelos({ publicadas, agendar }: { publicadas: string[]; agendar: string }) {
+export function MontraModelos({ publicadas, agendar, inicial }: { publicadas: string[]; agendar: string; inicial?: string }) {
   const { t, ligar } = useT()
-  const [id, setId] = useState(MODELOS[0].id)
+  const [id, setId] = useState(inicial ?? MODELOS[0].id)
   const [nome, setNome] = useState("")
   const [cor, setCor] = useState<string | null>(null)
   const m = MODELOS.find((x) => x.id === id) ?? MODELOS[0]

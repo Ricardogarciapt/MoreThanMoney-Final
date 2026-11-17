@@ -17,6 +17,8 @@ import { LOCALE_OG } from "@/lib/site-solucoes/i18n/base"
 import { dicionario } from "@/lib/site-solucoes/i18n/dicionarios"
 import { alternativas, idiomaDoPedido, tradutorServidor } from "@/lib/site-solucoes/i18n/servidor"
 import { IdiomaSolucoes, SeletorIdioma } from "@/components/solucoes/idioma"
+import { MiniTelemovel } from "@/components/solucoes/mini-telemovel"
+import { MODELOS } from "@/lib/site-solucoes/showroom"
 
 // Página dinâmica: o idioma vem de cada pedido (?lang=, cookie, browser). A «demo de hoje» muda
 // sozinha à meia-noite de Lisboa.
@@ -113,6 +115,9 @@ export default async function SolucoesPage({ searchParams }: Props) {
                   className="inline-flex items-center rounded-full border border-white/15 px-6 py-3 font-semibold text-zinc-200 transition hover:border-[#D2A63C]/60 active:scale-[0.98]"
                 >{t("Pedir análise ao meu negócio")}</a>
               </div>
+              <Link href={ligar("/demos#modelos")} className="mt-5 inline-flex min-h-[44px] items-center gap-2 text-sm font-semibold text-[#E9C46A] hover:text-white">
+                {t("Ou vê já a app do teu negócio no showroom")} <ArrowRight className="h-4 w-4" aria-hidden="true" />
+              </Link>
             </div>
             <HeroAoVivo />
           </div>
@@ -134,6 +139,35 @@ export default async function SolucoesPage({ searchParams }: Props) {
         {/* O que automatizamos: as dores de quem trabalha sem IA */}
         <section id="video" className="mx-auto max-w-5xl px-4 pt-20">
           <VideoApresentacao />
+        </section>
+
+        {/* Vitrine do showroom: a app do negócio antes de pagar */}
+        <section id="vitrine" className="mx-auto max-w-6xl px-4 pt-24">
+          <div className="relative overflow-hidden rounded-3xl border border-[#D2A63C]/30 bg-gradient-to-br from-[#D2A63C]/10 via-transparent to-transparent p-6 md:p-12">
+            <div className="grid gap-10 md:grid-cols-[1fr_1.2fr] md:items-center">
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[#D2A63C]">{t("Showroom")}</p>
+                <h2 className="mt-3 text-3xl font-bold tracking-tight md:text-5xl">{t("Vê a app do teu negócio antes de pagares")}</h2>
+                <p className="mt-4 max-w-[48ch] text-lg text-zinc-300">{t("Escolhe o teu sector, escreve o nome do teu negócio e experimenta a marcação como se fosses o teu cliente.")}</p>
+                <ul className="mt-6 space-y-2 text-zinc-300">
+                  {["8 sectores com ecrãs próprios", "Com o teu nome e a tua cor", "14 soluções prontas a entregar"].map((x) => (
+                    <li key={x} className="flex gap-2"><Check className="mt-1 h-4 w-4 shrink-0 text-[#D2A63C]" aria-hidden="true" /> {t(x)}</li>
+                  ))}
+                </ul>
+                <Link href={ligar("/demos#modelos")} className="mt-8 inline-flex min-h-[52px] items-center justify-center gap-2 rounded-full text-center bg-[#D2A63C] px-7 font-semibold text-black shadow-lg shadow-[#D2A63C]/20 hover:bg-[#E9C46A]">
+                  {t("Experimentar com o meu nome")} <ArrowRight className="h-4 w-4" aria-hidden="true" />
+                </Link>
+              </div>
+              <div className="-mx-6 flex gap-4 overflow-x-auto px-6 pb-4 md:mx-0 md:grid md:grid-cols-4 md:gap-3 md:overflow-visible md:px-0">
+                {["restaurante", "barbearia", "ginasio", "imobiliaria"].map((id) => MODELOS.find((x) => x.id === id)!).map((m, i) => (
+                  <Link key={m.id} href={ligar(`/demos?modelo=${m.id}#modelos`)} className={`group shrink-0 transition hover:-translate-y-1 ${i % 2 ? "md:mt-10" : ""}`} aria-label={`${t("Ver o modelo")}: ${t(m.sector)}`}>
+                    <MiniTelemovel m={m} t={t} className="!w-[150px] md:!w-full" />
+                    <p className="mt-2 text-center text-xs text-zinc-400 group-hover:text-[#E9C46A]">{t(m.sector)}</p>
+                  </Link>
+                ))}
+              </div>
+            </div>
+          </div>
         </section>
 
         <section id="o-que-automatizamos" className="mx-auto max-w-6xl px-4 py-20">
@@ -163,12 +197,11 @@ export default async function SolucoesPage({ searchParams }: Props) {
 
           {/* Próximos projectos: o que está em cima da mesa */}
           <h3 className="mt-20 text-2xl font-bold md:text-3xl">{t("A seguir")}</h3>
-          <p className="mt-2 max-w-[60ch] text-zinc-400">{t("Projectos em proposta e em construção. Os nomes aparecem quando cada cliente der o OK.")}</p>
+          <p className="mt-2 max-w-[60ch] text-zinc-400">{t("Projectos que estamos a desenhar com novos clientes. Os nomes aparecem quando cada cliente der o OK.")}</p>
           <ol className="mt-8 grid gap-x-6 gap-y-10 sm:grid-cols-2 lg:grid-cols-4">
             {PROXIMOS.map((p) => (
               <li key={t(p.setor)} className="border-t-2 border-[#D2A63C]/50 pt-5">
-                <span className="text-xs font-semibold text-[#E9C46A]">{t(p.estado)}</span>
-                <h4 className="mt-1 text-lg font-bold">{t(p.setor)}</h4>
+                <h4 className="text-lg font-bold">{t(p.setor)}</h4>
                 <p className="mt-2 text-sm text-zinc-400">{t(p.desafio)}</p>
                 <ul className="mt-4 space-y-1.5 text-sm text-zinc-300">
                   {p.vamosConstruir.map((v) => (

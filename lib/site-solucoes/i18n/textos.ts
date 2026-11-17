@@ -22,7 +22,7 @@ export const TEXTOS_SOLTOS = [
   'Marcação confirmada', 'Lembrete agendado para amanhã', 'Orçamento enviado', 'PDF gerado a partir do pedido', 'Fatura paga', 'Arrumada na pasta do mês',
   'Presença', 'Atendimento e vendas', 'Operação', 'Conteúdo', 'Trading',
   // /demos: escolhidos em tempo real.
-  'aparelho de parede pequeno', 'aparelho de parede médio', 'duas unidades ou conduta', 'Demo com a tua marca', 'Preço fechado', '14 soluções entregáveis',
+  'aparelho de parede pequeno', 'aparelho de parede médio', 'duas unidades ou conduta', 'Demo com a tua marca', 'Preço fechado', '14 soluções entregáveis', '8 sectores com ecrãs próprios', 'Com o teu nome e a tua cor', '14 soluções prontas a entregar',
   'Pedir orçamento', 'Agendar visita', 'Marcar reunião', 'Marcar agora', 'Reservar mesa', 'Enviado', 'Entrar', 'Avisa-me',
   // Erros do servidor, traduzidos no browser.
   'Diz-nos o teu nome.', 'Precisamos de um email válido para te enviar a análise.', 'Deixa o teu telemóvel para te ligarmos com a análise.',
