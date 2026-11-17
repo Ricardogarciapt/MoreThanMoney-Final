@@ -70,7 +70,7 @@ export function SalaDeChamadas() {
     return () => clearTimeout(t)
   }, [procura, negocio])
 
-  useEffect(() => () => pararTudo(), []) // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => () => pararTudo(), [])
 
   async function transcreverBloco(blob: Blob, tipoMime: string) {
     if (blob.size < 2000) return
