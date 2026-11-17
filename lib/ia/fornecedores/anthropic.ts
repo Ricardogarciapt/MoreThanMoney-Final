@@ -12,6 +12,27 @@ import { exigirTexto, postJson, sistemaComJson, ultimoIndiceUser } from './comum
 const TIMEOUT_MS = Number(process.env.IA_TIMEOUT_MS) || 25_000
 
 /** Geração 5 / 4.6+ recusa `temperature` (400) — a mesma regra do Terminal, copiada para não haver import circular. */
+/**
+ * Prompt caching (17/11/2026, padrão `cost-aware-llm-pipeline` do ECC): o prompt de sistema dos agentes
+ * (persona + ferramentas + framework) repete-se em cada mensagem e em cada volta de ferramentas. Marcado
+ * com `cache_control`, as chamadas seguintes nos 5 min leem-no a 10% do preço. Duas marcas: o sistema e a
+ * última mensagem (a conversa vai crescendo, por isso a volta seguinte reaproveita o prefixo todo).
+ * Abaixo do mínimo do modelo (~1024 tokens) a API ignora a marca sem erro.
+ */
+const CACHE = { type: 'ephemeral' } as const
+
+function comCacheNaUltima(messages: { role: string; content: unknown }[]) {
+  const i = messages.length - 1
+  if (i < 0) return messages
+  const ultima = messages[i]
+  const blocos: Record<string, unknown>[] = typeof ultima.content === 'string'
+    ? [{ type: 'text', text: ultima.content }]
+    : [...(ultima.content as Record<string, unknown>[])]
+  if (!blocos.length) return messages
+  blocos[blocos.length - 1] = { ...blocos[blocos.length - 1], cache_control: CACHE }
+  return [...messages.slice(0, i), { role: ultima.role, content: blocos }]
+}
+
 function aceitaTemperatura(modelo: string): boolean {
   return !/claude-(sonnet|opus|fable|mythos)-5|claude-opus-4-[678]|claude-sonnet-4-6/.test(modelo)
 }
@@ -43,21 +64,31 @@ export const anthropic: Fornecedor = {
       {
         model: m,
         max_tokens: p.maxTokens ?? 1024,
-        ...(sistema ? { system: sistema } : {}),
-        messages,
+        ...(sistema ? { system: [{ type: 'text', text: sistema, cache_control: CACHE }] } : {}),
+        messages: comCacheNaUltima(messages),
         ...(p.temperatura != null && aceitaTemperatura(m) ? { temperature: p.temperatura } : {}),
       },
       sinal,
-    )) as { content?: { type: string; text?: string }[]; usage?: { input_tokens?: number; output_tokens?: number } }
+    )) as { content?: { type: string; text?: string }[]; usage?: {
+      input_tokens?: number
+      output_tokens?: number
+      cache_creation_input_tokens?: number
+      cache_read_input_tokens?: number
+    } }
     const texto = (j.content ?? []).filter((b) => b.type === 'text').map((b) => b.text ?? '').join('')
-    const tokensEntrada = j.usage?.input_tokens
+    const novos = j.usage?.input_tokens ?? 0
+    const escritos = j.usage?.cache_creation_input_tokens ?? 0
+    const lidos = j.usage?.cache_read_input_tokens ?? 0
+    const tokensEntrada = novos + escritos + lidos
     const tokensSaida = j.usage?.output_tokens
+    // Escrever em cache custa 1,25× a entrada; ler custa 0,1×.
+    const entradaEquivalente = Math.round(novos + escritos * 1.25 + lidos * 0.1)
     return {
       texto: exigirTexto('anthropic', texto),
       modelo: m,
       tokensEntrada,
       tokensSaida,
-      custoCents: estimarCustoCents(m, tokensEntrada, tokensSaida),
+      custoCents: estimarCustoCents(m, entradaEquivalente, tokensSaida),
     }
   },
 }
