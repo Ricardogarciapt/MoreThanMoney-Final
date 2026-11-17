@@ -5,6 +5,7 @@ import { chamarIAGratis, mensagemIndisponivel } from "@/lib/ia/chamar"
 import { normalizeLang } from "@/lib/i18n/config"
 import { getSupabaseAdmin } from "@/lib/supabase-admin-client"
 import { juntarMemoria, montarSistema, separarNotas, type ContextoAluno } from "@/lib/mentor/prompt"
+import { contextoDoAluno, salasDaSemana } from "@/lib/mentor/contexto-servidor"
 
 /**
  * MENTOR MTM — o agente pessoal de cada aluno (revisão de 17/11, ver `lib/mentor/prompt.ts`).
@@ -35,30 +36,6 @@ async function getAuthedClient() {
   })
 }
 
-async function contextoDoAluno(userId: string): Promise<{ contexto: ContextoAluno; memoria: string }> {
-  const db = getSupabaseAdmin()
-  const [{ data: perfil }, { data: mentor }, { data: tarefas }] = await Promise.all([
-    db.from("profiles").select("full_name, user_type, created_at").eq("id", userId).maybeSingle(),
-    db.from("mentor_profiles").select("objetivo, tempo_diario, fase_trading, memoria").eq("user_id", userId).maybeSingle(),
-    db.from("mentor_tasks").select("title").eq("user_id", userId).eq("status", "pending").order("due_at").limit(3),
-  ])
-  const dias = perfil?.created_at ? Math.floor((Date.now() - new Date(perfil.created_at).getTime()) / 86_400_000) : null
-  const memoria = (mentor?.memoria as string | null) || ""
-  return {
-    memoria,
-    contexto: {
-      primeiroNome: (perfil?.full_name as string | null)?.trim().split(/\s+/)[0] || null,
-      plano: (perfil?.user_type as string | null) || null,
-      diasDesdeEntrada: dias,
-      objetivo: mentor?.objetivo ?? null,
-      tempoDiario: mentor?.tempo_diario ?? null,
-      faseTrading: mentor?.fase_trading ?? null,
-      memoria,
-      tarefasPendentes: (tarefas || []).map((t) => t.title as string),
-    },
-  }
-}
-
 export async function POST(request: NextRequest) {
   try {
     const supabase = await getAuthedClient()
@@ -83,8 +60,11 @@ export async function POST(request: NextRequest) {
     if (!ultima || ultima.role !== "user") return NextResponse.json({ error: "Mensagens inválidas" }, { status: 400 })
 
     const langApp = normalizeLang(idioma)
-    const { contexto, memoria } = await contextoDoAluno(userId).catch(() => ({ contexto: {} as ContextoAluno, memoria: "" }))
-    const sistema = montarSistema({ langApp, ultimaPorBotao: Boolean(porBotao), contexto })
+    const [{ contexto, memoria }, salas] = await Promise.all([
+      contextoDoAluno(userId).catch(() => ({ contexto: {} as ContextoAluno, memoria: "", idiomaPerfil: null })),
+      salasDaSemana(),
+    ])
+    const sistema = montarSistema({ langApp, ultimaPorBotao: Boolean(porBotao), contexto, salas })
 
     const encoder = new TextEncoder()
     const stream = new ReadableStream({

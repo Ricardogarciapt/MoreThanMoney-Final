@@ -20,6 +20,14 @@ assert.ok(s.trim().split("\n## ").pop()!.startsWith("Língua"), "a regra da lín
 assert.match(s, /ÚLTIMA mensagem/)
 assert.match(montarSistema({ langApp: "de", ultimaPorBotao: true, contexto: {} }), /botão da app.*German/)
 
+// 2b. Base de conhecimento: planos, onboarding, MTM Funded, scanners; sem a academia de Network Marketing.
+assert.match(s, /Base de conhecimento MTM/)
+assert.match(s, /Premium · /)
+assert.match(s, /onboarding em 5 passos/)
+assert.match(s, /MTM Gold Killer/)
+assert.ok(!/Network Marketing/i.test(s.split("Base de conhecimento MTM")[1].split("## O que já sabes")[0]), "a academia de Network Marketing não pode ser recomendada")
+assert.match(s, /misturar línguas/)
+
 // 3. As notas nunca chegam ao aluno, mesmo mal formadas ou sem fecho.
 const r1 = separarNotas('Olá Ana!\n<notas>{"lingua":"pt","sinais":[{"tipo":"emocao","tema":"medo","resumo":"x"},{"tipo":"inventado","tema":"y","resumo":"z"}],"lembrar":"tem conta demo"}</notas>')
 assert.equal(r1.resposta, "Olá Ana!")
