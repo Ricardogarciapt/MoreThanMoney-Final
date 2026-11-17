@@ -45,7 +45,7 @@ export default function ConditionalNavbarFooter({ children }: { children: React.
   // FAQ e políticas próprias, sem caminho de regresso a morethanmoney.pt. Herdar a navbar
   // global misturava as duas marcas — e, num produto financiado, misturar quem responde
   // pelo quê não é uma questão de estética.
-  const standalonePaths = ["/charts-primeverse", "/app-mobile", "/work", "/tradingfloor", "/apresentacao", "/FreeSession", "/mtmfunded", "/webtrader", "/solucoes"]
+  const standalonePaths = ["/charts-primeverse", "/app-mobile", "/work", "/tradingfloor", "/apresentacao", "/FreeSession", "/mtmfunded", "/webtrader", "/solucoes", "/demos"]
   const isStandalonePage = naSolucoes || standalonePaths.some(isExactOrChildPath)
 
   /**
@@ -57,7 +57,7 @@ export default function ConditionalNavbarFooter({ children }: { children: React.
    * lado. Fica de fora das superfícies que têm barras próprias coladas ao fundo (a PWA, o
    * webtrader, os charts) e da app nativa, onde um botão flutuante taparia a navegação.
    */
-  const semBotaoIntro = naSolucoes || ["/app-mobile", "/webtrader", "/charts-primeverse", "/solucoes"].some(isExactOrChildPath)
+  const semBotaoIntro = naSolucoes || ["/app-mobile", "/webtrader", "/charts-primeverse", "/solucoes", "/demos"].some(isExactOrChildPath)
   /**
    * O balão de apoio fica no canto inferior direito. Sai das superfícies com barras ou botões
    * próprios colados ao fundo (PWA, webtrader, charts, quizzes, /mobile), das áreas internas
