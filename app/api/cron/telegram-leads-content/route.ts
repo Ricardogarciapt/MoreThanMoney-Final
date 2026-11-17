@@ -6,6 +6,7 @@ import { getWeeklyFlyerStats, fmtSigned, fmtPt, resumoEstrategias } from "@/lib/
 import { tradesGanhasRecentes } from "@/lib/pips-proof"
 import { postDoSlot, type DadosPosts } from "@/lib/telegram-leads-posts"
 import { legendaDoPost } from "@/lib/telegram-legenda-ig"
+import { linkOptin } from "@/lib/telegram-optin"
 
 export const runtime = "nodejs"
 export const dynamic = "force-dynamic"
@@ -20,6 +21,9 @@ export const dynamic = "force-dynamic"
 const BOT_USER = process.env.TELEGRAM_BOT_USERNAME?.replace(/^@/, "") || "MoreThanMoney_aibot"
 const CTA_DM = { text: "💬 Falar com o assistente MTM", url: `https://t.me/${BOT_USER}?start=lead` }
 const CTA_TRIAL = { text: "📲 Testar grátis", url: "https://www.morethanmoney.pt/register" }
+// 17/11: quem está só no grupo nunca escreveu ao bot, e o Telegram não deixa o bot abrir a DM.
+// Este botão é a única porta para o seguimento (opt-in de dois passos em lib/telegram-optin.ts).
+const CTA_OPTIN = { text: "🔔 Quero receber seguimento", url: linkOptin(BOT_USER) }
 
 /** Último post do Instagram @morethanmoney.pt via Graph API (se houver token). */
 async function latestIgPost(): Promise<{ caption: string; permalink: string; media_url: string; is_video: boolean } | null> {
@@ -141,7 +145,7 @@ export async function GET(request: NextRequest) {
             photo: `${site}/api/flyer/weekly?w=${stats.weekStart}&lang=${lang}`,
             caption: captions[lang],
             parse_mode: "HTML",
-            reply_markup: { inline_keyboard: [[CTA_TRIAL], [CTA_DM]] },
+            reply_markup: { inline_keyboard: [[CTA_TRIAL], [CTA_DM], [CTA_OPTIN]] },
           }),
         })
         const j = await r.json().catch(() => ({} as { description?: string }))
@@ -184,8 +188,8 @@ export async function GET(request: NextRequest) {
           width: 1080,
           height: 1920,
           reply_markup: next.botoes?.length
-            ? { inline_keyboard: next.botoes.map(([text, url]) => [{ text, url }]) }
-            : undefined,
+            ? { inline_keyboard: [...next.botoes.map(([text, url]) => [{ text, url }]), [CTA_OPTIN]] }
+            : { inline_keyboard: [[CTA_OPTIN]] },
         }),
       })
       const j = await r.json().catch(() => ({} as { description?: string }))
@@ -225,6 +229,7 @@ export async function GET(request: NextRequest) {
             inline_keyboard: [
               [{ text: "Ver no Instagram", url: ig.permalink }],
               [{ text: "📲 Testar grátis", url: "https://www.morethanmoney.pt/register" }],
+              [CTA_OPTIN],
             ],
           },
         }),
