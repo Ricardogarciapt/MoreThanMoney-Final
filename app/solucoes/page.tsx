@@ -8,6 +8,7 @@ import { CASO_MTM, SECTORES } from "@/lib/site-solucoes/automacao"
 import { SimuladorSolucoes } from "@/components/solucoes/simulador"
 import { HeroAoVivo } from "@/components/solucoes/hero-ao-vivo"
 import { AreasInterativas } from "@/components/solucoes/areas-interativas"
+import { CasosCiclo } from "@/components/solucoes/casos-ciclo"
 import { VideoApresentacao } from "@/components/solucoes/video-apresentacao"
 import { MenuTrabalhos } from "@/components/solucoes/menu-trabalhos"
 
@@ -36,8 +37,6 @@ const CTA_LABEL = "Marcar diagnóstico"
 export default function SolucoesPage() {
   const agendar = linkAgendar("negocios")
   const casos = CASOS.filter((c) => c.autorizado)
-  const destaque = casos.find((c) => c.img)
-  const outros = casos.filter((c) => c !== destaque)
 
   return (
     <div className="min-h-[100dvh] bg-[#08090C] text-zinc-100 antialiased">
@@ -138,55 +137,7 @@ export default function SolucoesPage() {
         <section id="casos" className="mx-auto max-w-6xl px-4 py-20">
           <h2 className="text-3xl font-bold tracking-tight md:text-4xl">Projectos reais</h2>
           <p className="mt-3 max-w-[62ch] text-zinc-400">O que construímos para quem já trabalha connosco. Os números ficam para quando cada cliente os medir.</p>
-          {destaque && (
-            <article className="mt-10 grid overflow-hidden rounded-3xl border border-white/10 bg-white/[0.03] md:grid-cols-[1.25fr_1fr]">
-              {destaque.img && (
-                <Image src={destaque.img} alt={`Site de ${destaque.cliente}`} width={1366} height={900} className="h-full w-full object-cover object-top" />
-              )}
-              <div className="flex flex-col p-7 md:p-9">
-                <div className="flex flex-wrap items-center justify-between gap-2">
-                  <p className="text-sm text-[#E9C46A]">{destaque.setor}</p>
-                  <span className="rounded-full bg-white/[0.06] px-2.5 py-0.5 text-[11px] font-semibold text-zinc-300">{destaque.estado}</span>
-                </div>
-                <h3 className="mt-2 text-2xl font-bold">{destaque.cliente}</h3>
-                <p className="mt-3 text-sm italic text-zinc-400">«{destaque.problema}»</p>
-                <ul className="mt-5 space-y-2 text-sm text-zinc-300">
-                  {destaque.feito.map((f) => (
-                    <li key={f} className="flex gap-2">
-                      <Check className="mt-0.5 h-4 w-4 shrink-0 text-[#D2A63C]" /> {f}
-                    </li>
-                  ))}
-                </ul>
-                {destaque.url && (
-                  <a href={destaque.url} target="_blank" rel="noopener noreferrer" className="mt-auto inline-flex items-center gap-1 pt-6 text-sm font-semibold text-[#E9C46A] hover:underline">
-                    Ver o projecto <ArrowUpRight className="h-4 w-4" />
-                  </a>
-                )}
-              </div>
-            </article>
-          )}
-          <div className="mt-5 grid gap-5 md:grid-cols-3">
-            {outros.map((c) => (
-              <article key={c.cliente} className="flex flex-col rounded-2xl border border-white/10 bg-white/[0.03] p-6">
-                <div className="flex flex-wrap items-center justify-between gap-2">
-                  <p className="text-sm text-[#E9C46A]">{c.setor}</p>
-                  <span className="rounded-full bg-white/[0.06] px-2.5 py-0.5 text-[11px] font-semibold text-zinc-300">{c.estado}</span>
-                </div>
-                <h3 className="mt-2 text-xl font-bold">
-                  {c.cliente}
-                  {c.anonimo && <span className="ml-2 align-middle text-xs font-normal text-zinc-500">projecto anónimo</span>}
-                </h3>
-                <p className="mt-3 text-sm italic text-zinc-400">«{c.problema}»</p>
-                <ul className="mt-4 space-y-1.5 text-sm text-zinc-300">
-                  {c.feito.map((f) => (
-                    <li key={f} className="flex gap-2">
-                      <Check className="mt-0.5 h-4 w-4 shrink-0 text-[#D2A63C]" /> {f}
-                    </li>
-                  ))}
-                </ul>
-              </article>
-            ))}
-          </div>
+          <CasosCiclo casos={casos} />
 
           {/* Próximos projectos: o que está em cima da mesa */}
           <h3 className="mt-20 text-2xl font-bold md:text-3xl">A seguir</h3>
