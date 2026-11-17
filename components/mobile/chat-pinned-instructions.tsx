@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react"
 import { ChevronDown, Pin } from "lucide-react"
+import { TextoAuto } from "@/components/mobile/texto-auto"
 
 /**
  * Card FIXO de "como seguir os sinais" no topo de um canal de sinais.
@@ -43,16 +44,16 @@ export default function ChatPinnedInstructions({ slug }: { slug: string | null |
         <Pin className="h-3.5 w-3.5 shrink-0 text-[#D2A63C]" />
         <span className="flex-1 min-w-0 truncate text-[13px] font-semibold text-[#e9cf8f]">
           {ins.emoji ? `${ins.emoji} ` : ""}
-          {ins.title || "Como seguir os sinais"}
+          <TextoAuto texto={ins.title || "Como seguir os sinais"} />
         </span>
-        <span className="text-[10px] uppercase tracking-wide text-[#D2A63C]/80">{open ? "fechar" : "abrir"}</span>
+        <span className="text-[10px] uppercase tracking-wide text-[#D2A63C]/80"><TextoAuto texto={open ? "fechar" : "abrir"} /></span>
         <ChevronDown
           className={`h-4 w-4 shrink-0 text-[#D2A63C] transition-transform ${open ? "rotate-180" : ""}`}
         />
       </button>
       {open && (
         <div className="px-3 pb-3 pt-0.5 text-[12.5px] leading-relaxed text-gray-200 whitespace-pre-line border-t border-[#D2A63C]/20">
-          {ins.body}
+          <TextoAuto texto={ins.body} />
         </div>
       )}
     </div>

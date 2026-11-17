@@ -60,6 +60,7 @@ import { getAccessToken } from "@/lib/auth-token"
 import { getChatMessageShareUrl } from "@/lib/chat-short-link"
 import { notifyXpFromResponse } from "@/lib/xp-client"
 import { useT } from "@/components/i18n-provider"
+import { TextoAuto } from "@/components/mobile/texto-auto"
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -1689,7 +1690,7 @@ function ChannelView({
             </h2>
           </div>
           {channel.description && (
-            <p className="text-[11px] text-gray-500 truncate mt-0.5">{channel.description}</p>
+            <p className="text-[11px] text-gray-500 truncate mt-0.5"><TextoAuto texto={channel.description} /></p>
           )}
         </div>
         {isPremiumChannel(channel.slug, channel) && (
@@ -2140,7 +2141,7 @@ function ChannelInfoSheet({
             <div className="min-w-0">
               <h3 className="text-lg font-bold text-white">#{channel.name}</h3>
               {channel.description && (
-                <p className="text-sm text-gray-400 mt-1">{channel.description}</p>
+                <p className="text-sm text-gray-400 mt-1"><TextoAuto texto={channel.description} /></p>
               )}
               <div className="flex flex-wrap gap-1.5 mt-2">
                 {meta.tag && (
@@ -2276,7 +2277,7 @@ function ChannelRow({
             {previewText}
           </p>
         ) : channel.description ? (
-          <p className="text-[11px] text-gray-500 truncate mt-0.5">{channel.description}</p>
+          <p className="text-[11px] text-gray-500 truncate mt-0.5"><TextoAuto texto={channel.description} /></p>
         ) : null}
       </div>
       {!locked && <ChevronRight className="w-4 h-4 text-gray-600 flex-shrink-0" />}
@@ -2761,7 +2762,7 @@ export default function ChatChannels({
                         {channel.name}
                       </span>
                       {channel.description && (
-                        <p className="text-[11px] text-gray-600 mt-0.5">{channel.description}</p>
+                        <p className="text-[11px] text-gray-600 mt-0.5"><TextoAuto texto={channel.description} /></p>
                       )}
                     </div>
                     {channel.children.map((sub) => (

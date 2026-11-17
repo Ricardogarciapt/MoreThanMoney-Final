@@ -30,12 +30,12 @@ export function hashTexto(texto: string): string {
 
 export type Traducao = { traducao: string; mesmoIdioma: boolean }
 
-async function googleGratis(texto: string, alvo: string): Promise<Traducao | null> {
+export async function googleGratis(texto: string, alvo: string, timeoutMs = 8000): Promise<Traducao | null> {
   const url =
     `https://translate.googleapis.com/translate_a/single?client=gtx&sl=auto&tl=${encodeURIComponent(alvo)}` +
     `&dt=t&q=${encodeURIComponent(texto)}`
   try {
-    const r = await fetch(url, { headers: { 'User-Agent': 'Mozilla/5.0' } })
+    const r = await fetch(url, { headers: { 'User-Agent': 'Mozilla/5.0' }, signal: AbortSignal.timeout(timeoutMs) })
     if (!r.ok) return null
     const data = (await r.json()) as unknown[]
     const segs = (data?.[0] as unknown[]) || []

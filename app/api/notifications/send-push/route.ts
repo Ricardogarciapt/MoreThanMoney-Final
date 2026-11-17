@@ -9,6 +9,7 @@ import {
 import { canalDeSinaisPago } from '@/lib/direito-sinais'
 import { filtrarComDireitoSinaisPagos } from '@/lib/direito-sinais-servidor'
 import { lerContaFirebase } from '@/lib/firebase-conta'
+import { agruparPorIdioma, traduzirPush } from '@/lib/push-traducao'
 
 const supabase = getSupabaseAdmin()
 
@@ -125,6 +126,206 @@ async function usersWithSoundOff(userIds: string[]): Promise<Set<string>> {
   )
 }
 
+type ResultadoGrupo = Record<string, unknown> & { _status?: number }
+
+/**
+ * Entrega a UM grupo de destinatários já filtrado (sino in-app + APNs + FCM). Chamado uma vez por
+ * idioma: o grupo PT com o texto original, os outros com o texto traduzido (lib/push-traducao).
+ */
+async function entregarGrupo(
+  admin: any,
+  payload: PushNotificationPayload,
+  targetUserIds: string[],
+): Promise<ResultadoGrupo> {
+  const notificationType = payload.data?.type || 'system'
+  const inAppData = {
+    ...(payload.data || {}),
+    url: payload.url || payload.data?.url || '/app-mobile',
+  }
+
+  let inAppCreated = 0
+  // 'system' passa a criar in-app (sino) também. Marcadores internos (cron) ficam de
+  // fora; envios internos que não queiram sino devem usar skipInApp:true.
+  if (!payload.skipInApp && targetUserIds.length > 0 && notificationType !== 'cron_marker') {
+    const rows = targetUserIds.map((userId) => ({
+      user_id: userId,
+      type: notificationType,
+      title: payload.title,
+      message: payload.body,
+      data: inAppData,
+      read: false,
+    }))
+    const { error: notifError } = await supabase.from('notifications').insert(rows)
+    if (notifError) {
+      console.warn('⚠️ [SEND PUSH] Falha ao criar notificações in-app:', notifError.message)
+    } else {
+      inAppCreated = rows.length
+      console.log(`💾 [SEND PUSH] ${rows.length} notificações in-app criadas`)
+    }
+  }
+
+  if (targetUserIds.length === 0) {
+    return {
+      success: true,
+      successCount: 0,
+      failureCount: 0,
+      totalDevices: 0,
+      recipients: 0,
+      message: 'Nenhum destinatário com esta categoria activa',
+    }
+  }
+
+  // Apenas tokens activos; deduplica por token para evitar envios duplos
+  const { data: fcmTokensRaw, error: tokensError } = await supabase
+    .from('fcm_tokens')
+    .select('token, user_id, device_info')
+    .in('user_id', targetUserIds)
+    .eq('active', true)
+
+  if (tokensError) {
+    console.error('❌ [SEND PUSH] Erro ao buscar tokens:', tokensError)
+    return { error: 'Erro ao buscar tokens', details: tokensError.message, _status: 500 }
+  }
+
+  // Deduplica por token (o mesmo dispositivo pode ter registado o token várias vezes)
+  const seen = new Set<string>()
+  const fcmTokens = (fcmTokensRaw ?? []).filter((t) => {
+    if (seen.has(t.token)) return false
+    seen.add(t.token)
+    return true
+  })
+
+  if (!fcmTokens?.length) {
+    return {
+      success: true,
+      successCount: 0,
+      failureCount: 0,
+      totalDevices: 0,
+      recipients: targetUserIds.length,
+      inAppCreated,
+      message: 'Notificações in-app criadas; nenhum dispositivo push registado',
+    }
+  }
+
+  // Tokens APNs: platform explicitamente 'ios-apns' OU exactamente 64 hex chars (32 bytes)
+  // Tudo o resto (Android FCM, iOS FCM via Firebase SDK) vai pelo Firebase Admin
+  const apnsPattern = /^[0-9a-f]{64}$/i
+  const isApnsToken = (t: { token: string; device_info: unknown }) => {
+    const info = t.device_info as Record<string, unknown> | null
+    const platform = info?.platform as string | undefined
+    return platform === 'ios-apns' || apnsPattern.test(t.token)
+  }
+  const apnsTokens = fcmTokens.filter(isApnsToken)
+  const webTokens = fcmTokens.filter((t) => !isApnsToken(t))
+
+  // APNs direct push for native iOS tokens
+  let apnsSent = 0
+  let apnsFailed = 0
+  if (apnsTokens.length > 0) {
+    const silenciosos = await usersWithSoundOff(apnsTokens.map((t) => t.user_id))
+    const apnsResult = await sendApnsNotifications(apnsTokens, payload, silenciosos)
+    apnsSent   = apnsResult.sent
+    apnsFailed = apnsResult.failed
+    console.log(`📲 [SEND PUSH] APNs: ${apnsSent} enviadas, ${apnsFailed} falharam`)
+  }
+
+  if (webTokens.length === 0) {
+    return {
+      success: true,
+      successCount: apnsSent,
+      failureCount: apnsFailed,
+      totalDevices: fcmTokens.length,
+      recipients: targetUserIds.length,
+      apnsSent,
+      apnsFailed,
+      inAppCreated,
+    }
+  }
+
+  const tokens = webTokens.map((t) => t.token)
+  const prioFcm = pushPriority(payload.data?.type)
+  const message = {
+    notification: {
+      title: payload.title,
+      body: payload.body,
+      // FCM exige URL absoluta — URL relativa causa messaging/invalid-payload
+      ...(payload.icon?.startsWith('http') ? { imageUrl: payload.icon } : {}),
+    },
+    data: {
+      url: payload.url || payload.data?.url || '/app-mobile',
+      tag: payload.tag || 'mtm-notification',
+      ...(payload.data || {}),
+    },
+    // Prioridade: Trade Alerts seguidos > Tap to Trade > restantes (respeita os toggles do user).
+    android: { priority: 'high' as const },
+    apns: {
+      headers: { 'apns-priority': '10' },
+      payload: { aps: { 'interruption-level': prioFcm.level, 'relevance-score': prioFcm.relevance } },
+    },
+    tokens,
+  }
+
+  if (!admin.apps?.length) {
+    console.error('❌ [SEND PUSH] Firebase Admin não inicializado')
+    return {
+        success: true,
+        recipients: targetUserIds.length,
+        inAppCreated,
+        pushSkipped: true,
+        message: 'In-app criadas; Firebase Admin não configurado para push', _status: 200 }
+  }
+
+  const response = await admin.messaging().sendEachForMulticast(message)
+
+  const invalidTokens: string[] = []
+  const historyPromises = webTokens.map(async (tokenData, idx) => {
+    const resp = response.responses[idx]
+    const status = resp?.success ? 'sent' : 'failed'
+    const errorCode = resp?.error?.code as string | undefined
+    const errorMessage = errorCode ?? (resp?.success ? undefined : 'unknown_error')
+
+    // Tokens inválidos/expirados — remover da DB
+    if (
+      errorCode === 'messaging/invalid-registration-token' ||
+      errorCode === 'messaging/registration-token-not-registered' ||
+      errorCode === 'messaging/mismatched-credential'
+    ) {
+      invalidTokens.push(tokens[idx])
+    }
+
+    if (!resp?.success && errorCode) {
+      console.warn(`⚠️ [SEND PUSH] Token falhou (${errorCode}): ${tokens[idx].substring(0, 20)}...`)
+    }
+
+    return supabase.from('notification_history').insert({
+      user_id: tokenData.user_id,
+      title: payload.title,
+      body: payload.body,
+      data: payload.data || {},
+      status,
+      error_message: errorMessage ?? null,
+      sent_at: new Date().toISOString(),
+    })
+  })
+  await Promise.all(historyPromises)
+
+  if (invalidTokens.length > 0) {
+    console.log(`🗑️ [SEND PUSH] Removing ${invalidTokens.length} invalid tokens`)
+    await supabase.from('fcm_tokens').delete().in('token', invalidTokens)
+  }
+
+  return {
+    success: true,
+    successCount: response.successCount + apnsSent,
+    failureCount: response.failureCount + apnsFailed,
+    totalDevices: fcmTokens.length,
+    recipients: targetUserIds.length,
+    webSent: tokens.length,
+    apnsSent,
+    inAppCreated,
+  }
+}
+
 // POST: Enviar notificação push + in-app
 export async function POST(request: NextRequest) {
   try {
@@ -185,200 +386,38 @@ export async function POST(request: NextRequest) {
       recipients: targetUserIds.length,
     })
 
-    const notificationType = payload.data?.type || 'system'
-    const inAppData = {
-      ...(payload.data || {}),
-      url: payload.url || payload.data?.url || '/app-mobile',
+    /**
+     * IDIOMA DE CADA ALUNO (17/11). Quem lê em PT recebe já, com o texto original; os outros
+     * grupos recebem o título e o corpo traduzidos (cache → Google grátis, tecto de 1,5 s), em
+     * paralelo — a tradução de um idioma nunca atrasa o aviso em PT.
+     */
+    const grupos = await agruparPorIdioma(supabase, targetUserIds)
+    if (grupos.size === 0 || (grupos.size === 1 && grupos.has('pt'))) {
+      const { _status, ...corpo } = await entregarGrupo(admin, payload, targetUserIds)
+      return NextResponse.json(corpo, { status: _status ?? 200 })
     }
-
-    let inAppCreated = 0
-    // 'system' passa a criar in-app (sino) também. Marcadores internos (cron) ficam de
-    // fora; envios internos que não queiram sino devem usar skipInApp:true.
-    if (!payload.skipInApp && targetUserIds.length > 0 && notificationType !== 'cron_marker') {
-      const rows = targetUserIds.map((userId) => ({
-        user_id: userId,
-        type: notificationType,
-        title: payload.title,
-        message: payload.body,
-        data: inAppData,
-        read: false,
-      }))
-      const { error: notifError } = await supabase.from('notifications').insert(rows)
-      if (notifError) {
-        console.warn('⚠️ [SEND PUSH] Falha ao criar notificações in-app:', notifError.message)
-      } else {
-        inAppCreated = rows.length
-        console.log(`💾 [SEND PUSH] ${rows.length} notificações in-app criadas`)
-      }
-    }
-
-    if (targetUserIds.length === 0) {
-      return NextResponse.json({
-        success: true,
-        successCount: 0,
-        failureCount: 0,
-        totalDevices: 0,
-        recipients: 0,
-        message: 'Nenhum destinatário com esta categoria activa',
-      })
-    }
-
-    // Apenas tokens activos; deduplica por token para evitar envios duplos
-    const { data: fcmTokensRaw, error: tokensError } = await supabase
-      .from('fcm_tokens')
-      .select('token, user_id, device_info')
-      .in('user_id', targetUserIds)
-      .eq('active', true)
-
-    if (tokensError) {
-      console.error('❌ [SEND PUSH] Erro ao buscar tokens:', tokensError)
-      return NextResponse.json(
-        { error: 'Erro ao buscar tokens', details: tokensError.message },
-        { status: 500 },
-      )
-    }
-
-    // Deduplica por token (o mesmo dispositivo pode ter registado o token várias vezes)
-    const seen = new Set<string>()
-    const fcmTokens = (fcmTokensRaw ?? []).filter((t) => {
-      if (seen.has(t.token)) return false
-      seen.add(t.token)
-      return true
-    })
-
-    if (!fcmTokens?.length) {
-      return NextResponse.json({
-        success: true,
-        successCount: 0,
-        failureCount: 0,
-        totalDevices: 0,
+    const resultados = await Promise.all(
+      Array.from(grupos.entries()).map(async ([lang, ids]) => {
+        const p = lang === 'pt' ? payload : { ...payload, ...(await traduzirPush(supabase, payload, lang)) }
+        return entregarGrupo(admin, p, ids)
+      }),
+    )
+    const soma = (k: string) => resultados.reduce((t, r) => t + (Number(r[k]) || 0), 0)
+    const erros = resultados.filter((r) => (r._status ?? 200) >= 400)
+    return NextResponse.json(
+      {
+        success: erros.length < resultados.length,
+        successCount: soma('successCount'),
+        failureCount: soma('failureCount'),
+        totalDevices: soma('totalDevices'),
         recipients: targetUserIds.length,
-        inAppCreated,
-        message: 'Notificações in-app criadas; nenhum dispositivo push registado',
-      })
-    }
-
-    // Tokens APNs: platform explicitamente 'ios-apns' OU exactamente 64 hex chars (32 bytes)
-    // Tudo o resto (Android FCM, iOS FCM via Firebase SDK) vai pelo Firebase Admin
-    const apnsPattern = /^[0-9a-f]{64}$/i
-    const isApnsToken = (t: { token: string; device_info: unknown }) => {
-      const info = t.device_info as Record<string, unknown> | null
-      const platform = info?.platform as string | undefined
-      return platform === 'ios-apns' || apnsPattern.test(t.token)
-    }
-    const apnsTokens = fcmTokens.filter(isApnsToken)
-    const webTokens = fcmTokens.filter((t) => !isApnsToken(t))
-
-    // APNs direct push for native iOS tokens
-    let apnsSent = 0
-    let apnsFailed = 0
-    if (apnsTokens.length > 0) {
-      const silenciosos = await usersWithSoundOff(apnsTokens.map((t) => t.user_id))
-      const apnsResult = await sendApnsNotifications(apnsTokens, payload, silenciosos)
-      apnsSent   = apnsResult.sent
-      apnsFailed = apnsResult.failed
-      console.log(`📲 [SEND PUSH] APNs: ${apnsSent} enviadas, ${apnsFailed} falharam`)
-    }
-
-    if (webTokens.length === 0) {
-      return NextResponse.json({
-        success: true,
-        successCount: apnsSent,
-        failureCount: apnsFailed,
-        totalDevices: fcmTokens.length,
-        recipients: targetUserIds.length,
-        apnsSent,
-        apnsFailed,
-        inAppCreated,
-      })
-    }
-
-    const tokens = webTokens.map((t) => t.token)
-    const prioFcm = pushPriority(payload.data?.type)
-    const message = {
-      notification: {
-        title: payload.title,
-        body: payload.body,
-        // FCM exige URL absoluta — URL relativa causa messaging/invalid-payload
-        ...(payload.icon?.startsWith('http') ? { imageUrl: payload.icon } : {}),
+        apnsSent: soma('apnsSent'),
+        inAppCreated: soma('inAppCreated'),
+        idiomas: Object.fromEntries(Array.from(grupos.entries()).map(([l, ids]) => [l, ids.length])),
+        ...(erros.length ? { erros: erros.map(({ _status, ...e }) => e) } : {}),
       },
-      data: {
-        url: payload.url || payload.data?.url || '/app-mobile',
-        tag: payload.tag || 'mtm-notification',
-        ...(payload.data || {}),
-      },
-      // Prioridade: Trade Alerts seguidos > Tap to Trade > restantes (respeita os toggles do user).
-      android: { priority: 'high' as const },
-      apns: {
-        headers: { 'apns-priority': '10' },
-        payload: { aps: { 'interruption-level': prioFcm.level, 'relevance-score': prioFcm.relevance } },
-      },
-      tokens,
-    }
-
-    if (!admin.apps?.length) {
-      console.error('❌ [SEND PUSH] Firebase Admin não inicializado')
-      return NextResponse.json(
-        {
-          success: true,
-          recipients: targetUserIds.length,
-          inAppCreated,
-          pushSkipped: true,
-          message: 'In-app criadas; Firebase Admin não configurado para push',
-        },
-        { status: 200 },
-      )
-    }
-
-    const response = await admin.messaging().sendEachForMulticast(message)
-
-    const invalidTokens: string[] = []
-    const historyPromises = webTokens.map(async (tokenData, idx) => {
-      const resp = response.responses[idx]
-      const status = resp?.success ? 'sent' : 'failed'
-      const errorCode = resp?.error?.code as string | undefined
-      const errorMessage = errorCode ?? (resp?.success ? undefined : 'unknown_error')
-
-      // Tokens inválidos/expirados — remover da DB
-      if (
-        errorCode === 'messaging/invalid-registration-token' ||
-        errorCode === 'messaging/registration-token-not-registered' ||
-        errorCode === 'messaging/mismatched-credential'
-      ) {
-        invalidTokens.push(tokens[idx])
-      }
-
-      if (!resp?.success && errorCode) {
-        console.warn(`⚠️ [SEND PUSH] Token falhou (${errorCode}): ${tokens[idx].substring(0, 20)}...`)
-      }
-
-      return supabase.from('notification_history').insert({
-        user_id: tokenData.user_id,
-        title: payload.title,
-        body: payload.body,
-        data: payload.data || {},
-        status,
-        error_message: errorMessage ?? null,
-        sent_at: new Date().toISOString(),
-      })
-    })
-    await Promise.all(historyPromises)
-
-    if (invalidTokens.length > 0) {
-      console.log(`🗑️ [SEND PUSH] Removing ${invalidTokens.length} invalid tokens`)
-      await supabase.from('fcm_tokens').delete().in('token', invalidTokens)
-    }
-
-    return NextResponse.json({
-      success: true,
-      successCount: response.successCount + apnsSent,
-      failureCount: response.failureCount + apnsFailed,
-      totalDevices: fcmTokens.length,
-      recipients: targetUserIds.length,
-      webSent: tokens.length,
-      apnsSent,
-      inAppCreated,
-    })
+      { status: erros.length === resultados.length ? 500 : 200 },
+    )
   } catch (error) {
     console.error('❌ [SEND PUSH] Erro:', error)
     return NextResponse.json(
