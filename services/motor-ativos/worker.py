@@ -48,6 +48,10 @@ INTERVALO = float(os.environ.get("MOTOR_INTERVALO", "5"))
 # Desligar sozinho: ao fim de N minutos sem trabalho corre este comando (ex.: «runpodctl stop pod $RUNPOD_POD_ID»).
 DESLIGAR_APOS_MIN = float(os.environ.get("MOTOR_DESLIGAR_APOS_MIN", "0"))
 CMD_DESLIGAR = os.environ.get("MOTOR_CMD_DESLIGAR", "")
+# Modo noturno (Mac mini): só trabalha entre estas horas locais, ex. "1-7" (01h00–06h59).
+JANELA = os.environ.get("MOTOR_JANELA", "")
+# Não pega trabalho se a memória livre descer abaixo disto (GB). Protege o Mac de ir abaixo.
+MEM_MIN_GB = float(os.environ.get("MOTOR_MEM_MIN_GB", "0"))
 CHATTERBOX_PY = os.environ.get("CHATTERBOX_PY", "")  # python do venv do Chatterbox
 VOZ_REF = os.environ.get("VOZ_REF", str(AQUI / "voz" / "ricardo.wav"))  # 10–30 s da voz real
 LATENTSYNC_DIR = os.environ.get("LATENTSYNC_DIR", "")
@@ -342,6 +346,42 @@ def capacidades() -> list[str]:
     return ["cena", "angulo", "mover"] + (["voz"] if tem_voz else []) + (["falar"] if tem_voz and LATENTSYNC_DIR else [])
 
 
+def dentro_da_janela(hora: int | None = None) -> bool:
+    if not JANELA:
+        return True
+    ini, fim = (int(x) for x in JANELA.split("-"))
+    h = time.localtime().tm_hour if hora is None else hora
+    return ini <= h < fim if ini <= fim else (h >= ini or h < fim)
+
+
+def memoria_livre_gb() -> float:
+    """macOS: páginas livres + inactivas + purgáveis (vm_stat). Linux: MemAvailable."""
+    try:
+        if sys.platform == "darwin":
+            out = subprocess.run(["vm_stat"], capture_output=True, text=True, timeout=5).stdout
+            tam = int(out.split("page size of ")[1].split(" ")[0])
+            paginas = 0
+            for chave in ("Pages free", "Pages inactive", "Pages purgeable", "Pages speculative"):
+                for linha in out.splitlines():
+                    if linha.startswith(chave):
+                        paginas += int(linha.split(":")[1].strip().rstrip("."))
+            return paginas * tam / 1e9
+        for linha in Path("/proc/meminfo").read_text().splitlines():
+            if linha.startswith("MemAvailable"):
+                return int(linha.split()[1]) / 1e6
+    except Exception:  # noqa: BLE001
+        pass
+    return float("inf")
+
+
+def pode_trabalhar() -> tuple[bool, str]:
+    if not dentro_da_janela():
+        return False, f"fora da janela {JANELA}h"
+    if MEM_MIN_GB and memoria_livre_gb() < MEM_MIN_GB:
+        return False, f"memória livre abaixo de {MEM_MIN_GB:g} GB"
+    return True, ""
+
+
 def uma_volta() -> bool:
     q = urllib.parse.urlencode({"motor": NOME, "gpu": gpu_nome(), "versao": VERSAO, "caps": ",".join(capacidades())})
     t = site("GET", f"/api/estudio/motor/geracao?{q}").get("trabalho")
@@ -373,6 +413,14 @@ def main():
     uma_vez = "--uma-vez" in sys.argv
     ultimo_trabalho = time.time()
     while True:
+        pode, porque = pode_trabalhar()
+        if not pode:  # sem pulso: o site não conta com este motor enquanto ele descansa
+            if uma_vez:
+                log("não trabalho agora:", porque)
+                break
+            time.sleep(60)
+            ultimo_trabalho = time.time()
+            continue
         try:
             trabalhou = uma_volta()
         except Exception as e:  # noqa: BLE001
