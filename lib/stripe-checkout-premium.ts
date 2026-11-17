@@ -1,4 +1,5 @@
 import type Stripe from 'stripe'
+import { TEXTO_ACESSO_IMEDIATO } from '@/lib/legal/checkout-acesso-imediato'
 
 /**
  * As duas portas do Premium mensal (decisão do Ricardo, 26/10/2026):
@@ -78,6 +79,11 @@ export function notaCampanha90d(): string {
     : `Não pedimos cartão nem cobramos nada nos ${DIAS_CAMPANHA_90D} dias. Ao fim deles, se quiseres continuar, ativas o Premium a 65 €/mês.`
 }
 
+/** Junta à nota o aviso de acesso imediato (livre resolução); o Stripe só mostra um texto por botão. */
+function comAcessoImediato(nota: string): string {
+  return `${nota} ${TEXTO_ACESSO_IMEDIATO}`
+}
+
 /**
  * Recolha completa no Stripe: morada de faturação, telemóvel e a nota do cartão.
  * Junta-se a qualquer sessão de subscrição Premium.
@@ -87,11 +93,11 @@ export function recolhaCompleta(trial: boolean): Pick<
   'billing_address_collection' | 'phone_number_collection' | 'custom_text'
 > {
   // Trial: só o cartão (desde 16/11) e a nota. A morada e o telemóvel pedem-se quando a pessoa ativar.
-  if (trial) return { custom_text: { submit: { message: notaMetodoPagamento(true) } } }
+  if (trial) return { custom_text: { submit: { message: comAcessoImediato(notaMetodoPagamento(true)) } } }
   return {
     billing_address_collection: 'required',
     phone_number_collection: { enabled: true },
-    custom_text: { submit: { message: notaMetodoPagamento(trial) } },
+    custom_text: { submit: { message: comAcessoImediato(notaMetodoPagamento(trial)) } },
   }
 }
 
@@ -132,7 +138,7 @@ export function paramsCampanha90d(): Pick<
 > {
   return {
     payment_method_collection: CAMPANHA_90D_PEDE_CARTAO ? 'always' : 'if_required',
-    custom_text: { submit: { message: notaCampanha90d() } },
+    custom_text: { submit: { message: comAcessoImediato(notaCampanha90d()) } },
     subscription_data: {
       trial_period_days: DIAS_CAMPANHA_90D,
       trial_settings: { end_behavior: { missing_payment_method: 'cancel' } },
