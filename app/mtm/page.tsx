@@ -127,12 +127,6 @@ const MTM_AREAS: Array<{ p: MtmPilar; t: string; edu: string | null; ini: string
     d: "Pôr a IA a trabalhar no teu negócio: automatizar o que se repete, produzir conteúdo e devolver-te as horas.",
     meta: ["percurso em vídeo", "ao teu ritmo"],
   },
-  {
-    p: "content",
-    t: "Network Marketing", edu: null, ini: "",
-    d: "Prospetar, comunicar e fazer crescer uma equipa — do primeiro contacto à duplicação.",
-    meta: ["percurso em vídeo", "ao teu ritmo"],
-  },
 ]
 
 type MtmExtraLink = { id: string; title: string; url: string }
@@ -975,7 +969,7 @@ A MTM não é uma escola de trading — o trading é só a divisão mais cheia. 
                   mudam, e esta página não é o sítio onde se lê o número em vigor. */}
               <p className="text-xl text-gray-300 mb-4 text-center">
                 A Jornada: começas como aluno e, se quiseres, passas a{" "}
-                <span className="text-cyan-400 font-bold">Rising Star</span> — recebes uma comissão por
+                <span className="text-cyan-400 font-bold">afiliado</span> — recebes uma comissão por
                 cada subscrição que vendas, e uma parte das renovações enquanto essa pessoa se
                 mantiver. Não é salário nem rendimento garantido: sem vendas, não há comissão.
               </p>
