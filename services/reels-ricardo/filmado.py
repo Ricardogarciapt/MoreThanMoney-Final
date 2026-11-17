@@ -58,6 +58,51 @@ def enquadrar(fr, plano, centro, t_rel):
     return Image.fromarray(fr).resize((W, H), Image.BICUBIC, box=(cx - cw / 2, cy - ch / 2, cx + cw / 2, cy + ch / 2))
 
 
+OURO, TEAL = (210, 166, 60), (0, 151, 178)
+
+
+def grade(arr):
+    """Cor da marca: sombras para o teal, altas luzes quentes, um pouco mais de contraste."""
+    x = arr.astype(np.float32) / 255
+    x = np.clip((x - 0.5) * 1.08 + 0.5, 0, 1)
+    lum = x.mean(axis=2, keepdims=True)
+    x += (1 - lum) * np.array([-0.02, 0.012, 0.03]) + lum * np.array([0.025, 0.01, -0.02])
+    return (np.clip(x, 0, 1) * 255).astype(np.uint8)
+
+
+def varrimento(p):
+    """Transição de marca: faixa diagonal ouro→teal que atravessa o ecrã (p de 0 a 1)."""
+    lay = Image.new('RGBA', (W, H), (0, 0, 0, 0)); d = ImageDraw.Draw(lay)
+    x = -900 + p * (W + 1800)
+    for i, (cor, larg, al) in enumerate([(TEAL, 520, 120), (OURO, 260, 200), ((255, 255, 255), 70, 230)]):
+        d.polygon([(x - larg, 0), (x + larg, 0), (x + larg - 700, H), (x - larg - 700, H)], fill=cor + (al,))
+    return lay
+
+
+def cartao(txt, cor):
+    """Cartão de vidro (o «CGI» da marca): fundo escuro translúcido, filete de cor, texto Oswald."""
+    f = cr.fonte('Oswald.ttf', 62); w = int(f.getlength(txt)) + 110; h = 118
+    c = Image.new('RGBA', (w, h), (0, 0, 0, 0)); d = ImageDraw.Draw(c)
+    d.rounded_rectangle((0, 0, w - 1, h - 1), 22, fill=(8, 12, 22, 200), outline=cor + (255,), width=3)
+    d.ellipse((28, h // 2 - 11, 50, h // 2 + 11), fill=cor + (255,))
+    d.text((70, h // 2 - 42), txt, font=f, fill=(255, 255, 255, 255))
+    return c
+
+
+def sfx(total, cortes):
+    """Whoosh em cada mudança de plano + um impacto grave no gancho."""
+    rng = np.random.default_rng(3); out = np.zeros(int(total * SR) + SR, np.float32)
+    n = int(0.32 * SR); env = np.sin(np.linspace(0, math.pi, n)) ** 2
+    ru = np.cumsum(rng.standard_normal(n)); wh = (ru - np.convolve(ru, np.ones(60) / 60, 'same')) * env * 0.06
+    nb = int(0.5 * SR); tb = np.arange(nb) / SR
+    boom = np.sin(2 * math.pi * (70 - 30 * tb) * tb) * np.exp(-tb * 7) * 0.55
+    s = int(CAPA_S * SR) - 800; out[s:s + nb] += boom
+    for c in cortes[1:]:
+        s = int((c['t'] - 0.16) * SR)
+        if s > 0: out[s:s + n] += wh
+    return out
+
+
 def audio_take(src):
     raw = subprocess.run(['ffmpeg', '-v', 'error', '-i', src, '-f', 's16le', '-ac', '1', '-ar', str(SR), '-'],
                          capture_output=True, check=True).stdout
@@ -136,8 +181,9 @@ def main():
     with wave.open(mw) as f:
         mu = np.frombuffer(f.readframes(f.getnframes()), np.int16).astype(np.float32).reshape(-1, 2).mean(1) / 32768
     mu = np.pad(mu, (0, max(0, len(voz) - len(mu))))[:len(voz)]
+    efeitos = sfx(total, cortes)[:len(voz)]
     env = np.convolve(np.abs(voz), np.ones(4800) / 4800, 'same')
-    mix = voz / (np.abs(voz).max() + 1e-9) * 0.9 + mu * 0.10 * (1 - 0.8 * np.clip(env / (env.max() + 1e-9) * 6, 0, 1))
+    mix = voz / (np.abs(voz).max() + 1e-9) * 0.9 + efeitos + mu * 0.13 * (1 - 0.75 * np.clip(env / (env.max() + 1e-9) * 6, 0, 1))
     mix /= np.abs(mix).max() / 0.9
     raw = os.path.join(tmp, 'mix.wav')
     with wave.open(raw, 'wb') as f:
@@ -165,6 +211,13 @@ def main():
     grad[y0:, :, 3] = (np.linspace(0, 150, H - y0)[:, None]).astype(np.uint8)
     sombra = Image.fromarray(grad, 'RGBA')
 
+    cores = [TEAL, OURO]
+    cartoes_img = {(ci, q): cartao(txt, cores[q % 2]) for ci, c in enumerate(cortes)
+                   for q, txt in enumerate(c.get('cartoes', []))}
+    gancho = None
+    if m.get('gancho'):
+        gancho = cr.faixa(cr.texto_italico(m['gancho'].upper(), cr.fonte('Anton.ttf', 84), (255, 255, 255), sombra=False))
+
     video = os.path.join(saida, f'reel-{n:02d}.mp4')
     ff = subprocess.Popen(['ffmpeg', '-y', '-f', 'rawvideo', '-pix_fmt', 'rgb24', '-s', f'{W}x{H}', '-r', str(FPS),
                            '-i', '-', '-i', audio, '-c:v', 'libx264', '-preset', 'medium', '-crf', '19',
@@ -178,9 +231,28 @@ def main():
         frames = ler_frames(src, c['a'], c['b'] + (1.4 if ci == len(cortes) - 1 else 0))
         for j, fr in enumerate(frames):
             t = k / FPS
-            im = enquadrar(fr, c['plano'], centro, j / FPS).convert('RGBA')
+            # entrada de plano com «punch»: começa 6 % mais perto e assenta em 0,2 s
+            im = enquadrar(grade(fr), c['plano'], centro, j / FPS)
+            if j < 5:
+                e = 1 + 0.06 * (1 - j / 5) ** 2; cw, ch = W / e, H / e
+                im = im.resize((W, H), Image.BICUBIC, box=((W - cw) / 2, (H - ch) / 2, (W + cw) / 2, (H + ch) / 2))
+            im = im.convert('RGBA')
             if ci == 0 and j < 4:  # clarão curto a sair da capa
                 im.alpha_composite(Image.new('RGBA', (W, H), (255, 255, 255, int(140 * (1 - j / 4)))))
+            if ci > 0 and j < 6:  # varrimento de marca na mudança de plano
+                im.alpha_composite(varrimento(0.5 + j / 12))
+            if ci + 1 < len(cortes) and len(frames) - j <= 6:
+                im.alpha_composite(varrimento((6 - (len(frames) - j)) / 12))
+            for q, txt in enumerate(c.get('cartoes', [])):  # cartões de vidro a entrar em cascata
+                tq = j / FPS - 0.25 - q * 0.35
+                if tq > 0:
+                    p = min(1, tq / 0.3); ca = cartoes_img[(ci, q)]
+                    x = int(70 - (1 - p) ** 3 * 500); y = 420 + q * 150
+                    if p < 1: ca = ca.copy(); ca.putalpha(ca.getchannel('A').point(lambda v: int(v * p)))
+                    im.alpha_composite(ca, (x, y))
+            if gancho is not None and t < CAPA_S + 2.2:  # gancho em cima nos primeiros 2 s
+                p = min(1, (t - CAPA_S) / 0.2)
+                im.alpha_composite(gancho, ((W - gancho.size[0]) // 2, int(250 - (1 - p) * 60)))
             im.alpha_composite(sombra); im.alpha_composite(sobre)
             li = next((i for i, (a, b, _) in enumerate(legendas) if a <= t < b), None)
             if li is not None:
