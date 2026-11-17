@@ -9,7 +9,9 @@ import torchaudio as ta
 from chatterbox.mtl_tts import ChatterboxMultilingualTTS
 
 texto, ref, saida = sys.argv[1], sys.argv[2], sys.argv[3]
-modelo = ChatterboxMultilingualTTS.from_pretrained(device="cuda" if torch.cuda.is_available() else "cpu")
+import os
+_dev = os.environ.get("MTM_DEVICE") or ("cuda" if torch.cuda.is_available() else "mps" if torch.backends.mps.is_available() else "cpu")
+modelo = ChatterboxMultilingualTTS.from_pretrained(device=_dev)
 # Frases longas soam melhor partidas: o Chatterbox perde naturalidade acima de ~300 caracteres.
 partes, atual = [], ""
 for frase in texto.replace("!", "!|").replace("?", "?|").replace(".", ".|").split("|"):

@@ -25,8 +25,8 @@ command -v ffmpeg >/dev/null || { echo "Falta o ffmpeg (brew install ffmpeg)"; e
 mkdir -p "$BASE/voz" "$BASE/logs"
 
 # Voz: Chatterbox (MIT) num venv no disco externo; corre em MPS/CPU.
-[ -x "$BASE/venv-voz/bin/python" ] || python3 -m venv "$BASE/venv-voz"
-"$BASE/venv-voz/bin/pip" install -q chatterbox-tts
+[ -x "$BASE/venv-voz/bin/python" ] || { command -v uv >/dev/null && uv venv --seed -p 3.11 "$BASE/venv-voz" || python3 -m venv "$BASE/venv-voz"; }   # chatterbox quer 3.10/3.11
+"$BASE/venv-voz/bin/pip" install -q chatterbox-tts "setuptools<81"   # perth precisa do pkg_resources
 [ -f "$BASE/voz/ricardo.wav" ] || echo "AVISO: copia a referência para $BASE/voz/ricardo.wav (está em project-files/motor-ativos/voz-ricardo-ref.wav)"
 
 umask 077
@@ -41,6 +41,8 @@ MOTOR_MEM_MIN_GB=${MOTOR_MEM_MIN_GB:-3}
 MOTOR_INTERVALO=30
 CHATTERBOX_PY=$BASE/venv-voz/bin/python
 VOZ_REF=$BASE/voz/ricardo.wav
+HF_HOME=$BASE/hf-cache
+PYTORCH_ENABLE_MPS_FALLBACK=1
 ENV
 
 cat > "$PLIST" <<PL
