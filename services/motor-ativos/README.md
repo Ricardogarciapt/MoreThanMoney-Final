@@ -67,9 +67,22 @@ tail -f /workspace/logs/worker.log
 Perfis: `imagem` (~60 GB de pesos), `video` (~110 GB), `completo` (+ voz e lábios). Com menos de 48 GB:
 `ANGLE_VARIANTE=gguf`. Parar: `bash arrancar.sh parar`.
 
+### RunPod (recomendado): tudo pela API, sem painel
+```bash
+export RUNPOD_API_KEY=…  MTM_MOTOR_SECRET='<CRON_SECRET>'  VOZ_REF_URL='<URL assinado do WAV>'   # opcional
+python3 services/motor-ativos/runpod.py criar --ensaio   # mostra o que vai criar
+python3 services/motor-ativos/runpod.py criar            # disco 200 GB (EU-RO-1) + pod L40S → 6000 Ada → A6000
+```
+No fim põe `RUNPOD_POD_ID` e `RUNPOD_API_KEY` na Vercel (Production). Daí em diante:
+pedido novo e nenhum motor online → o site liga o pod → o pod actualiza o código, corre o
+`bootstrap.sh` (só descarrega o que falta no disco) e o worker → 10 min sem trabalho → `runpodctl stop pod`.
+O 1.º arranque demora 30–60 min (≈112 GB de pesos); os seguintes ~3–5 min.
+`runpod.py estado|ligar|parar|apagar` para gerir à mão.
+
 Sem GPU (provar o ciclo, ex. na VPS): `MOTOR_MODO=ensaio MTM_MOTOR_SECRET=… python3 worker.py --uma-vez`.
 
-Testes (sem GPU, com um site e um ComfyUI falsos): `python3 services/motor-ativos/test_worker.py`.
+Testes (sem GPU, com um site e um ComfyUI falsos): `python3 services/motor-ativos/test_worker.py`
+e `npx tsx --test lib/estudio/geracao.test.ts`.
 
 ## Base de dados
 Migração `supabase/migrations/265_estudio_geracoes.sql`: tabelas `estudio_geracoes` (fila) e

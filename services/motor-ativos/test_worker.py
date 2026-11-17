@@ -140,5 +140,38 @@ class Testes(unittest.TestCase):
         self.assertIn("sem motor de voz", ESTADO["fechos"][0]["erro"])
 
 
+class TestesMaquina(unittest.TestCase):
+    def setUp(self):
+        for k in ESTADO: ESTADO[k].clear()
+
+    def test_desliga_sozinho_quando_parado(self):
+        marca = TMP / "desligado"
+        os.environ.update({"MOTOR_DESLIGAR_APOS_MIN": "0.001", "MOTOR_CMD_DESLIGAR": f"touch {marca}", "MOTOR_INTERVALO": "0.05"})
+        try:
+            w = carregar("ensaio")
+            sys.argv = ["worker.py"]
+            w.main()  # sai sozinho depois de correr o comando de desligar
+            self.assertTrue(marca.exists())
+            self.assertGreaterEqual(len(ESTADO["pulsos"]), 1)
+        finally:
+            for k in ("MOTOR_DESLIGAR_APOS_MIN", "MOTOR_CMD_DESLIGAR", "MOTOR_INTERVALO"):
+                os.environ.pop(k, None)
+
+    def test_pesos_do_manifest(self):
+        out = subprocess.run([sys.executable, str(AQUI / "pesos.py"), str(AQUI / "workflows" / "manifest.json"), "angle", "move"], capture_output=True, text=True, check=True).stdout
+        linhas = [l.split("\t") for l in out.strip().splitlines()]
+        self.assertEqual(len(linhas), len({l[1] for l in linhas}))  # sem repetidos
+        self.assertTrue(all(l[2].startswith("https://huggingface.co/") for l in linhas))
+        self.assertLess(sum(float(l[3]) for l in linhas), 150)
+
+    def test_runpod_ensaio(self):
+        out = subprocess.run([sys.executable, str(AQUI / "runpod.py"), "criar", "--ensaio"], capture_output=True, text=True, check=True,
+                             env={**os.environ, "MTM_MOTOR_SECRET": "s", "MTM_RUNPOD_ESTADO": str(TMP / "rp.json")}).stdout
+        self.assertIn("POST /networkvolumes", out)
+        self.assertIn('"volumeMountPath": "/workspace"', out)
+        self.assertIn("bootstrap.sh", out)
+        self.assertFalse((TMP / "rp.json").exists())  # o ensaio não grava estado
+
+
 if __name__ == "__main__":
     unittest.main(verbosity=1)
