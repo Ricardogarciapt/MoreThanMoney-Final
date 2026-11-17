@@ -663,3 +663,23 @@ export async function ingerirLeads(db: SupabaseClient): Promise<Ingerido[]> {
   }
   return resultados
 }
+
+/**
+ * Só as fontes QUENTES (quem acabou de falar connosco: bot do Telegram e comentários do Instagram).
+ * Corre de 5 em 5 minutos pelo `/api/cron/lead-instantaneo`, para o lead não esperar pela ingestão
+ * das 07:00 — a probabilidade de converter cai muito nos primeiros minutos sem resposta.
+ */
+export async function ingerirQuentes(db: SupabaseClient): Promise<Ingerido[]> {
+  const resultados: Ingerido[] = []
+  for (const [nome, correr] of [
+    ['telegram', () => doTelegram(db)],
+    ['instagram', () => doInstagram(db)],
+  ] as Array<[string, () => Promise<Ingerido>]>) {
+    try {
+      resultados.push(await correr())
+    } catch (e) {
+      resultados.push({ fonte: nome, criados: 0, jaExistiam: 0, actualizados: 0, propagacao: 'Falhou.', erro: e instanceof Error ? e.message : String(e) })
+    }
+  }
+  return resultados
+}
