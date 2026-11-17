@@ -3,6 +3,7 @@ import { COOKIE_ATRIBUICAO, normalizar as normalizarAgente } from '@/lib/agentes
 import { getStripeClient } from '@/lib/stripe-client'
 import { recusaPlanoDescontinuado, resolverPrecoStripe } from '@/lib/stripe-prices'
 import { buildStripeReturnUrl } from '@/lib/site-url'
+import { CUSTOM_TEXT_ACESSO_IMEDIATO } from '@/lib/legal/checkout-acesso-imediato'
 
 const SUBSCRIPTION_PLANS = new Set(['mtm_scanner_monthly', 'scanners_monthly'])
 
@@ -44,6 +45,7 @@ export async function POST(request: NextRequest) {
     const session = await stripe.checkout.sessions.create({
       customer: customer.id,
       mode,
+      custom_text: CUSTOM_TEXT_ACESSO_IMEDIATO,
       line_items: [{ price: priceId, quantity: 1 }],
       success_url: buildStripeReturnUrl('/success', {
         plan: planId,

@@ -5,6 +5,7 @@ import { resolverPrecoStripe } from '@/lib/stripe-prices'
 import { buildStripeReturnUrl } from '@/lib/site-url'
 import { getAuthenticatedUser } from '@/lib/admin-api-helpers'
 import { normalizarLogin, PRODUTO_EA, PRODUTO_PREMIUM_SCANNER, PRODUTO_SCALP, PRODUTOS } from '@/lib/licencas'
+import { CUSTOM_TEXT_ACESSO_IMEDIATO } from '@/lib/legal/checkout-acesso-imediato'
 
 export const dynamic = 'force-dynamic'
 
@@ -73,6 +74,7 @@ export async function POST(request: NextRequest) {
     const checkout = await stripe.checkout.sessions.create({
       customer_email: email,
       mode: plano.modo,
+      custom_text: CUSTOM_TEXT_ACESSO_IMEDIATO,
       line_items: [{ price: priceId, quantity: 1 }],
       allow_promotion_codes: true,
       success_url: buildStripeReturnUrl(`/${pagina}/obrigado`, { plan: planId }),

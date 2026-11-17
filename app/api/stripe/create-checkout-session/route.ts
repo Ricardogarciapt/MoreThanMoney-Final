@@ -9,6 +9,7 @@ import { isIosAppRequest, IOS_IAP_REQUIRED } from '@/lib/is-native-request'
 import { COOKIE_ATRIBUICAO, normalizar as normalizarAgente } from '@/lib/agentes/atribuicao'
 import { registarConsentimentoDaCompra } from '@/lib/captacao-consentimento-registo'
 import { CUPAO_INTRO_PREMIUM, ORIGEM_TRIAL, paramsTrialSemCartao, recolhaCompleta } from '@/lib/stripe-checkout-premium'
+import { CUSTOM_TEXT_ACESSO_IMEDIATO } from '@/lib/legal/checkout-acesso-imediato'
 
 const supabaseAdmin = getSupabaseAdmin()
 
@@ -112,6 +113,7 @@ export async function POST(request: NextRequest) {
     const sessionParams: Stripe.Checkout.SessionCreateParams = {
       customer: customerId,
       mode,
+      custom_text: CUSTOM_TEXT_ACESSO_IMEDIATO,
       line_items: [{ price: priceId, quantity: 1 }],
       success_url: buildStripeReturnUrl('/success', { plan: planId }),
       cancel_url: buildStripeReturnUrl(cancelPath, {}, { includeSessionPlaceholder: false }),

@@ -11,6 +11,7 @@ import { getSupabaseAdmin } from "@/lib/supabase-admin-client"
 import { isIosAppRequest, IOS_IAP_REQUIRED } from "@/lib/is-native-request"
 import type Stripe from 'stripe'
 import { COOKIE_ATRIBUICAO, normalizar as normalizarAgente } from "@/lib/agentes/atribuicao"
+import { CUSTOM_TEXT_ACESSO_IMEDIATO } from '@/lib/legal/checkout-acesso-imediato'
 
 const SUPABASE_URL = (process.env.NEXT_PUBLIC_SUPABASE_URL || "").trim()
 const SUPABASE_ANON_KEY = (process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "").trim()
@@ -101,6 +102,7 @@ export async function POST(request: NextRequest) {
     const sessionParams: Stripe.Checkout.SessionCreateParams = {
       customer: customer.id,
       mode: "subscription",
+      custom_text: CUSTOM_TEXT_ACESSO_IMEDIATO,
       line_items: [{ price: priceId, quantity: 1 }],
       success_url: buildStripeReturnUrl("/success", {
         plan: planId,

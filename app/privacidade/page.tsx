@@ -345,9 +345,11 @@ export default function PrivacidadePage() {
                 Os dados de análise anónimos do Firebase Analytics são conservados durante 14 meses.
               </p>
               <p className="mt-4">
-                Contactos que não chegaram a cliente (leads e conversas) são apagados ao fim de 24
-                meses sem interação. Documentos de faturação são conservados 10 anos, por obrigação
-                fiscal.
+                Contactos que ainda não são clientes (leads e conversas) são conservados enquanto
+                houver interesse legítimo em manter a relação: por exemplo, enquanto recebes os nossos
+                conteúdos ou nos voltas a contactar. Podes pedir a qualquer momento que deixemos de te
+                contactar ou que apaguemos os teus dados, e fazemo-lo sem custos. Documentos de
+                faturação são conservados 10 anos, por obrigação fiscal.
               </p>
               <p className="mt-4">
                 Os nossos serviços destinam-se a maiores de 18 anos. Não recolhemos

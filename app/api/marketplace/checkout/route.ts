@@ -70,6 +70,7 @@ import { registarConsentimentoDaCompra } from '@/lib/captacao-consentimento-regi
 import { sessaoDoMembro } from '@/lib/marketplace/sessao'
 import { contaDoComprador, emailServeParaComprar } from '@/lib/marketplace/comprador'
 import type { PerfilUi } from '@/lib/perfil-ui'
+import { CUSTOM_TEXT_ACESSO_IMEDIATO } from '@/lib/legal/checkout-acesso-imediato'
 
 export const dynamic = 'force-dynamic'
 
@@ -359,6 +360,7 @@ export async function POST(request: NextRequest) {
     const stripe = getStripeClient()
     const checkout = await stripe.checkout.sessions.create({
       mode: modoStripe(produto),
+      custom_text: CUSTOM_TEXT_ACESSO_IMEDIATO,
       line_items: [{ price: produto.stripe_price_id, quantity: 1 }],
       customer_email: quem.email ?? undefined,
       ...(cupao ? { discounts: [{ coupon: cupao }] } : {}),
