@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getSupabaseAdmin } from '@/lib/supabase-admin-client'
 import { exigirEstudio } from '@/lib/estudio/acesso'
 import { ehMotor } from '@/lib/conteudo-magnetico/acesso'
+import { enviarHeygen, heygenConfig, sincronizarHeygen } from '@/lib/estudio/heygen'
 import { CLIPE_ENSAIO, DESCRICAO_TIPOS, motorOnline, validarPedido } from '@/lib/estudio/geracao'
 
 export const runtime = 'nodejs'
@@ -96,6 +97,16 @@ export async function POST(request: NextRequest) {
     .single()
   if (error || !g) return NextResponse.json({ erro: 'Não consegui registar o pedido.' }, { status: 500 })
 
+  // «falar» com a HeyGen configurada: vai já para lá (o Digital Twin do Ricardo), sem GPU.
+  if (p.tipo === 'falar' && !g.ensaio && heygenConfig() && p.params.texto) {
+    const h = await enviarHeygen(p.params.texto, p.params.aspecto)
+    const upd = 'id' in h
+      ? { estado: 'a_gerar', motor: 'heygen', params: { ...p.params, heygen_id: h.id } }
+      : { estado: 'erro', motor: 'heygen', erro: h.erro, terminado_em: agora }
+    await db.from('estudio_geracoes').update(upd).eq('id', g.id)
+    return NextResponse.json({ ok: 'id' in h, id: g.id, estado: upd.estado, motor_online: true, motor: 'heygen', ...('erro' in h ? { erro: h.erro } : {}) }, { status: 'id' in h ? 200 : 502 })
+  }
+
   const { online } = await estadoMotores(db, p.tipo)
   const gpu = !online && !g.ensaio ? await acordarGpu() : null
   return NextResponse.json({
@@ -118,10 +129,14 @@ export async function GET(request: NextRequest) {
   if (id) {
     const { data: g } = await db
       .from('estudio_geracoes')
-      .select('id, tipo, estado, params, ensaio, saida_caminho, saida_ativo_id, erro, criado_em, terminado_em, segundos_gpu')
+      .select('id, tipo, estado, params, ensaio, saida_caminho, saida_ativo_id, erro, criado_em, terminado_em, segundos_gpu, motor, pedido_por')
       .eq('id', id)
       .maybeSingle()
     if (!g) return NextResponse.json({ erro: 'Pedido desconhecido.' }, { status: 404 })
+    if (g.motor === 'heygen' && g.estado === 'a_gerar' && (await sincronizarHeygen(db, g)) !== 'a_gerar') {
+      const { data: f } = await db.from('estudio_geracoes').select('estado, saida_caminho, saida_ativo_id, erro, terminado_em').eq('id', g.id).maybeSingle()
+      if (f) Object.assign(g, f)
+    }
     return NextResponse.json({
       id: g.id,
       tipo: g.tipo,
@@ -132,7 +147,7 @@ export async function GET(request: NextRequest) {
       criado_em: g.criado_em,
       terminado_em: g.terminado_em,
       segundos_gpu: g.segundos_gpu,
-      motor_online: online,
+      motor_online: online || g.motor === 'heygen',
     })
   }
 
