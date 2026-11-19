@@ -178,3 +178,34 @@ export function botoesTipoConta(contas: Array<{ plataforma: string }>): Array<{ 
     ...tipos.map((t) => ({ id: t as TipoConta, nome: NOME_PLATAFORMA[t], n: conta(t) })).filter((b) => b.n > 0),
   ]
 }
+
+// ── desfazer, resumos e iniciais (19/11, 2.ª ronda: padrões de quadros bem aceites) ──
+
+/** O pedido que desfaz outro — o «Desfazer» do aviso que aparece depois de cada largar. */
+export function desfazerDe(p: PedidoLargar): PedidoLargar {
+  if (p.accao === 'mover') return { accao: 'mover', ref: p.ref, de: p.para, para: p.de }
+  if (p.accao === 'ligar') return { accao: 'desligar', ref: p.ref, slug: p.slug }
+  return { accao: 'ligar', ref: p.ref, slug: p.slug }
+}
+
+/** Capital sob cópia de uma coluna: soma dos saldos conhecidos das contas (conta física uma vez). */
+export function capitalDaColuna(subs: Array<{ ref: string; chave: string }>, contaPorRef: Map<string, ContaGestor>): { total: number; conhecidas: number } {
+  const vistas = new Set<string>()
+  let total = 0
+  let conhecidas = 0
+  for (const s of subs) {
+    if (vistas.has(s.chave)) continue
+    vistas.add(s.chave)
+    const saldo = contaPorRef.get(s.ref.toLowerCase())?.saldo
+    if (saldo != null && Number.isFinite(saldo)) { total += saldo; conhecidas++ }
+  }
+  return { total, conhecidas }
+}
+
+/** Duas letras para o avatar do cartão: «Pedro Gonçalves» → «PG»; «ruben@x.pt» → «RU». */
+export function iniciais(texto: string | null | undefined): string {
+  const t = String(texto ?? '').replace(/@.*/, '').replace(/[^\p{L}\p{N} ]+/gu, ' ').trim()
+  if (!t) return '··'
+  const p = t.split(/\s+/)
+  return (p.length > 1 ? p[0][0] + p[1][0] : t.slice(0, 2)).toUpperCase()
+}

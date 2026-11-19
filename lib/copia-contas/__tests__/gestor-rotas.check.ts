@@ -6,7 +6,7 @@
  */
 import assert from 'node:assert/strict'
 import type { NoEstrategia, SubscritorCadeia } from '../cadeia'
-import { botoesTipoConta, fonteDaEstrategia, organizarGestor, pedidoDoLargar, type ContaGestor } from '../gestor-rotas'
+import { botoesTipoConta, capitalDaColuna, desfazerDe, fonteDaEstrategia, iniciais, organizarGestor, pedidoDoLargar, type ContaGestor } from '../gestor-rotas'
 import { SEM_TRAVAS } from '../mestre-travas'
 import { GESTAO_VAZIA } from '../mestre-gestao'
 
@@ -76,6 +76,23 @@ caso('largar recusa com motivo: WebTrader, estratégia desligada, já segue', ()
 caso('filtro de tipo de conta: nomes claros, só os que existem, com contagem', () => {
   const b = botoesTipoConta([{ plataforma: 'mt5' }, { plataforma: 'mt5' }, { plataforma: 'mtmfunded' }])
   assert.deepEqual(b.map((x) => `${x.nome}:${x.n}`), ['Todas:3', 'MetaTrader 5:2', 'MTM Funded:1'])
+})
+
+caso('desfazer devolve o estado anterior', () => {
+  assert.deepEqual(desfazerDe({ accao: 'mover', ref: A, de: 'x', para: 'y' }), { accao: 'mover', ref: A, de: 'y', para: 'x' })
+  assert.deepEqual(desfazerDe({ accao: 'ligar', ref: A, slug: 'y' }), { accao: 'desligar', ref: A, slug: 'y' })
+  assert.deepEqual(desfazerDe({ accao: 'desligar', ref: A, slug: 'y' }), { accao: 'ligar', ref: A, slug: 'y' })
+})
+
+caso('capital da coluna conta cada conta física uma vez e só saldos conhecidos', () => {
+  const m = new Map([[A, conta(A, { saldo: 1000.5 })], [B, conta(B, { saldo: null })]])
+  assert.deepEqual(capitalDaColuna([sub(A), sub(A, { rotaId: 'r2' }), sub(B)], m), { total: 1000.5, conhecidas: 1 })
+})
+
+caso('iniciais', () => {
+  assert.equal(iniciais('Pedro Gonçalves · FXIFY'), 'PG')
+  assert.equal(iniciais('ruben@x.pt'), 'RU')
+  assert.equal(iniciais(null), '··')
 })
 
 let n = 0
