@@ -336,6 +336,40 @@ export default function PortfoliosPage() {
   const retornoCripto = retornoDaCarteira(cryptoAssets)
   const retornoETF = retornoDaCarteira(etfAssets)
 
+  /**
+   * 19/11 — AS TABELAS MOSTRAM O QUE A CONTA TEM. A lista do admin tem 11 criptos e a conta
+   * PORTF-CRIPTO só tem 5 desde a limpeza de 01/10: a página parecia «por actualizar». Com posições
+   * da conta, a tabela fica só com esses activos e ganha a coluna «Na conta» (valor e peso reais).
+   * Sem posições (API em baixo), fica a lista do plano como antes.
+   */
+  const posicoesDe = (chave: string) => {
+    const m = new Map<string, PosicaoDaConta>()
+    for (const p of contasPortefolio.find((c) => c.chave === chave)?.posicoes ?? []) m.set(p.symbol.toUpperCase(), p)
+    return m
+  }
+  const naContaCripto = posicoesDe("PORTF-CRIPTO")
+  const naContaETF = posicoesDe("PORTF-ETF")
+  const chaveCripto = (s: string) => {
+    const t = String(s || "").toUpperCase().replace(/[^A-Z0-9]/g, "")
+    return t.endsWith("USDT") ? t : `${t}USDT`
+  }
+  const cryptoVisiveis = naContaCripto.size ? cryptoAssets.filter((a) => naContaCripto.has(chaveCripto(a.symbol))) : cryptoAssets
+  const etfVisiveis = naContaETF.size ? etfAssets.filter((a) => naContaETF.has(String(a.symbol).toUpperCase())) : etfAssets
+  const celulaNaConta = (p: PosicaoDaConta | undefined) =>
+    p?.valor == null ? (
+      <span className="text-gray-500">—</span>
+    ) : (
+      <div className="leading-tight tabular-nums">
+        <div className="font-bold text-white">
+          ${p.valor.toLocaleString("pt-PT", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+        </div>
+        <div className="text-[10px] text-gray-500">
+          {p.peso != null ? `${p.peso.toLocaleString("pt-PT")}% · ` : ""}investido $
+          {p.investido.toLocaleString("pt-PT", { maximumFractionDigits: 0 })}
+        </div>
+      </div>
+    )
+
   const formatPercent = (value: number) => {
     return `${value >= 0 ? "+" : ""}${value.toFixed(2)}%`
   }
@@ -431,10 +465,10 @@ export default function PortfoliosPage() {
                   <div className="text-xs text-gray-400 uppercase tracking-wider">Total de Ativos</div>
                 </div>
                 <div className="text-4xl font-black text-white mb-1">
-                  {cryptoAssets.length + etfAssets.length}
+                  {cryptoVisiveis.length + etfVisiveis.length}
                 </div>
                 <div className="text-xs text-gray-500">
-                  {cryptoAssets.length} Crypto • {etfAssets.length} ETF
+                  {cryptoVisiveis.length} Crypto • {etfVisiveis.length} ETF
                 </div>
               </CardContent>
             </Card>
@@ -689,7 +723,7 @@ export default function PortfoliosPage() {
                           Criptomoedas MTM
                         </CardTitle>
                         <Badge className="bg-green-500/20 text-green-400 border-green-500/50">
-                          {cryptoAssets.length} Ativos Ativos
+                          {cryptoVisiveis.length} Ativos na conta
                         </Badge>
                       </div>
                     </CardHeader>
@@ -699,6 +733,7 @@ export default function PortfoliosPage() {
                           <thead className="bg-gray-800/50">
                             <tr>
                               <th className="text-left py-4 px-6 text-xs text-gray-400 font-semibold uppercase tracking-wider">Ativo</th>
+                              <th className="text-center py-4 px-4 text-xs text-gray-400 font-semibold uppercase tracking-wider">Na conta</th>
                               <th className="text-center py-4 px-4 text-xs text-gray-400 font-semibold uppercase tracking-wider">Preço</th>
                               <th className="text-center py-4 px-4 text-xs text-gray-400 font-semibold uppercase tracking-wider">Stop Loss</th>
                               <th className="text-center py-4 px-4 text-xs text-gray-400 font-semibold uppercase tracking-wider">TP1</th>
@@ -713,7 +748,7 @@ export default function PortfoliosPage() {
                             </tr>
                           </thead>
                           <tbody>
-                            {cryptoAssets.map((asset, index) => (
+                            {cryptoVisiveis.map((asset, index) => (
                               <tr 
                                 key={index} 
                                 className="border-b border-gray-800/50 hover:bg-[#D2A63C]/5 transition-all group"
@@ -734,9 +769,10 @@ export default function PortfoliosPage() {
                                     </div>
                                   </div>
                                 </td>
+                                <td className="text-center py-4 px-4">{celulaNaConta(naContaCripto.get(chaveCripto(asset.symbol)))}</td>
                                 <td className="text-center py-4 px-4">
                                   <div className="font-bold text-white">
-                                    {asset.current_price ? `$${asset.current_price.toFixed(2)}` : '-'}
+                                    {asset.current_price ? `$${asset.current_price < 1 ? asset.current_price.toFixed(4) : asset.current_price.toFixed(2)}` : '-'}
                                   </div>
                                 </td>
                                 <td className="text-center py-4 px-4">
@@ -862,7 +898,7 @@ export default function PortfoliosPage() {
                           ETFs MTM - Horizonte 5 Anos
                         </CardTitle>
                         <Badge className="bg-blue-500/20 text-blue-400 border-blue-500/50">
-                          {etfAssets.length} ETFs
+                          {etfVisiveis.length} ETFs na conta
                         </Badge>
                       </div>
                     </CardHeader>
@@ -873,6 +909,7 @@ export default function PortfoliosPage() {
                             <tr>
                               <th className="text-left py-4 px-6 text-xs text-gray-400 font-semibold uppercase tracking-wider">ETF</th>
                               <th className="text-center py-4 px-4 text-xs text-gray-400 font-semibold uppercase tracking-wider">Alocação</th>
+                              <th className="text-center py-4 px-4 text-xs text-gray-400 font-semibold uppercase tracking-wider">Na conta</th>
                               <th className="text-right py-4 px-4 text-xs text-gray-400 font-semibold uppercase tracking-wider">Preço Atual</th>
                               <th className="text-right py-4 px-4 text-xs text-gray-400 font-semibold uppercase tracking-wider">SL (-60%)</th>
                               <th className="text-right py-4 px-4 text-xs text-gray-400 font-semibold uppercase tracking-wider">Target 5Y</th>
@@ -880,7 +917,7 @@ export default function PortfoliosPage() {
                             </tr>
                           </thead>
                           <tbody>
-                            {etfAssets.map((asset, index) => {
+                            {etfVisiveis.map((asset, index) => {
                               const stopLoss = asset.current_price ? asset.current_price * 0.40 : 0
                               const target = asset.current_price ? asset.current_price * (1 + asset.potential_growth / 100) : 0
                               
@@ -905,6 +942,7 @@ export default function PortfoliosPage() {
                                       {asset.allocation_percent}%
                                     </Badge>
                                   </td>
+                                  <td className="text-center py-4 px-4">{celulaNaConta(naContaETF.get(String(asset.symbol).toUpperCase()))}</td>
                                   <td className="text-right py-4 px-4">
                                     <div className="font-bold text-white">
                                       {asset.current_price ? `$${asset.current_price.toFixed(2)}` : (
