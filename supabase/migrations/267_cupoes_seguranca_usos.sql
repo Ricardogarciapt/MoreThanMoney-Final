@@ -1,4 +1,4 @@
--- 266 · Cupões: fechar a leitura pública, repor usos em falta e manter o contador certo (19/11/2026)
+-- 267 · Cupões: fechar a leitura pública, repor usos em falta e manter o contador certo (19/11/2026)
 --
 -- 1. A política `service_read_coupons` (SELECT, roles public, USING true) deixava QUALQUER pessoa
 --    com a chave anónima do site listar todos os cupões — incluindo MTMFOUNDER (100 % para sempre)
