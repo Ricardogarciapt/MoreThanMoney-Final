@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getSupabaseAdmin } from '@/lib/supabase-admin-client'
-import { cupaoEsgotado } from '@/lib/cupoes-usos'
+import { avaliarCupao, MENSAGEM_RECUSA } from '@/lib/cupoes-codigo'
 import { signPromotionalOffer, resolveAppleOfferForCoupon } from '@/lib/apple-iap'
 
 const supabase = getSupabaseAdmin()
@@ -15,32 +15,14 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'couponCode e productId obrigatórios' }, { status: 400 })
     }
 
-    const code = couponCode.trim().toUpperCase()
-
-    // 1. Verificar se o cupão existe e é válido na nossa tabela
-    const { data: coupon } = await supabase
-      .from('coupons')
-      .select('id, code, type, discount_value, plan_override, max_uses, used_count, valid_from, valid_until, is_active, apple_offer_id, apple_offer_products')
-      .eq('code', code)
-      .eq('is_active', true)
-      .maybeSingle()
-
-    if (!coupon) {
-      return NextResponse.json({ valid: false, error: 'Cupão inválido ou expirado' }, { status: 200 })
+    // 1. Cupão válido na nossa tabela (normalização, datas e usos reais — lib/cupoes-codigo.ts).
+    const r = await avaliarCupao(supabase, couponCode)
+    if (!r.ok) {
+      return NextResponse.json({ valid: false, error: MENSAGEM_RECUSA[r.motivo] }, { status: r.motivo === 'erro' ? 500 : 200 })
     }
-
-    // Verificar validade temporal
-    const now = new Date()
-    if (coupon.valid_from && new Date(coupon.valid_from) > now) {
-      return NextResponse.json({ valid: false, error: 'Cupão ainda não activo' })
-    }
-    if (coupon.valid_until && new Date(coupon.valid_until) < now) {
-      return NextResponse.json({ valid: false, error: 'Cupão expirado' })
-    }
-    // Contado em `coupon_usages`, não no `used_count` — esse nunca subia e o limite nunca
-    // disparava, o que deixava um cupão de uso único ser resgatado sem limite. Ver lib/cupoes-usos.ts.
-    if (await cupaoEsgotado(supabase, coupon)) {
-      return NextResponse.json({ valid: false, error: 'Cupão esgotado' })
+    const coupon = r.cupao
+    if (coupon.marketplace_produto_id || coupon.marketplace_educator_id || coupon.plan_override === 'mtmfunded') {
+      return NextResponse.json({ valid: false, error: 'Cupão não aplicável a este produto' })
     }
 
     // 2. Obter oferta Apple correspondente (sincronizado com a tabela coupons)

@@ -1,4 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { registarUsoCupao } from '@/lib/cupoes-usos'
+import { normalizarCodigoCupao } from '@/lib/cupoes-codigo'
 import { getSupabaseAdmin } from '@/lib/supabase-admin-client'
 import { productToSubscriptionPlan, APPLE_BUNDLE_ID } from '@/lib/apple-iap'
 import { verifyAppleTransaction } from '@/lib/apple-iap-verify'
@@ -157,7 +159,7 @@ export async function POST(req: NextRequest) {
     }
 
     // Registar cupão se fornecido
-    const couponUpper = (couponCode || '').trim().toUpperCase()
+    const couponUpper = normalizarCodigoCupao(couponCode)
     if (couponUpper) {
       updatePayload.coupon_code = couponUpper
     }
@@ -172,29 +174,10 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Erro ao activar subscrição' }, { status: 500 })
     }
 
-    // Registar uso de cupão na tabela coupon_usages
+    // Registar uso de cupão na tabela coupon_usages (uma vez por pessoa; é daí que contam os limites).
     if (couponUpper) {
       try {
-        const { data: coupon } = await supabase
-          .from('coupons')
-          .select('id')
-          .eq('code', couponUpper)
-          .eq('is_active', true)
-          .maybeSingle()
-
-        if (coupon) {
-          await supabase.from('coupon_usages').upsert(
-            { coupon_id: coupon.id, user_id: resolvedUserId, context: 'apple_iap' },
-            { onConflict: 'coupon_id,user_id' }
-          )
-          // NAO se incrementa aqui o coupons.used_count. O que estava neste sitio nao funcionava
-          // de duas maneiras: a RPC `increment_coupon_usage` nao existe na base, e o "fallback"
-          // gravava `used_count: supabase.rpc as unknown as number` — uma funcao passada como
-          // numero, que o JSON.stringify deixa cair. Resultado: o contador ficou sempre a 0, e
-          // por isso o limite `max_uses` verificado em /api/apple/iap/sign-offer NUNCA dispara.
-          // O uso real fica registado acima em coupon_usages (unico por cupao+utilizador).
-          // Falta decidir como contar: criar a RPC atomica, ou passar a contar coupon_usages.
-        }
+        await registarUsoCupao(supabase, couponUpper, resolvedUserId, 'apple_iap')
       } catch (couponErr) {
         console.error('[APPLE-IAP] Erro ao registar cupão:', couponErr)
       }

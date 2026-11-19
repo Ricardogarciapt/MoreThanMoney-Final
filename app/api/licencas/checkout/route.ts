@@ -76,7 +76,9 @@ export async function POST(request: NextRequest) {
       mode: plano.modo,
       custom_text: CUSTOM_TEXT_ACESSO_IMEDIATO,
       line_items: [{ price: priceId, quantity: 1 }],
-      allow_promotion_codes: true,
+      // SEM caixa de código promocional (19/11): os códigos da casa (ex.: MTMFOUNDER, 100 % forever)
+      // são promotion codes da mesma conta Stripe e, sem restrição de produto, davam uma licença
+      // de graça. Descontos em licenças fazem-se com cupão próprio, não com a caixa aberta.
       success_url: buildStripeReturnUrl(`/${pagina}/obrigado`, { plan: planId }),
       cancel_url: buildStripeReturnUrl(`/${pagina}`, {}, { includeSessionPlaceholder: false }),
       metadata,

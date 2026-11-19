@@ -2,6 +2,7 @@
 // Handles all Stripe webhook events — subscriptions, payments, cancellations
 
 import { NextRequest, NextResponse } from 'next/server'
+import { registarUsoCupao } from '@/lib/cupoes-usos'
 import Stripe from 'stripe'
 import { getSupabaseAdmin } from '@/lib/supabase-admin-client'
 import { sendScannerAccessEmail, sendMTMcopierSetupNotification } from '@/lib/email-service'
@@ -347,6 +348,10 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
       // que o agente trabalhou.
       agenteCodigo: session.metadata?.agente_codigo ?? null,
     })
+    // O cupão conta como usado — é daí (coupon_usages) que saem os limites de usos.
+    if (compradorProvisionado && session.metadata?.coupon_code) {
+      await registarUsoCupao(supabase, session.metadata.coupon_code, compradorProvisionado, 'stripe_registo').catch(() => {})
+    }
     return
   }
 
@@ -549,6 +554,9 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
     }
     if (couponCodeWebhook) subscriptionUpdate.coupon_code = couponCodeWebhook
     await supabase.from('profiles').update(subscriptionUpdate).eq('id', userId)
+    if (couponCodeWebhook) {
+      await registarUsoCupao(supabase, couponCodeWebhook, userId, 'stripe_checkout').catch(() => {})
+    }
 
     if (isPremiumStripePlan(planId)) {
       try {

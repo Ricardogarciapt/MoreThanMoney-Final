@@ -38,7 +38,7 @@ async function correr() {
   for (const rota of ['app/api/apple/iap/sign-offer/route.ts', 'app/api/coupons/validate/route.ts']) {
     const src = readFileSync(rota, 'utf8').replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '')
     teste(`${rota} não decide pelo used_count`, !/used_count\s*>=\s*/.test(src))
-    teste(`${rota} usa a contagem real`, /cupaoEsgotado\(/.test(src))
+    teste(`${rota} usa a contagem real`, /cupaoEsgotado\(|avaliarCupao\(/.test(src))
   }
 
 }
