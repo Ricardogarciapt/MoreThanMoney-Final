@@ -1,125 +1,57 @@
 import { NextRequest, NextResponse } from "next/server"
 import { getSupabaseAdmin } from "@/lib/supabase-admin-client"
-import { cupaoEsgotado } from "@/lib/cupoes-usos"
+import { checkRateLimit } from "@/lib/admin-api-helpers"
+import { avaliarCupao, MENSAGEM_RECUSA } from "@/lib/cupoes-codigo"
+
+/**
+ * POST /api/coupons/validate — o registo (web e app) pergunta se um cupão vale.
+ *
+ * As regras vivem em lib/cupoes-codigo.ts (normalização «she is faceless» → SHEISFACELESS, datas,
+ * usos reais em `coupon_usages`). Responde só o necessário para o formulário: nunca o id, os ids
+ * Stripe/Apple nem os limites — isso fica no servidor.
+ */
+const PLANO_LEGIVEL: Record<string, string> = {
+  app_member: "Membro",
+  premium: "Premium",
+  both: "Membro ou Premium",
+  vip: "Premium",
+}
 
 export async function POST(request: NextRequest) {
-  const supabase = getSupabaseAdmin()
+  // Travão leve contra quem tenta adivinhar códigos (por instância; o site é serverless).
+  const ip = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || "?"
+  if (!checkRateLimit(`cupao-validar:${ip}`, 20, 60_000).allowed) {
+    return NextResponse.json({ valid: false, message: "Demasiadas tentativas. Espera um minuto." }, { status: 429 })
+  }
 
   try {
-    const body = await request.json()
+    const body = await request.json().catch(() => ({}))
     const { code, userId } = body as { code?: string; userId?: string }
 
-    if (!code || typeof code !== "string") {
-      return NextResponse.json(
-        { valid: false, message: "Código de cupão em falta" },
-        { status: 400 }
-      )
+    const r = await avaliarCupao(getSupabaseAdmin(), code, { userId: typeof userId === "string" ? userId : null })
+    if (!r.ok) {
+      const status = r.motivo === "em_falta" ? 400 : r.motivo === "erro" ? 500 : 200
+      return NextResponse.json({ valid: false, type: r.cupao?.type ?? "", message: MENSAGEM_RECUSA[r.motivo] }, { status })
     }
 
-    const normalizedCode = code.trim().toUpperCase()
-
-    // Buscar o cupão
-    const { data: coupon, error } = await supabase
-      .from("coupons")
-      .select("*")
-      .eq("code", normalizedCode)
-      .maybeSingle()
-
-    if (error) {
-      console.error("❌ [COUPONS/VALIDATE] Erro ao buscar cupão:", error)
-      return NextResponse.json(
-        { valid: false, message: "Erro interno ao validar cupão" },
-        { status: 500 }
-      )
-    }
-
-    if (!coupon) {
-      return NextResponse.json({
-        valid: false,
-        type: "",
-        message: "Cupão inválido ou inexistente",
-      })
-    }
-
-    // Verificar se está activo
-    if (!coupon.is_active) {
-      return NextResponse.json({
-        valid: false,
-        type: coupon.type,
-        message: "Este cupão não está activo",
-      })
-    }
-
-    // Verificar datas de validade
-    const now = new Date()
-    const validFrom = new Date(coupon.valid_from)
-    if (validFrom > now) {
-      return NextResponse.json({
-        valid: false,
-        type: coupon.type,
-        message: "Este cupão ainda não está disponível",
-      })
-    }
-
-    if (coupon.valid_until) {
-      const validUntil = new Date(coupon.valid_until)
-      if (validUntil < now) {
-        return NextResponse.json({
-          valid: false,
-          type: coupon.type,
-          message: "Este cupão já expirou",
-        })
-      }
-    }
-
-    // Verificar limite de usos — contado em `coupon_usages`, não no `used_count`, que nunca subia
-    // (ver lib/cupoes-usos.ts). Enquanto se lia o contador, nenhum limite travava coisa nenhuma.
-    if (await cupaoEsgotado(supabase, coupon)) {
-      return NextResponse.json({
-        valid: false,
-        type: coupon.type,
-        message: "Este cupão já atingiu o número máximo de utilizações",
-      })
-    }
-
-    // Verificar se o utilizador já usou este cupão (se userId fornecido)
-    if (userId) {
-      const { data: existingUsage } = await supabase
-        .from("coupon_usages")
-        .select("id")
-        .eq("coupon_id", coupon.id)
-        .eq("user_id", userId)
-        .maybeSingle()
-
-      if (existingUsage) {
-        return NextResponse.json({
-          valid: false,
-          type: coupon.type,
-          message: "Já utilizaste este cupão anteriormente",
-        })
-      }
-    }
-
-    // Cupão válido — construir resposta
+    const coupon = r.cupao
+    const valor = Number(coupon.discount_value) || 0
     const response: {
       valid: boolean
       type: string
+      code: string
       discount_pct?: number
       free_months?: number
       plan_override?: string
       message: string
-    } = {
-      valid: true,
-      type: coupon.type,
-      message: "Cupão válido",
-    }
+    } = { valid: true, type: coupon.type, code: coupon.code, message: "Cupão válido" }
 
     if (coupon.type === "discount_pct") {
-      response.discount_pct = coupon.discount_value
-      response.message = `Desconto de ${coupon.discount_value}% aplicado`
+      response.discount_pct = valor
+      response.message = `Desconto de ${valor}% aplicado`
     } else if (coupon.type === "free_months") {
-      response.free_months = coupon.discount_value
-      response.message = `${coupon.discount_value} ${coupon.discount_value === 1 ? "mês grátis" : "meses grátis"} aplicado`
+      response.free_months = valor
+      response.message = `${valor} ${valor === 1 ? "mês grátis" : "meses grátis"} aplicado`
     } else if (coupon.type === "free_subscription") {
       response.message = "Subscrição gratuita aplicada"
     } else if (coupon.type === "campanha_90d") {
@@ -129,14 +61,13 @@ export async function POST(request: NextRequest) {
 
     if (coupon.plan_override) {
       response.plan_override = coupon.plan_override
+      const plano = PLANO_LEGIVEL[coupon.plan_override]
+      if (plano && coupon.type !== "campanha_90d") response.message += ` · plano ${plano}`
     }
 
     return NextResponse.json(response)
-  } catch (error: any) {
+  } catch (error) {
     console.error("❌ [COUPONS/VALIDATE] Erro:", error)
-    return NextResponse.json(
-      { valid: false, message: "Erro interno do servidor" },
-      { status: 500 }
-    )
+    return NextResponse.json({ valid: false, message: "Erro interno do servidor" }, { status: 500 })
   }
 }

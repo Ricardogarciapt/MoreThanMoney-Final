@@ -48,7 +48,7 @@ export const ORIGEM_CAMPANHA_90D: OrigemPeriodoGratis = 'campanha_90d'
 export const PLANO_DURANTE_CAMPANHA = 'app_member_monthly'
 
 export function ehCupaoCampanha90d(codigo: unknown): boolean {
-  return typeof codigo === 'string' && codigo.trim().toUpperCase() === CUPAO_CAMPANHA_90D
+  return typeof codigo === 'string' && codigo.replace(/\s+/g, '').toUpperCase() === CUPAO_CAMPANHA_90D
 }
 
 /** Origem do período grátis a partir do metadata da subscrição Stripe. */
@@ -107,7 +107,8 @@ export function recolhaCompleta(trial: boolean): Pick<
  */
 export function pareceCupao(codigo: unknown): codigo is string {
   if (typeof codigo !== 'string') return false
-  const c = codigo.trim()
+  // Espaços não contam: «SHE IS FACELESS» é o cupão SHEISFACELESS (normalizarCodigoCupao).
+  const c = codigo.replace(/\s+/g, '')
   return c.length >= 3 && c.length <= 40 && /^[A-Za-z0-9_-]+$/.test(c)
 }
 

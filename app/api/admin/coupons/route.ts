@@ -1,8 +1,10 @@
+import { normalizarCodigoCupao } from "@/lib/cupoes-codigo"
+import { sincronizarLinhaCupao } from "@/lib/cupoes-sync"
+import type { LinhaParaSync } from "@/lib/stripe-coupons"
 import { NextRequest, NextResponse } from "next/server"
 import { exigirGestao } from '@/lib/backoffice-sessao'
 import { getSupabaseAdmin } from "@/lib/admin-api-helpers"
 import {
-  activateStripePromotionCode,
   createStripeCouponSync,
   deactivateStripePromotionCode,
 } from "@/lib/stripe-coupons"
@@ -100,7 +102,7 @@ export async function POST(request: NextRequest) {
 
     // ── Código de parceria (influencer/UGC): concede acesso direto, sem Stripe/Apple ──
     if (type === "partnership") {
-      const normalizedCode = code.trim().toUpperCase()
+      const normalizedCode = normalizarCodigoCupao(code)
       const { data: dup } = await supabase.from("coupons").select("id").eq("code", normalizedCode).maybeSingle()
       if (dup) {
         return NextResponse.json({ error: `Já existe um código "${normalizedCode}"` }, { status: 409 })
@@ -176,7 +178,7 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    const normalizedCode = code.trim().toUpperCase()
+    const normalizedCode = normalizarCodigoCupao(code)
 
     // Check for duplicate
     const { data: existing } = await supabase
@@ -343,29 +345,6 @@ export async function PATCH(request: NextRequest) {
       }
     }
 
-    const { data: existing } = await supabase
-      .from("coupons")
-      .select("stripe_promotion_code_id")
-      .eq("id", id)
-      .maybeSingle()
-
-    if (is_active !== undefined && existing?.stripe_promotion_code_id) {
-      try {
-        if (Boolean(is_active)) {
-          await activateStripePromotionCode(existing.stripe_promotion_code_id)
-        } else {
-          await deactivateStripePromotionCode(existing.stripe_promotion_code_id)
-        }
-      } catch (stripeErr: unknown) {
-        const msg = stripeErr instanceof Error ? stripeErr.message : "Erro Stripe"
-        console.error("❌ [ADMIN COUPONS PATCH] Stripe:", msg)
-        return NextResponse.json(
-          { error: "Erro ao sincronizar estado no Stripe", details: msg },
-          { status: 502 }
-        )
-      }
-    }
-
     const { data, error } = await supabase
       .from("coupons")
       .update(updates)
@@ -385,7 +364,17 @@ export async function PATCH(request: NextRequest) {
       return NextResponse.json({ error: "Cupão não encontrado" }, { status: 404 })
     }
 
-    return NextResponse.json({ success: true, data })
+    // O Stripe fica igual à linha: liga/desliga, e recria o código se mudou o desconto, o fim ou
+    // o limite (o Stripe não deixa editar esses termos). Ver lib/cupoes-sync.ts.
+    const sync = await sincronizarLinhaCupao(supabase, data as LinhaParaSync, { origem: "painel" })
+    if (sync.acao === "erro") {
+      console.error("❌ [ADMIN COUPONS PATCH] Stripe:", sync.detalhe)
+      return NextResponse.json(
+        { success: true, data, stripe_sync: sync, warning: "Guardado, mas o Stripe falhou — o cron diário volta a tentar." },
+        { status: 207 }
+      )
+    }
+    return NextResponse.json({ success: true, data, stripe_sync: sync })
   } catch (error: any) {
     console.error("❌ [ADMIN COUPONS PATCH] Erro:", error)
     return NextResponse.json(

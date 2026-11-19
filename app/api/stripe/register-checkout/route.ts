@@ -3,8 +3,8 @@ import { opinlyTrack } from '@/lib/opinly/track'
 import { getStripeClient } from '@/lib/stripe-client'
 import { recusaPlanoDescontinuado, requireStripePriceId } from '@/lib/stripe-prices'
 import { buildStripeReturnUrl, getSiteOrigin } from '@/lib/site-url'
-import { resolveStripePromotionCode } from '@/lib/coupon-stripe-discount'
-import { getSupabaseAdmin } from '@/lib/supabase-admin-client'
+import { resolverCupaoCheckout } from '@/lib/coupon-stripe-discount'
+import { normalizarCodigoCupao } from '@/lib/cupoes-codigo'
 import { isIosAppRequest, IOS_IAP_REQUIRED } from '@/lib/is-native-request'
 import type Stripe from 'stripe'
 import { COOKIE_ATRIBUICAO, normalizar as normalizarAgente } from '@/lib/agentes/atribuicao'
@@ -33,11 +33,11 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(IOS_IAP_REQUIRED, { status: 403 })
     }
     const body = await request.json()
-    const { planId, email, fullName, username, phone, regToken, sponsorUsername, trial } = body
+    const { planId: planIdPedido, email, fullName, username, phone, regToken, sponsorUsername, trial } = body
     // Um email (ou lixo do preenchimento automático) no campo do cupão não é um cupão.
-    const couponCode = pareceCupao(body.couponCode) ? body.couponCode.trim().toUpperCase() : ''
+    const couponCode = pareceCupao(body.couponCode) ? normalizarCodigoCupao(body.couponCode) : ''
 
-    if (!planId || !email || !fullName || !username) {
+    if (!planIdPedido || !email || !fullName || !username) {
       return NextResponse.json({ error: 'planId, email, fullName e username são obrigatórios' }, { status: 400 })
     }
 
@@ -50,12 +50,21 @@ export async function POST(request: NextRequest) {
     })
 
     // Planos descontinuados (MTM Copy) não abrem checkout novo.
-    const descontinuado = recusaPlanoDescontinuado(planId)
+    const descontinuado = recusaPlanoDescontinuado(planIdPedido)
     if (descontinuado) return NextResponse.json(descontinuado, { status: 410 })
 
     // Campanha 90 dias (cupão 90DAYSPREVIOUSXP): o preço é o do Premium, com 90 dias grátis e
     // Membro durante o período. Sobrepõe-se ao plano que vier do formulário.
     const isCampanha90d = ehCupaoCampanha90d(couponCode)
+
+    // Qualquer outro cupão valida-se AQUI, no servidor, e decide o plano (um cupão de Membro não
+    // dá o Premium de graça). Inválido → erro claro, nunca um checkout a preço inesperado.
+    let planId: string = planIdPedido
+    const cupaoCheckout = couponCode && !isCampanha90d ? await resolverCupaoCheckout(couponCode, planIdPedido) : null
+    if (cupaoCheckout && !cupaoCheckout.ok) {
+      return NextResponse.json({ error: cupaoCheckout.erro, code: cupaoCheckout.codigo }, { status: 400 })
+    }
+    if (cupaoCheckout?.ok) planId = cupaoCheckout.planId
 
     // Premium mensal tem duas portas (ver lib/stripe-checkout-premium.ts):
     // trial de 3 dias SEM cartão e depois 65€/mês, ou ativar já com o 1º mês a 35€.
@@ -117,32 +126,11 @@ export async function POST(request: NextRequest) {
     }
 
     // Trial e campanha já trazem o subscription_data (paramsTrialSemCartao / paramsCampanha90d).
-    if (!isTrial && !isCampanha90d && couponCode) {
-      const promoId = await resolveStripePromotionCode(couponCode)
-      if (promoId) {
-        sessionParams.discounts = [{ promotion_code: promoId }]
-      } else {
-        // Sem promo code Stripe configurado — verificar tipo do cupão na DB
-        const { data: couponRow } = await getSupabaseAdmin()
-          .from('coupons')
-          .select('type, discount_value')
-          .eq('code', couponCode.trim().toUpperCase())
-          .eq('is_active', true)
-          .maybeSingle()
-
-        // Cupão de PARCERIA (creator/UGC): concede acesso pelo prazo do cupão SEM cartão.
-        // NÃO deve criar checkout Stripe — o cliente resgata via /api/partnership/redeem.
-        if (couponRow?.type === 'partnership') {
-          return NextResponse.json(
-            { error: 'Cupão de parceria: concede acesso sem cartão — usa o fluxo de resgate.', code: 'PARTNERSHIP_COUPON' },
-            { status: 400 }
-          )
-        }
-
-        if (couponRow?.type === 'free_subscription' || couponRow?.type === 'free_months') {
-          const months = Math.max(1, couponRow.discount_value ?? 1)
-          sessionParams.subscription_data = { trial_period_days: months * 30 }
-        }
+    if (cupaoCheckout?.ok) {
+      if (cupaoCheckout.promotionCodeId) {
+        sessionParams.discounts = [{ promotion_code: cupaoCheckout.promotionCodeId }]
+      } else if (cupaoCheckout.trialDays) {
+        sessionParams.subscription_data = { trial_period_days: cupaoCheckout.trialDays }
       }
     }
 

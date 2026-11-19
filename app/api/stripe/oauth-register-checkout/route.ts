@@ -5,9 +5,9 @@ import { recusaPlanoDescontinuado, requireStripePriceId } from "@/lib/stripe-pri
 import { buildStripeReturnUrl, getSiteOrigin } from "@/lib/site-url"
 import { isRegisteredMember } from "@/lib/member-access"
 import { buildUsername } from "@/lib/member-profile"
-import { resolveStripePromotionCode } from "@/lib/coupon-stripe-discount"
-import { ORIGEM_CAMPANHA_90D, PLANO_DURANTE_CAMPANHA, ehCupaoCampanha90d, paramsCampanha90d } from "@/lib/stripe-checkout-premium"
-import { getSupabaseAdmin } from "@/lib/supabase-admin-client"
+import { resolverCupaoCheckout } from "@/lib/coupon-stripe-discount"
+import { normalizarCodigoCupao } from "@/lib/cupoes-codigo"
+import { ORIGEM_CAMPANHA_90D, PLANO_DURANTE_CAMPANHA, ehCupaoCampanha90d, paramsCampanha90d, pareceCupao } from "@/lib/stripe-checkout-premium"
 import { isIosAppRequest, IOS_IAP_REQUIRED } from "@/lib/is-native-request"
 import type Stripe from 'stripe'
 import { COOKIE_ATRIBUICAO, normalizar as normalizarAgente } from "@/lib/agentes/atribuicao"
@@ -26,14 +26,15 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(IOS_IAP_REQUIRED, { status: 403 })
     }
     const body = await request.json()
-    const { planId, regToken, sponsorUsername, couponCode } = body
+    const { planId: planIdPedido, regToken, sponsorUsername } = body
+    const couponCode = pareceCupao(body.couponCode) ? normalizarCodigoCupao(body.couponCode) : ""
 
-    if (!planId || !regToken) {
+    if (!planIdPedido || !regToken) {
       return NextResponse.json({ error: "planId e regToken são obrigatórios" }, { status: 400 })
     }
 
     // Planos descontinuados (MTM Copy) não abrem checkout novo.
-    const descontinuado = recusaPlanoDescontinuado(planId)
+    const descontinuado = recusaPlanoDescontinuado(planIdPedido)
     if (descontinuado) return NextResponse.json(descontinuado, { status: 410 })
 
     let response = NextResponse.next()
@@ -80,6 +81,15 @@ export async function POST(request: NextRequest) {
       (typeof meta.name === "string" && meta.name) ||
       user.email.split("@")[0]
     const username = buildUsername({ user: { id: user.id, email: user.email, user_metadata: meta } })
+
+    // O cupão valida-se no servidor e decide o plano (um cupão de Membro não dá o Premium).
+    let planId: string = planIdPedido
+    const cupaoCheckout =
+      couponCode && !ehCupaoCampanha90d(couponCode) ? await resolverCupaoCheckout(couponCode, planIdPedido) : null
+    if (cupaoCheckout && !cupaoCheckout.ok) {
+      return NextResponse.json({ error: cupaoCheckout.erro, code: cupaoCheckout.codigo }, { status: 400 })
+    }
+    if (cupaoCheckout?.ok) planId = cupaoCheckout.planId
 
     const priceId = requireStripePriceId(planId)
     const stripe = getStripeClient()
@@ -142,24 +152,13 @@ export async function POST(request: NextRequest) {
         ...sessionParams.metadata,
         plan: PLANO_DURANTE_CAMPANHA,
         periodo_gratis: ORIGEM_CAMPANHA_90D,
-        coupon_code: String(couponCode).trim().toUpperCase(),
+        coupon_code: couponCode,
       }
-    } else if (couponCode) {
-      const promoId = await resolveStripePromotionCode(couponCode)
-      if (promoId) {
-        sessionParams.discounts = [{ promotion_code: promoId }]
-      } else {
-        const { data: couponRow } = await getSupabaseAdmin()
-          .from('coupons')
-          .select('type, discount_value')
-          .eq('code', couponCode.trim().toUpperCase())
-          .eq('is_active', true)
-          .maybeSingle()
-
-        if (couponRow?.type === 'free_subscription' || couponRow?.type === 'free_months') {
-          const months = Math.max(1, couponRow.discount_value ?? 1)
-          sessionParams.subscription_data = { trial_period_days: months * 30 }
-        }
+    } else if (cupaoCheckout?.ok) {
+      if (cupaoCheckout.promotionCodeId) {
+        sessionParams.discounts = [{ promotion_code: cupaoCheckout.promotionCodeId }]
+      } else if (cupaoCheckout.trialDays) {
+        sessionParams.subscription_data = { trial_period_days: cupaoCheckout.trialDays }
       }
     }
 

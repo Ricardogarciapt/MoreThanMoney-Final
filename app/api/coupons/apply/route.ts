@@ -1,14 +1,28 @@
 import { NextRequest, NextResponse } from "next/server"
 import { getSupabaseAdmin } from "@/lib/supabase-admin-client"
+import { normalizarCodigoCupao } from "@/lib/cupoes-codigo"
+import { cupaoEsgotado } from "@/lib/cupoes-usos"
+
+/**
+ * POST /api/coupons/apply — regista o uso de um cupão pela pessoa com sessão.
+ * 19/11: passou a exigir sessão (Bearer). Antes aceitava qualquer `userId` no corpo, e qualquer
+ * pessoa podia gastar um cupão em nome de outra.
+ */
 
 export async function POST(request: NextRequest) {
   const supabase = getSupabaseAdmin()
 
   try {
-    const body = await request.json()
-    const { code, userId, context } = body as {
+    const token = (request.headers.get("authorization") || "").replace("Bearer ", "").trim()
+    const { data: auth } = token ? await supabase.auth.getUser(token) : { data: { user: null } }
+    if (!auth?.user) {
+      return NextResponse.json({ success: false, message: "Sessão em falta" }, { status: 401 })
+    }
+    const userId = auth.user.id
+
+    const body = await request.json().catch(() => ({}))
+    const { code, context } = body as {
       code?: string
-      userId?: string
       context?: string
     }
 
@@ -19,14 +33,7 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    if (!userId || typeof userId !== "string") {
-      return NextResponse.json(
-        { success: false, message: "userId em falta" },
-        { status: 400 }
-      )
-    }
-
-    const normalizedCode = code.trim().toUpperCase()
+    const normalizedCode = normalizarCodigoCupao(code)
 
     // Buscar e validar o cupão (re-validação completa para evitar race conditions)
     const { data: coupon, error: fetchError } = await supabase
@@ -58,7 +65,7 @@ export async function POST(request: NextRequest) {
     }
 
     const now = new Date()
-    if (new Date(coupon.valid_from) > now) {
+    if (coupon.valid_from && new Date(coupon.valid_from) > now) {
       return NextResponse.json(
         { success: false, message: "Este cupão ainda não está disponível" },
         { status: 400 }
@@ -72,7 +79,7 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    if (coupon.max_uses !== null && coupon.used_count >= coupon.max_uses) {
+    if (await cupaoEsgotado(supabase, coupon)) {
       return NextResponse.json(
         { success: false, message: "Este cupão já atingiu o número máximo de utilizações" },
         { status: 400 }

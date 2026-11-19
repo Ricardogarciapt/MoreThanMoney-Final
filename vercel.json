@@ -21,6 +21,10 @@
       "schedule": "40 8 * * *"
     },
     {
+      "path": "/api/cron/cupoes-sincronizar",
+      "schedule": "10 6 * * *"
+    },
+    {
       "path": "/api/cron/vendas-reconciliar",
       "schedule": "20 6,13 * * *"
     },

@@ -53,15 +53,26 @@ export function resolveAppleOfferForCoupon(coupon: {
   const memberProducts = [APPLE_PRODUCTS.member_monthly, APPLE_PRODUCTS.member_annual]
   const allProducts = Object.values(APPLE_PRODUCTS) as string[]
 
+  const plan = coupon.plan_override
+  // Produtos que o plano do cupão permite. Sem lista explícita, um cupão de Membro NÃO pode
+  // assinar a oferta no Premium (19/11: SHEISFACELESS, de Membro, abria a oferta em todos).
+  const productsDoPlano =
+    plan === 'app_member' ? memberProducts
+    : plan === 'premium' || plan === 'vip' ? premiumProducts
+    : plan === 'mtmfunded' ? []
+    : allProducts
+
   // 1) Mapeamento explícito na BD
   if (coupon.apple_offer_id) {
-    const products = coupon.apple_offer_products?.length ? coupon.apple_offer_products : allProducts
+    const products = coupon.apple_offer_products?.length
+      ? coupon.apple_offer_products.filter((p) => productsDoPlano.includes(p))
+      : productsDoPlano
+    if (!products.length) return null
     return { offerIdentifier: coupon.apple_offer_id, applicableProducts: products }
   }
 
   // 2) Derivação por tipo (só ofertas que EXISTEM na ASC: founder_50pct, mtm_founder)
   const val = Number(coupon.discount_value)
-  const plan = coupon.plan_override
   if (coupon.type === 'discount_pct' && val >= 50) {
     return { offerIdentifier: APPLE_PROMO_OFFERS.founder_50pct, applicableProducts: premiumProducts }
   }

@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getSupabaseAdmin } from '@/lib/supabase-admin-client'
 import { sendNewMemberWelcomeIfEligible } from '@/lib/new-member-welcome'
+import { normalizarCodigoCupao } from '@/lib/cupoes-codigo'
+import { cupaoEsgotado } from '@/lib/cupoes-usos'
 
 /**
  * POST /api/partnership/redeem
@@ -35,7 +37,7 @@ export async function POST(req: NextRequest) {
     if (!rawCode || typeof rawCode !== 'string' || !rawCode.trim()) {
       return NextResponse.json({ success: false, message: 'Introduz um código.' }, { status: 400 })
     }
-    const code = rawCode.trim().toUpperCase()
+    const code = normalizarCodigoCupao(rawCode)
 
     // ── 3. Validar o código de parceria ────────────────────────────────────
     const { data: coupon, error: fetchError } = await supabase
@@ -65,7 +67,8 @@ export async function POST(req: NextRequest) {
     if (coupon.valid_until && new Date(coupon.valid_until) < now) {
       return NextResponse.json({ success: false, message: 'Este código já expirou.' }, { status: 400 })
     }
-    if (coupon.max_uses !== null && (coupon.used_count ?? 0) >= coupon.max_uses) {
+    // Usos reais em coupon_usages (lib/cupoes-usos.ts), não o contador.
+    if (await cupaoEsgotado(supabase, coupon)) {
       return NextResponse.json({ success: false, message: 'Este código já atingiu o limite de utilizações.' }, { status: 400 })
     }
 

@@ -49,3 +49,38 @@ export async function cupaoEsgotado(
   if (usos == null) return true
   return usos >= coupon.max_uses
 }
+
+/**
+ * Regista que esta pessoa usou o cupão — uma vez por pessoa (idempotente: reenvios do webhook ou
+ * da Apple não duplicam). Devolve `true` se gravou agora.
+ *
+ * 19/11: até aqui só o resgate manual e o de parceria gravavam. Quem pagava com cupão no Stripe
+ * nunca ficava em `coupon_usages` (17 perfis com cupão, 4 usos registados), e a Apple usava um
+ * `upsert … onConflict 'coupon_id,user_id'` sem índice único por trás — o Postgres recusava e o
+ * erro morria no `catch`. Resultado: os limites de usos nunca contavam estas vendas.
+ */
+export async function registarUsoCupao(
+  db: Pick<SupabaseClient, 'from'>,
+  codigo: string,
+  userId: string,
+  context: string,
+): Promise<boolean> {
+  const code = codigo.normalize('NFKC').replace(/\s+/g, '').toUpperCase()
+  if (!code || !userId) return false
+  const { data: cupao } = await db.from('coupons').select('id').eq('code', code).maybeSingle()
+  if (!cupao) return false
+  const { data: ja } = await db
+    .from('coupon_usages')
+    .select('id')
+    .eq('coupon_id', cupao.id)
+    .eq('user_id', userId)
+    .limit(1)
+    .maybeSingle()
+  if (ja) return false
+  const { error } = await db.from('coupon_usages').insert({ coupon_id: cupao.id, user_id: userId, context })
+  if (error) {
+    console.error('[cupoes] falhou registar uso:', code, error.message)
+    return false
+  }
+  return true
+}
