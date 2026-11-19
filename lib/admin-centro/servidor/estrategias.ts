@@ -124,6 +124,7 @@ async function lerEstrategias() {
   for (const s of sinais.linhas) sinalProv.set(String(s.id), String(s.provider_id))
   const nomeEquipa = new Map(tenants.linhas.map((t) => [String(t.id), String(t.nome ?? '')]))
   const vered = new Map(veredito.linhas.map((v) => [String(v.estrategia ?? '').toLowerCase(), v]))
+  const usersComContaAuto = new Set(contas.contas.filter((c) => c.origem === 'auto' && c.userId).map((c) => String(c.userId)))
 
   const estrategias: EstrategiaCentro[] = provs.map((p: Linha) => {
     const id = String(p.id)
@@ -150,7 +151,10 @@ async function lerEstrategias() {
     const contasSub = subsP.map((s) => contas.contas.find((c) => c.ref === `auto:${s.conta_id}`))
     const divergencias: string[] = []
     if (p.ativo === false && subsP.some((s) => s.auto_aceitar)) divergencias.push('estratégia inactiva com seguidores em automático')
-    if (subsP.some((s) => !s.conta_id)) divergencias.push(`${subsP.filter((s) => !s.conta_id).length} subscrição(ões) sem conta`)
+    // Sem `conta_id` a subscrição cai na conta MTM Auto principal do utilizador (ficha-copia.ts):
+    // só é ligação morta quando o utilizador não tem conta MTM Auto nenhuma (19/11).
+    const semContaMorta = subsP.filter((s) => !s.conta_id && !usersComContaAuto.has(String(s.user_id))).length
+    if (semContaMorta) divergencias.push(`${semContaMorta} subscrição(ões) sem conta MTM Auto (ligação morta — limpar em Contas)`)
     const paradas = contasSub.filter((c) => c && (!c.ativa || /error|erro/i.test(c.estado))).length
     if (paradas) divergencias.push(`${paradas} conta(s) MTM Auto parada(s)/em erro a seguir`)
     const naoSub = m?.cf.cortado ? 0 : siteSeg.filter((c) => c.usos.some((u) => u.includes('não subscrita')) && c.ativa).length
@@ -163,7 +167,7 @@ async function lerEstrategias() {
       const pausadasSub = siteSeg.filter((c) => !c.ativa && !c.usos.some((u) => u.includes('não subscrita'))).length
       if (pausadasSub) divergencias.push(`${pausadasSub} ligação(ões) pausada(s) ainda marcadas como subscritas`)
     }
-    for (const a of m?.avisos ?? []) divergencias.push(`motor das mestres: ${a}`)
+    for (const a of m?.avisos ?? []) divergencias.push(a)
     if (p.metaapi_account_id && contas.contas.some((c) => c.metaapiAccountId === p.metaapi_account_id && c.metaapi.inexistente)) divergencias.push('conta mestre no registo de inexistentes')
     if (fechadosTodos.length > fechados.length) divergencias.push(`${fechadosTodos.length - fechados.length} resultado(s) incoerente(s) excluído(s) do desempenho`)
     if (p.fonte_execucao === 'espelho' && v && v.alinhado !== true) divergencias.push('fonte espelho sem veredicto alinhado')
