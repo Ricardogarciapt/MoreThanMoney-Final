@@ -6,7 +6,7 @@
  * arrastar a cadeia inteira (e a base de dados) para o bundle.
  */
 
-export type NomeFornecedor = 'ollama' | 'groq' | 'gemini' | 'openai' | 'anthropic'
+export type NomeFornecedor = 'ollama' | 'groq' | 'gemini' | 'cerebras' | 'openrouter' | 'mistral' | 'openai' | 'anthropic'
 
 export type MensagemIA = { role: 'user' | 'assistant'; content: string }
 
@@ -33,6 +33,14 @@ export type PedidoIA = {
   imagens?: ImagemIA[]
   /** Tecto por fornecedor, em ms. Sem ele: 25 s (Ollama 60 s). */
   timeoutMs?: number
+  /**
+   * 19/11: quem está à espera da resposta. «interativo» = uma pessoa no ecrã (Mentor, Terminal,
+   * apoio) — tem os modelos grandes reservados e roda por TODOS os modelos antes de desistir.
+   * «fundo» = crons e lotes (traduções, teste de população, legendas) — só modelos pequenos e
+   * fornecedores com quota larga, para nunca esgotar o que o cliente usa. Sem isto, decide-se
+   * pela `tarefa` (ver `prioridade.ts`).
+   */
+  prioridade?: 'interativo' | 'fundo'
 }
 
 export type TentativaIA = { fornecedor: string; erro: string }

@@ -160,18 +160,33 @@ async function main() {
     certo(/rodado: gemini-3\.8-flash, gemini-3\.7-flash/.test(r.modelo), `(b) nomeia os dois esgotados, veio «${r.modelo}»`)
   }
 
-  // ─── (c) 429 diário em 3 → rebenta passável SEM 4.º pedido ───────────────────────────────
+  // ─── (c) 19/11: o INTERATIVO roda pela lista toda (6 modelos) antes de desistir ──────────
   {
     esquecerGemini()
-    const reg = armarFetch([{ status: 429, body: diario }, { status: 429, body: diario }, { status: 429, body: diario }])
+    const reg = armarFetch(Array.from({ length: 6 }, () => ({ status: 429, body: diario })))
     const err = await tentar()
     certo(err instanceof ErroFornecedor && err.passavel && err.status === 429, '(c) rebenta passável com 429')
-    certo(reg.length === 3, `(c) exactamente 3 pedidos, foram ${reg.length}`)
-    certo(err instanceof ErroFornecedor && /não se tenta um 4\.º/.test(err.message), `(c) a mensagem diz que parou no tecto, veio «${err instanceof Error ? err.message.slice(-120) : ''}»`)
-    // E os 3 ficaram marcados: o pedido seguinte vai directo ao 4.º da lista, 1 pedido.
+    certo(reg.length === 6, `(c) interativo tenta os 6 modelos, foram ${reg.length}`)
+    certo(err instanceof ErroFornecedor && /rotação acabou/.test(err.message), `(c) a mensagem diz que a rotação acabou, veio «${err instanceof Error ? err.message.slice(-120) : ''}»`)
+  }
+
+  // ─── (c2) FUNDO: só os lite/gemma e no máximo 3 — nunca os flash grandes ─────────────────
+  {
+    esquecerGemini()
+    const fundo = { ...pedido, tarefa: 'i18n-auto' }
+    const reg = armarFetch([{ status: 429, body: diario }, { status: 429, body: diario }, { status: 429, body: diario }])
+    let err: unknown
+    try {
+      await gemini.gerar(fundo, sinal())
+    } catch (e) {
+      err = e
+    }
+    certo(err instanceof ErroFornecedor && reg.length === 3, `(c2) fundo pára aos 3, foram ${reg.length}`)
+    certo(reg.every((r) => /lite|gemma/.test(r.modelo)), `(c2) fundo só usa lite/gemma, usou ${reg.map((r) => r.modelo).join(', ')}`)
+    // E o interativo continua a ter os flash grandes intactos.
     const reg2 = armarFetch([{ status: 200, body: ok }])
     await gemini.gerar(pedido, sinal())
-    certo(reg2.length === 1 && reg2[0].modelo === 'gemini-3.5-flash-lite', `(c) a seguir vai directo ao 3.5-flash-lite, foi ${reg2[0]?.modelo}`)
+    certo(reg2.length === 1 && reg2[0].modelo === 'gemini-3.8-flash', `(c2) o interativo continua no 3.8-flash, foi ${reg2[0]?.modelo}`)
   }
 
   // ─── (d) 429 POR MINUTO → NÃO roda, 1 pedido, erro passável ──────────────────────────────
@@ -246,14 +261,14 @@ async function main() {
   {
     esquecerGemini()
     const saturado = { error: { code: 503, message: 'high demand', status: 'UNAVAILABLE' } }
-    const reg = armarFetch([{ status: 503, body: saturado }, { status: 503, body: saturado }, { status: 503, body: saturado }])
+    const reg = armarFetch(Array.from({ length: 6 }, () => ({ status: 503, body: saturado })))
     let err: unknown
     try {
       await gemini.gerar(pedido, sinal())
     } catch (e) {
       err = e
     }
-    certo(err instanceof ErroFornecedor && err.passavel && reg.length === 3, `(i) 3 pedidos e passa ao fornecedor seguinte, foram ${reg.length}`)
+    certo(err instanceof ErroFornecedor && err.passavel && reg.length === 6, `(i) 6 pedidos e passa ao fornecedor seguinte, foram ${reg.length}`)
     certo(err instanceof ErroFornecedor && /saturado/.test(err.message), `(i) a mensagem diz saturado, veio «${err instanceof Error ? err.message.slice(-90) : ''}»`)
   }
 

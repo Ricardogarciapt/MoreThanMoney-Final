@@ -12,6 +12,7 @@
  *    POR MODELO, por isso roda-se para o modelo seguinte da lista `ROTACAO` — ver
  *    `rotacao-quota.ts`. Um 429 por MINUTO não roda.
  */
+import { chavesDe, prioridadeDe } from '../prioridade'
 import type { Fornecedor, GeracaoFornecedor, PedidoIA } from '../tipos'
 import { ErroFornecedor } from '../tipos'
 import { exigirTexto, postJson, sistemaComJson, ultimoIndiceUser } from './comum'
@@ -33,6 +34,13 @@ const ROTACAO: readonly string[] = [
   'gemini-3.1-flash-lite',
   'gemma-4-26b-a4b-it',
 ]
+
+/**
+ * 19/11/2026: a faixa de FUNDO (crons, traduções, lotes) só usa os lite/gemma e nunca os flash
+ * grandes — esses ficam para quem está no ecrã. O interativo roda pela lista toda antes de desistir
+ * (a 19/11 o Mentor parou no 3.º modelo com três lite ainda por tentar).
+ */
+const ROTACAO_FUNDO: readonly string[] = ['gemini-3.5-flash-lite', 'gemini-3.1-flash-lite', 'gemma-4-26b-a4b-it']
 
 /** Modelo descoberto em runtime, por processo (ver nota no Groq). */
 let descoberto: string | null = null
@@ -60,7 +68,7 @@ function modeloConfigurado(): string {
   return 'gemini-3.8-flash'
 }
 
-async function pedir(m: string, p: PedidoIA, sinal: AbortSignal) {
+async function pedir(chave: string, m: string, p: PedidoIA, sinal: AbortSignal) {
   const sistema = sistemaComJson(p)
   const idxUser = ultimoIndiceUser(p.mensagens)
   const contents = p.mensagens.map((msg, i) => ({
@@ -75,7 +83,7 @@ async function pedir(m: string, p: PedidoIA, sinal: AbortSignal) {
   const j = (await postJson(
     'gemini',
     `https://generativelanguage.googleapis.com/v1beta/models/${m}:generateContent`,
-    { 'x-goog-api-key': process.env.GEMINI_API_KEY!.trim() },
+    { 'x-goog-api-key': chave },
     {
       ...(sistema ? { systemInstruction: { parts: [{ text: sistema }] } } : {}),
       contents,
@@ -107,9 +115,34 @@ export const gemini: Fornecedor = {
   nome: 'gemini',
   suportaImagens: true,
   timeoutMs: TIMEOUT_MS,
-  disponivel: () => Boolean(process.env.GEMINI_API_KEY?.trim()),
+  disponivel: () => chavesDe('GEMINI').length > 0,
   async gerar(p, sinal): Promise<GeracaoFornecedor> {
-    const fila = candidatos(descoberto ?? modeloConfigurado(), ROTACAO, mortos, marcas)
+    const chaves = chavesDe('GEMINI')
+    let ultimo: unknown = null
+    for (let k = 0; k < chaves.length; k++) {
+      try {
+        const r = await gerarComChave(chaves[k], k, p, sinal)
+        return k ? { ...r, modelo: `${r.modelo} · chave ${k + 1}` } : r
+      } catch (e) {
+        ultimo = e
+        // Outra chave = outro projeto = outra quota. Só para erros de conta/ritmo.
+        const deConta = e instanceof ErroFornecedor && [401, 403, 429].includes(e.status ?? 0)
+        if (deConta && k < chaves.length - 1) continue
+        throw e
+      }
+    }
+    throw ultimo ?? new ErroFornecedor('gemini', 'sem chave', true)
+  },
+}
+
+async function gerarComChave(chave: string, k: number, p: PedidoIA, sinal: AbortSignal): Promise<GeracaoFornecedor> {
+  {
+    const fundo = prioridadeDe(p) === 'fundo'
+    const marcasK = vistaDeMarcas(k)
+    const fila = fundo
+      ? candidatos(ROTACAO_FUNDO[0], ROTACAO_FUNDO, mortos, marcasK)
+      : candidatos(descoberto ?? modeloConfigurado(), ROTACAO, mortos, marcasK)
+    const tecto = fundo ? MAX_MODELOS_POR_PEDIDO : Number.POSITIVE_INFINITY
     if (!fila.length) {
       throw new ErroFornecedor('gemini', `429 quota diária esgotada em todos os modelos da rotação (${[descoberto ?? modeloConfigurado(), ...ROTACAO].join(', ')})`, true, 429)
     }
@@ -117,10 +150,10 @@ export const gemini: Fornecedor = {
     const saturadosAgora: string[] = []
     let ultimo: ErroFornecedor | null = null
 
-    for (let tentados = 0; fila.length && tentados < MAX_MODELOS_POR_PEDIDO; tentados++) {
+    for (let tentados = 0; fila.length && tentados < tecto; tentados++) {
       const m = fila.shift()!
       try {
-        const r = await pedir(m, p, sinal)
+        const r = await pedir(chave, m, p, sinal)
         if (esgotadosAgora.length || saturadosAgora.length) {
           // Diz no livro que rodou e porquê — é assim que se vê que o 3.8 anda a esgotar-se.
           const motivos = [
@@ -133,7 +166,7 @@ export const gemini: Fornecedor = {
       } catch (e) {
         if (ehErroDeQuotaDiaria(e)) {
           // Tecto do dia neste modelo: marca-se até à hora que o erro diz e passa-se ao seguinte.
-          marcas.marcar(m, horasDeEspera(e.message))
+          marcasK.marcar(m, horasDeEspera(e.message))
           esgotadosAgora.push(m)
           ultimo = e
           continue
@@ -152,7 +185,7 @@ export const gemini: Fornecedor = {
           mortos.add(m)
           const sugerido = modeloSugeridoNoErro(e.message)
           if (!sugerido || sugerido === m || mortos.has(sugerido)) throw erroComDescoberta(e, 'o erro não sugeriu um modelo substituto')
-          const r = await pedir(sugerido, p, sinal)
+          const r = await pedir(chave, sugerido, p, sinal)
           descoberto = sugerido
           return { ...r, modelo: `${sugerido} (descoberto: ${m} já não está disponível)` }
         }
@@ -168,5 +201,19 @@ export const gemini: Fornecedor = {
       ? `rodou por ${tentados}; não se tenta um ${MAX_MODELOS_POR_PEDIDO + 1}.º modelo no mesmo pedido`
       : `rodou por ${tentados} e a rotação acabou`
     throw erroComDescoberta(ultimo!, nota)
-  },
+  }
+}
+
+/**
+ * As marcas de quota são por CHAVE (cada projeto Google tem a sua). A chave 0 usa os nomes nus —
+ * igual a antes, e é o que a guarda de 04/10 verifica; as outras levam o índice à frente.
+ */
+function vistaDeMarcas(k: number): MarcasDeQuota {
+  if (k === 0) return marcas
+  const pref = (m: string) => `${k}|${m}`
+  return {
+    marcar: (m: string, h: number) => marcas.marcar(pref(m), h),
+    esgotado: (m: string) => marcas.esgotado(pref(m)),
+    esquecer: () => marcas.esquecer(),
+  } as unknown as MarcasDeQuota
 }

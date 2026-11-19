@@ -6,6 +6,7 @@ import { normalizeLang } from "@/lib/i18n/config"
 import { getSupabaseAdmin } from "@/lib/supabase-admin-client"
 import { juntarMemoria, montarSistema, separarNotas, type ContextoAluno } from "@/lib/mentor/prompt"
 import { contextoDoAluno, salasDaSemana } from "@/lib/mentor/contexto-servidor"
+import { avisoOcupado } from "@/lib/mentor/ocupado"
 
 /**
  * MENTOR MTM — o agente pessoal de cada aluno (revisão de 17/11, ver `lib/mentor/prompt.ts`).
@@ -90,8 +91,12 @@ export async function POST(request: NextRequest) {
             )
           )
         } catch (err) {
-          controller.enqueue(encoder.encode(`data: ${JSON.stringify({ type: "error", message: mensagemIndisponivel(err) })}\n\n`))
+          // 19/11: o membro NUNCA vê a lista de fornecedores (aparecia «org_…», quotas e URLs).
+          // Vê uma frase calma na língua dele; o detalhe vai para os logs e para o Telegram do dono.
+          console.error("[mentor] IA indisponível:", mensagemIndisponivel(err))
+          controller.enqueue(encoder.encode(`data: ${JSON.stringify({ type: "error", message: avisoOcupado(langApp) })}\n\n`))
           controller.close()
+          after(() => avisarDonoUmaVezPorHora(mensagemIndisponivel(err)))
         }
       },
     })
@@ -143,4 +148,13 @@ async function guardar(
       }))
     )
   }
+}
+
+/** Um aviso por hora por instância, para o Telegram do dono não encher se a falha durar. */
+let ultimoAvisoEm = 0
+async function avisarDonoUmaVezPorHora(detalhe: string) {
+  if (Date.now() - ultimoAvisoEm < 3_600_000) return
+  ultimoAvisoEm = Date.now()
+  const { avisarDono } = await import("@/lib/suporte/servidor")
+  await avisarDono(`⚠️ Mentor AI sem resposta: todos os fornecedores grátis falharam.\n\n${detalhe.slice(0, 900)}\n\nPainel: https://www.morethanmoney.pt/admin/mentor`)
 }
