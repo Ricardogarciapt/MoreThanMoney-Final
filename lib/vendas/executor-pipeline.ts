@@ -272,11 +272,18 @@ export interface ResultadoExecutor {
   contactados: number
   porDestino: Record<string, number>
   erros: string[]
+  /** Reencontro no WhatsApp (`lib/whatsapp/reencontro.ts`), com interruptor próprio. */
+  reencontro?: unknown
 }
 
 export async function correrExecutor(db: Db): Promise<ResultadoExecutor> {
   const cfg = await lerConfig(db)
   const r: ResultadoExecutor = { ok: true, ligado: cfg.ligado, rascunhosTelegram: 0, rascunhosEmail: 0, enviados: 0, ficam: 0, contactados: 0, porDestino: {}, erros: [] }
+  try {
+    // Interruptor próprio (site_settings.whatsapp_reencontro): corre mesmo com o executor desligado.
+    const { correrReencontro } = await import('@/lib/whatsapp/reencontro')
+    r.reencontro = await correrReencontro(db)
+  } catch (e) { r.erros.push(`reencontro: ${e instanceof Error ? e.message : String(e)}`) }
   if (!cfg.ligado) return r
   try {
     const { runLeadFollowups } = await import('@/lib/telegram-lead-followup')

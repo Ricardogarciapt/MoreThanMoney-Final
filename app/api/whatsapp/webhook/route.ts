@@ -40,7 +40,26 @@ export async function GET(req: NextRequest) {
   return NextResponse.json({ ok: false, error: 'verify failed' }, { status: 403 })
 }
 
-interface WAMessage { id?: string; from?: string; type?: string; text?: { body?: string } }
+interface WAMessage {
+  id?: string
+  from?: string
+  type?: string
+  text?: { body?: string }
+  /** Toque num botão de resposta rápida de um TEMPLATE. */
+  button?: { text?: string; payload?: string }
+  /** Toque num botão ou numa linha de lista de uma mensagem interativa. */
+  interactive?: { button_reply?: { id?: string; title?: string }; list_reply?: { id?: string; title?: string } }
+}
+
+/** O que a pessoa escreveu ou tocou, e o id do botão/linha quando tocou. Puro. */
+function lerEntrada(m: WAMessage): { texto: string; botao: string | null } {
+  const br = m.interactive?.button_reply
+  const lr = m.interactive?.list_reply
+  if (br) return { texto: (br.title ?? br.id ?? '').trim(), botao: (br.id ?? br.title ?? '').trim() || null }
+  if (lr) return { texto: (lr.title ?? lr.id ?? '').trim(), botao: (lr.id ?? lr.title ?? '').trim() || null }
+  if (m.button) return { texto: (m.button.text ?? '').trim(), botao: (m.button.payload || m.button.text || '').trim() || null }
+  return { texto: (m.text?.body ?? '').trim(), botao: null }
+}
 
 /**
  * O funil de WhatsApp só trata LEADS NOVOS — nunca contactos/clientes já existentes.
@@ -82,7 +101,7 @@ export async function POST(req: NextRequest) {
       const contactName = value?.contacts?.[0]?.profile?.name ?? null
       for (const m of (value?.messages ?? []) as WAMessage[]) {
         const from = m.from
-        const text = m.text?.body?.trim()
+        const { texto: text, botao } = lerEntrada(m)
         if (!from || !text) continue
 
         /**
@@ -101,7 +120,7 @@ export async function POST(req: NextRequest) {
          * Grava na exclusão global e marca o consentimento retirado; responde uma vez (janela aberta,
          * grátis) e não passa pelo funil.
          */
-        if (/^(sair|parar|stop|cancelar|unsubscribe)[.!]?$/i.test(text) && numero) {
+        if ((/^(sair|parar|stop|cancelar|unsubscribe)[.!]?$/i.test(text) || /^n[aã]o quero receber/i.test(text)) && numero) {
           const db = getSupabaseAdmin()
           const agora = new Date().toISOString()
           const { data: ja } = await db.from('contacto_exclusao').select('identificador').eq('identificador', numero).limit(1)
@@ -122,8 +141,27 @@ export async function POST(req: NextRequest) {
           continue
         }
 
+        /**
+         * FUNIL HÍBRIDO (19/11): quem tocou num botão, ou está a meio do guião (stage `wa_*`), segue o
+         * guião texto → áudio → lista → áudio → link (`lib/whatsapp/fluxo.ts`). Vem ANTES do filtro de
+         * leads novos porque o reencontro é precisamente com contactos que o Ricardo já tem.
+         */
+        const { data: est } = await getSupabaseAdmin().from('telegram_leads').select('stage').eq('chat_id', `wa:${from}`).maybeSingle()
+        const noGuiao = typeof est?.stage === 'string' && est.stage.startsWith('wa_') && est.stage !== 'wa_humano'
+        if (numero) {
+          if (botao || noGuiao) {
+            try {
+              const { tratarFluxoWhatsApp } = await import('@/lib/whatsapp/fluxo')
+              if (await tratarFluxoWhatsApp({ from, e164: numero, texto: text, botao, nome: contactName })) continue
+            } catch (e) {
+              console.error('[whatsapp] fluxo falhou, segue o closer:', e instanceof Error ? e.message : e)
+            }
+          }
+        }
+
         // SÓ leads novos — nunca contactos/clientes existentes.
-        if (!(await isNewWhatsAppLead(from))) {
+        // Quem está no guião (reencontro) é contacto do Ricardo de propósito: o closer continua com ele.
+        if (!noGuiao && !(await isNewWhatsAppLead(from))) {
           console.log('[whatsapp] contacto existente — funil ignorado:', from)
           continue
         }

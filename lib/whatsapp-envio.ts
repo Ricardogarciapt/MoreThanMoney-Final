@@ -344,12 +344,50 @@ export interface CorpoTemplate {
   parametros?: string[]
 }
 
+/** Mensagem interactiva (só dentro da janela): botões (até 3) ou lista (até 10 linhas). */
+export type Interativo =
+  | { tipo: 'botoes'; corpo: string; botoes: Array<{ id: string; titulo: string }> }
+  | { tipo: 'lista'; corpo: string; botao: string; linhas: Array<{ id: string; titulo: string; descricao?: string }> }
+
 export function corpoParaCloudApi(
   paraE164: string,
-  msg: { tipo: 'texto'; texto: string } | { tipo: 'template'; template: CorpoTemplate },
+  msg:
+    | { tipo: 'texto'; texto: string }
+    | { tipo: 'template'; template: CorpoTemplate }
+    | { tipo: 'audio'; url: string }
+    | { tipo: 'interativo'; interativo: Interativo },
 ): Record<string, unknown> {
   // A Meta quer o número SEM `+` no campo `to`.
   const to = paraE164.replace(/^\+/, '')
+  if (msg.tipo === 'audio') return { messaging_product: 'whatsapp', to, type: 'audio', audio: { link: msg.url } }
+  if (msg.tipo === 'interativo') {
+    const i = msg.interativo
+    const interactive =
+      i.tipo === 'botoes'
+        ? {
+            type: 'button',
+            body: { text: i.corpo.slice(0, 1024) },
+            action: { buttons: i.botoes.slice(0, 3).map((b) => ({ type: 'reply', reply: { id: b.id.slice(0, 256), title: b.titulo.slice(0, 20) } })) },
+          }
+        : {
+            type: 'list',
+            body: { text: i.corpo.slice(0, 1024) },
+            action: {
+              button: i.botao.slice(0, 20),
+              sections: [
+                {
+                  title: 'Opções',
+                  rows: i.linhas.slice(0, 10).map((l) => ({
+                    id: l.id.slice(0, 200),
+                    title: l.titulo.slice(0, 24),
+                    ...(l.descricao ? { description: l.descricao.slice(0, 72) } : {}),
+                  })),
+                },
+              ],
+            },
+          }
+    return { messaging_product: 'whatsapp', to, type: 'interactive', interactive }
+  }
   if (msg.tipo === 'texto') {
     // `preview_url: false` de propósito: uma pré-visualização de link numa primeira resposta faz a
     // mensagem parecer publicidade, e é isso que se está a evitar.

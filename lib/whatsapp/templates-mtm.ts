@@ -136,6 +136,35 @@ export const TEMPLATES_MTM = [
       { type: 'FOOTER', text: 'Conteúdo educativo, não é aconselhamento financeiro' },
     ],
   },
+  {
+    /**
+     * Reencontro (19/11): 1.ª mensagem a contactos que o Ricardo já conhece. Pede licença; o toque em
+     * «Sim, manda» é o opt-in com prova (`lib/whatsapp/fluxo.ts`). Os textos dos botões têm de bater
+     * com BOTAO_* em `lib/vendas/guiao-whatsapp.ts`.
+     */
+    name: 'mtm_reencontro',
+    language: 'pt_PT',
+    category: 'MARKETING',
+    components: [
+      {
+        type: 'BODY',
+        text:
+          'Olá {{1}}, é o Ricardo Garcia, da MoreThanMoney. 👋\n\n' +
+          'Há algum tempo que não falamos. Estou a preparar uma coisa nova e lembrei-me de ti. ' +
+          'Posso mandar-te um áudio curto a explicar?',
+        example: { body_text: [['Ana']] },
+      },
+      { type: 'FOOTER', text: 'Podes deixar de receber a qualquer momento' },
+      {
+        type: 'BUTTONS',
+        buttons: [
+          { type: 'QUICK_REPLY', text: 'Sim, manda' },
+          { type: 'QUICK_REPLY', text: 'Agora não' },
+          { type: 'QUICK_REPLY', text: 'Não quero receber' },
+        ],
+      },
+    ],
+  },
 ] as const
 
 /** Template de primeiro contacto para cada interesse do formulário «Quero que me liguem». */

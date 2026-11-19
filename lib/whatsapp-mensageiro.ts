@@ -48,6 +48,7 @@ import {
   type Decisao,
   type EstadoDoContacto,
   type Finalidade,
+  type Interativo,
 } from '@/lib/whatsapp-envio'
 
 /** Versão da Graph API. Fixa de propósito: a Meta muda comportamento entre versões. */
@@ -299,6 +300,10 @@ export interface PedidoDeEnvio {
   texto?: string
   /** Template aprovado — a única coisa que passa fora da janela. */
   template?: CorpoTemplate
+  /** Áudio por link (só dentro da janela). `texto` fica como transcrição para o livro. */
+  audioUrl?: string
+  /** Botões ou lista (só dentro da janela). */
+  interativo?: Interativo
   /** Estado já lido (evita uma ida à base quando quem chama acabou de o ler). */
   estado?: EstadoDoContacto
   /**
@@ -370,7 +375,11 @@ export async function enviarWhatsApp(p: PedidoDeEnvio): Promise<ResultadoEnvio> 
 
   const corpoParaLivro = p.template
     ? `[${p.template.nome}/${p.template.idioma}] ${(p.template.parametros ?? []).join(' | ')}`
-    : (p.texto ?? '')
+    : p.audioUrl
+      ? `[áudio] ${p.texto ?? ''} ${p.audioUrl}`
+      : p.interativo
+        ? `[${p.interativo.tipo}] ${p.interativo.corpo}`
+        : (p.texto ?? '')
 
   if (!decisao.pode) {
     // A recusa fica escrita. Uma recusa que não se grava é um silêncio sem explicação no dia em que
@@ -396,7 +405,7 @@ export async function enviarWhatsApp(p: PedidoDeEnvio): Promise<ResultadoEnvio> 
   // Daqui para baixo `decisao.para` é um E.164 válido (foi a decisão que o validou).
   const para = decisao.para as string
 
-  if (tipo === 'texto' && !(p.texto ?? '').trim()) {
+  if (tipo === 'texto' && !p.audioUrl && !p.interativo && !(p.texto ?? '').trim()) {
     const porque = 'mensagem de texto vazia — não se manda'
     await gravar({ numero: para, direcao: 'saida', tipo, estado: 'recusada', codigo: 'texto_vazio', motivo: porque, marcacao, funil: p.agente?.funil ?? null })
     return { enviado: false, decisao, codigo: 'texto_vazio', porque }
@@ -423,7 +432,13 @@ export async function enviarWhatsApp(p: PedidoDeEnvio): Promise<ResultadoEnvio> 
 
   const corpo = corpoParaCloudApi(
     para,
-    p.template ? { tipo: 'template', template: p.template } : { tipo: 'texto', texto: p.texto ?? '' },
+    p.template
+      ? { tipo: 'template', template: p.template }
+      : p.audioUrl
+        ? { tipo: 'audio', url: p.audioUrl }
+        : p.interativo
+          ? { tipo: 'interativo', interativo: p.interativo }
+          : { tipo: 'texto', texto: p.texto ?? '' },
   )
 
   const url = creds.relayUrl ?? `https://graph.facebook.com/${GRAPH}/${creds.phoneNumberId}/messages`
