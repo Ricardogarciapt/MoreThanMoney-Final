@@ -20,7 +20,7 @@
 import { getSupabaseAdmin } from '@/lib/supabase-admin-client'
 import {
   accaoSeguimentoPremium, bloqueioPorExposicao, decidirSinalPremium, entradasPremium, lerEntradaPremium, legadoPremiumCortado,
-  camadasParaAnular, saidaDoTraderPremium, SLUG_PREMIUM, type SinalLido,
+  camadasParaAnular, saidaDoTraderPremium, beDoTraderPremium, slDeBePremium, SLUG_PREMIUM, type SinalLido,
 } from '../premium'
 import type { ModoEstrategia } from '../tipos'
 import { encaminharSinalParaMestre } from './sinal-mestre'
@@ -145,6 +145,48 @@ async function sairDoSinal(contaMestreId: string, paiMessageId: number, tudo: bo
   return `trader saiu ${tudo ? 'de TODAS as camadas' : `do sinal ${paiMessageId}`}: ${ordens?.length ?? 0} pendente(s) cancelada(s), ${fechadas} posição(ões) fechada(s)`
 }
 
+/**
+ * O trader mandou pôr em BE («running +50 … set BE», «HIT TP1»): em cada conta do Premium o stop das
+ * posições abertas desse sinal vai para a entrada + folga (`beOffsetPips` do sinais_config, 2 pips).
+ * Posição que já está em BE, ou cujo preço ainda não passou a entrada, fica como está. Nunca lança.
+ */
+async function porSinalEmBe(contaMestreId: string, paiMessageId: number): Promise<string> {
+  const db = getSupabaseAdmin()
+  const ref = `sinal:${SLUG_PREMIUM}:msg:tg:${paiMessageId}`
+  const contas = await contasDoPremium(contaMestreId)
+  const { data: posicoes } = await db.from('funded_positions').select('id, account_id, symbol, direcao, preco_entrada, sl, tp')
+    .in('account_id', contas).eq('estado', 'aberta').in('ideia_ref', [ref, `${ref}:c1`])
+  if (!posicoes?.length) return `BE do trader: sem posições abertas do sinal ${paiMessageId}`
+  const cfg = (await sinaisConfigPremium()) as { beOffsetPips?: unknown } | null
+  const offsetPips = Number(cfg?.beOffsetPips ?? 2)
+  const ex = await import('@/lib/mtmfunded/simulado/execucao')
+  const simbolos = [...new Set(posicoes.map((p) => String(p.symbol)))]
+  const { precos } = await ex.carregarPrecos(simbolos, simbolos)
+  let movidas = 0
+  for (const p of posicoes) {
+    try {
+      const px = precos[String(p.symbol)]
+      const novo = slDeBePremium({
+        direcao: p.direcao === 'sell' ? 'sell' : 'buy',
+        entrada: Number(p.preco_entrada),
+        slActual: p.sl == null ? null : Number(p.sl),
+        preco: px ? { bid: px.bid, ask: px.ask } : null,
+        offset: (Number.isFinite(offsetPips) ? offsetPips : 2) * 0.1,
+        folga: 0.5,
+      })
+      if (novo == null) continue
+      const conta = await ex.lerConta(String(p.account_id))
+      if (!conta) continue
+      await ex.modificarPosicao(conta, String(p.id), novo, p.tp)
+      await db.from('funded_positions').update({ be_feito: true }).eq('id', p.id).eq('estado', 'aberta')
+      movidas++
+    } catch {
+      // fechou entretanto ou o preço mexeu — o BE por preço continua de guarda
+    }
+  }
+  return `BE do trader no sinal ${paiMessageId}: ${movidas}/${posicoes.length} posição(ões) com stop na entrada`
+}
+
 export interface PedidoPremiumMotor {
   texto: string
   /** id da mensagem no canal Premium (destino do relay) — chave exacta do sinal */
@@ -183,6 +225,11 @@ export async function premiumPeloMotor(p: PedidoPremiumMotor): Promise<Resultado
       if (est.legadoCortado && est.sinalModo === 'live' && est.contaMestreId && p.paiMessageId && p.paiMessageId > 0
         && saidaDoTraderPremium(p.texto) !== 'nada') {
         partes.push(await sairDoSinal(est.contaMestreId, p.paiMessageId, saidaDoTraderPremium(p.texto) === 'fechar_tudo'))
+      }
+      // «running +50 … set BE» / «HIT TP»: o trader protegeu a trade — a nossa também (19/11).
+      if (est.legadoCortado && est.sinalModo === 'live' && est.contaMestreId && p.paiMessageId && p.paiMessageId > 0
+        && saidaDoTraderPremium(p.texto) === 'nada' && beDoTraderPremium(p.texto)) {
+        partes.push(await porSinalEmBe(est.contaMestreId, p.paiMessageId))
       }
       if (est.legadoCortado && accaoSeguimentoPremium(kind) === 'contar_sl') {
         const { incrementPremiumSlToday } = await import('@/lib/mtmcopy/premium-daily-stop')

@@ -60,7 +60,7 @@ import { eAlertaPremiumScanner } from "@/lib/sinais/premium-scanner-webhook"
 import { eAlertaDefy } from "@/lib/sinais/defy-webhook"
 import { eAlertaRocketnova } from "@/lib/sinais/rocketnova"
 import { eAlertaQuantum } from "@/lib/sinais/quantum"
-import { TIMEFRAMES_POR_ESTRATEGIA, slFixo, timeframeAceite } from "@/lib/sinais/sl-por-estrategia"
+import { TIMEFRAMES_POR_ESTRATEGIA, slFixo, timeframeAceite, tpsFixos } from "@/lib/sinais/sl-por-estrategia"
 import { avaliarEntradaTardiaAoVivo } from "@/lib/sinais/filtro-entrada-tardia"
 import { marcaDaEstrategia } from "@/lib/sinais/grafico-estrategia"
 import { enviarGraficoTelegram, legendaDoGrafico, urlDoGraficoDoSinal } from "@/lib/sinais/grafico-publicar"
@@ -1022,13 +1022,28 @@ async function processarAlerta(request: NextRequest) {
   const slDaEstrategia = entradaDoAlerta
     ? slFixo(estrategia, v.symbol ?? activeSensei?.symbol ?? ticker, v.direction ?? activeSensei?.direction ?? null, v.entry ?? activeSensei?.entry ?? price)
     : null
+  // Alvos fixos em R (MTM Scanner, 19/11): mesma distância de risco que o stop fixo.
+  const tpsDaEstrategia = slDaEstrategia != null
+    ? tpsFixos(estrategia, v.symbol ?? activeSensei?.symbol ?? ticker, v.direction ?? activeSensei?.direction ?? null, v.entry ?? activeSensei?.entry ?? price)
+    : null
   if (slDaEstrategia != null) {
     v.sl = slDaEstrategia
-    if (activeSensei) activeSensei = { ...activeSensei, sl: slDaEstrategia }
+    if (tpsDaEstrategia) v.tp = tpsDaEstrategia
+    if (activeSensei) activeSensei = { ...activeSensei, sl: slDaEstrategia, ...(tpsDaEstrategia ? { tp: tpsDaEstrategia } : {}) }
+    const alvos = tpsDaEstrategia
+      ? {
+          tp1: tpsDaEstrategia[0], tp2: tpsDaEstrategia[1] ?? null, tp3: tpsDaEstrategia[2] ?? null,
+          tps_do_alerta: [payload.tp1 ?? null, payload.tp2 ?? null, payload.tp3 ?? null],
+        }
+      : {}
     if (logId) {
       await supabase
         .from("tradingview_signals")
-        .update({ sl: slDaEstrategia, raw_payload: { ...payload, sl: slDaEstrategia, sl_do_alerta: sl } })
+        .update({
+          sl: slDaEstrategia,
+          ...(tpsDaEstrategia ? { tp: tpsDaEstrategia[0] } : {}),
+          raw_payload: { ...payload, sl: slDaEstrategia, sl_do_alerta: sl, ...alvos },
+        })
         .eq("id", logId)
         .then(undefined, (e) => console.error("[tradingview-webhook] gravar stop fixo:", e))
     }
@@ -1078,6 +1093,7 @@ async function processarAlerta(request: NextRequest) {
     } as ParsedSignal)
 
   if (slDaEstrategia != null && parsedForExec) parsedForExec.sl = slDaEstrategia
+  if (tpsDaEstrategia && parsedForExec) parsedForExec.tp = tpsDaEstrategia
 
   // Forex (conta MTM Auto Forex): entrar a MERCADO (fill garantido) em vez de limit/pullback —
   // o trailing dinâmico da conta trata do resto. (Sensei gold/btc já é forçado a market no processor.)

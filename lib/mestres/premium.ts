@@ -419,3 +419,46 @@ export function saidaDoTraderPremium(texto: string | null | undefined): 'fechar_
   if (/\b(?:hit\s?sl|sl\s?hit|stop\s?loss\s+hit)\b/i.test(t)) return 'fechar_sinal'
   return 'nada'
 }
+
+/**
+ * O TRADER MANDA PÔR EM BREAK-EVEN (19/11/2026, pedido do Ricardo).
+ *
+ * O trader do Premium responde ao sinal com «Trade active and running +50PIPS … If hold set BE» ou
+ * «HIT TP1 … set BE». A mestre ignorava estas mensagens (gestão só por preço) e, como entra a mercado
+ * e muitas vezes pior do que a zona dele, os +50 pips do trader eram +20–25 nossos: o BE por preço
+ * (25 pips) não chegava a armar e a trade virava até ao stop. Medido 16–18/11: 3 sinais (12208,
+ * 12260, 12268) com «running +50/+60» do trader acabaram em −100/−110 pips na mestre (−840 $).
+ *
+ * Regra: um «running +N» com N ≥ `minPips` ou qualquer «HIT TP» em resposta a um sinal põe o stop
+ * desse sinal na entrada (+ folga) em todas as contas do Premium. O motor das mestres leva a
+ * modificação às cópias dos clientes.
+ */
+export function beDoTraderPremium(texto: string | null | undefined, minPips = 40): boolean {
+  const t = String(texto ?? '')
+  if (/\b(?:hit\s?tp\s*[1-4]|tp\s*[1-4]\s*hit|hit\s+all\s+tp)\b/i.test(t)) return true
+  if (/\b(?:move|set|put)\s+(?:sl|stop(?:\s?loss)?)\s+(?:to\s+)?(?:be|break\s?-?even|entry)\b/i.test(t)) return true
+  const corre = t.match(/\btrade\s+active\s+and\s+running\s*\+?\s*(\d{1,4})\s*pips?\b/i)
+  return !!corre && Number(corre[1]) >= minPips
+}
+
+/**
+ * O stop de BE para uma posição aberta, ou null se não se pode pôr (o preço ainda não passou a
+ * entrada com folga, ou o stop actual já protege mais). Puro.
+ *  · compra: entrada + offset, e tem de ficar abaixo do bid − folga;
+ *  · venda:  entrada − offset, e tem de ficar acima do ask + folga.
+ */
+export function slDeBePremium(p: {
+  direcao: 'buy' | 'sell'
+  entrada: number
+  slActual: number | null
+  preco: { bid: number; ask: number } | null
+  offset: number
+  folga: number
+}): number | null {
+  if (!(p.entrada > 0) || !p.preco) return null
+  const compra = p.direcao === 'buy'
+  const alvo = compra ? p.entrada + p.offset : p.entrada - p.offset
+  if (p.slActual != null && (compra ? p.slActual >= alvo : p.slActual <= alvo)) return null
+  const valido = compra ? alvo < p.preco.bid - p.folga : alvo > p.preco.ask + p.folga
+  return valido ? Number(alvo.toFixed(2)) : null
+}
