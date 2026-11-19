@@ -70,3 +70,6 @@ __pycache__/
 
 # saída gerada do graphify (grafo local por máquina; rebuild com /graphify)
 graphify-out/
+
+# motor de vídeo único: renders locais quando não há disco externo nem pasta do projeto
+video/saida/

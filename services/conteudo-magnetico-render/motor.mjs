@@ -49,9 +49,11 @@ const MOTOR = process.env.MOTOR_NOME || os.hostname()
 const THREADS = String(process.env.FFMPEG_THREADS || '2')
 const VOZ = process.env.TTS_VOZ || 'pt-PT-DuarteNeural'
 const INTERVALO = Number(process.env.INTERVALO_S || 20) * 1000
-const W = 1080
-const H = 1920
-const FPS = 30
+// Motor de vídeo único (formato, codificação, -14 LUFS, perfis de marca): video/motor/motor.mjs.
+// Na VPS copia-se para ./motor-video ao lado deste ficheiro (ver LEIA-ME).
+const motorVideo = await import(existsSync(new URL('./motor-video/motor.mjs', import.meta.url)) ? './motor-video/motor.mjs' : '../../video/motor/motor.mjs')
+const { largura: W, altura: H } = motorVideo.formato('reel')
+const FPS = motorVideo.FPS
 
 const log = (...a) => console.log(new Date().toISOString(), '[cm-motor]', ...a)
 
@@ -182,7 +184,7 @@ async function clipDeImagem(img, dur, zoom, destino) {
     '-loop', '1', '-i', img,
     '-vf', `scale=${W}:${H}:force_original_aspect_ratio=increase,crop=${W}:${H},zoompan=z='${z}':x='iw/2-(iw/zoom/2)':y='ih/2-(ih/zoom/2)':d=${frames}:s=${W}x${H}:fps=${FPS},format=yuv420p`,
     '-frames:v', String(frames),
-    '-c:v', 'libx264', '-preset', 'veryfast', '-crf', '20', '-threads', THREADS,
+    ...motorVideo.codecVideo('rapido', { threads: THREADS }),
     destino,
   ])
 }
@@ -200,7 +202,7 @@ async function clipDeVideo(video, dur, destino, { inicio = 0, proprio = false } 
   await ff([
     '-stream_loop', '-1', ...(ss > 0 ? ['-ss', ss.toFixed(3)] : []), '-i', video, '-t', dur.toFixed(3),
     '-vf', `scale=${W}:${H}:force_original_aspect_ratio=increase,${recorte},fps=${FPS},${cor},format=yuv420p`,
-    '-an', '-c:v', 'libx264', '-preset', 'veryfast', '-crf', '20', '-threads', THREADS,
+    '-an', ...motorVideo.codecVideo('rapido', { threads: THREADS }),
     destino,
   ])
 }
@@ -383,9 +385,9 @@ export async function render(trabalho, saida) {
       filtros.push('[vozB]anullsink')
     }
     const nMix = base.split('][').length + efeitos.length
-    filtros.push(`${base}${efeitos.join('')}amix=inputs=${nMix}:normalize=0:duration=first,loudnorm=I=-14:TP=-1.5:LRA=11[aout]`)
+    filtros.push(`${base}${efeitos.join('')}amix=inputs=${nMix}:normalize=0:duration=first,${motorVideo.LOUDNORM}[aout]`)
     const audio = path.join(pasta, 'audio.m4a')
-    await ff([...entradas, '-filter_complex', filtros.join(';'), '-map', '[aout]', '-ar', '44100', '-c:a', 'aac', '-b:a', '160k', audio])
+    await ff([...entradas, '-filter_complex', filtros.join(';'), '-map', '[aout]', ...motorVideo.codecAudio(), audio])
 
     const ass = path.join(pasta, 'legendas.ass')
     await fs.writeFile(ass, legendas(linha, trabalho.marca || {}))
@@ -393,7 +395,7 @@ export async function render(trabalho, saida) {
       '-i', video, '-i', audio,
       '-vf', `ass=${ass}:fontsdir=${fontes}`,
       '-map', '0:v', '-map', '1:a',
-      '-c:v', 'libx264', '-preset', 'veryfast', '-crf', '21', '-threads', THREADS, '-pix_fmt', 'yuv420p',
+      ...motorVideo.codecVideo('rapido', { threads: THREADS }),
       '-c:a', 'copy', '-shortest', '-movflags', '+faststart',
       saida,
     ])
@@ -447,7 +449,7 @@ async function principal() {
   const args = process.argv.slice(2)
   if (args[0] === '--local') {
     const g = JSON.parse(await fs.readFile(args[1], 'utf8'))
-    const tr = g.guiao ? g : { guiao: g, marca: g.marcaResolvida || { arroba: '@morethanmoney.pt', destaque: '#D2A63C', destaque2: '#E9C46A', id: 'morethanmoney' }, fundo_url: g.fundo_url || null }
+    const tr = g.guiao ? g : { guiao: g, marca: g.marcaResolvida || (({ id, arroba, cores }) => ({ id, arroba, destaque: cores.destaque, destaque2: cores.destaque2 }))(motorVideo.marca(g.marca)), fundo_url: g.fundo_url || null }
     const r = await render(tr, args[2] || 'saida.mp4')
     log(`feito: ${args[2] || 'saida.mp4'} (${r.duracao.toFixed(1)}s)`)
     return

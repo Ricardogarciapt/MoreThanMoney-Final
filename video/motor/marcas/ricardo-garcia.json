@@ -1,0 +1,74 @@
+{
+  "id": "ricardo-garcia",
+  "aliases": [
+    "ricardogarciapt",
+    "@ricardogarciapt",
+    "ricardo"
+  ],
+  "nome": "Ricardo Garcia",
+  "arroba": "@ricardogarciapt",
+  "daCasa": true,
+  "cores": {
+    "fundo": "#0A0A0A",
+    "fundo2": "#040A1A",
+    "texto": "#FFFFFF",
+    "destaque": "#0098B2",
+    "destaque2": "#1EAAE6",
+    "faixa": "#1256BE",
+    "neutra": "#A6A6A6",
+    "ouro": "#D2A63C"
+  },
+  "fontes": {
+    "titulo": {
+      "familia": "Anton",
+      "ficheiro": "fontes/Anton.ttf",
+      "maiusculas": true,
+      "italico": true
+    },
+    "texto": {
+      "familia": "Oswald",
+      "ficheiro": "fontes/Oswald.ttf"
+    },
+    "etiqueta": {
+      "familia": "Oswald",
+      "ficheiro": "fontes/Oswald.ttf"
+    },
+    "nota": {
+      "familia": "Kalam",
+      "ficheiro": "fontes/Kalam.ttf"
+    }
+  },
+  "logo": "public/marca/ricardogarciapt/logo-ricardo-garcia.png",
+  "logo_video": "marca/ricardogarciapt/logo-ricardo-garcia.png",
+  "logo_alternativo": "public/marca/ricardogarciapt/logo-rg-monograma-transparente.png",
+  "grade": "teal",
+  "legendas": {
+    "estilo": "karaoke",
+    "cor": "#FFFFFF",
+    "destaque": "#1EAAE6"
+  },
+  "voz": {
+    "fornecedor": "fish",
+    "variavel": "FISH_VOICE_RICARDO",
+    "alternativa": "heygen (HEYGEN_VOICE_ID, igual à Fish)"
+  },
+  "clone": {
+    "fornecedor": "heygen",
+    "looks": "lib/estudio/heygen-looks.ts (só verticais, alternados por plano)"
+  },
+  "musica": {
+    "bpm": 100,
+    "origem": "sintetizada (sem direitos)"
+  },
+  "disclaimer": "Conteúdo educativo. Não constitui consultoria financeira.",
+  "cta": {
+    "texto": "Comenta a palavra",
+    "url": "morethanmoney.pt"
+  },
+  "brand_kit": "https://www.morethanmoney.pt/marca/ricardogarciapt",
+  "regras": [
+    "Primeira pessoa, directo, história de vida e disciplina. PT-PT, «tu».",
+    "Reels 7–15 s, gémeo IA plano a plano, looks verticais HeyGen.",
+    "Publicação no @ricardogarciapt só com aprovação do Ricardo no briefing."
+  ]
+}

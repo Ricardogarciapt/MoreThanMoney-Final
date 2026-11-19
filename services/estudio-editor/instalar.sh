@@ -19,6 +19,8 @@ NODE="$(command -v node)"; [ -n "$NODE" ] || { echo "Falta o node (brew install 
 mkdir -p "$DEST"; chmod 700 "$DEST"
 cp "$REPO/services/estudio-editor/editor.mjs" "$DEST/editor.mjs"
 cp "$REPO/services/estudio-editor/projeto.mjs" "$DEST/projeto.mjs"
+# Motor de vídeo único (formatos, codificação, -14 LUFS, perfis de marca): vai junto, em ./motor-video.
+rm -rf "$DEST/motor-video"; cp -R "$REPO/video/motor" "$DEST/motor-video"
 # Segredos vêm do env do cortador («export X=…», às vezes com aspas). O site aceita qualquer um dos dois.
 ler() { [ -f "$HOME/.mtm-videocliper/env" ] && grep -E "^(export )?$1=" "$HOME/.mtm-videocliper/env" | head -1 | cut -d= -f2- | sed -E "s/^[\"']//; s/[\"']\$//"; }
 umask 077; touch "$DEST/env"

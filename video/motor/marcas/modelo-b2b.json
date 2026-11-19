@@ -1,0 +1,55 @@
+{
+  "id": "modelo-b2b",
+  "aliases": [],
+  "nome": "O Teu Negócio",
+  "arroba": "@oteunegocio",
+  "daCasa": false,
+  "_leia": "Modelo para clientes B2B. Copia para b2b-<slug>.json, troca nome, cores, logo e CTA. Os vídeos do cliente nunca levam o logótipo nem a voz da MTM.",
+  "cores": {
+    "fundo": "#0E0E10",
+    "fundo2": "#16161A",
+    "texto": "#FFFFFF",
+    "destaque": "#D2A63C",
+    "destaque2": "#E9C46A",
+    "neutra": "#3A3A40"
+  },
+  "fontes": {
+    "titulo": {
+      "familia": "Anton",
+      "ficheiro": "fontes/Anton.ttf",
+      "maiusculas": true
+    },
+    "texto": {
+      "familia": "Inter",
+      "ficheiro": null
+    },
+    "etiqueta": {
+      "familia": "Oswald",
+      "ficheiro": "fontes/Oswald.ttf"
+    }
+  },
+  "logo": null,
+  "logo_video": null,
+  "grade": "neutro",
+  "legendas": {
+    "estilo": "caixa",
+    "cor": "#FFFFFF",
+    "destaque": "#E9C46A"
+  },
+  "voz": {
+    "fornecedor": "fish",
+    "variavel": null
+  },
+  "musica": {
+    "bpm": 110,
+    "origem": "sintetizada (sem direitos)"
+  },
+  "disclaimer": null,
+  "cta": {
+    "texto": "Marca já",
+    "url": "oteunegocio.pt"
+  },
+  "regras": [
+    "Nada de números inventados: exemplos levam «Exemplo ilustrativo»."
+  ]
+}

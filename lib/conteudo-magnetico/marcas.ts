@@ -13,6 +13,13 @@
  * As duas da casa só as usam admins (o servidor decide em `marcasPermitidas`).
  */
 
+import { perfilMarca } from '@/lib/video/motor'
+
+// As cores das marcas da casa vêm do perfil único do motor de vídeo (video/motor/marcas/*.json),
+// para o carrossel, a imagem e o vídeo saírem iguais.
+const RG = perfilMarca('ricardo-garcia').cores
+const MTM = perfilMarca('morethanmoney').cores
+
 export type IdMarca = 'ricardo-garcia' | 'morethanmoney' | 'propria'
 
 export type Marca = {
@@ -42,8 +49,8 @@ export const MARCAS: Record<IdMarca, Marca> = {
     id: 'ricardo-garcia',
     nome: 'Ricardo Garcia',
     arroba: '@ricardogarciapt',
-    destaque: '#0097b2',
-    destaque2: '#29a8f0',
+    destaque: RG.destaque,
+    destaque2: RG.destaque2,
     texto: '#ffffff',
     fundo: '#0d1117',
     fundoGradiente: 'radial-gradient(900px 900px at 50% 30%, #12324a, #0b1220 55%, #06090f 100%)',
@@ -57,10 +64,10 @@ export const MARCAS: Record<IdMarca, Marca> = {
     id: 'morethanmoney',
     nome: 'More Than Money',
     arroba: '@morethanmoney.pt',
-    destaque: '#D2A63C',
-    destaque2: '#E9C46A',
+    destaque: MTM.destaque,
+    destaque2: MTM.destaque2,
     texto: '#ffffff',
-    fundo: '#0b0d12',
+    fundo: MTM.fundo2,
     fundoGradiente: 'radial-gradient(900px 900px at 30% 20%, #2a2418, #0f0e0b 55%, #070707 100%)',
     logo: '/logo-mtm-transparent.png',
     voz:

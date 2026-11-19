@@ -8,13 +8,14 @@ import { spawn, execFileSync } from 'node:child_process'
 import fs from 'node:fs'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
+import * as motorVideo from '../motor/motor.mjs'
 
 const { chromium } = createRequire(import.meta.url)('playwright')
 const DIR = path.dirname(fileURLToPath(import.meta.url))
 const [est, nv, lang = 'pt'] = process.argv.slice(2)
 const arg = n => (process.argv.find(a => a.startsWith(`--${n}=`)) || '').split('=')[1]
 const preview = process.argv.includes('--preview')
-const FPS = preview ? 8 : 25
+const FPS = preview ? 8 : motorVideo.FPS
 const ABRE = 0.5, RESPIRO = 0.7
 // Velocidade da narração: +10% pedido a 06/11 15:26, depois -7% a 20:08 → 1.03. --vel=1 volta ao normal.
 const VEL = Number(arg('vel') || 1.03)
@@ -53,7 +54,7 @@ if (falas.length) {
   const ins = [], filt = []
   falas.forEach((c, i) => { ins.push('-i', c.audio); filt.push(`[${i}:a]aresample=48000,atempo=${VEL},adelay=${Math.round(c.ini * 1000)}:all=1[a${i}]`) })
   const musica = path.join(DIR, 'musica.mp3'), temMusica = fs.existsSync(musica)
-  filt.push(`${falas.map((_, i) => `[a${i}]`).join('')}amix=inputs=${falas.length}:normalize=0,apad=whole_dur=${total.toFixed(2)},loudnorm=I=-16:TP=-1.5,aresample=48000${temMusica ? ',asplit[voz][chave]' : '[out]'}`)
+  filt.push(`${falas.map((_, i) => `[a${i}]`).join('')}amix=inputs=${falas.length}:normalize=0,apad=whole_dur=${total.toFixed(2)},${motorVideo.LOUDNORM},aresample=48000${temMusica ? ',asplit[voz][chave]' : '[out]'}`)
   if (temMusica) {
     ins.push('-stream_loop', '-1', '-i', musica)
     filt.push(`[${falas.length}:a]aresample=48000,atrim=0:${total.toFixed(2)},loudnorm=I=-30,aresample=48000,afade=t=in:d=1,afade=t=out:st=${(total - 4).toFixed(2)}:d=4[m]`,
@@ -79,9 +80,9 @@ await page.waitForTimeout(400)
 const mp4 = path.join(out, `${base}${preview ? '-preview' : ''}.mp4`)
 const args = ['-y', '-v', 'error', '-f', 'image2pipe', '-framerate', String(FPS), '-c:v', 'mjpeg', '-i', '-']
 if (falas.length) args.push('-ss', String(de), '-i', audio)
-args.push('-c:v', 'libx264', '-preset', preview ? 'veryfast' : 'medium', '-crf', preview ? '30' : '22', '-pix_fmt', 'yuv420p', '-r', String(FPS))
-if (falas.length) args.push('-c:a', 'aac', '-b:a', '160k', '-shortest')
-args.push('-movflags', '+faststart', mp4)
+args.push('-r', String(FPS), ...motorVideo.codificar(preview ? 'rascunho' : 'final', { semAudio: !falas.length }))
+if (falas.length) args.push('-shortest')
+args.push(mp4)
 const ff = spawn('ffmpeg', args, { stdio: ['pipe', 'inherit', 'inherit'] })
 const n0 = Math.floor(de * FPS), n1 = Math.ceil(Math.min(ate, total) * FPS)
 for (let i = n0; i < n1; i++) {

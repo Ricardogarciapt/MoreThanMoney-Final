@@ -1,0 +1,26 @@
+{
+  "name": "mtm-motor-cinematico",
+  "private": true,
+  "description": "Motor cinem\u00e1tico (Remotion + Three.js) \u2014 perfis de marca em video/motor/marcas. Ver video/motor/LEIA-ME.md",
+  "scripts": {
+    "render": "bash render.sh",
+    "estudio": "npx remotion studio src/index.ts"
+  },
+  "dependencies": {
+    "@react-three/drei": "^9.117.3",
+    "@react-three/fiber": "^8.17.10",
+    "@react-three/postprocessing": "^2.16.3",
+    "@remotion/cli": "^4.0.544",
+    "@remotion/google-fonts": "^4.0.544",
+    "@remotion/light-leaks": "^4.0.544",
+    "@remotion/noise": "^4.0.544",
+    "@remotion/renderer": "^4.0.544",
+    "@remotion/three": "^4.0.544",
+    "@remotion/transitions": "^4.0.544",
+    "postprocessing": "^6.36.4",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "remotion": "^4.0.544",
+    "three": "^0.170.0"
+  }
+}

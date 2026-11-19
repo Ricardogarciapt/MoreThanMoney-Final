@@ -1,0 +1,67 @@
+{
+  "id": "morethanmoney",
+  "aliases": [
+    "mtm",
+    "morethanmoney.pt",
+    "more-than-money"
+  ],
+  "nome": "More Than Money",
+  "arroba": "@morethanmoney.pt",
+  "daCasa": true,
+  "cores": {
+    "fundo": "#07070A",
+    "fundo2": "#0B0D12",
+    "texto": "#FFFFFF",
+    "destaque": "#D2A63C",
+    "destaque2": "#E9C46A",
+    "neutra": "#2A2E39"
+  },
+  "fontes": {
+    "titulo": {
+      "familia": "Anton",
+      "ficheiro": "fontes/Anton.ttf",
+      "maiusculas": true
+    },
+    "texto": {
+      "familia": "Inter",
+      "ficheiro": null
+    },
+    "etiqueta": {
+      "familia": "Oswald",
+      "ficheiro": "fontes/Oswald.ttf"
+    }
+  },
+  "logo": "public/logo-mtm-transparent.png",
+  "logo_video": "logo-mf-gold.png",
+  "grade": "ouro",
+  "legendas": {
+    "estilo": "karaoke",
+    "cor": "#FFFFFF",
+    "destaque": "#E9C46A"
+  },
+  "voz": {
+    "fornecedor": "fish",
+    "variavel": "FISH_VOICE_RICARDO",
+    "velocidade": {
+      "tutorial": 1.12,
+      "vendas": 1.0,
+      "bootcamp": 1.03
+    }
+  },
+  "musica": {
+    "bpm": 120,
+    "progressao": "Am-F-C-G",
+    "origem": "sintetizada (sem direitos)"
+  },
+  "disclaimer": "Conteúdo educativo. Não constitui consultoria financeira. Resultados passados não garantem resultados futuros.",
+  "cta": {
+    "texto": "Marca o teu diagnóstico",
+    "url": "morethanmoney.pt"
+  },
+  "regras": [
+    "PT-PT com «tu»; «ecrã», «telemóvel».",
+    "Nenhum número de desempenho inventado: prova em pips com origem; exemplos levam «Exemplo ilustrativo».",
+    "Disclaimer educativo em todo o conteúdo de trading.",
+    "Não nomear a plataforma dos cursos em peças públicas."
+  ]
+}

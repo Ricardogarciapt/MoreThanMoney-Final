@@ -22,7 +22,7 @@ sys.path.insert(0, AQUI)
 import capa_reel as cr  # noqa: E402
 from render import img_bloco, CIANO  # noqa: E402
 
-W, H, FPS, SR = 1080, 1920, 25, 48000
+_, W, H = cr.motor.formato('reel'); FPS, SR = cr.motor.FPS, 48000
 ZOOM = {'aberto': 1.0, 'medio': 1.28, 'fechado': 1.6, 'de_cima': 1.15, 'de_baixo': 1.15, 'detalhe': 2.0, 'mao': 1.4}
 Y_LEG = 1400      # legendas abaixo do queixo (a cara fica no terço de cima)
 Y_CTA = 1560
@@ -189,7 +189,7 @@ def main():
     with wave.open(raw, 'wb') as f:
         f.setnchannels(1); f.setsampwidth(2); f.setframerate(SR); f.writeframes((mix * 32767).astype(np.int16).tobytes())
     audio = os.path.join(tmp, 'audio.wav')
-    sh('ffmpeg', '-y', '-i', raw, '-af', 'loudnorm=I=-14:TP=-1.5:LRA=11', '-ar', '48000', '-ac', '2', audio)
+    sh('ffmpeg', '-y', '-i', raw, '-af', cr.motor.LOUDNORM, '-ar', '48000', '-ac', '2', audio)
 
     # legendas com os tempos reais das palavras, passados para a linha do tempo do reel
     legendas = []
@@ -220,9 +220,7 @@ def main():
 
     video = os.path.join(saida, f'reel-{n:02d}.mp4')
     ff = subprocess.Popen(['ffmpeg', '-y', '-f', 'rawvideo', '-pix_fmt', 'rgb24', '-s', f'{W}x{H}', '-r', str(FPS),
-                           '-i', '-', '-i', audio, '-c:v', 'libx264', '-preset', 'medium', '-crf', '19',
-                           '-pix_fmt', 'yuv420p', '-profile:v', 'high', '-c:a', 'aac', '-b:a', '160k',
-                           '-movflags', '+faststart', '-shortest', video], stdin=subprocess.PIPE, stderr=subprocess.DEVNULL)
+                           '-i', '-', '-i', audio, *cr.motor.codificar('final'), '-shortest', video], stdin=subprocess.PIPE, stderr=subprocess.DEVNULL)
     k = 0
     for _ in range(int(CAPA_S * FPS)):
         ff.stdin.write(capa.tobytes()); k += 1

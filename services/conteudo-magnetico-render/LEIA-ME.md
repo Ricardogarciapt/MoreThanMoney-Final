@@ -16,6 +16,8 @@ aqui, fora da Vercel, porque precisa de ffmpeg e de minutos de CPU.
 ```bash
 sudo apt-get install -y ffmpeg python3-pip && pip3 install edge-tts gTTS
 sudo mkdir -p /opt/mtm/conteudo-magnetico && sudo cp motor.mjs /opt/mtm/conteudo-magnetico/
+# motor de vídeo único (formatos, codificação, -14 LUFS, marcas) — obrigatório desde 19/11/2026
+sudo rm -rf /opt/mtm/conteudo-magnetico/motor-video && sudo cp -R ../../video/motor /opt/mtm/conteudo-magnetico/motor-video
 sudo cp mtm-conteudo-magnetico.service /etc/systemd/system/
 sudo tee /etc/mtm-conteudo-magnetico.env >/dev/null <<'ENV'
 SITE_URL=https://www.morethanmoney.pt

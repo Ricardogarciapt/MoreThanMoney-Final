@@ -7,24 +7,20 @@
 //   3. textos e legendas (karaoke a partir do Whisper de cada take) num .ass queimado com libass;
 //      logótipo no canto; música em loop com duck por sidechain; som a -14 LUFS.
 import { spawn } from 'node:child_process'
+import { existsSync } from 'node:fs'
 import { writeFile } from 'node:fs/promises'
 import { join } from 'node:path'
 
-const FORMATOS = { '9:16': [1080, 1920], '1:1': [1080, 1080], '4:5': [1080, 1350], '16:9': [1920, 1080] }
-export const FILTROS_FF = {
-  nenhum: '',
-  ouro: 'colorchannelmixer=rr=1.05:gg=0.97:bb=0.82,eq=contrast=1.08:saturation=1.2',
-  teal: 'colorchannelmixer=rr=0.9:gg=1.02:bb=1.08,eq=contrast=1.06:saturation=1.1',
-  quente: 'colorbalance=rs=.08:gs=.02:bs=-.08,eq=saturation=1.15',
-  frio: 'colorbalance=rs=-.06:bs=.08',
-  pb: 'hue=s=0,eq=contrast=1.1',
-  cinema: 'eq=contrast=1.18:saturation=0.85:brightness=-0.03',
-  vivo: 'eq=saturation=1.45:contrast=1.05',
-  suave: 'eq=contrast=0.9:brightness=0.04:saturation=0.9',
-}
-const MARCA = {
-  morethanmoney: { fundo: '0x0b0b0c', acento: '&H003CA6D2', claro: '&H006AC4E9' },
-  'ricardo-garcia': { fundo: '0x0b0b0c', acento: '&H00B29700', claro: '&H00D8C25A' },
+// Motor de vídeo único (formatos, grades, codificação, perfis de marca): video/motor/motor.mjs.
+// No Mac o instalar.sh copia-o para ./motor-video ao lado deste ficheiro.
+export const motor = await import(existsSync(new URL('./motor-video/motor.mjs', import.meta.url)) ? './motor-video/motor.mjs' : '../../video/motor/motor.mjs')
+
+const FORMATOS = Object.fromEntries(['9:16', '1:1', '4:5', '16:9'].map((k) => { const f = motor.formato(k); return [k, [f.largura, f.altura]] }))
+export const FILTROS_FF = motor.GRADES
+/** Cores do perfil da marca: fundo (ffmpeg), acento e claro (ASS). */
+function corMarca(id) {
+  const c = motor.marca(id).cores
+  return { fundo: motor.corFF(c.fundo), acento: motor.corAss(c.destaque), claro: motor.corAss(c.destaque2) }
 }
 
 function correr(cmd, args) {
@@ -109,7 +105,7 @@ export async function renderSegmento(c, ficheiro, saida, { W, H, fundo, cor, vol
     }
   }
   args.push('-filter_complex', fc, '-map', '[v]', '-map', '[a]', '-t', dur.toFixed(3),
-    '-c:v', 'libx264', '-preset', 'veryfast', '-crf', '18', '-c:a', 'aac', '-b:a', '192k', '-ar', '48000', '-ac', '2', saida)
+    ...motor.codecVideo('intermedio'), ...motor.codecAudio(), saida)
   await correr('nice', ['-n', '15', 'ffmpeg', ...args])
   return dur
 }
@@ -157,7 +153,7 @@ const limparAss = (t) => String(t).replace(/[{}]/g, '').replace(/\n/g, '\\N')
 
 /** O .ass com os textos sobrepostos e as legendas. */
 export function gerarAss(projeto, palavrasPorTake, { W, H, marca }) {
-  const cor = MARCA[marca] || MARCA.morethanmoney
+  const cor = corMarca(marca)
   const k = W / 1080
   const sz = (n) => Math.round(n * k)
   const estilos = [
@@ -209,7 +205,7 @@ export function gerarAss(projeto, palavrasPorTake, { W, H, marca }) {
  */
 export async function renderProjeto(projeto, { pasta, ficheiros, palavras = {}, marca = 'morethanmoney', logo = null, saida }) {
   const [W, H] = FORMATOS[projeto.formato] || FORMATOS['9:16']
-  const cor = (MARCA[marca] || MARCA.morethanmoney).fundo
+  const cor = corMarca(marca).fundo
   const clips = (projeto.clips || []).filter((c) => ficheiros[c.fonte?.url])
   if (!clips.length) throw new Error('nenhum clip com material descarregado')
   const segs = [], duracoes = []
@@ -243,10 +239,9 @@ export async function renderProjeto(projeto, { pasta, ficheiros, palavras = {}, 
     } else f.push(`[${a}][mu]amix=inputs=2:duration=first:dropout_transition=0:normalize=0[am]`)
     a = 'am'; n++
   }
-  f.push(`[${a}]loudnorm=I=-14:TP=-1.5:LRA=11[af]`)
+  f.push(`[${a}]${motor.LOUDNORM}[af]`)
   args.push('-filter_complex', f.join(';'), '-map', `[${v}]`, '-map', '[af]', '-t', j.total.toFixed(3),
-    '-c:v', 'libx264', '-preset', 'medium', '-crf', '20', '-pix_fmt', 'yuv420p', '-c:a', 'aac', '-b:a', '160k', '-ar', '48000',
-    '-movflags', '+faststart', saida)
+    ...motor.codificar('final'), saida)
   await correr('nice', ['-n', '15', 'ffmpeg', ...args])
   return { duracao: j.total }
 }
