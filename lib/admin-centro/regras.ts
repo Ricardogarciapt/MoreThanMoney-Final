@@ -127,15 +127,17 @@ export interface Alerta {
   acoes: { rotulo: string; acao: AcaoRunbook; confirmar?: string }[]
 }
 
-export type SeccaoCentro = 'cockpit' | 'sinais' | 'estrategias' | 'contas' | 'copia' | 'utilizadores'
+export type SeccaoCentro = 'cockpit' | 'rotas' | 'sinais' | 'estrategias' | 'contas' | 'copia' | 'utilizadores'
 
 export const SECCOES: { id: SeccaoCentro; nome: string; atalho: string }[] = [
   { id: 'cockpit', nome: 'Cockpit', atalho: '1' },
-  { id: 'sinais', nome: 'Sinais', atalho: '2' },
-  { id: 'estrategias', nome: 'Estratégias', atalho: '3' },
-  { id: 'contas', nome: 'Contas', atalho: '4' },
-  { id: 'copia', nome: 'Cópia', atalho: '5' },
-  { id: 'utilizadores', nome: 'Utilizadores', atalho: '6' },
+  // 19/11/2026: o gestor simples «estratégia → contas» (arrastar). É o que o dono abre primeiro.
+  { id: 'rotas', nome: 'Gestor de rotas', atalho: '2' },
+  { id: 'sinais', nome: 'Sinais', atalho: '3' },
+  { id: 'estrategias', nome: 'Estratégias', atalho: '4' },
+  { id: 'contas', nome: 'Contas', atalho: '5' },
+  { id: 'copia', nome: 'Cópia (avançado)', atalho: '6' },
+  { id: 'utilizadores', nome: 'Utilizadores', atalho: '7' },
 ]
 
 /**

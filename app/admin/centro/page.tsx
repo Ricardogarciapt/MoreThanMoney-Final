@@ -4,7 +4,7 @@ import { Suspense, useCallback, useEffect, useMemo, useState } from "react"
 import Link from "next/link"
 import { usePathname, useRouter, useSearchParams } from "next/navigation"
 import {
-  Activity, ArrowLeft, ArrowLeftRight, Command as IconeComando, Cpu, ListTree, Loader2, Radio, Search, Users, Wallet,
+  Activity, ArrowLeft, ArrowLeftRight, Columns3, Command as IconeComando, Cpu, ListTree, Loader2, Radio, Search, Users, Wallet,
 } from "lucide-react"
 import { useAuth } from "@/contexts/auth-context"
 import { SECCOES, destinoDeSeccaoAntiga, ehSeccao, type SeccaoCentro } from "@/lib/admin-centro/regras"
@@ -16,6 +16,7 @@ import SeccaoSinais from "@/components/admin/centro/seccoes/sinais"
 import SeccaoEstrategias from "@/components/admin/centro/seccoes/estrategias"
 import SeccaoContas from "@/components/admin/centro/seccoes/contas"
 import SeccaoCopia from "@/components/admin/centro/seccoes/copia"
+import SeccaoRotas from "@/components/admin/centro/seccoes/rotas"
 import SeccaoUtilizadores from "@/components/admin/centro/seccoes/utilizadores"
 
 /**
@@ -28,10 +29,11 @@ import SeccaoUtilizadores from "@/components/admin/centro/seccoes/utilizadores"
  */
 
 const ICONE: Record<SeccaoCentro, typeof Activity> = {
-  cockpit: Activity, sinais: Radio, estrategias: ListTree, contas: Wallet, copia: ArrowLeftRight, utilizadores: Users,
+  cockpit: Activity, rotas: Columns3, sinais: Radio, estrategias: ListTree, contas: Wallet, copia: ArrowLeftRight, utilizadores: Users,
 }
 const DESCRICAO: Record<SeccaoCentro, string> = {
   cockpit: "Saúde em tempo real: pipeline de sinais, execução, MetaApi, streaming, base, VPS, crons e alertas com runbook.",
+  rotas: "Uma coluna por estratégia ligada: de onde vem o sinal, a conta mestre e onde aparece nas apps — e as contas dos clientes em cartões que se arrastam de uma estratégia para outra.",
   sinais: "Todos os sinais das últimas 24 h e o fan-out de cada um: quem executou, quem saltou e porquê, erros.",
   estrategias: "Estratégias da casa e das equipas: fonte mestre/espelho, seguidores, desempenho, divergências e afinações.",
   contas: "Todas as contas (MT4/MT5/TradeLocker/MTM Funded; clientes, casa, seguidoras, equipas) com dono, direito, quota e estado — e, no fim, os programas e o gestor MTM Funded.",
@@ -190,6 +192,7 @@ function Centro() {
 
           <div className="mx-auto max-w-[1600px] p-4 sm:p-6">
             {seccao === "cockpit" && <SeccaoCockpit />}
+            {seccao === "rotas" && <SeccaoRotas />}
             {seccao === "sinais" && <SeccaoSinais />}
             {seccao === "estrategias" && <SeccaoEstrategias />}
             {seccao === "contas" && <SeccaoContas />}
@@ -203,7 +206,7 @@ function Centro() {
         {ajuda && (
           <div className="fixed bottom-4 right-4 z-50 w-72 rounded-xl border border-[#D2A63C]/25 bg-zinc-950/95 p-4 text-xs text-zinc-300 shadow-2xl">
             <p className="mb-2 font-semibold text-[#E9C46A]">Atalhos</p>
-            {[["⌘/Ctrl K ou /", "paleta de comandos"], ["1 – 8", "secções"], ["R", "reler tudo"], ["Esc", "fechar gaveta"], ["?", "esta ajuda"]].map(([k, v]) => (
+            {[["⌘/Ctrl K ou /", "paleta de comandos"], ["1 – 7", "secções"], ["R", "reler tudo"], ["Esc", "fechar gaveta"], ["?", "esta ajuda"]].map(([k, v]) => (
               <p key={k} className="flex justify-between py-0.5"><kbd className="rounded border border-white/10 px-1.5 text-[10px]">{k}</kbd><span className="text-zinc-500">{v}</span></p>
             ))}
           </div>
