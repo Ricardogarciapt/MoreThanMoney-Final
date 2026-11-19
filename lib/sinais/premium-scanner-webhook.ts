@@ -19,6 +19,7 @@ import { urlDoGraficoDoSinal } from '@/lib/sinais/grafico-publicar'
 import { sendTelegramChannelPush } from '@/lib/telegram-channel-push'
 import { formatarSinal } from '@/lib/sinais/formato-sinal'
 import { encaminharSinalParaMestre } from '@/lib/mestres/servidor/sinal-mestre'
+import { HORAS_BLOQUEADAS_LONDRES_OMISSAO, foraDaJanelaPremiumII, horaDeLondres } from '@/lib/sinais/premium-ii-janela'
 
 type Json = Record<string, unknown>
 
@@ -30,6 +31,16 @@ export const CANAL_PREMIUM_SCANNER = 'sinais-premium-ii'
 const JANELA_DUPLICADO_MS = 10 * 60_000
 /** Validade da ordem limite na mestre: 4 velas de 15m, como `InpValidade` da EA. */
 const VALIDADE_LIMITE_MS = 60 * 60_000
+
+async function horasBloqueadas(): Promise<unknown> {
+  try {
+    const { data } = await getSupabaseAdmin().from('mtmauto_providers').select('sinais_config').eq('slug', 'mtm-auto-premium-ii').maybeSingle()
+    const cfg = (data?.sinais_config ?? null) as { horasBloqueadasLondres?: unknown } | null
+    return cfg && 'horasBloqueadasLondres' in cfg ? cfg.horasBloqueadasLondres : HORAS_BLOQUEADAS_LONDRES_OMISSAO
+  } catch {
+    return HORAS_BLOQUEADAS_LONDRES_OMISSAO
+  }
+}
 
 /** `?strategy=premiumscanner` no URL, ou `"strategy":"PremiumScanner"` no JSON do alerta. */
 export function eAlertaPremiumScanner(strategy: string | null | undefined, payload: Json): boolean {
@@ -84,6 +95,10 @@ export async function processarPremiumScanner(payload: Json): Promise<{ ok: bool
   }
 
   if (!simbolo || !direcao || !entrada || !sl || tps.length < 3) return falha('alerta incompleto (ticker, action, entry, sl, tp1..tp3)')
+
+  if (foraDaJanelaPremiumII(new Date(), await horasBloqueadas())) {
+    return falha(`fora da janela (${horaDeLondres(new Date())}h de Londres sem entradas — sinais_config.horasBloqueadasLondres)`)
+  }
 
   const desde = new Date(Date.now() - JANELA_DUPLICADO_MS).toISOString()
   const { data: recentes } = await supabase
