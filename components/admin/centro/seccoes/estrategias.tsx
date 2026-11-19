@@ -41,6 +41,24 @@ export default function SeccaoEstrategias() {
   return <ListaEstrategias />
 }
 
+/**
+ * Um só estado por estratégia (19/11, pedido do dono: menos pílulas). O detalhe — executor, sinal,
+ * T2T, rotas — fica no `title` e na página da estratégia.
+ */
+function estadoSimples(e: EstrategiaCentro): { texto: string; tom: "ok" | "info" | "neutro" | "grave" | "aviso"; detalhe: string } {
+  const m = e.mestres
+  const detalhe = m
+    ? `${m.executorNota} · cópia ${m.modo} · sinal ${m.sinalModo} · T2T ${m.t2tModo} · ${m.nRotasLive}/${m.nRotas} rotas live`
+    : e.ativa ? "activa (sem mestre nossa)" : "inactiva"
+  if (e.apagada) return { texto: "Escondida", tom: "neutro", detalhe }
+  if (e.fonteDesligada) return { texto: "Fonte desligada", tom: "grave", detalhe: e.fonteDesligada.motivo ?? detalhe }
+  if (!m) return e.ativa ? { texto: "Activa", tom: "ok", detalhe } : { texto: "Desligada", tom: "neutro", detalhe }
+  if (m.modo === "live" && m.nContasLive > 0) return { texto: "Live · a copiar", tom: "ok", detalhe }
+  if (m.modo === "live" || m.sinalModo === "live") return { texto: "Live · só sinal", tom: "info", detalhe }
+  if (m.modo === "sombra") return { texto: "Sombra", tom: "info", detalhe }
+  return { texto: "Desligada", tom: "neutro", detalhe }
+}
+
 function ListaEstrategias() {
   const ctx = useCentroCtx()
   const { dados, erro, aCarregar, recarregar, lidoEm } = useCentro<DadosEstrategias>(`/api/admin/centro/estrategias?v=${ctx.versao}`, 30_000)
@@ -89,39 +107,25 @@ function ListaEstrategias() {
         </Filtros>
         {dados?.veredictoPendente && <div className="mb-2"><Aviso tom="info">Veredicto do espelho (082) indisponível nesta base.</Aviso></div>}
         <Lista dados={dados} erro={erro} vazio={todas.length === 0} textoVazio="Nenhuma estratégia registada." filtrada={lista.length === 0}>
-          <Tabela min={1120}>
-            <thead><tr><th className={th}>Estratégia</th><th className={th}>Execução</th><th className={th}>Seguidores</th><th className={th} title="Catálogo da MTM Auto: trades reais fechadas em 90 dias, parciais pesadas — o número que os clientes vêem">90 d · publicado</th><th className={th} title="mtmauto_signals: tudo-ou-nada, sem parciais — sub-avalia. Diagnóstico interno, não publicar.">Ideias 30 d</th><th className={th}>Último sinal</th><th className={th}>Divergências</th></tr></thead>
+          <Tabela min={860}>
+            <thead><tr><th className={th}>Estratégia</th><th className={th}>Estado</th><th className={th}>Seguidores</th><th className={th} title="Catálogo da MTM Auto: trades reais fechadas em 90 dias, parciais pesadas — o número que os clientes vêem">90 d · publicado</th><th className={th}>Último sinal</th><th className={th}>Atenção</th></tr></thead>
             <tbody>
-              {lista.map((e) => (
+              {lista.map((e) => {
+                const est = estadoSimples(e)
+                return (
                 <tr key={e.id} className={trClic} onClick={() => abrir(e.slug)}>
                   <td className={td}>
                     <p className="font-medium text-zinc-100">{e.nome}{e.apagada && <span className="ml-1 text-rose-400" title="apagado_em: fora de todos os catálogos, histórico intacto. Abre a ficha para restaurar.">(escondida)</span>}</p>
-                    <p className="text-[10px] text-zinc-500">{e.slug} · {e.tipo ?? "—"}{e.equipa ? ` · equipa ${e.equipa}` : " · casa"}{e.mestres?.cfIds.length ? ` · CF ${e.mestres.cfIds.join(",")} ${e.mestres.cfCortado ? "cortada" : "por cortar"}` : e.estrategiaCf ? ` · CF ${e.estrategiaCf}` : ""}{e.abandonada ? " · abandonada" : ""}{e.canalChat ? ` · chat ${e.canalChat}` : ""}</p>
-                    {e.fonteDesligada && <p className="mt-0.5"><Pilula tom="grave" title={e.fonteDesligada.motivo ?? undefined}>fonte desligada {e.fonteDesligada.em.slice(0, 10)}</Pilula></p>}
-                    {e.tipo === "mt5" && <p className="mt-0.5"><Pilula tom="aviso">MT5 directo · {e.mt5Estado ?? "por_ligar"}</Pilula></p>}
+                    <p className="text-[10px] text-zinc-500" title={`${e.slug} · ${e.tipo ?? "—"}${e.canalChat ? ` · chat ${e.canalChat}` : ""}`}>
+                      {e.mestres ? `${e.mestres.rotuloMestre} ${e.mestres.contaMestreLogin ?? ""}` : e.slug}
+                    </p>
                   </td>
                   <td className={td}>
-                    {e.mestres && (
-                      <div className="mb-1 flex flex-wrap gap-1">
-                        <Pilula tom={e.mestres.executor === "motor" ? "ok" : e.mestres.executor === "copyfactory" ? "aviso" : "neutro"} title={e.mestres.executorNota}>
-                          {e.mestres.executor === "motor" ? "motor das mestres" : e.mestres.executor === "copyfactory" ? "CopyFactory" : "legado"}
-                        </Pilula>
-                        <Pilula tom={e.mestres.modo === "live" ? "grave" : e.mestres.modo === "sombra" ? "info" : "neutro"} title={`sinal ${e.mestres.sinalModo} · T2T ${e.mestres.t2tModo}`}>motor {e.mestres.modo}</Pilula>
-                        {e.mestres.sinalModo !== e.mestres.modo && <Pilula tom={e.mestres.sinalModo === "live" ? "grave" : "neutro"}>sinal {e.mestres.sinalModo}</Pilula>}
-                        <Pilula title={`${e.mestres.nRotasLive}/${e.mestres.nRotas} rotas live · ${e.mestres.nContasLive} conta(s) live`}>{e.mestres.rotuloMestre} {e.mestres.contaMestreLogin ?? ""}</Pilula>
-                      </div>
-                    )}
-                    <div className="flex flex-wrap gap-1">
-                      {e.modo === "sombra" && !e.ativa
-                        ? <Pilula tom="info" title="Medida todos os dias sem abrir nada (estrategia_sombra_dia). Quem decide a execução é «ativo».">Sombra — não executa</Pilula>
-                        : <Pilula tom={e.ativa ? "ok" : "neutro"} title="mtmauto_providers.ativo — o executor antigo do MTM Auto">{e.mestres ? `MTM Auto ${e.ativa ? "activa" : "inactiva"}` : e.ativa ? "activa" : "inactiva"}</Pilula>}
-                      {e.fonteExecucao && <Pilula tom={e.fonteExecucao === "espelho" ? "info" : "neutro"}>{e.fonteExecucao}</Pilula>}
-                      {e.espelho && <Pilula tom={e.espelho.alinhado ? "ok" : "aviso"} title={e.espelho.motivos.join(" · ")}>{e.espelho.alinhado ? "espelho alinhado" : "espelho por alinhar"}</Pilula>}
-                    </div>
+                    <Pilula tom={est.tom} title={est.detalhe}>{est.texto}</Pilula>
                   </td>
-                  <td className={`${td} font-mono text-[11px]`}>
+                  <td className={`${td} font-mono text-[11px]`} title={`MTM Auto ${e.seguidores.mtmauto} (${e.seguidores.mtmautoAuto} em automático) · site ${e.seguidores.site} · funded ${e.seguidores.funded}${e.mestres ? ` · ${e.mestres.nContasLive} conta(s) a receber em live` : ""}`}>
                     <p className="text-white">{e.seguidores.total}</p>
-                    <p className="text-zinc-500">auto {e.seguidores.mtmauto} ({e.seguidores.mtmautoAuto} auto) · site {e.seguidores.site} · funded {e.seguidores.funded}</p>
+                    {e.mestres && <p className="text-zinc-500">{e.mestres.nContasLive} em live</p>}
                   </td>
                   <td className={`${td} text-[11px]`}>
                     {(() => {
@@ -131,16 +135,15 @@ function ListaEstrategias() {
                       return <span className={r?.temHistorico ? "text-zinc-100" : "text-zinc-500"} title={r?.simuladas ? "Simuladas: só contas SIM, nunca se publicam nem se somam às reais" : undefined}>{textoResumo90d(r)}</span>
                     })()}
                   </td>
-                  <td className={`${td} font-mono text-[11px] opacity-70`}>
-                    <p className={e.desempenho30d.pips >= 0 ? "text-emerald-300" : "text-rose-300"}>{fmtNum(e.desempenho30d.pips, 1)} pips</p>
-                    <p className="text-zinc-500">{e.desempenho30d.fechados}/{e.desempenho30d.sinais} fechados · {e.desempenho30d.acerto ?? "—"}% · {e.desempenho30d.pct ?? "—"}%</p>
-                  </td>
                   <td className={`${td} font-mono`}>{e.ultimoSinal ? fmtIdade(idadeDe(e.ultimoSinal)) : "—"}</td>
-                  <td className={`${td} max-w-[280px]`}>
-                    {e.divergencias.length === 0 ? <span className="text-zinc-600">—</span> : e.divergencias.map((d) => <p key={d} className="text-[11px] text-amber-300">• {d}</p>)}
+                  <td className={td}>
+                    {e.divergencias.length === 0 && !e.fonteDesligada
+                      ? <span className="text-emerald-400/80">✓</span>
+                      : <span className="text-[11px] text-amber-300" title={e.divergencias.join("\n")}>{e.divergencias.length + (e.fonteDesligada ? 1 : 0)} por resolver</span>}
                   </td>
                 </tr>
-              ))}
+                )
+              })}
             </tbody>
           </Tabela>
         </Lista>
