@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { runLeadFunnelReply } from '@/lib/telegram-lead-funnel'
 import { getSupabaseAdmin } from '@/lib/supabase-admin-client'
 import { enviarWhatsApp, lerEstadoDoContacto, registarEntrada } from '@/lib/whatsapp-mensageiro'
+import { talvezAudioWhatsApp } from '@/lib/whatsapp/audio'
 
 /**
  * Webhook do WhatsApp (Meta Cloud API) — funil de vendas MTM no WhatsApp, reutilizando o MESMO
@@ -169,6 +170,11 @@ export async function POST(req: NextRequest) {
           },
         })
         if (!r.enviado) console.warn(`[whatsapp] resposta ao lead não saiu (${r.codigo}): ${r.porque}`)
+        else if (reply) {
+          // Áudio na voz do Ricardo (quebra-gelo ou fecho), se o interruptor `whatsapp_audio` deixar.
+          const a = await talvezAudioWhatsApp({ para: from, resposta: reply, referencia: m.id ?? `${from}-${Date.now()}` })
+          if (!a.enviado && a.motivo !== 'desligado' && a.motivo !== 'travas') console.warn('[whatsapp] áudio não saiu:', a.motivo)
+        }
       }
     }
   } catch (e) {

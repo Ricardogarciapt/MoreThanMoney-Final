@@ -88,9 +88,9 @@ export function textoParaAudio(resposta: string): string {
 
 type Db = StorageVoz & { from: (t: string) => any }
 
-export async function lerConfigAudio(db: Db): Promise<ConfigAudio> {
+export async function lerConfigAudio(db: Db, chave: string = CHAVE_AUDIO_DM): Promise<ConfigAudio> {
   try {
-    const { data } = await db.from('site_settings').select('value').eq('key', CHAVE_AUDIO_DM).maybeSingle()
+    const { data } = await db.from('site_settings').select('value').eq('key', chave).maybeSingle()
     const v = (typeof data?.value === 'string' ? JSON.parse(data.value) : data?.value) ?? {}
     const t = Number(v.tecto_dia)
     return { ligado: v.ligado === true, tectoDia: Number.isFinite(t) && t >= 0 ? Math.min(t, 200) : TECTO_DIA_OMISSAO }
@@ -99,13 +99,13 @@ export async function lerConfigAudio(db: Db): Promise<ConfigAudio> {
   }
 }
 
-function pastaDoDia(agora = new Date()): string {
-  return `dm-audio/${agora.toISOString().slice(0, 10)}`
+export function pastaDoDia(agora = new Date(), prefixo = 'dm-audio'): string {
+  return `${prefixo}/${agora.toISOString().slice(0, 10)}`
 }
 
-async function audiosHoje(db: Db): Promise<number> {
+export async function audiosHoje(db: Db, prefixo = 'dm-audio'): Promise<number> {
   try {
-    const { data } = await db.storage.from('lms-tts').list(pastaDoDia(), { limit: 1000 })
+    const { data } = await db.storage.from('lms-tts').list(pastaDoDia(new Date(), prefixo), { limit: 1000 })
     return Array.isArray(data) ? data.length : 0
   } catch {
     return Number.POSITIVE_INFINITY // sem contagem, não se arrisca a fatura

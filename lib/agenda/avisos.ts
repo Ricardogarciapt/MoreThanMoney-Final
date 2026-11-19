@@ -43,6 +43,14 @@ export interface DadosDoAviso {
 const base = () => (process.env.NEXT_PUBLIC_SITE_URL || 'https://www.morethanmoney.pt').replace(/\/$/, '')
 
 /** A hora escrita como a pessoa a lê. Sempre com o fuso à vista — ver o cabeçalho de `horas.ts`. */
+/** O {{3}} do template `mtm_aviso_marcacao`: o que mudou, numa linha, sem links. */
+const ESTADO_CURTO: Record<MotivoAviso, (p: DadosDoAviso) => string> = {
+  marcada: (p) => `fica marcada para ${quando(p.inicio)}`,
+  remarcada: (p) => `mudou para ${quando(p.inicio)}`,
+  cancelada: (p) => `a de ${quando(p.inicio)} foi cancelada`,
+  confirmada: (p) => `está confirmada para ${quando(p.inicio)}`,
+}
+
 function quando(d: Date): string {
   return `${d.toLocaleString('pt-PT', { timeZone: 'Europe/Lisbon', dateStyle: 'full', timeStyle: 'short' })} (hora de Lisboa)`
 }
@@ -137,13 +145,20 @@ export async function avisarConvidado(motivo: MotivoAviso, p: DadosDoAviso): Pro
 
   if (p.telefone) {
     try {
-      const { enviarWhatsApp } = await import('@/lib/whatsapp-mensageiro')
+      const { enviarTextoOuTemplate } = await import('@/lib/whatsapp/texto-ou-template')
+      const { primeiroNome } = await import('@/lib/whatsapp/templates-mtm')
       /**
        * `finalidade: 'servico'` e não `'campanha'`: isto é o aviso de uma chamada que a PRÓPRIA
        * pessoa marcou. É a diferença entre falar com alguém sobre o que ele pediu e escrever-lhe
        * sem ele ter pedido nada — e é essa distinção que `whatsapp-envio` usa para decidir.
        */
-      const r = await enviarWhatsApp({ para: p.telefone, texto: t.curto, finalidade: 'servico' })
+      // Fora das 24 h a Meta recusa texto livre: vai o template aprovado `mtm_aviso_marcacao`.
+      const r = await enviarTextoOuTemplate({
+        para: p.telefone,
+        texto: t.curto,
+        finalidade: 'servico',
+        template: { nome: 'mtm_aviso_marcacao', idioma: 'pt_PT', parametros: [primeiroNome(p.nome), p.tipoNome, ESTADO_CURTO[motivo](p)] },
+      })
       whatsapp = r.enviado
       if (!whatsapp) notas.push(`whatsapp não saiu: ${r.porque}`)
     } catch (e) {
