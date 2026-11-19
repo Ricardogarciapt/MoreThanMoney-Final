@@ -28,6 +28,16 @@ const nextConfig = {
   compress: true,
   reactStrictMode: true,
   serverExternalPackages: ["ssh2", "metaapi.cloud-sdk", "pdfkit"],
+  async rewrites() {
+    return {
+      // Páginas estáticas em public/ servidas sem o «/index.html» no endereço. Sem isto,
+      // /marca/ricardogarciapt dava 404 (o Next não abre o index.html de uma pasta de public/).
+      beforeFiles: [
+        { source: '/marca/ricardogarciapt', destination: '/marca/ricardogarciapt/index.html' },
+        { source: '/marca/ricardogarciapt/', destination: '/marca/ricardogarciapt/index.html' },
+      ],
+    }
+  },
   async redirects() {
     return [
       {

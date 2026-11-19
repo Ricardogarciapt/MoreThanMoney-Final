@@ -3,19 +3,28 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Ricardo Garcia · Marca</title>
-<meta name="description" content="Guia de marca de Ricardo Garcia (@ricardogarciapt): logótipo, cores e tipos de letra para vídeos e reels.">
+<title>Ricardo Garcia · @ricardogarciapt</title>
+<meta name="description" content="Ricardo Garcia (@ricardogarciapt): desenvolvimento, trading e automação. Fundador da MoreThanMoney. Formação, MTM Auto, MTM Funded e soluções com IA para negócios.">
 <meta name="theme-color" content="#0A0A0A">
-<meta property="og:title" content="Ricardo Garcia · Marca">
+<link rel="canonical" href="https://www.morethanmoney.pt/marca/ricardogarciapt">
+<meta property="og:type" content="profile">
+<meta property="og:title" content="Ricardo Garcia · @ricardogarciapt">
+<meta property="og:description" content="Desenvolvimento, trading e automação. Fundador da MoreThanMoney.">
 <meta property="og:site_name" content="Ricardo Garcia">
+<meta property="og:url" content="https://www.morethanmoney.pt/marca/ricardogarciapt">
 <meta property="og:image" content="https://www.morethanmoney.pt/marca/ricardogarciapt/logo-ricardo-garcia-fundo.png">
-<link rel="image_src" href="logo-rg-monograma.png">
-<link rel="icon" type="image/png" href="icone.png">
-<link rel="apple-touch-icon" href="icone.png">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="image_src" href="/marca/ricardogarciapt/logo-rg-monograma.png">
+<link rel="icon" type="image/png" href="/marca/ricardogarciapt/icone.png">
+<link rel="apple-touch-icon" href="/marca/ricardogarciapt/icone.png">
+<link rel="preload" as="image" href="/marca/ricardogarciapt/foto-ricardo.jpg">
+<script type="application/ld+json">
+{"@context":"https://schema.org","@type":"Person","name":"Ricardo Garcia","alternateName":"@ricardogarciapt","url":"https://www.morethanmoney.pt/marca/ricardogarciapt","image":"https://www.morethanmoney.pt/marca/ricardogarciapt/foto-ricardo.jpg","jobTitle":"Fundador","worksFor":{"@type":"Organization","name":"MoreThanMoney","url":"https://www.morethanmoney.pt"},"sameAs":["https://www.instagram.com/ricardogarciapt/","https://www.instagram.com/morethanmoney.pt/"]}
+</script>
 <style>
-@font-face { font-family: "Anton"; src: url("fontes/Anton.ttf") format("truetype"); font-display: swap; }
-@font-face { font-family: "Oswald"; src: url("fontes/Oswald.ttf") format("truetype"); font-weight: 200 700; font-display: swap; }
-@font-face { font-family: "Kalam"; src: url("fontes/Kalam.ttf") format("truetype"); font-display: swap; }
+@font-face { font-family: "Anton"; src: url("/marca/ricardogarciapt/fontes/Anton.ttf") format("truetype"); font-display: swap; }
+@font-face { font-family: "Oswald"; src: url("/marca/ricardogarciapt/fontes/Oswald.ttf") format("truetype"); font-weight: 200 700; font-display: swap; }
+@font-face { font-family: "Kalam"; src: url("/marca/ricardogarciapt/fontes/Kalam.ttf") format("truetype"); font-display: swap; }
 :root {
   --ciano: #0098B2;
   --ciano-claro: #1EAAE6;
@@ -25,19 +34,110 @@
   --branco: #FFFFFF;
   --cinza: #A6A6A6;
   --ouro: #D2A63C;
+  --ouro-claro: #E9C46A;
   --noite: #040A1A;
+  --linha: #1d2230;
+  --cartao: #0f121a;
 }
 * { box-sizing: border-box; }
-body { margin: 0; background: var(--carvao); color: var(--branco); font-family: "Oswald", system-ui, sans-serif; line-height: 1.5; }
-main { max-width: 1040px; margin: 0 auto; padding: 48px 16px 80px; }
-header { display: flex; align-items: center; gap: 20px; flex-wrap: wrap; }
-.logo { width: min(520px, 100%); height: auto; }
-h1, h2 { font-family: "Anton", sans-serif; text-transform: uppercase; font-weight: 400; letter-spacing: .5px; }
-h1 { font-size: clamp(40px, 8vw, 84px); line-height: .95; margin: 32px 0 8px; font-style: italic; }
-h1 .c { color: var(--ciano); }
-h2 { font-size: 30px; margin: 56px 0 16px; color: var(--ciano); }
-p { color: #d6d6d6; max-width: 70ch; }
-.handle { color: var(--cinza); font-size: 22px; }
+html { scroll-behavior: smooth; }
+body { margin: 0; background: var(--carvao); color: var(--branco); font-family: "Oswald", system-ui, sans-serif; line-height: 1.55; -webkit-font-smoothing: antialiased; overflow-x: hidden; }
+a { color: inherit; }
+img { max-width: 100%; }
+.wrap { max-width: 1120px; margin: 0 auto; padding: 0 16px; }
+h1, h2, h3 { font-family: "Anton", sans-serif; text-transform: uppercase; font-weight: 400; letter-spacing: .5px; margin: 0; }
+p { color: #d6d6d6; }
+.c { color: var(--ciano); }
+.kalam { font-family: "Kalam", cursive; color: var(--ouro); }
+
+/* barra de topo */
+.topo { position: sticky; top: 0; z-index: 10; background: rgba(10,10,10,.85); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); border-bottom: 1px solid #161616; }
+.topo .wrap { display: flex; align-items: center; justify-content: space-between; gap: 12px; height: 64px; }
+.topo .marca { display: flex; align-items: center; gap: 10px; text-decoration: none; }
+.topo .marca img { width: 40px; height: 40px; border-radius: 10px; }
+.topo .marca span { font-family: "Anton", sans-serif; text-transform: uppercase; font-style: italic; font-size: 20px; }
+.topo nav { display: flex; gap: 18px; font-size: 15px; color: #cfcfcf; }
+.topo nav a { text-decoration: none; }
+.topo nav a:hover { color: var(--ciano-claro); }
+.topo .btn { padding: 9px 14px; font-size: 14px; }
+@media (max-width: 760px) { .topo nav { display: none; } }
+
+/* botões */
+.btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; padding: 14px 22px; border-radius: 10px; font-weight: 600; font-size: 17px; text-decoration: none; letter-spacing: .3px; transition: transform .15s ease, background .15s ease, border-color .15s ease; min-height: 44px; }
+.btn:hover { transform: translateY(-1px); }
+.btn-azul { background: linear-gradient(135deg, var(--ciano-claro), var(--azul-faixa)); color: #fff; }
+.btn-ouro { background: var(--ouro); color: #111; }
+.btn-ouro:hover { background: var(--ouro-claro); }
+.btn-linha { border: 1px solid #333; color: #fff; }
+.btn-linha:hover { border-color: var(--ciano); }
+
+/* hero */
+.hero { position: relative; padding: 56px 0 72px; background: radial-gradient(900px 500px at 85% 10%, rgba(18,86,190,.35), transparent 60%), linear-gradient(180deg, var(--noite), var(--carvao) 85%); overflow: hidden; }
+.hero .wrap { display: grid; grid-template-columns: 1.1fr .9fr; gap: 40px; align-items: center; }
+.hero .logo { width: min(440px, 100%); height: auto; display: block; margin-bottom: 18px; }
+.hero h1 { font-style: italic; font-size: clamp(44px, 7.5vw, 92px); line-height: .95; }
+.pincel { display: inline-block; background: linear-gradient(90deg, var(--ciano-claro), var(--azul-faixa)); padding: 2px 14px 4px; transform: skew(-6deg); }
+.pincel > span { display: inline-block; transform: skew(6deg); }
+.hero .sub { font-size: clamp(18px, 2.2vw, 22px); color: #e6e6e6; margin: 20px 0 8px; max-width: 54ch; }
+.hero .handle { color: var(--cinza); font-size: 18px; }
+.hero .nota { font-size: 24px; margin-top: 6px; }
+.hero .acoes { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 26px; }
+.hero .foto { position: relative; }
+.hero .foto img { width: 100%; height: auto; aspect-ratio: 4/5; object-fit: cover; border-radius: 18px; display: block; box-shadow: 0 30px 80px rgba(0,0,0,.6), 0 0 0 1px rgba(30,170,230,.25); }
+.hero .foto .selo { position: absolute; left: -14px; bottom: 22px; width: 92px; height: 92px; border-radius: 18px; box-shadow: 0 10px 30px rgba(0,0,0,.5); }
+@media (max-width: 860px) {
+  .hero { padding-top: 32px; }
+  .hero .wrap { grid-template-columns: 1fr; }
+  .hero .foto { order: -1; max-width: 420px; margin: 0 auto; }
+  .hero .foto .selo { left: 8px; width: 72px; height: 72px; }
+}
+
+section { padding: 72px 0; }
+.titulo { font-size: clamp(32px, 5vw, 52px); font-style: italic; line-height: 1; margin-bottom: 14px; }
+.lead { font-size: 19px; max-width: 64ch; }
+
+/* sobre */
+.sobre .wrap { display: grid; grid-template-columns: .8fr 1.2fr; gap: 44px; align-items: center; }
+.sobre img { width: 100%; aspect-ratio: 4/5; object-fit: cover; border-radius: 18px; }
+.pilares { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-top: 24px; }
+.pilar { background: var(--cartao); border: 1px solid var(--linha); border-radius: 14px; padding: 18px; }
+.pilar h3 { font-size: 22px; color: var(--ciano-claro); margin-bottom: 6px; }
+.pilar p { margin: 0; font-size: 15px; }
+@media (max-width: 860px) { .sobre .wrap { grid-template-columns: 1fr; } .sobre img { max-width: 420px; } .pilares { grid-template-columns: 1fr; } }
+
+/* caminhos */
+.caminhos { background: linear-gradient(180deg, var(--carvao), #070b14); }
+.grelha { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; margin-top: 30px; }
+@media (max-width: 960px) { .grelha { grid-template-columns: repeat(2, 1fr); } }
+@media (max-width: 620px) { .grelha { grid-template-columns: 1fr; } }
+.cartao { display: flex; flex-direction: column; background: var(--cartao); border: 1px solid var(--linha); border-radius: 16px; padding: 22px; text-decoration: none; transition: border-color .2s ease, transform .2s ease; }
+.cartao:hover { border-color: var(--ciano); transform: translateY(-2px); }
+.cartao .etiqueta { font-size: 13px; letter-spacing: 1.5px; text-transform: uppercase; color: var(--cinza); }
+.cartao h3 { font-size: 28px; margin: 6px 0 8px; font-style: italic; }
+.cartao p { margin: 0 0 16px; font-size: 16px; flex: 1; }
+.cartao .ir { color: var(--ciano-claro); font-weight: 600; }
+.cartao.mtm h3 { color: var(--ouro); }
+.cartao.mtm .ir { color: var(--ouro-claro); }
+
+/* agendar */
+.agendar { text-align: center; }
+.agendar .caixa { background: radial-gradient(600px 300px at 50% 0%, rgba(30,170,230,.22), transparent 70%), var(--cartao); border: 1px solid var(--linha); border-radius: 22px; padding: 48px 20px; }
+.agendar .lead { margin: 10px auto 26px; }
+.agendar .acoes { display: flex; flex-wrap: wrap; gap: 12px; justify-content: center; }
+
+/* redes */
+.redes { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-top: 26px; }
+@media (max-width: 860px) { .redes { grid-template-columns: repeat(2, 1fr); } }
+@media (max-width: 420px) { .redes { grid-template-columns: 1fr; } }
+.rede { display: flex; align-items: center; gap: 12px; padding: 16px; border-radius: 14px; background: var(--cartao); border: 1px solid var(--linha); text-decoration: none; min-height: 64px; }
+.rede:hover { border-color: var(--ciano); }
+.rede svg { width: 26px; height: 26px; flex: none; fill: var(--ciano-claro); }
+.rede b { display: block; font-size: 16px; }
+.rede span { font-size: 14px; color: var(--cinza); }
+
+/* kit de marca */
+.kit { border-top: 1px solid #161616; }
+.kit h2.sec { font-size: 30px; margin: 48px 0 16px; color: var(--ciano); }
 .cores { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 12px; }
 .cor { border-radius: 10px; overflow: hidden; border: 1px solid #222; }
 .cor div { height: 90px; }
@@ -46,69 +146,514 @@ p { color: #d6d6d6; max-width: 70ch; }
 .tipo { background: #111; border-radius: 12px; padding: 20px; margin-bottom: 12px; }
 .anton { font-family: "Anton", sans-serif; font-style: italic; text-transform: uppercase; font-size: clamp(34px, 6vw, 60px); line-height: 1; }
 .oswald { font-family: "Oswald", sans-serif; font-size: 26px; }
-.kalam { font-family: "Kalam", cursive; font-size: 28px; color: var(--ouro); }
+.tipo .kalam { font-size: 28px; }
 .faixa { display: inline-block; background: var(--azul-faixa); font-family: "Anton", sans-serif; text-transform: uppercase; padding: 6px 16px; font-size: 26px; }
 .regras li { margin: 6px 0; color: #d6d6d6; }
-.capa { width: min(420px, 100%); border-radius: 12px; display: block; }
-.mtm { width: 140px; height: auto; opacity: .9; }
-footer { margin-top: 64px; color: #777; font-size: 13px; }
+.capa { width: min(300px, 100%); border-radius: 12px; display: block; }
+.logo-kit { width: min(520px, 100%); height: auto; border-radius: 12px; display: block; }
+.mtm-logo { width: 140px; height: auto; opacity: .9; vertical-align: middle; }
+
+footer { padding: 40px 0 60px; border-top: 1px solid #161616; color: #8a8a8a; font-size: 14px; }
+footer .linha { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 16px; }
+footer .aviso { margin-top: 18px; font-size: 13px; color: #777; max-width: 90ch; }
+
+@media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } .btn, .cartao { transition: none; } }
+
+/* ── v2 cinemático ─────────────────────────────────────────────── */
+.grao { position: fixed; inset: -50%; z-index: 50; pointer-events: none; opacity: .07; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E"); animation: grao 1s steps(6) infinite; }
+@keyframes grao { 0%{transform:translate(0,0)} 20%{transform:translate(-4%,3%)} 40%{transform:translate(3%,-2%)} 60%{transform:translate(-2%,-4%)} 80%{transform:translate(4%,2%)} 100%{transform:translate(0,0)} }
+.hero { min-height: calc(100svh - 64px); display: flex; align-items: center; }
+.hero > .wrap { position: relative; z-index: 2; width: 100%; }
+#cgi { position: absolute; inset: 0; width: 100%; height: 100%; z-index: 1; display: block; }
+.hero::after { content: ""; position: absolute; inset: auto 0 0 0; height: 160px; background: linear-gradient(transparent, var(--carvao)); z-index: 1; pointer-events: none; }
+.palavras .p { display: inline-block; opacity: 0; filter: blur(12px); transform: translateY(40px) scale(.96); transition: opacity .7s ease, filter .7s ease, transform .9s cubic-bezier(.2,1.4,.4,1); }
+.palavras.vis .p { opacity: 1; filter: blur(0); transform: none; }
+.aparece { opacity: 0; transform: translateY(30px); transition: opacity .9s ease, transform .9s cubic-bezier(.2,.9,.3,1); }
+.aparece.vis { opacity: 1; transform: none; }
+.desce { position: absolute; left: 50%; bottom: 22px; transform: translateX(-50%); z-index: 3; color: var(--cinza); font-size: 13px; letter-spacing: 3px; text-transform: uppercase; text-decoration: none; display: flex; flex-direction: column; align-items: center; gap: 6px; }
+.desce i { width: 1px; height: 36px; background: linear-gradient(var(--ciano-claro), transparent); animation: desce 1.8s ease-in-out infinite; }
+@keyframes desce { 0%{transform:scaleY(0);transform-origin:top} 50%{transform:scaleY(1);transform-origin:top} 51%{transform-origin:bottom} 100%{transform:scaleY(0);transform-origin:bottom} }
+.hero .foto img:first-child { animation: kenburns 18s ease-in-out infinite alternate; }
+@keyframes kenburns { from { transform: scale(1); } to { transform: scale(1.06) translate(-1%, -1%); } }
+.hero .foto { overflow: visible; }
+.hero .foto .moldura { border-radius: 18px; overflow: hidden; box-shadow: 0 30px 80px rgba(0,0,0,.6), 0 0 0 1px rgba(30,170,230,.25); }
+.hero .foto .moldura img { box-shadow: none; border-radius: 0; }
+
+/* vídeo */
+.video-sec { padding-top: 40px; }
+.ecra { position: relative; border-radius: 20px; overflow: hidden; background: #000; aspect-ratio: 16/9; box-shadow: 0 40px 120px rgba(18,86,190,.25), 0 0 0 1px #1d2230; }
+.ecra video { width: 100%; height: 100%; display: block; object-fit: cover; }
+.ecra .play { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 14px; background: radial-gradient(circle at center, rgba(4,10,26,.25), rgba(4,10,26,.75)); border: 0; color: #fff; cursor: pointer; font-family: inherit; font-size: 18px; letter-spacing: 1px; }
+.ecra .play b { width: 88px; height: 88px; border-radius: 50%; display: grid; place-items: center; background: linear-gradient(135deg, var(--ciano-claro), var(--azul-faixa)); box-shadow: 0 0 0 0 rgba(30,170,230,.6); animation: pulso 2.2s infinite; }
+.ecra .play b::before { content: ""; border-left: 26px solid #fff; border-top: 16px solid transparent; border-bottom: 16px solid transparent; margin-left: 6px; }
+@keyframes pulso { 0%{box-shadow:0 0 0 0 rgba(30,170,230,.55)} 70%{box-shadow:0 0 0 26px rgba(30,170,230,0)} 100%{box-shadow:0 0 0 0 rgba(30,170,230,0)} }
+.ecra.a-tocar .play { display: none; }
+.legenda-video { color: var(--cinza); font-size: 14px; margin-top: 10px; }
+
+/* trajeto: deslizes */
+.trajeto { position: relative; overflow: hidden; }
+.trajeto .topo-sec { display: flex; align-items: end; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
+.setas { display: flex; gap: 8px; }
+.setas button { width: 48px; height: 48px; border-radius: 50%; border: 1px solid #333; background: transparent; color: #fff; font-size: 20px; cursor: pointer; transition: border-color .2s, background .2s; }
+.setas button:hover { border-color: var(--ciano); background: rgba(0,152,178,.12); }
+.trilho { display: flex; gap: 18px; overflow-x: auto; scroll-snap-type: x mandatory; scroll-behavior: smooth; padding: 30px max(16px, calc((100vw - 1120px) / 2 + 16px)) 20px; scrollbar-width: none; }
+.trilho::-webkit-scrollbar { display: none; }
+.cap { flex: 0 0 min(860px, 86vw); scroll-snap-align: center; display: grid; grid-template-columns: .9fr 1.1fr; background: var(--cartao); border: 1px solid var(--linha); border-radius: 22px; overflow: hidden; min-height: 460px; transition: transform .6s cubic-bezier(.2,.9,.3,1), opacity .6s ease, filter .6s ease; transform: scale(.93); opacity: .45; filter: saturate(.4); }
+.cap.ativo { transform: none; opacity: 1; filter: none; }
+.cap .img { position: relative; overflow: hidden; }
+.cap .img img { width: 100%; height: 100%; object-fit: cover; display: block; transform: scale(1.08); transition: transform 6s ease; }
+.cap.ativo .img img { transform: scale(1); }
+.cap .img::after { content: ""; position: absolute; inset: 0; background: linear-gradient(90deg, transparent 55%, var(--cartao)); }
+.cap[data-tom="frio"] .img img { filter: grayscale(1) contrast(1.15) brightness(.85); }
+.cap[data-tom="azul"] .img::before { content: ""; position: absolute; inset: 0; z-index: 1; background: linear-gradient(160deg, rgba(18,86,190,.35), transparent 60%); mix-blend-mode: screen; }
+.cap[data-tom="ouro"] .img::before { content: ""; position: absolute; inset: 0; z-index: 1; background: linear-gradient(160deg, rgba(210,166,60,.35), transparent 60%); mix-blend-mode: screen; }
+.cap .txt { padding: 34px 30px; display: flex; flex-direction: column; justify-content: center; }
+.cap .num { font-family: "Anton", sans-serif; font-size: 82px; line-height: .8; color: transparent; -webkit-text-stroke: 1px rgba(30,170,230,.6); }
+.cap[data-tom="ouro"] .num { -webkit-text-stroke-color: rgba(210,166,60,.7); }
+.cap h3 { font-size: clamp(28px, 3.6vw, 42px); font-style: italic; line-height: 1; margin: 12px 0 14px; }
+.cap p { font-size: 17px; margin: 0 0 10px; }
+.cap .kalam { font-size: 22px; margin-top: 6px; }
+.progresso { max-width: 1120px; margin: 4px auto 0; padding: 0 16px; display: flex; gap: 6px; }
+.progresso span { flex: 1; height: 3px; border-radius: 3px; background: #222; overflow: hidden; position: relative; cursor: pointer; }
+.progresso span::after { content: ""; position: absolute; inset: 0; background: linear-gradient(90deg, var(--ciano-claro), var(--ouro)); transform: scaleX(0); transform-origin: left; transition: transform .5s ease; }
+.progresso span.on::after { transform: scaleX(1); }
+@media (max-width: 760px) { .cap { grid-template-columns: 1fr; min-height: 0; } .cap .img { height: 280px; } .cap .img::after { background: linear-gradient(180deg, transparent 55%, var(--cartao)); } .cap .txt { padding: 22px 20px 26px; } .cap .num { font-size: 60px; } }
+.clarao { position: fixed; inset: 0; z-index: 40; pointer-events: none; opacity: 0; background: radial-gradient(800px 500px at 70% 30%, rgba(233,196,106,.35), transparent 60%), radial-gradient(700px 500px at 20% 70%, rgba(30,170,230,.3), transparent 60%); transition: opacity .25s ease; mix-blend-mode: screen; }
+.clarao.on { opacity: 1; }
+
+/* ligação à MTM */
+.liga { background: radial-gradient(800px 400px at 50% 0%, rgba(210,166,60,.12), transparent 70%); }
+.liga .wrap { display: grid; grid-template-columns: 1fr 1fr; gap: 40px; align-items: center; }
+.liga svg { width: 100%; height: auto; }
+.liga .fio { fill: none; stroke-width: 1.5; stroke-dasharray: 600; stroke-dashoffset: 600; transition: stroke-dashoffset 2s ease; }
+.liga.vis .fio { stroke-dashoffset: 0; }
+.liga .no text { font-family: "Oswald", sans-serif; font-size: 15px; fill: #e6e6e6; }
+.liga .pulsar { animation: pulsar 2.6s ease-in-out infinite; transform-box: fill-box; transform-origin: center; }
+@keyframes pulsar { 0%,100%{transform:scale(1);opacity:.9} 50%{transform:scale(1.25);opacity:.4} }
+@media (max-width: 860px) { .liga .wrap { grid-template-columns: 1fr; } }
+.ouro { color: var(--ouro); }
+
+@media (max-width: 860px) {
+  .hero { min-height: 0; padding-bottom: 80px; }
+  .hero .foto { max-width: 300px; }
+  .hero .logo { width: min(300px, 80%); }
+  .hero .acoes .btn { flex: 1 1 100%; }
+  .desce { display: none; }
+  .liga .no text { font-size: 19px; }
+  .liga svg { max-width: 460px; margin: 0 auto; display: block; }
+  section { padding: 56px 0; }
+  .ecra .play b { width: 72px; height: 72px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .grao, .desce i, .hero .foto img:first-child, .ecra .play b, .liga .pulsar { animation: none; }
+  .palavras .p, .aparece, .cap, .cap .img img, .liga .fio { transition: none; opacity: 1; filter: none; transform: none; stroke-dashoffset: 0; }
+}
 </style>
 </head>
 <body>
-<main>
-  <header>
-    <img class="logo" src="logo-ricardo-garcia.png" alt="Ricardo Garcia logo" width="1414" height="420">
-  </header>
-  <h1>Ricardo<br><span class="c">Garcia</span></h1>
-  <div class="handle">@ricardogarciapt · desenvolvimento e trading</div>
-  <p>Guia de marca pessoal do Ricardo Garcia para vídeos, reels e capas. Fotografia a cores com luz azul (ou a preto e branco), títulos fortes em maiúsculas com uma linha em ciano e outra em branco, sobre carvão.</p>
 
-  <h2>Cores</h2>
-  <div class="cores">
-    <div class="cor"><div style="background:#0098B2"></div><span><b>#0098B2</b>Ciano principal</span></div>
-    <div class="cor"><div style="background:#1EAAE6"></div><span><b>#1EAAE6</b>Ciano claro</span></div>
-    <div class="cor"><div style="background:#1256BE"></div><span><b>#1256BE</b>Azul da faixa</span></div>
-    <div class="cor"><div style="background:#0A0A0A"></div><span><b>#0A0A0A</b>Carvão (fundo)</span></div>
-    <div class="cor"><div style="background:#040A1A"></div><span><b>#040A1A</b>Azul-noite (gradiente)</span></div>
-    <div class="cor"><div style="background:#FFFFFF"></div><span><b>#FFFFFF</b>Branco (texto)</span></div>
-    <div class="cor"><div style="background:#A6A6A6"></div><span><b>#A6A6A6</b>Cinza (@ e notas)</span></div>
-    <div class="cor"><div style="background:#D2A63C"></div><span><b>#D2A63C</b>Ouro MTM (destaque)</span></div>
+<div class="grao" aria-hidden="true"></div>
+<div class="clarao" aria-hidden="true"></div>
+
+<header class="topo">
+  <div class="wrap">
+    <a class="marca" href="#inicio" aria-label="Ricardo Garcia, início">
+      <img src="/marca/ricardogarciapt/logo-rg-monograma.png" alt="Logótipo RG de Ricardo Garcia" width="40" height="40">
+      <span>Ricardo <span class="c">Garcia</span></span>
+    </a>
+    <nav aria-label="Secções">
+      <a href="#historia">História</a>
+      <a href="#trajeto">Trajeto</a>
+      <a href="#caminhos">Por onde começar</a>
+      <a href="#redes">Redes</a>
+      <a href="#marca">Marca</a>
+    </nav>
+    <a class="btn btn-azul" href="/agendar">Marcar conversa</a>
   </div>
+</header>
 
-  <h2>Tipos de letra</h2>
-  <div class="tipo"><div class="anton">Títulos em <span style="color:var(--ciano)">Anton</span></div><p>Anton, maiúsculas, itálico. Uma linha em ciano, outra em branco.</p></div>
-  <div class="tipo"><div class="oswald">Oswald · @ricardogarciapt · legendas e etiquetas</div><p>Oswald para o @, legendas e etiquetas.</p></div>
-  <div class="tipo"><div class="kalam">Kalam: notas escritas à mão</div><p>Kalam para pequenas notas manuscritas.</p></div>
+<main id="inicio">
 
-  <h2>Estilo</h2>
-  <ul class="regras">
-    <li>Fotografias e vídeo do Ricardo a cores, com luz e ambiente azul; o preto e branco de contraste alto também serve.</li>
-    <li>Pinceladas azuis (#1EAAE6 a #1256BE) por baixo dos títulos, como traço de pincel.</li>
-    <li>Nota curta manuscrita em Kalam, a ouro #D2A63C (por exemplo «e a tua, chega?»).</li>
-    <li>Logo MoreThanMoney a ouro no fundo, @ricardogarciapt em baixo.</li>
-    <li>Título em duas linhas: uma em ciano <b>#0098B2</b>, outra em branco.</li>
-    <li>@ricardogarciapt sempre em cinza <b>#A6A6A6</b>, em Oswald.</li>
-    <li>Chamada para ação numa faixa azul: <span class="faixa">Comenta SISTEMA</span></li>
-    <li>Legendas em branco com a palavra-chave em ciano.</li>
-    <li>Conteúdo de trading leva sempre a nota: conteúdo educativo, não é aconselhamento financeiro.</li>
-  </ul>
+  <section class="hero">
+    <canvas id="cgi" aria-hidden="true"></canvas>
+    <div class="wrap">
+      <div>
+        <img class="logo aparece" src="/marca/ricardogarciapt/logo-ricardo-garcia.png" alt="Ricardo Garcia logo" width="1414" height="420">
+        <h1 class="palavras" data-palavras>Tecnologia ao<br><span class="pincel"><span>serviço do teu tempo</span></span></h1>
+        <p class="sub aparece">Sou o Ricardo Garcia. Catorze anos de farda, fuzileiro e GNR, até queimar o barco e construir a MoreThanMoney. Hoje desenvolvo sistemas de trading, automação e IA, e ensino a usá-los com método e transparência.</p>
+        <div class="handle aparece">@ricardogarciapt · desenvolvimento e trading</div>
+        <div class="nota kalam aparece">e o teu tempo, chega?</div>
+        <div class="acoes aparece">
+          <a class="btn btn-azul" href="#historia">Ver a minha história</a>
+          <a class="btn btn-linha" href="#caminhos">Por onde começar</a>
+        </div>
+      </div>
+      <div class="foto aparece">
+        <div class="moldura"><img src="/marca/ricardogarciapt/foto-ricardo.jpg" alt="Ricardo Garcia em Lisboa, ao fim da tarde, com o portátil" width="900" height="1125" fetchpriority="high"></div>
+        <img class="selo" src="/marca/ricardogarciapt/logo-rg-monograma.png" alt="" width="92" height="92">
+      </div>
+    </div>
+    <a class="desce" href="#historia" aria-label="Descer para a história">desliza<i></i></a>
+  </section>
 
-  <h2>Exemplos de capa</h2>
-  <div style="display:flex;gap:12px;flex-wrap:wrap"><img class="capa" style="width:min(300px,100%)" src="exemplo-capa-3.jpg" alt="Exemplo de capa de reel do @ricardogarciapt"><img class="capa" style="width:min(300px,100%)" src="exemplo-capa-2.jpg" alt="Exemplo de capa de reel do Ricardo Garcia"><img class="capa" style="width:min(300px,100%)" src="exemplo-capa.jpg" alt="Exemplo de capa a preto e branco"></div>
+  <section class="video-sec" id="historia">
+    <div class="wrap">
+      <h2 class="titulo palavras" data-palavras>A minha <span class="c">história</span> em 1 minuto</h2>
+      <p class="lead aparece">Quem sou, como cheguei aqui e porque é que a MoreThanMoney existe. Contado por mim.</p>
+      <div class="ecra aparece" id="ecra">
+        <video id="video-ricardo" preload="none" playsinline poster="/marca/ricardogarciapt/apresentacao-ricardo-poster.jpg">
+          <source src="/marca/ricardogarciapt/apresentacao-ricardo.mp4" type="video/mp4">
+          <track kind="captions" srclang="pt" label="Português" src="/marca/ricardogarciapt/apresentacao-ricardo.vtt">
+        </video>
+        <button class="play" type="button" aria-label="Ver o vídeo de apresentação do Ricardo"><b></b>Ver o vídeo</button>
+      </div>
+      <p class="legenda-video">Vídeo com o gémeo digital do Ricardo, criado com IA a partir da cara e da voz dele.</p>
+    </div>
+  </section>
 
-  <h2>Logótipo</h2>
-  <p>Monograma «RG» em Anton itálico (R branco, G ciano) sobre a pincelada azul, ao lado do nome e do @. Usa-se o monograma sozinho em avatares, marcas de água e cantos de vídeo.</p>
-  <div style="display:flex;gap:16px;flex-wrap:wrap;align-items:center">
-    <img src="logo-rg-monograma.png" alt="Ricardo Garcia logo monograma RG" width="200" height="200" style="border-radius:16px">
-    <img src="logo-rg-monograma-transparente.png" alt="Ricardo Garcia logo RG transparente" width="200" height="200" style="background:#1a1a1a;border-radius:16px">
-  </div>
-  <p></p>
-  <img class="logo" src="logo-ricardo-garcia-fundo.png" alt="Ricardo Garcia logo sobre carvão" width="1800" height="420" style="border-radius:12px">
-  <p></p>
-  <img class="logo" src="logo-ricardo-garcia-claro.png" alt="Ricardo Garcia logo sobre fundo claro" width="1800" height="420" style="border-radius:12px">
-  <p><img class="mtm" src="logo-mtm.png" alt="MoreThanMoney logo"> Marca associada: MoreThanMoney.</p>
+  <section class="trajeto" id="trajeto">
+    <div class="wrap topo-sec">
+      <div>
+        <h2 class="titulo palavras" data-palavras>O <span class="c">trajeto</span></h2>
+        <p class="lead aparece" style="margin:0">Seis capítulos, da farda ao digital. Desliza.</p>
+      </div>
+      <div class="setas"><button type="button" data-seta="-1" aria-label="Capítulo anterior">←</button><button type="button" data-seta="1" aria-label="Capítulo seguinte">→</button></div>
+    </div>
+    <div class="trilho" id="trilho" tabindex="0" aria-label="Capítulos do trajeto do Ricardo">
+      <article class="cap" data-tom="frio">
+        <div class="img"><img src="/marca/ricardogarciapt/cap-1.jpg" alt="Retrato a preto e branco do Ricardo, de braços cruzados" loading="lazy" width="720" height="900"></div>
+        <div class="txt">
+          <div class="num">01</div>
+          <h3>Catorze anos <span class="c">de farda</span></h3>
+          <p>Primeiro fuzileiro, depois GNR. Disciplina, missão e horas sem fim.</p>
+          <p>Estive ocupado catorze anos e percebi que não estava a construir nada para o meu futuro.</p>
+        </div>
+      </article>
+      <article class="cap" data-tom="frio">
+        <div class="img"><img src="/marca/ricardogarciapt/cap-6.jpg" alt="O Ricardo pensativo, a olhar pela janela do comboio" loading="lazy" width="720" height="900"></div>
+        <div class="txt">
+          <div class="num">02</div>
+          <h3>Novembro <span class="c">de 2022</span></h3>
+          <p>Uma das piores fases da minha vida. Esgotado, sem saúde, com a minha mulher doente, uma filha de três anos e depois de ter vendido a casa.</p>
+          <div class="kalam">foi aí que conheci o mundo digital.</div>
+        </div>
+      </article>
+      <article class="cap" data-tom="ouro">
+        <div class="img"><img src="/marca/ricardogarciapt/cap-3.jpg" alt="O Ricardo, de olhar decidido, sobre fundo escuro" loading="lazy" width="720" height="900"></div>
+        <div class="txt">
+          <div class="num">03</div>
+          <h3>Queimei <span class="ouro">o barco</span></h3>
+          <p>Se mantivesse um pé na vida antiga e outro na nova, nada ia mudar. Não tinha garantias, mas estava decidido a fazer resultar.</p>
+          <p>Mais tarde, deixei uma carreira de muitos anos.</p>
+        </div>
+      </article>
+      <article class="cap" data-tom="azul">
+        <div class="img"><img src="/marca/ricardogarciapt/cap-2.jpg" alt="O Ricardo na secretária, com gráficos de trading nos ecrãs" loading="lazy" width="720" height="900"></div>
+        <div class="txt">
+          <div class="num">04</div>
+          <h3>Mercados <span class="c">e código</span></h3>
+          <p>Estudei os mercados, aprendi a programar e criei as minhas próprias ferramentas: scanners, automações e apps.</p>
+          <div class="kalam">sem método, é só um palpite.</div>
+        </div>
+      </article>
+      <article class="cap" data-tom="ouro">
+        <div class="img"><img src="/marca/ricardogarciapt/cap-4.jpg" alt="O Ricardo a explicar a um aluno, numa mesa com caderno" loading="lazy" width="720" height="900"></div>
+        <div class="txt">
+          <div class="num">05</div>
+          <h3>Dois pilares, <span class="ouro">uma casa</span></h3>
+          <p>Hoje, com quatro anos de experiência, desenvolvo dois pilares na MoreThanMoney: educação financeira e trading; e negócios digitais, tecnologia e inteligência artificial.</p>
+        </div>
+      </article>
+      <article class="cap" data-tom="azul">
+        <div class="img"><img src="/marca/ricardogarciapt/cap-5.jpg" alt="O Ricardo a caminhar na praia ao pôr do sol" loading="lazy" width="720" height="900"></div>
+        <div class="txt">
+          <div class="num">06</div>
+          <h3>O caminho <span class="c">que construí</span></h3>
+          <p>Não há resultados garantidos: exige conhecimento, compromisso e execução. Mas não precisas de pagar o preço que eu paguei para aprender sozinho.</p>
+          <div class="kalam">nunca subestimes uma reviravolta.</div>
+        </div>
+      </article>
+    </div>
+    <div class="progresso" id="progresso" aria-hidden="true"><span></span><span></span><span></span><span></span><span></span><span></span></div>
+  </section>
 
-  <footer>Ricardo Garcia · @ricardogarciapt · morethanmoney.pt</footer>
+  <section class="liga" id="liga">
+    <div class="wrap">
+      <div>
+        <h2 class="titulo palavras" data-palavras>Onde tudo <span class="ouro">se liga</span></h2>
+        <p class="lead aparece">A marca pessoal é a porta. A MoreThanMoney é a casa. Tudo o que crio vai parar a um destes caminhos, para aprenderes, automatizares ou levares a IA para o teu negócio.</p>
+        <p class="aparece" style="color:var(--cinza)">Um ecossistema, uma regra: educação primeiro, transparência sempre, nenhuma promessa de lucro.</p>
+      </div>
+      <svg viewBox="0 0 460 400" role="img" aria-label="Diagrama: Ricardo Garcia ligado à MoreThanMoney, que se liga a Formação, MTM Auto, MTM Funded e Soluções com IA">
+        <defs>
+          <linearGradient id="g-fio" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#1EAAE6"/><stop offset="1" stop-color="#D2A63C"/></linearGradient>
+          <radialGradient id="g-mtm"><stop offset="0" stop-color="#E9C46A"/><stop offset="1" stop-color="#D2A63C" stop-opacity="0"/></radialGradient>
+        </defs>
+        <path class="fio" stroke="url(#g-fio)" d="M80 200 C150 200 170 200 230 200"/>
+        <path class="fio" stroke="#D2A63C" d="M230 200 C290 160 330 80 390 70"/>
+        <path class="fio" stroke="#D2A63C" d="M230 200 C300 180 340 160 400 160"/>
+        <path class="fio" stroke="#D2A63C" d="M230 200 C300 220 340 240 400 240"/>
+        <path class="fio" stroke="#D2A63C" d="M230 200 C290 240 330 320 390 330"/>
+        <g class="no"><circle cx="80" cy="200" r="44" fill="#0f121a" stroke="#1EAAE6"/><image href="/marca/ricardogarciapt/logo-rg-monograma-transparente.png" x="48" y="168" width="64" height="64"/></g>
+        <g class="no"><circle class="pulsar" cx="230" cy="200" r="54" fill="url(#g-mtm)" opacity=".5"/><circle cx="230" cy="200" r="38" fill="#0f121a" stroke="#D2A63C"/><image href="/marca/ricardogarciapt/logo-mtm.png" x="198" y="176" width="64" height="48" preserveAspectRatio="xMidYMid meet"/></g>
+        <g class="no"><circle cx="390" cy="70" r="7" fill="#D2A63C"/><text x="378" y="48" text-anchor="end">Formação</text></g>
+        <g class="no"><circle cx="400" cy="160" r="7" fill="#D2A63C"/><text x="388" y="140" text-anchor="end">MTM Auto</text></g>
+        <g class="no"><circle cx="400" cy="240" r="7" fill="#D2A63C"/><text x="388" y="268" text-anchor="end">MTM Funded</text></g>
+        <g class="no"><circle cx="390" cy="330" r="7" fill="#D2A63C"/><text x="378" y="360" text-anchor="end">Soluções com IA</text></g>
+      </svg>
+    </div>
+  </section>
+
+  <section class="caminhos" id="caminhos">
+    <div class="wrap">
+      <h2 class="titulo">Por onde <span class="c">começar</span></h2>
+      <p class="lead">Escolhe o caminho que faz sentido para ti. Todos passam pela MoreThanMoney.</p>
+      <div class="grelha">
+        <a class="cartao mtm" href="/register?plan=app_member">
+          <span class="etiqueta">Formação</span>
+          <h3>Membro MTM</h3>
+          <p>A app, as aulas e a comunidade para aprenderes trading e finanças com método.</p>
+          <span class="ir">Entrar na comunidade →</span>
+        </a>
+        <a class="cartao mtm" href="/register?plan=premium">
+          <span class="etiqueta">Formação avançada</span>
+          <h3>Premium</h3>
+          <p>Ideias de trading, scanners e acompanhamento mais próximo. Experimenta grátis durante 3 dias, sem cartão.</p>
+          <span class="ir">Experimentar o Premium →</span>
+        </a>
+        <a class="cartao" href="/mtmauto">
+          <span class="etiqueta">Automação</span>
+          <h3>MTM Auto</h3>
+          <p>Estratégias automáticas ligadas à tua conta, com regras de risco definidas e controlo total do teu lado.</p>
+          <span class="ir">Conhecer o MTM Auto →</span>
+        </a>
+        <a class="cartao" href="/mtmfunded">
+          <span class="etiqueta">Desafios</span>
+          <h3>MTM Funded</h3>
+          <p>Prova o teu método em contas simuladas. Quem cumpre recebe o Patrocínio de Desempenho MTM.</p>
+          <span class="ir">Ver os desafios →</span>
+        </a>
+        <a class="cartao" href="/solucoes">
+          <span class="etiqueta">Para negócios</span>
+          <h3>Soluções com IA</h3>
+          <p>Sites, apps, funis e agentes de IA à medida da tua empresa. Vê exemplos reais.</p>
+          <span class="ir">Ver soluções →</span>
+        </a>
+        <a class="cartao" href="/abrir-conta">
+          <span class="etiqueta">Corretora</span>
+          <h3>Abrir conta</h3>
+          <p>A rota pela corretora regulada que usamos na casa, com o apoio da comunidade.</p>
+          <span class="ir">Abrir conta →</span>
+        </a>
+      </div>
+    </div>
+  </section>
+
+  <section class="agendar">
+    <div class="wrap">
+      <div class="caixa">
+        <h2 class="titulo">Falamos <span class="c">10 minutos?</span></h2>
+        <p class="lead">Conta-me onde estás e para onde queres ir. Dizemos-te com sinceridade se a MoreThanMoney é para ti, e por onde começar.</p>
+        <div class="acoes">
+          <a class="btn btn-azul" href="/agendar">Marcar uma conversa</a>
+          <a class="btn btn-linha" href="https://wa.me/351912666699?text=Ol%C3%A1%20Ricardo%2C%20vim%20da%20tua%20p%C3%A1gina" target="_blank" rel="noopener">Falar no WhatsApp</a>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="redes">
+    <div class="wrap">
+      <h2 class="titulo">Onde me <span class="c">encontras</span></h2>
+      <div class="redes">
+        <a class="rede" href="https://www.instagram.com/ricardogarciapt/" target="_blank" rel="noopener">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2.2c3.2 0 3.6 0 4.8.1 1.2.1 1.8.2 2.2.4.6.2 1 .5 1.4.9.4.4.7.8.9 1.4.2.4.4 1.1.4 2.2.1 1.3.1 1.6.1 4.8s0 3.6-.1 4.8c-.1 1.2-.2 1.8-.4 2.2-.2.6-.5 1-.9 1.4-.4.4-.8.7-1.4.9-.4.2-1.1.4-2.2.4-1.3.1-1.6.1-4.8.1s-3.6 0-4.8-.1c-1.2-.1-1.8-.2-2.2-.4-.6-.2-1-.5-1.4-.9-.4-.4-.7-.8-.9-1.4-.2-.4-.4-1.1-.4-2.2C2.2 15.6 2.2 15.2 2.2 12s0-3.6.1-4.8c.1-1.2.2-1.8.4-2.2.2-.6.5-1 .9-1.4.4-.4.8-.7 1.4-.9.4-.2 1.1-.4 2.2-.4C8.4 2.2 8.8 2.2 12 2.2zm0 4.7a5.1 5.1 0 1 0 0 10.2 5.1 5.1 0 0 0 0-10.2zm0 8.4a3.3 3.3 0 1 1 0-6.6 3.3 3.3 0 0 1 0 6.6zm5.3-9.8a1.2 1.2 0 1 0 0 2.4 1.2 1.2 0 0 0 0-2.4z"/></svg>
+          <div><b>Instagram</b><span>@ricardogarciapt</span></div>
+        </a>
+        <a class="rede" href="https://www.instagram.com/morethanmoney.pt/" target="_blank" rel="noopener">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2.2c3.2 0 3.6 0 4.8.1 1.2.1 1.8.2 2.2.4.6.2 1 .5 1.4.9.4.4.7.8.9 1.4.2.4.4 1.1.4 2.2.1 1.3.1 1.6.1 4.8s0 3.6-.1 4.8c-.1 1.2-.2 1.8-.4 2.2-.2.6-.5 1-.9 1.4-.4.4-.8.7-1.4.9-.4.2-1.1.4-2.2.4-1.3.1-1.6.1-4.8.1s-3.6 0-4.8-.1c-1.2-.1-1.8-.2-2.2-.4-.6-.2-1-.5-1.4-.9-.4-.4-.7-.8-.9-1.4-.2-.4-.4-1.1-.4-2.2C2.2 15.6 2.2 15.2 2.2 12s0-3.6.1-4.8c.1-1.2.2-1.8.4-2.2.2-.6.5-1 .9-1.4.4-.4.8-.7 1.4-.9.4-.2 1.1-.4 2.2-.4C8.4 2.2 8.8 2.2 12 2.2zm0 4.7a5.1 5.1 0 1 0 0 10.2 5.1 5.1 0 0 0 0-10.2zm0 8.4a3.3 3.3 0 1 1 0-6.6 3.3 3.3 0 0 1 0 6.6zm5.3-9.8a1.2 1.2 0 1 0 0 2.4 1.2 1.2 0 0 0 0-2.4z"/></svg>
+          <div><b>MoreThanMoney</b><span>@morethanmoney.pt</span></div>
+        </a>
+        <a class="rede" href="https://t.me/MoreThanMoney_aibot" target="_blank" rel="noopener">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M21.9 4.3 18.7 19.4c-.2 1.1-.9 1.3-1.8.8l-4.9-3.6-2.4 2.3c-.3.3-.5.5-1 .5l.3-5 9.1-8.2c.4-.4-.1-.6-.6-.2L6.2 13 1.4 11.5c-1-.3-1.1-1 .2-1.5L20.5 2.8c.9-.3 1.6.2 1.4 1.5z"/></svg>
+          <div><b>Telegram</b><span>Assistente MTM</span></div>
+        </a>
+        <a class="rede" href="https://www.morethanmoney.pt" target="_blank" rel="noopener">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20zm6.9 6h-3a15.7 15.7 0 0 0-1.4-3.6A8 8 0 0 1 18.9 8zM12 4c.8 1.2 1.5 2.5 1.9 4h-3.8c.4-1.5 1.1-2.8 1.9-4zM4.3 14a8.2 8.2 0 0 1 0-4h3.4a16.5 16.5 0 0 0 0 4H4.3zm.8 2h3a15.7 15.7 0 0 0 1.4 3.6A8 8 0 0 1 5.1 16zm3-8h-3a8 8 0 0 1 4.3-3.6C8.9 5.5 8.4 6.7 8.1 8zM12 20c-.8-1.2-1.5-2.5-1.9-4h3.8c-.4 1.5-1.1 2.8-1.9 4zm2.3-6H9.7a14.7 14.7 0 0 1 0-4h4.6a14.7 14.7 0 0 1 0 4zm.3 5.6c.6-1.1 1.1-2.3 1.4-3.6h3a8 8 0 0 1-4.4 3.6zm1.7-5.6a16.5 16.5 0 0 0 0-4h3.4a8.2 8.2 0 0 1 0 4h-3.4z"/></svg>
+          <div><b>Site</b><span>morethanmoney.pt</span></div>
+        </a>
+      </div>
+    </div>
+  </section>
+
+  <section class="kit" id="marca">
+    <div class="wrap">
+      <h2 class="titulo">Kit de <span class="c">marca</span></h2>
+      <p class="lead">Guia de marca pessoal do Ricardo Garcia para vídeos, reels e capas. Fotografia a cores com luz azul (ou a preto e branco), títulos fortes em maiúsculas com uma linha em ciano e outra em branco, sobre carvão.</p>
+
+      <h2 class="sec">Cores</h2>
+      <div class="cores">
+        <div class="cor"><div style="background:#0098B2"></div><span><b>#0098B2</b>Ciano principal</span></div>
+        <div class="cor"><div style="background:#1EAAE6"></div><span><b>#1EAAE6</b>Ciano claro</span></div>
+        <div class="cor"><div style="background:#1256BE"></div><span><b>#1256BE</b>Azul da faixa</span></div>
+        <div class="cor"><div style="background:#0A0A0A"></div><span><b>#0A0A0A</b>Carvão (fundo)</span></div>
+        <div class="cor"><div style="background:#040A1A"></div><span><b>#040A1A</b>Azul-noite (gradiente)</span></div>
+        <div class="cor"><div style="background:#FFFFFF"></div><span><b>#FFFFFF</b>Branco (texto)</span></div>
+        <div class="cor"><div style="background:#A6A6A6"></div><span><b>#A6A6A6</b>Cinza (@ e notas)</span></div>
+        <div class="cor"><div style="background:#D2A63C"></div><span><b>#D2A63C</b>Ouro MTM (destaque)</span></div>
+      </div>
+
+      <h2 class="sec">Tipos de letra</h2>
+      <div class="tipo"><div class="anton">Títulos em <span style="color:var(--ciano)">Anton</span></div><p>Anton, maiúsculas, itálico. Uma linha em ciano, outra em branco.</p></div>
+      <div class="tipo"><div class="oswald">Oswald · @ricardogarciapt · legendas e etiquetas</div><p>Oswald para o @, legendas e etiquetas.</p></div>
+      <div class="tipo"><div class="kalam">Kalam: notas escritas à mão</div><p>Kalam para pequenas notas manuscritas.</p></div>
+
+      <h2 class="sec">Estilo</h2>
+      <ul class="regras">
+        <li>Fotografias e vídeo do Ricardo a cores, com luz e ambiente azul; o preto e branco de contraste alto também serve.</li>
+        <li>Pinceladas azuis (#1EAAE6 a #1256BE) por baixo dos títulos, como traço de pincel.</li>
+        <li>Nota curta manuscrita em Kalam, a ouro #D2A63C (por exemplo «e a tua, chega?»).</li>
+        <li>Logo MoreThanMoney a ouro no fundo, @ricardogarciapt em baixo.</li>
+        <li>Título em duas linhas: uma em ciano <b>#0098B2</b>, outra em branco.</li>
+        <li>@ricardogarciapt sempre em cinza <b>#A6A6A6</b>, em Oswald.</li>
+        <li>Chamada para ação numa faixa azul: <span class="faixa">Comenta SISTEMA</span></li>
+        <li>Legendas em branco com a palavra-chave em ciano.</li>
+        <li>Conteúdo de trading leva sempre a nota: conteúdo educativo, não é aconselhamento financeiro.</li>
+      </ul>
+
+      <h2 class="sec">Exemplos de capa</h2>
+      <div style="display:flex;gap:12px;flex-wrap:wrap">
+        <img class="capa" src="/marca/ricardogarciapt/exemplo-capa-3.jpg" alt="Exemplo de capa de reel do @ricardogarciapt" loading="lazy">
+        <img class="capa" src="/marca/ricardogarciapt/exemplo-capa-2.jpg" alt="Exemplo de capa de reel do Ricardo Garcia" loading="lazy">
+        <img class="capa" src="/marca/ricardogarciapt/exemplo-capa.jpg" alt="Exemplo de capa a preto e branco" loading="lazy">
+      </div>
+
+      <h2 class="sec">Logótipo</h2>
+      <p>Monograma «RG» em Anton itálico (R branco, G ciano) sobre a pincelada azul, ao lado do nome e do @. Usa-se o monograma sozinho em avatares, marcas de água e cantos de vídeo.</p>
+      <div style="display:flex;gap:16px;flex-wrap:wrap;align-items:center">
+        <img src="/marca/ricardogarciapt/logo-rg-monograma.png" alt="Ricardo Garcia logo monograma RG" width="200" height="200" style="border-radius:16px" loading="lazy">
+        <img src="/marca/ricardogarciapt/logo-rg-monograma-transparente.png" alt="Ricardo Garcia logo RG transparente" width="200" height="200" style="background:#1a1a1a;border-radius:16px" loading="lazy">
+      </div>
+      <p></p>
+      <img class="logo-kit" src="/marca/ricardogarciapt/logo-ricardo-garcia-fundo.png" alt="Ricardo Garcia logo sobre carvão" width="1800" height="420" loading="lazy">
+      <p></p>
+      <img class="logo-kit" src="/marca/ricardogarciapt/logo-ricardo-garcia-claro.png" alt="Ricardo Garcia logo sobre fundo claro" width="1800" height="420" loading="lazy">
+      <p><img class="mtm-logo" src="/marca/ricardogarciapt/logo-mtm.png" alt="MoreThanMoney logo" loading="lazy"> Marca associada: MoreThanMoney.</p>
+    </div>
+  </section>
+
 </main>
+
+<footer>
+  <div class="wrap">
+    <div class="linha">
+      <span>Ricardo Garcia · @ricardogarciapt · <a href="https://www.morethanmoney.pt">morethanmoney.pt</a></span>
+      <img class="mtm-logo" src="/marca/ricardogarciapt/logo-mtm.png" alt="MoreThanMoney" loading="lazy">
+    </div>
+    <p class="aviso">Conteúdo educativo, não constitui aconselhamento financeiro. O trading envolve risco de perda de capital e resultados passados não garantem resultados futuros. As contas MTM Funded são simuladas; a MoreThanMoney não é uma prop firm nem custodia fundos de clientes.</p>
+  </div>
+</footer>
+
+<script>
+(function () {
+  var reduz = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  // Títulos palavra a palavra (mola + desfoque)
+  document.querySelectorAll('[data-palavras]').forEach(function (el) {
+    var i = 0;
+    (function partir(n) {
+      Array.prototype.slice.call(n.childNodes).forEach(function (c) {
+        if (c.nodeType === 3) {
+          var frag = document.createDocumentFragment();
+          c.textContent.split(/(\s+)/).forEach(function (t) {
+            if (!t) return;
+            if (/^\s+$/.test(t)) { frag.appendChild(document.createTextNode(t)); return; }
+            var s = document.createElement('span'); s.className = 'p'; s.textContent = t;
+            s.style.transitionDelay = (i++ * 90) + 'ms'; frag.appendChild(s);
+          });
+          n.replaceChild(frag, c);
+        } else if (c.nodeType === 1 && c.tagName !== 'BR') { partir(c); }
+      });
+    })(el);
+  });
+
+  // Entradas ao fazer scroll
+  var alvos = document.querySelectorAll('.aparece, [data-palavras], .liga');
+  if ('IntersectionObserver' in window && !reduz) {
+    var io = new IntersectionObserver(function (es) {
+      es.forEach(function (e) { if (e.isIntersecting) { e.target.classList.add('vis'); io.unobserve(e.target); } });
+    }, { threshold: 0.15 });
+    alvos.forEach(function (a, k) { if (a.classList.contains('aparece')) a.style.transitionDelay = ((k % 4) * 80) + 'ms'; io.observe(a); });
+  } else { alvos.forEach(function (a) { a.classList.add('vis'); }); }
+
+  // CGI do topo: partículas que se ligam em rede (ciano a ouro), com deriva e paralaxe do rato
+  var cv = document.getElementById('cgi');
+  if (cv && cv.getContext) {
+    var cx = cv.getContext('2d'), W = 0, H = 0, dpr = Math.min(window.devicePixelRatio || 1, 2), pts = [], rato = { x: -999, y: -999 }, corre = true;
+    function medir() {
+      var r = cv.getBoundingClientRect(); W = r.width; H = r.height;
+      cv.width = W * dpr; cv.height = H * dpr; cx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      var n = Math.round(Math.min(110, W * H / 12000)); pts = [];
+      for (var i = 0; i < n; i++) pts.push({ x: Math.random() * W, y: Math.random() * H, z: Math.random(), vx: (Math.random() - .5) * .25, vy: (Math.random() - .5) * .25 });
+    }
+    function cor(p, a) { return p.x / W > .55 ? 'rgba(210,166,60,' + a + ')' : 'rgba(30,170,230,' + a + ')'; }
+    function passo() {
+      if (!corre) return;
+      cx.clearRect(0, 0, W, H);
+      for (var i = 0; i < pts.length; i++) {
+        var p = pts[i];
+        if (!reduz) { p.x += p.vx * (0.5 + p.z); p.y += p.vy * (0.5 + p.z); }
+        if (p.x < 0) p.x = W; if (p.x > W) p.x = 0; if (p.y < 0) p.y = H; if (p.y > H) p.y = 0;
+        var dx = p.x - rato.x, dy = p.y - rato.y, d2 = dx * dx + dy * dy;
+        if (d2 < 14000) { p.x += dx * .012; p.y += dy * .012; }
+        for (var j = i + 1; j < pts.length; j++) {
+          var q = pts[j], ex = p.x - q.x, ey = p.y - q.y, e = ex * ex + ey * ey;
+          if (e < 16000) { cx.strokeStyle = cor(p, (1 - e / 16000) * .35); cx.lineWidth = .7; cx.beginPath(); cx.moveTo(p.x, p.y); cx.lineTo(q.x, q.y); cx.stroke(); }
+        }
+        cx.fillStyle = cor(p, .55 + p.z * .45); cx.beginPath(); cx.arc(p.x, p.y, 1 + p.z * 1.8, 0, 6.283); cx.fill();
+      }
+      if (!reduz) requestAnimationFrame(passo);
+    }
+    medir(); passo();
+    window.addEventListener('resize', function () { medir(); if (reduz) passo(); });
+    cv.parentElement.addEventListener('pointermove', function (e) { var r = cv.getBoundingClientRect(); rato.x = e.clientX - r.left; rato.y = e.clientY - r.top; });
+    cv.parentElement.addEventListener('pointerleave', function () { rato.x = rato.y = -999; });
+    if ('IntersectionObserver' in window) new IntersectionObserver(function (es) { var v = es[0].isIntersecting; if (v && !corre) { corre = true; if (!reduz) requestAnimationFrame(passo); } corre = v; }).observe(cv);
+  }
+
+  // Deslizes do trajeto
+  var trilho = document.getElementById('trilho');
+  if (trilho) {
+    var caps = trilho.querySelectorAll('.cap'), barras = document.querySelectorAll('#progresso span'), atual = -1, clarao = document.querySelector('.clarao');
+    function marcar(k) {
+      if (k === atual) return;
+      if (atual !== -1 && clarao && !reduz) { clarao.classList.add('on'); setTimeout(function () { clarao.classList.remove('on'); }, 260); }
+      atual = k;
+      caps.forEach(function (c, i) { c.classList.toggle('ativo', i === k); });
+      barras.forEach(function (b, i) { b.classList.toggle('on', i <= k); });
+    }
+    function ir(k) { k = Math.max(0, Math.min(caps.length - 1, k)); var c = caps[k]; trilho.scrollTo({ left: c.offsetLeft - (trilho.clientWidth - c.clientWidth) / 2, behavior: reduz ? 'auto' : 'smooth' }); }
+    function centro() {
+      var m = trilho.scrollLeft + trilho.clientWidth / 2, best = 0, bd = 1e9;
+      caps.forEach(function (c, i) { var d = Math.abs(c.offsetLeft + c.clientWidth / 2 - m); if (d < bd) { bd = d; best = i; } });
+      marcar(best);
+    }
+    var t; trilho.addEventListener('scroll', function () { clearTimeout(t); t = setTimeout(centro, 60); }, { passive: true });
+    document.querySelectorAll('[data-seta]').forEach(function (b) { b.addEventListener('click', function () { ir(atual + Number(b.getAttribute('data-seta'))); }); });
+    barras.forEach(function (b, i) { b.addEventListener('click', function () { ir(i); }); });
+    trilho.addEventListener('keydown', function (e) { if (e.key === 'ArrowRight') { e.preventDefault(); ir(atual + 1); } if (e.key === 'ArrowLeft') { e.preventDefault(); ir(atual - 1); } });
+    marcar(0);
+  }
+
+  // Vídeo
+  var ecra = document.getElementById('ecra');
+  if (ecra) {
+    var v = ecra.querySelector('video'), b = ecra.querySelector('.play');
+    b.addEventListener('click', function () { ecra.classList.add('a-tocar'); v.controls = true; v.play().catch(function () {}); });
+    v.addEventListener('ended', function () { ecra.classList.remove('a-tocar'); v.controls = false; });
+  }
+})();
+</script>
 </body>
 </html>
