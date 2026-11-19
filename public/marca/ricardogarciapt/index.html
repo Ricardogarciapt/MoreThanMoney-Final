@@ -158,9 +158,103 @@ footer .linha { display: flex; flex-wrap: wrap; align-items: center; justify-con
 footer .aviso { margin-top: 18px; font-size: 13px; color: #777; max-width: 90ch; }
 
 @media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } .btn, .cartao { transition: none; } }
+
+/* ── v2 cinemático ─────────────────────────────────────────────── */
+.grao { position: fixed; inset: -50%; z-index: 50; pointer-events: none; opacity: .07; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E"); animation: grao 1s steps(6) infinite; }
+@keyframes grao { 0%{transform:translate(0,0)} 20%{transform:translate(-4%,3%)} 40%{transform:translate(3%,-2%)} 60%{transform:translate(-2%,-4%)} 80%{transform:translate(4%,2%)} 100%{transform:translate(0,0)} }
+.hero { min-height: calc(100svh - 64px); display: flex; align-items: center; }
+.hero > .wrap { position: relative; z-index: 2; width: 100%; }
+#cgi { position: absolute; inset: 0; width: 100%; height: 100%; z-index: 1; display: block; }
+.hero::after { content: ""; position: absolute; inset: auto 0 0 0; height: 160px; background: linear-gradient(transparent, var(--carvao)); z-index: 1; pointer-events: none; }
+.palavras .p { display: inline-block; opacity: 0; filter: blur(12px); transform: translateY(40px) scale(.96); transition: opacity .7s ease, filter .7s ease, transform .9s cubic-bezier(.2,1.4,.4,1); }
+.palavras.vis .p { opacity: 1; filter: blur(0); transform: none; }
+.aparece { opacity: 0; transform: translateY(30px); transition: opacity .9s ease, transform .9s cubic-bezier(.2,.9,.3,1); }
+.aparece.vis { opacity: 1; transform: none; }
+.desce { position: absolute; left: 50%; bottom: 22px; transform: translateX(-50%); z-index: 3; color: var(--cinza); font-size: 13px; letter-spacing: 3px; text-transform: uppercase; text-decoration: none; display: flex; flex-direction: column; align-items: center; gap: 6px; }
+.desce i { width: 1px; height: 36px; background: linear-gradient(var(--ciano-claro), transparent); animation: desce 1.8s ease-in-out infinite; }
+@keyframes desce { 0%{transform:scaleY(0);transform-origin:top} 50%{transform:scaleY(1);transform-origin:top} 51%{transform-origin:bottom} 100%{transform:scaleY(0);transform-origin:bottom} }
+.hero .foto img:first-child { animation: kenburns 18s ease-in-out infinite alternate; }
+@keyframes kenburns { from { transform: scale(1); } to { transform: scale(1.06) translate(-1%, -1%); } }
+.hero .foto { overflow: visible; }
+.hero .foto .moldura { border-radius: 18px; overflow: hidden; box-shadow: 0 30px 80px rgba(0,0,0,.6), 0 0 0 1px rgba(30,170,230,.25); }
+.hero .foto .moldura img { box-shadow: none; border-radius: 0; }
+
+/* vídeo */
+.video-sec { padding-top: 40px; }
+.ecra { position: relative; border-radius: 20px; overflow: hidden; background: #000; aspect-ratio: 16/9; box-shadow: 0 40px 120px rgba(18,86,190,.25), 0 0 0 1px #1d2230; }
+.ecra video { width: 100%; height: 100%; display: block; object-fit: cover; }
+.ecra .play { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 14px; background: radial-gradient(circle at center, rgba(4,10,26,.25), rgba(4,10,26,.75)); border: 0; color: #fff; cursor: pointer; font-family: inherit; font-size: 18px; letter-spacing: 1px; }
+.ecra .play b { width: 88px; height: 88px; border-radius: 50%; display: grid; place-items: center; background: linear-gradient(135deg, var(--ciano-claro), var(--azul-faixa)); box-shadow: 0 0 0 0 rgba(30,170,230,.6); animation: pulso 2.2s infinite; }
+.ecra .play b::before { content: ""; border-left: 26px solid #fff; border-top: 16px solid transparent; border-bottom: 16px solid transparent; margin-left: 6px; }
+@keyframes pulso { 0%{box-shadow:0 0 0 0 rgba(30,170,230,.55)} 70%{box-shadow:0 0 0 26px rgba(30,170,230,0)} 100%{box-shadow:0 0 0 0 rgba(30,170,230,0)} }
+.ecra.a-tocar .play { display: none; }
+.legenda-video { color: var(--cinza); font-size: 14px; margin-top: 10px; }
+
+/* trajeto: deslizes */
+.trajeto { position: relative; overflow: hidden; }
+.trajeto .topo-sec { display: flex; align-items: end; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
+.setas { display: flex; gap: 8px; }
+.setas button { width: 48px; height: 48px; border-radius: 50%; border: 1px solid #333; background: transparent; color: #fff; font-size: 20px; cursor: pointer; transition: border-color .2s, background .2s; }
+.setas button:hover { border-color: var(--ciano); background: rgba(0,152,178,.12); }
+.trilho { display: flex; gap: 18px; overflow-x: auto; scroll-snap-type: x mandatory; scroll-behavior: smooth; padding: 30px max(16px, calc((100vw - 1120px) / 2 + 16px)) 20px; scrollbar-width: none; }
+.trilho::-webkit-scrollbar { display: none; }
+.cap { flex: 0 0 min(860px, 86vw); scroll-snap-align: center; display: grid; grid-template-columns: .9fr 1.1fr; background: var(--cartao); border: 1px solid var(--linha); border-radius: 22px; overflow: hidden; min-height: 460px; transition: transform .6s cubic-bezier(.2,.9,.3,1), opacity .6s ease, filter .6s ease; transform: scale(.93); opacity: .45; filter: saturate(.4); }
+.cap.ativo { transform: none; opacity: 1; filter: none; }
+.cap .img { position: relative; overflow: hidden; }
+.cap .img img { width: 100%; height: 100%; object-fit: cover; display: block; transform: scale(1.08); transition: transform 6s ease; }
+.cap.ativo .img img { transform: scale(1); }
+.cap .img::after { content: ""; position: absolute; inset: 0; background: linear-gradient(90deg, transparent 55%, var(--cartao)); }
+.cap[data-tom="frio"] .img img { filter: grayscale(1) contrast(1.15) brightness(.85); }
+.cap[data-tom="azul"] .img::before { content: ""; position: absolute; inset: 0; z-index: 1; background: linear-gradient(160deg, rgba(18,86,190,.35), transparent 60%); mix-blend-mode: screen; }
+.cap[data-tom="ouro"] .img::before { content: ""; position: absolute; inset: 0; z-index: 1; background: linear-gradient(160deg, rgba(210,166,60,.35), transparent 60%); mix-blend-mode: screen; }
+.cap .txt { padding: 34px 30px; display: flex; flex-direction: column; justify-content: center; }
+.cap .num { font-family: "Anton", sans-serif; font-size: 82px; line-height: .8; color: transparent; -webkit-text-stroke: 1px rgba(30,170,230,.6); }
+.cap[data-tom="ouro"] .num { -webkit-text-stroke-color: rgba(210,166,60,.7); }
+.cap h3 { font-size: clamp(28px, 3.6vw, 42px); font-style: italic; line-height: 1; margin: 12px 0 14px; }
+.cap p { font-size: 17px; margin: 0 0 10px; }
+.cap .kalam { font-size: 22px; margin-top: 6px; }
+.progresso { max-width: 1120px; margin: 4px auto 0; padding: 0 16px; display: flex; gap: 6px; }
+.progresso span { flex: 1; height: 3px; border-radius: 3px; background: #222; overflow: hidden; position: relative; cursor: pointer; }
+.progresso span::after { content: ""; position: absolute; inset: 0; background: linear-gradient(90deg, var(--ciano-claro), var(--ouro)); transform: scaleX(0); transform-origin: left; transition: transform .5s ease; }
+.progresso span.on::after { transform: scaleX(1); }
+@media (max-width: 760px) { .cap { grid-template-columns: 1fr; min-height: 0; } .cap .img { height: 280px; } .cap .img::after { background: linear-gradient(180deg, transparent 55%, var(--cartao)); } .cap .txt { padding: 22px 20px 26px; } .cap .num { font-size: 60px; } }
+.clarao { position: fixed; inset: 0; z-index: 40; pointer-events: none; opacity: 0; background: radial-gradient(800px 500px at 70% 30%, rgba(233,196,106,.35), transparent 60%), radial-gradient(700px 500px at 20% 70%, rgba(30,170,230,.3), transparent 60%); transition: opacity .25s ease; mix-blend-mode: screen; }
+.clarao.on { opacity: 1; }
+
+/* ligação à MTM */
+.liga { background: radial-gradient(800px 400px at 50% 0%, rgba(210,166,60,.12), transparent 70%); }
+.liga .wrap { display: grid; grid-template-columns: 1fr 1fr; gap: 40px; align-items: center; }
+.liga svg { width: 100%; height: auto; }
+.liga .fio { fill: none; stroke-width: 1.5; stroke-dasharray: 600; stroke-dashoffset: 600; transition: stroke-dashoffset 2s ease; }
+.liga.vis .fio { stroke-dashoffset: 0; }
+.liga .no text { font-family: "Oswald", sans-serif; font-size: 15px; fill: #e6e6e6; }
+.liga .pulsar { animation: pulsar 2.6s ease-in-out infinite; transform-box: fill-box; transform-origin: center; }
+@keyframes pulsar { 0%,100%{transform:scale(1);opacity:.9} 50%{transform:scale(1.25);opacity:.4} }
+@media (max-width: 860px) { .liga .wrap { grid-template-columns: 1fr; } }
+.ouro { color: var(--ouro); }
+
+@media (max-width: 860px) {
+  .hero { min-height: 0; padding-bottom: 80px; }
+  .hero .foto { max-width: 300px; }
+  .hero .logo { width: min(300px, 80%); }
+  .hero .acoes .btn { flex: 1 1 100%; }
+  .desce { display: none; }
+  .liga .no text { font-size: 19px; }
+  .liga svg { max-width: 460px; margin: 0 auto; display: block; }
+  section { padding: 56px 0; }
+  .ecra .play b { width: 72px; height: 72px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .grao, .desce i, .hero .foto img:first-child, .ecra .play b, .liga .pulsar { animation: none; }
+  .palavras .p, .aparece, .cap, .cap .img img, .liga .fio { transition: none; opacity: 1; filter: none; transform: none; stroke-dashoffset: 0; }
+}
 </style>
 </head>
 <body>
+
+<div class="grao" aria-hidden="true"></div>
+<div class="clarao" aria-hidden="true"></div>
 
 <header class="topo">
   <div class="wrap">
@@ -169,7 +263,8 @@ footer .aviso { margin-top: 18px; font-size: 13px; color: #777; max-width: 90ch;
       <span>Ricardo <span class="c">Garcia</span></span>
     </a>
     <nav aria-label="Secções">
-      <a href="#sobre">Sobre</a>
+      <a href="#historia">História</a>
+      <a href="#trajeto">Trajeto</a>
       <a href="#caminhos">Por onde começar</a>
       <a href="#redes">Redes</a>
       <a href="#marca">Marca</a>
@@ -181,38 +276,132 @@ footer .aviso { margin-top: 18px; font-size: 13px; color: #777; max-width: 90ch;
 <main id="inicio">
 
   <section class="hero">
+    <canvas id="cgi" aria-hidden="true"></canvas>
     <div class="wrap">
       <div>
-        <img class="logo" src="/marca/ricardogarciapt/logo-ricardo-garcia.png" alt="Ricardo Garcia logo" width="1414" height="420">
-        <h1>Tecnologia ao<br><span class="pincel"><span>serviço do teu tempo</span></span></h1>
-        <p class="sub">Sou o Ricardo Garcia, fundador da MoreThanMoney. Construo sistemas de trading, automação e IA, e ensino a usá-los com método, gestão de risco e transparência.</p>
-        <div class="handle">@ricardogarciapt · desenvolvimento e trading</div>
-        <div class="nota kalam">e o teu tempo, chega?</div>
-        <div class="acoes">
-          <a class="btn btn-azul" href="#caminhos">Por onde começar</a>
-          <a class="btn btn-linha" href="https://www.instagram.com/ricardogarciapt/" target="_blank" rel="noopener">Seguir no Instagram</a>
+        <img class="logo aparece" src="/marca/ricardogarciapt/logo-ricardo-garcia.png" alt="Ricardo Garcia logo" width="1414" height="420">
+        <h1 class="palavras" data-palavras>Tecnologia ao<br><span class="pincel"><span>serviço do teu tempo</span></span></h1>
+        <p class="sub aparece">Sou o Ricardo Garcia. Catorze anos de farda, fuzileiro e GNR, até queimar o barco e construir a MoreThanMoney. Hoje desenvolvo sistemas de trading, automação e IA, e ensino a usá-los com método e transparência.</p>
+        <div class="handle aparece">@ricardogarciapt · desenvolvimento e trading</div>
+        <div class="nota kalam aparece">e o teu tempo, chega?</div>
+        <div class="acoes aparece">
+          <a class="btn btn-azul" href="#historia">Ver a minha história</a>
+          <a class="btn btn-linha" href="#caminhos">Por onde começar</a>
         </div>
       </div>
-      <div class="foto">
-        <img src="/marca/ricardogarciapt/foto-ricardo.jpg" alt="Ricardo Garcia em Lisboa, ao fim da tarde, com o portátil" width="900" height="1125" fetchpriority="high">
+      <div class="foto aparece">
+        <div class="moldura"><img src="/marca/ricardogarciapt/foto-ricardo.jpg" alt="Ricardo Garcia em Lisboa, ao fim da tarde, com o portátil" width="900" height="1125" fetchpriority="high"></div>
         <img class="selo" src="/marca/ricardogarciapt/logo-rg-monograma.png" alt="" width="92" height="92">
       </div>
     </div>
+    <a class="desce" href="#historia" aria-label="Descer para a história">desliza<i></i></a>
   </section>
 
-  <section class="sobre" id="sobre">
+  <section class="video-sec" id="historia">
     <div class="wrap">
-      <img src="/marca/ricardogarciapt/foto-ricardo-estudio.jpg" alt="Ricardo Garcia a gravar conteúdo no estúdio" width="800" height="1000" loading="lazy">
-      <div>
-        <h2 class="titulo">Quem <span class="c">sou</span></h2>
-        <p class="lead">Durante anos troquei horas por dinheiro. Hoje dedico-me a construir ferramentas que devolvem tempo: scanners e automações de trading, apps e agentes de IA que trabalham enquanto eu vivo.</p>
-        <p class="lead">Na MoreThanMoney partilho tudo isso com uma comunidade que aprende a fazer o mesmo, passo a passo, sem promessas fáceis e sem atalhos mágicos.</p>
-        <div class="pilares">
-          <div class="pilar"><h3>Trading</h3><p>Método, gestão de risco e disciplina. Educação primeiro, sempre.</p></div>
-          <div class="pilar"><h3>Desenvolvimento</h3><p>Apps, scanners e automações feitos em casa, em produção todos os dias.</p></div>
-          <div class="pilar"><h3>IA para negócios</h3><p>Agentes e funis automáticos que libertam tempo a empresas locais.</p></div>
-        </div>
+      <h2 class="titulo palavras" data-palavras>A minha <span class="c">história</span> em 1 minuto</h2>
+      <p class="lead aparece">Quem sou, como cheguei aqui e porque é que a MoreThanMoney existe. Contado por mim.</p>
+      <div class="ecra aparece" id="ecra">
+        <video id="video-ricardo" preload="none" playsinline poster="/marca/ricardogarciapt/apresentacao-ricardo-poster.jpg">
+          <source src="/marca/ricardogarciapt/apresentacao-ricardo.mp4" type="video/mp4">
+          <track kind="captions" srclang="pt" label="Português" src="/marca/ricardogarciapt/apresentacao-ricardo.vtt">
+        </video>
+        <button class="play" type="button" aria-label="Ver o vídeo de apresentação do Ricardo"><b></b>Ver o vídeo</button>
       </div>
+      <p class="legenda-video">Vídeo com o gémeo digital do Ricardo, criado com IA a partir da cara e da voz dele.</p>
+    </div>
+  </section>
+
+  <section class="trajeto" id="trajeto">
+    <div class="wrap topo-sec">
+      <div>
+        <h2 class="titulo palavras" data-palavras>O <span class="c">trajeto</span></h2>
+        <p class="lead aparece" style="margin:0">Seis capítulos, da farda ao digital. Desliza.</p>
+      </div>
+      <div class="setas"><button type="button" data-seta="-1" aria-label="Capítulo anterior">←</button><button type="button" data-seta="1" aria-label="Capítulo seguinte">→</button></div>
+    </div>
+    <div class="trilho" id="trilho" tabindex="0" aria-label="Capítulos do trajeto do Ricardo">
+      <article class="cap" data-tom="frio">
+        <div class="img"><img src="/marca/ricardogarciapt/cap-1.jpg" alt="Retrato a preto e branco do Ricardo, de braços cruzados" loading="lazy" width="720" height="900"></div>
+        <div class="txt">
+          <div class="num">01</div>
+          <h3>Catorze anos <span class="c">de farda</span></h3>
+          <p>Primeiro fuzileiro, depois GNR. Disciplina, missão e horas sem fim.</p>
+          <p>Estive ocupado catorze anos e percebi que não estava a construir nada para o meu futuro.</p>
+        </div>
+      </article>
+      <article class="cap" data-tom="frio">
+        <div class="img"><img src="/marca/ricardogarciapt/cap-6.jpg" alt="O Ricardo pensativo, a olhar pela janela do comboio" loading="lazy" width="720" height="900"></div>
+        <div class="txt">
+          <div class="num">02</div>
+          <h3>Novembro <span class="c">de 2022</span></h3>
+          <p>Uma das piores fases da minha vida. Esgotado, sem saúde, com a minha mulher doente, uma filha de três anos e depois de ter vendido a casa.</p>
+          <div class="kalam">foi aí que conheci o mundo digital.</div>
+        </div>
+      </article>
+      <article class="cap" data-tom="ouro">
+        <div class="img"><img src="/marca/ricardogarciapt/cap-3.jpg" alt="O Ricardo, de olhar decidido, sobre fundo escuro" loading="lazy" width="720" height="900"></div>
+        <div class="txt">
+          <div class="num">03</div>
+          <h3>Queimei <span class="ouro">o barco</span></h3>
+          <p>Se mantivesse um pé na vida antiga e outro na nova, nada ia mudar. Não tinha garantias, mas estava decidido a fazer resultar.</p>
+          <p>Mais tarde, deixei uma carreira de muitos anos.</p>
+        </div>
+      </article>
+      <article class="cap" data-tom="azul">
+        <div class="img"><img src="/marca/ricardogarciapt/cap-2.jpg" alt="O Ricardo na secretária, com gráficos de trading nos ecrãs" loading="lazy" width="720" height="900"></div>
+        <div class="txt">
+          <div class="num">04</div>
+          <h3>Mercados <span class="c">e código</span></h3>
+          <p>Estudei os mercados, aprendi a programar e criei as minhas próprias ferramentas: scanners, automações e apps.</p>
+          <div class="kalam">sem método, é só um palpite.</div>
+        </div>
+      </article>
+      <article class="cap" data-tom="ouro">
+        <div class="img"><img src="/marca/ricardogarciapt/cap-4.jpg" alt="O Ricardo a explicar a um aluno, numa mesa com caderno" loading="lazy" width="720" height="900"></div>
+        <div class="txt">
+          <div class="num">05</div>
+          <h3>Dois pilares, <span class="ouro">uma casa</span></h3>
+          <p>Hoje, com quatro anos de experiência, desenvolvo dois pilares na MoreThanMoney: educação financeira e trading; e negócios digitais, tecnologia e inteligência artificial.</p>
+        </div>
+      </article>
+      <article class="cap" data-tom="azul">
+        <div class="img"><img src="/marca/ricardogarciapt/cap-5.jpg" alt="O Ricardo a caminhar na praia ao pôr do sol" loading="lazy" width="720" height="900"></div>
+        <div class="txt">
+          <div class="num">06</div>
+          <h3>O caminho <span class="c">que construí</span></h3>
+          <p>Não há resultados garantidos: exige conhecimento, compromisso e execução. Mas não precisas de pagar o preço que eu paguei para aprender sozinho.</p>
+          <div class="kalam">nunca subestimes uma reviravolta.</div>
+        </div>
+      </article>
+    </div>
+    <div class="progresso" id="progresso" aria-hidden="true"><span></span><span></span><span></span><span></span><span></span><span></span></div>
+  </section>
+
+  <section class="liga" id="liga">
+    <div class="wrap">
+      <div>
+        <h2 class="titulo palavras" data-palavras>Onde tudo <span class="ouro">se liga</span></h2>
+        <p class="lead aparece">A marca pessoal é a porta. A MoreThanMoney é a casa. Tudo o que crio vai parar a um destes caminhos, para aprenderes, automatizares ou levares a IA para o teu negócio.</p>
+        <p class="aparece" style="color:var(--cinza)">Um ecossistema, uma regra: educação primeiro, transparência sempre, nenhuma promessa de lucro.</p>
+      </div>
+      <svg viewBox="0 0 460 400" role="img" aria-label="Diagrama: Ricardo Garcia ligado à MoreThanMoney, que se liga a Formação, MTM Auto, MTM Funded e Soluções com IA">
+        <defs>
+          <linearGradient id="g-fio" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#1EAAE6"/><stop offset="1" stop-color="#D2A63C"/></linearGradient>
+          <radialGradient id="g-mtm"><stop offset="0" stop-color="#E9C46A"/><stop offset="1" stop-color="#D2A63C" stop-opacity="0"/></radialGradient>
+        </defs>
+        <path class="fio" stroke="url(#g-fio)" d="M80 200 C150 200 170 200 230 200"/>
+        <path class="fio" stroke="#D2A63C" d="M230 200 C290 160 330 80 390 70"/>
+        <path class="fio" stroke="#D2A63C" d="M230 200 C300 180 340 160 400 160"/>
+        <path class="fio" stroke="#D2A63C" d="M230 200 C300 220 340 240 400 240"/>
+        <path class="fio" stroke="#D2A63C" d="M230 200 C290 240 330 320 390 330"/>
+        <g class="no"><circle cx="80" cy="200" r="44" fill="#0f121a" stroke="#1EAAE6"/><image href="/marca/ricardogarciapt/logo-rg-monograma-transparente.png" x="48" y="168" width="64" height="64"/></g>
+        <g class="no"><circle class="pulsar" cx="230" cy="200" r="54" fill="url(#g-mtm)" opacity=".5"/><circle cx="230" cy="200" r="38" fill="#0f121a" stroke="#D2A63C"/><image href="/marca/ricardogarciapt/logo-mtm.png" x="198" y="176" width="64" height="48" preserveAspectRatio="xMidYMid meet"/></g>
+        <g class="no"><circle cx="390" cy="70" r="7" fill="#D2A63C"/><text x="378" y="48" text-anchor="end">Formação</text></g>
+        <g class="no"><circle cx="400" cy="160" r="7" fill="#D2A63C"/><text x="388" y="140" text-anchor="end">MTM Auto</text></g>
+        <g class="no"><circle cx="400" cy="240" r="7" fill="#D2A63C"/><text x="388" y="268" text-anchor="end">MTM Funded</text></g>
+        <g class="no"><circle cx="390" cy="330" r="7" fill="#D2A63C"/><text x="378" y="360" text-anchor="end">Soluções com IA</text></g>
+      </svg>
     </div>
   </section>
 
@@ -366,5 +555,105 @@ footer .aviso { margin-top: 18px; font-size: 13px; color: #777; max-width: 90ch;
   </div>
 </footer>
 
+<script>
+(function () {
+  var reduz = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  // Títulos palavra a palavra (mola + desfoque)
+  document.querySelectorAll('[data-palavras]').forEach(function (el) {
+    var i = 0;
+    (function partir(n) {
+      Array.prototype.slice.call(n.childNodes).forEach(function (c) {
+        if (c.nodeType === 3) {
+          var frag = document.createDocumentFragment();
+          c.textContent.split(/(\s+)/).forEach(function (t) {
+            if (!t) return;
+            if (/^\s+$/.test(t)) { frag.appendChild(document.createTextNode(t)); return; }
+            var s = document.createElement('span'); s.className = 'p'; s.textContent = t;
+            s.style.transitionDelay = (i++ * 90) + 'ms'; frag.appendChild(s);
+          });
+          n.replaceChild(frag, c);
+        } else if (c.nodeType === 1 && c.tagName !== 'BR') { partir(c); }
+      });
+    })(el);
+  });
+
+  // Entradas ao fazer scroll
+  var alvos = document.querySelectorAll('.aparece, [data-palavras], .liga');
+  if ('IntersectionObserver' in window && !reduz) {
+    var io = new IntersectionObserver(function (es) {
+      es.forEach(function (e) { if (e.isIntersecting) { e.target.classList.add('vis'); io.unobserve(e.target); } });
+    }, { threshold: 0.15 });
+    alvos.forEach(function (a, k) { if (a.classList.contains('aparece')) a.style.transitionDelay = ((k % 4) * 80) + 'ms'; io.observe(a); });
+  } else { alvos.forEach(function (a) { a.classList.add('vis'); }); }
+
+  // CGI do topo: partículas que se ligam em rede (ciano a ouro), com deriva e paralaxe do rato
+  var cv = document.getElementById('cgi');
+  if (cv && cv.getContext) {
+    var cx = cv.getContext('2d'), W = 0, H = 0, dpr = Math.min(window.devicePixelRatio || 1, 2), pts = [], rato = { x: -999, y: -999 }, corre = true;
+    function medir() {
+      var r = cv.getBoundingClientRect(); W = r.width; H = r.height;
+      cv.width = W * dpr; cv.height = H * dpr; cx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      var n = Math.round(Math.min(110, W * H / 12000)); pts = [];
+      for (var i = 0; i < n; i++) pts.push({ x: Math.random() * W, y: Math.random() * H, z: Math.random(), vx: (Math.random() - .5) * .25, vy: (Math.random() - .5) * .25 });
+    }
+    function cor(p, a) { return p.x / W > .55 ? 'rgba(210,166,60,' + a + ')' : 'rgba(30,170,230,' + a + ')'; }
+    function passo() {
+      if (!corre) return;
+      cx.clearRect(0, 0, W, H);
+      for (var i = 0; i < pts.length; i++) {
+        var p = pts[i];
+        if (!reduz) { p.x += p.vx * (0.5 + p.z); p.y += p.vy * (0.5 + p.z); }
+        if (p.x < 0) p.x = W; if (p.x > W) p.x = 0; if (p.y < 0) p.y = H; if (p.y > H) p.y = 0;
+        var dx = p.x - rato.x, dy = p.y - rato.y, d2 = dx * dx + dy * dy;
+        if (d2 < 14000) { p.x += dx * .012; p.y += dy * .012; }
+        for (var j = i + 1; j < pts.length; j++) {
+          var q = pts[j], ex = p.x - q.x, ey = p.y - q.y, e = ex * ex + ey * ey;
+          if (e < 16000) { cx.strokeStyle = cor(p, (1 - e / 16000) * .35); cx.lineWidth = .7; cx.beginPath(); cx.moveTo(p.x, p.y); cx.lineTo(q.x, q.y); cx.stroke(); }
+        }
+        cx.fillStyle = cor(p, .55 + p.z * .45); cx.beginPath(); cx.arc(p.x, p.y, 1 + p.z * 1.8, 0, 6.283); cx.fill();
+      }
+      if (!reduz) requestAnimationFrame(passo);
+    }
+    medir(); passo();
+    window.addEventListener('resize', function () { medir(); if (reduz) passo(); });
+    cv.parentElement.addEventListener('pointermove', function (e) { var r = cv.getBoundingClientRect(); rato.x = e.clientX - r.left; rato.y = e.clientY - r.top; });
+    cv.parentElement.addEventListener('pointerleave', function () { rato.x = rato.y = -999; });
+    if ('IntersectionObserver' in window) new IntersectionObserver(function (es) { var v = es[0].isIntersecting; if (v && !corre) { corre = true; if (!reduz) requestAnimationFrame(passo); } corre = v; }).observe(cv);
+  }
+
+  // Deslizes do trajeto
+  var trilho = document.getElementById('trilho');
+  if (trilho) {
+    var caps = trilho.querySelectorAll('.cap'), barras = document.querySelectorAll('#progresso span'), atual = -1, clarao = document.querySelector('.clarao');
+    function marcar(k) {
+      if (k === atual) return;
+      if (atual !== -1 && clarao && !reduz) { clarao.classList.add('on'); setTimeout(function () { clarao.classList.remove('on'); }, 260); }
+      atual = k;
+      caps.forEach(function (c, i) { c.classList.toggle('ativo', i === k); });
+      barras.forEach(function (b, i) { b.classList.toggle('on', i <= k); });
+    }
+    function ir(k) { k = Math.max(0, Math.min(caps.length - 1, k)); var c = caps[k]; trilho.scrollTo({ left: c.offsetLeft - (trilho.clientWidth - c.clientWidth) / 2, behavior: reduz ? 'auto' : 'smooth' }); }
+    function centro() {
+      var m = trilho.scrollLeft + trilho.clientWidth / 2, best = 0, bd = 1e9;
+      caps.forEach(function (c, i) { var d = Math.abs(c.offsetLeft + c.clientWidth / 2 - m); if (d < bd) { bd = d; best = i; } });
+      marcar(best);
+    }
+    var t; trilho.addEventListener('scroll', function () { clearTimeout(t); t = setTimeout(centro, 60); }, { passive: true });
+    document.querySelectorAll('[data-seta]').forEach(function (b) { b.addEventListener('click', function () { ir(atual + Number(b.getAttribute('data-seta'))); }); });
+    barras.forEach(function (b, i) { b.addEventListener('click', function () { ir(i); }); });
+    trilho.addEventListener('keydown', function (e) { if (e.key === 'ArrowRight') { e.preventDefault(); ir(atual + 1); } if (e.key === 'ArrowLeft') { e.preventDefault(); ir(atual - 1); } });
+    marcar(0);
+  }
+
+  // Vídeo
+  var ecra = document.getElementById('ecra');
+  if (ecra) {
+    var v = ecra.querySelector('video'), b = ecra.querySelector('.play');
+    b.addEventListener('click', function () { ecra.classList.add('a-tocar'); v.controls = true; v.play().catch(function () {}); });
+    v.addEventListener('ended', function () { ecra.classList.remove('a-tocar'); v.controls = false; });
+  }
+})();
+</script>
 </body>
 </html>
