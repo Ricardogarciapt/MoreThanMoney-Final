@@ -7,42 +7,47 @@
  * Looks de foto = outros cenários → planos de apoio, para o reel não ficar sempre no mesmo sítio.
  */
 export type TipoLook = 'twin' | 'foto'
-export type Look = { id: string; tipo: TipoLook; nome: string; papel: string }
+export type Look = { id: string; tipo: TipoLook; nome: string; papel: string; vertical: boolean }
 
 export const VOZ_RICARDO = '5b96f4b43ecb419eb59014812b289d05' // «Ricardo Garcia PT-PT (Fish)», clonada de 50 s da voz Fish dos reels (19/11)
 
 export const LOOKS = {
-  twin: { id: '3d43ebba9ad248e1984401c6997a6d1e', tipo: 'twin', nome: 'Ricardo Garcia (Digital Twin)', papel: 'Fala para a câmara' },
-  mentor: { id: 'e3b7d1109fad41ed8b03a768cb288744', tipo: 'foto', nome: 'Professional financial analyst in office', papel: 'O Mentor' },
-  trader: { id: '9e6c76cd63024df880c51db41908b72f', tipo: 'foto', nome: 'Focused trader at his desk', papel: 'O Trader na secretária' },
-  casual: { id: '64393d619ecb4af283d79d37e93a0944', tipo: 'foto', nome: 'Professional in white linen shirt', papel: 'O Casual' },
-  podcast: { id: '03fbd5fc42a4466190f59f17a0da8906', tipo: 'foto', nome: 'Podcast host in studio', papel: 'Podcast' },
+  // Verticais (9:16 nativo) — os únicos usados nos reels, por pedido do Ricardo (19/11 20:16).
+  blazer: { id: 'e619a4a6f8d24f73a3d6541493435629', tipo: 'foto', nome: 'Professional in dark blazer', papel: 'Blazer escuro', vertical: true },
+  retrato: { id: 'b9d0f34b1a0042118cf22d8aee4d99ea', tipo: 'foto', nome: 'Ricardo Garcia', papel: 'Retrato', vertical: true },
+  casual: { id: '64393d619ecb4af283d79d37e93a0944', tipo: 'foto', nome: 'Professional in white linen shirt', papel: 'O Casual', vertical: true },
+  // Horizontais (16:9): ficam para vídeos deitados, fora dos reels.
+  twin: { id: '3d43ebba9ad248e1984401c6997a6d1e', tipo: 'twin', nome: 'Ricardo Garcia (Digital Twin)', papel: 'Fala para a câmara', vertical: false },
+  mentor: { id: 'e3b7d1109fad41ed8b03a768cb288744', tipo: 'foto', nome: 'Professional financial analyst in office', papel: 'O Mentor', vertical: false },
+  trader: { id: '9e6c76cd63024df880c51db41908b72f', tipo: 'foto', nome: 'Focused trader at his desk', papel: 'O Trader na secretária', vertical: false },
+  podcast: { id: '03fbd5fc42a4466190f59f17a0da8906', tipo: 'foto', nome: 'Podcast host in studio', papel: 'Podcast', vertical: false },
 } as const satisfies Record<string, Look>
 export type NomeLook = keyof typeof LOOKS
 
 /**
- * Plano do guião → look, seguindo a intenção de cada plano (lib/conteudo-magnetico/guiao.ts → PLANOS):
- *  fechado  (cara e ombros, a frase forte)        → Twin em close-up
- *  medio    (da cintura para cima, explicar)      → Twin normal
- *  aberto   (corpo e espaço, situa quem vê)       → Casual (terraço, mais espaço)
- *  de_baixo (autoridade e prova)                  → Mentor (escritório)
- *  de_cima  (a dor, vulnerabilidade)              → Podcast (estúdio, mais íntimo)
- *  detalhe  (mãos, ecrã com o gráfico)            → Trader na secretária com os gráficos
- *  mao      (íntimo, bastidores)                  → Podcast
- * Planos desconhecidos caem no Twin.
+ * Plano do guião → look VERTICAL (19/11 20:16, Ricardo: «para os reels usa os looks verticais em
+ * vários planos»). Os planos alternam entre os três looks 9:16 para o reel mudar de cenário:
+ *  fechado  (a frase forte)          → Blazer escuro
+ *  medio    (explicar)               → Retrato
+ *  aberto   (situa quem vê)          → Casual
+ *  de_baixo (autoridade e prova)     → Blazer escuro
+ *  de_cima  (a dor)                  → Retrato
+ *  detalhe  (ecrã com o gráfico)     → Blazer (numa bolha quando há media)
+ *  mao      (íntimo, bastidores)     → Casual
+ * Planos desconhecidos caem no Retrato.
  */
 export const PLANO_LOOK: Record<string, { look: NomeLook; estilo: 'normal' | 'closeUp' }> = {
-  fechado: { look: 'twin', estilo: 'closeUp' },
-  medio: { look: 'twin', estilo: 'normal' },
+  fechado: { look: 'blazer', estilo: 'normal' },
+  medio: { look: 'retrato', estilo: 'normal' },
   aberto: { look: 'casual', estilo: 'normal' },
-  de_baixo: { look: 'mentor', estilo: 'normal' },
-  de_cima: { look: 'podcast', estilo: 'normal' },
-  detalhe: { look: 'trader', estilo: 'normal' },
-  mao: { look: 'podcast', estilo: 'normal' },
+  de_baixo: { look: 'blazer', estilo: 'normal' },
+  de_cima: { look: 'retrato', estilo: 'normal' },
+  detalhe: { look: 'blazer', estilo: 'normal' },
+  mao: { look: 'casual', estilo: 'normal' },
 }
 
 export function lookDoPlano(plano: string | null | undefined, avatarEnv?: string | null): Look & { estilo: 'normal' | 'closeUp' | 'circle' } {
-  const p = PLANO_LOOK[String(plano || '')] ?? { look: 'twin' as NomeLook, estilo: 'normal' as const }
+  const p = PLANO_LOOK[String(plano || '')] ?? { look: 'retrato' as NomeLook, estilo: 'normal' as const }
   const look: Look = LOOKS[p.look]
   // Um Twin novo posto na Vercel substitui o de origem; os looks de foto ficam.
   return { ...(look.tipo === 'twin' && avatarEnv ? { ...look, id: avatarEnv } : look), estilo: p.estilo }
@@ -89,8 +94,8 @@ export function cenasDoGuiao(guiao: any): Cena[] {
 export function entradaDaCena(c: Cena, voz: string, avatarEnv?: string | null) {
   const look = lookDoPlano(c.plano, avatarEnv)
   const sobreMedia = c.visual !== 'apresentador' && !!c.media_url
-  // A bolha só existe nos looks de foto; o Twin sobre media passa para o look de detalhe.
-  const quem = sobreMedia ? { ...(look.tipo === 'twin' ? { ...LOOKS.trader } : look), estilo: 'circle' as const } : look
+  // A bolha só existe nos looks de foto; o Twin sobre media passa para o Blazer.
+  const quem = sobreMedia ? { ...(look.tipo === 'twin' ? { ...LOOKS.blazer } : look), estilo: 'circle' as const } : look
   return {
     character: personagem(quem),
     voice: c.audio_url
