@@ -194,12 +194,38 @@ export async function registarPedidoDeContacto(p: {
   })
   await db.from('pedidos_contacto').update({ tarefa_id: tarefa.id, tarefa_estado: tarefa.estado }).eq('id', pedidoId)
 
+  /**
+   * WHATSAPP NA HORA (19/11/2026). Se a pessoa marcou WhatsApp e o motor autoriza a saída, recebe já
+   * o template do funil dela (`lib/whatsapp/templates-mtm.ts`). É resposta ao pedido que ela própria
+   * fez, por isso vai como `servico`. Nunca rebenta o registo: o pedido já está gravado.
+   */
+  let whatsappNota = ''
+  if (pedido.telefone && decisoes.whatsapp?.destino === 'sai') {
+    try {
+      const { enviarTextoOuTemplate } = await import('@/lib/whatsapp/texto-ou-template')
+      const { templateDoInteresse, primeiroNome } = await import('@/lib/whatsapp/templates-mtm')
+      const tpl = templateDoInteresse(pedido.interesse)
+      const nome = primeiroNome(pedido.nome)
+      const r = await enviarTextoOuTemplate({
+        para: pedido.telefone,
+        finalidade: 'servico',
+        texto: textoPrimeiroContacto({ nome: pedido.nome, interesse: pedido.interesse, canal: 'whatsapp' }),
+        template: { nome: tpl.nome, idioma: 'pt_PT', parametros: tpl.comTema ? [nome, INTERESSES[pedido.interesse]] : [nome] },
+        agente: { codigoExplicito: pedido.ag ?? AG.SETTER },
+      })
+      whatsappNota = r.enviado ? `\n💬 WhatsApp enviado (${r.via === 'template' ? tpl.nome : 'texto'}).` : `\n💬 WhatsApp não saiu: ${esc(r.porque)}`
+    } catch (e) {
+      whatsappNota = `\n💬 WhatsApp falhou: ${esc(e instanceof Error ? e.message : 'erro')}`
+    }
+  }
+
   await avisarDono(
     `📞 <b>Quero que me liguem</b> (${p.fonte})\n` +
       `${esc(pedido.nome)} · ${esc(pedido.telefone || pedido.email || '')}\n` +
       `Interesse: ${esc(INTERESSES[pedido.interesse])} · ${esc(MELHORES_HORAS[pedido.melhorHora])}\n` +
       `Consentiu: ${canais.join(', ')}${pedido.origem ? `\nOrigem: ${esc(pedido.origem)}` : ''}${pedido.ag ? ` · ${pedido.ag}` : ''}\n` +
-      (autorizada ? '✅ Saída autorizada: o setter contacta já.' : '⏳ Tarefa pendente na fila de envios (aprovar no /admin).'),
+      (autorizada ? '✅ Saída autorizada: o setter contacta já.' : '⏳ Tarefa pendente na fila de envios (aprovar no /admin).') +
+      whatsappNota,
   )
 
   return { ok: true, pedidoId, consentimentos, tarefa }

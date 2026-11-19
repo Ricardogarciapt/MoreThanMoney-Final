@@ -58,4 +58,95 @@ export const TEMPLATES_MTM = [
       { type: 'FOOTER', text: 'Conteúdo educativo, não é aconselhamento financeiro' },
     ],
   },
+  {
+    name: 'mtm_funil_educacao',
+    language: 'pt_PT',
+    category: 'UTILITY',
+    allow_category_change: true,
+    components: [
+      {
+        type: 'BODY',
+        text:
+          'Olá {{1}}, aqui é a equipa MoreThanMoney. Pediste para te contactarmos sobre a formação em trading.\n\n' +
+          'Para te orientarmos bem: já operaste alguma vez ou estás a começar do zero?',
+        example: { body_text: [['Ana']] },
+      },
+      { type: 'FOOTER', text: 'Conteúdo educativo, não é aconselhamento financeiro' },
+    ],
+  },
+  {
+    name: 'mtm_funil_corretora',
+    language: 'pt_PT',
+    category: 'UTILITY',
+    allow_category_change: true,
+    components: [
+      {
+        type: 'BODY',
+        text:
+          'Olá {{1}}, aqui é a equipa MoreThanMoney. Pediste ajuda para abrir conta na corretora regulada que recomendamos.\n\n' +
+          'Já tens conta aberta ou queres que te acompanhemos desde o primeiro passo?',
+        example: { body_text: [['Ana']] },
+      },
+      { type: 'FOOTER', text: 'Trading envolve risco de perda de capital' },
+    ],
+  },
+  {
+    name: 'mtm_funil_funded',
+    language: 'pt_PT',
+    category: 'UTILITY',
+    allow_category_change: true,
+    components: [
+      {
+        type: 'BODY',
+        text:
+          'Olá {{1}}, aqui é a equipa MoreThanMoney. Pediste informação sobre o MTM Funded, os desafios em conta simulada.\n\n' +
+          'Queres que te expliquemos as regras e como começar?',
+        example: { body_text: [['Ana']] },
+      },
+      { type: 'FOOTER', text: 'Conta simulada. Não é prop firm.' },
+    ],
+  },
+  {
+    name: 'mtm_aviso_marcacao',
+    language: 'pt_PT',
+    category: 'UTILITY',
+    allow_category_change: true,
+    components: [
+      {
+        type: 'BODY',
+        text:
+          'Olá {{1}}, novidade sobre a tua chamada «{{2}}» com a MoreThanMoney: {{3}}.\n\n' +
+          'Os detalhes estão no email que te enviámos. Se precisares de ajuda, responde a esta mensagem.',
+        example: { body_text: [['Ana', 'Onboarding de novos membros', 'fica marcada para quinta-feira, 20 de novembro, às 10:00']] },
+      },
+    ],
+  },
+  {
+    name: 'mtm_reativar',
+    language: 'pt_PT',
+    category: 'MARKETING',
+    components: [
+      {
+        type: 'BODY',
+        text:
+          'Olá {{1}}, há algum tempo que não falamos. 🙂 Esta semana temos {{2}} na MoreThanMoney.\n\n' +
+          'Queres saber mais? Responde SIM. Se não quiseres receber mais mensagens nossas, responde SAIR.',
+        example: { body_text: [['Ana', 'uma aula ao vivo sobre gestão de risco']] },
+      },
+      { type: 'FOOTER', text: 'Conteúdo educativo, não é aconselhamento financeiro' },
+    ],
+  },
 ] as const
+
+/** Template de primeiro contacto para cada interesse do formulário «Quero que me liguem». */
+export function templateDoInteresse(interesse: string): { nome: string; comTema: boolean } {
+  if (interesse === 'formacao') return { nome: 'mtm_funil_educacao', comTema: false }
+  if (interesse === 'rota_corretora') return { nome: 'mtm_funil_corretora', comTema: false }
+  if (interesse === 'mtm_funded') return { nome: 'mtm_funil_funded', comTema: false }
+  return { nome: 'mtm_resposta_lead', comTema: true }
+}
+
+/** Primeiro nome, para o {{1}}. A Meta recusa parâmetros vazios. */
+export function primeiroNome(nome: string | null | undefined): string {
+  return (nome ?? '').trim().split(/\s+/)[0] || '👋'
+}
