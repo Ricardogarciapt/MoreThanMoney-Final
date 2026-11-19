@@ -113,7 +113,9 @@ export function tipoDeEntrega(c: ContaEntrega): TipoEntrega {
     contaReal: c.contaReal ?? null,
   })) {
     case 'torneio': return 'torneio'
-    case 'mestre': return 'mestre'
+    case 'mestre':
+    case 'mestre_real':
+    case 'mestre_funded': return 'mestre'
     case 'funded': return 'funded'
     case 'real': return 'real'
     case 'auditoria': return 'auditoria'
