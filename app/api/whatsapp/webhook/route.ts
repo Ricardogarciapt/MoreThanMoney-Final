@@ -95,6 +95,32 @@ export async function POST(req: NextRequest) {
          */
         const numero = await registarEntrada({ numero: from, texto: text, waMessageId: m.id ?? null, nome: contactName })
 
+        /**
+         * SAIR / PARAR — o template de seguimento promete isto, por isso tem de funcionar (19/11).
+         * Grava na exclusão global e marca o consentimento retirado; responde uma vez (janela aberta,
+         * grátis) e não passa pelo funil.
+         */
+        if (/^(sair|parar|stop|cancelar|unsubscribe)[.!]?$/i.test(text) && numero) {
+          const db = getSupabaseAdmin()
+          const agora = new Date().toISOString()
+          const { data: ja } = await db.from('contacto_exclusao').select('identificador').eq('identificador', numero).limit(1)
+          if (!ja?.length) {
+            await db.from('contacto_exclusao').insert({ identificador: numero, canal_origem: 'whatsapp', pedido_em: agora, nota: `respondeu «${text}» no WhatsApp` })
+          }
+          await db.from('captacao_consentimento').insert({
+            telefone: numero, canal: 'whatsapp', base_legal: 'sem_base', prova: `mensagem WhatsApp «${text}»`,
+            retirado_em: agora, retirado_por: 'whatsapp:sair', origem: 'whatsapp',
+          })
+          const estadoSair = await lerEstadoDoContacto(numero)
+          await enviarWhatsApp({
+            para: from,
+            finalidade: 'resposta',
+            texto: 'Feito, não voltas a receber mensagens nossas por aqui. Se um dia quiseres voltar, é só escreveres. 🙏',
+            estado: { ...estadoSair, retirou: false, ultimaEntradaIso: estadoSair.ultimaEntradaIso ?? agora },
+          })
+          continue
+        }
+
         // SÓ leads novos — nunca contactos/clientes existentes.
         if (!(await isNewWhatsAppLead(from))) {
           console.log('[whatsapp] contacto existente — funil ignorado:', from)
