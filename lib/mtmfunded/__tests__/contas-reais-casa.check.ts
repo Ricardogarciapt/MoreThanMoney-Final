@@ -61,9 +61,10 @@ async function main() {
   await t('conta real encerrada não diz «contém negociação real»', () => {
     assert.equal(avisoDaConta({ tipo: 'financiada', estado: 'cancelada', metricas: METRICAS_CASA, contaReal: true }), 'funded_encerrada')
   })
-  await t('a marca só vale em contas financiadas (desafio/torneio/mestre não mudam)', () => {
+  await t('a marca não muda um desafio; numa mestre decide real ou Funded (nunca simulada, 19/11)', () => {
     assert.equal(avisoDaConta({ tipo: 'desafio', estado: 'ativa', contaReal: true }), 'avaliacao')
-    assert.equal(avisoDaConta({ tipo: 'provider', estado: 'ativa', contaReal: true }), 'mestre')
+    assert.equal(avisoDaConta({ tipo: 'provider', estado: 'ativa', contaReal: true }), 'mestre_real')
+    assert.equal(avisoDaConta({ tipo: 'provider', estado: 'ativa', contaReal: false }), 'mestre_funded')
   })
 
   // ── 2. email de entrega ─────────────────────────────────────────────────

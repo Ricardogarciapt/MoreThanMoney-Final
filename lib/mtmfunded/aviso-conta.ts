@@ -22,7 +22,11 @@
  *     auditar as estratégias. Continuam sem regras (`analise`); a marca manda sobre `analise`
  *     porque as duas respondem a perguntas diferentes (ver conta-real-casa.ts).
  *   · torneio → simulada, com o nome do torneio no lugar da avaliação
- *   · provider (conta-mestre de estratégia) → simulada, conta-mestre
+ *   · provider (conta-mestre de estratégia) — 19/11, decisão do dono: uma mestre NUNCA diz
+ *     «simulada». Com `conta_real_casa` → «Conta real · MTM Funded · Conta-mestre · capital real»
+ *     (Aurum Flow, Premium, DEFY, Trendshot, portefólios); sem ela → conta MTM Funded financiada,
+ *     «MTM Funded · Conta Prop Firm · Conta-mestre» (MTM Scanner, Premium II). `mestre` fica só
+ *     para sessões antigas e para o email.
  *   · sem dados (sessão antiga guardada no browser antes deste campo) → a frase neutra
  *
  * Puro: o servidor calcula (rotas das contas) e o cliente só traduz a chave.
@@ -39,6 +43,8 @@ export type AvisoConta =
   | 'analise'
   | 'torneio'
   | 'mestre'
+  | 'mestre_real'
+  | 'mestre_funded'
   | 'geral'
 
 export interface ContaParaAviso {
@@ -80,7 +86,7 @@ export function avisoDaConta(c: ContaParaAviso | null | undefined): AvisoConta {
     case 'torneio':
       return 'torneio'
     case 'provider':
-      return 'mestre'
+      return c.contaReal === true ? 'mestre_real' : 'mestre_funded'
     default:
       return 'geral'
   }
@@ -88,10 +94,11 @@ export function avisoDaConta(c: ContaParaAviso | null | undefined): AvisoConta {
 
 /** A chave do dicionário (lib/i18n/messages/mtmfunded.ts) — `.curto` para a faixa do telemóvel. */
 export function chaveDoAviso(a: AvisoConta | string | null | undefined, curto = false): string {
-  const valido: AvisoConta[] = ['avaliacao', 'avaliacao_concluida', 'avaliacao_terminada', 'funded', 'real', 'auditoria', 'funded_encerrada', 'analise', 'torneio', 'mestre', 'geral']
+  const valido: AvisoConta[] = ['avaliacao', 'avaliacao_concluida', 'avaliacao_terminada', 'funded', 'real', 'auditoria', 'funded_encerrada', 'analise', 'torneio', 'mestre', 'mestre_real', 'mestre_funded', 'geral']
   const k = valido.includes(a as AvisoConta) ? (a as AvisoConta) : 'geral'
   return `mtmfunded.aviso.${k}${curto ? '.curto' : ''}`
 }
 
 /** A conta tem negociação real (pinta a faixa de outra cor): Funded de cliente e auditoria da casa. */
-export const avisoReal = (a: AvisoConta | string | null | undefined) => a === 'funded' || a === 'real' || a === 'auditoria'
+export const avisoReal = (a: AvisoConta | string | null | undefined) =>
+  a === 'funded' || a === 'real' || a === 'auditoria' || a === 'mestre_real' || a === 'mestre_funded'
