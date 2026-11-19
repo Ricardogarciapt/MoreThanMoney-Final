@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server"
+import type { NomeFornecedor } from "@/lib/ia/chamar"
 import { createServerClient } from "@supabase/ssr"
 import { cookies } from "next/headers"
 import { buildLocalMtmCoachReply } from "@/lib/mtm-ai-coach-fallback"
@@ -182,7 +183,7 @@ export async function POST(request: NextRequest) {
     // primeiro. Se a cadeia falhar toda, o guia local responde — mas a DIZER que a IA está em
     // baixo e quem foi tentado, nunca a fingir que é IA.
     let aiMessage: string
-    let source: "groq" | "gemini" | "ollama" | "openai" | "anthropic" | "local"
+    let source: NomeFornecedor | "local"
     try {
       const resposta = await chamarIAGratis({
         tarefa: "ai-chat",

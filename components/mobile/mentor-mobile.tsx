@@ -1,10 +1,11 @@
 "use client"
 
 import { useState, useEffect, useRef, useCallback } from "react"
-import { Send, Bot, User, Loader2, ChevronDown, TrendingUp, CheckCircle2, RotateCcw, ShieldCheck, Trash2 } from "lucide-react"
+import { Send, Bot, User, Loader2, ChevronDown, TrendingUp, CheckCircle2, RotateCcw, ShieldCheck, Trash2, Mic, Square, Volume2, VolumeX } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
 import { useI18n, useT } from "@/components/i18n-provider"
 import { TextoAuto } from "@/components/mobile/texto-auto"
+import { useVozMentor } from "@/components/mobile/mentor-voz"
 
 type Message = {
   role: "user" | "assistant"
@@ -90,6 +91,18 @@ export default function MentorMobile() {
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const abortRef = useRef<AbortController | null>(null)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
+  // Voz (19/11): ler respostas em voz alta fica guardado por aparelho; e quem fala com o Mentor
+  // ouve a resposta mesmo com a leitura desligada — é uma conversa falada.
+  const [lerAuto, setLerAuto] = useState(false)
+  const falarRef = useRef<(id: string, texto: string) => void>(() => {})
+  const proximaPorVoz = useRef(false)
+  useEffect(() => {
+    try {
+      setLerAuto(localStorage.getItem("mtm_mentor_ler_auto") === "1")
+    } catch {
+      /* sem armazenamento: fica desligado */
+    }
+  }, [])
 
   const scrollToBottom = useCallback(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" })
@@ -206,6 +219,7 @@ export default function MentorMobile() {
         if (!accumulated.trim()) {
           throw new Error(erroDaRota || t("amB.mentor.errEmpty"))
         }
+        if (lerAuto || proximaPorVoz.current) falarRef.current(assistantId, accumulated)
       } catch (err) {
         if ((err as Error).name === "AbortError") return
         const motivo = (err as Error).message || t("amB.mentor.errContact")
@@ -215,9 +229,10 @@ export default function MentorMobile() {
       } finally {
         setStreaming(false)
         abortRef.current = null
+        proximaPorVoz.current = false
       }
     },
-    [messages, streaming, toast, t, lang]
+    [messages, streaming, toast, t, lang, lerAuto]
   )
 
   const handleOnboardingAnswer = async (questionId: string, labelKey: string) => {
@@ -252,6 +267,26 @@ export default function MentorMobile() {
       resetChat()
     } catch {
       toast({ title: t("amB.mentor.unavailable"), variant: "destructive" })
+    }
+  }
+
+  const voz = useVozMentor({
+    lang,
+    aoTranscrever: (texto) => {
+      proximaPorVoz.current = true
+      void sendMessage(texto, true)
+    },
+    aoErro: (chave) => toast({ title: t(chave), variant: "destructive" }),
+  })
+  falarRef.current = voz.falar
+  const alternarLerAuto = () => {
+    const novo = !lerAuto
+    setLerAuto(novo)
+    if (!novo) voz.calar()
+    try {
+      localStorage.setItem("mtm_mentor_ler_auto", novo ? "1" : "0")
+    } catch {
+      /* sem armazenamento */
     }
   }
 
@@ -458,9 +493,24 @@ export default function MentorMobile() {
               }`}
             >
               {msg.content ? (
-                <p className="text-[13.5px] leading-relaxed whitespace-pre-wrap">
-                  <FormattedText text={msg.content} isUser={msg.role === "user"} />
-                </p>
+                <>
+                  <p className="text-[13.5px] leading-relaxed whitespace-pre-wrap">
+                    <FormattedText text={msg.content} isUser={msg.role === "user"} />
+                  </p>
+                  {msg.role === "assistant" && voz.podeOuvir && !(streaming && msg.id === messages[messages.length - 1]?.id) && (
+                    <button
+                      type="button"
+                      onClick={() => voz.falar(msg.id, msg.content)}
+                      aria-label={t(voz.aFalar === msg.id ? "amB.mentor.voz.calar" : "amB.mentor.voz.ouvir")}
+                      className={`mt-1.5 -mb-0.5 inline-flex items-center gap-1 text-[11px] transition-colors ${
+                        voz.aFalar === msg.id ? "text-[#E9C46A]" : "text-gray-500 hover:text-[#E9C46A]"
+                      }`}
+                    >
+                      {voz.aFalar === msg.id ? <Square className="w-3 h-3" /> : <Volume2 className="w-3.5 h-3.5" />}
+                      {t(voz.aFalar === msg.id ? "amB.mentor.voz.calar" : "amB.mentor.voz.ouvir")}
+                    </button>
+                  )}
+                </>
               ) : (
                 <div className="flex items-center gap-1.5 py-0.5">
                   <span
@@ -526,7 +576,31 @@ export default function MentorMobile() {
 
       {/* Input */}
       <div className="px-4 pb-4 pt-2 border-t border-gray-800 flex-shrink-0">
+        {voz.estado !== "parado" && (
+          <p className="text-[11px] text-[#E9C46A] mb-1.5 flex items-center gap-1.5" aria-live="polite">
+            {voz.estado === "a-ouvir" ? (
+              <span className="w-2 h-2 rounded-full bg-red-500 animate-pulse" />
+            ) : (
+              <Loader2 className="w-3 h-3 animate-spin" />
+            )}
+            {t(voz.estado === "a-ouvir" ? "amB.mentor.voz.aOuvir" : "amB.mentor.voz.aTranscrever")}
+          </p>
+        )}
         <form onSubmit={handleSubmit} className="flex items-end gap-2">
+          {voz.podeOuvir && (
+            <button
+              type="button"
+              onClick={alternarLerAuto}
+              aria-pressed={lerAuto}
+              aria-label={t("amB.mentor.voz.lerAuto")}
+              title={t("amB.mentor.voz.lerAuto")}
+              className={`w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 border transition-all active:scale-95 ${
+                lerAuto ? "border-[#D2A63C] text-[#E9C46A] bg-[#D2A63C]/10" : "border-gray-700 text-gray-500"
+              }`}
+            >
+              {lerAuto ? <Volume2 className="w-4 h-4" /> : <VolumeX className="w-4 h-4" />}
+            </button>
+          )}
           <div className="flex-1 bg-gray-900 border border-gray-700 rounded-2xl px-3.5 py-2.5 focus-within:border-[#D2A63C]/50 transition-colors">
             <textarea
               ref={textareaRef}
@@ -539,6 +613,25 @@ export default function MentorMobile() {
               disabled={streaming}
             />
           </div>
+          {voz.podeFalar && !input.trim() ? (
+            <button
+              type="button"
+              onClick={voz.alternarMicro}
+              disabled={streaming || voz.estado === "a-transcrever"}
+              aria-label={t(voz.estado === "a-ouvir" ? "amB.mentor.voz.parar" : "amB.mentor.voz.falar")}
+              className={`w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 transition-all active:scale-95 disabled:opacity-40 ${
+                voz.estado === "a-ouvir" ? "bg-red-500 animate-pulse" : "bg-[#D2A63C]"
+              }`}
+            >
+              {voz.estado === "a-transcrever" || streaming ? (
+                <Loader2 className="w-4 h-4 text-black animate-spin" />
+              ) : voz.estado === "a-ouvir" ? (
+                <Square className="w-4 h-4 text-white" />
+              ) : (
+                <Mic className="w-4 h-4 text-black" />
+              )}
+            </button>
+          ) : (
           <button
             type="submit"
             disabled={!input.trim() || streaming}
@@ -550,6 +643,7 @@ export default function MentorMobile() {
               <Send className="w-4 h-4 text-black" />
             )}
           </button>
+          )}
         </form>
       </div>
     </div>

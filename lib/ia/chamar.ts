@@ -27,28 +27,44 @@
  * que a guarda `chamar.check.ts` prova com fornecedores falsos.
  */
 import { anthropic } from './fornecedores/anthropic'
+import { cerebras, mistral, openrouter } from './fornecedores/compativel'
 import { gemini } from './fornecedores/gemini'
 import { groq } from './fornecedores/groq'
 import { ollama } from './fornecedores/ollama'
 import { openai } from './fornecedores/openai'
 import { livroSupabase, type Livro } from './livro'
+import { prioridadeDe } from './prioridade'
 import { ErroFornecedor, ErroIA, type Fornecedor, type PedidoIA, type RespostaIA, type TentativaIA } from './tipos'
 
 export type { PedidoIA, RespostaIA, NomeFornecedor, MensagemIA, ImagemIA, TentativaIA } from './tipos'
 export { ErroIA, ErroFornecedor } from './tipos'
 
+/**
+ * 19/11/2026 — mais grátis e duas faixas (ver `prioridade.ts`). Fornecedores sem chave são
+ * saltados sem custo, por isso acrescentar Cerebras/OpenRouter/Mistral não muda nada até haver
+ * chave no ambiente.
+ *  · interativo (alguém à espera): o mais rápido primeiro — Groq, Cerebras, Gemini, OpenRouter,
+ *    Mistral, Ollama (Mac mini, último recurso).
+ *  · fundo (crons/lotes): os de quota LARGA primeiro e o Groq/Gemini no fim, para os crons nunca
+ *    esgotarem o que os clientes usam.
+ */
+export const CADEIA_GRATIS: Fornecedor[] = [groq, cerebras, gemini, openrouter, mistral, ollama]
+export const CADEIA_GRATIS_FUNDO: Fornecedor[] = [cerebras, openrouter, mistral, gemini, groq, ollama]
+
 /** A ordem oficial. Mudar a ordem é mudar aqui — e explicar no cabeçalho. */
-export const CADEIA: Fornecedor[] = [groq, gemini, ollama, openai, anthropic]
+export const CADEIA: Fornecedor[] = [...CADEIA_GRATIS, openai, anthropic]
+
+export function cadeiaGratisPara(p: Pick<PedidoIA, 'prioridade' | 'tarefa'>): Fornecedor[] {
+  return prioridadeDe(p) === 'fundo' ? CADEIA_GRATIS_FUNDO : CADEIA_GRATIS
+}
 
 export async function chamarIA(p: PedidoIA): Promise<RespostaIA> {
-  return executarCadeia(p, CADEIA, livroSupabase)
+  return executarCadeia(p, [...cadeiaGratisPara(p), openai, anthropic], livroSupabase)
 }
 
 /** Só os fornecedores grátis. Para quem prefere não decidir a pagar: falham todos → ErroIA. */
-export const CADEIA_GRATIS: Fornecedor[] = [groq, gemini, ollama]
-
 export async function chamarIAGratis(p: PedidoIA): Promise<RespostaIA> {
-  return executarCadeia(p, CADEIA_GRATIS, livroSupabase)
+  return executarCadeia(p, cadeiaGratisPara(p), livroSupabase)
 }
 
 /**

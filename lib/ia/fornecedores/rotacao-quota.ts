@@ -69,7 +69,12 @@ export function ehErroDeQuotaDiaria(err: unknown): err is ErroFornecedor {
  */
 export function horasDeEspera(mensagem: string): number {
   const m = /retry in\s*(\d+(?:\.\d+)?)\s*h(?:\s*(\d+)\s*m)?/i.exec(mensagem)
-  if (!m) return HORAS_POR_OMISSAO
+  if (!m) {
+    // Groq (19/11): «Please try again in 18m28.944s» — a janela do TPD é móvel, volta em minutos.
+    const g = /try again in\s*(?:(\d+)h)?\s*(?:(\d+)m)?\s*(?:(\d+(?:\.\d+)?)s)?/i.exec(mensagem)
+    if (g && (g[1] || g[2])) return Math.max(0.05, Number(g[1] ?? 0) + Number(g[2] ?? 0) / 60 + Number(g[3] ?? 0) / 3600)
+    return HORAS_POR_OMISSAO
+  }
   const horas = Number(m[1]) + (m[2] ? Number(m[2]) / 60 : 0)
   return horas > 0 ? horas : HORAS_POR_OMISSAO
 }
