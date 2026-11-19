@@ -11,14 +11,17 @@
  * Storage do estúdio e cria o ativo, como faz o worker da GPU.
  */
 import type { SupabaseClient } from '@supabase/supabase-js'
+import { LOOKS, VOZ_RICARDO, lookDoPlano, personagem, type Cena } from './heygen-looks'
+import { PROJETO_VAZIO, normalizarProjeto } from './projeto'
 
 const API = 'https://api.heygen.com'
 
-export function heygenConfig(): { chave: string; avatar: string; voz: string } | null {
+/** Só a chave é obrigatória; o Twin e a voz vêm de heygen-looks.ts se não houver variáveis. */
+export function heygenConfig(): { chave: string; avatar: string; voz: string; avatarEnv: string | null } | null {
   const chave = process.env.HEYGEN_API_KEY?.trim()
-  const avatar = process.env.HEYGEN_AVATAR_ID?.trim()
-  const voz = process.env.HEYGEN_VOICE_ID?.trim()
-  return chave && avatar && voz ? { chave, avatar, voz } : null
+  if (!chave) return null
+  const avatarEnv = process.env.HEYGEN_AVATAR_ID?.trim() || null
+  return { chave, avatar: avatarEnv || LOOKS.twin.id, voz: process.env.HEYGEN_VOICE_ID?.trim() || VOZ_RICARDO, avatarEnv }
 }
 
 const DIMENSOES: Record<string, { width: number; height: number }> = {
@@ -28,19 +31,25 @@ const DIMENSOES: Record<string, { width: number; height: number }> = {
   '4:5': { width: 1080, height: 1350 },
 }
 
-/** Pede o vídeo. Devolve o video_id da HeyGen ou a mensagem de erro. */
-export async function enviarHeygen(texto: string, aspecto = '9:16'): Promise<{ id: string } | { erro: string }> {
+/**
+ * Pede o vídeo. `texto` (um só plano, no Twin) ou `cenas` (uma cena por plano do guião, cada uma no
+ * look do seu plano, tudo num só vídeo). Devolve o video_id da HeyGen ou a mensagem de erro.
+ */
+export async function enviarHeygen(texto: string | Cena[], aspecto = '9:16', titulo?: string): Promise<{ id: string } | { erro: string }> {
   const cfg = heygenConfig()
   if (!cfg) return { erro: 'HeyGen não configurada.' }
+  const cenas: Cena[] = typeof texto === 'string' ? [{ texto, plano: 'fechado' }] : texto
+  if (!cenas.length) return { erro: 'Sem texto para o clone dizer.' }
   try {
     const r = await fetch(`${API}/v2/video/generate`, {
       method: 'POST',
       headers: { 'x-api-key': cfg.chave, 'content-type': 'application/json' },
       body: JSON.stringify({
-        video_inputs: [{
-          character: { type: 'avatar', avatar_id: cfg.avatar, avatar_style: 'normal' },
-          voice: { type: 'text', input_text: texto.slice(0, 1500), voice_id: cfg.voz },
-        }],
+        ...(titulo ? { title: titulo.slice(0, 100) } : {}),
+        video_inputs: cenas.slice(0, 50).map((c) => ({
+          character: personagem(lookDoPlano(c.plano, cfg.avatarEnv)),
+          voice: { type: 'text', input_text: c.texto.slice(0, 1500), voice_id: cfg.voz },
+        })),
         dimension: DIMENSOES[aspecto] ?? DIMENSOES['9:16'],
       }),
       signal: AbortSignal.timeout(15000),
@@ -100,8 +109,50 @@ export async function sincronizarHeygen(db: SupabaseClient, g: Geracao): Promise
     await db.from('estudio_geracoes').update(ativo
       ? { estado: 'pronto', saida_ativo_id: ativo.id, erro: null, terminado_em: agora }
       : { estado: 'erro', erro: 'Não consegui criar o ativo.', terminado_em: agora }).eq('id', g.id)
+    if (ativo && typeof g.params?.peca_id === 'string') {
+      await projetoDoClone(db, g, { ativoId: ativo.id, caminho, duracao: Number(d.duration) || 15 })
+    }
     return ativo ? 'pronto' : 'erro'
   } catch {
     return 'a_gerar'
+  }
+}
+
+/**
+ * Reel do clone pronto → liga o vídeo à peça e cria o projecto do editor (gancho no início, CTA no
+ * fim, legendas karaoke, marca de água) já em 'a_render', como o robô dos takes: o Mac acaba-o e o
+ * render fica na biblioteca do /estudio. Nada aqui publica. Nunca lança.
+ */
+async function projetoDoClone(db: SupabaseClient, g: Geracao, v: { ativoId: string; caminho: string; duracao: number }) {
+  try {
+    const pecaId = g.params.peca_id as string
+    await db.from('estudio_ativos').update({ peca_id: pecaId }).eq('id', v.ativoId)
+    const { data: peca } = await db.from('conteudo_magnetico_pecas').select('user_id, marca, guiao').eq('id', pecaId).maybeSingle()
+    if (!peca) return
+    const gu = (peca.guiao ?? {}) as any
+    const seg0 = Array.isArray(gu.reel?.segmentos) ? gu.reel.segmentos[0] : null
+    const gancho = String(seg0?.texto_ecra || '').slice(0, 90)
+    const cta = gu.palavra_chave ? `Comenta «${String(gu.palavra_chave)}»` : ''
+    const dur = Math.max(2, Math.min(v.duracao, 180))
+    const projeto = normalizarProjeto({
+      ...PROJETO_VAZIO,
+      clips: [{ media: 'video', fonte: { tipo: 'ativo', ref: v.ativoId, caminho: v.caminho, url: null }, nome: 'Clone (HeyGen)', duracao_fonte: dur, de: 0, ate: dur }],
+      textos: [
+        ...(gancho ? [{ texto: gancho, inicio: 0, fim: Math.min(3, dur), posicao: 'cima', estilo: 'titulo', animacao: 'aparecer' }] : []),
+        ...(cta ? [{ texto: cta, inicio: Math.max(0, dur - 3), fim: dur, posicao: 'baixo', estilo: 'cta', animacao: 'subir' }] : []),
+      ],
+      legendas: 'karaoke',
+      fundo: 'marca',
+    })
+    const titulo = gu.nicho ? `Reel · ${String(gu.nicho).slice(0, 60)} · clone` : 'Reel do clone'
+    await db.from('estudio_projetos').insert({
+      user_id: g.pedido_por || peca.user_id,
+      titulo: titulo.slice(0, 120),
+      marca: peca.marca || 'ricardo-garcia',
+      projeto,
+      estado: 'a_render',
+    })
+  } catch {
+    /* o vídeo já está na biblioteca; o projecto monta-se à mão no editor */
   }
 }

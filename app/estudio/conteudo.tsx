@@ -116,6 +116,7 @@ export default function PainelConteudoMagnetico({ onGravar }: { onGravar?: (peca
   const [copiado, setCopiado] = useState(false)
   const [renders, setRenders] = useState<Render[]>([])
   const [aEnfileirar, setAEnfileirar] = useState(false)
+  const [clone, setClone] = useState<{ estado: string; msg: string } | null>(null)
   const previasRef = useRef<(string | null)[]>([])
 
   // ── arranque: que marcas posso usar ─────────────────────────────────────────
@@ -315,6 +316,20 @@ export default function PainelConteudoMagnetico({ onGravar }: { onGravar?: (peca
         .filter((a: { tipo: string }) => a.tipo === 'video')
         .map((a: { id: string; nome: string; url: string | null }) => ({ id: a.id, nome: a.nome, url: a.url })),
     )
+  }
+
+  async function fazerComClone() {
+    if (!pecaId) return
+    setClone({ estado: 'a_enviar', msg: '' })
+    try {
+      const r = await fetch('/api/estudio/clone-reel', { method: 'POST', headers: { ...(await authHeaders()), 'content-type': 'application/json' }, body: JSON.stringify({ peca_id: pecaId }) })
+      const j = await r.json().catch(() => ({}))
+      setClone(r.ok
+        ? { estado: 'ok', msg: `O clone está a gravar ${j.cenas ?? ''} planos na HeyGen (uns minutos). O vídeo entra em Ativos e o projecto com legendas vai para o Editor.` }
+        : { estado: 'erro', msg: j.erro || 'Não consegui pedir o vídeo ao clone.' })
+    } catch {
+      setClone({ estado: 'erro', msg: 'Sem ligação ao servidor.' })
+    }
   }
 
   async function pedirVideo() {
@@ -622,11 +637,19 @@ export default function PainelConteudoMagnetico({ onGravar }: { onGravar?: (peca
                             <Video className="h-4 w-4" /> Gravar no teleprompter
                           </button>
                         )}
+                        {pecaId && marca === 'ricardo-garcia' && (
+                          <button type="button" className={botaoOuro} onClick={fazerComClone} disabled={clone?.estado === 'a_enviar' || avisos.length > 0} title="O clone do Ricardo (HeyGen) diz o guião, um look por plano">
+                            {clone?.estado === 'a_enviar' ? <Loader2 className="h-4 w-4 animate-spin" /> : <Wand2 className="h-4 w-4" />} Fazer com o clone
+                          </button>
+                        )}
                         <button type="button" className={botaoOuro} onClick={pedirVideo} disabled={aEnfileirar || avisos.length > 0}>
                           {aEnfileirar ? <Loader2 className="h-4 w-4 animate-spin" /> : <Film className="h-4 w-4" />} Gerar vídeo
                         </button>
                       </div>
                     </div>
+                    {clone && clone.estado !== 'a_enviar' && (
+                      <p className={`mb-3 text-xs ${clone.estado === 'erro' ? 'text-red-400' : 'text-[#E9C46A]'}`}>{clone.msg}</p>
+                    )}
                     <div className="space-y-3">
                       {guiao.reel.segmentos.map((s, i) => (
                         <div key={s.id} className="grid gap-2 rounded-xl border border-white/8 bg-black/30 p-3 md:grid-cols-[28px_1fr_200px]">
