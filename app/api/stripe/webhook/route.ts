@@ -158,6 +158,8 @@ export async function POST(req: NextRequest) {
           await renovarLicencaDaSubscricao(subDaFatura)
         }
         await handlePaymentSucceeded(invoice)
+        // Pagou: religa a cópia que estivesse em pausa por falta de pagamento (só esta pessoa).
+        await religarCopiaDoCliente(invoice.customer as string)
         // Só renovações: a 1.ª fatura já conta como purchase no checkout.session.completed
         if (invoice.billing_reason === 'subscription_cycle' && invoice.amount_paid > 0 && invoice.id) {
           await opinlyTrackPurchase({
@@ -1221,6 +1223,21 @@ async function handlePaymentFailed(invoice: Stripe.Invoice) {
 }
 
 const LIMIAR_CORTE_FALHAS = 3
+
+/** Religa logo ao pagar, sem esperar pelo cron diário. Nunca parte o webhook. */
+async function religarCopiaDoCliente(customerId: string | null | undefined) {
+  if (!customerId) return
+  try {
+    const { data: p } = await supabase.from('profiles').select('id').eq('stripe_customer_id', customerId).maybeSingle()
+    if (!p?.id) return
+    const { data: aberta } = await supabase.from('copia_suspensoes').select('id').eq('user_id', p.id).is('religada_em', null).maybeSingle()
+    if (!aberta) return
+    const { correrSuspensaoCopia } = await import('@/lib/cobranca/suspender-copia')
+    await correrSuspensaoCopia({ apenasUser: p.id })
+  } catch (err) {
+    console.error('[copia-suspensao] religar ao pagar falhou:', err)
+  }
+}
 
 /**
  * O cliente fica a saber que o banco recusou — antes, o Stripe tentava 9 a 12 vezes em silêncio e
