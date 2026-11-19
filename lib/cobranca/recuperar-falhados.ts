@@ -1,6 +1,7 @@
 import { getSiteUrl } from '@/lib/mail-transport'
 import { mtmEmailShell } from '@/lib/activation-emails'
 import { chaveDoAviso, jaAvisado } from '@/lib/cobranca/aviso-cartao-falhado'
+import { PARAGRAFO_COPIA_PAUSADA_HTML, PARAGRAFO_COPIA_PAUSADA_TEXTO } from '@/lib/cobranca/suspender-copia-emails'
 
 /**
  * RECUPERAÇÃO DE PAGAMENTOS FALHADOS — a parte que o webhook não cobre.
@@ -105,12 +106,13 @@ export function linhaDoResumo(r: ResumoRecuperacao | null | undefined): string |
 }
 
 /** Email depois de o Stripe desistir: um só, sem promessas, com a porta aberta. */
-export function buildEmailReativar(i: { nome: string; valorCents?: number | null }): { subject: string; html: string; text: string } {
+export function buildEmailReativar(i: { nome: string; valorCents?: number | null; copiaPausada?: boolean }): { subject: string; html: string; text: string } {
   const link = `${getSiteUrl()}/upgrade`
   const valor = i.valorCents && i.valorCents > 0 ? ` de ${euros(i.valorCents)}` : ''
   const inner = `
     <h1 style="margin:0 0 16px;font-size:21px;line-height:1.3;color:#D2A63C">${i.nome}, a tua subscrição terminou</h1>
     <p style="margin:0 0 14px;font-size:15px;line-height:1.7">O banco recusou várias vezes o pagamento${valor} e a subscrição MoreThanMoney acabou por fechar. Pode ter sido um cartão expirado ou um bloqueio do banco, e não chegaste a saber.</p>
+    ${i.copiaPausada ? PARAGRAFO_COPIA_PAUSADA_HTML : ''}
     <p style="margin:0 0 14px;font-size:15px;line-height:1.7">O teu histórico e as tuas ligações ficaram guardados. Se quiseres voltar, reativas aqui com um cartão válido:</p>
     <div style="text-align:center;margin:24px 0">
       <a href="${link}" style="display:inline-block;background:#D2A63C;color:#0b0b0f;text-decoration:none;font-weight:700;font-size:15px;padding:13px 28px;border-radius:10px">Reativar a subscrição</a>
@@ -123,7 +125,7 @@ export function buildEmailReativar(i: { nome: string; valorCents?: number | null
     text: `${i.nome},
 
 O banco recusou várias vezes o pagamento${valor} e a subscrição MoreThanMoney acabou por fechar.
-
+${i.copiaPausada ? `\n${PARAGRAFO_COPIA_PAUSADA_TEXTO}\n` : ''}
 O teu histórico e as tuas ligações ficaram guardados. Se quiseres voltar, reativas aqui:
 ${link}
 

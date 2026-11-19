@@ -8,7 +8,8 @@
  *  - grava o resumo (em curso, perdido, recuperado este mês) em `site_settings.cobranca_recuperacao`,
  *    que a vista «Hoje» do Telegram mostra numa linha.
  *
- * Não cancela, não corta acesso e não anula faturas.
+ * Não cancela nem anula faturas. A cópia de quem não paga é pausada (e religada ao pagar) em
+ * lib/cobranca/suspender-copia.ts — em modo sombra até o Ricardo pôr `copia_suspensao.modo='live'`.
  * `?ensaio=1` devolve o que faria sem enviar nem gravar. `?backlog=1` alarga a janela a 120 dias
  * (só para correr uma vez, com o OK do Ricardo). O mesmo efeito, sem segredo: pôr
  * `backlog_uma_vez: true` em `site_settings.cobranca_recuperacao` — a corrida seguinte usa-o e desliga-o.
@@ -28,6 +29,7 @@ import {
   type FaturaAberta,
 } from '@/lib/cobranca/recuperar-falhados'
 import { ehFaturaDeMarketplace } from '@/lib/marketplace/subscricao-stripe'
+import { correrSuspensaoCopia, utilizadoresComCopiaPausada } from '@/lib/cobranca/suspender-copia'
 
 export const dynamic = 'force-dynamic'
 export const maxDuration = 120
@@ -85,6 +87,16 @@ export async function GET(req: NextRequest) {
     })
   }
 
+  // 2b. Cópia em pausa por falta de pagamento (lib/cobranca/suspender-copia.ts). Corre ANTES dos
+  // emails para que o convite a reativar já diga «a tua cópia parou». Uma falha aqui não pára a cobrança.
+  let suspensao: Awaited<ReturnType<typeof correrSuspensaoCopia>> | { erro: string }
+  try {
+    suspensao = await correrSuspensaoCopia({ ensaio })
+  } catch (err) {
+    suspensao = { erro: err instanceof Error ? err.message : String(err) }
+  }
+  const pausados = await utilizadoresComCopiaPausada(((perfis ?? []) as Perfil[]).map((p) => p.id)).catch(() => new Set<string>())
+
   // 3. Decidir e enviar.
   let marcasGlobais = Array.isArray(estado.marcas) ? estado.marcas.filter((m) => typeof m === 'string') : []
   const feitos: Array<{ fatura: string; momento: string; email: string; ok: boolean }> = []
@@ -101,7 +113,7 @@ export async function GET(req: NextRequest) {
     const mail =
       momento === 'primeira'
         ? buildAvisoCartaoFalhado({ nome, momento: 'primeira', valorCents: f.valorCents, moeda: f.moeda, linkFatura: f.link })
-        : buildEmailReativar({ nome, valorCents: f.valorCents })
+        : buildEmailReativar({ nome, valorCents: f.valorCents, copiaPausada: Boolean(p && pausados.has(p.id)) })
     const chave = chaveRecuperacao(f.id, momento)
     let ok = true
     if (transporter) {
@@ -152,5 +164,5 @@ export async function GET(req: NextRequest) {
     )
   }
 
-  return NextResponse.json({ ok: true, ensaio, resumo, enviados: feitos })
+  return NextResponse.json({ ok: true, ensaio, resumo, enviados: feitos, suspensao })
 }
