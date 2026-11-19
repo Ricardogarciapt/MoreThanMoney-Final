@@ -3,19 +3,28 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Ricardo Garcia · Marca</title>
-<meta name="description" content="Guia de marca de Ricardo Garcia (@ricardogarciapt): logótipo, cores e tipos de letra para vídeos e reels.">
+<title>Ricardo Garcia · @ricardogarciapt</title>
+<meta name="description" content="Ricardo Garcia (@ricardogarciapt): desenvolvimento, trading e automação. Fundador da MoreThanMoney. Formação, MTM Auto, MTM Funded e soluções com IA para negócios.">
 <meta name="theme-color" content="#0A0A0A">
-<meta property="og:title" content="Ricardo Garcia · Marca">
+<link rel="canonical" href="https://www.morethanmoney.pt/marca/ricardogarciapt">
+<meta property="og:type" content="profile">
+<meta property="og:title" content="Ricardo Garcia · @ricardogarciapt">
+<meta property="og:description" content="Desenvolvimento, trading e automação. Fundador da MoreThanMoney.">
 <meta property="og:site_name" content="Ricardo Garcia">
+<meta property="og:url" content="https://www.morethanmoney.pt/marca/ricardogarciapt">
 <meta property="og:image" content="https://www.morethanmoney.pt/marca/ricardogarciapt/logo-ricardo-garcia-fundo.png">
-<link rel="image_src" href="logo-rg-monograma.png">
-<link rel="icon" type="image/png" href="icone.png">
-<link rel="apple-touch-icon" href="icone.png">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="image_src" href="/marca/ricardogarciapt/logo-rg-monograma.png">
+<link rel="icon" type="image/png" href="/marca/ricardogarciapt/icone.png">
+<link rel="apple-touch-icon" href="/marca/ricardogarciapt/icone.png">
+<link rel="preload" as="image" href="/marca/ricardogarciapt/foto-ricardo.jpg">
+<script type="application/ld+json">
+{"@context":"https://schema.org","@type":"Person","name":"Ricardo Garcia","alternateName":"@ricardogarciapt","url":"https://www.morethanmoney.pt/marca/ricardogarciapt","image":"https://www.morethanmoney.pt/marca/ricardogarciapt/foto-ricardo.jpg","jobTitle":"Fundador","worksFor":{"@type":"Organization","name":"MoreThanMoney","url":"https://www.morethanmoney.pt"},"sameAs":["https://www.instagram.com/ricardogarciapt/","https://www.instagram.com/morethanmoney.pt/"]}
+</script>
 <style>
-@font-face { font-family: "Anton"; src: url("fontes/Anton.ttf") format("truetype"); font-display: swap; }
-@font-face { font-family: "Oswald"; src: url("fontes/Oswald.ttf") format("truetype"); font-weight: 200 700; font-display: swap; }
-@font-face { font-family: "Kalam"; src: url("fontes/Kalam.ttf") format("truetype"); font-display: swap; }
+@font-face { font-family: "Anton"; src: url("/marca/ricardogarciapt/fontes/Anton.ttf") format("truetype"); font-display: swap; }
+@font-face { font-family: "Oswald"; src: url("/marca/ricardogarciapt/fontes/Oswald.ttf") format("truetype"); font-weight: 200 700; font-display: swap; }
+@font-face { font-family: "Kalam"; src: url("/marca/ricardogarciapt/fontes/Kalam.ttf") format("truetype"); font-display: swap; }
 :root {
   --ciano: #0098B2;
   --ciano-claro: #1EAAE6;
@@ -25,19 +34,110 @@
   --branco: #FFFFFF;
   --cinza: #A6A6A6;
   --ouro: #D2A63C;
+  --ouro-claro: #E9C46A;
   --noite: #040A1A;
+  --linha: #1d2230;
+  --cartao: #0f121a;
 }
 * { box-sizing: border-box; }
-body { margin: 0; background: var(--carvao); color: var(--branco); font-family: "Oswald", system-ui, sans-serif; line-height: 1.5; }
-main { max-width: 1040px; margin: 0 auto; padding: 48px 16px 80px; }
-header { display: flex; align-items: center; gap: 20px; flex-wrap: wrap; }
-.logo { width: min(520px, 100%); height: auto; }
-h1, h2 { font-family: "Anton", sans-serif; text-transform: uppercase; font-weight: 400; letter-spacing: .5px; }
-h1 { font-size: clamp(40px, 8vw, 84px); line-height: .95; margin: 32px 0 8px; font-style: italic; }
-h1 .c { color: var(--ciano); }
-h2 { font-size: 30px; margin: 56px 0 16px; color: var(--ciano); }
-p { color: #d6d6d6; max-width: 70ch; }
-.handle { color: var(--cinza); font-size: 22px; }
+html { scroll-behavior: smooth; }
+body { margin: 0; background: var(--carvao); color: var(--branco); font-family: "Oswald", system-ui, sans-serif; line-height: 1.55; -webkit-font-smoothing: antialiased; overflow-x: hidden; }
+a { color: inherit; }
+img { max-width: 100%; }
+.wrap { max-width: 1120px; margin: 0 auto; padding: 0 16px; }
+h1, h2, h3 { font-family: "Anton", sans-serif; text-transform: uppercase; font-weight: 400; letter-spacing: .5px; margin: 0; }
+p { color: #d6d6d6; }
+.c { color: var(--ciano); }
+.kalam { font-family: "Kalam", cursive; color: var(--ouro); }
+
+/* barra de topo */
+.topo { position: sticky; top: 0; z-index: 10; background: rgba(10,10,10,.85); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); border-bottom: 1px solid #161616; }
+.topo .wrap { display: flex; align-items: center; justify-content: space-between; gap: 12px; height: 64px; }
+.topo .marca { display: flex; align-items: center; gap: 10px; text-decoration: none; }
+.topo .marca img { width: 40px; height: 40px; border-radius: 10px; }
+.topo .marca span { font-family: "Anton", sans-serif; text-transform: uppercase; font-style: italic; font-size: 20px; }
+.topo nav { display: flex; gap: 18px; font-size: 15px; color: #cfcfcf; }
+.topo nav a { text-decoration: none; }
+.topo nav a:hover { color: var(--ciano-claro); }
+.topo .btn { padding: 9px 14px; font-size: 14px; }
+@media (max-width: 760px) { .topo nav { display: none; } }
+
+/* botões */
+.btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; padding: 14px 22px; border-radius: 10px; font-weight: 600; font-size: 17px; text-decoration: none; letter-spacing: .3px; transition: transform .15s ease, background .15s ease, border-color .15s ease; min-height: 44px; }
+.btn:hover { transform: translateY(-1px); }
+.btn-azul { background: linear-gradient(135deg, var(--ciano-claro), var(--azul-faixa)); color: #fff; }
+.btn-ouro { background: var(--ouro); color: #111; }
+.btn-ouro:hover { background: var(--ouro-claro); }
+.btn-linha { border: 1px solid #333; color: #fff; }
+.btn-linha:hover { border-color: var(--ciano); }
+
+/* hero */
+.hero { position: relative; padding: 56px 0 72px; background: radial-gradient(900px 500px at 85% 10%, rgba(18,86,190,.35), transparent 60%), linear-gradient(180deg, var(--noite), var(--carvao) 85%); overflow: hidden; }
+.hero .wrap { display: grid; grid-template-columns: 1.1fr .9fr; gap: 40px; align-items: center; }
+.hero .logo { width: min(440px, 100%); height: auto; display: block; margin-bottom: 18px; }
+.hero h1 { font-style: italic; font-size: clamp(44px, 7.5vw, 92px); line-height: .95; }
+.pincel { display: inline-block; background: linear-gradient(90deg, var(--ciano-claro), var(--azul-faixa)); padding: 2px 14px 4px; transform: skew(-6deg); }
+.pincel > span { display: inline-block; transform: skew(6deg); }
+.hero .sub { font-size: clamp(18px, 2.2vw, 22px); color: #e6e6e6; margin: 20px 0 8px; max-width: 54ch; }
+.hero .handle { color: var(--cinza); font-size: 18px; }
+.hero .nota { font-size: 24px; margin-top: 6px; }
+.hero .acoes { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 26px; }
+.hero .foto { position: relative; }
+.hero .foto img { width: 100%; height: auto; aspect-ratio: 4/5; object-fit: cover; border-radius: 18px; display: block; box-shadow: 0 30px 80px rgba(0,0,0,.6), 0 0 0 1px rgba(30,170,230,.25); }
+.hero .foto .selo { position: absolute; left: -14px; bottom: 22px; width: 92px; height: 92px; border-radius: 18px; box-shadow: 0 10px 30px rgba(0,0,0,.5); }
+@media (max-width: 860px) {
+  .hero { padding-top: 32px; }
+  .hero .wrap { grid-template-columns: 1fr; }
+  .hero .foto { order: -1; max-width: 420px; margin: 0 auto; }
+  .hero .foto .selo { left: 8px; width: 72px; height: 72px; }
+}
+
+section { padding: 72px 0; }
+.titulo { font-size: clamp(32px, 5vw, 52px); font-style: italic; line-height: 1; margin-bottom: 14px; }
+.lead { font-size: 19px; max-width: 64ch; }
+
+/* sobre */
+.sobre .wrap { display: grid; grid-template-columns: .8fr 1.2fr; gap: 44px; align-items: center; }
+.sobre img { width: 100%; aspect-ratio: 4/5; object-fit: cover; border-radius: 18px; }
+.pilares { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-top: 24px; }
+.pilar { background: var(--cartao); border: 1px solid var(--linha); border-radius: 14px; padding: 18px; }
+.pilar h3 { font-size: 22px; color: var(--ciano-claro); margin-bottom: 6px; }
+.pilar p { margin: 0; font-size: 15px; }
+@media (max-width: 860px) { .sobre .wrap { grid-template-columns: 1fr; } .sobre img { max-width: 420px; } .pilares { grid-template-columns: 1fr; } }
+
+/* caminhos */
+.caminhos { background: linear-gradient(180deg, var(--carvao), #070b14); }
+.grelha { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; margin-top: 30px; }
+@media (max-width: 960px) { .grelha { grid-template-columns: repeat(2, 1fr); } }
+@media (max-width: 620px) { .grelha { grid-template-columns: 1fr; } }
+.cartao { display: flex; flex-direction: column; background: var(--cartao); border: 1px solid var(--linha); border-radius: 16px; padding: 22px; text-decoration: none; transition: border-color .2s ease, transform .2s ease; }
+.cartao:hover { border-color: var(--ciano); transform: translateY(-2px); }
+.cartao .etiqueta { font-size: 13px; letter-spacing: 1.5px; text-transform: uppercase; color: var(--cinza); }
+.cartao h3 { font-size: 28px; margin: 6px 0 8px; font-style: italic; }
+.cartao p { margin: 0 0 16px; font-size: 16px; flex: 1; }
+.cartao .ir { color: var(--ciano-claro); font-weight: 600; }
+.cartao.mtm h3 { color: var(--ouro); }
+.cartao.mtm .ir { color: var(--ouro-claro); }
+
+/* agendar */
+.agendar { text-align: center; }
+.agendar .caixa { background: radial-gradient(600px 300px at 50% 0%, rgba(30,170,230,.22), transparent 70%), var(--cartao); border: 1px solid var(--linha); border-radius: 22px; padding: 48px 20px; }
+.agendar .lead { margin: 10px auto 26px; }
+.agendar .acoes { display: flex; flex-wrap: wrap; gap: 12px; justify-content: center; }
+
+/* redes */
+.redes { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-top: 26px; }
+@media (max-width: 860px) { .redes { grid-template-columns: repeat(2, 1fr); } }
+@media (max-width: 420px) { .redes { grid-template-columns: 1fr; } }
+.rede { display: flex; align-items: center; gap: 12px; padding: 16px; border-radius: 14px; background: var(--cartao); border: 1px solid var(--linha); text-decoration: none; min-height: 64px; }
+.rede:hover { border-color: var(--ciano); }
+.rede svg { width: 26px; height: 26px; flex: none; fill: var(--ciano-claro); }
+.rede b { display: block; font-size: 16px; }
+.rede span { font-size: 14px; color: var(--cinza); }
+
+/* kit de marca */
+.kit { border-top: 1px solid #161616; }
+.kit h2.sec { font-size: 30px; margin: 48px 0 16px; color: var(--ciano); }
 .cores { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 12px; }
 .cor { border-radius: 10px; overflow: hidden; border: 1px solid #222; }
 .cor div { height: 90px; }
@@ -46,69 +146,225 @@ p { color: #d6d6d6; max-width: 70ch; }
 .tipo { background: #111; border-radius: 12px; padding: 20px; margin-bottom: 12px; }
 .anton { font-family: "Anton", sans-serif; font-style: italic; text-transform: uppercase; font-size: clamp(34px, 6vw, 60px); line-height: 1; }
 .oswald { font-family: "Oswald", sans-serif; font-size: 26px; }
-.kalam { font-family: "Kalam", cursive; font-size: 28px; color: var(--ouro); }
+.tipo .kalam { font-size: 28px; }
 .faixa { display: inline-block; background: var(--azul-faixa); font-family: "Anton", sans-serif; text-transform: uppercase; padding: 6px 16px; font-size: 26px; }
 .regras li { margin: 6px 0; color: #d6d6d6; }
-.capa { width: min(420px, 100%); border-radius: 12px; display: block; }
-.mtm { width: 140px; height: auto; opacity: .9; }
-footer { margin-top: 64px; color: #777; font-size: 13px; }
+.capa { width: min(300px, 100%); border-radius: 12px; display: block; }
+.logo-kit { width: min(520px, 100%); height: auto; border-radius: 12px; display: block; }
+.mtm-logo { width: 140px; height: auto; opacity: .9; vertical-align: middle; }
+
+footer { padding: 40px 0 60px; border-top: 1px solid #161616; color: #8a8a8a; font-size: 14px; }
+footer .linha { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 16px; }
+footer .aviso { margin-top: 18px; font-size: 13px; color: #777; max-width: 90ch; }
+
+@media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } .btn, .cartao { transition: none; } }
 </style>
 </head>
 <body>
-<main>
-  <header>
-    <img class="logo" src="logo-ricardo-garcia.png" alt="Ricardo Garcia logo" width="1414" height="420">
-  </header>
-  <h1>Ricardo<br><span class="c">Garcia</span></h1>
-  <div class="handle">@ricardogarciapt · desenvolvimento e trading</div>
-  <p>Guia de marca pessoal do Ricardo Garcia para vídeos, reels e capas. Fotografia a cores com luz azul (ou a preto e branco), títulos fortes em maiúsculas com uma linha em ciano e outra em branco, sobre carvão.</p>
 
-  <h2>Cores</h2>
-  <div class="cores">
-    <div class="cor"><div style="background:#0098B2"></div><span><b>#0098B2</b>Ciano principal</span></div>
-    <div class="cor"><div style="background:#1EAAE6"></div><span><b>#1EAAE6</b>Ciano claro</span></div>
-    <div class="cor"><div style="background:#1256BE"></div><span><b>#1256BE</b>Azul da faixa</span></div>
-    <div class="cor"><div style="background:#0A0A0A"></div><span><b>#0A0A0A</b>Carvão (fundo)</span></div>
-    <div class="cor"><div style="background:#040A1A"></div><span><b>#040A1A</b>Azul-noite (gradiente)</span></div>
-    <div class="cor"><div style="background:#FFFFFF"></div><span><b>#FFFFFF</b>Branco (texto)</span></div>
-    <div class="cor"><div style="background:#A6A6A6"></div><span><b>#A6A6A6</b>Cinza (@ e notas)</span></div>
-    <div class="cor"><div style="background:#D2A63C"></div><span><b>#D2A63C</b>Ouro MTM (destaque)</span></div>
+<header class="topo">
+  <div class="wrap">
+    <a class="marca" href="#inicio" aria-label="Ricardo Garcia, início">
+      <img src="/marca/ricardogarciapt/logo-rg-monograma.png" alt="Logótipo RG de Ricardo Garcia" width="40" height="40">
+      <span>Ricardo <span class="c">Garcia</span></span>
+    </a>
+    <nav aria-label="Secções">
+      <a href="#sobre">Sobre</a>
+      <a href="#caminhos">Por onde começar</a>
+      <a href="#redes">Redes</a>
+      <a href="#marca">Marca</a>
+    </nav>
+    <a class="btn btn-azul" href="/agendar">Marcar conversa</a>
   </div>
+</header>
 
-  <h2>Tipos de letra</h2>
-  <div class="tipo"><div class="anton">Títulos em <span style="color:var(--ciano)">Anton</span></div><p>Anton, maiúsculas, itálico. Uma linha em ciano, outra em branco.</p></div>
-  <div class="tipo"><div class="oswald">Oswald · @ricardogarciapt · legendas e etiquetas</div><p>Oswald para o @, legendas e etiquetas.</p></div>
-  <div class="tipo"><div class="kalam">Kalam: notas escritas à mão</div><p>Kalam para pequenas notas manuscritas.</p></div>
+<main id="inicio">
 
-  <h2>Estilo</h2>
-  <ul class="regras">
-    <li>Fotografias e vídeo do Ricardo a cores, com luz e ambiente azul; o preto e branco de contraste alto também serve.</li>
-    <li>Pinceladas azuis (#1EAAE6 a #1256BE) por baixo dos títulos, como traço de pincel.</li>
-    <li>Nota curta manuscrita em Kalam, a ouro #D2A63C (por exemplo «e a tua, chega?»).</li>
-    <li>Logo MoreThanMoney a ouro no fundo, @ricardogarciapt em baixo.</li>
-    <li>Título em duas linhas: uma em ciano <b>#0098B2</b>, outra em branco.</li>
-    <li>@ricardogarciapt sempre em cinza <b>#A6A6A6</b>, em Oswald.</li>
-    <li>Chamada para ação numa faixa azul: <span class="faixa">Comenta SISTEMA</span></li>
-    <li>Legendas em branco com a palavra-chave em ciano.</li>
-    <li>Conteúdo de trading leva sempre a nota: conteúdo educativo, não é aconselhamento financeiro.</li>
-  </ul>
+  <section class="hero">
+    <div class="wrap">
+      <div>
+        <img class="logo" src="/marca/ricardogarciapt/logo-ricardo-garcia.png" alt="Ricardo Garcia logo" width="1414" height="420">
+        <h1>Tecnologia ao<br><span class="pincel"><span>serviço do teu tempo</span></span></h1>
+        <p class="sub">Sou o Ricardo Garcia, fundador da MoreThanMoney. Construo sistemas de trading, automação e IA, e ensino a usá-los com método, gestão de risco e transparência.</p>
+        <div class="handle">@ricardogarciapt · desenvolvimento e trading</div>
+        <div class="nota kalam">e o teu tempo, chega?</div>
+        <div class="acoes">
+          <a class="btn btn-azul" href="#caminhos">Por onde começar</a>
+          <a class="btn btn-linha" href="https://www.instagram.com/ricardogarciapt/" target="_blank" rel="noopener">Seguir no Instagram</a>
+        </div>
+      </div>
+      <div class="foto">
+        <img src="/marca/ricardogarciapt/foto-ricardo.jpg" alt="Ricardo Garcia em Lisboa, ao fim da tarde, com o portátil" width="900" height="1125" fetchpriority="high">
+        <img class="selo" src="/marca/ricardogarciapt/logo-rg-monograma.png" alt="" width="92" height="92">
+      </div>
+    </div>
+  </section>
 
-  <h2>Exemplos de capa</h2>
-  <div style="display:flex;gap:12px;flex-wrap:wrap"><img class="capa" style="width:min(300px,100%)" src="exemplo-capa-3.jpg" alt="Exemplo de capa de reel do @ricardogarciapt"><img class="capa" style="width:min(300px,100%)" src="exemplo-capa-2.jpg" alt="Exemplo de capa de reel do Ricardo Garcia"><img class="capa" style="width:min(300px,100%)" src="exemplo-capa.jpg" alt="Exemplo de capa a preto e branco"></div>
+  <section class="sobre" id="sobre">
+    <div class="wrap">
+      <img src="/marca/ricardogarciapt/foto-ricardo-estudio.jpg" alt="Ricardo Garcia a gravar conteúdo no estúdio" width="800" height="1000" loading="lazy">
+      <div>
+        <h2 class="titulo">Quem <span class="c">sou</span></h2>
+        <p class="lead">Durante anos troquei horas por dinheiro. Hoje dedico-me a construir ferramentas que devolvem tempo: scanners e automações de trading, apps e agentes de IA que trabalham enquanto eu vivo.</p>
+        <p class="lead">Na MoreThanMoney partilho tudo isso com uma comunidade que aprende a fazer o mesmo, passo a passo, sem promessas fáceis e sem atalhos mágicos.</p>
+        <div class="pilares">
+          <div class="pilar"><h3>Trading</h3><p>Método, gestão de risco e disciplina. Educação primeiro, sempre.</p></div>
+          <div class="pilar"><h3>Desenvolvimento</h3><p>Apps, scanners e automações feitos em casa, em produção todos os dias.</p></div>
+          <div class="pilar"><h3>IA para negócios</h3><p>Agentes e funis automáticos que libertam tempo a empresas locais.</p></div>
+        </div>
+      </div>
+    </div>
+  </section>
 
-  <h2>Logótipo</h2>
-  <p>Monograma «RG» em Anton itálico (R branco, G ciano) sobre a pincelada azul, ao lado do nome e do @. Usa-se o monograma sozinho em avatares, marcas de água e cantos de vídeo.</p>
-  <div style="display:flex;gap:16px;flex-wrap:wrap;align-items:center">
-    <img src="logo-rg-monograma.png" alt="Ricardo Garcia logo monograma RG" width="200" height="200" style="border-radius:16px">
-    <img src="logo-rg-monograma-transparente.png" alt="Ricardo Garcia logo RG transparente" width="200" height="200" style="background:#1a1a1a;border-radius:16px">
-  </div>
-  <p></p>
-  <img class="logo" src="logo-ricardo-garcia-fundo.png" alt="Ricardo Garcia logo sobre carvão" width="1800" height="420" style="border-radius:12px">
-  <p></p>
-  <img class="logo" src="logo-ricardo-garcia-claro.png" alt="Ricardo Garcia logo sobre fundo claro" width="1800" height="420" style="border-radius:12px">
-  <p><img class="mtm" src="logo-mtm.png" alt="MoreThanMoney logo"> Marca associada: MoreThanMoney.</p>
+  <section class="caminhos" id="caminhos">
+    <div class="wrap">
+      <h2 class="titulo">Por onde <span class="c">começar</span></h2>
+      <p class="lead">Escolhe o caminho que faz sentido para ti. Todos passam pela MoreThanMoney.</p>
+      <div class="grelha">
+        <a class="cartao mtm" href="/register?plan=app_member">
+          <span class="etiqueta">Formação</span>
+          <h3>Membro MTM</h3>
+          <p>A app, as aulas e a comunidade para aprenderes trading e finanças com método.</p>
+          <span class="ir">Entrar na comunidade →</span>
+        </a>
+        <a class="cartao mtm" href="/register?plan=premium">
+          <span class="etiqueta">Formação avançada</span>
+          <h3>Premium</h3>
+          <p>Ideias de trading, scanners e acompanhamento mais próximo. Experimenta grátis durante 3 dias, sem cartão.</p>
+          <span class="ir">Experimentar o Premium →</span>
+        </a>
+        <a class="cartao" href="/mtmauto">
+          <span class="etiqueta">Automação</span>
+          <h3>MTM Auto</h3>
+          <p>Estratégias automáticas ligadas à tua conta, com regras de risco definidas e controlo total do teu lado.</p>
+          <span class="ir">Conhecer o MTM Auto →</span>
+        </a>
+        <a class="cartao" href="/mtmfunded">
+          <span class="etiqueta">Desafios</span>
+          <h3>MTM Funded</h3>
+          <p>Prova o teu método em contas simuladas. Quem cumpre recebe o Patrocínio de Desempenho MTM.</p>
+          <span class="ir">Ver os desafios →</span>
+        </a>
+        <a class="cartao" href="/solucoes">
+          <span class="etiqueta">Para negócios</span>
+          <h3>Soluções com IA</h3>
+          <p>Sites, apps, funis e agentes de IA à medida da tua empresa. Vê exemplos reais.</p>
+          <span class="ir">Ver soluções →</span>
+        </a>
+        <a class="cartao" href="/abrir-conta">
+          <span class="etiqueta">Corretora</span>
+          <h3>Abrir conta</h3>
+          <p>A rota pela corretora regulada que usamos na casa, com o apoio da comunidade.</p>
+          <span class="ir">Abrir conta →</span>
+        </a>
+      </div>
+    </div>
+  </section>
 
-  <footer>Ricardo Garcia · @ricardogarciapt · morethanmoney.pt</footer>
+  <section class="agendar">
+    <div class="wrap">
+      <div class="caixa">
+        <h2 class="titulo">Falamos <span class="c">10 minutos?</span></h2>
+        <p class="lead">Conta-me onde estás e para onde queres ir. Dizemos-te com sinceridade se a MoreThanMoney é para ti, e por onde começar.</p>
+        <div class="acoes">
+          <a class="btn btn-azul" href="/agendar">Marcar uma conversa</a>
+          <a class="btn btn-linha" href="https://wa.me/351912666699?text=Ol%C3%A1%20Ricardo%2C%20vim%20da%20tua%20p%C3%A1gina" target="_blank" rel="noopener">Falar no WhatsApp</a>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="redes">
+    <div class="wrap">
+      <h2 class="titulo">Onde me <span class="c">encontras</span></h2>
+      <div class="redes">
+        <a class="rede" href="https://www.instagram.com/ricardogarciapt/" target="_blank" rel="noopener">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2.2c3.2 0 3.6 0 4.8.1 1.2.1 1.8.2 2.2.4.6.2 1 .5 1.4.9.4.4.7.8.9 1.4.2.4.4 1.1.4 2.2.1 1.3.1 1.6.1 4.8s0 3.6-.1 4.8c-.1 1.2-.2 1.8-.4 2.2-.2.6-.5 1-.9 1.4-.4.4-.8.7-1.4.9-.4.2-1.1.4-2.2.4-1.3.1-1.6.1-4.8.1s-3.6 0-4.8-.1c-1.2-.1-1.8-.2-2.2-.4-.6-.2-1-.5-1.4-.9-.4-.4-.7-.8-.9-1.4-.2-.4-.4-1.1-.4-2.2C2.2 15.6 2.2 15.2 2.2 12s0-3.6.1-4.8c.1-1.2.2-1.8.4-2.2.2-.6.5-1 .9-1.4.4-.4.8-.7 1.4-.9.4-.2 1.1-.4 2.2-.4C8.4 2.2 8.8 2.2 12 2.2zm0 4.7a5.1 5.1 0 1 0 0 10.2 5.1 5.1 0 0 0 0-10.2zm0 8.4a3.3 3.3 0 1 1 0-6.6 3.3 3.3 0 0 1 0 6.6zm5.3-9.8a1.2 1.2 0 1 0 0 2.4 1.2 1.2 0 0 0 0-2.4z"/></svg>
+          <div><b>Instagram</b><span>@ricardogarciapt</span></div>
+        </a>
+        <a class="rede" href="https://www.instagram.com/morethanmoney.pt/" target="_blank" rel="noopener">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2.2c3.2 0 3.6 0 4.8.1 1.2.1 1.8.2 2.2.4.6.2 1 .5 1.4.9.4.4.7.8.9 1.4.2.4.4 1.1.4 2.2.1 1.3.1 1.6.1 4.8s0 3.6-.1 4.8c-.1 1.2-.2 1.8-.4 2.2-.2.6-.5 1-.9 1.4-.4.4-.8.7-1.4.9-.4.2-1.1.4-2.2.4-1.3.1-1.6.1-4.8.1s-3.6 0-4.8-.1c-1.2-.1-1.8-.2-2.2-.4-.6-.2-1-.5-1.4-.9-.4-.4-.7-.8-.9-1.4-.2-.4-.4-1.1-.4-2.2C2.2 15.6 2.2 15.2 2.2 12s0-3.6.1-4.8c.1-1.2.2-1.8.4-2.2.2-.6.5-1 .9-1.4.4-.4.8-.7 1.4-.9.4-.2 1.1-.4 2.2-.4C8.4 2.2 8.8 2.2 12 2.2zm0 4.7a5.1 5.1 0 1 0 0 10.2 5.1 5.1 0 0 0 0-10.2zm0 8.4a3.3 3.3 0 1 1 0-6.6 3.3 3.3 0 0 1 0 6.6zm5.3-9.8a1.2 1.2 0 1 0 0 2.4 1.2 1.2 0 0 0 0-2.4z"/></svg>
+          <div><b>MoreThanMoney</b><span>@morethanmoney.pt</span></div>
+        </a>
+        <a class="rede" href="https://t.me/MoreThanMoney_aibot" target="_blank" rel="noopener">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M21.9 4.3 18.7 19.4c-.2 1.1-.9 1.3-1.8.8l-4.9-3.6-2.4 2.3c-.3.3-.5.5-1 .5l.3-5 9.1-8.2c.4-.4-.1-.6-.6-.2L6.2 13 1.4 11.5c-1-.3-1.1-1 .2-1.5L20.5 2.8c.9-.3 1.6.2 1.4 1.5z"/></svg>
+          <div><b>Telegram</b><span>Assistente MTM</span></div>
+        </a>
+        <a class="rede" href="https://www.morethanmoney.pt" target="_blank" rel="noopener">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20zm6.9 6h-3a15.7 15.7 0 0 0-1.4-3.6A8 8 0 0 1 18.9 8zM12 4c.8 1.2 1.5 2.5 1.9 4h-3.8c.4-1.5 1.1-2.8 1.9-4zM4.3 14a8.2 8.2 0 0 1 0-4h3.4a16.5 16.5 0 0 0 0 4H4.3zm.8 2h3a15.7 15.7 0 0 0 1.4 3.6A8 8 0 0 1 5.1 16zm3-8h-3a8 8 0 0 1 4.3-3.6C8.9 5.5 8.4 6.7 8.1 8zM12 20c-.8-1.2-1.5-2.5-1.9-4h3.8c-.4 1.5-1.1 2.8-1.9 4zm2.3-6H9.7a14.7 14.7 0 0 1 0-4h4.6a14.7 14.7 0 0 1 0 4zm.3 5.6c.6-1.1 1.1-2.3 1.4-3.6h3a8 8 0 0 1-4.4 3.6zm1.7-5.6a16.5 16.5 0 0 0 0-4h3.4a8.2 8.2 0 0 1 0 4h-3.4z"/></svg>
+          <div><b>Site</b><span>morethanmoney.pt</span></div>
+        </a>
+      </div>
+    </div>
+  </section>
+
+  <section class="kit" id="marca">
+    <div class="wrap">
+      <h2 class="titulo">Kit de <span class="c">marca</span></h2>
+      <p class="lead">Guia de marca pessoal do Ricardo Garcia para vídeos, reels e capas. Fotografia a cores com luz azul (ou a preto e branco), títulos fortes em maiúsculas com uma linha em ciano e outra em branco, sobre carvão.</p>
+
+      <h2 class="sec">Cores</h2>
+      <div class="cores">
+        <div class="cor"><div style="background:#0098B2"></div><span><b>#0098B2</b>Ciano principal</span></div>
+        <div class="cor"><div style="background:#1EAAE6"></div><span><b>#1EAAE6</b>Ciano claro</span></div>
+        <div class="cor"><div style="background:#1256BE"></div><span><b>#1256BE</b>Azul da faixa</span></div>
+        <div class="cor"><div style="background:#0A0A0A"></div><span><b>#0A0A0A</b>Carvão (fundo)</span></div>
+        <div class="cor"><div style="background:#040A1A"></div><span><b>#040A1A</b>Azul-noite (gradiente)</span></div>
+        <div class="cor"><div style="background:#FFFFFF"></div><span><b>#FFFFFF</b>Branco (texto)</span></div>
+        <div class="cor"><div style="background:#A6A6A6"></div><span><b>#A6A6A6</b>Cinza (@ e notas)</span></div>
+        <div class="cor"><div style="background:#D2A63C"></div><span><b>#D2A63C</b>Ouro MTM (destaque)</span></div>
+      </div>
+
+      <h2 class="sec">Tipos de letra</h2>
+      <div class="tipo"><div class="anton">Títulos em <span style="color:var(--ciano)">Anton</span></div><p>Anton, maiúsculas, itálico. Uma linha em ciano, outra em branco.</p></div>
+      <div class="tipo"><div class="oswald">Oswald · @ricardogarciapt · legendas e etiquetas</div><p>Oswald para o @, legendas e etiquetas.</p></div>
+      <div class="tipo"><div class="kalam">Kalam: notas escritas à mão</div><p>Kalam para pequenas notas manuscritas.</p></div>
+
+      <h2 class="sec">Estilo</h2>
+      <ul class="regras">
+        <li>Fotografias e vídeo do Ricardo a cores, com luz e ambiente azul; o preto e branco de contraste alto também serve.</li>
+        <li>Pinceladas azuis (#1EAAE6 a #1256BE) por baixo dos títulos, como traço de pincel.</li>
+        <li>Nota curta manuscrita em Kalam, a ouro #D2A63C (por exemplo «e a tua, chega?»).</li>
+        <li>Logo MoreThanMoney a ouro no fundo, @ricardogarciapt em baixo.</li>
+        <li>Título em duas linhas: uma em ciano <b>#0098B2</b>, outra em branco.</li>
+        <li>@ricardogarciapt sempre em cinza <b>#A6A6A6</b>, em Oswald.</li>
+        <li>Chamada para ação numa faixa azul: <span class="faixa">Comenta SISTEMA</span></li>
+        <li>Legendas em branco com a palavra-chave em ciano.</li>
+        <li>Conteúdo de trading leva sempre a nota: conteúdo educativo, não é aconselhamento financeiro.</li>
+      </ul>
+
+      <h2 class="sec">Exemplos de capa</h2>
+      <div style="display:flex;gap:12px;flex-wrap:wrap">
+        <img class="capa" src="/marca/ricardogarciapt/exemplo-capa-3.jpg" alt="Exemplo de capa de reel do @ricardogarciapt" loading="lazy">
+        <img class="capa" src="/marca/ricardogarciapt/exemplo-capa-2.jpg" alt="Exemplo de capa de reel do Ricardo Garcia" loading="lazy">
+        <img class="capa" src="/marca/ricardogarciapt/exemplo-capa.jpg" alt="Exemplo de capa a preto e branco" loading="lazy">
+      </div>
+
+      <h2 class="sec">Logótipo</h2>
+      <p>Monograma «RG» em Anton itálico (R branco, G ciano) sobre a pincelada azul, ao lado do nome e do @. Usa-se o monograma sozinho em avatares, marcas de água e cantos de vídeo.</p>
+      <div style="display:flex;gap:16px;flex-wrap:wrap;align-items:center">
+        <img src="/marca/ricardogarciapt/logo-rg-monograma.png" alt="Ricardo Garcia logo monograma RG" width="200" height="200" style="border-radius:16px" loading="lazy">
+        <img src="/marca/ricardogarciapt/logo-rg-monograma-transparente.png" alt="Ricardo Garcia logo RG transparente" width="200" height="200" style="background:#1a1a1a;border-radius:16px" loading="lazy">
+      </div>
+      <p></p>
+      <img class="logo-kit" src="/marca/ricardogarciapt/logo-ricardo-garcia-fundo.png" alt="Ricardo Garcia logo sobre carvão" width="1800" height="420" loading="lazy">
+      <p></p>
+      <img class="logo-kit" src="/marca/ricardogarciapt/logo-ricardo-garcia-claro.png" alt="Ricardo Garcia logo sobre fundo claro" width="1800" height="420" loading="lazy">
+      <p><img class="mtm-logo" src="/marca/ricardogarciapt/logo-mtm.png" alt="MoreThanMoney logo" loading="lazy"> Marca associada: MoreThanMoney.</p>
+    </div>
+  </section>
+
 </main>
+
+<footer>
+  <div class="wrap">
+    <div class="linha">
+      <span>Ricardo Garcia · @ricardogarciapt · <a href="https://www.morethanmoney.pt">morethanmoney.pt</a></span>
+      <img class="mtm-logo" src="/marca/ricardogarciapt/logo-mtm.png" alt="MoreThanMoney" loading="lazy">
+    </div>
+    <p class="aviso">Conteúdo educativo, não constitui aconselhamento financeiro. O trading envolve risco de perda de capital e resultados passados não garantem resultados futuros. As contas MTM Funded são simuladas; a MoreThanMoney não é uma prop firm nem custodia fundos de clientes.</p>
+  </div>
+</footer>
+
 </body>
 </html>
