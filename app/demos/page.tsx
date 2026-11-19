@@ -13,6 +13,9 @@ import { alternativas, idiomaDoPedido, tradutorServidor } from "@/lib/site-soluc
 import { IdiomaSolucoes, SeletorIdioma } from "@/components/solucoes/idioma"
 import { MontraModelos } from "@/components/solucoes/montra-modelos"
 import { MiniTelemovel } from "@/components/solucoes/mini-telemovel"
+import { CenaCGI } from "@/components/solucoes/cena-cgi"
+import { EcraProjeto } from "@/components/solucoes/ecra-projeto"
+import { Revelar } from "@/components/solucoes/revelar"
 
 /**
  * Showroom de demos: tudo o que se pode mostrar a um negócio num só sítio.
@@ -54,12 +57,25 @@ const ICONE: Record<string, React.ComponentType<{ className?: string }>> = {
 /** Três telemóveis pequenos no topo: o mesmo kit com a cara de três sectores. */
 function TelemoveisTopo({ t }: { t: (s: string) => string }) {
   const tres = ["restaurante", "barbearia", "clinica"].map((id) => MODELOS.find((m) => m.id === id)!)
-  const pos = ["left-0 top-10 -rotate-6", "left-1/2 top-0 z-10 -translate-x-1/2", "right-0 top-10 rotate-6"]
+  const pos = ["left-0 top-10", "left-1/2 top-0 z-10 -translate-x-1/2", "right-0 top-10"]
+  const anim = ["telFlutuaE", "telFlutuaC", "telFlutuaD"]
   return (
-    <div className="relative mx-auto h-[360px] w-full max-w-[420px] md:h-[440px]">
+    <div className="relative mx-auto h-[380px] w-full max-w-[460px] [perspective:1200px] md:h-[460px]">
+      {/* CGI: partículas douradas que se juntam em esfera, telemóvel e rede de agentes */}
+      <CenaCGI className="absolute -inset-16 md:-inset-24" />
+      <div className="absolute inset-x-6 bottom-0 h-16 rounded-[50%] bg-[#D2A63C]/25 blur-3xl" aria-hidden="true" />
       {tres.map((m, i) => (
-        <MiniTelemovel key={m.id} m={m} t={t} className={`absolute ${pos[i]}`} />
+        <div key={m.id} className={`absolute ${pos[i]}`}>
+          <div className="motion-safe:[animation:var(--a)_7s_ease-in-out_infinite] [transform-style:preserve-3d]" style={{ ["--a" as string]: anim[i] }}>
+            <MiniTelemovel m={m} t={t} className="ring-1 ring-[#D2A63C]/20" />
+          </div>
+        </div>
       ))}
+      <style>{`
+        @keyframes telFlutuaE { 0%,100% { transform: rotateY(18deg) rotateZ(-6deg) translateY(0) } 50% { transform: rotateY(10deg) rotateZ(-4deg) translateY(-14px) } }
+        @keyframes telFlutuaC { 0%,100% { transform: rotateX(6deg) translateY(-6px) } 50% { transform: rotateX(-4deg) translateY(10px) } }
+        @keyframes telFlutuaD { 0%,100% { transform: rotateY(-18deg) rotateZ(6deg) translateY(-8px) } 50% { transform: rotateY(-10deg) rotateZ(4deg) translateY(8px) } }
+      `}</style>
     </div>
   )
 }
@@ -69,7 +85,7 @@ export default async function ShowroomDemos({ searchParams }: Props) {
   const idioma = await idiomaDoPedido(sp.lang)
   const pedido = Array.isArray(sp.modelo) ? sp.modelo[0] : sp.modelo
   const modeloInicial = MODELOS.some((m) => m.id === pedido) ? pedido : undefined
-  const { t, ligar } = tradutorServidor(idioma)
+  const { t, tf, ligar } = tradutorServidor(idioma)
   const fmt = (d: string) => new Intl.DateTimeFormat(LOCALE[idioma], { day: "numeric", month: "long" }).format(new Date(`${d}T12:00:00Z`))
   const demos = demosPublicadas()
   const publicadas = demos.map((d) => d.slug)
@@ -142,8 +158,13 @@ export default async function ShowroomDemos({ searchParams }: Props) {
             <h2 className="text-3xl font-bold tracking-tight md:text-5xl">{t("Protótipos completos")}</h2>
             <p className="mt-3 max-w-2xl text-zinc-400">{t("Feitos de raiz para um negócio concreto, com a marca dele, para lhe mostrar como ficaria. Abre e mexe à vontade.")}</p>
             <div className="mt-8 grid gap-4 md:grid-cols-2">
-              {PROTOTIPOS.map((p) => (
-                <a key={p.id} href={p.url} target="_blank" rel="noopener noreferrer" className="group flex flex-col rounded-3xl border border-white/10 bg-gradient-to-br from-white/[0.04] to-transparent p-6 transition hover:border-[#D2A63C]/60">
+              {PROTOTIPOS.map((p, i) => (
+                <Revelar key={p.id} atraso={i * 120}>
+                <a href={p.url} target="_blank" rel="noopener noreferrer" className="group flex h-full flex-col overflow-hidden rounded-3xl border border-white/10 bg-gradient-to-br from-white/[0.04] to-transparent transition hover:border-[#D2A63C]/60">
+                  <div className="relative bg-[radial-gradient(90%_80%_at_30%_0%,rgba(210,166,60,0.22),transparent_65%)] px-5 pt-5">
+                    <EcraProjeto src={p.img} alt={tf("Protótipo de {marca}", { marca: p.marca })} url={p.url} />
+                  </div>
+                  <div className="flex flex-1 flex-col p-6">
                   <div className="flex items-start justify-between gap-3">
                     <div>
                       <p className="text-xs text-zinc-500">{t(p.sector)}</p>
@@ -163,7 +184,9 @@ export default async function ShowroomDemos({ searchParams }: Props) {
                     {t("Abrir o protótipo")} <ArrowUpRight className="h-4 w-4 transition group-hover:-translate-y-0.5 group-hover:translate-x-0.5" aria-hidden="true" />
                     {p.codigo ? <span className="font-normal text-zinc-500">· {t("back-office:")} {p.codigo}</span> : null}
                   </span>
+                  </div>
                 </a>
+                </Revelar>
               ))}
             </div>
           </section>
@@ -179,8 +202,10 @@ export default async function ShowroomDemos({ searchParams }: Props) {
                 const temDemo = k.demo && publicadas.includes(k.demo)
                 const Icone = ICONE[k.kit] ?? Sparkles
                 return (
-                  <div key={k.kit} className="group flex flex-col rounded-2xl border border-white/10 bg-white/[0.02] p-5 transition hover:border-[#D2A63C]/50 hover:bg-[#D2A63C]/[0.04]">
-                    <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-[#D2A63C]/15 text-[#E9C46A]">
+                  <Revelar key={k.kit} atraso={(KITS.indexOf(k) % 3) * 90}>
+                  <div className="group relative flex h-full flex-col overflow-hidden rounded-2xl border border-white/10 bg-white/[0.02] p-5 transition duration-300 hover:-translate-y-1 hover:border-[#D2A63C]/50 hover:bg-[#D2A63C]/[0.04] hover:shadow-[0_20px_50px_-20px_rgba(210,166,60,0.35)]">
+                    <span className="pointer-events-none absolute -right-10 -top-10 h-28 w-28 rounded-full bg-[#D2A63C]/0 blur-2xl transition duration-500 group-hover:bg-[#D2A63C]/25" aria-hidden="true" />
+                    <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-[#D2A63C]/15 text-[#E9C46A] transition duration-500 group-hover:rotate-[8deg] group-hover:scale-110">
                       <Icone className="h-5 w-5" aria-hidden="true" />
                     </div>
                     <p className="mt-4 text-lg font-semibold">{t(k.solucao)}</p>
@@ -199,6 +224,7 @@ export default async function ShowroomDemos({ searchParams }: Props) {
                       )}
                     </div>
                   </div>
+                  </Revelar>
                 )
               })}
             </div>
@@ -239,6 +265,7 @@ export default async function ShowroomDemos({ searchParams }: Props) {
           <section className="pt-24">
             <div className="relative overflow-hidden rounded-3xl border border-[#D2A63C]/40 bg-gradient-to-br from-[#D2A63C]/20 via-[#D2A63C]/5 to-transparent p-8 md:p-14">
               <div className="pointer-events-none absolute -right-20 -top-20 h-72 w-72 rounded-full bg-[#D2A63C]/20 blur-3xl" aria-hidden="true" />
+              <CenaCGI className="absolute -right-24 top-1/2 hidden h-[420px] w-[520px] -translate-y-1/2 opacity-80 md:block" formas={["anel", "telemovel", "rede"]} intensidade={0.9} />
               <h2 className="relative max-w-2xl text-3xl font-bold tracking-tight md:text-5xl">{t("Queres ver isto com o teu nome?")}</h2>
               <p className="relative mt-4 max-w-2xl text-lg text-zinc-300">{t("Numa conversa de 30 minutos escolhemos a demo certa e montamo-la com a marca do teu negócio.")}</p>
               <a href={agendar} className="relative mt-8 inline-flex min-h-[52px] items-center gap-2 rounded-full bg-[#D2A63C] px-7 font-semibold text-black shadow-lg shadow-[#D2A63C]/20 hover:bg-[#E9C46A]">

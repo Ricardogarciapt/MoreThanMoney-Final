@@ -5,6 +5,7 @@ import { ArrowLeft, ArrowRight, Check } from "lucide-react"
 import { linkAgendar } from "@/lib/agenda/link"
 import { demoPorSlug, demosPublicadas } from "@/lib/site-solucoes/demos-diarias"
 import { DemoRoteiro } from "@/components/solucoes/demo-roteiro"
+import { CenaCGI } from "@/components/solucoes/cena-cgi"
 import { dicionario } from "@/lib/site-solucoes/i18n/dicionarios"
 import { alternativas, idiomaDoPedido, tradutorServidor } from "@/lib/site-solucoes/i18n/servidor"
 import { IdiomaSolucoes, SeletorIdioma } from "@/components/solucoes/idioma"
@@ -37,7 +38,7 @@ export default async function DemoPage({ params, searchParams }: Props) {
 
   return (
     <IdiomaSolucoes idioma={idioma} dic={dicionario(idioma)}>
-    <main lang={idioma} className="min-h-[100dvh] bg-[#08090C] px-4 pb-24 pt-8 text-zinc-100 antialiased">
+    <main lang={idioma} className="min-h-[100dvh] overflow-x-hidden bg-[#08090C] px-4 pb-24 pt-8 text-zinc-100 antialiased">
       <div className="mx-auto max-w-6xl">
         <div className="flex items-center justify-between gap-3">
           <Link href={ligar("/solucoes/demos")} className="inline-flex min-h-[44px] items-center gap-2 text-sm text-zinc-400 hover:text-white">
@@ -74,8 +75,11 @@ export default async function DemoPage({ params, searchParams }: Props) {
             <p className="mt-3 text-xs text-zinc-500">{t("Diagnóstico de 15 minutos, sem compromisso. Demonstração ilustrativa, não é um caso de cliente.")}</p>
           </section>
 
-          <section aria-label={t("Demonstração")}>
-            <DemoRoteiro roteiro={d.roteiro} />
+          <section aria-label={t("Demonstração")} className="relative">
+            <CenaCGI className="absolute -inset-x-10 top-28 bottom-16 opacity-70" formas={["rede", "telemovel", "esfera"]} intensidade={0.7} />
+            <div className="relative">
+              <DemoRoteiro roteiro={d.roteiro} />
+            </div>
           </section>
         </div>
 

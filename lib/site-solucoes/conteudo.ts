@@ -119,6 +119,8 @@ export const CASOS: Caso[] = [
     ],
     estado: 'Entregue',
     autorizado: true,
+    url: 'https://plurinstal.vercel.app',
+    img: '/images/solucoes/caso-plurinstal.jpg',
   },
   {
     cliente: 'Liliana Faria',
@@ -151,6 +153,8 @@ export const CASOS: Caso[] = [
     estado: 'Protótipo apresentado',
     autorizado: true,
     anonimo: true,
+    // Screenshot real do protótipo com o nome e o emblema desfocados (o caso aqui é anónimo).
+    img: '/images/solucoes/caso-clube.jpg',
   },
 ]
 

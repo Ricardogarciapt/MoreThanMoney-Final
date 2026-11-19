@@ -1,7 +1,8 @@
 "use client"
 
 import { useEffect, useRef, useState } from "react"
-import Image from "next/image"
+import { EcraProjeto } from "@/components/solucoes/ecra-projeto"
+import { CenaCGI } from "@/components/solucoes/cena-cgi"
 import { ArrowUpRight, Check, ChevronLeft, ChevronRight } from "lucide-react"
 import type { Caso } from "@/lib/site-solucoes/conteudo"
 import { useT } from "@/components/solucoes/idioma"
@@ -79,14 +80,14 @@ export function CasosCiclo({ casos }: { casos: Caso[] }) {
         className="mt-5 grid overflow-hidden rounded-3xl border border-white/10 bg-white/[0.03] motion-safe:animate-in motion-safe:fade-in motion-safe:duration-500 md:min-h-[440px] md:grid-cols-[1.25fr_1fr]"
       >
         {c.img ? (
-          <Image src={c.img} alt={tf("Site de {cliente}", { cliente: t(c.cliente) })} width={1366} height={900} className="h-full max-h-[460px] w-full object-cover object-top" />
+          <div className="relative flex items-center overflow-hidden bg-[radial-gradient(90%_80%_at_30%_0%,rgba(210,166,60,0.22),transparent_65%),linear-gradient(160deg,#121318,#08090C)] p-5 md:p-8">
+            <EcraProjeto src={c.img} alt={tf("Site de {cliente}", { cliente: t(c.cliente) })} url={c.anonimo ? undefined : c.url} className="w-full" />
+          </div>
         ) : (
-          <div className="relative flex min-h-[220px] flex-col justify-end overflow-hidden bg-[radial-gradient(120%_90%_at_20%_0%,rgba(210,166,60,0.28),transparent_60%),linear-gradient(160deg,#121318,#08090C)] p-8">
-            <span aria-hidden className="pointer-events-none absolute -right-4 -top-10 select-none text-[180px] font-black leading-none text-white/[0.04]">
-              {c.cliente.slice(0, 2)}
-            </span>
-            <p className="text-sm text-[#E9C46A]">{t(c.setor)}</p>
-            <p className="mt-2 max-w-[22ch] text-2xl font-bold leading-tight text-white md:text-3xl">{t(c.feito[0])}</p>
+          <div className="relative flex min-h-[260px] flex-col justify-end overflow-hidden bg-[radial-gradient(120%_90%_at_20%_0%,rgba(210,166,60,0.28),transparent_60%),linear-gradient(160deg,#121318,#08090C)] p-8">
+            <CenaCGI className="absolute inset-0" formas={["rede", "telemovel"]} intensidade={0.8} />
+            <p className="relative text-sm text-[#E9C46A]">{t(c.setor)}</p>
+            <p className="relative mt-2 max-w-[22ch] text-2xl font-bold leading-tight text-white md:text-3xl">{t(c.feito[0])}</p>
           </div>
         )}
         <div className="flex flex-col p-7 md:p-9">
