@@ -79,5 +79,8 @@ export async function POST(request: NextRequest) {
   }
   const url = db.storage.from('uploads').getPublicUrl(`estudio/projetos/${p.id}.mp4`).data.publicUrl
   await db.from('estudio_projetos').update({ estado: 'pronto', erro: null, video_url: `${url}?v=${Date.now()}`, atualizado_em: new Date().toISOString() }).eq('id', p.id)
-  return NextResponse.json({ ok: true, video_url: url })
+  // Reel do clone HeyGen → fila do Instagram como rascunho + pedido de aprovação ao Ricardo.
+  const { rascunhoDoReelDoClone } = await import('@/lib/estudio/reel-aprovacao')
+  const post_id = await rascunhoDoReelDoClone(db, p.id)
+  return NextResponse.json({ ok: true, video_url: url, post_id })
 }

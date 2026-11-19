@@ -56,8 +56,15 @@ export const CRIADOR_AUTORIZADO_PESSOAL = "carrossel-diario:ricardo"
  * (`teste: true`) saem como «reels de teste» do Instagram: mostrados primeiro a não seguidores.
  */
 export const CRIADOR_REELS_PESSOAL = "reels-ricardo:ricardo"
+/**
+ * Terceira excepção, pedida pelo Ricardo a 19/11/2026: «quero eu poder aprovar no briefing os reels
+ * para se auto publicar». Só REELS feitos pelo clone HeyGen no /estudio, e cada um só sai depois de
+ * ele carregar «Publicar» no Telegram (lib/estudio/reel-aprovacao.ts passa-o de draft a approved).
+ */
+export const CRIADOR_REELS_CLONE = "estudio-clone:ricardo"
 export function autorizadoNaPessoal(row: { created_by?: string | null; media_type?: string | null }): boolean {
   if (row.created_by === CRIADOR_AUTORIZADO_PESSOAL && row.media_type === "CAROUSEL") return true
+  if (row.created_by === CRIADOR_REELS_CLONE && row.media_type === "REELS") return true
   return row.created_by === CRIADOR_REELS_PESSOAL && row.media_type === "REELS"
 }
 

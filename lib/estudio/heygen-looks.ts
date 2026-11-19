@@ -9,7 +9,7 @@
 export type TipoLook = 'twin' | 'foto'
 export type Look = { id: string; tipo: TipoLook; nome: string; papel: string }
 
-export const VOZ_RICARDO = 'd04d18d2a4ad473b82b6ce4bfa20f0f9' // «Ricardo Garcia PT-PT», clonada da amostra real
+export const VOZ_RICARDO = '5b96f4b43ecb419eb59014812b289d05' // «Ricardo Garcia PT-PT (Fish)», clonada de 50 s da voz Fish dos reels (19/11)
 
 export const LOOKS = {
   twin: { id: '3d43ebba9ad248e1984401c6997a6d1e', tipo: 'twin', nome: 'Ricardo Garcia (Digital Twin)', papel: 'Fala para a câmara' },

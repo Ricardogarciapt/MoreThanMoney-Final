@@ -772,6 +772,12 @@ export async function handleAdminAction(supabase: Supa, action: string, chatId: 
     case 'menu':
       await enviar(chatId, TEXTO_PAINEL, adminPanelKeyboard())
       return
+    case 'reels': {
+      const { reenviarPendentes } = await import('@/lib/estudio/reel-aprovacao')
+      const n = await reenviarPendentes(supabase as never, chatId)
+      if (!n) await enviar(chatId, '🎬 <b>Nenhum reel do clone à tua espera.</b>', { inline_keyboard: [VOLTAR] })
+      return
+    }
     case 'hoje': {
       const { carregarHoje, textoHoje, tecladoHoje } = await import('@/lib/telegram-admin-hoje')
       const h = await carregarHoje(supabase)

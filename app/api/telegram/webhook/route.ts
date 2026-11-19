@@ -382,7 +382,7 @@ export async function POST(request: NextRequest) {
         // ainda está a decidir, e uma pergunta que fica sem resposta é um lead que se vai embora.
         const dadosBotao = typeof cq.data === "string" ? cq.data : ""
         // Opt-in de seguimento (10/11) e aprovação humana das DMs do setter do Instagram.
-        if (dadosBotao.startsWith("optin:") || dadosBotao.startsWith("igdm:")) {
+        if (dadosBotao.startsWith("optin:") || dadosBotao.startsWith("igdm:") || dadosBotao.startsWith("reel:")) {
           const bt = getMtmcopyBotToken()
           const chatBotao = String(cq.message?.chat?.id ?? cq.from?.id ?? "")
           let resposta = ""
@@ -399,8 +399,13 @@ export async function POST(request: NextRequest) {
           } else {
             const { ehChatDeAdmin } = await import("@/lib/telegram-admin-menu")
             if (await ehChatDeAdmin(supabase, chatBotao)) {
-              const { decidirDmPorTelegram } = await import("@/lib/instagram/setter-aprovacao")
-              resposta = await decidirDmPorTelegram(dadosBotao)
+              if (dadosBotao.startsWith("reel:")) {
+                const { decidirReelPorTelegram } = await import("@/lib/estudio/reel-aprovacao")
+                resposta = await decidirReelPorTelegram(dadosBotao)
+              } else {
+                const { decidirDmPorTelegram } = await import("@/lib/instagram/setter-aprovacao")
+                resposta = await decidirDmPorTelegram(dadosBotao)
+              }
             }
           }
           if (bt) {
