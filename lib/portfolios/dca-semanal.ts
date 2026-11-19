@@ -99,3 +99,55 @@ export function valorDeMercado(h: Record<string, number>, fecho: Record<string, 
   }
   return r2(v)
 }
+
+/**
+ * 19/11 — A SEXTA DO DCA, contada à hora a que o cron corre. O Ricardo reforça as carteiras reais
+ * à sexta e quer a conta igual NO MESMO DIA: o cron passou a correr às 21:30 UTC de sexta (depois
+ * do fecho de Nova Iorque, 21:00 UTC no inverno). A essa hora a sexta de hoje já conta; antes das
+ * 21:00 vale a anterior, que é o que `ultimaSextaFechada` diz. O sábado de manhã fica como rede.
+ */
+export function sextaDoDca(agora: Date): string {
+  if (agora.getUTCDay() === 5 && agora.getUTCHours() >= 21) return agora.toISOString().slice(0, 10)
+  return ultimaSextaFechada(agora)
+}
+
+export interface PosicaoCarteira {
+  symbol: string
+  unidades: number
+  /** Dinheiro posto neste activo: compras − vendas. */
+  investido: number
+  preco: number | null
+  valor: number | null
+  /** % do valor em activos (sem a caixa). */
+  peso: number | null
+}
+
+/**
+ * 19/11 — O QUE A CONTA TEM, activo a activo, para a /portfolios mostrar a carteira VERDADEIRA da
+ * conta em vez da lista do plano. Lê os movimentos (o mesmo registo que o DCA escreve) e as
+ * cotações de `portfolio_cotacoes`. Activo sem cotação: aparece, mas sem valor nem peso.
+ */
+export function posicoesDaCarteira(movs: MovimentoMin[], precos: Record<string, number | null | undefined>): {
+  posicoes: PosicaoCarteira[]
+  caixa: number
+  valor: number | null
+} {
+  const h = carteira(movs)
+  const investido: Record<string, number> = {}
+  for (const m of movs) {
+    const t = String(m.tipo).toLowerCase()
+    const v = Number(m.valor) || 0
+    if (t === 'compra') investido[m.symbol] = (investido[m.symbol] ?? 0) + v
+    else if (t === 'venda') investido[m.symbol] = (investido[m.symbol] ?? 0) - v
+  }
+  const caixa = liquidez(movs)
+  const linhas = Object.entries(h).filter(([, u]) => u > 0).map(([symbol, unidades]) => {
+    const p = Number(precos[symbol])
+    const preco = Number.isFinite(p) && p > 0 ? p : null
+    return { symbol, unidades, investido: r2(investido[symbol] ?? 0), preco, valor: preco == null ? null : r2(unidades * preco), peso: null as number | null }
+  })
+  const emActivos = linhas.reduce((a, l) => a + (l.valor ?? 0), 0)
+  for (const l of linhas) l.peso = l.valor == null || emActivos <= 0 ? null : Math.round((l.valor / emActivos) * 1000) / 10
+  linhas.sort((a, b) => (b.valor ?? -1) - (a.valor ?? -1) || a.symbol.localeCompare(b.symbol))
+  return { posicoes: linhas, caixa, valor: valorDeMercado(h, precos, caixa) }
+}

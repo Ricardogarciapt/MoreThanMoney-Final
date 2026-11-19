@@ -41,7 +41,19 @@ export async function GET() {
 
     return NextResponse.json({
       contas: contas.map((c) => {
-        const curva = porConta.get(String(c.id)) ?? []
+        const curva = [...(porConta.get(String(c.id)) ?? [])]
+        const m = (c.metricas ?? {}) as Record<string, unknown>
+        /**
+         * 19/11 — O VALOR DE HOJE. A curva é semanal; o cron das cotações (15 min) marca a conta ao
+         * mercado em `metricas.valor_hoje` (lib/portfolios/servidor.ts). Se for mais recente do que
+         * o último ponto, entra como ponto de hoje, com o contribuído da última sexta.
+         */
+        const valorHoje = Number(m.valor_hoje)
+        const hojeEm = typeof m.valor_hoje_em === 'string' ? m.valor_hoje_em : null
+        const ultimoSemanal = curva[curva.length - 1]
+        if (hojeEm && Number.isFinite(valorHoje) && valorHoje > 0 && (!ultimoSemanal || hojeEm.slice(0, 10) > ultimoSemanal.data)) {
+          curva.push({ data: hojeEm.slice(0, 10), contribuido: Number(ultimoSemanal?.contribuido ?? c.sim_saldo ?? 0), valor: valorHoje })
+        }
         const ultimo = curva[curva.length - 1]
         /**
          * O ÚLTIMO PONTO DA CURVA primeiro, e só depois as colunas da conta. A 05/11/2026 a página
@@ -52,7 +64,6 @@ export async function GET() {
          */
         const contribuido = Number(ultimo?.contribuido ?? c.sim_saldo ?? 0)
         const valor = Number(ultimo?.valor ?? c.sim_equity ?? 0)
-        const m = (c.metricas ?? {}) as Record<string, unknown>
         return {
           chave: String(c.mt5_login),
           nome: String(c.etiqueta ?? ''),
@@ -75,6 +86,10 @@ export async function GET() {
           dca: String(m.dca ?? ''),
           nota: String(m.nota ?? ''),
           curva,
+          // A carteira VERDADEIRA da conta, activo a activo (a mesma que o DCA de sexta reforça).
+          posicoes: Array.isArray(m.posicoes_hoje) ? m.posicoes_hoje : [],
+          caixa: Number(m.caixa_hoje ?? 0),
+          valorEm: hojeEm,
         }
       }),
     })

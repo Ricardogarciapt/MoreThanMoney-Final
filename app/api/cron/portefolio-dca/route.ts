@@ -1,5 +1,10 @@
 /**
- * Cron SEMANAL do DCA das contas de portefólio (PORTF-CRIPTO e PORTF-ETF) — sábado de manhã.
+ * Cron SEMANAL do DCA das contas de portefólio (PORTF-CRIPTO e PORTF-ETF) — sexta às 21:30 UTC.
+ *
+ * 19/11: corria ao sábado de manhã; passou para a própria sexta, depois do fecho de Nova Iorque,
+ * para a conta ficar igual às carteiras reais no dia em que o Ricardo reforça. O sábado às 06:00
+ * fica como rede (é idempotente: «já feito»). A carteira lê-se em páginas (lerMovimentos): o
+ * select simples parava nas 1 000 linhas e gravava valores errados na curva desde 06/11.
  *
  * Pedido do Ricardo (05/11/2026): «às sextas fazer esses DCA automaticamente, pois eu estou a fazer
  * o mesmo». O plano e as regras estão em lib/portfolios/dca-semanal.ts.
@@ -15,9 +20,10 @@ import { NextRequest, NextResponse } from 'next/server'
 import { isCronAuthorized } from '@/lib/cron-auth'
 import { getSupabaseAdmin } from '@/lib/supabase-admin-client'
 import {
-  MOTIVO_DCA, PLANOS_DCA, carteira, comprasDaSemana, liquidez, totalDoPlano, ultimaSextaFechada, valorDeMercado,
+  MOTIVO_DCA, PLANOS_DCA, carteira, comprasDaSemana, liquidez, sextaDoDca, totalDoPlano, valorDeMercado,
   type FontePreco,
 } from '@/lib/portfolios/dca-semanal'
+import { lerMovimentos, marcarPortefoliosAoMercado } from '@/lib/portfolios/servidor'
 
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
@@ -69,7 +75,7 @@ const fecho = (f: FontePreco, s: string, d: string) => (f === 'binance' ? fechoB
 export async function GET(req: NextRequest) {
   if (!isCronAuthorized(req)) return NextResponse.json({ error: 'unauthorized' }, { status: 401 })
   const pedida = req.nextUrl.searchParams.get('data')
-  const data = pedida && /^\d{4}-\d{2}-\d{2}$/.test(pedida) ? pedida : ultimaSextaFechada(new Date())
+  const data = pedida && /^\d{4}-\d{2}-\d{2}$/.test(pedida) ? pedida : sextaDoDca(new Date())
   const db = getSupabaseAdmin()
   const resultado: Array<Record<string, unknown>> = []
 
@@ -89,12 +95,8 @@ export async function GET(req: NextRequest) {
         .eq('conta_id', conta.id).eq('tipo', 'compra').eq('data', data).eq('motivo', MOTIVO_DCA)
       if ((count ?? 0) > 0) { resultado.push({ conta: plano.login, data, estado: 'já feito' }); continue }
 
-      const { data: movs } = await db
-        .from('portefolio_movimentos')
-        .select('symbol, tipo, unidades, valor')
-        .eq('conta_id', conta.id)
-        .lte('data', data)
-      const antes = carteira(movs ?? [])
+      const movs = await lerMovimentos(db, String(conta.id), data)
+      const antes = carteira(movs)
       const simbolos = [...new Set([...Object.keys(plano.reforco), ...Object.keys(antes)])]
       const precos: Record<string, number | null> = {}
       await Promise.all(simbolos.map(async (s) => { precos[s] = await fecho(plano.fonte, s, data) }))
@@ -110,7 +112,7 @@ export async function GET(req: NextRequest) {
       const { error: e1 } = await db.from('portefolio_movimentos').insert(novas)
       if (e1) throw e1
 
-      const todos = [...(movs ?? []), ...novas]
+      const todos = [...movs, ...novas]
       const valor = valorDeMercado(carteira(todos), precos, liquidez(todos))
       const { data: ult } = await db
         .from('portefolio_curva').select('contribuido').eq('conta_id', conta.id).lt('data', data)
@@ -127,5 +129,7 @@ export async function GET(req: NextRequest) {
       resultado.push({ conta: plano.login, data, estado: 'erro', erro: e instanceof Error ? e.message : String(e) })
     }
   }
-  return NextResponse.json({ ok: true, data, resultado })
+  // O valor de hoje logo a seguir ao DCA, para a /portfolios não esperar pelo próximo ciclo das cotações.
+  const mercado = await marcarPortefoliosAoMercado(db).catch(() => [])
+  return NextResponse.json({ ok: true, data, resultado, mercado })
 }
