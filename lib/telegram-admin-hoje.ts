@@ -63,6 +63,8 @@ export interface FontesDeHoje {
   sinaisHoje: number
   pedidosDeAcesso: number
   levantamentosAbertos: number
+  /** Reels do clone à espera de «Publicar» (lib/estudio/reel-aprovacao.ts). */
+  reelsPorAprovar?: number
   agoraMs?: number
 }
 
@@ -122,6 +124,7 @@ export function montarHoje(f: FontesDeHoje): Hoje {
     aMinhaEspera: [
       { o_que: 'pedidos de acesso (depósito)', quantos: f.pedidosDeAcesso, callback: 'admin:dep' },
       { o_que: 'levantamentos por decidir', quantos: f.levantamentosAbertos, callback: 'admin:lev' },
+      { o_que: 'reel(s) do clone por aprovar', quantos: f.reelsPorAprovar ?? 0, callback: 'admin:reels' },
     ].filter((x) => x.quantos > 0),
     avisos,
   }
@@ -304,7 +307,16 @@ export async function carregarHoje(supabase: unknown, agoraMs: number = Date.now
       })),
   ].slice(0, 20)
 
+  let reelsPorAprovar = 0
+  try {
+    const { contarReelsPorAprovar } = await import('@/lib/estudio/reel-aprovacao')
+    reelsPorAprovar = await contarReelsPorAprovar(db as never)
+  } catch {
+    /* a vista sai na mesma */
+  }
+
   return montarHoje({
+    reelsPorAprovar,
     pagamentosDeHoje: pags,
     pagamentosLidos,
     nomes,
