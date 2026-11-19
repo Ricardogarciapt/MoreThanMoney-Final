@@ -8,6 +8,7 @@ import fs from 'node:fs'
 import os from 'node:os'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
+import * as motorVideo from '../motor/motor.mjs'
 
 const { chromium } = createRequire(import.meta.url)('playwright')
 const DIR = path.dirname(fileURLToPath(import.meta.url))
@@ -74,14 +75,13 @@ for (const peca of pecas) for (const lang of langs) {
   const audio = path.join(tmp, 'audio.wav')
   if (falas.length) {
     execFileSync('ffmpeg', ['-y', '-v', 'error', '-i', musica, '-i', voz, '-filter_complex',
-      '[1]asplit[vs][vm];[0]volume=0.55[m];[m][vs]sidechaincompress=threshold=0.03:ratio=6:attack=20:release=350[md];[vm]volume=1.6,acompressor=threshold=0.1:ratio=3[vv];[md][vv]amix=inputs=2:normalize=0,alimiter=limit=0.95[a]',
+      '[1]asplit[vs][vm];[0]volume=0.55[m];[m][vs]sidechaincompress=threshold=0.03:ratio=6:attack=20:release=350[md];[vm]volume=1.6,acompressor=threshold=0.1:ratio=3[vv];[md][vv]amix=inputs=2:normalize=0,alimiter=limit=0.95,' + motorVideo.LOUDNORM + '[a]',
       '-map', '[a]', audio])
   } else fs.copyFileSync(musica, audio)
 
   const mp4 = path.join(SAIDA, `${nome}.mp4`)
   const ff = spawn('ffmpeg', ['-y', '-v', 'error', '-f', 'image2pipe', '-framerate', '30', '-c:v', 'mjpeg', '-i', '-', '-i', audio,
-    '-c:v', 'libx264', '-preset', 'medium', '-crf', '19', '-pix_fmt', 'yuv420p', '-r', '30',
-    '-c:a', 'aac', '-b:a', '192k', '-t', total.toFixed(2), '-movflags', '+faststart', mp4], { stdio: ['pipe', 'inherit', 'inherit'] })
+    '-r', String(motorVideo.FPS), ...motorVideo.codificar('final'), '-t', total.toFixed(2), mp4], { stdio: ['pipe', 'inherit', 'inherit'] })
   const n = Math.ceil(total * 30)
   for (let i = 0; i < n; i++) {
     await page.evaluate((x) => window.renderAt(x), i / 30)

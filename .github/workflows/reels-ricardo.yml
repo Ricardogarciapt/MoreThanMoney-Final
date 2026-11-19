@@ -29,7 +29,9 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          sparse-checkout: services/reels-ricardo
+          sparse-checkout: |
+            services/reels-ricardo
+            video/motor
 
       - uses: actions/setup-python@v5
         with:

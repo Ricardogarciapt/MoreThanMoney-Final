@@ -27,6 +27,7 @@ jobs:
         with:
           sparse-checkout: |
             tools/reels-educadores
+            video/motor
             deploy/vps-stream/videocliper
 
       - uses: actions/setup-node@v4

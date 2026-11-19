@@ -28,6 +28,7 @@
     "app/mtmcopy/telegram-to-mt5-develop/**",
     "supabase/functions/**",
     "mtmcopy-engine/**",
-    "services/cripto-executor/**"
+    "services/cripto-executor/**",
+    "video/cinematico/**"
   ]
 }

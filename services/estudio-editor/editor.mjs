@@ -20,7 +20,7 @@ import { spawn } from 'node:child_process'
 import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
-import { renderProjeto } from './projeto.mjs'
+import { renderProjeto, motor } from './projeto.mjs'
 
 const SITE = (process.env.MTM_SITE || 'https://www.morethanmoney.pt').replace(/\/$/, '')
 const SEGREDO = process.env.CRON_SECRET?.trim()
@@ -50,7 +50,7 @@ function correr(cmd, args, opts = {}) {
   })
 }
 
-const ENQUADRAR = 'scale=1080:1920:force_original_aspect_ratio=increase,crop=1080:1920,fps=30,format=yuv420p'
+const ENQUADRAR = motor.enquadrar('reel')
 
 /**
  * Animação de uma imagem pelo contexto do segmento onde entra: o zoom pedido no guião manda; números,
@@ -144,8 +144,8 @@ export async function edicaoBase(entrada, saida, guiao = {}) {
   const args = ['-y', '-hide_banner', '-loglevel', 'error', '-threads', '2', ...(corte ? ['-ss', String(corte)] : []), '-i', entrada]
   const fora = cortes.map((c) => `between(t,${c.ini},${c.fim})`).join('+')
   const filtros = cortes.length
-    ? [`[0:v]select='not(${fora})',setpts=N/FRAME_RATE/TB,${ENQUADRAR}[v0]`, `[0:a]aselect='not(${fora})',asetpts=N/SR/TB,loudnorm=I=-14:TP=-1.5:LRA=11[a0]`]
-    : [`[0:v]${ENQUADRAR}[v0]`, '[0:a]loudnorm=I=-14:TP=-1.5:LRA=11[a0]']
+    ? [`[0:v]select='not(${fora})',setpts=N/FRAME_RATE/TB,${ENQUADRAR}[v0]`, `[0:a]aselect='not(${fora})',asetpts=N/SR/TB,${motor.LOUDNORM}[a0]`]
+    : [`[0:v]${ENQUADRAR}[v0]`, `[0:a]${motor.LOUDNORM}[a0]`]
   let n = 1
   let ultimo = 'v0'
   plano.forEach((p, k) => {
@@ -177,8 +177,7 @@ export async function edicaoBase(entrada, saida, guiao = {}) {
   }
   args.push('-filter_complex', filtros.join(';'), '-map', `[${ultimo}]`, '-map', `[${audio}]`,
     ...(duracao > 0 ? ['-t', duracao.toFixed(2)] : []),
-    '-c:v', 'libx264', '-preset', 'medium', '-crf', '20', '-c:a', 'aac', '-b:a', '160k', '-ar', '48000',
-    '-movflags', '+faststart', saida)
+    ...motor.codificar('final'), saida)
   await correr('nice', ['-n', '15', 'ffmpeg', ...args])
   return { ativos_usados: plano.length + (musica ? 1 : 0) }
 }

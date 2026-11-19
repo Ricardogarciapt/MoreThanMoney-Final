@@ -7,6 +7,7 @@ import { spawn, execFileSync } from 'node:child_process'
 import fs from 'node:fs'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
+import * as motorVideo from '../motor/motor.mjs'
 
 const { chromium } = createRequire(import.meta.url)('playwright')
 const DIR = path.dirname(fileURLToPath(import.meta.url))
@@ -14,8 +15,8 @@ const lang = process.argv[2] || 'pt'
 const preview = process.argv.includes('--preview')
 const so = (process.argv.find(a => a.startsWith('--so=')) || '').slice(5)
 const legendas = !process.argv.includes('--sem-legendas')
-const FPS = preview ? 12 : 30
-const W = 1920, H = 1080
+const FPS = preview ? 12 : motorVideo.FPS
+const { largura: W, altura: H } = motorVideo.formato('youtube')
 const ABRE = 0.6, RESPIRO = 1.1 // segundos antes da 1.ª fala e entre cenas
 
 const guiao = JSON.parse(fs.readFileSync(path.join(DIR, 'guiao.json'), 'utf8')).cenas
@@ -55,7 +56,7 @@ if (temVoz) {
   const falas = TL.filter(c => c.audio)
   falas.forEach((c, i) => { ins.push('-i', c.audio); filt.push(`[${i}:a]aresample=48000,adelay=${Math.round(c.ini * 1000)}:all=1[a${i}]`) })
   const musica = path.join(DIR, 'musica.mp3'), temMusica = fs.existsSync(musica) && !so
-  filt.push(`${falas.map((_, i) => `[a${i}]`).join('')}amix=inputs=${falas.length}:normalize=0,apad=whole_dur=${total.toFixed(2)},loudnorm=I=-16:TP=-1.5,aresample=48000${temMusica ? ',asplit[voz][chave]' : '[out]'}`)
+  filt.push(`${falas.map((_, i) => `[a${i}]`).join('')}amix=inputs=${falas.length}:normalize=0,apad=whole_dur=${total.toFixed(2)},${motorVideo.LOUDNORM},aresample=48000${temMusica ? ',asplit[voz][chave]' : '[out]'}`)
   if (temMusica) {
     // Música com energia: cheia na abertura e nas pausas, baixa sozinha por baixo da voz (ducking pela própria voz).
     // Nível de base ~-20 LUFS; com voz desce cerca de 10 dB, para a fala ficar sempre à frente.
@@ -79,9 +80,9 @@ await page.waitForTimeout(500)
 const mp4 = path.join(out, `apresentacao-${lang}${preview ? '-preview' : ''}${so ? '-' + so : ''}.mp4`)
 const args = ['-y', '-v', 'error', '-f', 'image2pipe', '-framerate', String(FPS), '-c:v', 'mjpeg', '-i', '-']
 if (temVoz) args.push('-i', audio)
-args.push('-c:v', 'libx264', '-preset', preview ? 'veryfast' : 'slow', '-crf', preview ? '30' : '25', '-pix_fmt', 'yuv420p', '-r', String(FPS))
-if (temVoz) args.push('-c:a', 'aac', '-b:a', '160k', '-shortest')
-args.push('-movflags', '+faststart', mp4)
+args.push('-r', String(FPS), ...motorVideo.codificar(preview ? 'rascunho' : 'mestre', { semAudio: !temVoz }))
+if (temVoz) args.push('-shortest')
+args.push(mp4)
 const ff = spawn('ffmpeg', args, { stdio: ['pipe', 'inherit', 'inherit'] })
 
 const n = Math.ceil(total * FPS)
@@ -104,6 +105,8 @@ fs.writeFileSync(path.join(out, `apresentacao-${lang}.vtt`), 'WEBVTT\n\n' + TL.f
 if (temVoz && !preview && !so) {
   const final = path.join(out, `apresentacao-${lang}-final.mp4`)
   fs.copyFileSync(mp4, final)
+  // cópia para a pasta única dos renders: <raiz>/morethanmoney/apresentacao/<data>-apresentacao-<lang>.mp4
+  try { fs.copyFileSync(final, motorVideo.saida({ marca: 'morethanmoney', produto: 'apresentacao', slug: `apresentacao-${lang}` })) } catch (e) { console.warn('sem cópia para os renders:', e.message) }
   const fecho = TL.find(c => c.id === 's14-fecho')
   execFileSync('ffmpeg', ['-y', '-v', 'error', '-ss', String(fecho.ini + 1.6), '-i', final, '-frames:v', '1', '-vf', 'scale=1280:-1', '-q:v', '3', path.join(out, `poster-${lang}.jpg`)])
   console.log('feito:', final)

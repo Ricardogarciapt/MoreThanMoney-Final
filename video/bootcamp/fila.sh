@@ -45,6 +45,8 @@ for est in $ESTS; do
   node video/bootcamp/capa.mjs "$est" || echo "ERRO capa $est"
   mkdir -p "$DEST/bootcamp-$est"
   cp video/bootcamp/saida/$est/*.mp4 video/bootcamp/saida/$est/*.vtt video/bootcamp/saida/$est/*.txt video/bootcamp/saida/$est/*.jpg "$DEST/bootcamp-$est/" 2>/dev/null
+  # pasta única dos renders (motor de vídeo): <raiz>/morethanmoney/bootcamp/<est>/
+  R="$(node video/motor/motor.mjs pasta morethanmoney bootcamp)/$est"; mkdir -p "$R" && cp video/bootcamp/saida/$est/*.mp4 video/bootcamp/saida/$est/*.vtt "$R/" 2>/dev/null || true
   node video/bootcamp/publicar-youtube.mjs || echo "publicação em pausa (quota ou erro); retoma no fim"
 done
 echo "=== FILA TERMINADA $(date) ==="

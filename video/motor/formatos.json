@@ -1,0 +1,128 @@
+{
+  "_leia": "Fonte única de formatos e codificação de TODOS os motores de vídeo da casa. Não copies estes números para outro sítio: lê-os com motor.mjs / motor.py / lib/video/motor.ts.",
+  "fps": 30,
+  "formatos": {
+    "reel": {
+      "largura": 1080,
+      "altura": 1920,
+      "aliases": [
+        "9:16",
+        "story",
+        "short",
+        "tiktok",
+        "vertical"
+      ]
+    },
+    "feed": {
+      "largura": 1080,
+      "altura": 1350,
+      "aliases": [
+        "4:5",
+        "post",
+        "carrossel"
+      ]
+    },
+    "quadrado": {
+      "largura": 1080,
+      "altura": 1080,
+      "aliases": [
+        "1:1"
+      ]
+    },
+    "youtube": {
+      "largura": 1920,
+      "altura": 1080,
+      "aliases": [
+        "16:9",
+        "horizontal",
+        "apresentacao",
+        "web"
+      ]
+    },
+    "web-720": {
+      "largura": 1280,
+      "altura": 720,
+      "aliases": [
+        "720p",
+        "telemovel-web"
+      ]
+    }
+  },
+  "qualidade": {
+    "mestre": {
+      "preset": "slow",
+      "crf": 17,
+      "_uso": "vídeos cinemáticos e apresentações (vão para o site e para o YouTube)"
+    },
+    "final": {
+      "preset": "medium",
+      "crf": 20,
+      "_uso": "omissão: reels, stories, bootcamps, editor do /estudio"
+    },
+    "rapido": {
+      "preset": "veryfast",
+      "crf": 21,
+      "_uso": "VPS e máquinas fracas (Conteúdo Magnético)"
+    },
+    "rascunho": {
+      "preset": "veryfast",
+      "crf": 30,
+      "_uso": "pré-visualizações (--preview)"
+    },
+    "intermedio": {
+      "preset": "veryfast",
+      "crf": 18,
+      "_uso": "segmentos temporários que voltam a ser codificados"
+    }
+  },
+  "video": {
+    "codec": "libx264",
+    "pix_fmt": "yuv420p",
+    "profile": "high"
+  },
+  "audio": {
+    "codec": "aac",
+    "bitrate": "192k",
+    "sample_rate": 48000,
+    "canais": 2
+  },
+  "volume": {
+    "lufs": -14,
+    "true_peak": -1.5,
+    "lra": 11,
+    "musica_sob_voz_db": -18
+  },
+  "saida": {
+    "_leia": "Todos os renders terminam em <raiz>/<marca>/<produto>/<AAAA-MM-DD>-<slug>.mp4; no Storage, em renders/<marca>/<produto>/<ficheiro>.",
+    "raiz_mac": "/Volumes/Disco externo/MTM-Assets/renders",
+    "raiz_nuvem": "/mnt/project-files/renders",
+    "ativos_mac": "/Volumes/Disco externo/MTM-Assets",
+    "ativos_nuvem": "/mnt/project-files/MTM-Assets",
+    "bucket": "estudio",
+    "prefixo_storage": "renders"
+  },
+  "produtos": [
+    "estudio",
+    "reels",
+    "cinematico",
+    "apresentacao",
+    "bootcamp",
+    "stories",
+    "conteudo-magnetico",
+    "educadores",
+    "landing",
+    "demos"
+  ],
+  "grades": {
+    "nenhum": "",
+    "neutro": "",
+    "ouro": "colorchannelmixer=rr=1.05:gg=0.97:bb=0.82,eq=contrast=1.08:saturation=1.2",
+    "teal": "colorchannelmixer=rr=0.9:gg=1.02:bb=1.08,eq=contrast=1.06:saturation=1.1",
+    "quente": "colorbalance=rs=.08:gs=.02:bs=-.08,eq=saturation=1.15",
+    "frio": "colorbalance=rs=-.06:bs=.08",
+    "pb": "hue=s=0,eq=contrast=1.1",
+    "cinema": "eq=contrast=1.18:saturation=0.85:brightness=-0.03",
+    "vivo": "eq=saturation=1.45:contrast=1.05",
+    "suave": "eq=contrast=0.9:brightness=0.04:saturation=0.9"
+  }
+}

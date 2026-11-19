@@ -7,9 +7,13 @@ import json, sys, os, math
 from PIL import Image, ImageDraw, ImageFont, ImageFilter, ImageEnhance
 
 AQUI = os.path.dirname(os.path.abspath(__file__))
-FONTES = os.path.join(AQUI, 'fontes')
-W, H = 1080, 1920
-CIANO = (30, 170, 230); AZUL = (18, 86, 190); OURO = (210, 166, 60)
+# Motor de vídeo único: cores, fontes, formato e codificação vêm de video/motor (perfil ricardo-garcia).
+sys.path.insert(0, os.path.join(AQUI, '..', '..', 'video', 'motor'))
+import motor  # noqa: E402
+MARCA = motor.marca('ricardo-garcia')
+FONTES = motor.PASTA_FONTES
+_, W, H = motor.formato('reel')
+CIANO = motor.rgb(MARCA['cores']['destaque2']); AZUL = motor.rgb(MARCA['cores']['faixa']); OURO = motor.rgb(MARCA['cores']['ouro'])
 LOGO = os.path.join(AQUI, 'logo-mtm-transparent.png')
 
 def fonte(nome, t): return ImageFont.truetype(os.path.join(FONTES, nome), t)

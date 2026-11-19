@@ -28,7 +28,7 @@ Fonte `lib/framework-mtm.ts`, explicado em `docs/mtm-master-framework.md`. Promp
 
 - Sub-agentes sempre com `model: haiku`. Ler só as partes dos ficheiros de que precisas.
 - `/clear` entre tarefas sem relação; `/compact` no fim de cada fase, nunca a meio de uma implementação.
-- As skills de uso diário estão em `.claude/skills/` (42). As outras 472 estão em `biblioteca-skills/`: copia uma para `.claude/skills/` só quando fizer falta.
+- As skills de uso diário estão em `.claude/skills/` (43). As outras 472 estão em `biblioteca-skills/`: copia uma para `.claude/skills/` só quando fizer falta.
 
 ## Onde está o resto (ler só quando preciso)
 
@@ -36,6 +36,7 @@ Fonte `lib/framework-mtm.ts`, explicado em `docs/mtm-master-framework.md`. Promp
 |---|---|
 | 12 agentes do Dashboard Gestão e Dispatch | `docs/claude/agentes-ia.md` |
 | UI, skills de design e AIOS (iframe em `public/aios`, não é React) | `docs/claude/design-ui.md` |
+| **Vídeo** (motor único, perfis de marca, que motor usar; skill `mtm-video`) | `video/motor/LEIA-ME.md` |
 | WhatsApp Business (IDs, token de sistema, o que falta) | `docs/claude/whatsapp.md` |
 | Variáveis de ambiente, tabelas Supabase, URLs, métricas | `docs/claude/ambiente-metricas.md` |
 | Pendentes e doutrinas de set.–nov. 2026 (VPS, MTM Funded, T2T, flyer semanal) | `docs/claude/pendentes-historico.md` |

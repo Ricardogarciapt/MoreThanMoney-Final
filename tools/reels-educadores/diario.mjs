@@ -13,6 +13,7 @@ import fs from 'node:fs'
 import os from 'node:os'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
+import * as motorVideo from '../../video/motor/motor.mjs'
 
 const DIR = path.dirname(fileURLToPath(import.meta.url))
 const API = (process.env.MTM_API_BASE || 'https://www.morethanmoney.pt').replace(/\/+$/, '')
@@ -140,11 +141,11 @@ async function desenhar(browser, item, pasta, fundo = null) {
   const som = path.join(pasta, 'som.wav')
   execFileSync('python3', [path.join(DIR, 'som.py'), som, String(info.total), JSON.stringify(info.cortes), JSON.stringify(info.palavras)])
   const mp4 = path.join(pasta, 'reel.mp4')
-  const saida = ['-c:v', 'libx264', '-preset', 'medium', '-crf', '20', '-pix_fmt', 'yuv420p', '-r', '30',
-    '-c:a', 'aac', '-b:a', '192k', '-t', info.total.toFixed(2), '-movflags', '+faststart', mp4]
+  // codificação e volume do motor de vídeo único (video/motor): H.264 final, AAC 48 kHz, -14 LUFS
+  const saida = ['-af', motorVideo.LOUDNORM, '-r', String(motorVideo.FPS), ...motorVideo.codificar('final'), '-t', info.total.toFixed(2), mp4]
   const args = fundo
     ? ['-y', '-v', 'error', '-stream_loop', '-1', '-i', fundo, '-f', 'image2pipe', '-framerate', '30', '-c:v', 'png', '-i', '-', '-i', som,
-      '-filter_complex', '[0:v]scale=1080:1920:force_original_aspect_ratio=increase,crop=1080:1920,setsar=1,fps=30,drawbox=c=black@0.5:t=fill[f];[f][1:v]overlay=0:0:shortest=1[v]',
+      '-filter_complex', `[0:v]${motorVideo.enquadrar('reel')},drawbox=c=black@0.5:t=fill[f];[f][1:v]overlay=0:0:shortest=1[v]`,
       '-map', '[v]', '-map', '2:a', ...saida]
     : ['-y', '-v', 'error', '-f', 'image2pipe', '-framerate', '30', '-c:v', 'mjpeg', '-i', '-', '-i', som, ...saida]
   const ff = spawn('ffmpeg', args, { stdio: ['pipe', 'inherit', 'inherit'] })

@@ -24,7 +24,7 @@ AQUI = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, AQUI)
 import capa_reel as cr  # noqa: E402
 
-W, H, FPS = 1080, 1920, 30
+_, W, H = cr.motor.formato('reel'); FPS = cr.motor.FPS
 CIANO, AZUL = cr.CIANO, cr.AZUL
 GAP = 0.14          # pausa entre falas (s)
 INICIO = 0.35       # a voz entra aqui; antes só a capa
@@ -98,7 +98,7 @@ def montar_audio(vozes, total, tmp):
         f.setnchannels(1); f.setsampwidth(2); f.setframerate(SR)
         f.writeframes((mix * 32767).astype(np.int16).tobytes())
     final = os.path.join(tmp, 'audio.wav')
-    sh('ffmpeg', '-y', '-i', raw, '-af', 'loudnorm=I=-14:TP=-1.5:LRA=11', '-ar', '48000', '-ac', '2', final)
+    sh('ffmpeg', '-y', '-i', raw, '-af', cr.motor.LOUDNORM, '-ar', '48000', '-ac', '2', final)
     return final, marcas
 
 
@@ -219,9 +219,7 @@ def main():
 
     video = os.path.join(saida, f'reel-{n:02d}.mp4')
     ff = subprocess.Popen(['ffmpeg', '-y', '-f', 'rawvideo', '-pix_fmt', 'rgb24', '-s', f'{W}x{H}', '-r', str(FPS),
-                           '-i', '-', '-i', audio, '-c:v', 'libx264', '-preset', 'medium', '-crf', '19',
-                           '-pix_fmt', 'yuv420p', '-profile:v', 'high', '-c:a', 'aac', '-b:a', '160k',
-                           '-movflags', '+faststart', '-shortest', video],
+                           '-i', '-', '-i', audio, *cr.motor.codificar('final'), '-shortest', video],
                           stdin=subprocess.PIPE, stderr=subprocess.DEVNULL)
     nfr = int(total * FPS)
     ultima = marcas[-1][0]
