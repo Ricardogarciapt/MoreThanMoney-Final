@@ -218,6 +218,10 @@
     },
     {
       "path": "/api/cron/portefolio-dca",
+      "schedule": "30 21 * * 5"
+    },
+    {
+      "path": "/api/cron/portefolio-dca?rede=sabado",
       "schedule": "0 6 * * 6"
     },
     {

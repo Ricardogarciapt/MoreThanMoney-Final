@@ -13,6 +13,8 @@ import { NextRequest, NextResponse } from 'next/server'
 import { isCronAuthorized } from '@/lib/cron-auth'
 import { getSupabaseAdmin } from '@/lib/supabase-admin-client'
 import { cotacoesCripto, cotacoesEtf, parBinance } from '@/lib/portfolios/cotacoes'
+import { marcarPortefoliosAoMercado } from '@/lib/portfolios/servidor'
+import { PLANOS_DCA } from '@/lib/portfolios/dca-semanal'
 
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
@@ -29,8 +31,11 @@ export async function GET(req: NextRequest) {
     db.from('admin_crypto_portfolio').select('symbol, entry_price'),
     db.from('admin_etf_portfolio').select('symbol'),
   ])
-  const cripto = (cr ?? []).map((r) => parBinance(String(r.symbol))).filter(Boolean)
-  const etfs = (et ?? []).map((r) => String(r.symbol)).filter(Boolean)
+  // Os activos das contas de portefólio entram sempre, estejam ou não na lista do admin: sem a
+  // cotação deles a conta não se marca ao mercado.
+  const doPlano = (f: 'binance' | 'yahoo') => PLANOS_DCA.filter((p) => p.fonte === f).flatMap((p) => Object.keys(p.reforco))
+  const cripto = [...new Set([...(cr ?? []).map((r) => parBinance(String(r.symbol))), ...doPlano('binance')])].filter(Boolean)
+  const etfs = [...new Set([...(et ?? []).map((r) => String(r.symbol)), ...doPlano('yahoo')])].filter(Boolean)
 
   const [pc, pe] = await Promise.all([cotacoesCripto(cripto), cotacoesEtf(etfs)])
   const agora = new Date().toISOString()
@@ -42,6 +47,9 @@ export async function GET(req: NextRequest) {
     const { error } = await db.from('portfolio_cotacoes').upsert(linhas, { onConflict: 'symbol' })
     if (error) return NextResponse.json({ ok: false, erro: error.message }, { status: 500 })
   }
+
+  // 19/11 — as contas PORTF-CRIPTO e PORTF-ETF ao preço de agora (a /portfolios lê daqui entre sextas).
+  const mercado = await marcarPortefoliosAoMercado(db).catch((e) => [{ conta: '*', valor: null, erro: String(e) }])
 
   // TP/SL da IA, devagar: os mais antigos primeiro.
   const ia: string[] = []
@@ -69,5 +77,5 @@ export async function GET(req: NextRequest) {
   }
 
   const semPreco = [...cripto.filter((s) => !pc[s]), ...etfs.filter((s) => !pe[s])]
-  return NextResponse.json({ ok: true, gravadas: linhas.length, semPreco, ia })
+  return NextResponse.json({ ok: true, gravadas: linhas.length, semPreco, ia, mercado })
 }

@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import CurvaPortefolio, { type PontoCurva } from "@/components/portfolios/curva-portefolio"
+import CarteiraDaConta, { type PosicaoDaConta } from "@/components/portfolios/carteira-da-conta"
 import { Badge } from "@/components/ui/badge"
 import { Progress } from "@/components/ui/progress"
 import ProtectedPage from "@/components/protected-page"
@@ -98,6 +99,7 @@ export default function PortfoliosPage() {
   const [contasPortefolio, setContasPortefolio] = useState<Array<{
     chave: string; nome: string; contribuido: number; valor: number; resultadoPct: number
     desde: string; dca: string; fontePrecos: string; nota: string; curva: PontoCurva[]
+    posicoes?: PosicaoDaConta[]; caixa?: number; valorEm?: string | null
   }>>([])
 
   useEffect(() => {
@@ -674,6 +676,7 @@ export default function PortfoliosPage() {
                           fontePrecos={c.fontePrecos}
                           nota={c.nota}
                         />
+                        <CarteiraDaConta posicoes={c.posicoes ?? []} caixa={c.caixa ?? 0} valorEm={c.valorEm} />
                       </div>
                     ))}
 
@@ -846,6 +849,7 @@ export default function PortfoliosPage() {
                           fontePrecos={c.fontePrecos}
                           nota={c.nota}
                         />
+                        <CarteiraDaConta posicoes={c.posicoes ?? []} caixa={c.caixa ?? 0} valorEm={c.valorEm} />
                       </div>
                     ))}
 
