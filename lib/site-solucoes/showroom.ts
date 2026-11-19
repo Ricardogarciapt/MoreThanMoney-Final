@@ -154,6 +154,8 @@ export interface Prototipo {
   url: string
   /** Código do back-office de demonstração, se houver. */
   codigo?: string
+  /** Screenshot real do protótipo (public/images/solucoes). */
+  img: string
 }
 
 /**
@@ -165,12 +167,12 @@ export const PROTOTIPOS: Prototipo[] = [
     id: 'o-vitor', marca: 'O Vítor', sector: 'Restaurante e churrasqueira',
     resumo: 'Site e app de reservas com a ementa à vista e pré-pedido, e back-office onde o dono dita a ementa por voz.',
     partes: ['Reserva de mesa com pré-pedido', 'Ementa ditada por voz', 'Planta das mesas em tempo real', 'Da reserva ao serviço num toque'],
-    url: 'https://o-vitor-santarem.vercel.app/#/apresentacao', codigo: '1234',
+    url: 'https://o-vitor-santarem.vercel.app/#/apresentacao', codigo: '1234', img: '/images/solucoes/prototipo-o-vitor.jpg',
   },
   {
     id: 'aguias-alpiarca', marca: 'C.D. Os Águias de Alpiarça', sector: 'Clube desportivo',
     resumo: 'Site novo e app do sócio, com canais por modalidade, escape rooms do clube e back-office da direcção.',
     partes: ['App do sócio e dos pais', 'Canais e notícias por modalidade', 'Escape rooms com QR', 'Back-office com papéis'],
-    url: 'https://aguias-alpiarca.vercel.app',
+    url: 'https://aguias-alpiarca.vercel.app', img: '/images/solucoes/prototipo-aguias.jpg',
   },
 ]
