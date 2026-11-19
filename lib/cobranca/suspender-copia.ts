@@ -192,7 +192,24 @@ export async function correrSuspensaoCopia(opcoes: { ensaio?: boolean; apenasUse
       if (stripePaga === true) resumo.dessincronizados.push(perfil?.email ?? u)
     }
     const d = decidir({ situacao, ligado, suspensaoAberta: aberta, stripePaga })
-    if (d.accao === 'nada') continue
+    if (d.accao === 'nada') {
+      // Em pausa e ainda por pagar, mas com contas MetaApi DEPLOYED (pausa feita à mão, ou algo
+      // voltou a ligá-las): undeploy e junta-as ao que se religa ao pagar.
+      const aberta = abertaDe.get(u)
+      if (aberta && live && ligado.metaapi.length) {
+        const erros: string[] = []
+        const des = (aberta.desligado ?? {}) as Partial<Ligado>
+        const feitas: Ligado['metaapi'] = []
+        for (const m of ligado.metaapi) {
+          const token = await tokenMetaApiDoUtilizador(u, m.origem)
+          if (token && (await metaApi('undeploy', m.id, token))) feitas.push(m)
+          else erros.push(`undeploy ${m.id.slice(0, 8)}`)
+        }
+        const metaapi = [...(des.metaapi ?? []), ...feitas.filter((f) => !(des.metaapi ?? []).some((x) => x.id === f.id))]
+        await db.from('copia_suspensoes').update({ desligado: { ...des, metaapi }, ...(erros.length ? { erros } : {}) }).eq('id', aberta.id)
+      }
+      continue
+    }
     const linha: LinhaResumo = {
       email: perfil?.email ?? u,
       nome: perfil?.full_name ?? null,
