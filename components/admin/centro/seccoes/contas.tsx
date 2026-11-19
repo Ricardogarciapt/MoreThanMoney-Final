@@ -14,12 +14,13 @@ import { MarcaProveniencia, PctLinhaDeAgua } from "../linha-de-agua"
 import { useCentroCtx } from "../contexto"
 import { fmtDinheiro, fmtFlutuante } from "@/lib/format/dinheiro"
 import { Loader2, Wallet } from "lucide-react"
+import { botoesTipoConta, NOME_PLATAFORMA } from "@/lib/copia-contas/gestor-rotas"
 import { Azulejo, Botao, BotaoLer, Chip, Filtros, Grupo, Lista, Painel, Pilula, Recolhivel, Tabela, fmtIdade, fmtNum, idadeDe, pedirCentro, td, th, trClic, useCentro } from "../ui"
 
 export type DadosContas = { contas: ContaCentro[]; avisos: string[]; lidaEm: string }
 
-const PLATAFORMAS = ["mt5", "mt4", "tradelocker", "mtmfunded"] as const
 const CATEGORIAS = ["cliente", "casa", "seguidora", "equipa", "mestre"] as const
+const NOME_CATEGORIA: Record<(typeof CATEGORIAS)[number], string> = { cliente: "Clientes", casa: "Da casa", seguidora: "Seguidoras", equipa: "Equipas", mestre: "Mestres" }
 
 export function tomEstadoConta(c: ContaCentro) {
   if (c.metaapi.inexistente) return "grave" as const
@@ -218,10 +219,12 @@ export default function SeccaoContas() {
       )}>
         {notaSaldos && <p className="mb-2 text-[11px] text-zinc-400">{notaSaldos}</p>}
         <Filtros q={q} aoMudarQ={setQ} exemplo="email, login, servidor, etiqueta, id MetaApi…" contagem={lista.length} total={todas.length}>
-          <Chip activo={!plataforma} onClick={() => setPlataforma("")}>todas</Chip>
-          {PLATAFORMAS.map((p) => <Chip key={p} activo={plataforma === p} onClick={() => setPlataforma(p)}>{p}</Chip>)}
+          {/* Tipo de conta: nomes claros e contagem, só os tipos que existem (pedido do dono, 19/11). */}
+          <span className="text-[10px] uppercase tracking-wider text-zinc-600">Tipo</span>
+          {botoesTipoConta(todas).map((b) => <Chip key={b.id || "todas"} activo={plataforma === b.id} onClick={() => setPlataforma(b.id)}>{b.nome} <span className="text-zinc-500">{b.n}</span></Chip>)}
           <span className="mx-1 h-4 w-px bg-zinc-800" />
-          {CATEGORIAS.map((c) => <Chip key={c} activo={categoria === c} onClick={() => setCategoria(categoria === c ? "" : c)}>{c}</Chip>)}
+          <span className="text-[10px] uppercase tracking-wider text-zinc-600">De quem</span>
+          {CATEGORIAS.map((c) => <Chip key={c} activo={categoria === c} onClick={() => setCategoria(categoria === c ? "" : c)}>{NOME_CATEGORIA[c]}</Chip>)}
           <span className="mx-1 h-4 w-px bg-zinc-800" />
           <Chip activo={premium} onClick={() => setPremium(!premium)}>segue o Premium</Chip>
           {problema && <Chip activo onClick={() => setProblema("")}>filtro: {problema === "1" ? "com problema" : problema} ✕</Chip>}
@@ -233,7 +236,7 @@ export default function SeccaoContas() {
               {lista.slice(0, 500).map((c) => (
                 <tr key={c.ref} className={trClic} onClick={() => ctx.abrir({ tipo: "conta", id: c.ref })}>
                   <td className={td}>
-                    <p className="font-mono text-zinc-100">{c.plataforma.toUpperCase()} {c.login ?? "—"}</p>
+                    <p className="font-mono text-zinc-100"><span className="mr-1 rounded bg-white/[0.06] px-1 py-px font-sans text-[10px] font-semibold text-zinc-300">{NOME_PLATAFORMA[c.plataforma as keyof typeof NOME_PLATAFORMA] ?? c.plataforma}</span>{c.login ?? "—"}</p>
                     {c.etiquetaDoDono && <p className="truncate text-[10.5px] text-[#E9C46A]" title="etiqueta do dono">{c.etiquetaDoDono}</p>}
                     <p className="text-[10px] text-zinc-500">{c.servidor ?? "—"}{c.rotulo ? ` · ${c.rotulo}` : ""} · {c.categoria}{c.demo ? " · demo" : ""}</p>
                     <Ligacoes c={c} abrir={(ref) => ctx.abrir({ tipo: "conta", id: ref })} />

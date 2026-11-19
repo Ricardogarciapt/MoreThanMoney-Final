@@ -63,6 +63,7 @@ export default function SeccaoCopia() {
         sub="A cadeia inteira: fonte do sinal → conta mestre (a estratégia) → quem a segue. O live/sombra de cada linha é o que o motor decide agora, não a coluna copia_rotas.modo."
         accao={
           <div className="flex gap-1.5">
+            <Chip onClick={() => ctx.irPara("rotas")}>Gestor simples →</Chip>
             <Chip activo={vista === "lista"} onClick={() => setVista("lista")}>Lista</Chip>
             <Chip activo={vista === "quadro"} onClick={() => setVista("quadro")}>Quadro (arrastar)</Chip>
           </div>
