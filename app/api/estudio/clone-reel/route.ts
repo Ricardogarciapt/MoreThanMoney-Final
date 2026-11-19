@@ -4,14 +4,16 @@ import { exigirEstudio } from '@/lib/estudio/acesso'
 import { ehMotor } from '@/lib/conteudo-magnetico/acesso'
 import { enviarHeygen, heygenConfig } from '@/lib/estudio/heygen'
 import { cenasDoGuiao } from '@/lib/estudio/heygen-looks'
+import { falarParaStorage } from '@/lib/voz'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
+export const maxDuration = 60
 
 /**
  * GUIÃO → REEL FEITO PELO CLONE (HeyGen), sem take.
  * POST { peca_id } → uma cena por segmento do guião com fala, cada uma no look do seu plano
- * (lib/estudio/heygen-looks.ts), tudo num só vídeo 9:16 com a voz clonada do Ricardo.
+ * (lib/estudio/heygen-looks.ts), tudo num só vídeo 9:16 com a voz do Ricardo na Fish.
  * Fica em estudio_geracoes (tipo 'falar', motor 'heygen'); o GET /api/estudio/geracao?id= vê o
  * estado e, quando acaba, o vídeo entra em Ativos e nasce o projecto do editor já em 'a_render'.
  * Nada é publicado. Entram: a equipa do estúdio («ativos») ou servidores com o segredo do motor.
@@ -53,6 +55,11 @@ export async function POST(request: NextRequest) {
   }).select('id').single()
   if (error || !g) return NextResponse.json({ erro: 'Não consegui registar o pedido.' }, { status: 500 })
 
+  // A voz é a da Fish (a mesma dos reels e do LMS), uma faixa por cena; a HeyGen só mexe os lábios.
+  // Se a Fish falhar numa cena, essa cena fica com a voz clonada da HeyGen.
+  const vozes = await Promise.all(cenas.map((c, i) =>
+    falarParaStorage(db, c.texto, `clone-reel/${pecaId}/${g.id}-${i + 1}.mp3`).catch(() => null)))
+  vozes.forEach((v, i) => { if (v && v.ok) cenas[i].audio_url = v.url })
   const h = await enviarHeygen(cenas, '9:16', nicho ? `MTM · ${nicho}` : undefined)
   const agora = new Date().toISOString()
   if ('erro' in h) {

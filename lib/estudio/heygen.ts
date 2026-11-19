@@ -11,7 +11,7 @@
  * Storage do estúdio e cria o ativo, como faz o worker da GPU.
  */
 import type { SupabaseClient } from '@supabase/supabase-js'
-import { LOOKS, VOZ_RICARDO, lookDoPlano, personagem, type Cena } from './heygen-looks'
+import { LOOKS, VOZ_RICARDO, entradaDaCena, type Cena } from './heygen-looks'
 import { PROJETO_VAZIO, normalizarProjeto } from './projeto'
 
 const API = 'https://api.heygen.com'
@@ -46,10 +46,7 @@ export async function enviarHeygen(texto: string | Cena[], aspecto = '9:16', tit
       headers: { 'x-api-key': cfg.chave, 'content-type': 'application/json' },
       body: JSON.stringify({
         ...(titulo ? { title: titulo.slice(0, 100) } : {}),
-        video_inputs: cenas.slice(0, 50).map((c) => ({
-          character: personagem(lookDoPlano(c.plano, cfg.avatarEnv)),
-          voice: { type: 'text', input_text: c.texto.slice(0, 1500), voice_id: cfg.voz },
-        })),
+        video_inputs: cenas.slice(0, 50).map((c) => entradaDaCena(c, cfg.voz, cfg.avatarEnv)),
         dimension: DIMENSOES[aspecto] ?? DIMENSOES['9:16'],
       }),
       signal: AbortSignal.timeout(15000),
