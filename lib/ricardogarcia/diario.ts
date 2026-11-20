@@ -138,7 +138,33 @@ export async function pontosPerto(lat: number, lon: number, raio = 1500) {
   const isolada = unicos.length < 3
   const escolhidos = isolada ? [] : unicos.slice(0, 8)
   if (escolhidos.length) await db().from('rg_app_pontos').upsert(escolhidos.map(({ dist, ...p }) => p), { onConflict: 'id' })
-  return { isolada, pontos: escolhidos }
+  // Os pontos do Ricardo (escolhidos à mão, com lição) entram sempre que estejam a 5 km ou menos.
+  const meus = (await pontosDoRicardo()).map(p => ({ ...p, dist: Math.round(distanciaM({ lat, lon }, p)) })).filter(p => p.dist <= 5000).sort((a, b) => a.dist - b.dist)
+  return { isolada: isolada && !meus.length, pontos: [...meus, ...escolhidos] }
+}
+
+/** Pontos criados pelo Ricardo no painel. A lição só se revela ao chegar, por isso não vai aqui. */
+export async function pontosDoRicardo() {
+  const { data } = await db().from('rg_app_pontos').select('id, nome, tipo, lat, lon, area, descricao, licao_titulo, xp_extra, raio_m').eq('origem', 'ricardo').eq('activo', true).order('nome').limit(300)
+  return (data || []).map(p => ({ ...p, ricardo: true }))
+}
+
+/** Lê latitude e longitude de um link do Google Maps ou do Apple Maps (os curtos maps.app.goo.gl seguem-se no servidor). */
+export async function coordenadasDeLink(link: string): Promise<{ lat: number; lon: number; nome?: string } | null> {
+  let u = String(link || '').trim()
+  if (!/^https?:\/\//i.test(u)) {
+    const m = /(-?\d{1,2}\.\d+)\s*,\s*(-?\d{1,3}\.\d+)/.exec(u)
+    return m ? { lat: +m[1], lon: +m[2] } : null
+  }
+  try {
+    const host = new URL(u).hostname
+    if (!/(^|\.)(goo\.gl|google\.[a-z.]+|apple\.com)$/.test(host)) return null
+    if (/goo\.gl$/.test(host)) { const r = await fetch(u, { redirect: 'follow', signal: AbortSignal.timeout(8000) }); u = r.url }
+  } catch { return null }
+  const d = decodeURIComponent(u)
+  const padroes = [/!3d(-?\d+\.\d+)!4d(-?\d+\.\d+)/, /@(-?\d+\.\d+),(-?\d+\.\d+)/, /[?&](?:q|query|ll|daddr|destination|sll)=(-?\d+\.\d+),\s*(-?\d+\.\d+)/]
+  for (const re of padroes) { const m = re.exec(d); if (m) { const nome = /\/place\/([^/@]+)/.exec(d)?.[1]?.replace(/\+/g, ' '); return { lat: +m[1], lon: +m[2], nome } } }
+  return null
 }
 
 /** Guarda o comprovativo da presença (imagem em data URL, já reduzida no telemóvel). */

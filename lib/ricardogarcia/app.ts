@@ -63,13 +63,13 @@ export async function membroDaSessao(_req?: NextRequest) {
   if (!user) return null
   const [c, perfil, xp] = await Promise.all([
     carteira(user.id),
-    db().from('profiles').select('full_name, email, phone, user_type').eq('id', user.id).maybeSingle(),
+    db().from('profiles').select('full_name, email, phone, user_type, avatar_url').eq('id', user.id).maybeSingle(),
     db().from('user_xp').select('total_xp').eq('user_id', user.id).maybeSingle(),
   ])
   if (!c || c.estado !== 'ativo') return null
   const total = xp.data?.total_xp ?? 0
   return { ...c, nome: perfil.data?.full_name || String(user.email || '').split('@')[0], email: perfil.data?.email || user.email,
-    telefone: perfil.data?.phone || null, user_type: perfil.data?.user_type || null, xp: total, patente: patenteDe(total) }
+    telefone: perfil.data?.phone || null, user_type: perfil.data?.user_type || null, avatar_url: perfil.data?.avatar_url || null, xp: total, patente: patenteDe(total) }
 }
 
 export async function economia(): Promise<Economia> {
