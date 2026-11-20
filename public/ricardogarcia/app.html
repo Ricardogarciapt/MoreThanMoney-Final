@@ -279,6 +279,16 @@ input, textarea, select { font-size: 16px !important; }
 @media (prefers-reduced-motion: reduce) { .intro.vai .emb, .intro.vai h2 { animation-duration: .01s; } }
 .interr { display: flex; justify-content: space-between; align-items: center; gap: 10px; padding: 10px 0; border-top: 1px solid var(--linha); font-size: 15px; }
 .interr input { width: 46px; height: 26px; accent-color: var(--ouro2); }
+
+/* cartões que abrem detalhe */
+.placa.patente, .stats > div, #cDia, #cGrade span[data-i], .placa.ins, #gPat .pedido, .placa.rec, .placa.evento, .entrada-diario, #gEsq li { cursor: pointer; transition: transform .15s ease, border-color .2s; }
+.placa.patente:active, .stats > div:active, #cDia:active, .placa.ins:active, .placa.rec:active, .placa.evento:active, .entrada-diario:active, #gEsq li:active { transform: scale(.98); }
+.det-lista { list-style: none; padding: 0; margin: 10px 0; }
+.det-lista li { display: flex; justify-content: space-between; align-items: center; gap: 10px; padding: 11px 0; border-top: 1px solid var(--linha); font-size: 15px; }
+.det-lista li.on { color: var(--ouro2); }
+.det-lista li.agora { background: rgba(210,166,60,.08); border-radius: 10px; padding-left: 8px; padding-right: 8px; }
+.det-big { font-family: "Anton"; font-size: 56px; line-height: 1; color: var(--ouro2); margin: 6px 0; }
+.det-img { width: 100%; border-radius: 14px; margin: 6px 0 10px; }
 /* perfil e avatar */
 .perfil-bt { display: flex; align-items: center; gap: 8px; background: none; border: 0; padding: 0; color: var(--texto); min-width: 0; }
 .perfil-bt .av { width: 40px; height: 40px; flex: 0 0 40px; font-size: 18px; border: 2px solid var(--ouro); }
@@ -571,27 +581,27 @@ input, textarea, select { font-size: 16px !important; }
     for (var z = 0; z < pad; z++) cel += '<span style="visibility:hidden"></span>';
     H.forEach(function (d, i) { if (d.feitas) ativos++; if (d.feitas >= 4) completos++;
       var n = d.feitas >= 4 ? 'n3' : d.feitas >= 2 ? 'n2' : d.feitas === 1 ? 'n1' : '';
-      cel += '<span class="' + n + (i === H.length - 1 ? ' hoje' : '') + '" title="' + d.dia + ': ' + d.feitas + ' missões, ' + d.xp + ' XP"></span>'; });
+      cel += '<span data-i="' + i + '" class="' + n + (i === H.length - 1 ? ' hoje' : '') + '" title="' + d.dia + ': ' + d.feitas + ' missões, ' + d.xp + ' XP"></span>'; });
     $('cGrade').innerHTML = cel; $('cResumo').textContent = ativos + ' dias activos · ' + completos + ' completos';
     var D = e.diario || [];
     $('dTotal').textContent = D.length ? D.length + ' entradas' : '';
-    $('gDiario').innerHTML = D.length ? D.map(function (d) { return '<div class="placa entrada-diario" data-tipo="' + esc(d.tipo) + '"><div class="mono">' + esc(new Date(d.dia + 'T12:00:00Z').toLocaleDateString('pt-PT', { weekday: 'short', day: 'numeric', month: 'short' })) + ' · ' + esc(d.tipo) + '</div><b>' + esc(d.titulo) + '</b><p>' + esc(d.texto) + '</p></div>'; }).join('')
+    $('gDiario').innerHTML = D.length ? D.map(function (d) { return '<div class="placa entrada-diario" data-i="' + E.diario.indexOf(d) + '" data-tipo="' + esc(d.tipo) + '"><div class="mono">' + esc(new Date(d.dia + 'T12:00:00Z').toLocaleDateString('pt-PT', { weekday: 'short', day: 'numeric', month: 'short' })) + ' · ' + esc(d.tipo) + '</div><b>' + esc(d.titulo) + '</b><p>' + esc(d.texto) + '</p></div>'; }).join('')
       : '<div class="placa vazio"><img src="/ricardogarcia/app-emblema.png" alt=""><br>Ainda está em branco. Faz a missão de mindset de hoje e a primeira página fica escrita.</div>';
     $('listaMissoes').innerHTML = e.missoes.map(function (x) {
       return '<div class="placa missao ' + (x.estado === 'feita' ? 'feita' : '') + '" data-tipo="' + x.tipo + '" data-id="' + esc(x.id) + '" role="button" tabindex="0"' + (x.desafio ? ' style="border-color:var(--ouro);background:linear-gradient(135deg,rgba(210,166,60,.14),transparent)"' : '') + '><div class="ic">' + ICON[x.tipo] + '</div><div>' + (x.desafio ? '<small style="display:block;color:var(--ouro2);font-size:11px;letter-spacing:.08em;text-transform:uppercase">Desafio da semana do Ricardo</small>' : '') + '<b>' + esc(x.titulo) + '</b><span>' + esc(x.resumo || '') + '</span></div><div class="xp">' + (x.estado === 'feita' ? '✓ +' + x.xp_ganho : '+' + x.xp + ' XP') + '</div></div>';
     }).join('');
     renderExtra(e);
     $('dicaDia').textContent = feitas === diarias.length ? 'Missão do dia cumprida. Amanhã há mais.' : DICAS[new Date().getDate() % DICAS.length];
-    $('gIns').innerHTML = e.insignias.map(function (i) { return '<div class="placa ins ' + (i.tem ? 'tem' : '') + '"><div class="med">' + (i.tem ? '★' : '?') + '</div><b>' + esc(i.nome) + '</b><small>' + esc(i.desc) + '</small></div>'; }).join('');
+    $('gIns').innerHTML = e.insignias.map(function (i, k) { return '<div class="placa ins ' + (i.tem ? 'tem' : '') + '" data-i="' + k + '"><div class="med">' + (i.tem ? '★' : '?') + '</div><b>' + esc(i.nome) + '</b><small>' + esc(i.desc) + '</small></div>'; }).join('');
     $('gPat').innerHTML = e.patentes.map(function (p, i) { return '<div class="pedido"><span style="color:' + (i <= m.patente ? 'var(--ouro2)' : 'inherit') + '">' + (i <= m.patente ? '★ ' : '') + esc(p.nome) + '</span><span>' + p.xp + ' XP</span></div>'; }).join('');
     $('gRec').innerHTML = e.recompensas.map(function (r) {
-      return '<div class="placa rec"><h4>' + esc(r.titulo) + '</h4><p>' + esc(r.descricao || '') + '</p><div class="req"><span>' + r.min_dias_conta + ' dias na app</span><span>' + r.min_dias_ativos + ' dias activos</span><span>' + esc(e.patentes[r.min_patente].nome) + '+</span></div>' +
+      return '<div class="placa rec" data-id="' + esc(r.id) + '"><h4>' + esc(r.titulo) + '</h4><p>' + esc(r.descricao || '') + '</p><div class="req"><span>' + r.min_dias_conta + ' dias na app</span><span>' + r.min_dias_ativos + ' dias activos</span><span>' + esc(e.patentes[r.min_patente].nome) + '+</span></div>' +
         '<div class="lin"><span class="pill"><i class="moeda"></i><b>' + r.custo + '</b></span><button class="btn" data-rec="' + esc(r.id) + '" ' + (r.bloqueio ? 'disabled' : '') + ' type="button">Pedir</button></div>' + (r.bloqueio ? '<div class="bloq">🔒 ' + esc(r.bloqueio) + '</div>' : '') + '</div>';
     }).join('') || '<p class="mono">Sem recompensas activas.</p>';
     var nomeRec = {}; e.recompensas.forEach(function (r) { nomeRec[r.id] = r.titulo; });
     var EST = { pendente: '⏳ À espera do Ricardo', aprovado: '✅ Aprovado', recusado: '↩︎ Recusado (moedas devolvidas)', entregue: '🎁 Entregue' };
     $('gPed').innerHTML = e.resgates.length ? e.resgates.map(function (p) { return '<div class="pedido"><span>' + esc(nomeRec[p.recompensa_id] || 'Recompensa') + '</span><span>' + EST[p.estado] + '</span></div>'; }).join('') : '<span class="mono">Ainda não pediste nada.</span>';
-    $('gEsq').innerHTML = e.esquadrao.map(function (x, i) { return '<li class="' + (x.eu ? 'eu' : '') + '"><span class="pos">#' + (i + 1) + '</span><span>' + esc(x.nome) + (x.eu ? ' (tu)' : '') + '<br><small class="mono">' + esc(x.patente) + '</small></span><b class="anton">' + x.xp + '</b></li>'; }).join('');
+    $('gEsq').innerHTML = e.esquadrao.map(function (x, i) { return '<li data-i="' + i + '" class="' + (x.eu ? 'eu' : '') + '"><span class="pos">#' + (i + 1) + '</span><span>' + esc(x.nome) + (x.eu ? ' (tu)' : '') + '<br><small class="mono">' + esc(x.patente) + '</small></span><b class="anton">' + x.xp + '</b></li>'; }).join('');
   }
 
   // ── v3: aprender, hábitos, presença, rotas, movimento e eventos ──────────
@@ -817,7 +827,7 @@ input, textarea, select { font-size: 16px !important; }
     var eur = function (v) { return Number(v).toLocaleString('pt-PT', { style: 'currency', currency: 'EUR' }); };
     var cartao = function (ev) {
       var des = ev.tipo === 'desafio';
-      return '<div class="placa evento">' + (ev.imagem_url ? '<img class="capa" src="' + esc(ev.imagem_url) + '" alt="" loading="lazy">' : '') + '<div class="corpo"><div class="quando">' + (des ? '🏁 Desafio' + (ev.xp ? ' · +' + ev.xp + ' XP' : '') : '🎟️ Evento') + (ev.quando ? ' · ' + esc(quando(ev.quando)) : '') + (ev.local ? ' · ' + esc(ev.local) : '') + '</div>' +
+      return '<div class="placa evento" data-id="' + esc(ev.id) + '">' + (ev.imagem_url ? '<img class="capa" src="' + esc(ev.imagem_url) + '" alt="" loading="lazy">' : '') + '<div class="corpo"><div class="quando">' + (des ? '🏁 Desafio' + (ev.xp ? ' · +' + ev.xp + ' XP' : '') : '🎟️ Evento') + (ev.quando ? ' · ' + esc(quando(ev.quando)) : '') + (ev.local ? ' · ' + esc(ev.local) : '') + '</div>' +
         '<h4>' + esc(ev.titulo) + '</h4>' + (ev.descricao ? '<p>' + esc(ev.descricao) + '</p>' : '') +
         (!des && ev.preco_eur != null ? '<div class="preco"><b>' + eur(ev.preco_eur) + '</b>' + (ev.preco_antes_eur ? '<s>' + eur(ev.preco_antes_eur) + '</s><span class="mono">pré-venda</span>' : '') + '</div>' : '') +
         (ev.meu ? '<div class="estado">' + ({ interesse: '⭐ Marcaste interesse', reservado: '🎟️ Tens pré-reserva. O Ricardo vai falar contigo.', concluido: '✓ Desafio concluído' })[ev.meu] + '</div>' : '') +
@@ -887,7 +897,7 @@ input, textarea, select { font-size: 16px !important; }
       el.textContent = r > 0 ? fmt(r) : 'FEITO'; el.classList.toggle('ok', r <= 0); if (b) b.disabled = r > 5; if (r <= 0) clearInterval(relogio); };
     tick(); relogio = setInterval(tick, 500);
   }
-  function fechar() { clearInterval(relogio); $('folha').classList.remove('on'); }
+  function fechar() { clearInterval(relogio); $('folha').classList.remove('on'); $('folhaC').onclick = null; $('folhaC').onchange = null; }
   $('folha').addEventListener('click', function (e) { if (e.target === $('folha')) fechar(); });
   document.addEventListener('keydown', function (e) { if (e.key === 'Escape') fechar(); });
   $('listaMissoes').addEventListener('click', function (e) { var c = e.target.closest('.missao'); if (c) abrir(c.getAttribute('data-id')); });
@@ -1058,6 +1068,70 @@ input, textarea, select { font-size: 16px !important; }
     el.classList.remove('vai'); el.classList.add('on');
     el.onclick = function () { if (el.classList.contains('vai')) return; Som.desbloquear(); Som.intro(); el.classList.add('vai'); setTimeout(function () { el.classList.remove('on', 'vai'); }, 3000); };
   }
+  // ── Cartões que abrem detalhe (modal na folha de baixo) ──────────────────
+  function modal(html, aoClicar) {
+    var c = $('folhaC'); c.onchange = null;
+    c.innerHTML = '<button class="fechar" type="button" aria-label="Fechar">×</button>' + html;
+    c.onclick = function (ev) { var b = ev.target.closest('button'); if (!b) return; if (b.classList.contains('fechar')) { fechar(); return; } if (aoClicar) aoClicar(b); };
+    $('folha').classList.add('on'); c.scrollTop = 0;
+  }
+  function escada() {
+    var m = E.membro;
+    return '<div class="mono">A tua patente</div><h2>' + esc(m.patente_nome) + '</h2><p class="texto-m" style="font-size:15px">Sobes de patente com o XP de tudo o que fazes na MoreThanMoney: missões, quiz, rotas, chat e aulas. ' + (m.prox_nome ? 'Faltam <b>' + (m.prox_xp - m.xp) + ' XP</b> para ' + esc(m.prox_nome) + '.' : 'Estás no topo.') + '</p>' +
+      '<ul class="det-lista">' + E.patentes.map(function (p, i) { return '<li class="' + (i < m.patente ? 'on' : '') + (i === m.patente ? ' on agora' : '') + '"><span>' + (i <= m.patente ? '★ ' : '☆ ') + esc(p.nome) + (i === m.patente ? ' · tu' : '') + '</span><span class="mono">' + p.xp + ' XP</span></li>'; }).join('') + '</ul>';
+  }
+  var DET = [
+    ['.placa.patente, #gPat .pedido', function () { modal(escada()); }],
+    ['.stats > div', function (el) {
+      var m = E.membro, i = Array.prototype.indexOf.call(el.parentNode.children, el), H = E.historico || [];
+      var sem = H.slice(-7).reduce(function (s, d) { return s + (d.xp || 0); }, 0);
+      var t = [
+        ['XP total', m.xp, 'É um só XP para toda a MoreThanMoney. Nos últimos 7 dias ganhaste <b>' + sem + ' XP</b> nas missões.'],
+        ['Dias activos', m.dias_ativos, 'Dias em que fizeste pelo menos uma missão. Estás na app há ' + (m.dias_conta || 0) + ' dias.'],
+        ['Melhor série', m.melhor_sequencia, 'A tua maior sequência de dias seguidos. Agora vais em <b>' + m.sequencia + '</b>. Um dia sem nada e a série volta a zero.'],
+      ][i] || ['', '', ''];
+      modal('<div class="mono">' + t[0] + '</div><div class="det-big">' + t[1] + '</div><p class="texto-m" style="font-size:15px">' + t[2] + '</p>');
+    }],
+    ['#cDia', function () {
+      var ms = E.missoes || [];
+      modal('<div class="mono">Hoje</div><h2>' + (E.hoje ? E.hoje.xp : 0) + ' / ' + (E.hoje ? E.hoje.max : 0) + ' XP</h2><ul class="det-lista">' + ms.map(function (x) { return '<li class="' + (x.estado === 'feita' ? 'on' : '') + '"><span>' + (x.estado === 'feita' ? '✓ ' : '') + esc(x.titulo) + '</span><button class="btn sec" style="width:auto;padding:6px 14px" type="button" data-abrirm="' + esc(x.id) + '">' + (x.estado === 'feita' ? 'Ver' : 'Fazer') + '</button></li>'; }).join('') + '</ul>',
+        function (b) { var id = b.getAttribute('data-abrirm'); if (id) { fechar(); abrir(id); } });
+    }],
+    ['#cGrade span[data-i]', function (el) {
+      var d = (E.historico || [])[+el.getAttribute('data-i')]; if (!d) return;
+      modal('<div class="mono">' + esc(new Date(d.dia + 'T12:00:00Z').toLocaleDateString('pt-PT', { weekday: 'long', day: 'numeric', month: 'long' })) + '</div><div class="det-big">' + d.feitas + '<span style="font-size:22px;color:var(--cinza)"> missões</span></div><p class="texto-m" style="font-size:15px">' + (d.xp || 0) + ' XP nesse dia. ' + (d.feitas >= 4 ? 'Dia completo. 🎖️' : d.feitas ? 'Bom dia de trabalho.' : 'Um dia de descanso. Amanhã há mais.') + '</p>');
+    }],
+    ['.placa.ins', function (el) {
+      var i = (E.insignias || [])[+el.getAttribute('data-i')]; if (!i) return;
+      modal('<div class="mono">Insígnia</div><div class="ins ' + (i.tem ? 'tem' : '') + '" style="padding:10px 0"><div class="med" style="width:96px;height:96px;font-size:40px">' + (i.tem ? '★' : '?') + '</div></div><h2 style="text-align:center">' + esc(i.nome) + '</h2><p class="texto-m" style="font-size:15px;text-align:center">' + esc(i.desc) + '<br><b>' + (i.tem ? 'Já é tua.' : 'Ainda não a tens.') + '</b></p>');
+    }],
+    ['.placa.rec', function (el) {
+      var r = (E.recompensas || []).filter(function (x) { return x.id === el.getAttribute('data-id'); })[0]; if (!r) return;
+      modal('<div class="mono">Recompensa · ' + r.custo + ' moedas</div><h2>' + esc(r.titulo) + '</h2><p class="texto-m" style="font-size:15px">' + esc(r.descricao || '') + '</p><ul class="det-lista"><li><span>Dias na app</span><span>' + r.min_dias_conta + '</span></li><li><span>Dias activos</span><span>' + r.min_dias_ativos + '</span></li><li><span>Patente mínima</span><span>' + esc(E.patentes[r.min_patente].nome) + '</span></li><li><span>As tuas moedas</span><span>' + E.membro.moedas + '</span></li></ul>' +
+        (r.bloqueio ? '<div class="bloq">🔒 ' + esc(r.bloqueio) + '</div>' : '<button class="btn" type="button" data-pedir="' + esc(r.id) + '">Pedir · o Ricardo aprova</button>'),
+        function (b) { var id = b.getAttribute('data-pedir'); if (id) { fechar(); var o = $('gRec').querySelector('[data-rec="' + id + '"]'); if (o) o.click(); } });
+    }],
+    ['.placa.evento', function (el) {
+      var o = el.cloneNode(true); o.classList.remove('placa'); o.style.border = '0'; o.style.background = 'none';
+      modal('<div class="mono">Do Ricardo</div>' + o.outerHTML, function (b) {
+        var k = b.getAttribute('data-ev') ? '[data-ev="' + b.getAttribute('data-ev') + '"]' : b.getAttribute('data-evfim') ? '[data-evfim="' + b.getAttribute('data-evfim') + '"]' : null;
+        if (k) { fechar(); var x = $('gEventos').querySelector(k); if (x) x.click(); }
+      });
+    }],
+    ['.entrada-diario', function (el) {
+      var d = (E.diario || [])[+el.getAttribute('data-i')]; if (!d) return;
+      modal('<div class="mono">' + esc(new Date(d.dia + 'T12:00:00Z').toLocaleDateString('pt-PT', { weekday: 'long', day: 'numeric', month: 'long' })) + ' · ' + esc(d.tipo) + '</div><h2>' + esc(d.titulo) + '</h2><p class="texto-m" style="font-size:16px;white-space:pre-wrap">' + esc(d.texto) + '</p>');
+    }],
+    ['#gEsq li', function (el) {
+      var L = E.esquadrao || [], i = +el.getAttribute('data-i'), x = L[i]; if (!x) return;
+      var acima = i > 0 ? L[i - 1] : null;
+      modal('<div class="mono">Ranking · #' + (i + 1) + '</div><div class="av-grande"><div class="av" style="font-size:44px;border:3px solid var(--ouro)">' + esc(String(x.nome || '?').charAt(0).toUpperCase()) + '</div></div><h2 style="text-align:center">' + esc(x.nome) + (x.eu ? ' (tu)' : '') + '</h2><p class="texto-m" style="text-align:center;font-size:15px">' + esc(x.patente) + ' · <b>' + x.xp + ' XP</b>' + (acima ? '<br>' + (acima.xp - x.xp) + ' XP atrás de ' + esc(acima.nome) : '<br>Primeiro lugar. 🏆') + '</p>');
+    }],
+  ];
+  $('app').addEventListener('click', function (ev) {
+    if (ev.target.closest('button, a, input, textarea, select, label')) return;
+    for (var i = 0; i < DET.length; i++) { var el = ev.target.closest(DET[i][0]); if (el && $('app').contains(el)) { DET[i][1](el); return; } }
+  });
   $('bPerfil').onclick = function () { if (E) folhaPerfil(); };
   // iOS ignora user-scalable=no: trava o gesto de pinça (o duplo toque já fica preso pelo touch-action).
   document.addEventListener('gesturestart', function (e) { e.preventDefault(); }, { passive: false });
