@@ -191,6 +191,65 @@ label { display: block; font-size: 13px; letter-spacing: 1.5px; text-transform: 
 .doca button { font-size: 11px; }
 .btn:active { transform: translateY(1px); }
 .btn:focus-visible, .doca button:focus-visible, .missao:focus-visible { outline: 2px solid var(--ciano); outline-offset: 2px; }
+/* v3: aprender, hábitos, presença, rotas, eventos */
+.dia .seg { grid-template-columns: repeat(4, 1fr); }
+.missao[data-tipo="produtividade"] { border-left-color: var(--verde); }
+.missao[data-tipo="produtividade"] .ic { color: var(--verde); }
+.cartao { padding: 16px; margin-bottom: 12px; }
+.cartao .tag { display: inline-flex; gap: 6px; align-items: center; font-family: ui-monospace, Menlo, monospace; font-size: 11px; letter-spacing: 1px; text-transform: uppercase; color: var(--ciano); }
+.cartao h4 { margin: 6px 0 6px; font-size: 19px; line-height: 1.2; }
+.cartao p { margin: 0 0 12px; color: #d0d6df; font-size: 15.5px; line-height: 1.5; }
+.cartao .btn { min-height: 44px; font-size: 15px; }
+.cartao.feito { border-color: rgba(60,207,142,.4); }
+.ano { font-family: "Anton"; color: var(--ouro2); font-size: 15px; letter-spacing: 1px; }
+.opcoes { display: grid; gap: 8px; margin-top: 4px; }
+.opcoes button { text-align: left; padding: 12px 14px; border-radius: 12px; background: #0a0d13; border: 1px solid var(--linha); color: var(--texto); font-size: 15px; line-height: 1.35; transition: border-color .2s, background .2s; }
+.opcoes button:hover:not(:disabled) { border-color: var(--ciano); }
+.opcoes button.certa { border-color: var(--verde); background: rgba(60,207,142,.12); }
+.opcoes button.errada { border-color: var(--verm); background: rgba(255,122,107,.10); }
+.opcoes button:disabled { cursor: default; }
+.explica { margin-top: 10px; font-size: 15px; color: #cfd6e0; border-left: 3px solid var(--ouro2); padding-left: 10px; }
+.habitos { display: grid; gap: 8px; }
+.hab { display: grid; grid-template-columns: 34px 1fr auto auto; gap: 10px; align-items: center; padding: 10px 12px; border-radius: 12px; background: #0a0d13; border: 1px solid var(--linha); }
+.hab .ic2 { font-size: 20px; text-align: center; }
+.hab .ok { width: 34px; height: 34px; border-radius: 10px; border: 2px solid var(--linha); background: transparent; color: #111; font-weight: 700; }
+.hab.feito .ok { background: linear-gradient(135deg, var(--ouro2), var(--ouro)); border-color: var(--ouro2); }
+.hab.feito span.n { color: var(--cinza); text-decoration: line-through; }
+.hab .x { background: none; border: 0; color: #59627a; font-size: 18px; padding: 4px; }
+.sug { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
+.sug button, .chips button { border: 1px solid var(--linha); background: var(--placa2); color: var(--texto); border-radius: 999px; padding: 7px 12px; font-size: 13px; }
+.chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.chips button.on { background: linear-gradient(135deg, var(--ouro2), var(--ouro)); color: #111; border-color: transparent; }
+.linha-f { display: grid; grid-template-columns: 1fr auto; gap: 8px; margin-top: 10px; }
+.linha-f .btn { width: auto; min-height: 46px; }
+.seg2 { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; background: #0a0d13; border: 1px solid var(--linha); border-radius: 12px; padding: 4px; margin: 10px 0; }
+.seg2 button { min-height: 40px; border: 0; border-radius: 9px; background: transparent; color: var(--cinza); font-size: 14px; }
+.seg2 button.on { background: var(--placa2); color: var(--texto); box-shadow: inset 0 0 0 1px var(--linha); }
+.prova-pre { width: 100%; max-height: 220px; object-fit: contain; border-radius: 12px; border: 1px solid var(--linha); margin-top: 10px; background: #0a0d13; }
+.dois { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+#mapa { height: 300px; border-radius: 16px; border: 1px solid var(--linha); overflow: hidden; margin: 10px 0; background: #0a0d13; }
+.ponto { display: grid; grid-template-columns: 1fr auto; gap: 10px; align-items: center; padding: 12px; border-radius: 12px; background: #0a0d13; border: 1px solid var(--linha); margin-bottom: 8px; }
+.ponto.feito { border-color: rgba(60,207,142,.45); }
+.ponto.alvo { border-color: var(--ciano); box-shadow: 0 0 0 1px var(--ciano) inset; }
+.ponto b { display: block; font-size: 16px; }
+.ponto small { color: var(--cinza); font-size: 13px; }
+.ponto .btn { width: auto; min-height: 40px; padding: 0 14px; font-size: 14px; }
+.seguro { font-size: 13.5px; color: var(--cinza); line-height: 1.45; border: 1px dashed var(--linha); border-radius: 12px; padding: 10px 12px; margin: 10px 0; }
+.evento { padding: 0; margin-bottom: 14px; }
+.evento .capa { width: 100%; aspect-ratio: 16/9; object-fit: cover; display: block; border-bottom: 1px solid var(--linha); }
+.evento .corpo { padding: 14px 16px 16px; }
+.evento .quando { font-family: ui-monospace, Menlo, monospace; font-size: 12px; letter-spacing: 1px; color: var(--ciano); text-transform: uppercase; }
+.evento h4 { margin: 6px 0; font-size: 21px; }
+.evento p { margin: 0 0 12px; color: #d0d6df; font-size: 15px; line-height: 1.5; white-space: pre-wrap; }
+.preco { display: flex; gap: 10px; align-items: baseline; margin-bottom: 12px; }
+.preco b { font-family: "Anton"; font-weight: 400; font-size: 26px; color: var(--ouro2); }
+.preco s { color: var(--cinza); }
+.evento .acc { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.evento .acc .btn { min-height: 44px; font-size: 14px; }
+.evento .estado { color: var(--verde); font-size: 14px; margin-bottom: 10px; }
+.dica-chave { font-family: "Kalam"; font-size: 20px; line-height: 1.45; color: #f0f2f6; }
+.doca { grid-template-columns: repeat(6, 1fr); }
+.doca button { font-size: 10px; letter-spacing: 0; }
 @media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } }
 </style>
 </head>
@@ -248,12 +307,39 @@ label { display: block; font-size: 13px; letter-spacing: 1.5px; text-transform: 
         </div>
       </div>
       <div class="stats"><div><b id="sXp">0</b><small>XP</small></div><div><b id="sDias">0</b><small>Dias activos</small></div><div><b id="sMelhor">0</b><small>Melhor série</small></div></div>
-      <div class="placa dia" id="cDia"><div class="lin"><span class="mono">XP de hoje</span><span><b id="dXp">0</b> <span class="mono" id="dMax">/ 110</span></span></div><div class="seg" id="dSeg"><i></i><i></i><i></i></div></div>
-      <div class="sec-tit"><h3>Missões de hoje</h3><span class="mono" id="mFeitas">0/3</span></div>
+      <div class="placa dia" id="cDia"><div class="lin"><span class="mono">XP das missões hoje</span><span><b id="dXp">0</b> <span class="mono" id="dMax">/ 110</span></span></div><div class="seg" id="dSeg"><i></i><i></i><i></i><i></i></div></div>
+      <div class="sec-tit"><h3>Missões de hoje</h3><span class="mono" id="mFeitas">0/4</span></div>
       <div id="listaMissoes"></div>
       <p class="dica" id="dicaDia"></p>
+      <div id="blocoRicardo"></div>
+      <div class="sec-tit"><h3>Aprender hoje</h3><span class="mono" id="aResumo"></span></div>
+      <div id="cCur"></div>
+      <div id="cQuiz"></div>
+      <div class="sec-tit"><h3>Hábitos</h3><span class="mono" id="hResumo"></span></div>
+      <div class="placa cartao" id="cHab"></div>
+      <div class="sec-tit"><h3>Presença</h3><span class="mono">Aula ou sessão</span></div>
+      <div class="placa cartao" id="cPres"></div>
       <div class="sec-tit"><h3>6 semanas</h3><span class="mono" id="cResumo"></span></div>
       <div class="placa cal"><div class="grade" id="cGrade"></div><div class="dias7"><span>S</span><span>T</span><span>Q</span><span>Q</span><span>S</span><span>S</span><span>D</span></div><div class="leg">menos <span style="background:#0b0e15;border:1px solid #1a2030"></span><span style="background:rgba(30,170,230,.28)"></span><span style="background:rgba(233,196,106,.45)"></span><span style="background:#E9C46A"></span> dia completo</div></div>
+    </div>
+
+    <div class="vista" id="vRotas">
+      <div class="sec-tit"><h3>Rotas</h3><span class="mono" id="rResumo"></span></div>
+      <p class="texto-m" style="margin-top:0;font-size:15px;color:var(--cinza)">Escolhe o que estás a aprender, sai a pé e passa por pontos seguros perto de ti: parques, jardins, praças, bibliotecas e miradouros. Em cada um recebes uma dica-chave e XP.</p>
+      <div class="placa cartao"><span class="tag">A tua área</span><div class="chips" id="rAreas" style="margin-top:8px"></div></div>
+      <div class="seguro">🛡️ Só propomos lugares públicos, fora da estrada e com nome no mapa. Em zonas isoladas não há rota. Vai de dia, pelo passeio, e nunca olhes para o ecrã a atravessar: a app avisa quando chegares.</div>
+      <button class="btn" id="bPontos" type="button">Encontrar pontos seguros perto de mim</button>
+      <div class="erro" id="rErro" role="alert"></div>
+      <div id="mapa" hidden></div>
+      <div id="rLista"></div>
+      <div class="sec-tit"><h3>Movimento</h3><span class="mono">Saúde</span></div>
+      <div class="placa cartao" id="cSaude"></div>
+    </div>
+
+    <div class="vista" id="vEventos">
+      <div class="sec-tit"><h3>Do Ricardo</h3><span class="mono">Desafios e eventos</span></div>
+      <p class="texto-m" style="margin-top:0;font-size:15px;color:var(--cinza)">Desafios que o Ricardo lança e eventos com pré-reserva para quem está na app.</p>
+      <div id="gEventos"></div>
     </div>
 
     <div class="vista" id="vDiario">
@@ -262,12 +348,6 @@ label { display: block; font-size: 13px; letter-spacing: 1.5px; text-transform: 
       <div id="gDiario"></div>
     </div>
 
-    <div class="vista" id="vIns">
-      <div class="sec-tit"><h3>Insígnias</h3><span class="mono">Cada uma vale moedas</span></div>
-      <div class="grelha" id="gIns"></div>
-      <div class="sec-tit"><h3>Patentes</h3><span class="mono">Por XP</span></div>
-      <div class="placa" id="gPat"></div>
-    </div>
 
     <div class="vista" id="vRec">
       <div class="sec-tit"><h3>Recompensas</h3><span class="mono">Aprovadas pelo Ricardo</span></div>
@@ -275,6 +355,10 @@ label { display: block; font-size: 13px; letter-spacing: 1.5px; text-transform: 
       <div id="gRec"></div>
       <div class="sec-tit"><h3>Os teus pedidos</h3></div>
       <div class="placa" id="gPed"></div>
+      <div class="sec-tit"><h3>Insígnias</h3><span class="mono">Cada uma vale moedas</span></div>
+      <div class="grelha" id="gIns"></div>
+      <div class="sec-tit"><h3>Patentes</h3><span class="mono">Por XP</span></div>
+      <div class="placa" id="gPat"></div>
     </div>
 
     <div class="vista esq" id="vEsq">
@@ -293,9 +377,10 @@ label { display: block; font-size: 13px; letter-spacing: 1.5px; text-transform: 
 
 <nav class="doca" id="doca" hidden>
   <button class="on" data-v="vBase" type="button"><span>⌂</span>Base</button>
+  <button data-v="vRotas" type="button"><span>⌖</span>Rotas</button>
+  <button data-v="vEventos" type="button"><span>★</span>Ricardo</button>
   <button data-v="vDiario" type="button"><span>✎</span>Diário</button>
-  <button data-v="vIns" type="button"><span>✦</span>Insígnias</button>
-  <button data-v="vRec" type="button"><span>◈</span>Recompensas</button>
+  <button data-v="vRec" type="button"><span>◈</span>Prémios</button>
   <button data-v="vEsq" type="button"><span>⚑</span>Esquadrão</button>
 </nav>
 
@@ -309,7 +394,7 @@ label { display: block; font-size: 13px; letter-spacing: 1.5px; text-transform: 
   var API = '/api/ricardogarcia/app', E = null, modo = 'registar', relogio = null;
   var $ = function (id) { return document.getElementById(id); };
   var esc = function (s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); };
-  var ICON = { treino: '🔥', mindset: '🧠', digital: '⚡' };
+  var ICON = { treino: '🔥', mindset: '🧠', digital: '⚡', produtividade: '⏱' };
   var DICAS = ['A disciplina é escolher o que queres mais em vez do que queres agora.', 'Um dia de cada vez. Hoje conta.', 'Não precisas de motivação. Precisas de começar.', 'Pequeno e feito ganha a perfeito e adiado.', 'Quem aparece todos os dias acaba por chegar.'];
 
   function api(body) {
@@ -346,8 +431,8 @@ label { display: block; font-size: 13px; letter-spacing: 1.5px; text-transform: 
     var H = e.historico || [], ativos = 0, completos = 0;
     var pad = H.length ? (new Date(H[0].dia + 'T12:00:00Z').getUTCDay() + 6) % 7 : 0, cel = '';
     for (var z = 0; z < pad; z++) cel += '<span style="visibility:hidden"></span>';
-    H.forEach(function (d, i) { if (d.feitas) ativos++; if (d.feitas >= 3) completos++;
-      var n = d.feitas >= 3 ? 'n3' : d.feitas === 2 ? 'n2' : d.feitas === 1 ? 'n1' : '';
+    H.forEach(function (d, i) { if (d.feitas) ativos++; if (d.feitas >= 4) completos++;
+      var n = d.feitas >= 4 ? 'n3' : d.feitas >= 2 ? 'n2' : d.feitas === 1 ? 'n1' : '';
       cel += '<span class="' + n + (i === H.length - 1 ? ' hoje' : '') + '" title="' + d.dia + ': ' + d.feitas + ' missões, ' + d.xp + ' XP"></span>'; });
     $('cGrade').innerHTML = cel; $('cResumo').textContent = ativos + ' dias activos · ' + completos + ' completos';
     var D = e.diario || [];
@@ -357,6 +442,7 @@ label { display: block; font-size: 13px; letter-spacing: 1.5px; text-transform: 
     $('listaMissoes').innerHTML = e.missoes.map(function (x) {
       return '<div class="placa missao ' + (x.estado === 'feita' ? 'feita' : '') + '" data-tipo="' + x.tipo + '" data-id="' + esc(x.id) + '" role="button" tabindex="0"' + (x.desafio ? ' style="border-color:var(--ouro);background:linear-gradient(135deg,rgba(210,166,60,.14),transparent)"' : '') + '><div class="ic">' + ICON[x.tipo] + '</div><div>' + (x.desafio ? '<small style="display:block;color:var(--ouro2);font-size:11px;letter-spacing:.08em;text-transform:uppercase">Desafio da semana do Ricardo</small>' : '') + '<b>' + esc(x.titulo) + '</b><span>' + esc(x.resumo || '') + '</span></div><div class="xp">' + (x.estado === 'feita' ? '✓ +' + x.xp_ganho : '+' + x.xp + ' XP') + '</div></div>';
     }).join('');
+    renderExtra(e);
     $('dicaDia').textContent = feitas === diarias.length ? 'Missão do dia cumprida. Amanhã há mais.' : DICAS[new Date().getDate() % DICAS.length];
     $('gIns').innerHTML = e.insignias.map(function (i) { return '<div class="placa ins ' + (i.tem ? 'tem' : '') + '"><div class="med">' + (i.tem ? '★' : '?') + '</div><b>' + esc(i.nome) + '</b><small>' + esc(i.desc) + '</small></div>'; }).join('');
     $('gPat').innerHTML = e.patentes.map(function (p, i) { return '<div class="pedido"><span style="color:' + (i <= m.patente ? 'var(--ouro2)' : 'inherit') + '">' + (i <= m.patente ? '★ ' : '') + esc(p.nome) + '</span><span>' + p.xp + ' XP</span></div>'; }).join('');
@@ -369,6 +455,202 @@ label { display: block; font-size: 13px; letter-spacing: 1.5px; text-transform: 
     $('gPed').innerHTML = e.resgates.length ? e.resgates.map(function (p) { return '<div class="pedido"><span>' + esc(nomeRec[p.recompensa_id] || 'Recompensa') + '</span><span>' + EST[p.estado] + '</span></div>'; }).join('') : '<span class="mono">Ainda não pediste nada.</span>';
     $('gEsq').innerHTML = e.esquadrao.map(function (x, i) { return '<li class="' + (x.eu ? 'eu' : '') + '"><span class="pos">#' + (i + 1) + '</span><span>' + esc(x.nome) + (x.eu ? ' (tu)' : '') + '<br><small class="mono">' + esc(x.patente) + '</small></span><b class="anton">' + x.xp + '</b></li>'; }).join('');
   }
+
+  // ── v3: aprender, hábitos, presença, rotas, movimento e eventos ──────────
+  var CAT = { mercados: 'Mercados', cripto: 'Bitcoin e cripto', mente: 'Mente', digital: 'Digital e IA', trading: 'Trading', corpo: 'Corpo', curso: 'Do curso', formularios: 'Porquê esta pergunta?', mente_q: 'Mente' };
+  var ganhoToast = function (r, extra) { var g = r.ganho || {}; toast((g.xp ? '<b>+' + g.xp + ' XP</b>' : '<b>Registado</b>') + (extra ? '<br>' + extra : ''), 3600); if (g.subiu) { confete(220); $('promoN').textContent = r.membro.patente_nome; $('promo').classList.add('on'); } try { if (navigator.vibrate) navigator.vibrate(20); } catch (_) {} };
+  var presTipo = 'plataforma', presImg = null;
+  function renderExtra(e) {
+    var X = e.extra || {}, c = X.curiosidade, q = X.quiz;
+    $('aResumo').textContent = [c && c.feita, q && q.feito].filter(Boolean).length + '/2';
+    $('cCur').innerHTML = c ? '<div class="placa cartao ' + (c.feita ? 'feito' : '') + '"><span class="tag">💡 Curiosidade · ' + esc(CAT[c.categoria] || c.categoria) + '</span>' + (c.ano ? ' <span class="ano">' + c.ano + '</span>' : '') +
+      '<h4>' + esc(c.titulo) + '</h4><p>' + esc(c.texto) + '</p>' + (c.feita ? '<span class="mono" style="color:var(--verde)">Lida hoje ✓</span>' : '<button class="btn sec" id="bCur" type="button">Li e aprendi · +' + c.xp + ' XP</button>') + '</div>' : '';
+    if (q) {
+      var ops = q.opcoes.map(function (o, i) { var cl = q.feito ? (i === q.correta ? 'certa' : i === q.escolha ? 'errada' : '') : ''; return '<button type="button" data-op="' + i + '" class="' + cl + '" ' + (q.feito ? 'disabled' : '') + '>' + String.fromCharCode(65 + i) + ') ' + esc(o) + '</button>'; }).join('');
+      $('cQuiz').innerHTML = '<div class="placa cartao ' + (q.feito ? 'feito' : '') + '"><span class="tag">🎯 Quiz do dia · ' + esc(CAT[q.categoria] || q.categoria) + '</span><h4>' + esc(q.pergunta) + '</h4><div class="opcoes" id="qOps">' + ops + '</div>' +
+        (q.feito ? '<div class="explica">' + (q.escolha === q.correta ? '<b style="color:var(--verde)">Certo.</b> ' : '<b style="color:var(--verm)">Não foi desta.</b> ') + esc(q.explicacao || '') + '</div>' : '<p class="mono" style="margin:10px 0 0">Certo +' + q.xp + ' XP · errado +5 XP. Uma tentativa por dia.</p>') + '</div>';
+    } else $('cQuiz').innerHTML = '';
+    // hábitos
+    var H = X.habitos || [], feitosH = H.filter(function (h) { return h.feito; }).length;
+    $('hResumo').textContent = H.length ? feitosH + '/' + H.length + ' · +' + X.habitos_xp + ' XP cada' : '';
+    var jaTem = {}; H.forEach(function (h) { jaTem[h.nome.toLowerCase()] = 1; });
+    var sug = (X.sugestoes || []).filter(function (s) { return !jaTem[s.nome.toLowerCase()]; }).slice(0, H.length ? 4 : 6);
+    $('cHab').innerHTML = (H.length ? '<div class="habitos">' + H.map(function (h) { return '<div class="hab ' + (h.feito ? 'feito' : '') + '"><span class="ic2">' + esc(h.icone) + '</span><span class="n">' + esc(h.nome) + '</span><button class="ok" type="button" data-hok="' + h.id + '" aria-label="Marcar ' + esc(h.nome) + '" ' + (h.feito ? 'disabled' : '') + '>' + (h.feito ? '✓' : '') + '</button><button class="x" type="button" data-hx="' + h.id + '" aria-label="Tirar ' + esc(h.nome) + '">×</button></div>'; }).join('') + '</div>'
+      : '<p style="margin-top:0">Escolhe os hábitos que queres cumprir todos os dias. Cada um que marcas dá XP (até ' + X.habitos_max + ' por dia).</p>') +
+      (sug.length ? '<div class="sug">' + sug.map(function (s) { return '<button type="button" data-hsug="' + esc(s.nome) + '" data-hic="' + esc(s.icone) + '">' + esc(s.icone) + ' ' + esc(s.nome) + '</button>'; }).join('') + '</div>' : '') +
+      '<form class="linha-f" id="fHab"><input id="hNome" maxlength="60" placeholder="Outro hábito (ex.: 10 min de alongamentos)" aria-label="Novo hábito"><button class="btn sec" type="submit">Juntar</button></form>';
+    // presença
+    var P = X.presenca || {};
+    $('cPres').innerHTML = P.feita
+      ? '<span class="tag">🎓 Presença de hoje</span><h4>Registada ' + (P.prova ? 'com comprovativo ✓' : 'sem comprovativo') + '</h4><p>Ganhaste ' + P.xp + ' XP.' + (P.prova ? '' : ' Junta o print da aula e recebes o resto (+' + (P.xp_prova - P.xp) + ' XP).') + '</p>' +
+        (P.prova ? '' : '<input type="file" id="pFich" accept="image/*" hidden><button class="btn sec" id="bProva" type="button">Juntar comprovativo</button><img class="prova-pre" id="pPre" hidden alt="Pré-visualização do comprovativo"><button class="btn" id="bPresEnv" type="button" hidden style="margin-top:10px">Enviar comprovativo</button>')
+      : '<span class="tag">🎓 Presença de hoje</span><h4>Já assististe a uma aula ou sessão hoje?</h4><p>Com print ou comprovativo ganhas ' + P.xp_prova + ' XP. Sem prova, ' + P.xp_sem + ' XP.</p>' +
+        '<div class="seg2" id="pTipo"><button type="button" data-pt="plataforma" class="' + (presTipo === 'plataforma' ? 'on' : '') + '">Aula da plataforma</button><button type="button" data-pt="sessao" class="' + (presTipo === 'sessao' ? 'on' : '') + '">Sessão gratuita</button></div>' +
+        '<input type="file" id="pFich" accept="image/*" hidden><div class="dois"><button class="btn sec" id="bProva" type="button">📎 Juntar print</button><button class="btn" id="bPresEnv" type="button">' + (presImg ? 'Enviar · +' + P.xp_prova : 'Marcar sem prova · +' + P.xp_sem) + '</button></div><img class="prova-pre" id="pPre" ' + (presImg ? 'src="' + presImg + '"' : 'hidden') + ' alt="Pré-visualização do comprovativo">';
+    renderRotas(X); renderSaude(X); renderEventos(X);
+  }
+  function reduzir(f, cb) {
+    var rd = new FileReader(); rd.onload = function () { var im = new Image(); im.onload = function () {
+      var k = Math.min(1, 1400 / Math.max(im.width, im.height)), cv = document.createElement('canvas'); cv.width = Math.round(im.width * k); cv.height = Math.round(im.height * k);
+      cv.getContext('2d').drawImage(im, 0, 0, cv.width, cv.height); cb(cv.toDataURL('image/jpeg', .82)); }; im.onerror = function () { cb(null); }; im.src = rd.result; }; rd.readAsDataURL(f);
+  }
+  $('app').addEventListener('click', function (ev) {
+    var b = ev.target.closest('button'); if (!b) return; var v;
+    if (b.id === 'bCur') { b.disabled = true; api({ accao: 'curiosidade' }).then(function (r) { if (!r.ok) { toast(esc(r.erro)); b.disabled = false; return; } render(r); ganhoToast(r, 'Mais uma coisa que sabes.'); }); }
+    else if ((v = b.getAttribute('data-op')) !== null && b.closest('#qOps')) { b.closest('#qOps').querySelectorAll('button').forEach(function (k) { k.disabled = true; }); api({ accao: 'quiz', escolha: +v }).then(function (r) { if (!r.ok) { toast(esc(r.erro)); return; } render(r); ganhoToast(r, r.quiz_certo ? 'Resposta certa. 🎯' : 'Fica a explicação para a próxima.'); }); }
+    else if ((v = b.getAttribute('data-hok'))) { b.disabled = true; api({ accao: 'habito', id: v }).then(function (r) { if (!r.ok) { toast(esc(r.erro)); b.disabled = false; return; } render(r); ganhoToast(r); }); }
+    else if ((v = b.getAttribute('data-hx'))) { if (!confirm('Tirar este hábito da tua lista?')) return; api({ accao: 'habito_tirar', id: v }).then(function (r) { if (r.ok) render(r); }); }
+    else if ((v = b.getAttribute('data-hsug'))) { b.disabled = true; api({ accao: 'habito_novo', nome: v, icone: b.getAttribute('data-hic') }).then(function (r) { if (!r.ok) { toast(esc(r.erro)); b.disabled = false; return; } render(r); }); }
+    else if ((v = b.getAttribute('data-pt'))) { presTipo = v; render(E); }
+    else if (b.id === 'bProva') $('pFich').click();
+    else if (b.id === 'bPresEnv') { b.disabled = true; api({ accao: 'presenca', tipo: presTipo, imagem: presImg || undefined }).then(function (r) { if (!r.ok) { toast(esc(r.erro)); b.disabled = false; return; } presImg = null; render(r); ganhoToast(r, 'Presença registada. Aparecer é metade do caminho.'); }); }
+  });
+  $('app').addEventListener('submit', function (ev) {
+    if (ev.target.id !== 'fHab') return; ev.preventDefault(); var n = $('hNome').value.trim(); if (n.length < 2) return;
+    api({ accao: 'habito_novo', nome: n }).then(function (r) { if (!r.ok) { toast(esc(r.erro)); return; } render(r); });
+  });
+  $('app').addEventListener('change', function (ev) {
+    if (ev.target.id !== 'pFich' || !ev.target.files[0]) return;
+    reduzir(ev.target.files[0], function (d) { if (!d) { toast('Não consegui ler essa imagem.'); return; } presImg = d;
+      if (E.extra.presenca.feita) { $('pPre').src = d; $('pPre').hidden = false; $('bPresEnv').hidden = false; } else render(E); });
+  });
+
+  // rotas
+  var AREA = (function () { try { return localStorage.getItem('rg-area') || 'mindset'; } catch (_) { return 'mindset'; } })();
+  var PONTOS = [], mapa = null, camada = null, eu = null, vigia = null, alvo = null, ultimaPos = null;
+  function renderRotas(X) {
+    var R = X.rotas || { areas: [] };
+    $('rResumo').textContent = R.hoje + '/' + R.max + ' pontos com XP hoje';
+    $('rAreas').innerHTML = R.areas.map(function (a) { return '<button type="button" data-area="' + a.id + '" class="' + (a.id === AREA ? 'on' : '') + '">' + esc(a.nome) + '</button>'; }).join('');
+    pintaPontos();
+  }
+  function pintaPontos() {
+    var R = (E && E.extra && E.extra.rotas) || { visitados: [] }, vis = {}; (R.visitados || []).forEach(function (v) { vis[v.ponto] = v; });
+    var dist = function (p) { return ultimaPos ? Math.round(distM(ultimaPos, p)) : p.dist; };
+    $('rLista').innerHTML = PONTOS.map(function (p) {
+      var d = dist(p), feito = vis[p.id];
+      return '<div class="ponto ' + (feito ? 'feito' : '') + (alvo === p.id ? ' alvo' : '') + '"><div><b>' + esc(p.nome) + '</b><small>' + esc(p.tipo) + ' · ' + (d >= 1000 ? (d / 1000).toFixed(1) + ' km' : d + ' m') + (feito ? ' · visitado ✓' : '') + '</small></div>' +
+        (feito ? '<button class="btn sec" type="button" data-dica="' + esc(p.id) + '">Ver dica</button>' : alvo === p.id ? '<button class="btn" type="button" data-chegar="' + esc(p.id) + '">Cheguei</button>' : '<button class="btn sec" type="button" data-ir="' + esc(p.id) + '">Ir</button>') + '</div>';
+    }).join('');
+  }
+  function distM(a, b) { var R = 6371000, r = Math.PI / 180, dLa = (b.lat - a.lat) * r, dLo = (b.lon - a.lon) * r; var h = Math.pow(Math.sin(dLa / 2), 2) + Math.cos(a.lat * r) * Math.cos(b.lat * r) * Math.pow(Math.sin(dLo / 2), 2); return 2 * R * Math.asin(Math.sqrt(h)); }
+  function carregarLeaflet(cb) {
+    if (window.L) return cb();
+    var css = document.createElement('link'); css.rel = 'stylesheet'; css.href = 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css'; document.head.appendChild(css);
+    var js = document.createElement('script'); js.src = 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js'; js.onload = cb; js.onerror = function () { $('rErro').textContent = 'O mapa não abriu. A lista de pontos continua a funcionar.'; }; document.head.appendChild(js);
+  }
+  function pintaMapa(pos) {
+    carregarLeaflet(function () {
+      $('mapa').hidden = false;
+      if (!mapa) { mapa = L.map('mapa', { zoomControl: false, attributionControl: true }); L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', { maxZoom: 19, attribution: '© OpenStreetMap · © CARTO' }).addTo(mapa); }
+      var lim = [[pos.lat, pos.lon]]; PONTOS.forEach(function (p) { lim.push([p.lat, p.lon]); });
+      mapa.invalidateSize(); mapa.fitBounds(lim, { padding: [24, 24], maxZoom: 16 });
+      if (camada) camada.remove(); camada = L.layerGroup().addTo(mapa);
+      PONTOS.forEach(function (p) { L.circleMarker([p.lat, p.lon], { radius: 9, color: '#E9C46A', weight: 2, fillColor: '#D2A63C', fillOpacity: .55 }).bindTooltip(p.nome).addTo(camada); L.circle([p.lat, p.lon], { radius: 80, color: '#1EAAE6', weight: 1, fillOpacity: .06, opacity: .4 }).addTo(camada); });
+      if (eu) eu.remove(); eu = L.circleMarker([pos.lat, pos.lon], { radius: 8, color: '#fff', weight: 3, fillColor: '#1EAAE6', fillOpacity: 1 }).addTo(mapa);
+      setTimeout(function () { mapa.invalidateSize(); }, 50);
+    });
+  }
+  function seguir() {
+    if (vigia != null || !navigator.geolocation) return;
+    vigia = navigator.geolocation.watchPosition(function (g) {
+      ultimaPos = { lat: g.coords.latitude, lon: g.coords.longitude, prec: g.coords.accuracy, t: Date.now() };
+      if (eu) eu.setLatLng([ultimaPos.lat, ultimaPos.lon]);
+      var p = PONTOS.filter(function (k) { return k.id === alvo; })[0];
+      if (p && distM(ultimaPos, p) < 80 + Math.min(50, ultimaPos.prec || 50) && !seguir.avisado) { seguir.avisado = p.id; try { navigator.vibrate && navigator.vibrate([60, 80, 60]); } catch (_) {} toast('<b>Chegaste a ' + esc(p.nome) + '</b><br>Pára num sítio seguro e carrega em «Cheguei».', 5000); }
+      pintaPontos();
+    }, function () {}, { enableHighAccuracy: true, maximumAge: 5000, timeout: 20000 });
+  }
+  function mostrarDica(d, titulo) { $('folhaC').innerHTML = '<button class="fechar" type="button" aria-label="Fechar">×</button><div class="mono">⌖ ' + esc(titulo || 'Dica-chave') + '</div><h2>' + esc(d.titulo) + '</h2><p class="dica-chave">' + esc(d.texto) + '</p><button class="btn" type="button" id="bDicaOk">Seguir caminho</button>'; $('folha').classList.add('on'); $('folhaC').querySelector('.fechar').onclick = fechar; $('bDicaOk').onclick = fechar; }
+  $('vRotas').addEventListener('click', function (ev) {
+    var b = ev.target.closest('button'); if (!b) return; var v;
+    if ((v = b.getAttribute('data-area'))) { AREA = v; try { localStorage.setItem('rg-area', v); } catch (_) {} renderRotas(E.extra); }
+    else if (b.id === 'bPontos') {
+      $('rErro').textContent = ''; if (!navigator.geolocation) { $('rErro').textContent = 'Este telemóvel não dá a localização ao browser.'; return; }
+      b.disabled = true; b.textContent = 'A procurar…';
+      navigator.geolocation.getCurrentPosition(function (g) {
+        var pos = { lat: g.coords.latitude, lon: g.coords.longitude, prec: g.coords.accuracy }; ultimaPos = pos;
+        api({ accao: 'rota_pontos', lat: pos.lat, lon: pos.lon }).then(function (r) {
+          b.disabled = false; b.textContent = 'Procurar outra vez';
+          if (!r.ok) { $('rErro').textContent = r.erro; return; }
+          if (r.isolada || !r.pontos.length) { $('rErro').textContent = 'Não encontrei pontos seguros suficientes perto de ti. Por segurança, aqui não há rota: faz o treino do dia em casa.'; PONTOS = []; pintaPontos(); return; }
+          PONTOS = r.pontos; pintaPontos(); pintaMapa(pos); seguir();
+        });
+      }, function () { b.disabled = false; b.textContent = 'Encontrar pontos seguros perto de mim'; $('rErro').textContent = 'Preciso da tua localização para encontrar os pontos. Ativa-a nas definições do browser.'; }, { enableHighAccuracy: true, timeout: 15000 });
+    }
+    else if ((v = b.getAttribute('data-ir'))) {
+      alvo = v; seguir.avisado = null; pintaPontos(); var p = PONTOS.filter(function (k) { return k.id === v; })[0];
+      var ios = /iPhone|iPad|iPod/.test(navigator.userAgent);
+      var url = ios ? 'https://maps.apple.com/?daddr=' + p.lat + ',' + p.lon + '&dirflg=w' : 'https://www.google.com/maps/dir/?api=1&travelmode=walking&destination=' + p.lat + ',' + p.lon;
+      $('folhaC').innerHTML = '<button class="fechar" type="button" aria-label="Fechar">×</button><div class="mono">⌖ Próximo ponto</div><h2>' + esc(p.nome) + '</h2><p class="texto-m">Abre o caminho a pé no mapa do telemóvel. A app fica a contar a distância e vibra quando chegares. Ao chegar, pára e carrega em «Cheguei» para receber a dica.</p><a class="btn" href="' + url + '" target="_blank" rel="noopener" style="text-decoration:none">Abrir caminho a pé</a><button class="btn sec" type="button" id="bFicar" style="margin-top:10px">Já sei o caminho</button>';
+      $('folha').classList.add('on'); $('folhaC').querySelector('.fechar').onclick = fechar; $('bFicar').onclick = fechar;
+    }
+    else if ((v = b.getAttribute('data-chegar'))) {
+      b.disabled = true;
+      var enviar = function (pos) {
+        api({ accao: 'rota_chegar', ponto: v, lat: pos.lat, lon: pos.lon, precisao: pos.prec, area: AREA }).then(function (r) {
+          b.disabled = false; if (!r.ok) { toast(esc(r.erro)); return; }
+          alvo = null; render(r); ganhoToast(r); if (r.dica) mostrarDica(r.dica, r.dica.ponto); confete(90);
+        });
+      };
+      // A posição que o GPS já está a seguir serve, se for recente; senão pede-se uma nova.
+      if (ultimaPos && ultimaPos.t && Date.now() - ultimaPos.t < 30000) enviar(ultimaPos);
+      else navigator.geolocation.getCurrentPosition(function (g) { enviar({ lat: g.coords.latitude, lon: g.coords.longitude, prec: g.coords.accuracy }); },
+        function () { b.disabled = false; toast('Sem localização. Ativa o GPS e tenta outra vez.'); }, { enableHighAccuracy: true, timeout: 15000, maximumAge: 15000 });
+    }
+    else if ((v = b.getAttribute('data-dica'))) { var vi = (E.extra.rotas.visitados || []).filter(function (k) { return k.ponto === v; })[0]; if (vi && vi.dica) mostrarDica(vi.dica, vi.nome); }
+  });
+
+  // movimento (Saúde). Na app instalada da loja, a shell nativa responde a mtmSaude; no browser, regista-se à mão.
+  function ponteSaude() {
+    if (window.webkit && window.webkit.messageHandlers && window.webkit.messageHandlers.mtmSaude) return 'apple';
+    if (window.MTMSaude && typeof window.MTMSaude.passosHoje === 'function') return 'google';
+    return null;
+  }
+  window.mtmSaudeResposta = function (d) { d = d || {}; api({ accao: 'saude', passos: d.passos, minutos: d.minutos, fonte: d.fonte || ponteSaude() || 'manual' }).then(function (r) { if (r.ok) { render(r); ganhoToast(r, 'Movimento lido da app Saúde.'); } }); };
+  function renderSaude(X) {
+    var S = X.saude || {}, ponte = ponteSaude();
+    $('cSaude').innerHTML = '<span class="tag">👟 Hoje</span><h4>' + (S.passos || S.minutos ? (S.passos || 0).toLocaleString('pt-PT') + ' passos · ' + (S.minutos || 0) + ' min de exercício' : 'Quanto te mexeste hoje?') + '</h4>' +
+      '<p>5000 passos ou 20 minutos de exercício valem +10 XP por dia.' + (S.xp ? ' <b style="color:var(--verde)">Já ganhaste hoje ✓</b>' : '') + '</p>' +
+      (ponte ? '<button class="btn" type="button" id="bSaudeLer">Ler da app ' + (ponte === 'apple' ? 'Saúde (Apple)' : 'Health Connect') + '</button>' :
+        '<div class="dois"><div><label for="sPassos">Passos</label><input id="sPassos" type="number" inputmode="numeric" min="0" max="100000" value="' + (S.passos || '') + '"></div><div><label for="sMin">Minutos</label><input id="sMin" type="number" inputmode="numeric" min="0" max="600" value="' + (S.minutos || '') + '"></div></div><button class="btn sec" type="button" id="bSaude" style="margin-top:10px">Guardar movimento</button>' +
+        '<p style="margin:10px 0 0;font-size:13.5px;color:var(--cinza)">A leitura automática da Apple Saúde e do Health Connect (Android) liga-se na app instalada pela loja. No browser, copia o número da app Saúde do telemóvel.</p>');
+  }
+  $('vRotas').addEventListener('click', function (ev) {
+    var b = ev.target.closest('button'); if (!b) return;
+    if (b.id === 'bSaude') { b.disabled = true; api({ accao: 'saude', passos: +$('sPassos').value || 0, minutos: +$('sMin').value || 0, fonte: 'manual' }).then(function (r) { b.disabled = false; if (!r.ok) { toast(esc(r.erro)); return; } render(r); ganhoToast(r); }); }
+    if (b.id === 'bSaudeLer') { var p = ponteSaude(); try { if (p === 'apple') window.webkit.messageHandlers.mtmSaude.postMessage({ pedir: 'hoje' }); else window.mtmSaudeResposta(JSON.parse(window.MTMSaude.passosHoje())); } catch (_) { toast('Não consegui ler a app Saúde.'); } }
+  });
+
+  // eventos e desafios do Ricardo
+  function renderEventos(X) {
+    var L = X.eventos || [];
+    var quando = function (q) { return q ? new Date(q).toLocaleString('pt-PT', { weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) : ''; };
+    var eur = function (v) { return Number(v).toLocaleString('pt-PT', { style: 'currency', currency: 'EUR' }); };
+    var cartao = function (ev) {
+      var des = ev.tipo === 'desafio';
+      return '<div class="placa evento">' + (ev.imagem_url ? '<img class="capa" src="' + esc(ev.imagem_url) + '" alt="" loading="lazy">' : '') + '<div class="corpo"><div class="quando">' + (des ? '🏁 Desafio' + (ev.xp ? ' · +' + ev.xp + ' XP' : '') : '🎟️ Evento') + (ev.quando ? ' · ' + esc(quando(ev.quando)) : '') + (ev.local ? ' · ' + esc(ev.local) : '') + '</div>' +
+        '<h4>' + esc(ev.titulo) + '</h4>' + (ev.descricao ? '<p>' + esc(ev.descricao) + '</p>' : '') +
+        (!des && ev.preco_eur != null ? '<div class="preco"><b>' + eur(ev.preco_eur) + '</b>' + (ev.preco_antes_eur ? '<s>' + eur(ev.preco_antes_eur) + '</s><span class="mono">pré-venda</span>' : '') + '</div>' : '') +
+        (ev.meu ? '<div class="estado">' + ({ interesse: '⭐ Marcaste interesse', reservado: '🎟️ Tens pré-reserva. O Ricardo vai falar contigo.', concluido: '✓ Desafio concluído' })[ev.meu] + '</div>' : '') +
+        (des ? (ev.meu === 'concluido' ? '' : '<div class="acc">' + (ev.meu ? '' : '<button class="btn sec" type="button" data-ev="' + ev.id + '|interesse">Aceito o desafio</button>') + '<button class="btn" type="button" data-evfim="' + ev.id + '" style="' + (ev.meu ? 'grid-column:1/-1' : '') + '">Concluí</button></div>')
+          : '<div class="acc">' + (ev.meu ? '' : '<button class="btn sec" type="button" data-ev="' + ev.id + '|interesse">Tenho interesse</button>') + (ev.link_compra ? '<a class="btn" href="' + esc(ev.link_compra) + '" target="_blank" rel="noopener" style="text-decoration:none' + (ev.meu ? ';grid-column:1/-1' : '') + '">Comprar</a>' : ev.meu === 'reservado' ? '' : '<button class="btn" type="button" data-ev="' + ev.id + '|reservado" style="' + (ev.meu ? 'grid-column:1/-1' : '') + '">Pré-reservar</button>') + '</div>') +
+        '</div></div>';
+    };
+    $('gEventos').innerHTML = L.length ? L.map(cartao).join('') : '<div class="placa vazio"><img src="/ricardogarcia/app-emblema.png" alt=""><br>Ainda não há desafios nem eventos. Quando o Ricardo lançar um, aparece aqui primeiro.</div>';
+    var top = L.filter(function (x) { return x.meu !== 'concluido'; })[0];
+    $('blocoRicardo').innerHTML = top ? '<div class="sec-tit"><h3>Do Ricardo</h3><span class="mono">' + (top.tipo === 'desafio' ? 'Desafio' : 'Evento') + '</span></div>' + cartao(top) : '';
+  }
+  document.addEventListener('click', function (ev) {
+    var b = ev.target.closest('button'); if (!b) return; var v;
+    if ((v = b.getAttribute('data-ev'))) { var p = v.split('|'); b.disabled = true; api({ accao: 'evento', id: p[0], estado: p[1] }).then(function (r) { if (!r.ok) { toast(esc(r.erro)); b.disabled = false; return; } render(r); toast(p[1] === 'reservado' ? '<b>Pré-reserva feita</b><br>O Ricardo vai entrar em contacto.' : '<b>Anotado</b><br>Avisamos-te das novidades.'); }); }
+    else if ((v = b.getAttribute('data-evfim'))) {
+      var ev2 = E.extra.eventos.filter(function (k) { return k.id === v; })[0];
+      $('folhaC').innerHTML = '<button class="fechar" type="button" aria-label="Fechar">×</button><div class="mono">🏁 Desafio' + (ev2.xp ? ' · +' + ev2.xp + ' XP' : '') + '</div><h2>' + esc(ev2.titulo) + '</h2><label for="evResp">Como correu?</label><textarea id="evResp" rows="5" maxlength="1500"></textarea><button class="btn" type="button" id="bEvFim" style="margin-top:12px">Concluir desafio</button><div class="erro" id="fErro" role="alert"></div>';
+      $('folha').classList.add('on'); $('folhaC').querySelector('.fechar').onclick = fechar;
+      $('bEvFim').onclick = function () { var bb = this; bb.disabled = true; api({ accao: 'evento', id: v, estado: 'concluido', resposta: $('evResp').value }).then(function (r) { if (!r.ok) { $('fErro').textContent = r.erro; bb.disabled = false; return; } fechar(); render(r); confete(140); ganhoToast(r, 'Desafio concluído. O Ricardo vai ver.'); }); };
+    }
+  });
 
   function abrir(id) {
     var x = E.missoes.filter(function (k) { return k.id === id; })[0]; if (!x) return;

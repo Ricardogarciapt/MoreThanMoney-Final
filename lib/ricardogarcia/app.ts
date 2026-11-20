@@ -12,7 +12,7 @@ export { PATENTES, patenteDe }
 // Valores por omissão; o Ricardo afina-os no painel (rg_dados → app_economia).
 export const ECONOMIA_BASE = {
   xp_dia_max: 100,          // tecto de XP por dia nas missões (+ bónus)
-  bonus_dia_completo: 10,   // XP extra por fazer as 3 missões do dia
+  bonus_dia_completo: 10,   // XP extra por fazer as 4 missões do dia
   moedas_dia_completo: 1,   // 1 moeda por dia completo
   moedas_semana: 5,         // a cada 7 dias seguidos
   moedas_patente: 5,        // ao subir de patente (com XP de qualquer parte da MTM)
@@ -23,7 +23,7 @@ export type Economia = typeof ECONOMIA_BASE
 
 export const INSIGNIAS: { id: string; nome: string; desc: string; teste: (m: any) => boolean }[] = [
   { id: 'primeiro-passo', nome: 'Primeiro passo', desc: 'Concluíste a primeira missão.', teste: m => m.xp > 0 },
-  { id: 'dia-completo', nome: 'Dia completo', desc: 'Fizeste as três missões num dia.', teste: m => m.dias_ativos >= 1 && m._completo },
+  { id: 'dia-completo', nome: 'Dia completo', desc: 'Fizeste todas as missões do dia.', teste: m => m.dias_ativos >= 1 && m._completo },
   { id: 'semana', nome: 'Sete dias seguidos', desc: 'Uma semana sem falhar.', teste: m => m.sequencia >= 7 },
   { id: 'quinzena', nome: 'Quinze dias seguidos', desc: 'Já é hábito.', teste: m => m.sequencia >= 15 },
   { id: 'mes', nome: 'Trinta dias seguidos', desc: 'Disciplina de verdade.', teste: m => m.sequencia >= 30 },
@@ -99,7 +99,7 @@ export async function missoesDoDia(dia = hoje()) {
   // aparecem em cima, como missão extra, só entre as datas do próprio desafio.
   const rotacao = (data || []).filter(m => !String(m.id).startsWith('semana-'))
   const desafio = (data || []).find(m => String(m.id).startsWith('semana-') && (!m.conteudo?.de || m.conteudo.de <= dia) && (!m.conteudo?.ate || m.conteudo.ate >= dia))
-  const diarias = (['treino', 'mindset', 'digital'] as const).map(t => {
+  const diarias = (['treino', 'mindset', 'digital', 'produtividade'] as const).map(t => {
     const l = rotacao.filter(m => m.tipo === t); return l.length ? l[n % l.length] : null
   }).filter(Boolean) as any[]
   return desafio ? [{ ...desafio, desafio: true }, ...diarias] : diarias
