@@ -325,6 +325,27 @@ input, textarea, select { font-size: 16px !important; }
 .mlinha button { flex: 0 0 48px; height: 44px; border-radius: 12px; border: 0; background: linear-gradient(135deg, var(--ouro2), var(--ouro)); color: #111; font-size: 18px; }
 .msug { display: flex; gap: 6px; flex-wrap: wrap; margin: 4px 0 8px; }
 .msug button { border: 1px solid var(--linha); background: var(--placa2); color: var(--texto); border-radius: 999px; padding: 6px 12px; font-size: 13px; }
+
+/* diário livre e desafios da comunidade */
+.dtabs { display: flex; gap: 6px; margin: 4px 0 12px; }
+.dtabs button { flex: 1; min-height: 42px; border-radius: 12px; border: 1px solid var(--linha); background: var(--placa2); color: var(--cinza); font-weight: 700; letter-spacing: 1px; text-transform: uppercase; font-size: 12px; }
+.dtabs button.on { color: #111; background: linear-gradient(135deg, var(--ouro2), var(--ouro)); border-color: transparent; }
+.dacoes { display: flex; gap: 8px; margin-bottom: 12px; }
+.dacoes .btn { min-height: 44px; font-size: 13px; }
+.entrada-diario[data-tipo="livre"] { border-left-color: #c9a7ff; }
+.humor { display: flex; gap: 6px; }
+.humor button { flex: 1; font-size: 24px; min-height: 48px; border-radius: 12px; border: 1px solid var(--linha); background: var(--placa2); }
+.humor button.on { border-color: var(--ouro2); background: rgba(210,166,60,.15); }
+.dm { margin-bottom: 10px; }
+.dm h4 { margin: 2px 0 4px; font-size: 17px; }
+.dm .meta { font-size: 13px; color: var(--cinza); }
+.dm .barra { height: 6px; border-radius: 6px; background: var(--linha); margin: 10px 0 8px; overflow: hidden; }
+.dm .barra i { display: block; height: 100%; background: linear-gradient(90deg, var(--ciano), var(--ouro2)); }
+.dm .linha-b { display: flex; gap: 8px; }
+.dm .linha-b .btn { min-height: 40px; font-size: 12px; padding: 0 12px; }
+.dm.fim { border-color: rgba(210,166,60,.5); }
+.dm .selo { position: absolute; top: 12px; right: 12px; font-size: 11px; letter-spacing: 1px; text-transform: uppercase; color: var(--ouro2); }
+.sub-tit { font-size: 12px; letter-spacing: 2px; text-transform: uppercase; color: var(--cinza); margin: 16px 0 8px; }
 /* perfil e avatar */
 .perfil-bt { display: flex; align-items: center; gap: 8px; background: none; border: 0; padding: 0; color: var(--texto); min-width: 0; }
 .perfil-bt .av { width: 40px; height: 40px; flex: 0 0 40px; font-size: 18px; border: 2px solid var(--ouro); }
@@ -506,8 +527,17 @@ input, textarea, select { font-size: 16px !important; }
 
     <div class="vista" id="vDiario">
       <div class="sec-tit"><h3>Diário de campo</h3><span class="mono" id="dTotal"></span></div>
-      <p class="texto-m" style="margin-top:0;font-size:15px;color:var(--cinza)">Tudo o que escreves nas missões fica aqui. Daqui a um mês vais gostar de reler.</p>
-      <div id="gDiario"></div>
+      <div class="dtabs" role="tablist"><button type="button" class="on" data-dtab="pag" role="tab">✎ Páginas</button><button type="button" data-dtab="des" role="tab">🎯 Desafios</button></div>
+      <div id="dPag">
+        <p class="texto-m" style="margin-top:0;font-size:15px;color:var(--cinza)">As tuas páginas e tudo o que escreves nas missões. Daqui a um mês vais gostar de reler.</p>
+        <div class="dacoes"><button class="btn" type="button" id="bNovaPag">✎ Nova página</button></div>
+        <div id="gDiario"></div>
+      </div>
+      <div id="dDes" hidden>
+        <p class="texto-m" style="margin-top:0;font-size:15px;color:var(--cinza)">Cria um desafio teu ou junta-te aos da comunidade. Um check-in por dia, XP a cada dia e no fim.</p>
+        <div class="dacoes"><button class="btn" type="button" id="bNovoDes">🎯 Criar desafio</button></div>
+        <div id="gDes"></div>
+      </div>
     </div>
 
 
@@ -627,10 +657,7 @@ input, textarea, select { font-size: 16px !important; }
       var n = d.feitas >= 4 ? 'n3' : d.feitas >= 2 ? 'n2' : d.feitas === 1 ? 'n1' : '';
       cel += '<span data-i="' + i + '" class="' + n + (i === H.length - 1 ? ' hoje' : '') + '" title="' + d.dia + ': ' + d.feitas + ' missões, ' + d.xp + ' XP"></span>'; });
     $('cGrade').innerHTML = cel; $('cResumo').textContent = ativos + ' dias activos · ' + completos + ' completos';
-    var D = e.diario || [];
-    $('dTotal').textContent = D.length ? D.length + ' entradas' : '';
-    $('gDiario').innerHTML = D.length ? D.map(function (d) { return '<div class="placa entrada-diario" data-i="' + E.diario.indexOf(d) + '" data-tipo="' + esc(d.tipo) + '"><div class="mono">' + esc(new Date(d.dia + 'T12:00:00Z').toLocaleDateString('pt-PT', { weekday: 'short', day: 'numeric', month: 'short' })) + ' · ' + esc(d.tipo) + '</div><b>' + esc(d.titulo) + '</b><p>' + esc(d.texto) + '</p></div>'; }).join('')
-      : '<div class="placa vazio"><img src="/ricardogarcia/app-emblema.png" alt=""><br>Ainda está em branco. Faz a missão de mindset de hoje e a primeira página fica escrita.</div>';
+    renderDiario(e);
     $('listaMissoes').innerHTML = e.missoes.map(function (x) {
       return '<div class="placa missao ' + (x.estado === 'feita' ? 'feita' : '') + '" data-tipo="' + x.tipo + '" data-id="' + esc(x.id) + '" role="button" tabindex="0"' + (x.desafio ? ' style="border-color:var(--ouro);background:linear-gradient(135deg,rgba(210,166,60,.14),transparent)"' : '') + '><div class="ic">' + ICON[x.tipo] + '</div><div>' + (x.desafio ? '<small style="display:block;color:var(--ouro2);font-size:11px;letter-spacing:.08em;text-transform:uppercase">Desafio da semana do Ricardo</small>' : '') + '<b>' + esc(x.titulo) + '</b><span>' + esc(x.resumo || '') + '</span></div><div class="xp">' + (x.estado === 'feita' ? '✓ +' + x.xp_ganho : '+' + x.xp + ' XP') + '</div></div>';
     }).join('');
@@ -1213,6 +1240,110 @@ input, textarea, select { font-size: 16px !important; }
     api({ accao: 'mentor_hist' }).then(function (r) { M.msgs = (r && r.mensagens) || []; pinta(); }, function () { pinta(); });
   }
   $('cMentor').addEventListener('click', folhaMentor);
+  // ── Diário livre e desafios da comunidade ────────────────────────────────
+  var HUMOR = ['😞', '😕', '😐', '🙂', '😄'];
+  function dataCurta(d) { return new Date(d + 'T12:00:00Z').toLocaleDateString('pt-PT', { weekday: 'short', day: 'numeric', month: 'short' }); }
+  function renderDiario(e) {
+    var L = ((e.extra || {}).diario_livre || []).map(function (d) { return { livre: d, dia: d.dia, ord: d.criado }; });
+    var M = (e.diario || []).map(function (d, k) { return { m: d, k: k, dia: d.dia, ord: d.dia + 'T00' }; });
+    var T = L.concat(M).sort(function (a, b) { return a.ord < b.ord ? 1 : a.ord > b.ord ? -1 : 0; });
+    $('dTotal').textContent = T.length ? T.length + ' entradas' : '';
+    $('gDiario').innerHTML = T.length ? T.map(function (x) {
+      if (x.livre) { var d = x.livre; return '<div class="placa entrada-diario" data-livre="' + esc(d.id) + '" data-tipo="livre"><div class="mono">' + esc(dataCurta(d.dia)) + ' · página' + (d.humor ? ' · ' + HUMOR[d.humor - 1] : '') + '</div>' + (d.titulo ? '<b>' + esc(d.titulo) + '</b>' : '') + '<p>' + esc(d.texto) + '</p></div>'; }
+      var m = x.m; return '<div class="placa entrada-diario" data-i="' + x.k + '" data-tipo="' + esc(m.tipo) + '"><div class="mono">' + esc(dataCurta(m.dia)) + ' · ' + esc(m.tipo) + '</div><b>' + esc(m.titulo) + '</b><p>' + esc(m.texto) + '</p></div>';
+    }).join('') : '<div class="placa vazio"><img src="/ricardogarcia/app-emblema.png" alt=""><br>Ainda está em branco. Escreve a tua primeira página ou faz a missão de mindset de hoje.</div>';
+    renderDesafiosM(e);
+  }
+  function renderDesafiosM(e) {
+    var L = (e.extra || {}).desafios_m || [];
+    var meus = L.filter(function (d) { return d.eu; }), outros = L.filter(function (d) { return !d.eu; });
+    function cartao(d) {
+      var pct = d.eu ? Math.min(100, Math.round(d.eu.checkins / d.dias * 100)) : 0, b = '';
+      if (d.eu && d.eu.concluido) b = '<span class="mono" style="color:var(--ouro2)">🎖️ Concluído</span>';
+      else if (d.eu) b = '<button class="btn" type="button" data-dmc="' + esc(d.id) + '"' + (d.eu.hoje ? ' disabled' : '') + '>' + (d.eu.hoje ? '✓ Feito hoje' : 'Check-in de hoje') + '</button>';
+      else b = '<button class="btn" type="button" data-dme="' + esc(d.id) + '">Juntar-me</button>';
+      return '<div class="placa dm' + (d.eu && d.eu.concluido ? ' fim' : '') + '" data-dm="' + esc(d.id) + '">' + (d.publico ? '' : '<span class="selo">Privado</span>') + (d.oculto ? '<span class="selo" style="color:var(--verm)">Em revisão</span>' : '') +
+        '<div class="mono">' + d.dias + ' dias · por ' + esc(d.meu ? 'ti' : d.autor) + '</div><h4>' + esc(d.titulo) + '</h4><div class="meta">' + d.pessoas + (d.pessoas === 1 ? ' pessoa' : ' pessoas') + (d.concluiram ? ' · ' + d.concluiram + ' concluíram' : '') + '</div>' +
+        (d.eu ? '<div class="barra"><i style="width:' + pct + '%"></i></div><div class="meta" style="margin-bottom:8px">' + d.eu.checkins + ' de ' + d.dias + ' dias</div>' : '<div style="height:10px"></div>') +
+        '<div class="linha-b">' + b + '</div></div>';
+    }
+    $('gDes').innerHTML = (meus.length ? '<div class="sub-tit">Os teus desafios</div>' + meus.map(cartao).join('') : '') +
+      (outros.length ? '<div class="sub-tit">Da comunidade</div>' + outros.map(cartao).join('') : '') +
+      (L.length ? '' : '<div class="placa vazio">Ainda não há desafios. Sê o primeiro a lançar um: 7 dias sem açúcar, 14 dias a ler 10 páginas, 30 dias a acordar às 6h…</div>');
+  }
+  function acaoDiario(body, ok) {
+    return api(body).then(function (r) {
+      if (!r.ok) { toast(esc(r.erro || 'Não deu. Tenta outra vez.')); return r; }
+      render(r); if (ok) ok(r); return r;
+    });
+  }
+  document.querySelectorAll('[data-dtab]').forEach(function (b) {
+    b.onclick = function () {
+      document.querySelectorAll('[data-dtab]').forEach(function (x) { x.classList.toggle('on', x === b); });
+      $('dPag').hidden = b.getAttribute('data-dtab') !== 'pag'; $('dDes').hidden = b.getAttribute('data-dtab') !== 'des';
+    };
+  });
+  $('bNovaPag').onclick = function () {
+    var humor = 0;
+    modal('<div class="mono">Nova página' + ((E.extra || {}).diario_hoje ? '' : ' · +3 XP') + '</div><h2>O que tens na cabeça?</h2>' +
+      '<label>Como te sentes</label><div class="humor">' + HUMOR.map(function (x, i) { return '<button type="button" data-h="' + (i + 1) + '" aria-label="Humor ' + (i + 1) + '">' + x + '</button>'; }).join('') + '</div>' +
+      '<label for="pTit">Título (opcional)</label><input id="pTit" maxlength="120" placeholder="Ex.: O que aprendi hoje">' +
+      '<label for="pTxt">A tua página</label><textarea id="pTxt" rows="7" maxlength="4000" placeholder="Uma vitória, uma lição, uma coisa a mudar amanhã…"></textarea>' +
+      '<div style="height:12px"></div><button class="btn" type="button" id="pOk">Guardar página</button><p class="texto-m" style="font-size:13px;color:var(--cinza)">Só tu vês o teu diário.</p>',
+      function (b) {
+        if (b.getAttribute('data-h')) { humor = +b.getAttribute('data-h'); $('folhaC').querySelectorAll('[data-h]').forEach(function (x) { x.classList.toggle('on', x === b); }); return; }
+        if (b.id === 'pOk') { b.disabled = true; acaoDiario({ accao: 'diario_novo', titulo: $('pTit').value, texto: $('pTxt').value, humor: humor }, function (r) { fechar(); ganhoToast(r, 'Página guardada.'); }).then(function () { b.disabled = false; }); }
+      });
+  };
+  $('bNovoDes').onclick = function () {
+    var dias = 7, pub = true;
+    modal('<div class="mono">Desafio novo</div><h2>Lança um desafio</h2>' +
+      '<label for="dTit">Nome</label><input id="dTit" maxlength="80" placeholder="Ex.: 7 dias sem redes sociais ao acordar">' +
+      '<label for="dDesc">Regras (opcional)</label><textarea id="dDesc" rows="3" maxlength="600" placeholder="O que conta como cumprido em cada dia?"></textarea>' +
+      '<label>Duração</label><div class="chips">' + ((E.extra || {}).desafios_dias || [3, 7, 14, 30]).map(function (n) { return '<button type="button" data-dd="' + n + '"' + (n === 7 ? ' class="on"' : '') + '>' + n + ' dias</button>'; }).join('') + '</div>' +
+      '<label>Quem vê</label><div class="chips"><button type="button" data-dp="1" class="on">Comunidade</button><button type="button" data-dp="0">Só eu</button></div>' +
+      '<div style="height:16px"></div><button class="btn" type="button" id="dOk">Criar e começar</button><p class="texto-m" style="font-size:13px;color:var(--cinza)">Respeito acima de tudo: desafios perigosos ou ofensivos saem do ar.</p>',
+      function (b) {
+        if (b.getAttribute('data-dd')) { dias = +b.getAttribute('data-dd'); $('folhaC').querySelectorAll('[data-dd]').forEach(function (x) { x.classList.toggle('on', x === b); }); return; }
+        if (b.getAttribute('data-dp')) { pub = b.getAttribute('data-dp') === '1'; $('folhaC').querySelectorAll('[data-dp]').forEach(function (x) { x.classList.toggle('on', x === b); }); return; }
+        if (b.id === 'dOk') { b.disabled = true; acaoDiario({ accao: 'desafio_criar', titulo: $('dTit').value, descricao: $('dDesc').value, dias: dias, publico: pub }, function () { fechar(); toast('<b>Desafio lançado.</b><br>Faz já o check-in de hoje.'); }).then(function () { b.disabled = false; }); }
+      });
+  };
+  function checkin(id, b) {
+    if (b) b.disabled = true;
+    acaoDiario({ accao: 'desafio_checkin', id: id }, function (r) { fechar(); ganhoToast(r, r.desafio_fim ? 'Desafio concluído: ' + esc(r.desafio_fim) + ' 🎖️' : 'Dia registado. Continua.'); if (r.desafio_fim) confete(180); }).then(function () { if (b) b.disabled = false; });
+  }
+  $('gDes').addEventListener('click', function (ev) {
+    var b = ev.target.closest('button'); if (!b) return; ev.stopPropagation();
+    if (b.getAttribute('data-dmc')) checkin(b.getAttribute('data-dmc'), b);
+    else if (b.getAttribute('data-dme')) acaoDiario({ accao: 'desafio_entrar', id: b.getAttribute('data-dme') }, function () { toast('<b>Estás dentro.</b> Faz o check-in de hoje.'); });
+  });
+  DET.unshift(['.entrada-diario[data-livre]', function (el) {
+    var d = ((E.extra || {}).diario_livre || []).filter(function (x) { return x.id === el.getAttribute('data-livre'); })[0]; if (!d) return;
+    modal('<div class="mono">' + esc(new Date(d.dia + 'T12:00:00Z').toLocaleDateString('pt-PT', { weekday: 'long', day: 'numeric', month: 'long' })) + ' · página' + (d.humor ? ' · ' + HUMOR[d.humor - 1] : '') + '</div>' + (d.titulo ? '<h2>' + esc(d.titulo) + '</h2>' : '<div style="height:8px"></div>') + '<p class="texto-m" style="font-size:17px;white-space:pre-wrap;font-family:Kalam">' + esc(d.texto) + '</p><div style="height:10px"></div><button class="btn sec" type="button" data-apagar="1">Apagar página</button>',
+      function (b) { if (b.getAttribute('data-apagar')) { if (b.getAttribute('data-c')) acaoDiario({ accao: 'diario_apagar', id: d.id }, function () { fechar(); toast('Página apagada.'); }); else { b.setAttribute('data-c', '1'); b.textContent = 'Toca outra vez para apagar'; } } });
+  }]);
+  DET.push(['.dm[data-dm]', function (el) {
+    var d = ((E.extra || {}).desafios_m || []).filter(function (x) { return x.id === el.getAttribute('data-dm'); })[0]; if (!d) return;
+    var bts = '';
+    if (d.eu && !d.eu.concluido && !d.eu.hoje) bts += '<button class="btn" type="button" data-x="c">Check-in de hoje</button><div style="height:8px"></div>';
+    if (!d.eu) bts += '<button class="btn" type="button" data-x="e">Juntar-me</button><div style="height:8px"></div>';
+    if (d.eu && !d.eu.concluido && !d.meu) bts += '<button class="btn sec" type="button" data-x="s">Sair do desafio</button><div style="height:8px"></div>';
+    if (d.meu) bts += '<button class="btn sec" type="button" data-x="a">Apagar desafio</button>';
+    else bts += '<button class="btn sec" type="button" data-x="d" style="border-color:transparent;color:var(--cinza)">🚩 Denunciar</button>';
+    modal('<div class="mono">Desafio · ' + d.dias + ' dias · por ' + esc(d.meu ? 'ti' : d.autor) + '</div><h2>' + esc(d.titulo) + '</h2>' + (d.descricao ? '<p class="texto-m" style="font-size:15px;white-space:pre-wrap">' + esc(d.descricao) + '</p>' : '') +
+      '<ul class="det-lista"><li><span>Pessoas</span><span>' + d.pessoas + '</span></li><li><span>Concluíram</span><span>' + d.concluiram + '</span></li>' + (d.eu ? '<li class="on"><span>O teu progresso</span><span>' + d.eu.checkins + ' / ' + d.dias + '</span></li>' : '') + '<li><span>XP</span><span>+5 por dia · +20 no fim</span></li></ul>' + bts,
+      function (b) {
+        var x = b.getAttribute('data-x'); if (!x) return;
+        if (x === 'c') checkin(d.id, b);
+        else if (x === 'e') acaoDiario({ accao: 'desafio_entrar', id: d.id }, function () { fechar(); toast('<b>Estás dentro.</b>'); });
+        else if (x === 's') acaoDiario({ accao: 'desafio_sair', id: d.id }, function () { fechar(); toast('Saíste do desafio.'); });
+        else if (x === 'a' || x === 'd') {
+          if (!b.getAttribute('data-c')) { b.setAttribute('data-c', '1'); b.textContent = x === 'a' ? 'Toca outra vez para apagar' : 'Toca outra vez para denunciar'; return; }
+          acaoDiario({ accao: x === 'a' ? 'desafio_apagar' : 'desafio_denunciar', id: d.id }, function () { fechar(); toast(x === 'a' ? 'Desafio apagado.' : 'Obrigado. Vamos rever.'); });
+        }
+      });
+  }]);
   $('bPerfil').onclick = function () { if (E) folhaPerfil(); };
   // iOS ignora user-scalable=no: trava o gesto de pinça (o duplo toque já fica preso pelo touch-action).
   document.addEventListener('gesturestart', function (e) { e.preventDefault(); }, { passive: false });

@@ -14,11 +14,13 @@ import { ligacoes, novoTokenAtalho, registarMovimento, sincronizarStrava } from 
 import { configPush, guardarToken, tirarToken } from '@/lib/ricardogarcia/push'
 import { missoesDoMembro, FASES } from '@/lib/ricardogarcia/plano39'
 import { falarComMentor, historico as historicoMentor } from '@/lib/ricardogarcia/mentor'
+import { DIAS_DESAFIO, desafiosDoMembro, diarioLivre, textoLivre } from '@/lib/ricardogarcia/diario-desafios'
 
 export const dynamic = 'force-dynamic'
 export const maxDuration = 60
 
 const t = (v: unknown, n: number) => String(v ?? '').replace(/[\u0000-\u001f]/g, ' ').trim().slice(0, n)
+const XP_DIA_DIARIO = 3
 const erro = (m: string, s = 400) => NextResponse.json({ ok: false, erro: m }, { status: s })
 const primeiroNome = (n: string) => String(n || '').trim().split(/\s+/)[0].slice(0, 20)
 
@@ -37,13 +39,14 @@ const patenteIdx = (xp: number) => { let i = 0; PATENTES.forEach((p, k) => { if 
 
 // O resto do dia: curiosidade, quiz, presença, hábitos, movimento, rotas e o que o Ricardo publicou.
 async function extras(m: any, dia: string) {
-  const [cur, quiz, diarios, habs, feitos, evs, meus] = await Promise.all([
+  const [cur, quiz, diarios, habs, feitos, evs, meus, livre, desafiosM] = await Promise.all([
     curiosidadeDoDia(dia), quizDoDia(dia),
     db().from('rg_app_diarios').select('item, ref, xp, dados, prova_path').eq('membro_id', m.id).eq('dia', dia),
     db().from('rg_app_habitos').select('id, nome, icone, ordem').eq('membro_id', m.id).eq('activo', true).order('ordem').order('criado'),
     db().from('rg_app_habitos_feitos').select('habito_id').eq('membro_id', m.id).eq('dia', dia),
     db().from('rg_app_eventos').select('*').eq('activo', true).order('ordem').order('quando', { ascending: true, nullsFirst: false }).limit(30),
     db().from('rg_app_eventos_membros').select('evento_id, estado').eq('membro_id', m.id),
+    diarioLivre(m.id), desafiosDoMembro(m.id, dia),
   ])
   const it = new Map((diarios.data || []).map(d => [d.item, d]))
   const q: any = quiz, qr: any = it.get('quiz')
@@ -52,6 +55,8 @@ async function extras(m: any, dia: string) {
   const agora = Date.now()
   const rotas = (diarios.data || []).filter(d => d.item.startsWith('rota:'))
   return {
+    diario_livre: livre, desafios_m: desafiosM, desafios_dias: DIAS_DESAFIO,
+    diario_hoje: it.has('diario'),
     curiosidade: cur ? { id: cur.id, titulo: cur.titulo, texto: cur.texto, ano: cur.ano, categoria: cur.categoria, feita: it.has('curiosidade'), xp: XP_DIA.curiosidade } : null,
     quiz: q ? { id: q.id, pergunta: q.pergunta, opcoes: q.opcoes, categoria: q.categoria, xp: XP_DIA.quiz_certo,
       feito: !!qr, escolha: qr?.dados?.escolha ?? null, correta: qr ? q.correta : null, explicacao: qr ? q.explicacao : null } : null,
@@ -452,6 +457,73 @@ export async function POST(req: NextRequest) {
     await db().from('rg_app_eventos_membros').upsert({ evento_id: e.id, membro_id: m.id, estado: quer }, { onConflict: 'evento_id,membro_id' })
     if (ja?.estado !== quer) try { await avisarAdmin(db(), `${quer === 'reservado' ? '🎟️ Pré-reserva' : '⭐ Interesse'} na app\n${m.nome} (${m.email}) · «${e.titulo}»${m.telefone ? '\n' + m.telefone : ''}`) } catch {}
     return NextResponse.json(await estado(m))
+  }
+
+  // Diário livre: páginas soltas. XP só na primeira do dia.
+  if (accao === 'diario_novo') {
+    const texto = textoLivre(b?.texto, 4000), titulo = t(b?.titulo, 120)
+    if (texto.length < 10) return erro('Escreve pelo menos uma frase.')
+    const humor = Math.round(Number(b?.humor)); 
+    if (!checkRateLimit('rg-app-diario:' + m.id, 15, 24 * 3600_000).allowed) return erro('Já escreveste muito hoje. Amanhã há mais páginas.', 429)
+    const { error } = await db().from('rg_app_diario_livre').insert({ membro_id: m.id, dia, titulo: titulo || null, texto, humor: humor >= 1 && humor <= 5 ? humor : null })
+    if (error) return erro('Não consegui guardar. Tenta outra vez.')
+    const primeira = await registarDia('diario', XP_DIA_DIARIO)
+    return responder(primeira ? await darXp('app_diario', XP_DIA_DIARIO, `Diário ${dia}`) : { xp: 0 })
+  }
+  if (accao === 'diario_apagar') {
+    await db().from('rg_app_diario_livre').delete().eq('id', t(b?.id, 40)).eq('membro_id', m.id)
+    return NextResponse.json(await estado(m))
+  }
+
+  // Desafios criados pelos membros.
+  if (accao === 'desafio_criar') {
+    const titulo = t(b?.titulo, 80), descricao = textoLivre(b?.descricao, 600), dias = Number(b?.dias)
+    if (titulo.length < 4) return erro('Dá um nome ao desafio.')
+    if (!DIAS_DESAFIO.includes(dias)) return erro('Escolhe 3, 7, 14 ou 30 dias.')
+    if (!checkRateLimit('rg-app-desafio-criar:' + m.id, 3, 24 * 3600_000).allowed) return erro('Já criaste 3 desafios hoje.', 429)
+    const { data: d, error } = await db().from('rg_app_desafios_m').insert({ autor_id: m.id, titulo, descricao: descricao || null, dias, publico: b?.publico !== false }).select('id').single()
+    if (error || !d) return erro('Não consegui criar o desafio.')
+    await db().from('rg_app_desafios_m_adesoes').insert({ desafio_id: d.id, membro_id: m.id, inicio: dia })
+    if (b?.publico !== false) try { await avisarAdmin(db(), `🎯 Desafio novo na app\n${m.nome}: «${titulo}» (${dias} dias)${descricao ? '\n' + descricao.slice(0, 200) : ''}`) } catch {}
+    return NextResponse.json(await estado(m))
+  }
+  if (accao === 'desafio_entrar' || accao === 'desafio_sair' || accao === 'desafio_checkin' || accao === 'desafio_denunciar' || accao === 'desafio_apagar') {
+    const id = t(b?.id, 40)
+    const { data: d } = await db().from('rg_app_desafios_m').select('*').eq('id', id).maybeSingle()
+    if (!d || (d.oculto && d.autor_id !== m.id)) return erro('Este desafio já não existe.', 404)
+    const { data: a } = await db().from('rg_app_desafios_m_adesoes').select('*').eq('desafio_id', id).eq('membro_id', m.id).maybeSingle()
+    if (accao === 'desafio_entrar') {
+      if (!d.publico && d.autor_id !== m.id) return erro('Este desafio é privado.')
+      if (!a) await db().from('rg_app_desafios_m_adesoes').insert({ desafio_id: id, membro_id: m.id, inicio: dia })
+      return NextResponse.json(await estado(m))
+    }
+    if (accao === 'desafio_sair') {
+      if (a && !a.concluido) await db().from('rg_app_desafios_m_adesoes').delete().eq('desafio_id', id).eq('membro_id', m.id)
+      return NextResponse.json(await estado(m))
+    }
+    if (accao === 'desafio_apagar') {
+      if (d.autor_id !== m.id) return erro('Só quem criou pode apagar.')
+      await db().from('rg_app_desafios_m').delete().eq('id', id)
+      return NextResponse.json(await estado(m))
+    }
+    if (accao === 'desafio_denunciar') {
+      if (d.autor_id === m.id) return erro('Não podes denunciar o que é teu.')
+      const { error } = await db().from('rg_app_denuncias').insert({ alvo: 'desafio', alvo_id: id, membro_id: m.id, motivo: t(b?.motivo, 200) || null })
+      if (error) return erro('Já denunciaste isto. Obrigado.')
+      const n = (d.denuncias || 0) + 1
+      await db().from('rg_app_desafios_m').update({ denuncias: n, ...(n >= 3 ? { oculto: true } : {}) }).eq('id', id)
+      try { await avisarAdmin(db(), `🚩 Desafio denunciado na app (${n}.ª)\n«${d.titulo}»${n >= 3 ? '\nSaiu do ar automaticamente.' : ''}`) } catch {}
+      return NextResponse.json({ ...(await estado(m)), aviso: 'Obrigado. Vamos rever.' })
+    }
+    // Check-in: um por dia; ao chegar aos dias do desafio, conclui.
+    if (!a) return erro('Entra primeiro no desafio.')
+    if (a.concluido) return erro('Já concluíste este desafio. 🎖️')
+    if (a.ultimo === dia || !(await registarDia('dm:' + id, 0))) return erro('Já fizeste o check-in de hoje.')
+    const checkins = (a.checkins || 0) + 1, fim = checkins >= d.dias
+    await db().from('rg_app_desafios_m_adesoes').update({ checkins, ultimo: dia, ...(fim ? { concluido: new Date().toISOString() } : {}) }).eq('desafio_id', id).eq('membro_id', m.id)
+    const g1 = await darXp('app_desafio_membro_dia', 5, `Desafio «${d.titulo}» dia ${checkins}`)
+    const g2 = fim ? await darXp('app_desafio_membro_fim', 20, `Desafio «${d.titulo}» concluído`) : { xp: 0, subiu: false }
+    return responder({ xp: g1.xp + g2.xp, subiu: g1.subiu || g2.subiu }, { desafio_fim: fim ? d.titulo : null })
   }
 
   if (accao === 'resgatar') {
