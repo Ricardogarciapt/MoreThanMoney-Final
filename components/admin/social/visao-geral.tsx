@@ -42,7 +42,7 @@ export function VisaoGeral({ r, dono, irPara }: { r: ResumoSocial; dono: boolean
 
   const destaque: Record<string, string[]> = {
     publicar: [
-      `${vivo(r.porEstado.draft)} rascunho(s) por rever`,
+      `${r.rascunhosPorRever ?? vivo(r.porEstado.draft)} rascunho(s) por rever`,
       `${vivo(r.porEstado.approved)} aprovado(s) à espera da hora`,
       r.autopilot ? `Autopiloto: @morethanmoney.pt ${r.autopilot.morethanmoney ? "ligado" : "desligado"} · @ricardogarciapt ${r.autopilot.ricardo ? "ligado" : "desligado"}` : "",
     ],
