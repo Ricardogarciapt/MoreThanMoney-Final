@@ -6,7 +6,7 @@
 <title>Missão · Ricardo Garcia</title>
 <meta name="description" content="Missões diárias de treino, mindset e digital com o Ricardo Garcia. Sobe de patente, ganha insígnias e troca moedas por recompensas.">
 <meta name="theme-color" content="#07080c">
-<link rel="icon" href="/ricardogarcia/icone.png">
+<link rel="icon" href="/ricardogarcia/app-emblema.png">
 <link rel="apple-touch-icon" href="/ricardogarcia/app-icones/apple-180.png">
 <link rel="manifest" href="/ricardogarcia/app.webmanifest">
 <meta name="apple-mobile-web-app-title" content="Missão">
@@ -147,6 +147,50 @@ label { display: block; font-size: 13px; letter-spacing: 1.5px; text-transform: 
 .promo.on { display: grid; animation: aparece .4s ease; }
 .promo h2 { font-size: clamp(44px, 14vw, 80px); color: var(--ouro2); margin: 6px 0; font-style: italic; }
 .rodape { color: #6b7385; font-size: 12px; text-align: center; margin: 26px 0 0; line-height: 1.5; }
+/* v2: anel de patente, dia, calendário, diário, celebrações */
+.patente { grid-template-columns: 112px 1fr; }
+.anel { position: relative; width: 112px; height: 112px; display: grid; place-items: center; }
+.anel > svg.aro { position: absolute; inset: 0; width: 112px; height: 112px; transform: rotate(-90deg); }
+.anel .aro circle { fill: none; stroke-width: 7; }
+.anel .aro .f { stroke: #1a2030; }
+.anel .aro .p { stroke: url(#aroG); stroke-linecap: round; transition: stroke-dashoffset 1.2s cubic-bezier(.2,.9,.3,1); filter: drop-shadow(0 0 6px rgba(233,196,106,.45)); }
+.anel .galao, .anel .galao svg { width: 74px; height: 74px; }
+.anel .nivel { position: absolute; bottom: -4px; left: 50%; transform: translateX(-50%); font-family: "Anton"; font-size: 12px; letter-spacing: 1px; background: var(--placa2); border: 1px solid var(--ouro); color: var(--ouro2); padding: 1px 8px; border-radius: 999px; white-space: nowrap; }
+.dia { margin-top: 12px; padding: 14px; }
+.dia .lin { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; }
+.dia .lin b { font-family: "Anton"; font-weight: 400; font-size: 22px; color: var(--ouro2); }
+.dia .seg { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; margin-top: 10px; }
+.dia .seg i { height: 8px; border-radius: 8px; background: #0a0d13; border: 1px solid var(--linha); position: relative; overflow: hidden; }
+.dia .seg i.ok::after { content: ""; position: absolute; inset: 0; background: linear-gradient(90deg, var(--ciano), var(--ouro2)); animation: enche .6s ease both; }
+@keyframes enche { from { transform: scaleX(0); transform-origin: left; } }
+.cal { padding: 14px; }
+.cal .grade, .cal .dias7 { max-width: 300px; margin-left: auto; margin-right: auto; }
+.cal .grade { display: grid; grid-template-columns: repeat(7, 1fr); gap: 5px; margin-top: 8px; }
+.cal .grade span { aspect-ratio: 1; border-radius: 6px; background: #0b0e15; border: 1px solid #1a2030; }
+.cal .grade span.n1 { background: rgba(30,170,230,.28); border-color: rgba(30,170,230,.45); }
+.cal .grade span.n2 { background: rgba(233,196,106,.45); border-color: rgba(233,196,106,.6); }
+.cal .grade span.n3 { background: linear-gradient(135deg, var(--ouro2), var(--ouro)); border-color: var(--ouro2); box-shadow: 0 0 8px rgba(233,196,106,.35); }
+.cal .grade span.hoje { outline: 2px solid var(--ciano); outline-offset: 1px; }
+.cal .dias7 { display: grid; grid-template-columns: repeat(7, 1fr); gap: 5px; text-align: center; font-size: 10px; color: var(--cinza); letter-spacing: 1px; margin-top: 6px; }
+.cal .leg { display: flex; gap: 6px; align-items: center; justify-content: flex-end; font-size: 11px; color: var(--cinza); margin-top: 8px; }
+.cal .leg span { width: 12px; height: 12px; border-radius: 3px; display: inline-block; }
+.missao { border-left: 3px solid var(--linha); }
+.missao[data-tipo="treino"] { border-left-color: #ff9a3c; }
+.missao[data-tipo="mindset"] { border-left-color: var(--ouro2); }
+.missao[data-tipo="digital"] { border-left-color: var(--ciano); }
+.missao.feita .ic { background: rgba(60,207,142,.12); border-color: rgba(60,207,142,.5); color: var(--verde); }
+.entrada-diario { padding: 14px; margin-bottom: 10px; border-left: 3px solid var(--ouro2); }
+.entrada-diario[data-tipo="digital"] { border-left-color: var(--ciano); }
+.entrada-diario .mono { margin-bottom: 4px; }
+.entrada-diario b { display: block; font-size: 16px; margin-bottom: 6px; }
+.entrada-diario p { margin: 0; font-family: "Kalam"; font-size: 17px; line-height: 1.45; color: #dfe4ec; white-space: pre-wrap; word-break: break-word; }
+.vazio { text-align: center; padding: 28px 16px; color: var(--cinza); }
+.vazio img { width: 72px; opacity: .8; margin-bottom: 8px; }
+#confete { position: fixed; inset: 0; pointer-events: none; z-index: 45; }
+.doca { grid-template-columns: repeat(5, 1fr); }
+.doca button { font-size: 11px; }
+.btn:active { transform: translateY(1px); }
+.btn:focus-visible, .doca button:focus-visible, .missao:focus-visible { outline: 2px solid var(--ciano); outline-offset: 2px; }
 @media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } }
 </style>
 </head>
@@ -155,7 +199,7 @@ label { display: block; font-size: 13px; letter-spacing: 1.5px; text-transform: 
 
   <!-- ENTRADA -->
   <section id="entrada" hidden>
-    <a class="marca" href="/ricardogarcia" style="text-decoration:none;color:inherit"><img src="/ricardogarcia/logo-rg-monograma-transparente.png" alt=""><b>RICARDO <i>GARCIA</i></b></a>
+    <a class="marca" href="/ricardogarcia" style="text-decoration:none;color:inherit"><img src="/ricardogarcia/app-emblema.png" alt="" style="width:48px;height:48px"><b>RICARDO <i>GARCIA</i></b></a>
     <div class="hero-app">
       <h1>Missão<br><span>diária</span></h1>
       <p>Três missões por dia: treino sem pesos, mindset e digital com IA. Sobe de patente, ganha insígnias e troca moedas por recompensas reais.</p>
@@ -189,13 +233,13 @@ label { display: block; font-size: 13px; letter-spacing: 1.5px; text-transform: 
   <!-- APP -->
   <section id="app" hidden>
     <header class="topo">
-      <a class="marca" href="/ricardogarcia" style="text-decoration:none;color:inherit"><img src="/ricardogarcia/logo-rg-monograma-transparente.png" alt="Página do Ricardo" style="width:34px;height:34px"></a>
+      <a class="marca" href="/ricardogarcia" style="text-decoration:none;color:inherit"><img src="/ricardogarcia/app-emblema.png" alt="Página do Ricardo" style="width:38px;height:38px"></a>
       <div class="saldo"><span class="pill"><span class="chama">🔥</span><b id="tSeq">0</b></span><span class="pill"><i class="moeda"></i><b id="tMoedas">0</b></span></div>
     </header>
 
     <div class="vista on" id="vBase">
       <div class="placa cantos patente">
-        <div class="galao" id="galao"></div>
+        <div class="anel"><svg class="aro" viewBox="0 0 112 112" aria-hidden="true"><defs><linearGradient id="aroG" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#1EAAE6"/><stop offset="1" stop-color="#E9C46A"/></linearGradient></defs><circle class="f" cx="56" cy="56" r="50"/><circle class="p" id="aroP" cx="56" cy="56" r="50" stroke-dasharray="314.16" stroke-dashoffset="314.16"/></svg><div class="galao" id="galao"></div><span class="nivel" id="pNivel">NÍVEL 1</span></div>
         <div>
           <div class="mono" id="pOla">Recruta</div>
           <h2 id="pNome">Recruta</h2>
@@ -204,9 +248,18 @@ label { display: block; font-size: 13px; letter-spacing: 1.5px; text-transform: 
         </div>
       </div>
       <div class="stats"><div><b id="sXp">0</b><small>XP</small></div><div><b id="sDias">0</b><small>Dias activos</small></div><div><b id="sMelhor">0</b><small>Melhor série</small></div></div>
+      <div class="placa dia" id="cDia"><div class="lin"><span class="mono">XP de hoje</span><span><b id="dXp">0</b> <span class="mono" id="dMax">/ 110</span></span></div><div class="seg" id="dSeg"><i></i><i></i><i></i></div></div>
       <div class="sec-tit"><h3>Missões de hoje</h3><span class="mono" id="mFeitas">0/3</span></div>
       <div id="listaMissoes"></div>
       <p class="dica" id="dicaDia"></p>
+      <div class="sec-tit"><h3>6 semanas</h3><span class="mono" id="cResumo"></span></div>
+      <div class="placa cal"><div class="grade" id="cGrade"></div><div class="dias7"><span>S</span><span>T</span><span>Q</span><span>Q</span><span>S</span><span>S</span><span>D</span></div><div class="leg">menos <span style="background:#0b0e15;border:1px solid #1a2030"></span><span style="background:rgba(30,170,230,.28)"></span><span style="background:rgba(233,196,106,.45)"></span><span style="background:#E9C46A"></span> dia completo</div></div>
+    </div>
+
+    <div class="vista" id="vDiario">
+      <div class="sec-tit"><h3>Diário de campo</h3><span class="mono" id="dTotal"></span></div>
+      <p class="texto-m" style="margin-top:0;font-size:15px;color:var(--cinza)">Tudo o que escreves nas missões fica aqui. Daqui a um mês vais gostar de reler.</p>
+      <div id="gDiario"></div>
     </div>
 
     <div class="vista" id="vIns">
@@ -240,6 +293,7 @@ label { display: block; font-size: 13px; letter-spacing: 1.5px; text-transform: 
 
 <nav class="doca" id="doca" hidden>
   <button class="on" data-v="vBase" type="button"><span>⌂</span>Base</button>
+  <button data-v="vDiario" type="button"><span>✎</span>Diário</button>
   <button data-v="vIns" type="button"><span>✦</span>Insígnias</button>
   <button data-v="vRec" type="button"><span>◈</span>Recompensas</button>
   <button data-v="vEsq" type="button"><span>⚑</span>Esquadrão</button>
@@ -247,6 +301,7 @@ label { display: block; font-size: 13px; letter-spacing: 1.5px; text-transform: 
 
 <div class="folha" id="folha" role="dialog" aria-modal="true"><div class="caixa" id="folhaC"></div></div>
 <div class="toast" id="toast" role="status"></div>
+<canvas id="confete" aria-hidden="true"></canvas>
 <div class="promo" id="promo"><div><div class="mono">Promoção</div><h2 id="promoN"></h2><p class="texto-m">Subiste de patente. A disciplina está a pagar.</p><button class="btn" type="button" onclick="this.closest('.promo').classList.remove('on')" style="max-width:260px">Continuar</button></div></div>
 
 <script>
@@ -280,10 +335,25 @@ label { display: block; font-size: 13px; letter-spacing: 1.5px; text-transform: 
     var pct = m.prox_xp ? Math.round((m.xp - m.base_xp) / (m.prox_xp - m.base_xp) * 100) : 100;
     $('pProx').textContent = m.prox_nome ? (m.prox_xp - m.xp) + ' XP para ' + m.prox_nome : 'Patente máxima';
     requestAnimationFrame(function () { $('pBarra').style.width = pct + '%'; });
+    var ar = $('aroP'); requestAnimationFrame(function () { ar.style.strokeDashoffset = String(314.16 * (1 - pct / 100)); });
+    $('pNivel').textContent = 'NÍVEL ' + (m.patente + 1);
+    var hj = e.hoje || { xp: 0, max: 110 }; $('dXp').textContent = hj.xp; $('dMax').textContent = '/ ' + hj.max;
     $('sXp').textContent = m.xp; $('sDias').textContent = m.dias_ativos; $('sMelhor').textContent = m.melhor_sequencia;
     var diarias = e.missoes.filter(function (x) { return !x.desafio; });
     var feitas = diarias.filter(function (x) { return x.estado === 'feita'; }).length;
     $('mFeitas').textContent = feitas + '/' + diarias.length;
+    $('dSeg').innerHTML = diarias.map(function (x) { return '<i class="' + (x.estado === 'feita' ? 'ok' : '') + '" title="' + esc(x.titulo) + '"></i>'; }).join('');
+    var H = e.historico || [], ativos = 0, completos = 0;
+    var pad = H.length ? (new Date(H[0].dia + 'T12:00:00Z').getUTCDay() + 6) % 7 : 0, cel = '';
+    for (var z = 0; z < pad; z++) cel += '<span style="visibility:hidden"></span>';
+    H.forEach(function (d, i) { if (d.feitas) ativos++; if (d.feitas >= 3) completos++;
+      var n = d.feitas >= 3 ? 'n3' : d.feitas === 2 ? 'n2' : d.feitas === 1 ? 'n1' : '';
+      cel += '<span class="' + n + (i === H.length - 1 ? ' hoje' : '') + '" title="' + d.dia + ': ' + d.feitas + ' missões, ' + d.xp + ' XP"></span>'; });
+    $('cGrade').innerHTML = cel; $('cResumo').textContent = ativos + ' dias activos · ' + completos + ' completos';
+    var D = e.diario || [];
+    $('dTotal').textContent = D.length ? D.length + ' entradas' : '';
+    $('gDiario').innerHTML = D.length ? D.map(function (d) { return '<div class="placa entrada-diario" data-tipo="' + esc(d.tipo) + '"><div class="mono">' + esc(new Date(d.dia + 'T12:00:00Z').toLocaleDateString('pt-PT', { weekday: 'short', day: 'numeric', month: 'short' })) + ' · ' + esc(d.tipo) + '</div><b>' + esc(d.titulo) + '</b><p>' + esc(d.texto) + '</p></div>'; }).join('')
+      : '<div class="placa vazio"><img src="/ricardogarcia/app-emblema.png" alt=""><br>Ainda está em branco. Faz a missão de mindset de hoje e a primeira página fica escrita.</div>';
     $('listaMissoes').innerHTML = e.missoes.map(function (x) {
       return '<div class="placa missao ' + (x.estado === 'feita' ? 'feita' : '') + '" data-tipo="' + x.tipo + '" data-id="' + esc(x.id) + '" role="button" tabindex="0"' + (x.desafio ? ' style="border-color:var(--ouro);background:linear-gradient(135deg,rgba(210,166,60,.14),transparent)"' : '') + '><div class="ic">' + ICON[x.tipo] + '</div><div>' + (x.desafio ? '<small style="display:block;color:var(--ouro2);font-size:11px;letter-spacing:.08em;text-transform:uppercase">Desafio da semana do Ricardo</small>' : '') + '<b>' + esc(x.titulo) + '</b><span>' + esc(x.resumo || '') + '</span></div><div class="xp">' + (x.estado === 'feita' ? '✓ +' + x.xp_ganho : '+' + x.xp + ' XP') + '</div></div>';
     }).join('');
@@ -324,9 +394,20 @@ label { display: block; font-size: 13px; letter-spacing: 1.5px; text-transform: 
         if (!r.ok) { $('fErro').textContent = r.erro; fim.disabled = false; return; }
         var antes = E.membro.patente; fechar(); render(r);
         var g = r.ganho || {}; toast('<b>+' + g.xp + ' XP</b>' + (g.moedas ? ' · <i class="moeda" style="display:inline-block;vertical-align:-2px"></i> +' + g.moedas : '') + (g.completo ? '<br>Dia completo. 🔥' : '') + (g.insignias && g.insignias.length ? '<br>Insígnia: ' + esc(g.insignias.join(', ')) : ''), 4200);
+        if (g.completo || g.subiu) confete(g.subiu ? 220 : 120);
+        try { if (navigator.vibrate) navigator.vibrate(g.completo ? [30, 60, 30] : 25); } catch (_) {}
         if (g.subiu) { $('promoN').textContent = r.membro.patente_nome; $('promo').classList.add('on'); }
       });
     };
+  }
+  function confete(n) {
+    if (matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    var c = $('confete'), x = c.getContext('2d'), W = c.width = innerWidth, Hh = c.height = innerHeight, P = [], cores = ['#E9C46A', '#D2A63C', '#1EAAE6', '#fff3c4', '#1256BE'];
+    for (var i = 0; i < n; i++) P.push({ x: W / 2 + (Math.random() - .5) * 80, y: Hh * .35, vx: (Math.random() - .5) * 14, vy: -Math.random() * 14 - 4, r: Math.random() * 6 + 3, a: Math.random() * 6, va: (Math.random() - .5) * .3, c: cores[i % cores.length] });
+    var t0 = performance.now();
+    (function f(t) { x.clearRect(0, 0, W, Hh); var vivo = t - t0 < 2600;
+      P.forEach(function (p) { p.vy += .35; p.vx *= .99; p.x += p.vx; p.y += p.vy; p.a += p.va; x.save(); x.translate(p.x, p.y); x.rotate(p.a); x.fillStyle = p.c; x.globalAlpha = Math.max(0, 1 - (t - t0) / 2600); x.fillRect(-p.r, -p.r / 2, p.r * 2, p.r); x.restore(); });
+      if (vivo) requestAnimationFrame(f); else x.clearRect(0, 0, W, Hh); })(t0);
   }
   function fmt(s) { s = Math.max(0, Math.ceil(s)); return Math.floor(s / 60) + ':' + ('0' + (s % 60)).slice(-2); }
   function contar(x) {
