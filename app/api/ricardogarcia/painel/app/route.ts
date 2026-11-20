@@ -38,6 +38,15 @@ export async function GET(req: NextRequest) {
   const nomeMembro = new Map(membros.map(m => [m.id, m]))
   const nomeRec = new Map((recs.data || []).map(r => [r.id, r.titulo]))
   const ativos7 = new Set((regs.data || []).map(r => r.membro_id)).size
+  // Fase 3: desafios/eventos com quem respondeu, e presenças com comprovativo (links assinados, 1 h).
+  const [evs, insc, pres] = await Promise.all([
+    db().from('rg_app_eventos').select('*').order('activo', { ascending: false }).order('ordem').order('criado', { ascending: false }).limit(100),
+    db().from('rg_app_eventos_membros').select('*').order('criado', { ascending: false }).limit(2000),
+    db().from('rg_app_diarios').select('membro_id, dia, ref, xp, dados, prova_path, criado').eq('item', 'presenca').gte('dia', new Date(Date.now() - 14 * 864e5).toISOString().slice(0, 10)).order('criado', { ascending: false }).limit(150),
+  ])
+  const caminhos = (pres.data || []).map(p => p.prova_path).filter(Boolean) as string[]
+  const { data: assinados } = caminhos.length ? await db().storage.from('rg-app-provas').createSignedUrls(caminhos, 3600) : { data: [] as any[] }
+  const urlDe = new Map((assinados || []).map((a: any) => [a.path, a.signedUrl]))
   const dia = hoje()
   const naApp = new Set(emails)
   return NextResponse.json({
@@ -48,6 +57,11 @@ export async function GET(req: NextRequest) {
     recompensas: recs.data || [],
     missoes: miss.data || [],
     economia: eco, economia_base: ECONOMIA_BASE, patentes: PATENTES,
+    eventos: (evs.data || []).map(e => {
+      const l = (insc.data || []).filter(i => i.evento_id === e.id)
+      return { ...e, inscritos: l.map(i => ({ estado: i.estado, resposta: i.resposta, criado: i.criado, nome: nomeMembro.get(i.membro_id)?.nome || 'Membro', email: nomeMembro.get(i.membro_id)?.email || null, telefone: nomeMembro.get(i.membro_id)?.telefone || null })) }
+    }),
+    presencas: (pres.data || []).map(p => ({ dia: p.dia, tipo: p.ref, xp: p.xp, nota: (p.dados as any)?.nota || null, nome: nomeMembro.get(p.membro_id)?.nome || 'Membro', prova: p.prova_path ? urlDe.get(p.prova_path) || null : null })),
     convidar: (leads.data || []).filter(l => !l.email || !naApp.has(String(l.email).toLowerCase())).slice(0, 30),
   })
 }
@@ -85,12 +99,27 @@ export async function POST(req: NextRequest) {
     }
     case 'missao': {
       const m = b.missao || {}
-      if (!['treino', 'mindset', 'digital'].includes(m.tipo)) return falha('Tipo inválido.')
+      if (!['treino', 'mindset', 'digital', 'produtividade'].includes(m.tipo)) return falha('Tipo inválido.')
       const id = t(m.id, 40).replace(/[^a-z0-9-]/gi, '') || `${m.tipo[0]}-${Date.now().toString(36)}`
       const conteudo = typeof m.conteudo === 'object' && m.conteudo ? m.conteudo : {}
       if (JSON.stringify(conteudo).length > 8000) return falha('Conteúdo demasiado grande.')
       const { error } = await db().from('rg_app_missoes').upsert({ id, tipo: m.tipo, titulo: t(m.titulo, 120), resumo: t(m.resumo, 200) || null, conteudo,
         xp: Math.min(60, int(m.xp, 20)), min_seg: Math.min(3600, int(m.min_seg)), ordem: int(m.ordem), activo: m.activo !== false })
+      return error ? falha(error.message, 500) : ok()
+    }
+    case 'evento': {
+      const e = b.evento || {}
+      const num = (v: unknown) => (v === '' || v == null || !Number.isFinite(Number(v)) ? null : Math.max(0, Number(v)))
+      const link = t(e.link_compra, 400), img = t(e.imagem_url, 400)
+      if ((link && !/^https:\/\//.test(link)) || (img && !/^(https:\/\/|\/)/.test(img))) return falha('Os links têm de começar por https://')
+      const linha = { tipo: e.tipo === 'desafio' ? 'desafio' : 'evento', titulo: t(e.titulo, 140), descricao: t(e.descricao, 2000) || null,
+        quando: e.quando ? new Date(e.quando).toISOString() : null, local: t(e.local, 140) || null, imagem_url: img || null,
+        preco_eur: num(e.preco_eur), preco_antes_eur: num(e.preco_antes_eur), link_compra: link || null,
+        vagas: num(e.vagas), xp: Math.min(200, int(e.xp)), activo: e.activo !== false, ordem: int(e.ordem) }
+      if (!linha.titulo) return falha('Dá um título ao desafio ou evento.')
+      if (e.quando && isNaN(Date.parse(e.quando))) return falha('Data inválida.')
+      const q = e.id ? db().from('rg_app_eventos').update(linha).eq('id', t(e.id, 40)) : db().from('rg_app_eventos').insert(linha)
+      const { error } = await q
       return error ? falha(error.message, 500) : ok()
     }
     case 'membro_estado': {

@@ -14,6 +14,14 @@ export const XP_ACTION_DEFAULTS: Record<
   login_daily: { amount: 10, dailyCap: 1, label: 'Login diário' },
   missao_concluida: { amount: 20, label: 'Missão do dia' },
   missao_dia_completo: { amount: 10, dailyCap: 1, label: 'Dia completo' },
+  // App do Ricardo, fase 3 (os tectos repetem-se aqui como segunda trava no servidor)
+  app_curiosidade: { amount: 5, dailyCap: 1, label: 'Curiosidade do dia' },
+  app_quiz: { amount: 15, dailyCap: 1, label: 'Quiz do dia' },
+  app_presenca: { amount: 20, dailyCap: 2, label: 'Presença numa aula' },
+  app_habito: { amount: 3, dailyCap: 6, label: 'Hábito cumprido' },
+  app_rota_ponto: { amount: 15, dailyCap: 3, label: 'Ponto da rota' },
+  app_saude: { amount: 10, dailyCap: 1, label: 'Movimento do dia' },
+  app_desafio: { amount: 50, label: 'Desafio do Ricardo' },
 }
 
 /**

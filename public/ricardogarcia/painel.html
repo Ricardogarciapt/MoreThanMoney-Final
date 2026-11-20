@@ -576,7 +576,7 @@ dialog h2 { font-size: 24px; font-style: italic; margin-bottom: 14px; }
         .catch(function (e) { el.innerHTML = '<p class="vazio">Não abriu: ' + esc(e.message) + '</p>'; }); return; }
     function post(c) { return fetch('/api/ricardogarcia/painel/app', { method: 'POST', credentials: 'same-origin', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(c) }).then(function (r) { return r.json(); }).then(function (j) { if (!j.ok) throw new Error(j.erro || 'Erro'); return j; }); }
     function recarregar(msg) { A = null; if (msg) aviso(msg); vApp(el); }
-    var R = A.resumo, ABAS = [['pedidos', 'Pedidos' + (R.pendentes ? ' (' + R.pendentes + ')' : '')], ['membros', 'Membros'], ['recompensas', 'Recompensas'], ['missoes', 'Missões'], ['economia', 'Economia'], ['convidar', 'Convidar leads']];
+    var R = A.resumo, ABAS = [['pedidos', 'Pedidos' + (R.pendentes ? ' (' + R.pendentes + ')' : '')], ['membros', 'Membros'], ['recompensas', 'Recompensas'], ['eventos', 'Desafios e eventos'], ['presencas', 'Presenças'], ['missoes', 'Missões'], ['economia', 'Economia'], ['convidar', 'Convidar leads']];
     var h = '<div class="cab"><div><h1>App Missão</h1><p>A tua app para leads: missões diárias, patentes, moedas e recompensas. Cada membro entra no pipeline MTM.</p></div><a class="btn" href="/ricardogarcia/app" target="_blank" rel="noopener">Abrir a app ↗</a></div>' +
       '<div class="kpis"><div class="kpi"><b>' + R.membros + '</b><span>Membros</span></div><div class="kpi"><b>' + R.ativos7 + '</b><span>Activos em 7 dias</span></div><div class="kpi"><b>' + R.hoje + '</b><span>Activos hoje</span></div><div class="kpi"><b>' + R.pendentes + '</b><span>Pedidos por decidir</span></div></div>' +
       '<div class="filtros" style="margin:16px 0">' + ABAS.map(function (a) { return '<button class="btn peq ' + (abaApp === a[0] ? 'pri' : '') + '" data-aa="' + a[0] + '">' + a[1] + '</button>'; }).join('') + '</div><section class="cx">';
@@ -602,8 +602,8 @@ dialog h2 { font-size: 24px; font-style: italic; margin-bottom: 14px; }
       }).join('');
     }
     if (abaApp === 'missoes') {
-      var TIP = { treino: '🔥 Treino', mindset: '🧠 Mindset', digital: '⚡ Digital' };
-      h += '<p class="vazio" style="margin-top:0">Rodam por dia: uma de cada tipo. Nos treinos, o tempo mínimo é verificado no servidor. Em mindset e digital, a pessoa escreve uma reflexão ou acção.</p>' + A.missoes.concat([{ id: '', tipo: 'treino', titulo: '', resumo: '', conteudo: { passos: [] }, xp: 30, min_seg: 420, ordem: 9, activo: true }]).map(function (m, i) {
+      var TIP = { treino: '🔥 Treino', mindset: '🧠 Mindset', digital: '⚡ Digital', produtividade: '⏱ Produtividade' };
+      h += '<p class="vazio" style="margin-top:0">Rodam por dia: uma de cada tipo (4 por dia). Nos treinos, o tempo mínimo é verificado no servidor. Em mindset e digital, a pessoa escreve uma reflexão ou acção.</p>' + A.missoes.concat([{ id: '', tipo: 'treino', titulo: '', resumo: '', conteudo: { passos: [] }, xp: 30, min_seg: 420, ordem: 9, activo: true }]).map(function (m, i) {
         var c = m.conteudo || {}, corpo = m.tipo === 'treino' ? (c.passos || []).join('\n') : (c.texto || '');
         var perg = m.tipo === 'treino' ? (c.nota || '') : (c.pergunta || c.acao || '');
         return '<div class="sec ' + (m.activo ? '' : 'off') + '" style="margin-bottom:10px"><div class="sec-cab"><h3>' + (m.id ? esc(m.titulo) : '+ Nova missão') + '</h3><span class="pilula tipo">' + TIP[m.tipo] + (m.id ? ' · +' + m.xp + ' XP' : '') + '</span><button class="btn peq" data-mab="' + i + '">Editar</button></div><div class="sec-corpo" data-mis="' + i + '" data-id="' + esc(m.id) + '">' +
@@ -615,6 +615,28 @@ dialog h2 { font-size: 24px; font-style: italic; margin-bottom: 14px; }
           '<div style="display:flex;justify-content:space-between;align-items:center;margin-top:10px"><label style="display:flex;gap:8px;align-items:center"><input type="checkbox" data-k="activo" ' + (m.activo ? 'checked' : '') + '> Activa</label><button class="btn peq pri" data-gmis="' + i + '">' + (m.id ? 'Guardar' : 'Criar') + '</button></div></div></div>';
       }).join('');
     }
+    if (abaApp === 'eventos') {
+      var hojeLocal = function (q) { if (!q) return ''; var d = new Date(q); return d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate()) + 'T' + pad(d.getHours()) + ':' + pad(d.getMinutes()); };
+      var ESTI = { interesse: '⭐ Interesse', reservado: '🎟️ Pré-reserva', concluido: '✓ Concluiu' };
+      var waDe = function (t) { t = String(t || ''); var d = ''; for (var k = 0; k < t.length; k++) if (t[k] >= '0' && t[k] <= '9') d += t[k]; return d.length === 9 && d[0] === '9' ? '351' + d : d; };
+      h += '<p class="vazio" style="margin-top:0">O que publicares aqui aparece na app, no separador «Ricardo» e em cima das missões. Desafios dão XP a quem os conclui (máx. 200). Eventos aceitam interesse, pré-reserva com vagas e um link de compra (por exemplo, um link de pagamento Stripe).</p>' +
+        A.eventos.concat([{ id: '', tipo: 'evento', titulo: '', descricao: '', quando: null, local: '', imagem_url: '', preco_eur: null, preco_antes_eur: null, link_compra: '', vagas: null, xp: 0, activo: true, ordem: 0, inscritos: [] }]).map(function (e, i) {
+          var ins = e.inscritos || [], n = { interesse: 0, reservado: 0, concluido: 0 }; ins.forEach(function (x) { n[x.estado]++; });
+          return '<div class="sec ' + (e.id && !e.activo ? 'off' : '') + (e.id ? '' : ' aberta') + '" style="margin-bottom:10px"><div class="sec-cab"><h3>' + (e.id ? esc(e.titulo) : '+ Novo desafio ou evento') + '</h3>' + (e.id ? '<span class="pilula tipo">' + (e.tipo === 'desafio' ? '🏁 Desafio' : '🎟️ Evento') + ' · ⭐ ' + n.interesse + ' · 🎟️ ' + n.reservado + ' · ✓ ' + n.concluido + '</span><button class="btn peq" data-mab="' + i + '">Abrir</button>' : '') + '</div><div class="sec-corpo" data-evt="' + i + '">' +
+            '<div class="linha2"><label class="campo"><span>Tipo</span><select data-k="tipo"><option value="evento" ' + (e.tipo === 'evento' ? 'selected' : '') + '>🎟️ Evento (pré-venda)</option><option value="desafio" ' + (e.tipo === 'desafio' ? 'selected' : '') + '>🏁 Desafio (dá XP)</option></select></label><label class="campo"><span>Título</span><input data-k="titulo" maxlength="140" value="' + esc(e.titulo) + '"></label></div>' +
+            '<label class="campo"><span>Descrição</span><textarea data-k="descricao" rows="4">' + esc(e.descricao || '') + '</textarea></label>' +
+            '<div class="linha2" style="grid-template-columns:repeat(3,1fr)"><label class="campo"><span>Data e hora</span><input type="datetime-local" data-k="quando" value="' + hojeLocal(e.quando) + '"></label><label class="campo"><span>Local</span><input data-k="local" value="' + esc(e.local || '') + '"></label><label class="campo"><span>Imagem (link)</span><input data-k="imagem_url" placeholder="https://…" value="' + esc(e.imagem_url || '') + '"></label>' +
+            '<label class="campo"><span>Preço pré-venda (€)</span><input type="number" step="0.01" data-k="preco_eur" value="' + (e.preco_eur == null ? '' : e.preco_eur) + '"></label><label class="campo"><span>Preço depois (€, riscado)</span><input type="number" step="0.01" data-k="preco_antes_eur" value="' + (e.preco_antes_eur == null ? '' : e.preco_antes_eur) + '"></label><label class="campo"><span>Link de compra</span><input data-k="link_compra" placeholder="https://buy.stripe.com/…" value="' + esc(e.link_compra || '') + '"></label>' +
+            '<label class="campo"><span>Vagas de pré-reserva</span><input type="number" data-k="vagas" value="' + (e.vagas == null ? '' : e.vagas) + '"></label><label class="campo"><span>XP do desafio (máx. 200)</span><input type="number" data-k="xp" value="' + (e.xp || 0) + '"></label><label class="campo"><span>Ordem</span><input type="number" data-k="ordem" value="' + (e.ordem || 0) + '"></label></div>' +
+            '<div style="display:flex;justify-content:space-between;align-items:center;margin-top:10px"><label style="display:flex;gap:8px;align-items:center"><input type="checkbox" data-k="activo" ' + (e.activo ? 'checked' : '') + '> Visível na app</label><button class="btn peq pri" data-gevt="' + i + '">' + (e.id ? 'Guardar' : 'Publicar na app') + '</button></div>' +
+            (ins.length ? '<h3 style="margin:16px 0 6px;font-size:16px">Quem respondeu (' + ins.length + ')</h3>' + ins.map(function (x) { var tel = waDe(x.telefone);
+              return '<div class="contacto"><div><b>' + esc(x.nome) + '</b> <span class="pilula">' + ESTI[x.estado] + '</span><div class="sub">' + esc(x.email || '') + (x.telefone ? ' · ' + esc(x.telefone) : '') + ' · ' + new Date(x.criado).toLocaleDateString('pt-PT') + (x.resposta ? '<br>«' + esc(x.resposta) + '»' : '') + '</div></div><div class="acc">' + (tel ? '<a class="btn peq pri" target="_blank" rel="noopener" href="https://wa.me/' + esc(tel) + '">WhatsApp</a>' : '') + '</div></div>'; }).join('') : '') +
+            '</div></div>';
+        }).join('');
+    }
+    if (abaApp === 'presencas') h += '<p class="vazio" style="margin-top:0">Presenças em aulas e sessões dos últimos 14 dias. Com comprovativo dão 20 XP; sem prova, 10. Os links das imagens valem 1 hora.</p>' + (A.presencas.length ? A.presencas.map(function (p) {
+      return '<div class="contacto"><div><b>' + esc(p.nome) + '</b> <span class="pilula ' + (p.prova ? 'novo' : '') + '">' + (p.prova ? 'Com comprovativo' : 'Sem prova') + '</span><div class="sub">' + esc(p.dia) + ' · ' + (p.tipo === 'sessao' ? 'Sessão gratuita' : 'Aula da plataforma') + ' · +' + p.xp + ' XP' + (p.nota ? ' · ' + esc(p.nota) : '') + '</div></div><div class="acc">' + (p.prova ? '<a class="btn peq" target="_blank" rel="noopener" href="' + esc(p.prova) + '">Ver print</a>' : '') + '</div></div>';
+    }).join('') : '<p class="vazio">Ainda ninguém registou presença.</p>');
     if (abaApp === 'economia') {
       var NOM = { xp_dia_max: 'Tecto de XP por dia', bonus_dia_completo: 'XP extra por dia completo', moedas_dia_completo: 'Moedas por dia completo', moedas_semana: 'Moedas por 7 dias seguidos', moedas_patente: 'Moedas por subida de patente', moedas_insignia: 'Moedas por insígnia', min_resposta: 'Caracteres mínimos numa reflexão' };
       h += '<p class="vazio" style="margin-top:0">O XP mede a reputação e não se gasta. As moedas gastam-se, e só se ganham com constância. Com os valores de origem, alguém muito constante junta à volta de 12 moedas por semana: a mensalidade (150) pede uns 3 meses.</p><div class="linha2" style="grid-template-columns:repeat(2,1fr)">' +
@@ -643,6 +665,11 @@ dialog h2 { font-size: 24px; font-style: italic; margin-bottom: 14px; }
         var conteudo = v.tipo === 'treino' ? { passos: v.corpo.split('\n').map(function (x) { return x.trim(); }).filter(Boolean), nota: v.perg } : v.tipo === 'mindset' ? { texto: v.corpo, pergunta: v.perg } : { texto: v.corpo, acao: v.perg };
         b.disabled = true; post({ acao: 'missao', missao: { id: cx.getAttribute('data-id'), tipo: v.tipo, titulo: v.titulo, resumo: v.resumo, conteudo: conteudo, xp: v.xp, min_seg: v.tipo === 'treino' ? v.min_seg : 0, ordem: v.ordem, activo: v.activo } })
           .then(function () { recarregar('Missão guardada ✓'); }, function (er) { aviso(er.message); b.disabled = false; });
+      }
+      else if ((a = b.getAttribute('data-gevt')) != null) {
+        cx = el.querySelector('[data-evt="' + a + '"]'); var ev = { id: (A.eventos[+a] || {}).id };
+        $$('[data-k]', cx).forEach(function (i) { ev[i.getAttribute('data-k')] = i.type === 'checkbox' ? i.checked : i.value; });
+        b.disabled = true; post({ acao: 'evento', evento: ev }).then(function () { recarregar(ev.id ? 'Guardado ✓' : 'Publicado na app ✓'); }, function (er) { aviso(er.message); b.disabled = false; });
       }
       else if (b.id === 'gEco') { var eco = {}; $$('[data-eco]', el).forEach(function (i) { eco[i.getAttribute('data-eco')] = i.value; }); post({ acao: 'economia', economia: eco }).then(function () { recarregar('Economia guardada ✓'); }, function (er) { aviso(er.message); }); }
     };

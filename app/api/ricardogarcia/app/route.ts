@@ -6,6 +6,9 @@ import {
   economia, missoesDoDia, ligarAoCrm, podeResgatar,
 } from '@/lib/ricardogarcia/app'
 import { awardXp } from '@/lib/xp-service'
+import {
+  XP_DIA, SUGESTOES_HABITOS, AREAS_ROTA, curiosidadeDoDia, quizDoDia, dicaPara, pontosPerto, distanciaM, guardarProva,
+} from '@/lib/ricardogarcia/diario'
 
 export const dynamic = 'force-dynamic'
 
@@ -26,10 +29,43 @@ async function esquadrao() {
 }
 const patenteIdx = (xp: number) => { let i = 0; PATENTES.forEach((p, k) => { if (xp >= p.xp) i = k }); return i }
 
+// O resto do dia: curiosidade, quiz, presença, hábitos, movimento, rotas e o que o Ricardo publicou.
+async function extras(m: any, dia: string) {
+  const [cur, quiz, diarios, habs, feitos, evs, meus] = await Promise.all([
+    curiosidadeDoDia(dia), quizDoDia(dia),
+    db().from('rg_app_diarios').select('item, ref, xp, dados, prova_path').eq('membro_id', m.id).eq('dia', dia),
+    db().from('rg_app_habitos').select('id, nome, icone, ordem').eq('membro_id', m.id).eq('activo', true).order('ordem').order('criado'),
+    db().from('rg_app_habitos_feitos').select('habito_id').eq('membro_id', m.id).eq('dia', dia),
+    db().from('rg_app_eventos').select('*').eq('activo', true).order('ordem').order('quando', { ascending: true, nullsFirst: false }).limit(30),
+    db().from('rg_app_eventos_membros').select('evento_id, estado').eq('membro_id', m.id),
+  ])
+  const it = new Map((diarios.data || []).map(d => [d.item, d]))
+  const q: any = quiz, qr: any = it.get('quiz')
+  const feitosSet = new Set((feitos.data || []).map(f => f.habito_id))
+  const meu = new Map((meus.data || []).map(x => [x.evento_id, x.estado]))
+  const agora = Date.now()
+  const rotas = (diarios.data || []).filter(d => d.item.startsWith('rota:'))
+  return {
+    curiosidade: cur ? { id: cur.id, titulo: cur.titulo, texto: cur.texto, ano: cur.ano, categoria: cur.categoria, feita: it.has('curiosidade'), xp: XP_DIA.curiosidade } : null,
+    quiz: q ? { id: q.id, pergunta: q.pergunta, opcoes: q.opcoes, categoria: q.categoria, xp: XP_DIA.quiz_certo,
+      feito: !!qr, escolha: qr?.dados?.escolha ?? null, correta: qr ? q.correta : null, explicacao: qr ? q.explicacao : null } : null,
+    presenca: { feita: it.has('presenca'), prova: !!it.get('presenca')?.prova_path, xp: it.get('presenca')?.xp || 0, xp_prova: XP_DIA.presenca_prova, xp_sem: XP_DIA.presenca_sem },
+    habitos: (habs.data || []).map(h => ({ id: h.id, nome: h.nome, icone: h.icone, feito: feitosSet.has(h.id) })),
+    habitos_xp: XP_DIA.habito, habitos_max: XP_DIA.habitos_max, sugestoes: SUGESTOES_HABITOS,
+    saude: { ...(it.get('saude')?.dados || {}), xp: it.get('saude')?.xp || 0 },
+    rotas: { areas: AREAS_ROTA, hoje: rotas.length, max: XP_DIA.rota_max_dia, xp: XP_DIA.rota_ponto,
+      visitados: rotas.map(r => ({ ponto: r.item.slice(5), nome: r.dados?.nome, dica: r.dados?.dica })) },
+    eventos: (evs.data || []).filter(e => e.tipo === 'desafio' || !e.quando || Date.parse(e.quando) > agora - 6 * 3600_000).map(e => ({
+      id: e.id, tipo: e.tipo, titulo: e.titulo, descricao: e.descricao, quando: e.quando, local: e.local, imagem_url: e.imagem_url,
+      preco_eur: e.preco_eur, preco_antes_eur: e.preco_antes_eur, link_compra: e.link_compra, vagas: e.vagas, xp: e.xp, meu: meu.get(e.id) || null,
+    })),
+  }
+}
+
 async function estado(m: any) {
   const dia = hoje()
   const desde = new Date(Date.parse(dia) - 41 * 86_400_000).toISOString().slice(0, 10)
-  const [missoes, regs, conq, recs, resg, top, hist, eco] = await Promise.all([
+  const [missoes, regs, conq, recs, resg, top, hist, eco, extra] = await Promise.all([
     missoesDoDia(dia),
     db().from('rg_app_registos').select('missao_id, iniciado, concluido, xp').eq('membro_id', m.id).eq('dia', dia),
     db().from('rg_app_conquistas').select('insignia, criado').eq('membro_id', m.id),
@@ -38,6 +74,7 @@ async function estado(m: any) {
     esquadrao(),
     db().from('rg_app_registos').select('missao_id, dia, xp, concluido, resposta').eq('membro_id', m.id).gte('dia', desde).not('concluido', 'is', null).order('dia', { ascending: false }).limit(200),
     economia(),
+    extras(m, dia),
   ])
   // Calendário das últimas 6 semanas (XP e missões por dia) e Diário de campo (as tuas respostas).
   const porDia = new Map<string, { xp: number; feitas: number }>()
@@ -75,6 +112,7 @@ async function estado(m: any) {
     insignias: INSIGNIAS.map(i => ({ id: i.id, nome: i.nome, desc: i.desc, tem: (conq.data || []).some(c => c.insignia === i.id) })),
     recompensas,
     resgates: resg.data || [],
+    extra,
     esquadrao: (top.data || []).map(x => ({ nome: primeiroNome(x.nome), xp: x.xp, patente: PATENTES[x.patente]?.nome, eu: x.id === m.id })),
   }
 }
@@ -218,6 +256,143 @@ export async function POST(req: NextRequest) {
     if (subiu) moedas += eco.moedas_patente * (pat - m.patente)
     const atual = (await membroDaSessao()) || { ...m, ...up, xp: xpTotal, patente: pat }
     return NextResponse.json({ ...(await estado(atual)), ganho: { xp: xp + bonus, moedas, subiu, insignias: novas.map(i => i.nome), completo } })
+  }
+
+  // XP fora das missões: entra no registo único com o tecto de cada tipo (xp-config).
+  const darXp = async (tipo: string, n: number, desc: string) => {
+    if (n <= 0) return { xp: 0, subiu: false }
+    const r = await awardXp(db(), m.id, tipo, { amount: n, actionDescription: desc })
+    return { xp: r.awarded ? r.xp_gained : 0, subiu: r.awarded && r.level - 1 > m.patente }
+  }
+  const responder = async (g: { xp: number; subiu?: boolean }, extra: object = {}) => {
+    const atual = (await membroDaSessao()) || m
+    return NextResponse.json({ ...(await estado(atual)), ganho: { xp: g.xp, moedas: 0, subiu: !!g.subiu, insignias: [], completo: false }, ...extra })
+  }
+  const registarDia = async (item: string, xp: number, extra: Record<string, unknown> = {}) => {
+    const { error } = await db().from('rg_app_diarios').insert({ membro_id: m.id, dia, item, xp, ...extra })
+    return !error
+  }
+
+  if (accao === 'curiosidade') {
+    const c: any = await curiosidadeDoDia(dia)
+    if (!c) return erro('Sem curiosidade hoje.')
+    if (!(await registarDia('curiosidade', XP_DIA.curiosidade, { ref: String(c.id) }))) return erro('Já leste a curiosidade de hoje.')
+    return responder(await darXp('app_curiosidade', XP_DIA.curiosidade, `Curiosidade: ${c.titulo}`))
+  }
+
+  if (accao === 'quiz') {
+    const q: any = await quizDoDia(dia)
+    const escolha = Number(b?.escolha)
+    if (!q) return erro('Sem quiz hoje.')
+    if (!Number.isInteger(escolha) || escolha < 0 || escolha >= (q.opcoes || []).length) return erro('Escolhe uma resposta.')
+    const certo = escolha === q.correta, xp = certo ? XP_DIA.quiz_certo : XP_DIA.quiz_errado
+    if (!(await registarDia('quiz', xp, { ref: String(q.id), dados: { escolha, certo } }))) return erro('Já respondeste ao quiz de hoje.')
+    return responder(await darXp('app_quiz', xp, `Quiz ${dia}: ${certo ? 'certo' : 'errado'}`), { quiz_certo: certo })
+  }
+
+  if (accao === 'presenca') {
+    const tipoAula = ['plataforma', 'sessao'].includes(b?.tipo) ? b.tipo : 'plataforma'
+    const nota = t(b?.nota, 300)
+    let prova: string | null = null
+    if (b?.imagem) { const g = await guardarProva(m.id, dia, String(b.imagem)); if (g.erro) return erro(g.erro); prova = g.caminho! }
+    const { data: ja } = await db().from('rg_app_diarios').select('id, xp, prova_path').eq('membro_id', m.id).eq('dia', dia).eq('item', 'presenca').maybeSingle()
+    if (ja) {
+      // Quem marcou sem prova pode juntar o print mais tarde e recebe o resto do XP.
+      if (ja.prova_path || !prova) return erro('A presença de hoje já está registada.')
+      const falta = XP_DIA.presenca_prova - (ja.xp || 0)
+      await db().from('rg_app_diarios').update({ prova_path: prova, xp: XP_DIA.presenca_prova }).eq('id', ja.id)
+      return responder(await darXp('app_presenca', falta, `Presença ${dia}: comprovativo`))
+    }
+    const xp = prova ? XP_DIA.presenca_prova : XP_DIA.presenca_sem
+    if (!(await registarDia('presenca', xp, { ref: tipoAula, prova_path: prova, dados: { tipo: tipoAula, nota } }))) return erro('A presença de hoje já está registada.')
+    return responder(await darXp('app_presenca', xp, `Presença ${dia}: ${tipoAula}${prova ? ' com comprovativo' : ''}`))
+  }
+
+  if (accao === 'habito_novo') {
+    const nome = t(b?.nome, 60), icone = t(b?.icone, 4) || '✓'
+    if (nome.length < 2) return erro('Dá um nome ao hábito.')
+    const { count } = await db().from('rg_app_habitos').select('id', { count: 'exact', head: true }).eq('membro_id', m.id).eq('activo', true)
+    if ((count || 0) >= 12) return erro('Já tens 12 hábitos. Tira um antes de juntar outro.')
+    await db().from('rg_app_habitos').insert({ membro_id: m.id, nome, icone, ordem: (count || 0) + 1 })
+    return NextResponse.json(await estado(m))
+  }
+
+  if (accao === 'habito_tirar') {
+    await db().from('rg_app_habitos').update({ activo: false }).eq('id', t(b?.id, 40)).eq('membro_id', m.id)
+    return NextResponse.json(await estado(m))
+  }
+
+  if (accao === 'habito') {
+    const { data: h } = await db().from('rg_app_habitos').select('id, nome').eq('id', t(b?.id, 40)).eq('membro_id', m.id).eq('activo', true).maybeSingle()
+    if (!h) return erro('Hábito não encontrado.', 404)
+    const { count } = await db().from('rg_app_habitos_feitos').select('habito_id', { count: 'exact', head: true }).eq('membro_id', m.id).eq('dia', dia)
+    const xp = (count || 0) < XP_DIA.habitos_max ? XP_DIA.habito : 0
+    const { error } = await db().from('rg_app_habitos_feitos').insert({ habito_id: h.id, membro_id: m.id, dia, xp })
+    if (error) return erro('Este hábito já está marcado hoje.')
+    return responder(await darXp('app_habito', xp, `Hábito: ${h.nome}`))
+  }
+
+  if (accao === 'saude') {
+    const passos = Math.min(100_000, Math.max(0, Math.round(Number(b?.passos) || 0)))
+    const minutos = Math.min(600, Math.max(0, Math.round(Number(b?.minutos) || 0)))
+    const fonte = ['apple', 'google', 'manual'].includes(b?.fonte) ? b.fonte : 'manual'
+    const conta = passos >= 5000 || minutos >= 20
+    const { data: ja } = await db().from('rg_app_diarios').select('id, xp').eq('membro_id', m.id).eq('dia', dia).eq('item', 'saude').maybeSingle()
+    const dados = { passos, minutos, fonte, hora: new Date().toISOString() }
+    const xp = conta && !(ja?.xp) ? XP_DIA.saude : 0
+    if (ja) await db().from('rg_app_diarios').update({ dados, xp: (ja.xp || 0) + xp }).eq('id', ja.id)
+    else await registarDia('saude', xp, { dados })
+    return responder(await darXp('app_saude', xp, `Movimento ${dia}: ${passos} passos, ${minutos} min`))
+  }
+
+  if (accao === 'rota_pontos') {
+    const lat = Number(b?.lat), lon = Number(b?.lon)
+    if (!Number.isFinite(lat) || !Number.isFinite(lon) || Math.abs(lat) > 90 || Math.abs(lon) > 180) return erro('Localização inválida.')
+    if (!checkRateLimit('rg-app-rota:' + m.id, 10, 60 * 60_000).allowed) return erro('Já procuraste muitas vezes. Tenta daqui a pouco.', 429)
+    const r = await pontosPerto(lat, lon)
+    return NextResponse.json({ ok: true, ...r })
+  }
+
+  if (accao === 'rota_chegar') {
+    const lat = Number(b?.lat), lon = Number(b?.lon), prec = Number(b?.precisao) || 999
+    const { data: p } = await db().from('rg_app_pontos').select('*').eq('id', t(b?.ponto, 80)).maybeSingle()
+    if (!p) return erro('Ponto desconhecido. Procura os pontos outra vez.', 404)
+    if (!Number.isFinite(lat) || !Number.isFinite(lon)) return erro('Sem localização.')
+    const dist = distanciaM({ lat, lon }, p)
+    // Parques e praças são grandes: conta chegar a 80 m do centro (mais a margem do GPS, até 50 m).
+    if (dist > 80 + Math.min(50, prec)) return erro(`Ainda estás a ${Math.round(dist)} m de ${p.nome}.`)
+    const { count } = await db().from('rg_app_diarios').select('id', { count: 'exact', head: true }).eq('membro_id', m.id).eq('dia', dia).like('item', 'rota:%')
+    const area = t(b?.area, 20)
+    const dica: any = await dicaPara(area, m.id)
+    const xp = (count || 0) < XP_DIA.rota_max_dia ? XP_DIA.rota_ponto : 0
+    if (!(await registarDia('rota:' + p.id, xp, { ref: area, dados: { nome: p.nome, tipo: p.tipo, dica: dica ? { titulo: dica.titulo, texto: dica.texto } : null } }))) return erro(`Já passaste por ${p.nome} hoje.`)
+    return responder(await darXp('app_rota_ponto', xp, `Rota: ${p.nome}`), { dica: dica ? { titulo: dica.titulo, texto: dica.texto, ponto: p.nome } : null })
+  }
+
+  if (accao === 'evento') {
+    const { data: e } = await db().from('rg_app_eventos').select('*').eq('id', t(b?.id, 40)).eq('activo', true).maybeSingle()
+    if (!e) return erro('Já não está disponível.', 404)
+    const quer = String(b?.estado || '')
+    const { data: ja } = await db().from('rg_app_eventos_membros').select('estado').eq('evento_id', e.id).eq('membro_id', m.id).maybeSingle()
+    if (quer === 'concluido') {
+      if (e.tipo !== 'desafio') return erro('Só os desafios se concluem.')
+      if (ja?.estado === 'concluido') return erro('Já concluíste este desafio.')
+      const resposta = t(b?.resposta, 1500)
+      if (resposta.length < 20) return erro('Conta em pelo menos 20 caracteres como correu.')
+      await db().from('rg_app_eventos_membros').upsert({ evento_id: e.id, membro_id: m.id, estado: 'concluido', resposta }, { onConflict: 'evento_id,membro_id' })
+      const g = await (async () => { if (!e.xp) return { xp: 0, subiu: false }; const r = await awardXp(db(), m.id, 'app_desafio', { amount: Math.min(200, e.xp), actionDescription: `Desafio: ${e.titulo}`, oncePerDescription: true }); return { xp: r.awarded ? r.xp_gained : 0, subiu: r.awarded && r.level - 1 > m.patente } })()
+      try { await avisarAdmin(db(), `🏁 Desafio concluído na app\n${m.nome} concluiu «${e.titulo}»:\n${resposta.slice(0, 300)}`) } catch {}
+      return responder(g)
+    }
+    if (!['interesse', 'reservado'].includes(quer)) return erro('Escolha inválida.')
+    if (ja?.estado === 'concluido') return erro('Já concluíste este desafio.')
+    if (quer === 'reservado' && e.vagas) {
+      const { count } = await db().from('rg_app_eventos_membros').select('membro_id', { count: 'exact', head: true }).eq('evento_id', e.id).eq('estado', 'reservado')
+      if ((count || 0) >= e.vagas && ja?.estado !== 'reservado') return erro('As vagas de pré-reserva esgotaram.')
+    }
+    await db().from('rg_app_eventos_membros').upsert({ evento_id: e.id, membro_id: m.id, estado: quer }, { onConflict: 'evento_id,membro_id' })
+    if (ja?.estado !== quer) try { await avisarAdmin(db(), `${quer === 'reservado' ? '🎟️ Pré-reserva' : '⭐ Interesse'} na app\n${m.nome} (${m.email}) · «${e.titulo}»${m.telefone ? '\n' + m.telefone : ''}`) } catch {}
+    return NextResponse.json(await estado(m))
   }
 
   if (accao === 'resgatar') {
