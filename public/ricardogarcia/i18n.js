@@ -144,6 +144,13 @@
       document.documentElement.lang = 'en';
       Array.prototype.forEach.call(document.querySelectorAll('[data-en]'), function (e) { e.innerHTML = e.getAttribute('data-en'); });
       traduzir(document.body);
+      // Vídeo da história em inglês (tradução com a voz e os lábios do Ricardo).
+      var v = document.getElementById('video-ricardo');
+      if (v) {
+        var src = v.querySelector('source'); if (src) src.setAttribute('src', '/ricardogarcia/apresentacao-ricardo-en.mp4');
+        var tr = v.querySelector('track'); if (tr) { tr.setAttribute('src', '/ricardogarcia/apresentacao-ricardo-en.vtt'); tr.setAttribute('srclang', 'en'); tr.setAttribute('label', 'English'); }
+        try { v.load(); } catch (e) {}
+      }
       ['meta[name=description]', 'meta[property="og:description"]'].forEach(function (s) { var m = document.querySelector(s); if (m && EN[norm(m.content)]) m.content = EN[norm(m.content)]; });
       // Mensagens pré-escritas do WhatsApp em inglês.
       Array.prototype.forEach.call(document.querySelectorAll('a[href*="wa.me/"][href*="text="]'), function (a) {
