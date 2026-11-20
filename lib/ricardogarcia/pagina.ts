@@ -7,6 +7,7 @@ export type RgSeccao = { id: string; titulo: string; sub?: string; tipo: 'links'
 export type RgProduto = {
   id: string; titulo: string; subtitulo: string | null; descricao: string | null; preco_cents: number | null
   imagem_url: string | null; marketplace_slug: string | null; url: string | null; so_landing: boolean; activo: boolean; ordem: number
+  preco_antes_cents?: number | null; preco_sufixo?: string | null
 }
 
 const SITE = 'https://www.morethanmoney.pt'
@@ -53,7 +54,7 @@ export function linkDoProduto(p: Pick<RgProduto, 'marketplace_slug' | 'url'>): s
 /** O que a landing pública mostra: só o que está ligado. */
 export async function paginaPublica() {
   const db = getSupabaseAdmin()
-  const [{ data: pag }, { data: prods }, { data: blocos }] = await Promise.all([
+  const [{ data: pag }, { data: blocos }, { data: prods }] = await Promise.all([
     db.from('rg_pagina').select('seccoes, atualizado').eq('id', 1).maybeSingle(),
     db.from('rg_dados').select('v').eq('k', 'landing_blocos').maybeSingle(),
     db.from('rg_produtos').select('*').eq('activo', true).order('ordem').order('criado'),
@@ -65,7 +66,8 @@ export async function paginaPublica() {
   const seccoes = limparSeccoes(pag?.seccoes).filter(s => s.ativo).map(s => ({ ...s, itens: s.itens.filter(i => i.ativo) }))
   const produtos = ((prods as RgProduto[] | null) ?? []).map(p => ({
     id: p.id, titulo: p.titulo, subtitulo: p.subtitulo, descricao: p.descricao,
-    preco_cents: p.preco_cents, imagem_url: p.imagem_url, link: linkDoProduto(p),
+    preco_cents: p.preco_cents, preco_antes_cents: p.preco_antes_cents ?? null, preco_sufixo: p.preco_sufixo ?? null,
+    imagem_url: p.imagem_url, link: linkDoProduto(p),
   })).filter(p => p.link)
   return { seccoes, produtos, ordem, atualizado: pag?.atualizado ?? null }
 }

@@ -201,6 +201,8 @@ dialog h2 { font-size: 24px; font-style: italic; margin-bottom: 14px; }
     <label class="campo"><span>Descrição</span><textarea name="descricao" maxlength="3000"></textarea></label>
     <div class="linha2">
       <label class="campo"><span>Preço (€)</span><input type="number" name="preco" min="0" step="0.01" inputmode="decimal"></label>
+      <label class="campo"><span>Preço antes, riscado (€, opcional)</span><input type="number" name="preco_antes" min="0" step="0.01" inputmode="decimal"></label>
+      <label class="campo"><span>Depois do preço (ex.: /mês, opcional)</span><input name="preco_sufixo" maxlength="20"></label>
       <label class="campo"><span>Imagem (link)</span><input type="url" name="imagem_url" placeholder="https://"></label>
     </div>
     <label class="check" style="border:0"><input type="checkbox" name="so_landing" checked><span>Só aparece na minha página (não no marketplace geral)</span></label>
@@ -495,7 +497,7 @@ dialog h2 { font-size: 24px; font-style: italic; margin-bottom: 14px; }
     f.id.value = p ? p.id : '';
     var origem = p ? (p.marketplace_slug ? 'mkt' : 'proprio') : (S.marketplace.length ? 'mkt' : 'proprio');
     f.querySelector('[name=origem][value=' + origem + ']').checked = true;
-    if (p) { f.marketplace_slug.value = p.marketplace_slug || ''; f.url.value = p.url || ''; f.titulo.value = p.titulo; f.subtitulo.value = p.subtitulo || ''; f.descricao.value = p.descricao || ''; f.preco.value = p.preco_cents != null ? (p.preco_cents / 100).toFixed(2) : ''; f.imagem_url.value = p.imagem_url || ''; f.so_landing.checked = p.so_landing; f.activo.checked = p.activo; }
+    if (p) { f.marketplace_slug.value = p.marketplace_slug || ''; f.url.value = p.url || ''; f.titulo.value = p.titulo; f.subtitulo.value = p.subtitulo || ''; f.descricao.value = p.descricao || ''; f.preco.value = p.preco_cents != null ? (p.preco_cents / 100).toFixed(2) : ''; f.imagem_url.value = p.imagem_url || ''; f.preco_antes.value = p.preco_antes_cents != null ? (p.preco_antes_cents / 100).toFixed(2) : ''; f.preco_sufixo.value = p.preco_sufixo || ''; f.so_landing.checked = p.so_landing; f.activo.checked = p.activo; }
     var mostra = function () { var o = f.querySelector('[name=origem]:checked').value; $$('[data-o]', f).forEach(function (l) { l.hidden = l.getAttribute('data-o') !== o; }); };
     mostra(); $$('[name=origem]', f).forEach(function (r) { r.onchange = mostra; });
     f.marketplace_slug.onchange = function () { var m = S.marketplace.find(function (x) { return x.slug === f.marketplace_slug.value; }); if (!m) return; if (!f.titulo.value) f.titulo.value = m.titulo; if (!f.subtitulo.value && m.subtitulo) f.subtitulo.value = m.subtitulo; if (!f.preco.value && m.preco_cents != null) f.preco.value = (m.preco_cents / 100).toFixed(2); if (!f.imagem_url.value && m.imagem_url) f.imagem_url.value = m.imagem_url; };
@@ -503,7 +505,7 @@ dialog h2 { font-size: 24px; font-style: italic; margin-bottom: 14px; }
       if (e.submitter && e.submitter.value === 'cancelar') return;
       e.preventDefault();
       var o = f.querySelector('[name=origem]:checked').value;
-      var dados = { id: f.id.value || undefined, titulo: f.titulo.value, subtitulo: f.subtitulo.value, descricao: f.descricao.value, preco_cents: f.preco.value === '' ? null : Math.round(parseFloat(f.preco.value.replace(',', '.')) * 100), imagem_url: f.imagem_url.value, marketplace_slug: o === 'mkt' ? f.marketplace_slug.value : '', url: o === 'proprio' ? f.url.value : '', so_landing: f.so_landing.checked, activo: f.activo.checked, ordem: p ? p.ordem : S.produtos.length };
+      var dados = { id: f.id.value || undefined, titulo: f.titulo.value, subtitulo: f.subtitulo.value, descricao: f.descricao.value, preco_cents: f.preco.value === '' ? null : Math.round(parseFloat(f.preco.value.replace(',', '.')) * 100), imagem_url: f.imagem_url.value, preco_antes_cents: f.preco_antes.value === '' ? null : Math.round(parseFloat(f.preco_antes.value.replace(',', '.')) * 100), preco_sufixo: f.preco_sufixo.value, marketplace_slug: o === 'mkt' ? f.marketplace_slug.value : '', url: o === 'proprio' ? f.url.value : '', so_landing: f.so_landing.checked, activo: f.activo.checked, ordem: p ? p.ordem : S.produtos.length };
       var b = $('#btnGuardarProd'); b.disabled = true;
       gravarProduto(dados).then(function () { d.close(); }).catch(function () {}).then(function () { b.disabled = false; });
     };
