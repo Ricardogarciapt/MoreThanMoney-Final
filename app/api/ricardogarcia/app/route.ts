@@ -113,6 +113,26 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ ok: true })
   }
 
+  // Regresso do Google/Apple: garante perfil gratuito (lead), carteira e CRM para quem é novo.
+  if (accao === 'oauth') {
+    const sb = await clienteSessao()
+    const { data: { user } } = await sb.auth.getUser()
+    if (!user) return erro('Sessão terminada. Entra outra vez.', 401)
+    const email = String(user.email || '').toLowerCase()
+    const nome = t((user.user_metadata as any)?.full_name || (user.user_metadata as any)?.name || email.split('@')[0], 80)
+    const { data: perfil } = await db().from('profiles').select('id').eq('id', user.id).maybeSingle()
+    const { data: ja } = await db().from('rg_app_membros').select('id').eq('id', user.id).maybeSingle()
+    if (!perfil) await db().from('profiles').insert({ id: user.id, email, full_name: nome, user_type: 'lead', member_category: 'standard', is_active: true })
+    if (!ja) {
+      await carteira(user.id, perfil ? 'mtm' : 'app-oauth')
+      if (!perfil) {
+        await ligarAoCrm({ id: user.id, nome, email })
+        try { await avisarAdmin(db(), `🎖️ Novo recruta na app do Ricardo (Google/Apple)\n${nome} · ${email}\nConta MTM criada e já no pipeline.`) } catch {}
+      }
+    }
+    return NextResponse.json({ ok: true })
+  }
+
   if (accao === 'sair') {
     const sb = await clienteSessao()
     await sb.auth.signOut()
