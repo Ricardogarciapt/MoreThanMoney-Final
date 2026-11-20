@@ -28,14 +28,28 @@ const patenteIdx = (xp: number) => { let i = 0; PATENTES.forEach((p, k) => { if 
 
 async function estado(m: any) {
   const dia = hoje()
-  const [missoes, regs, conq, recs, resg, top] = await Promise.all([
+  const desde = new Date(Date.parse(dia) - 41 * 86_400_000).toISOString().slice(0, 10)
+  const [missoes, regs, conq, recs, resg, top, hist, eco] = await Promise.all([
     missoesDoDia(dia),
     db().from('rg_app_registos').select('missao_id, iniciado, concluido, xp').eq('membro_id', m.id).eq('dia', dia),
     db().from('rg_app_conquistas').select('insignia, criado').eq('membro_id', m.id),
     db().from('rg_app_recompensas').select('*').eq('activo', true).order('ordem'),
     db().from('rg_app_resgates').select('id, recompensa_id, custo, estado, criado').eq('membro_id', m.id).order('criado', { ascending: false }).limit(20),
     esquadrao(),
+    db().from('rg_app_registos').select('missao_id, dia, xp, concluido, resposta').eq('membro_id', m.id).gte('dia', desde).not('concluido', 'is', null).order('dia', { ascending: false }).limit(200),
+    economia(),
   ])
+  // Calendário das últimas 6 semanas (XP e missões por dia) e Diário de campo (as tuas respostas).
+  const porDia = new Map<string, { xp: number; feitas: number }>()
+  for (const r of hist.data || []) { const d = porDia.get(r.dia) || { xp: 0, feitas: 0 }; d.xp += r.xp || 0; d.feitas++; porDia.set(r.dia, d) }
+  const historico = Array.from({ length: 42 }, (_, i) => {
+    const d = new Date(Date.parse(dia) - (41 - i) * 86_400_000).toISOString().slice(0, 10)
+    return { dia: d, ...(porDia.get(d) || { xp: 0, feitas: 0 }) }
+  })
+  const ids = Array.from(new Set((hist.data || []).filter(r => r.resposta).map(r => r.missao_id)))
+  const { data: tit } = ids.length ? await db().from('rg_app_missoes').select('id, titulo, tipo').in('id', ids) : { data: [] as any[] }
+  const tMap = new Map((tit || []).map(x => [x.id, x]))
+  const diario = (hist.data || []).filter(r => r.resposta).slice(0, 40).map(r => ({ dia: r.dia, titulo: tMap.get(r.missao_id)?.titulo || 'Missão', tipo: tMap.get(r.missao_id)?.tipo || 'mindset', texto: r.resposta }))
   const porMissao = new Map((regs.data || []).map(r => [r.missao_id, r]))
   const recompensas = await Promise.all((recs.data || []).map(async r => ({
     id: r.id, titulo: r.titulo, descricao: r.descricao, custo: r.custo, min_dias_conta: r.min_dias_conta,
@@ -50,6 +64,9 @@ async function estado(m: any) {
       patente: p, patente_nome: PATENTES[p].nome, prox_nome: prox?.nome || null, prox_xp: prox?.xp || null, base_xp: PATENTES[p].xp,
     },
     patentes: PATENTES,
+    hoje: { dia, xp: porDia.get(dia)?.xp || 0, max: eco.xp_dia_max + eco.bonus_dia_completo },
+    historico,
+    diario,
     missoes: missoes.map(x => {
       const r: any = porMissao.get(x.id)
       return { id: x.id, desafio: !!x.desafio, tipo: x.tipo, titulo: x.titulo, resumo: x.resumo, conteudo: x.conteudo, xp: x.xp, min_seg: x.min_seg,
