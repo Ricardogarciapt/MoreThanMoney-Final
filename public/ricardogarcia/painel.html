@@ -648,6 +648,8 @@ dialog h2 { font-size: 24px; font-style: italic; margin-bottom: 14px; }
 
   // ───────────── arranque ─────────────
   function bloqueado(msg) {
+    // Sem sessão MoreThanMoney: vai direto ao login (que volta aqui). Com sessão, a conta não é a do Ricardo.
+    if (!/(^|;\s*)sb-[^=]+-auth-token/.test(document.cookie)) { location.replace('/login?redirect=' + encodeURIComponent('/ricardogarcia/painel' + location.hash)); return; }
     $('#raiz').innerHTML = '<div class="bloqueado"><div class="cx"><img src="/ricardogarcia/icone.png" alt="" width="56" height="56" style="border-radius:14px"><h1>Painel do Ricardo</h1><p class="vazio">' + esc(msg) + '</p><p style="margin-top:16px"><a class="btn pri" href="/login?redirect=' + encodeURIComponent('/ricardogarcia/painel') + '">Entrar</a></p></div></div>';
   }
   window.addEventListener('beforeunload', function (e) { if (sujo) { e.preventDefault(); e.returnValue = ''; } });
