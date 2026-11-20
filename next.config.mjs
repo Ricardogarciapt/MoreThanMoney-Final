@@ -41,6 +41,9 @@ const nextConfig = {
         // Site próprio da app «Missão»; a app em si vive em /ricardogarcia/app.
         { source: '/missao', destination: '/missao/index.html' },
         { source: '/missao/', destination: '/missao/index.html' },
+        // MTMOS no site (só super admin: middleware + APIs /api/mtmos/*).
+        { source: '/mtmos', destination: '/mtmos/index.html' },
+        { source: '/mtmos/', destination: '/mtmos/index.html' },
       ],
     }
   },
