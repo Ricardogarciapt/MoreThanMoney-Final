@@ -119,6 +119,34 @@ export const ANUNCIOS: Record<string, Anuncio> = {
     cta: { de: 9.0, topo: 'Escolhe o teu caminho', grande: 'MARCA A CONVERSA', botao: 'Marcar conversa', url: 'morethanmoney.pt/ricardogarcia' },
     aviso: 'Conteúdo educativo, não é consultoria financeira.',
   },
+  com: {
+    marca: 'morethanmoney',
+    gancho: { linhas: ['40 HORAS POR SEMANA.', 'E SOBRA POUCO?'], ate: 3.4 },
+    imagens: [
+      { de: 3.6, ate: 4.9, src: 'noite_cansado_1', tipo: 'video', grade: 'noite' },
+      { de: 9.7, ate: 11.0, src: 'edu-ricardo.jpg', tipo: 'app' },
+      { de: 11.0, ate: 12.9, src: 'edu-ruben.jpg', tipo: 'app' },
+      { de: 12.9, ate: 14.6, src: 'edu-maria.jpg', tipo: 'app' },
+      { de: 14.86, ate: 17.0, src: 'equipa_formacao_1', tipo: 'video', grade: 'ouro' },
+      { de: 17.0, ate: 18.3, src: 'app-feed.jpg', tipo: 'app' },
+      { de: 18.3, ate: 21.0, src: 'app-chat.jpg', tipo: 'app' },
+      { de: 21.26, ate: 26.0, src: 'app-solucoes.jpg', tipo: 'app' },
+      { de: 26.3, ate: 29.6, src: 'liberdade_1', tipo: 'video', grade: 'ouro' },
+    ],
+    chips: [
+      { em: 7.4, t: '✓ Não aprendes sozinho' },
+      { em: 10.0, t: '📈 Trading · Ricardo' },
+      { em: 11.6, t: '₿ Cripto · Ruben' },
+      { em: 13.4, t: '🎭 Faceless · Maria' },
+      { em: 16.0, t: '✓ Também os dias maus' },
+      { em: 18.6, t: '🤖 Mentor IA a qualquer hora' },
+      { em: 22.5, t: '🏢 Para o teu negócio' },
+      { em: 26.4, t: 'Sem promessas de lucro' },
+      { em: 28.2, t: 'Método · Disciplina · Equipa' },
+    ],
+    cta: { de: 30.0, topo: 'Vê os destaques', grande: '3 DIAS GRÁTIS', botao: 'Começar · sem cartão', url: 'morethanmoney.pt' },
+    aviso: 'Conteúdo educativo, não é consultoria financeira. Trading envolve risco.',
+  },
 }
 
 export type Seg = [number, number, string]
