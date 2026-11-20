@@ -116,6 +116,16 @@ export default function PostOAuthPage() {
       const { setCachedSession } = await import("@/lib/auth-cache")
       setCachedSession(session)
 
+      // App do Ricardo: gratuita, entra com qualquer conta. Quem não tem perfil fica com um perfil gratuito
+      // (lead) em vez de ir para o registo pago; os acessos pagos continuam a ser decididos no servidor.
+      if (redirectParam && redirectParam.startsWith("/ricardogarcia/app")) {
+        try {
+          await fetch("/api/ricardogarcia/app", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ accao: "oauth" }) })
+        } catch { /* a app trata no próximo pedido */ }
+        window.location.replace(`${window.location.origin}${redirectParam}`)
+        return
+      }
+
       const existingProfile = await loadMemberProfile(supabase, session.user.id)
       const isRegistered = isRegisteredMember(existingProfile)
 

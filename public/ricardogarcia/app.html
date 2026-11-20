@@ -19,6 +19,8 @@
 :root { --fundo: #07080c; --placa: #0f121a; --placa2: #141925; --linha: #232a38; --texto: #e9edf3; --cinza: #8b93a3; --ciano: #1EAAE6; --azul: #1256BE; --ouro: #D2A63C; --ouro2: #E9C46A; --verde: #3ccf8e; --verm: #ff7a6b; }
 * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
 [hidden] { display: none !important; }
+.ou { display: flex; align-items: center; gap: 10px; margin: 16px 0 12px; color: var(--cinza); font-size: 12px; text-transform: uppercase; letter-spacing: .12em; } .ou::before, .ou::after { content: ''; flex: 1; height: 1px; background: var(--linha); }
+.sociais { display: grid; gap: 10px; } .btn-social { display: flex; align-items: center; justify-content: center; gap: 10px; padding: 12px; border-radius: 12px; border: 1px solid var(--linha); background: var(--placa2); color: var(--texto); font-weight: 600; text-decoration: none; } .btn-social:hover { border-color: #3a4357; } .mais-op { text-align: center; font-size: 13px; color: var(--cinza); }
 .nota-conta { margin-top: 12px; font-size: 13px; color: var(--cinza); line-height: 1.45; } .nota-conta a { color: var(--ciano); }
 html, body { margin: 0; background: var(--fundo); color: var(--texto); font-family: "Oswald", system-ui, sans-serif; font-size: 16px; }
 body { min-height: 100dvh; background: radial-gradient(700px 400px at 80% -10%, rgba(210,166,60,.10), transparent 70%), radial-gradient(600px 400px at 0% 0%, rgba(30,170,230,.10), transparent 70%), var(--fundo); }
@@ -138,7 +140,7 @@ label { display: block; font-size: 13px; letter-spacing: 1.5px; text-transform: 
 @keyframes aparece { from { opacity: 0; transform: translateY(8px); } }
 
 /* recompensa ganha */
-.toast { position: fixed; left: 50%; top: 18px; transform: translate(-50%, -140%); z-index: 30; background: var(--placa2); border: 1px solid var(--ouro); border-radius: 14px; padding: 12px 16px; min-width: 260px; max-width: calc(100% - 32px); text-align: center; box-shadow: 0 20px 60px rgba(0,0,0,.6); transition: transform .45s cubic-bezier(.2,1.3,.4,1); }
+.toast { position: fixed; left: 50%; top: 18px; transform: translate(-50%, calc(-100% - 40px)); z-index: 30; background: var(--placa2); border: 1px solid var(--ouro); border-radius: 14px; padding: 12px 16px; min-width: 260px; max-width: calc(100% - 32px); text-align: center; box-shadow: 0 20px 60px rgba(0,0,0,.6); transition: transform .45s cubic-bezier(.2,1.3,.4,1); }
 .toast.on { transform: translate(-50%, 0); }
 .toast b { font-family: "Anton"; color: var(--ouro2); font-size: 22px; letter-spacing: .5px; }
 .promo { position: fixed; inset: 0; z-index: 40; display: none; place-items: center; background: radial-gradient(circle, rgba(210,166,60,.25), rgba(0,0,0,.9) 60%); text-align: center; padding: 24px; }
@@ -172,6 +174,12 @@ label { display: block; font-size: 13px; letter-spacing: 1.5px; text-transform: 
         <label class="consent" id="soReg2"><input type="checkbox" id="aOk"> Aceito que o Ricardo Garcia e a MoreThanMoney guardem os meus dados para gerir a app e me contactarem sobre a minha evolução. Posso pedir para apagar a qualquer momento.</label>
         <div class="erro" id="aErro" role="alert"></div>
         <button class="btn" id="aBtn" type="submit">Começar a missão</button>
+        <div class="ou"><span>ou</span></div>
+        <div class="sociais">
+          <a class="btn-social" href="/api/ricardogarcia/app/oauth?p=google"><svg width="18" height="18" viewBox="0 0 48 48" aria-hidden="true"><path fill="#FFC107" d="M43.6 20.5H42V20H24v8h11.3C33.7 32.7 29.2 36 24 36c-6.6 0-12-5.4-12-12s5.4-12 12-12c3.1 0 5.8 1.2 7.9 3.1l5.7-5.7C34 6.1 29.3 4 24 4 12.9 4 4 12.9 4 24s8.9 20 20 20 20-8.9 20-20c0-1.3-.1-2.4-.4-3.5z"/><path fill="#FF3D00" d="m6.3 14.7 6.6 4.8C14.7 15.1 19 12 24 12c3.1 0 5.8 1.2 7.9 3.1l5.7-5.7C34 6.1 29.3 4 24 4 16.3 4 9.7 8.3 6.3 14.7z"/><path fill="#4CAF50" d="M24 44c5.2 0 9.9-2 13.4-5.2l-6.2-5.2C29.2 35.1 26.7 36 24 36c-5.2 0-9.6-3.3-11.3-8l-6.5 5C9.5 39.6 16.2 44 24 44z"/><path fill="#1976D2" d="M43.6 20.5H42V20H24v8h11.3c-.8 2.2-2.2 4.2-4.1 5.6l6.2 5.2C37 39.2 44 34 44 24c0-1.3-.1-2.4-.4-3.5z"/></svg>Continuar com Google</a>
+          <a class="btn-social" href="/api/ricardogarcia/app/oauth?p=apple"><svg width="16" height="18" viewBox="0 0 384 512" aria-hidden="true"><path fill="currentColor" d="M318.7 268.7c-.2-36.7 16.4-64.4 50-84.8-18.8-26.9-47.2-41.7-84.7-44.6-35.5-2.8-74.3 20.7-88.5 20.7-15 0-49.4-19.7-76.4-19.7C63.3 141.2 4 184.8 4 273.5q0 39.3 14.4 81.2c12.8 36.7 59 126.7 107.2 125.2 25.2-.6 43-17.9 75.8-17.9 31.8 0 48.3 17.9 76.4 17.9 48.6-.7 90.4-82.5 102.6-119.3-65.2-30.7-61.7-90-61.7-91.9zm-56.6-164.2c27.3-32.4 24.8-61.9 24-72.5-24.1 1.4-52 16.4-67.9 34.9-17.5 19.8-27.8 44.3-25.6 71.9 26.1 2 49.9-11.4 69.5-34.3z"/></svg>Continuar com Apple</a>
+          <a class="mais-op" href="/login?redirect=%2Fricardogarcia%2Fapp">Outras formas de entrar (PrimeVerse e outras)</a>
+        </div>
         <p class="nota-conta">Uma só conta MoreThanMoney: se já tens conta na app MTM, entra com ela. O teu XP e a tua patente são os mesmos nas duas. <a href="/forgot-password">Esqueci-me da palavra-passe</a></p>
       </form>
     </div>
@@ -353,6 +361,7 @@ label { display: block; font-size: 13px; letter-spacing: 1.5px; text-transform: 
     $('soReg').hidden = $('soReg2').hidden = modo !== 'registar'; $('aPass').autocomplete = modo === 'registar' ? 'new-password' : 'current-password';
     $('aBtn').textContent = modo === 'registar' ? 'Começar a missão' : 'Entrar'; $('aErro').textContent = '';
   }; });
+  try { if (new URLSearchParams(location.search).get('erro') === 'oauth') $('aErro').textContent = 'Não foi possível entrar com essa conta. Tenta outra vez ou usa email e palavra-passe.'; } catch (_) {}
   try { if (new URLSearchParams(location.search).get('entrar')) document.querySelector('.abas button[data-modo="entrar"]').click(); } catch (_) {}
   $('fAuth').addEventListener('submit', function (e) {
     e.preventDefault(); var b = $('aBtn'); b.disabled = true; $('aErro').textContent = '';
