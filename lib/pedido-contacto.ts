@@ -276,9 +276,32 @@ export function canalDaCaixa(c: CaixaDoFormulario): CanalContacto | null {
   return null
 }
 
+/** «Número_de_telefone», «e-mail», «Full Name» → «numero_de_telefone», «e_mail», «full_name». */
+function chaveCampo(n: string): string {
+  return String(n ?? '')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '_')
+    .replace(/^_+|_+$/g, '')
+}
+
+/**
+ * Num formulário em PT-PT a Meta devolve as perguntas de contacto com o nome traduzido
+ * («e-mail», «nome_completo», «número_de_telefone») em vez de email/full_name/phone_number.
+ * Por isso cada nome pedido traz os sinónimos conhecidos e a comparação ignora acentos e hífens.
+ */
+const SINONIMOS: Record<string, string[]> = {
+  full_name: ['nome_completo', 'nome', 'name'],
+  first_name: ['primeiro_nome', 'nome_proprio'],
+  email: ['e_mail', 'correio_eletronico', 'endereco_de_e_mail'],
+  phone_number: ['numero_de_telefone', 'telefone', 'telemovel', 'numero_de_telemovel', 'phone'],
+}
+
 function campo(lead: LeadMeta, ...nomes: string[]): string {
+  const procurados = new Set(nomes.flatMap((n) => [chaveCampo(n), ...(SINONIMOS[chaveCampo(n)] ?? [])]))
   for (const f of lead.field_data ?? []) {
-    if (nomes.includes(String(f.name ?? '').toLowerCase())) return String(f.values?.[0] ?? '').trim()
+    if (procurados.has(chaveCampo(String(f.name ?? '')))) return String(f.values?.[0] ?? '').trim()
   }
   return ''
 }
