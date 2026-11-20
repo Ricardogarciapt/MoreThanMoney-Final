@@ -422,7 +422,7 @@ export const Video: React.FC = () => {
       <Kinetico de={T.destrui[0]} ate={T.destrui[1]} y={700} size={96} align="center" pincel={1} linhas={[{ t: 'Destruí a minha vida' }, { t: 'para a reconstruir' }]} />
 
       {/* 01 · Porto, 16 anos */}
-      <Cartao n="01" ano="Porto · 16 anos" t1="Desde o início" t2="já era diferente" src="cap-3.jpg" de={T.porto[0]} ate={T.dezasseis[1]} />
+      <Cartao n="01" ano="Porto · 16 anos" t1="Desde o início" t2="já era diferente" src="trajeto-origem.jpg" pos="55% 35%" de={T.porto[0]} ate={T.dezasseis[1]} />
       <Kinetico de={T.porto[0] + 0.2} ate={T.porto[1]} y={360} size={100} linhas={[{ t: 'Porto' }, { t: 'família adotiva', cor: OURO_CLARO }]} />
       <Kinetico de={T.porto[0] + 1.4} ate={T.porto[1]} y={700} size={52} linhas={[{ t: 'Origem humilde.', cor: '#d6d6d6' }]} />
       <Kinetico de={T.dezasseis[0]} ate={T.dezasseis[1] - 0.1} y={360} size={96} linhas={[{ t: 'Aos 16 anos' }, { t: 'já era diferente', cor: OURO_CLARO }]} />
