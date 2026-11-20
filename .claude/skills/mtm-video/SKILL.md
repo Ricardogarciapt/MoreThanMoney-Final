@@ -15,7 +15,7 @@ Antes de escrever código ou renderizar, lê `video/motor/LEIA-ME.md` (tabela «
 ## Passos
 
 1. **Marca.** Pergunta-te de quem é o vídeo: `morethanmoney` (casa, ouro), `ricardo-garcia`
-   (@ricardogarciapt, ciano, Brand Kit em /marca/ricardogarciapt) ou um cliente B2B
+   (@ricardogarciapt, ciano, página em /ricardogarcia) ou um cliente B2B
    (`video/motor/marcas/b2b-<slug>.json`, copiado do `modelo-b2b.json`). Nunca misturar: vídeo de
    cliente sem logótipo, voz nem @ da MTM.
 2. **Motor.** Pela tabela do LEIA-ME. Estilo cinemático (CGI, títulos palavra a palavra, música e
