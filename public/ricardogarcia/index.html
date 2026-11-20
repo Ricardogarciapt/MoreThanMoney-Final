@@ -390,7 +390,9 @@ html.lenis, html.lenis body { height: auto; }
 .manifesto p .c { color: var(--ciano-claro); }
 .manifesto .assina { font-family: "Kalam", cursive; color: var(--ouro); font-size: 26px; margin-top: 22px; }
 .fp { opacity: .14; transition: none; }
-.com-gsap .fp { will-change: opacity; }
+/* O Anton não tem itálico: o browser inclina-o à mão e o Safari cortava a ponta de cada palavra
+   (a camada do will-change e a caixa da palavra não contam com a inclinação). Folga à direita, sem camada. */
+.fp { padding-right: .14em; margin-right: -.14em; -webkit-box-decoration-break: clone; box-decoration-break: clone; }
 html:not(.com-gsap) .fp { opacity: 1; }
 .com-gsap [data-preencher].aparece { opacity: 1; transform: none; }
 .com-gsap .ecra { will-change: transform; transform-origin: 50% 0; }
