@@ -440,6 +440,8 @@ html:not(.com-gsap) .fp { opacity: 1; }
 .lk .ic { width: 56px; height: 56px; border-radius: 12px; background: #161b28; display: grid; place-items: center; overflow: hidden; }
 .lk .ic img { width: 100%; height: 100%; object-fit: cover; }
 .lk .ic svg { width: 26px; height: 26px; fill: #fff; }
+.lk.com-img { grid-template-columns: 92px 1fr 22px; min-height: 112px; }
+.lk.com-img .ic { width: 92px; height: 92px; border-radius: 14px; box-shadow: 0 0 0 1px rgba(233,196,106,.25), 0 8px 24px rgba(0,0,0,.45); }
 .lk b { display: block; font-weight: 500; font-size: 17px; line-height: 1.25; color: #fff; }
 .lk span { display: block; color: var(--cinza); font-size: 14px; line-height: 1.35; margin-top: 2px; }
 .lk .seta { color: var(--ciano-claro); font-size: 18px; }
@@ -447,7 +449,9 @@ html:not(.com-gsap) .fp { opacity: 1; }
 .produtos-rg { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 16px; margin-top: 20px; }
 .pr { display: flex; flex-direction: column; border-radius: 20px; overflow: hidden; background: var(--cartao); border: 1px solid var(--linha); }
 .pr .img { aspect-ratio: 16/10; background: radial-gradient(circle at 30% 20%, rgba(30,170,230,.25), transparent 60%), radial-gradient(circle at 80% 80%, rgba(210,166,60,.25), transparent 60%), #0b0f18; display: grid; place-items: center; }
-.pr .img img { width: 100%; height: 100%; object-fit: cover; }
+.pr .img { position: relative; overflow: hidden; }
+.pr .img .fundo { position: absolute; inset: -20px; width: calc(100% + 40px); height: calc(100% + 40px); object-fit: cover; filter: blur(18px) brightness(.45) saturate(1.2); }
+.pr .img img.capa { position: relative; width: 100%; height: 100%; object-fit: contain; filter: drop-shadow(0 10px 24px rgba(0,0,0,.6)); }
 .pr .img b { font-family: "Anton", sans-serif; font-style: italic; text-transform: uppercase; font-size: 30px; color: rgba(255,255,255,.85); text-align: center; padding: 0 18px; line-height: 1.05; font-weight: 400; }
 .pr .corpo { padding: 18px; display: flex; flex-direction: column; gap: 8px; flex: 1; }
 .pr h3 { font-size: 24px; font-style: italic; line-height: 1.05; }
@@ -474,6 +478,8 @@ html:not(.com-gsap) .fp { opacity: 1; }
   .lista-links { grid-template-columns: 1fr; }
   .lk { grid-template-columns: 48px 1fr 18px; min-height: 68px; }
   .lk .ic { width: 48px; height: 48px; }
+  .lk.com-img { grid-template-columns: 76px 1fr 18px; min-height: 96px; }
+  .lk.com-img .ic { width: 76px; height: 76px; }
   .form-rg { grid-template-columns: 1fr; padding: 16px; }
   .atalhos .chips { flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; margin-left: -16px; margin-right: -16px; padding: 0 16px; }
   .atalhos .chips::-webkit-scrollbar { display: none; }
@@ -1056,7 +1062,7 @@ html:not(.com-gsap) .fp { opacity: 1; }
   function externo(u) { try { return new URL(u, location.origin).origin !== location.origin; } catch (e) { return false; } }
   function linkHtml(it) {
     var u = comOrigem(it.url), ext = externo(it.url);
-    return '<a class="lk' + (it.destaque ? ' destaque' : '') + '" href="' + esc(u) + '" data-rg="' + esc(it.id) + '"' + (ext ? ' target="_blank" rel="noopener"' : '') + '><span class="ic">' + (it.img ? '<img src="' + esc(it.img) + '" alt="" loading="lazy">' : icone(it.url)) + '</span><div><b>' + esc(it.titulo) + '</b>' + (it.sub ? '<span>' + esc(it.sub) + '</span>' : '') + '</div><i class="seta" aria-hidden="true">→</i></a>';
+    return '<a class="lk' + (it.destaque ? ' destaque' : '') + (it.img ? ' com-img' : '') + '" href="' + esc(u) + '" data-rg="' + esc(it.id) + '"' + (ext ? ' target="_blank" rel="noopener"' : '') + '><span class="ic">' + (it.img ? '<img src="' + esc(it.img) + '" alt="' + esc(it.titulo) + '" loading="lazy">' : icone(it.url)) + '</span><div><b>' + esc(it.titulo) + '</b>' + (it.sub ? '<span>' + esc(it.sub) + '</span>' : '') + '</div><i class="seta" aria-hidden="true">→</i></a>';
   }
   // Ícones no conteúdo estático, antes de chegarem os dados.
   Array.prototype.forEach.call(document.querySelectorAll('#linksRg .lk .ic'), function (s) { if (!s.innerHTML) s.innerHTML = icone(s.parentNode.getAttribute('href')); });
@@ -1095,7 +1101,7 @@ html:not(.com-gsap) .fp { opacity: 1; }
         var eur = function (c) { return (c / 100).toLocaleString('pt-PT', { style: 'currency', currency: 'EUR', minimumFractionDigits: c % 100 ? 2 : 0 }); };
         var preco = p.preco_cents == null ? '' : (p.preco_antes_cents ? '<s>' + eur(p.preco_antes_cents) + esc(p.preco_sufixo || '') + '</s>' : '') + eur(p.preco_cents) + (p.preco_antes_cents ? '' : esc(p.preco_sufixo || ''));
         var u = comOrigem(p.link), ext = externo(p.link);
-        return '<article class="pr"><div class="img">' + (p.imagem_url ? '<img src="' + esc(p.imagem_url) + '" alt="" loading="lazy">' : '<b>' + esc(p.titulo) + '</b>') + '</div><div class="corpo"><h3>' + esc(p.titulo) + '</h3>' + (p.subtitulo ? '<p>' + esc(p.subtitulo) + '</p>' : '') +
+        return '<article class="pr"><div class="img">' + (p.imagem_url ? '<img class="fundo" src="' + esc(p.imagem_url) + '" alt="" aria-hidden="true" loading="lazy"><img class="capa" src="' + esc(p.imagem_url) + '" alt="' + esc(p.titulo) + '" loading="lazy">' : '<b>' + esc(p.titulo) + '</b>') + '</div><div class="corpo"><h3>' + esc(p.titulo) + '</h3>' + (p.subtitulo ? '<p>' + esc(p.subtitulo) + '</p>' : '') +
           (preco ? '<div class="preco">' + preco + '</div>' : '') + '<a class="btn btn-azul" href="' + esc(u) + '" data-rg="' + esc(p.id) + '" data-rg-tipo="produto"' + (ext ? ' target="_blank" rel="noopener"' : '') + '>Quero este</a></div></article>';
       }).join('');
       loja.hidden = false;
