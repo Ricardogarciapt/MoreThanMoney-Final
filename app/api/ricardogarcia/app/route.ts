@@ -13,8 +13,10 @@ import { FUNDOS, MOLDURAS, ROSTOS, guardarAvatar } from '@/lib/ricardogarcia/ava
 import { ligacoes, novoTokenAtalho, registarMovimento, sincronizarStrava } from '@/lib/ricardogarcia/saude'
 import { configPush, guardarToken, tirarToken } from '@/lib/ricardogarcia/push'
 import { missoesDoMembro, FASES } from '@/lib/ricardogarcia/plano39'
+import { falarComMentor, historico as historicoMentor } from '@/lib/ricardogarcia/mentor'
 
 export const dynamic = 'force-dynamic'
+export const maxDuration = 60
 
 const t = (v: unknown, n: number) => String(v ?? '').replace(/[\u0000-\u001f]/g, ' ').trim().slice(0, n)
 const erro = (m: string, s = 400) => NextResponse.json({ ok: false, erro: m }, { status: s })
@@ -359,6 +361,18 @@ export async function POST(req: NextRequest) {
     const prefs = { missao: p.missao !== false, chat: p.chat !== false, serie: p.serie !== false }
     await db().from('rg_app_membros').update({ push_prefs: prefs }).eq('id', m.id)
     return NextResponse.json({ ok: true, push_prefs: prefs })
+  }
+
+  // Mentor IA da app (acompanhamento no plano; a pessoa ainda não é membro).
+  if (accao === 'mentor_hist') return NextResponse.json({ ok: true, mensagens: await historicoMentor(m.id) })
+  if (accao === 'mentor') {
+    const texto = t(b?.texto, 1200)
+    if (texto.length < 2) return erro('Escreve a tua mensagem.')
+    if (!checkRateLimit('rg-mentor:' + m.id, 8, 60_000).allowed) return erro('Mais devagar. Espera um minuto.', 429)
+    const { count } = await db().from('rg_app_mentor').select('id', { count: 'exact', head: true }).eq('membro_id', m.id).eq('papel', 'user').gte('criado', dia + 'T00:00:00Z')
+    if ((count || 0) >= 40) return erro('Por hoje já falámos muito. Amanhã continuamos. Entretanto, faz a missão do dia. 💪', 429)
+    const resposta = await falarComMentor(m, texto)
+    return NextResponse.json({ ok: true, resposta })
   }
 
   if (accao === 'avatar') {

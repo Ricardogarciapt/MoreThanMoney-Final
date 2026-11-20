@@ -41,3 +41,15 @@ alter table rg_app_membros add column if not exists push_prefs jsonb default '{"
 
 -- Plano de 39 dias: dia 1 do plano de cada membro (vazio = data de entrada). Aplicada pelo MCP: app_ricardo_plano39.
 alter table rg_app_membros add column if not exists plano_inicio date;
+
+-- Mentor IA da app (conversa + notas internas). Aplicada pelo MCP: app_ricardo_mentor.
+create table if not exists rg_app_mentor (
+  id bigint generated always as identity primary key,
+  membro_id uuid not null,
+  papel text not null check (papel in ('user','assistant','nota')),
+  texto text not null,
+  dados jsonb,
+  criado timestamptz not null default now()
+);
+create index if not exists rg_app_mentor_membro_idx on rg_app_mentor (membro_id, criado desc);
+alter table rg_app_mentor enable row level security;

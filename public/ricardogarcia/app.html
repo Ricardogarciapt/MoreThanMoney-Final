@@ -308,6 +308,23 @@ input, textarea, select { font-size: 16px !important; }
 .grelha39 span { aspect-ratio: 1; border-radius: 6px; background: #141a26; display: grid; place-items: center; font-size: 11px; color: var(--cinza); }
 .grelha39 span.ok { background: rgba(30,170,230,.25); color: var(--texto); }
 .grelha39 span.hoje { background: var(--ouro2); color: #111; font-weight: 600; }
+
+/* mentor IA */
+.mentor-cta { display: grid; grid-template-columns: 44px 1fr auto; gap: 12px; align-items: center; padding: 12px 14px; margin: 10px 0 4px; cursor: pointer; background: linear-gradient(135deg, rgba(30,170,230,.10), rgba(210,166,60,.06)); }
+.mentor-cta .mic { width: 44px; height: 44px; border-radius: 12px; display: grid; place-items: center; font-size: 22px; background: #0a0d13; border: 1px solid rgba(30,170,230,.35); }
+.mentor-cta b { display: block; font-size: 16px; }
+.mentor-cta small { color: var(--cinza); font-size: 13px; }
+.mentor-cta .seta { font-size: 26px; color: var(--ciano); }
+.mchat { display: flex; flex-direction: column; gap: 10px; min-height: 40dvh; max-height: 58dvh; overflow-y: auto; padding: 4px 2px 10px; }
+.mchat .msg { max-width: 90%; }
+.mchat .msg .bolha { cursor: default; }
+.mchat .msg.ia .bolha { border-color: rgba(30,170,230,.35); }
+.mchat .pensa { color: var(--cinza); font-size: 14px; font-style: italic; }
+.mlinha { display: flex; gap: 6px; align-items: flex-end; margin-top: 6px; }
+.mlinha textarea { min-height: 44px; max-height: 120px; resize: none; padding: 10px 12px; }
+.mlinha button { flex: 0 0 48px; height: 44px; border-radius: 12px; border: 0; background: linear-gradient(135deg, var(--ouro2), var(--ouro)); color: #111; font-size: 18px; }
+.msug { display: flex; gap: 6px; flex-wrap: wrap; margin: 4px 0 8px; }
+.msug button { border: 1px solid var(--linha); background: var(--placa2); color: var(--texto); border-radius: 999px; padding: 6px 12px; font-size: 13px; }
 /* perfil e avatar */
 .perfil-bt { display: flex; align-items: center; gap: 8px; background: none; border: 0; padding: 0; color: var(--texto); min-width: 0; }
 .perfil-bt .av { width: 40px; height: 40px; flex: 0 0 40px; font-size: 18px; border: 2px solid var(--ouro); }
@@ -451,6 +468,7 @@ input, textarea, select { font-size: 16px !important; }
       <div class="stats"><div><b id="sXp">0</b><small>XP</small></div><div><b id="sDias">0</b><small>Dias activos</small></div><div><b id="sMelhor">0</b><small>Melhor série</small></div></div>
       <div class="placa dia" id="cDia"><div class="lin"><span class="mono">XP das missões hoje</span><span><b id="dXp">0</b> <span class="mono" id="dMax">/ 110</span></span></div><div class="seg" id="dSeg"><i></i><i></i><i></i><i></i></div></div>
       <div class="placa plano39" id="cPlano" hidden></div>
+      <div class="placa mentor-cta" id="cMentor" role="button" tabindex="0"><div class="mic">🧭</div><div><b>Fala com o teu mentor</b><small>Dúvidas, um dia mau, um objetivo novo. Responde a qualquer hora.</small></div><span class="seta">›</span></div>
       <div class="sec-tit"><h3>Missões de hoje</h3><span class="mono" id="mFeitas">0/4</span></div>
       <div id="listaMissoes"></div>
       <p class="dica" id="dicaDia"></p>
@@ -1170,6 +1188,31 @@ input, textarea, select { font-size: 16px !important; }
     if (ev.target.closest('button, a, input, textarea, select, label')) return;
     for (var i = 0; i < DET.length; i++) { var el = ev.target.closest(DET[i][0]); if (el && $('app').contains(el)) { DET[i][1](el); return; } }
   });
+  // ── Mentor IA ─────────────────────────────────────────────────────────
+  function folhaMentor() {
+    var M = { msgs: [], aEnviar: false };
+    function linkar(t) { return esc(t).replace(/(https:\/\/www\.morethanmoney\.pt\/[^\s<]*)/g, '<a href="$1" target="_blank" rel="noopener" style="color:var(--ciano)">$1</a>'); }
+    function pinta() {
+      var box = $('mChat'); if (!box) return;
+      box.innerHTML = (M.msgs.length ? '' : '<div class="msg ia"><div class="bolha">Olá, ' + esc(E.membro.primeiro) + '. Sou o teu mentor na Missão. Estás no dia ' + (E.plano ? E.plano.dia : 1) + ' de 39. Em que te posso ajudar hoje?</div></div>') +
+        M.msgs.map(function (x) { return '<div class="msg ' + (x.papel === 'user' ? 'eu' : 'ia') + '"><div class="bolha">' + linkar(x.texto) + '</div></div>'; }).join('') +
+        (M.aEnviar ? '<div class="pensa">O mentor está a escrever…</div>' : '');
+      box.scrollTop = box.scrollHeight;
+    }
+    function enviar(texto) {
+      texto = String(texto || '').trim(); if (!texto || M.aEnviar) return;
+      M.msgs.push({ papel: 'user', texto: texto }); M.aEnviar = true; $('mTxt').value = ''; pinta();
+      api({ accao: 'mentor', texto: texto }).then(function (r) { M.aEnviar = false; M.msgs.push({ papel: 'assistant', texto: r.ok ? r.resposta : (r.erro || 'Não consegui responder agora.') }); pinta(); if (r.ok) Som.plim(); }, function () { M.aEnviar = false; M.msgs.push({ papel: 'assistant', texto: 'Sem ligação. Tenta outra vez.' }); pinta(); });
+    }
+    modal('<div class="mono">🧭 Mentor IA</div><h2>O teu mentor</h2><div class="mchat" id="mChat"><p class="pensa">A abrir a conversa…</p></div>' +
+      '<div class="msug"><button type="button" data-msug="Hoje não me apetece fazer nada.">Hoje não me apetece</button><button type="button" data-msug="Como faço a missão de rede de hoje?">Missão de rede</button><button type="button" data-msug="Quero definir um objetivo para os próximos 90 dias.">Objetivo 90 dias</button></div>' +
+      '<div class="mlinha"><textarea id="mTxt" rows="1" maxlength="1200" placeholder="Escreve ao teu mentor…" aria-label="Mensagem para o mentor"></textarea><button type="button" id="mEnv" aria-label="Enviar">➤</button></div>' +
+      '<p class="texto-m" style="font-size:12px;color:var(--cinza);margin:8px 0 0">IA de acompanhamento. Não substitui médico, psicólogo nem aconselhamento financeiro.</p>',
+      function (b) { var s = b.getAttribute('data-msug'); if (s) enviar(s); else if (b.id === 'mEnv') enviar($('mTxt').value); });
+    $('mTxt').addEventListener('keydown', function (ev) { if (ev.key === 'Enter' && !ev.shiftKey) { ev.preventDefault(); enviar($('mTxt').value); } });
+    api({ accao: 'mentor_hist' }).then(function (r) { M.msgs = (r && r.mensagens) || []; pinta(); }, function () { pinta(); });
+  }
+  $('cMentor').addEventListener('click', folhaMentor);
   $('bPerfil').onclick = function () { if (E) folhaPerfil(); };
   // iOS ignora user-scalable=no: trava o gesto de pinça (o duplo toque já fica preso pelo touch-action).
   document.addEventListener('gesturestart', function (e) { e.preventDefault(); }, { passive: false });
