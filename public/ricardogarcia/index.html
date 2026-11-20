@@ -357,6 +357,49 @@ html:not(.com-gsap) .fp { opacity: 1; }
 .trajeto .contador { font-family: "Anton", sans-serif; font-size: 15px; letter-spacing: 3px; color: var(--cinza); }
 .trajeto .contador b { color: var(--ouro-claro); font-weight: 400; }
 @media (prefers-reduced-motion: reduce) { .fp { opacity: 1 !important; } .faixa-scroll .linha { transform: none !important; } }
+
+/* ── v5: leitura em cada ecrã, trajeto sem prender, vídeo que arranca sozinho ── */
+.fp { opacity: .3; }
+.trilho { cursor: grab; overscroll-behavior-x: contain; }
+.trilho.arrasta { cursor: grabbing; scroll-snap-type: none; scroll-behavior: auto; user-select: none; }
+.trilho.arrasta img { pointer-events: none; }
+.trajeto .dica { font-size: 14px; color: var(--cinza); margin-top: 6px; }
+.ecra .som { position: absolute; right: 14px; bottom: 14px; z-index: 3; display: none; align-items: center; gap: 8px; padding: 10px 16px; min-height: 44px; border-radius: 999px; border: 1px solid rgba(233,196,106,.6); background: rgba(5,8,16,.78); color: #fff; font: 600 15px/1 inherit; font-family: inherit; cursor: pointer; backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px); }
+.ecra .som i { width: 10px; height: 10px; border-radius: 50%; background: var(--ouro-claro); animation: pulso 1.8s infinite; }
+.ecra.mudo .som { display: inline-flex; }
+.ecra.a-tocar .play { display: none; }
+/* Tablet */
+@media (max-width: 1024px) {
+  .topo .marca span, .topo .btn { white-space: nowrap; }
+  .topo nav { gap: 2px; }
+  .topo .nav-pilula a { padding: 7px 9px; font-size: 13px; letter-spacing: .3px; }
+  .manifesto p { font-size: clamp(30px, 6.4vw, 60px); }
+  .faixa-scroll { padding: 50px 0 28px; }
+  .cap { flex-basis: min(760px, 88vw); }
+}
+/* Telemóvel */
+@media (max-width: 640px) {
+  body { -webkit-text-size-adjust: 100%; }
+  .hero h1 { font-size: clamp(38px, 11vw, 52px); line-height: 1; }
+  .titulo { font-size: clamp(30px, 8.6vw, 40px); }
+  .lead { font-size: 17px; line-height: 1.55; }
+  .manifesto { padding: 30px 0 70px; }
+  .manifesto p { font-size: clamp(26px, 8.2vw, 38px); line-height: 1.12; }
+  .manifesto .assina { font-size: 22px; }
+  .faixa-scroll { padding: 36px 0 18px; }
+  .faixa-scroll .linha { font-size: clamp(40px, 13vw, 60px); }
+  .cap { flex-basis: 88vw; }
+  .cap h3 { font-size: 28px; }
+  .cap p { font-size: 16px; line-height: 1.55; }
+  .cap .meta .de { display: none; }
+  .palavras .p { filter: none; transform: translateY(18px); }
+  .ecra { border-radius: 14px; }
+  .ecra .som { right: 10px; bottom: 10px; font-size: 14px; padding: 9px 13px; }
+  .trajeto .setas { display: none; }
+  .cap .img { height: 230px; }
+  .cap .txt { justify-content: flex-start; padding: 18px 18px 22px; }
+  .cap .meta .num { font-size: 48px; }
+}
 </style>
 </head>
 <body>
@@ -412,11 +455,12 @@ html:not(.com-gsap) .fp { opacity: 1; }
       <h2 class="titulo palavras" data-palavras>A minha <span class="c">história</span>, contada por mim</h2>
       <p class="lead aparece" data-preencher>De onde vim, o que tive de destruir e porque é que a MoreThanMoney existe.</p>
       <div class="ecra aparece" id="ecra">
-        <video id="video-ricardo" preload="none" playsinline poster="/ricardogarcia/apresentacao-ricardo-poster.jpg">
+        <video id="video-ricardo" preload="metadata" playsinline muted poster="/ricardogarcia/apresentacao-ricardo-poster.jpg">
           <source src="/ricardogarcia/apresentacao-ricardo.mp4" type="video/mp4">
           <track kind="captions" srclang="pt" label="Português" src="/ricardogarcia/apresentacao-ricardo.vtt">
         </video>
         <button class="play" type="button" aria-label="Ver o vídeo de apresentação do Ricardo"><b></b>Ver o vídeo</button>
+        <button class="som" type="button" aria-label="Ligar o som do vídeo"><i></i>Ligar o som</button>
       </div>
       <p class="legenda-video">Vídeo criado com IA a partir da imagem e da voz do Ricardo. A história é dele, palavra por palavra.</p>
     </div>
@@ -426,7 +470,7 @@ html:not(.com-gsap) .fp { opacity: 1; }
     <div class="wrap topo-sec">
       <div>
         <h2 class="titulo palavras" data-palavras>O <span class="c">trajeto</span></h2>
-        <p class="lead aparece" style="margin:0">Seis capítulos, do Porto à MoreThanMoney. Desliza.</p>
+        <p class="lead aparece" style="margin:0">Seis capítulos, do Porto à MoreThanMoney.</p>
       </div>
       <div class="setas"><button type="button" data-seta="-1" aria-label="Capítulo anterior">←</button><button type="button" data-seta="1" aria-label="Capítulo seguinte">→</button></div>
     </div>
@@ -728,6 +772,13 @@ html:not(.com-gsap) .fp { opacity: 1; }
     var t; trilho.addEventListener('scroll', function () { clearTimeout(t); t = setTimeout(centro, 60); }, { passive: true });
     document.querySelectorAll('[data-seta]').forEach(function (b) { b.addEventListener('click', function () { ir(atual + Number(b.getAttribute('data-seta'))); }); });
     barras.forEach(function (b, i) { b.addEventListener('click', function () { ir(i); }); });
+    if (window.matchMedia('(pointer: fine)').matches) {
+      var x0 = 0, l0 = 0, moveu = false, baixo = false;
+      trilho.addEventListener('pointerdown', function (e) { if (e.pointerType !== 'mouse' || e.button !== 0) return; baixo = true; moveu = false; x0 = e.clientX; l0 = trilho.scrollLeft; });
+      window.addEventListener('pointermove', function (e) { if (!baixo) return; var dx = e.clientX - x0; if (Math.abs(dx) > 4) { moveu = true; trilho.classList.add('arrasta'); } if (moveu) trilho.scrollLeft = l0 - dx; });
+      window.addEventListener('pointerup', function () { if (!baixo) return; baixo = false; if (moveu) { trilho.classList.remove('arrasta'); centro(); ir(atual); } });
+      trilho.addEventListener('click', function (e) { if (moveu) { e.preventDefault(); e.stopPropagation(); moveu = false; } }, true);
+    }
     trilho.addEventListener('keydown', function (e) { if (e.key === 'ArrowRight') { e.preventDefault(); ir(atual + 1); } if (e.key === 'ArrowLeft') { e.preventDefault(); ir(atual - 1); } });
     marcar(0);
   }
@@ -769,9 +820,30 @@ html:not(.com-gsap) .fp { opacity: 1; }
   // Vídeo
   var ecra = document.getElementById('ecra');
   if (ecra) {
-    var v = ecra.querySelector('video'), b = ecra.querySelector('.play');
-    b.addEventListener('click', function () { ecra.classList.add('a-tocar'); v.controls = true; v.play().catch(function () {}); });
-    v.addEventListener('ended', function () { ecra.classList.remove('a-tocar'); v.controls = false; });
+    // Arranca sozinho (sem som, como os browsers exigem) quando entra no ecrã ou o rato passa por cima;
+    // pausa quando sai. Um toque liga o som; depois disso não volta a tocar sozinho se o pausarem.
+    var v = ecra.querySelector('video'), b = ecra.querySelector('.play'), som = ecra.querySelector('.som');
+    var dono = false, pausouAMao = false, visivel = false;
+    function tocar(comSom) {
+      if (comSom) { v.muted = false; dono = true; ecra.classList.remove('mudo'); v.controls = true; }
+      ecra.classList.add('a-tocar'); if (v.muted) ecra.classList.add('mudo');
+      var p = v.play(); if (p && p.catch) p.catch(function () { if (!v.muted) { v.muted = true; ecra.classList.add('mudo'); v.play().catch(function () { ecra.classList.remove('a-tocar', 'mudo'); }); } });
+    }
+    b.addEventListener('click', function () { tocar(true); });
+    som.addEventListener('click', function (e) { e.stopPropagation(); if (v.muted) v.currentTime = 0; tocar(true); });
+    v.addEventListener('click', function () { if (v.muted) tocar(true); });
+    v.addEventListener('pause', function () { if (dono && !v.ended && visivel) pausouAMao = true; });
+    v.addEventListener('ended', function () { ecra.classList.remove('a-tocar', 'mudo'); v.controls = false; dono = false; pausouAMao = true; });
+    if (!reduz && 'IntersectionObserver' in window) {
+      new IntersectionObserver(function (es) {
+        visivel = es[0].intersectionRatio >= .55;
+        if (visivel) { if (!pausouAMao && v.paused) tocar(false); }
+        else if (!v.paused) v.pause();
+      }, { threshold: [0, .55, .8] }).observe(ecra);
+    }
+    if (window.matchMedia('(hover: hover)').matches) {
+      ecra.addEventListener('pointerenter', function () { if (!pausouAMao && v.paused && !reduz) tocar(false); });
+    }
   }
 })();
 </script>
@@ -822,7 +894,8 @@ window.addEventListener('load', function () {
   var ecra = document.getElementById('ecra');
   document.querySelectorAll('.hero .foto, #ecra').forEach(function (el) { el.classList.remove('aparece'); });
   if (ecra) {
-    gsap.fromTo(ecra, { scale: .84, borderRadius: 48, filter: 'brightness(.55)' }, { scale: 1, borderRadius: 20, filter: 'brightness(1)', ease: 'none',
+    ecra.style.transition = 'none';
+    gsap.fromTo(ecra, { y: 0, scale: largo ? .84 : .94, borderRadius: largo ? 48 : 22, filter: 'brightness(.55)' }, { y: 0, scale: 1, borderRadius: largo ? 20 : 14, filter: 'brightness(1)', ease: 'none',
       scrollTrigger: { trigger: ecra, start: 'top 95%', end: 'top 25%', scrub: true } });
   }
 
@@ -843,26 +916,16 @@ window.addEventListener('load', function () {
     })(el);
     var grande = el.closest('.manifesto');
     gsap.to(el.querySelectorAll('.fp'), { opacity: 1, stagger: .08, ease: 'none',
-      scrollTrigger: { trigger: el, start: grande ? 'top 80%' : 'top 88%', end: grande ? 'bottom 45%' : 'bottom 60%', scrub: true } });
+      // No telemóvel o texto fica completo antes do meio do ecrã, para nunca se ler meio apagado
+      scrollTrigger: { trigger: el, start: grande ? (largo ? 'top 80%' : 'top 92%') : 'top 92%', end: grande ? (largo ? 'center 55%' : 'bottom 62%') : 'bottom 70%', scrub: largo ? true : .3 } });
   });
 
-  // 5. Trajeto: em ecrã largo, a secção fica presa e o scroll vertical percorre os capítulos
-  var sec = document.getElementById('trajeto'), trilho = document.getElementById('trilho');
-  if (sec && trilho && largo) {
-    sec.classList.add('preso');
-    var caps = trilho.querySelectorAll('.cap');
-    var maxL = function () { return trilho.scrollWidth - trilho.clientWidth; };
-    var alvoDe = function (k) { var c = caps[k]; return Math.max(0, Math.min(maxL(), c.offsetLeft - (trilho.clientWidth - c.clientWidth) / 2)); };
-    var stT = ST.create({
-      trigger: sec, start: 'top 64px', end: function () { return '+=' + Math.round(maxL() * 1.15); }, pin: true, scrub: .6, anticipatePin: 1,
-      animation: gsap.to(trilho, { scrollLeft: function () { return maxL(); }, ease: 'none' }),
-      invalidateOnRefresh: true
-    });
-    window.__irTrajeto = function (k) {
-      k = Math.max(0, Math.min(caps.length - 1, k));
-      var y = stT.start + (alvoDe(k) / maxL()) * (stT.end - stT.start);
-      if (lenis) lenis.scrollTo(y, { duration: 1.1 }); else window.scrollTo({ top: y, behavior: 'smooth' });
-    };
+  // 5. Trajeto: já não prende o scroll (v5). Os capítulos entram em cascata e o
+  // carrossel anda com setas, arrastar, swipe ou teclado.
+  var capsT = document.querySelectorAll('#trilho .cap');
+  if (capsT.length) {
+    gsap.from(capsT, { x: 80, opacity: 0, stagger: .08, duration: .9, ease: 'expo.out', clearProps: 'transform,opacity',
+      scrollTrigger: { trigger: '#trilho', start: 'top 85%', once: true } });
   }
 
   // 6. Faixas cinéticas: andam com o scroll e inclinam com a velocidade
@@ -871,7 +934,7 @@ window.addEventListener('load', function () {
     gsap.fromTo(linhas[0], { xPercent: 0 }, { xPercent: -28, ease: 'none', scrollTrigger: { trigger: '.faixa-scroll', start: 'top bottom', end: 'bottom top', scrub: .4 } });
     if (linhas[1]) gsap.fromTo(linhas[1], { xPercent: -30 }, { xPercent: -2, ease: 'none', scrollTrigger: { trigger: '.faixa-scroll', start: 'top bottom', end: 'bottom top', scrub: .4 } });
     var inclina = gsap.quickTo('.faixa-scroll', 'skewY', { duration: .5, ease: 'power3' });
-    ST.create({ onUpdate: function (self) { inclina(gsap.utils.clamp(-4, 4, self.getVelocity() / -320)); } });
+    if (largo) ST.create({ onUpdate: function (self) { inclina(gsap.utils.clamp(-4, 4, self.getVelocity() / -320)); } });
   }
 
   // 7. Os três caminhos entram como cartas a erguer-se
