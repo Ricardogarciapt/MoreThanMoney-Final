@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server"
 import { getSupabaseAdmin } from "@/lib/supabase-admin-client"
-import { generateDmReply, sendInstagramDmResilient, candidateTokensForIgAccount } from "@/lib/instagram/dm-closer"
+import { generateDmReply, sendInstagramDmResilient, candidateTokensForIgAccount, carregarTokensIG } from "@/lib/instagram/dm-closer"
 
 export const runtime = "nodejs"
 export const dynamic = "force-dynamic"
@@ -59,6 +59,7 @@ export async function POST(request: NextRequest) {
   }
 
   const supabase = getSupabaseAdmin()
+  await carregarTokensIG()
   let handled = 0
 
   for (const entry of body.entry) {

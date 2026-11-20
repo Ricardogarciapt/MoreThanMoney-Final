@@ -139,11 +139,40 @@ const PERSONAL_IG_IDS = [
   ...(process.env.INSTAGRAM_PERSONAL_IDS || "").split(","),
 ].map((s) => (s || "").trim()).filter(Boolean)
 
+/**
+ * Tokens guardados no /admin/social (`site_settings.instagram_tokens`) — 20/11/2026.
+ *
+ * O closer só lia variáveis de ambiente, e essas estão VAZIAS desde que os tokens passaram para a
+ * base (ver lib/instagram/publish.ts). Resultado: mesmo que uma DM chegasse, o closer ficava
+ * «sem token IG» em silêncio. Agora a base manda e o ambiente fica de reserva, como na publicação.
+ * `carregarTokensIG()` tem de correr antes de pedir candidatos (o webhook chama-o à entrada).
+ */
+let tokensBase: Record<string, string> = {}
+let tokensBaseEm = 0
+export async function carregarTokensIG(): Promise<void> {
+  if (Date.now() - tokensBaseEm < 60_000) return
+  try {
+    const { getSupabaseAdmin } = await import("@/lib/supabase-admin-client")
+    const { data } = await getSupabaseAdmin().from("site_settings").select("value").eq("key", "instagram_tokens").maybeSingle()
+    const v = data?.value
+    const obj = (typeof v === "string" ? JSON.parse(v) : v) as Record<string, string> | null
+    tokensBase = obj && typeof obj === "object" ? obj : {}
+  } catch {
+    /* sem base, fica o ambiente */
+  }
+  tokensBaseEm = Date.now()
+}
+
 function personalToken(): string | null {
-  return process.env.INSTAGRAM_TOKEN_RICARDO?.trim() || process.env.INSTAGRAM_TOKEN_PERSONAL?.trim() || null
+  return (
+    tokensBase.INSTAGRAM_TOKEN_RICARDO?.trim() ||
+    process.env.INSTAGRAM_TOKEN_RICARDO?.trim() ||
+    process.env.INSTAGRAM_TOKEN_PERSONAL?.trim() ||
+    null
+  )
 }
 function brandToken(): string | null {
-  return process.env.INSTAGRAM_TOKEN?.trim() || null
+  return tokensBase.INSTAGRAM_TOKEN?.trim() || process.env.INSTAGRAM_TOKEN?.trim() || null
 }
 
 /** Escolhe o token IG certo para a conta que recebeu a mensagem (marca vs pessoal). */
@@ -214,6 +243,7 @@ export async function sendInstagramDmResilient(
   recipientId: string,
   text: string,
 ): Promise<{ ok: boolean; error?: string; usedFallback?: boolean }> {
+  await carregarTokensIG()
   const candidates = candidateTokensForIgAccount(igAccountId)
   if (candidates.length === 0) return { ok: false, error: "sem token IG configurado" }
   let lastErr: string | undefined

@@ -25,7 +25,7 @@
  * descobre depois que «o Ricardo» era uma máquina é uma venda perdida e uma queixa ganha.
  */
 import { falarParaStorage, type StorageVoz } from '@/lib/voz'
-import { candidateTokensForIgAccount } from '@/lib/instagram/dm-closer'
+import { candidateTokensForIgAccount, carregarTokensIG } from '@/lib/instagram/dm-closer'
 
 export const CHAVE_AUDIO_DM = 'vendas_audio_dm'
 export const TECTO_DIA_OMISSAO = 30
@@ -114,6 +114,7 @@ export async function audiosHoje(db: Db, prefixo = 'dm-audio'): Promise<number> 
 
 async function enviarAudioInstagram(accountId: string, destino: string, url: string): Promise<{ ok: boolean; error?: string }> {
   let ultimo: string | undefined
+  await carregarTokensIG()
   for (const token of candidateTokensForIgAccount(accountId)) {
     try {
       const res = await fetch('https://graph.facebook.com/v21.0/me/messages', {
