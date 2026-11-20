@@ -71,3 +71,41 @@ export async function paginaPublica() {
   })).filter(p => p.link)
   return { seccoes, produtos, ordem, atualizado: pag?.atualizado ?? null }
 }
+
+// ── Inglês ─────────────────────────────────────────────────────────────────
+// O painel escreve em PT. Para a landing em EN, cada texto é traduzido uma vez pela IA grátis
+// e guardado em rg_dados ('trad_en', mapa PT → EN). Texto novo traduz-se no pedido seguinte;
+// se a IA falhar, mostra-se o PT (nunca fica a página sem conteúdo).
+type Dados = Awaited<ReturnType<typeof paginaPublica>>
+
+export async function paginaEmIngles(d: Dados): Promise<Dados> {
+  const textos = new Set<string>()
+  const pega = (s?: string | null) => { const t = (s ?? '').trim(); if (t && /[a-zà-ú]/i.test(t)) textos.add(t) }
+  d.seccoes.forEach(s => { pega(s.titulo); pega(s.sub); s.itens.forEach(i => { pega(i.titulo); pega(i.sub) }) })
+  d.produtos.forEach(p => { pega(p.titulo); pega(p.subtitulo); pega(p.descricao); pega(p.preco_sufixo) })
+
+  const db = getSupabaseAdmin()
+  const { data } = await db.from('rg_dados').select('v').eq('k', 'trad_en').maybeSingle()
+  const mapa: Record<string, string> = (data?.v && typeof data.v === 'object' ? data.v : {}) as Record<string, string>
+  const falta = [...textos].filter(t => !mapa[t]).slice(0, 80)
+  if (falta.length) {
+    try {
+      const { chamarIAGratis } = await import('@/lib/ia/chamar')
+      const r = await chamarIAGratis({
+        sistema: 'Translate European Portuguese UI texts from a personal-brand landing page into natural, concise English. Keep brand and product names as they are (MoreThanMoney, MTM, PU Prime, Fitness Factory, Premium, Bootcamp, YouTube, Instagram, LinkedIn). Never add promises of profit. Answer only with a JSON object mapping each original string to its translation.',
+        mensagens: [{ role: 'user', content: JSON.stringify(falta) }],
+        json: true, maxTokens: 3000, temperatura: 0.2, tarefa: 'rg-landing-en', preferencia: 'qualidade', timeoutMs: 20_000,
+      })
+      const j = JSON.parse(r.texto.replace(/^```(?:json)?|```$/g, '').trim())
+      let novos = 0
+      for (const t of falta) { const v = typeof j?.[t] === 'string' ? j[t].trim() : ''; if (v && v.length < 600) { mapa[t] = v; novos++ } }
+      if (novos) await db.from('rg_dados').upsert({ k: 'trad_en', v: mapa, atualizado: new Date().toISOString() })
+    } catch { /* fica em PT até à próxima */ }
+  }
+  const tr = <T extends string | null | undefined>(s: T): T => (s && mapa[s.trim()] ? mapa[s.trim()] : s) as T
+  return {
+    ...d,
+    seccoes: d.seccoes.map(s => ({ ...s, titulo: tr(s.titulo), sub: tr(s.sub), itens: s.itens.map(i => ({ ...i, titulo: tr(i.titulo), sub: tr(i.sub) })) })),
+    produtos: d.produtos.map(p => ({ ...p, titulo: tr(p.titulo), subtitulo: tr(p.subtitulo), descricao: tr(p.descricao), preco_sufixo: tr(p.preco_sufixo) })),
+  }
+}
