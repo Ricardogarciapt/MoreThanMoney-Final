@@ -11,6 +11,8 @@ export const dynamic = 'force-dynamic'
  * MOTOR DO EDITOR — o Mac (services/estudio-editor → renderProjeto) monta aqui os projectos da
  * timeline do /estudio.
  *
+ * GET  ?moldes=cinematico → só projectos no molde cinemático (robô em GitHub Actions); sem ele, só
+ *        os da timeline simples (Mac). ?espreitar=1 → { pendentes } sem reclamar nada.
  * GET  → reclama o projecto 'a_render' mais antigo (passa a 'a_montar') e devolve o `projeto`
  *        normalizado com URL assinado (2 h) em cada clip e na música, as palavras do Whisper de
  *        cada take usado (para as legendas) e o URL assinado para subir o MP4.
@@ -23,9 +25,20 @@ export async function GET(request: NextRequest) {
   await db.from('estudio_projetos').update({ estado: 'a_render' }).eq('estado', 'a_montar')
     .lt('reclamado_em', new Date(Date.now() - 40 * 60_000).toISOString())
 
+  // Molde cinemático (20/11): só o robô video/cinematico/robo-cinematico.mjs os monta
+  // (?moldes=cinematico); o editor do Mac, que não pede molde, nunca os vê.
+  const sp = request.nextUrl.searchParams
+  const cinematico = sp.get('moldes') === 'cinematico'
+  if (sp.get('espreitar') === '1') {
+    let c = db.from('estudio_projetos').select('id', { count: 'exact', head: true }).eq('estado', 'a_render')
+    c = cinematico ? c.eq('projeto->>molde', 'cinematico') : c.is('projeto->>molde', null)
+    const { count } = await c
+    return NextResponse.json({ ok: true, pendentes: count ?? 0 })
+  }
   // ?robo=0 → o Mac está fora da janela nocturna: só monta o que alguém exportou à mão.
   let q = db.from('estudio_projetos').select('id, titulo, marca, projeto').eq('estado', 'a_render')
-  if (request.nextUrl.searchParams.get('robo') === '0') q = q.not('titulo', 'like', '%· robô')
+  q = cinematico ? q.eq('projeto->>molde', 'cinematico') : q.is('projeto->>molde', null)
+  if (sp.get('robo') === '0') q = q.not('titulo', 'like', '%· robô')
   const { data: cand } = await q.order('atualizado_em', { ascending: true }).limit(1).maybeSingle()
   if (!cand) return NextResponse.json({ ok: true, trabalho: null })
   const { data: meu } = await db.from('estudio_projetos')

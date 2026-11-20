@@ -70,7 +70,9 @@ export function legendaDoGuiao(g: Record<string, any>): string {
 export async function rascunhoDoReelDoClone(db: SupabaseClient, projetoId: string): Promise<string | null> {
   try {
     const { data: pr } = await db.from('estudio_projetos').select('id, titulo, marca, projeto, video_url, post_id').eq('id', projetoId).maybeSingle()
-    if (!pr || pr.post_id || pr.marca !== 'ricardo-garcia' || !pr.video_url) return null
+    // 20/11: o molde cinemático serve as duas marcas; cada uma vai para a sua conta.
+    if (!pr || pr.post_id || !pr.video_url || (pr.marca !== 'ricardo-garcia' && pr.marca !== 'morethanmoney')) return null
+    const perfil = pr.marca === 'morethanmoney' ? 'mtm' : 'ricardo'
     const p = normalizarProjeto(pr.projeto)
     const ref = p.clips.find((c) => c.fonte.tipo === 'ativo' && c.fonte.ref)?.fonte.ref
     if (!ref) return null
@@ -82,8 +84,8 @@ export async function rascunhoDoReelDoClone(db: SupabaseClient, projetoId: strin
 
     const { data: post } = await db.from('social_scheduled_posts').insert({
       channel: 'instagram',
-      ig_account_id: IG_ID.ricardo,
-      ig_username: ARROBA.ricardo.slice(1),
+      ig_account_id: IG_ID[perfil],
+      ig_username: ARROBA[perfil].slice(1),
       pillar: 'estudio',
       media_type: 'REELS',
       media_urls: [video],
@@ -94,7 +96,7 @@ export async function rascunhoDoReelDoClone(db: SupabaseClient, projetoId: strin
     }).select('id, caption').single()
     if (!post) return null
     await db.from('estudio_projetos').update({ post_id: post.id }).eq('id', pr.id)
-    await pedirAprovacaoReel({ postId: post.id, video, titulo: pr.titulo, legenda: post.caption || '' })
+    await pedirAprovacaoReel({ postId: post.id, video, titulo: pr.titulo, legenda: post.caption || '', conta: ARROBA[perfil] })
     return post.id
   } catch (e) {
     console.error('[reel-aprovacao] rascunho falhou', e)
@@ -103,12 +105,12 @@ export async function rascunhoDoReelDoClone(db: SupabaseClient, projetoId: strin
 }
 
 /** Puro: o texto e os botões do pedido. */
-export function mensagemDoReel(p: { postId: string; titulo: string; legenda: string }) {
+export function mensagemDoReel(p: { postId: string; titulo: string; legenda: string; conta?: string }) {
   return {
     texto:
       `🎬 <b>Reel do clone pronto para aprovares</b>\n<i>${esc(p.titulo)}</i>\n\n` +
       `<b>Legenda:</b>\n${esc(p.legenda.slice(0, 700))}\n\n` +
-      `«Publicar» põe-no na próxima janela das 20:30 no @ricardogarciapt.`,
+      `«Publicar» põe-no na próxima janela das 20:30 no ${p.conta || ARROBA.ricardo}.`,
     teclado: {
       inline_keyboard: [[
         { text: '✅ Publicar', callback_data: `${PREFIXO_REEL}ok:${p.postId}` },
@@ -132,7 +134,7 @@ async function tg(metodo: string, corpo: Record<string, unknown>): Promise<boole
 }
 
 /** Manda o vídeo com os botões; se o Telegram não aceitar o vídeo (>20 MB), manda o link. */
-export async function pedirAprovacaoReel(p: { postId: string; video: string; titulo: string; legenda: string }, chat = chatDeAdminDoAmbiente()): Promise<void> {
+export async function pedirAprovacaoReel(p: { postId: string; video: string; titulo: string; legenda: string; conta?: string }, chat = chatDeAdminDoAmbiente()): Promise<void> {
   if (!chat) return
   const m = mensagemDoReel(p)
   const foi = await tg('sendVideo', { chat_id: chat, video: p.video, caption: m.texto.slice(0, 1024), parse_mode: 'HTML', reply_markup: m.teclado, supports_streaming: true })
@@ -150,10 +152,10 @@ export async function contarReelsPorAprovar(db: SupabaseClient): Promise<number>
 
 /** «admin:reels»: volta a mandar os pedidos que estão à espera. Devolve quantos mandou. */
 export async function reenviarPendentes(db: SupabaseClient, chat: string): Promise<number> {
-  const { data } = await db.from('social_scheduled_posts').select('id, media_urls, caption')
+  const { data } = await db.from('social_scheduled_posts').select('id, media_urls, caption, ig_username')
     .eq('created_by', CRIADOR_REELS_CLONE).eq('status', 'draft').order('created_at', { ascending: true }).limit(5)
   for (const r of data ?? []) {
-    await pedirAprovacaoReel({ postId: r.id, video: (r.media_urls ?? [])[0] || '', titulo: 'Reel do clone', legenda: r.caption || '' }, chat)
+    await pedirAprovacaoReel({ postId: r.id, video: (r.media_urls ?? [])[0] || '', titulo: 'Reel do clone', legenda: r.caption || '', conta: r.ig_username ? `@${r.ig_username}` : undefined }, chat)
   }
   return data?.length ?? 0
 }
@@ -170,9 +172,12 @@ export async function decidirReelPorTelegram(data: string): Promise<string> {
       .eq('id', b.postId).eq('created_by', CRIADOR_REELS_CLONE).eq('status', 'draft').select('id')
     return r?.length ? '🗑 Reel descartado.' : 'Este reel já não estava à espera.'
   }
-  // Um por dia: a janela é a primeira 20:30 depois do último já aprovado.
+  // Um por dia e por conta: a janela é a primeira 20:30 depois do último já aprovado nessa conta.
+  const { data: este } = await db.from('social_scheduled_posts').select('ig_account_id, ig_username')
+    .eq('id', b.postId).eq('created_by', CRIADOR_REELS_CLONE).maybeSingle()
   const { data: ult } = await db.from('social_scheduled_posts').select('scheduled_at')
-    .eq('created_by', CRIADOR_REELS_CLONE).in('status', ['approved', 'publishing']).gt('scheduled_at', agora)
+    .eq('created_by', CRIADOR_REELS_CLONE).eq('ig_account_id', este?.ig_account_id ?? IG_ID.ricardo)
+    .in('status', ['approved', 'publishing']).gt('scheduled_at', agora)
     .order('scheduled_at', { ascending: false }).limit(1)
   const depois = ult?.[0]?.scheduled_at ? Math.max(Date.now(), new Date(ult[0].scheduled_at).getTime()) : Date.now()
   const quando = proximaJanela(depois)
@@ -181,5 +186,5 @@ export async function decidirReelPorTelegram(data: string): Promise<string> {
     .eq('id', b.postId).eq('created_by', CRIADOR_REELS_CLONE).eq('status', 'draft').select('id')
   if (!r?.length) return 'Este reel já não estava à espera.'
   const dia = new Intl.DateTimeFormat('pt-PT', { timeZone: 'Europe/Lisbon', weekday: 'long', day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }).format(quando)
-  return `✅ Aprovado. Sai no @ricardogarciapt ${dia}.`
+  return `✅ Aprovado. Sai no ${este?.ig_username ? `@${este.ig_username}` : ARROBA.ricardo} ${dia}.`
 }

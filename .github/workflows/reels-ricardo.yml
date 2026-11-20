@@ -4,9 +4,9 @@ name: Reels do @ricardogarciapt (gémeo IA)
 # Ricardo; esta máquina desenha o reel (fotos dele animadas + legendas + capa) e devolve-o à fila
 # do Instagram. Nada sai sem site_settings.reels_ricardo.ligado = true. Ver services/reels-ricardo.
 
+# 20/11/2026: horário DESLIGADO por ordem do Ricardo — os reels do @ricardogarciapt saem agora no molde
+# cinemático (.github/workflows/reels-cinematicos.yml). Fica só o arranque à mão, para arquivo.
 on:
-  schedule:
-    - cron: '40 6 * * *'   # 06:40 UTC
   workflow_dispatch:
     inputs:
       n:

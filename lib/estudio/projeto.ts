@@ -105,6 +105,40 @@ export type Projeto = {
   /** Barras de cor da marca em vez de desfoque quando o material não enche o formato. */
   fundo: 'desfoque' | 'marca' | 'preto'
   volume_geral: number
+  /**
+   * Molde do render (20/11/2026). 'cinematico' = o molde AnuncioReel aprovado pelo Ricardo
+   * (gémeo por baixo + gancho cinético, legendas palavra a palavra, PiP, chips, light leaks, música,
+   * CTA): quem o monta é o robô video/cinematico/robo-cinematico.mjs, não o editor do Mac.
+   * Sem molde = a timeline simples do editor (só para o que alguém monta à mão no /estudio).
+   */
+  molde?: 'cinematico'
+  cinematico?: Cinematico | null
+}
+
+/** O que o robô cinemático precisa do guião (o resto sai do vídeo do gémeo + Whisper). */
+export type Cinematico = {
+  marca: 'morethanmoney' | 'ricardo-garcia'
+  gancho: string
+  palavra_chave: string
+  nicho: string
+  /** O texto que o gémeo diz (orienta o Whisper na ortografia). */
+  texto: string
+  /** Imagens/vídeos de apoio do guião (https), pela ordem dos segmentos; entram em PiP. */
+  apoio: string[]
+  cta_url: string
+}
+
+export function normalizarCinematico(v: any): Cinematico | null {
+  if (!v || typeof v !== 'object') return null
+  return {
+    marca: v.marca === 'ricardo-garcia' ? 'ricardo-garcia' : 'morethanmoney',
+    gancho: txt(v.gancho, 90).trim(),
+    palavra_chave: txt(v.palavra_chave, 30).replace(/[^\p{L}\p{N} ]/gu, '').trim().toUpperCase(),
+    nicho: txt(v.nicho, 80).trim(),
+    texto: txt(v.texto, 1500).trim(),
+    apoio: (Array.isArray(v.apoio) ? v.apoio : []).filter((u: unknown) => typeof u === 'string' && /^https:\/\//.test(u)).slice(0, 4),
+    cta_url: txt(v.cta_url, 80).trim(),
+  }
 }
 
 export const PROJETO_VAZIO: Projeto = {
@@ -190,6 +224,7 @@ export function normalizarProjeto(v: any): Projeto {
     marca_dagua: v?.marca_dagua !== false,
     fundo: de(v?.fundo, ['desfoque', 'marca', 'preto'] as const, 'desfoque'),
     volume_geral: n(v?.volume_geral, 1, 0, 2),
+    ...(v?.molde === 'cinematico' ? { molde: 'cinematico' as const, cinematico: normalizarCinematico(v?.cinematico) } : {}),
   }
 }
 

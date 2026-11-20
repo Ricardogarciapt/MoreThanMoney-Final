@@ -116,9 +116,11 @@ export async function sincronizarHeygen(db: SupabaseClient, g: Geracao): Promise
 }
 
 /**
- * Reel do clone pronto → liga o vídeo à peça e cria o projecto do editor (gancho no início, CTA no
- * fim, legendas karaoke, marca de água) já em 'a_render', como o robô dos takes: o Mac acaba-o e o
- * render fica na biblioteca do /estudio. Nada aqui publica. Nunca lança.
+ * Reel do clone pronto → liga o vídeo à peça e cria o projecto JÁ NO MOLDE CINEMÁTICO (20/11/2026,
+ * aprovado pelo Ricardo: «é mesmo isto que eu procuro»): o gémeo fica por baixo e o robô
+ * video/cinematico/robo-cinematico.mjs monta por cima gancho cinético, legendas palavra a palavra,
+ * imagens em PiP, chips, light leaks, música e cartão final com CTA, a -14 LUFS. O reel «à moda
+ * antiga» (gancho + karaoke no editor do Mac) deixou de se produzir. Nada aqui publica. Nunca lança.
  */
 async function projetoDoClone(db: SupabaseClient, g: Geracao, v: { ativoId: string; caminho: string; duracao: number }) {
   try {
@@ -127,25 +129,30 @@ async function projetoDoClone(db: SupabaseClient, g: Geracao, v: { ativoId: stri
     const { data: peca } = await db.from('conteudo_magnetico_pecas').select('user_id, marca, guiao').eq('id', pecaId).maybeSingle()
     if (!peca) return
     const gu = (peca.guiao ?? {}) as any
-    const seg0 = Array.isArray(gu.reel?.segmentos) ? gu.reel.segmentos[0] : null
-    const gancho = String(seg0?.texto_ecra || '').slice(0, 90)
-    const cta = gu.palavra_chave ? `Comenta «${String(gu.palavra_chave)}»` : ''
+    const segs: any[] = Array.isArray(gu.reel?.segmentos) ? gu.reel.segmentos : []
+    const marca = peca.marca === 'morethanmoney' ? 'morethanmoney' : 'ricardo-garcia'
     const dur = Math.max(2, Math.min(v.duracao, 180))
     const projeto = normalizarProjeto({
       ...PROJETO_VAZIO,
       clips: [{ media: 'video', fonte: { tipo: 'ativo', ref: v.ativoId, caminho: v.caminho, url: null }, nome: 'Clone (HeyGen)', duracao_fonte: dur, de: 0, ate: dur }],
-      textos: [
-        ...(gancho ? [{ texto: gancho, inicio: 0, fim: Math.min(3, dur), posicao: 'cima', estilo: 'titulo', animacao: 'aparecer' }] : []),
-        ...(cta ? [{ texto: cta, inicio: Math.max(0, dur - 3), fim: dur, posicao: 'baixo', estilo: 'cta', animacao: 'subir' }] : []),
-      ],
       legendas: 'karaoke',
       fundo: 'marca',
+      molde: 'cinematico',
+      cinematico: {
+        marca,
+        gancho: String(segs[0]?.texto_ecra || gu.gancho || ''),
+        palavra_chave: String(gu.palavra_chave || ''),
+        nicho: String(gu.nicho || ''),
+        texto: String(g.params?.texto || ''),
+        apoio: Array.isArray(g.params?.apoio) ? g.params.apoio : [],
+        cta_url: String(gu.cta_url || ''),
+      },
     })
-    const titulo = gu.nicho ? `Reel · ${String(gu.nicho).slice(0, 60)} · clone` : 'Reel do clone'
+    const titulo = gu.nicho ? `Reel · ${String(gu.nicho).slice(0, 60)} · cinemático` : 'Reel cinemático do clone'
     await db.from('estudio_projetos').insert({
       user_id: g.pedido_por || peca.user_id,
       titulo: titulo.slice(0, 120),
-      marca: peca.marca || 'ricardo-garcia',
+      marca,
       projeto,
       estado: 'a_render',
     })

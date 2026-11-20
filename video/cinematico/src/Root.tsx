@@ -14,6 +14,6 @@ export const Root: React.FC = () => (
     <Composition id="Solucoes" component={Solucoes} durationInFrames={TOTAL_SOLUCOES} fps={FPS} {...formatoPedido('youtube')} />
     <Composition id="LandingRicardo" component={LandingRicardo} durationInFrames={TOTAL_LANDING_RICARDO} fps={FPS} {...formatoPedido('youtube')} />
     <Composition id="AnuncioReel" component={AnuncioReel} durationInFrames={300} fps={FPS} width={1080} height={1920}
-      calculateMetadata={({ props }) => ({ durationInFrames: Math.round(duracaoAnuncio(String((props as { anuncio?: string }).anuncio || 'cor')) * FPS) })} />
+      calculateMetadata={({ props }) => ({ durationInFrames: Math.round(duracaoAnuncio(String((props as { anuncio?: string }).anuncio || 'cor'), props as never) * FPS) })} />
   </>
 )

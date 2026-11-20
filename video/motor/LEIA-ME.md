@@ -20,9 +20,10 @@ video/cinematico/      motor cinemático Remotion + Three.js (estilo /solucoes),
 | Pedido | Motor | Onde corre |
 |---|---|---|
 | Vídeo de apresentação, promo, landing, demo B2B (CGI, títulos, música, SFX) | `video/cinematico` (Remotion) | Mac ou nuvem: `bash video/cinematico/render.sh <Composicao> <marca>` |
-| Reel a partir de um take filmado, «Montar com IA», editor com timeline | editor do `/estudio` (`services/estudio-editor`) | Mac (launchd) |
-| Reel do Ricardo com o clone (HeyGen, looks verticais) | `/api/estudio/clone-reel` → editor do `/estudio` | HeyGen + Mac |
-| Reel do Ricardo com fotos/voz Fish ou com take cortado plano a plano | `services/reels-ricardo` (`render.py`, `filmado.py`) | GitHub Actions / Mac |
+| **Todo o reel diário com gémeo ou take (as duas marcas) — MOLDE CINEMÁTICO** (ver abaixo) | `video/cinematico/robo-cinematico.mjs` → composição `AnuncioReel` (modo `auto`) | GitHub Actions (`reels-cinematicos.yml`, 6×/dia) ou Mac |
+| Reel de anúncio (Meta) afinado à mão | `bash video/cinematico/projetos-anuncio.sh <chave>` (`anuncios.ts` + `legendas.json`) | Mac ou nuvem |
+| «Montar com IA» feito à mão, editor com timeline | editor do `/estudio` (`services/estudio-editor`) | Mac (launchd) |
+| ~~Reel do Ricardo com fotos animadas / plano a plano simples~~ | `services/reels-ricardo` — **horário desligado a 20/11** (só arranque à mão, para arquivo) | — |
 | Reel/story de guião automático (voz TTS, cartões, Pexels) | Conteúdo Magnético (`services/conteudo-magnetico-render`) | VPS |
 | Reels diários dos educadores | `tools/reels-educadores/diario.mjs` | GitHub Actions |
 | Bootcamps de estratégia (YouTube, gráfico fiel ao Pine) | `video/bootcamp` | Mac (`fila.sh`) |
@@ -34,6 +35,32 @@ video/cinematico/      motor cinemático Remotion + Three.js (estilo /solucoes),
 
 Studify, HeyGen e qualquer vídeo que venha de fora passam sempre por `finalizar` antes de ir para
 o Instagram, o site ou o YouTube, para sair com o mesmo formato e volume.
+
+## Molde cinemático dos reels diários (20/11/2026, aprovado pelo Ricardo)
+
+«É mesmo isto que eu procuro.» O molde dos anúncios (`AnuncioReel`, PR #346) passou a ser o de TODO o
+conteúdo diário em vídeo, nas duas marcas: os reels do dia, a publicação diária em vídeo e o storytelling.
+Os reels «à moda antiga» (gémeo plano a plano com gancho + karaoke, fotos animadas) deixaram de se produzir.
+
+**Receita (não mexer sem o Ricardo):** gémeo HeyGen (ou take filmado) por baixo, a falar a ecrã inteiro →
+gancho cinético (Anton, palavra a palavra com mola e desfoque) → legendas palavra a palavra com a palavra
+ativa a ouro → b-roll real (Mixkit) e ecrãs da app em PiP com o gémeo numa janela com aro da marca →
+chips só com o que a voz diz → destaque glitch da palavra-chave → light leaks e clarões nos cortes →
+música sintetizada + whooshes/impactos → cartão final com CTA → aviso educativo se falar de trading → -14 LUFS.
+
+**Fluxo automático:**
+1. `reels-cinematicos.yml` (1.ª ronda 05:20 UTC) chama `/api/cron/reels-cinematicos`: pede à HeyGen os
+   guiões novos de `conteudo_magnetico_pecas` (`lib/estudio/reels-cinematicos.ts`), por marca,
+   `site_settings.reels_cinematicos.por_dia` (omissão 1 + 1), com reserva de créditos.
+2. Cada ronda fecha os vídeos HeyGen prontos (`/api/estudio/geracao?sincronizar=heygen`) → projecto
+   `estudio_projetos` com `projeto.molde='cinematico'` (o editor do Mac nunca os vê).
+3. O robô: Whisper (palavras) → `auto.mjs` gera a peça (gancho, PiP, chips, destaque, CTA; temas de
+   negócio levam o CTA a `morethanmoney.pt/solucoes`) → `sintese.py` → Remotion → `motor.mjs finalizar/verificar`.
+4. O site põe o reel em RASCUNHO na conta da marca e pede «Publicar/Descartar» ao Ricardo no Telegram
+   e no briefing 9h30 (`lib/estudio/reel-aprovacao.ts`, 1 por dia e por conta às 20:30). Nada sai sozinho.
+
+Ensaio local: `node video/cinematico/robo-cinematico.mjs --ensaio=<video.mp4> --marca=ricardo-garcia --palavra=X`.
+Stock no Actions: `stock-mixkit.sh` (fora do git; no Mac `public/stock` liga ao MTM-Assets).
 
 ## Regras
 

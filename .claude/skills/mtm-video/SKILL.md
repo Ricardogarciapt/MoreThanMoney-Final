@@ -21,7 +21,7 @@ Antes de escrever código ou renderizar, lê `video/motor/LEIA-ME.md` (tabela «
 2. **Motor.** Pela tabela do LEIA-ME. Estilo cinemático (CGI, títulos palavra a palavra, música e
    SFX sintetizados, stock com grade) = `video/cinematico`, com um projecto novo em
    `src/projetos/<nome>/` que reutiliza `src/motor/util.tsx` (Titulo, Plano, Pelicula, Clarao).
-   Take filmado = editor do `/estudio`. Clone = HeyGen (`/api/estudio/clone-reel`).
+   Reel diário (gémeo ou take, as duas marcas) = MOLDE CINEMÁTICO `AnuncioReel` via `video/cinematico/robo-cinematico.mjs` (ver «Molde cinemático» no LEIA-ME). Montagem à mão = editor do `/estudio`. Clone = HeyGen (`/api/estudio/clone-reel`), que já cria o projecto cinemático.
    Gémeo a apresentar/narrar um vídeo que já existe (círculo no canto, lip sync sobre o áudio do vídeo):
    `node video/motor/motor.mjs gemeo <base> <saida> --look=mentor` — corre primeiro com `--estimar`
    (créditos HeyGen são limitados) e nunca re-renderizes a base só para isto.
