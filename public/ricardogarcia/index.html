@@ -70,6 +70,28 @@ p { color: #d6d6d6; }
 .btn-ouro:hover { background: var(--ouro-claro); }
 .btn-linha { border: 1px solid #333; color: #fff; }
 .btn-linha:hover { border-color: var(--ciano); }
+.app-promo { padding: 70px 0; }
+.app-caixa { display: grid; grid-template-columns: 1.2fr .8fr; gap: 34px; align-items: center; background: radial-gradient(700px 360px at 85% 20%, rgba(210,166,60,.16), transparent 70%), var(--cartao); border: 1px solid var(--linha); border-radius: 24px; padding: 38px; }
+.app-promo .etiq { display: inline-block; font-size: 13px; letter-spacing: 2px; text-transform: uppercase; color: var(--ouro-claro); border: 1px solid rgba(210,166,60,.5); border-radius: 999px; padding: 4px 12px; margin-bottom: 12px; }
+.app-lista { list-style: none; padding: 0; margin: 14px 0 20px; display: grid; gap: 8px; font-size: 17px; }
+.app-btns { display: flex; gap: 10px; flex-wrap: wrap; }
+.app-tel { display: flex; justify-content: center; }
+.tel { width: 250px; border-radius: 34px; border: 2px solid #2a3244; background: #07080c; padding: 18px 14px; box-shadow: 0 30px 80px rgba(0,0,0,.6), 0 0 50px rgba(210,166,60,.15); transform: rotate(4deg); }
+.tel-topo { display: flex; justify-content: space-between; font-size: 14px; margin-bottom: 12px; }
+.tel .moeda { display: inline-block; width: 12px; height: 12px; border-radius: 50%; background: radial-gradient(circle at 35% 30%, #fff3c4, var(--ouro-claro) 40%, #9a7422); vertical-align: -1px; }
+.tel-pat { background: #0f121a; border: 1px solid #232a38; border-radius: 14px; padding: 12px; margin-bottom: 10px; }
+.tel-pat b { font-family: "Anton", sans-serif; font-weight: 400; font-size: 22px; font-style: italic; display: block; }
+.tel-pat small { color: var(--cinza); font-size: 12px; }
+.tel-pat i { display: block; height: 7px; border-radius: 7px; background: #0a0d13; margin-top: 8px; overflow: hidden; }
+.tel-pat em { display: block; height: 100%; width: 62%; background: linear-gradient(90deg, var(--ciano-claro), var(--ouro-claro)); }
+.tel-m { display: flex; justify-content: space-between; gap: 6px; background: #0f121a; border: 1px solid #232a38; border-radius: 12px; padding: 10px; margin-bottom: 8px; font-size: 13px; }
+.tel-m b { color: var(--ouro-claro); font-family: "Anton", sans-serif; font-weight: 400; }
+.tel-ex { display: block; text-align: center; color: #555d6d; font-size: 10px; margin-top: 6px; }
+@media (max-width: 860px) { .app-caixa { grid-template-columns: 1fr; padding: 24px 18px; } .tel { transform: none; } .app-btns .btn { flex: 1 1 100%; } }
+.acoes-topo { display: flex; align-items: center; gap: 8px; flex: 0 0 auto; }
+.topo .ic-btn { padding: 9px 12px; }
+@media (max-width: 1360px) { .topo .ic-btn span { display: none; } .topo .ic-btn { width: 42px; padding: 0; } }
+@media (max-width: 520px) { .topo .marca > span { display: none; } .acoes-topo { gap: 6px; } .topo .acoes-topo .btn-azul { padding: 9px 12px; font-size: 13px; } }
 
 /* hero */
 .hero { position: relative; padding: 56px 0 72px; background: radial-gradient(900px 500px at 85% 10%, rgba(18,86,190,.35), transparent 60%), linear-gradient(180deg, var(--noite), var(--carvao) 85%); overflow: hidden; }
@@ -456,6 +478,7 @@ html:not(.com-gsap) .fp { opacity: 1; }
   .atalhos .chips::-webkit-scrollbar { display: none; }
   .atalhos .chips button { flex: none; }
 }
+[data-oculto] { display: none !important; }
 </style>
 </head>
 <body>
@@ -479,7 +502,11 @@ html:not(.com-gsap) .fp { opacity: 1; }
       <a href="#contacto" data-sec="contacto">Contacto</a>
       <i class="indicador" aria-hidden="true"></i>
     </nav>
-    <a class="btn btn-azul" href="/agendar?t=fecho-alto-valor">Marcar conversa</a>
+    <div class="acoes-topo">
+      <a class="btn btn-azul" href="/agendar?t=fecho-alto-valor" data-rg="cta-agendar-topo">Marcar conversa</a>
+      <a class="btn btn-linha ic-btn" href="/ricardogarcia/app?entrar=1" data-rg="cta-entrar" aria-label="Entrar na app do Ricardo"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/><path d="M10 17l5-5-5-5"/><path d="M15 12H3"/></svg><span>Entrar</span></a>
+      <a class="btn btn-ouro ic-btn" href="/ricardogarcia/painel" aria-label="Área do Ricardo"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 2l8 3v6c0 5-3.5 9-8 11-4.5-2-8-6-8-11V5z"/><path d="M9 12l2 2 4-4"/></svg><span>Área do Ricardo</span></a>
+    </div>
   </div>
 </header>
 
@@ -507,21 +534,8 @@ html:not(.com-gsap) .fp { opacity: 1; }
     <a class="desce" href="#historia" aria-label="Descer para a história">desliza<i></i></a>
   </section>
 
-  <section class="atalhos" id="atalhos" aria-label="Atalhos">
-    <div class="wrap">
-      <h2 class="titulo palavras" data-palavras>Por onde <span class="c">queres ir?</span></h2>
-      <div class="chips" role="tablist" aria-label="Escolhe um tema" id="chipsRg"></div>
-      <p class="sub-sec" id="subRg"></p>
-      <div class="lista-links" id="linksRg" role="tabpanel">
-        <a class="lk destaque" href="https://www.morethanmoney.pt/FreeSession" data-rg="i1"><span class="ic"></span><div><b>Assiste às minhas aulas</b><span>Acesso às sessões onde educo, de graça</span></div><i class="seta">→</i></a>
-        <a class="lk" href="/agendar?t=fecho-alto-valor" data-rg="h1"><span class="ic"></span><div><b>Agenda uma conversa comigo</b><span>Sessão 1 para 1 para te esclarecer</span></div><i class="seta">→</i></a>
-        <a class="lk" href="https://www.morethanmoney.pt/marketplace" data-rg="i3"><span class="ic"></span><div><b>Marketplace e ofertas</b><span>Produtos digitais e ferramentas</span></div><i class="seta">→</i></a>
-        <a class="lk" href="https://wa.me/351912666699" data-rg="i4"><span class="ic"></span><div><b>Fala comigo no WhatsApp</b><span>Manda mensagem e esclareço-te</span></div><i class="seta">→</i></a>
-      </div>
-    </div>
-  </section>
 
-  <section class="video-sec" id="historia">
+  <section class="video-sec" id="historia" data-bloco="historia">
     <div class="wrap">
       <h2 class="titulo palavras" data-palavras>A minha <span class="c">história</span>, contada por mim</h2>
       <p class="lead aparece" data-preencher>De onde vim, o que tive de destruir e porque é que a MoreThanMoney existe.</p>
@@ -537,7 +551,7 @@ html:not(.com-gsap) .fp { opacity: 1; }
     </div>
   </section>
 
-  <section class="trajeto" id="trajeto">
+  <section class="trajeto" id="trajeto" data-bloco="trajeto">
     <div class="wrap topo-sec">
       <div>
         <h2 class="titulo palavras" data-palavras>O <span class="c">trajeto</span></h2>
@@ -603,14 +617,14 @@ html:not(.com-gsap) .fp { opacity: 1; }
     <div class="linha b"><span class="oco">Porto</span><span class="estrela">✦</span><span>2003 · 2008 · 2010</span><span class="estrela">✦</span><span class="oco">Liliana &amp; Constança</span><span class="estrela">✦</span><span class="ouro-t">MoreThanMoney</span><span class="estrela">✦</span><span class="oco">Porto</span><span class="estrela">✦</span><span>2003 · 2008 · 2010</span><span class="estrela">✦</span><span class="oco">Liliana &amp; Constança</span><span class="estrela">✦</span><span class="ouro-t">MoreThanMoney</span><span class="estrela">✦</span></div>
   </div>
 
-  <section class="manifesto" aria-label="Manifesto">
+  <section class="manifesto" aria-label="Manifesto" data-bloco="manifesto">
     <div class="wrap">
       <p data-preencher>Não há resultados garantidos. Há <span class="ouro">trabalho</span>, <span class="ouro">disciplina</span> e uma <span class="c">equipa ao teu lado</span>. É isso que eu não tive, e é isso que te quero dar.</p>
       <div class="assina">Ricardo</div>
     </div>
   </section>
 
-  <section class="liga" id="liga">
+  <section class="liga" id="liga" data-bloco="liga">
     <div class="wrap">
       <div>
         <h2 class="titulo palavras" data-palavras>Onde tudo <span class="ouro">se liga</span></h2>
@@ -637,7 +651,7 @@ html:not(.com-gsap) .fp { opacity: 1; }
     </div>
   </section>
 
-  <section class="caminhos" id="caminhos">
+  <section class="caminhos" id="caminhos" data-bloco="caminhos">
     <div class="wrap">
       <h2 class="titulo palavras" data-palavras>Escolhe o teu <span class="c">caminho</span></h2>
       <p class="lead aparece" data-preencher>Se a minha história te tocou, há três formas de caminharmos juntos.</p>
@@ -688,7 +702,38 @@ html:not(.com-gsap) .fp { opacity: 1; }
   </section>
 
 
-  <section class="loja" id="loja" hidden>
+  <section class="atalhos" id="atalhos" data-bloco="atalhos" aria-label="Atalhos">
+    <div class="wrap">
+      <h2 class="titulo palavras" data-palavras>Por onde <span class="c">queres ir?</span></h2>
+      <div class="chips" role="tablist" aria-label="Escolhe um tema" id="chipsRg"></div>
+      <p class="sub-sec" id="subRg"></p>
+      <div class="lista-links" id="linksRg" role="tabpanel">
+        <a class="lk destaque" href="https://www.morethanmoney.pt/FreeSession" data-rg="i1"><span class="ic"></span><div><b>Assiste às minhas aulas</b><span>Acesso às sessões onde educo, de graça</span></div><i class="seta">→</i></a>
+        <a class="lk" href="/agendar?t=fecho-alto-valor" data-rg="h1"><span class="ic"></span><div><b>Agenda uma conversa comigo</b><span>Sessão 1 para 1 para te esclarecer</span></div><i class="seta">→</i></a>
+        <a class="lk" href="https://www.morethanmoney.pt/marketplace" data-rg="i3"><span class="ic"></span><div><b>Marketplace e ofertas</b><span>Produtos digitais e ferramentas</span></div><i class="seta">→</i></a>
+        <a class="lk" href="https://wa.me/351912666699" data-rg="i4"><span class="ic"></span><div><b>Fala comigo no WhatsApp</b><span>Manda mensagem e esclareço-te</span></div><i class="seta">→</i></a>
+      </div>
+    </div>
+  </section>
+
+  <section class="app-promo" id="app-missao" data-bloco="app" aria-label="A app do Ricardo">
+    <div class="wrap">
+      <div class="app-caixa aparece">
+        <div class="app-txt">
+          <span class="etiq">Grátis · web app</span>
+          <h2 class="titulo palavras" data-palavras>A minha app: <span class="ouro">Missão</span></h2>
+          <p class="lead">Três missões por dia, pensadas por mim: treino sem pesos, mindset e digital com IA. Sobe de patente, ganha insígnias e troca moedas por recompensas reais.</p>
+          <ul class="app-lista"><li>🔥 Treinos de 7 a 10 minutos, em casa</li><li>🧠 Cápsulas de mindset com reflexão</li><li>⚡ Micro-lições de IA e marca pessoal</li><li>🎖️ Patentes, insígnias e esquadrão</li></ul>
+          <div class="app-btns"><a class="btn btn-ouro" href="/ricardogarcia/app?utm_source=ricardogarcia&amp;utm_medium=landing" data-rg="cta-app">Começar a missão</a><a class="btn btn-linha" href="/ricardogarcia/app?entrar=1" data-rg="cta-app-entrar">Já tenho conta</a><a class="btn btn-linha" href="/missao?utm_source=ricardogarcia" data-rg="cta-app-saber">Saber mais</a></div>
+        </div>
+        <div class="app-tel" aria-hidden="true">
+          <div class="tel"><div class="tel-topo"><span>🔥 7</span><span><i class="moeda"></i> 42</span></div><div class="tel-pat"><b>SOLDADO</b><small>180 XP para Cabo</small><i><em></em></i></div><div class="tel-m t">🔥 Circuito de arranque <b>+30</b></div><div class="tel-m m">🧠 O que controlas hoje <b>+20</b></div><div class="tel-m d">⚡ O teu primeiro prompt <b>+25</b></div><small class="tel-ex">Exemplo ilustrativo</small></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="loja" id="loja" data-bloco="loja" hidden>
     <div class="wrap">
       <h2 class="titulo palavras" data-palavras id="lojaTit">Produtos <span class="c">digitais</span></h2>
       <p class="lead" id="lojaSub">Feitos por mim, para começares com estrutura.</p>
@@ -696,7 +741,7 @@ html:not(.com-gsap) .fp { opacity: 1; }
     </div>
   </section>
 
-  <section class="parceiros" id="parceiros">
+  <section class="parceiros" id="parceiros" data-bloco="parceiros">
     <div class="wrap">
       <h2 class="titulo palavras" data-palavras>Parceiros <span class="c">da marca</span></h2>
       <p class="lead aparece">Como marca pessoal, trabalho com duas fintech que nos ajudam a chegar a mais pessoas e a ter melhores soluções de pagamento.</p>
@@ -708,7 +753,7 @@ html:not(.com-gsap) .fp { opacity: 1; }
     </div>
   </section>
 
-  <section class="agendar">
+  <section class="agendar" data-bloco="agendar">
     <div class="wrap">
       <div class="caixa">
         <h2 class="titulo">Falamos <span class="c">10 minutos?</span></h2>
@@ -722,7 +767,7 @@ html:not(.com-gsap) .fp { opacity: 1; }
   </section>
 
 
-  <section class="contacto-rg" id="contacto">
+  <section class="contacto-rg" id="contacto" data-bloco="contacto">
     <div class="wrap">
       <h2 class="titulo" id="contTit">Fala <span class="c">comigo</span></h2>
       <p class="lead" id="contSub">Deixa a tua mensagem e respondo eu.</p>
@@ -740,7 +785,7 @@ html:not(.com-gsap) .fp { opacity: 1; }
     </div>
   </section>
 
-  <section id="redes">
+  <section id="redes" data-bloco="redes">
     <div class="wrap">
       <h2 class="titulo">Onde me <span class="c">encontras</span></h2>
       <div class="redes">
@@ -1017,6 +1062,16 @@ html:not(.com-gsap) .fp { opacity: 1; }
 
   fetch('/api/ricardogarcia/pagina', { credentials: 'omit' }).then(function (r) { return r.ok ? r.json() : null; }).then(function (d) {
     if (!d || !d.seccoes) return;
+    // Ordem dos blocos escolhida no painel: cada bloco ocupa, pela nova ordem, os lugares que os blocos já tinham.
+    if (d.ordem && d.ordem.length) {
+      var blocos = Array.prototype.slice.call(document.querySelectorAll('[data-bloco]'));
+      var porId = {}; blocos.forEach(function (b) { porId[b.getAttribute('data-bloco')] = b; });
+      var nova = [];
+      d.ordem.forEach(function (o) { if (porId[o.id]) { nova.push(porId[o.id]); if (o.ativo === false) porId[o.id].setAttribute('data-oculto', ''); delete porId[o.id]; } });
+      blocos.forEach(function (b) { if (porId[b.getAttribute('data-bloco')]) nova.push(b); });
+      var lugares = blocos.map(function (b) { var m = document.createComment('bloco'); b.parentNode.insertBefore(m, b); return m; });
+      lugares.forEach(function (m, i) { m.parentNode.replaceChild(nova[i], m); });
+    }
     var links = d.seccoes.filter(function (s) { return s.tipo === 'links' && s.itens.length; });
     var chips = document.getElementById('chipsRg'), lista = document.getElementById('linksRg'), sub = document.getElementById('subRg');
     if (links.length && chips && lista) {

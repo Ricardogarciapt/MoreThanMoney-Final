@@ -1,0 +1,388 @@
+<!doctype html>
+<html lang="pt-PT">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Missão · Ricardo Garcia</title>
+<meta name="description" content="Missões diárias de treino, mindset e digital com o Ricardo Garcia. Sobe de patente, ganha insígnias e troca moedas por recompensas.">
+<meta name="theme-color" content="#07080c">
+<link rel="icon" href="/ricardogarcia/icone.png">
+<link rel="apple-touch-icon" href="/ricardogarcia/app-icones/apple-180.png">
+<link rel="manifest" href="/ricardogarcia/app.webmanifest">
+<meta name="apple-mobile-web-app-title" content="Missão">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<style>
+@font-face { font-family: "Anton"; src: url(/ricardogarcia/fontes/Anton.ttf); font-display: swap; }
+@font-face { font-family: "Oswald"; src: url(/ricardogarcia/fontes/Oswald.ttf); font-display: swap; }
+@font-face { font-family: "Kalam"; src: url(/ricardogarcia/fontes/Kalam.ttf); font-display: swap; }
+:root { --fundo: #07080c; --placa: #0f121a; --placa2: #141925; --linha: #232a38; --texto: #e9edf3; --cinza: #8b93a3; --ciano: #1EAAE6; --azul: #1256BE; --ouro: #D2A63C; --ouro2: #E9C46A; --verde: #3ccf8e; --verm: #ff7a6b; }
+* { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+[hidden] { display: none !important; }
+html, body { margin: 0; background: var(--fundo); color: var(--texto); font-family: "Oswald", system-ui, sans-serif; font-size: 16px; }
+body { min-height: 100dvh; background: radial-gradient(700px 400px at 80% -10%, rgba(210,166,60,.10), transparent 70%), radial-gradient(600px 400px at 0% 0%, rgba(30,170,230,.10), transparent 70%), var(--fundo); }
+body::before { content: ""; position: fixed; inset: 0; pointer-events: none; background-image: linear-gradient(rgba(255,255,255,.025) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,.025) 1px, transparent 1px); background-size: 32px 32px; mask-image: linear-gradient(180deg, #000, transparent 70%); }
+a { color: var(--ciano); }
+h1, h2, h3, .anton { font-family: "Anton", sans-serif; font-weight: 400; letter-spacing: .5px; text-transform: uppercase; }
+.cx { max-width: 560px; margin: 0 auto; padding: 0 16px calc(96px + env(safe-area-inset-bottom)); position: relative; }
+button { font: inherit; cursor: pointer; }
+.btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 48px; padding: 0 20px; border-radius: 12px; border: 0; background: linear-gradient(135deg, var(--ouro2), var(--ouro)); color: #121212; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; width: 100%; }
+.btn.sec { background: transparent; border: 1px solid var(--linha); color: var(--texto); }
+.btn:disabled { opacity: .45; cursor: not-allowed; }
+input, textarea { width: 100%; font: inherit; color: var(--texto); background: #0a0d13; border: 1px solid var(--linha); border-radius: 12px; padding: 13px 14px; outline: none; }
+input:focus, textarea:focus { border-color: var(--ciano); }
+label { display: block; font-size: 13px; letter-spacing: 1.5px; text-transform: uppercase; color: var(--cinza); margin: 12px 0 6px; }
+.erro { color: var(--verm); font-size: 15px; min-height: 20px; margin-top: 8px; }
+.placa { background: linear-gradient(180deg, var(--placa2), var(--placa)); border: 1px solid var(--linha); border-radius: 18px; padding: 16px; position: relative; overflow: hidden; }
+.cantos::before, .cantos::after { content: ""; position: absolute; width: 14px; height: 14px; border: 2px solid var(--ouro2); opacity: .7; }
+.cantos::before { left: 8px; top: 8px; border-right: 0; border-bottom: 0; }
+.cantos::after { right: 8px; bottom: 8px; border-left: 0; border-top: 0; }
+.mono { font-family: ui-monospace, Menlo, monospace; font-size: 12px; letter-spacing: 1px; color: var(--cinza); text-transform: uppercase; }
+
+/* entrada */
+#entrada { padding-top: 32px; }
+.marca { display: flex; align-items: center; gap: 10px; }
+.marca img { width: 40px; height: 40px; }
+.marca b { font-family: "Anton"; font-size: 20px; letter-spacing: 1px; }
+.marca b i { color: var(--ciano); font-style: normal; }
+.hero-app h1 { font-size: clamp(46px, 13vw, 72px); line-height: .9; margin: 26px 0 10px; font-style: italic; }
+.hero-app h1 span { color: var(--ouro2); }
+.hero-app p { color: #c9d0db; font-size: 17px; margin: 0 0 18px; }
+.trio { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin: 18px 0; }
+.trio div { background: var(--placa); border: 1px solid var(--linha); border-radius: 14px; padding: 12px 10px; text-align: center; }
+.trio b { display: block; font-family: "Anton"; font-size: 15px; letter-spacing: 1px; text-transform: uppercase; }
+.trio small { color: var(--cinza); font-size: 12px; }
+.abas { display: grid; grid-template-columns: 1fr 1fr; background: #0a0d13; border: 1px solid var(--linha); border-radius: 12px; padding: 4px; margin-bottom: 6px; }
+.abas button { min-height: 42px; border: 0; border-radius: 9px; background: transparent; color: var(--cinza); letter-spacing: 1px; text-transform: uppercase; }
+.abas button.on { background: var(--placa2); color: var(--texto); box-shadow: inset 0 0 0 1px var(--linha); }
+.consent { display: flex; gap: 10px; align-items: flex-start; font-size: 14px; color: var(--cinza); margin-top: 12px; text-transform: none; letter-spacing: 0; }
+.consent input { width: 20px; height: 20px; flex: 0 0 20px; margin-top: 2px; }
+
+/* base */
+.topo { display: flex; align-items: center; justify-content: space-between; padding: 16px 0 10px; position: sticky; top: 0; z-index: 5; background: linear-gradient(180deg, var(--fundo) 70%, transparent); }
+.saldo { display: flex; gap: 8px; }
+.pill { display: inline-flex; align-items: center; gap: 6px; padding: 6px 12px; border-radius: 999px; background: var(--placa); border: 1px solid var(--linha); font-size: 15px; }
+.pill b { font-family: "Anton"; font-weight: 400; letter-spacing: .5px; }
+.moeda { width: 16px; height: 16px; border-radius: 50%; background: radial-gradient(circle at 35% 30%, #fff3c4, var(--ouro2) 40%, #9a7422); box-shadow: 0 0 8px rgba(233,196,106,.5); }
+.chama { color: #ff9a3c; }
+.patente { display: grid; grid-template-columns: 84px 1fr; gap: 14px; align-items: center; }
+.galao { width: 84px; height: 84px; display: grid; place-items: center; }
+.galao svg { width: 84px; height: 84px; filter: drop-shadow(0 0 14px rgba(210,166,60,.35)); }
+.patente h2 { margin: 2px 0 4px; font-size: 32px; font-style: italic; line-height: 1; }
+.barra { height: 10px; border-radius: 10px; background: #0a0d13; border: 1px solid var(--linha); overflow: hidden; margin-top: 8px; }
+.barra i { display: block; height: 100%; width: 0; background: linear-gradient(90deg, var(--ciano), var(--ouro2)); transition: width 1s cubic-bezier(.2,.9,.3,1); }
+.stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-top: 12px; }
+.stats div { background: #0a0d13; border: 1px solid var(--linha); border-radius: 12px; padding: 10px; text-align: center; }
+.stats b { display: block; font-family: "Anton"; font-size: 24px; font-weight: 400; }
+.stats small { color: var(--cinza); font-size: 12px; letter-spacing: 1px; text-transform: uppercase; }
+.sec-tit { display: flex; justify-content: space-between; align-items: baseline; margin: 22px 0 10px; }
+.sec-tit h3 { margin: 0; font-size: 22px; }
+.missao { display: grid; grid-template-columns: 52px 1fr auto; gap: 12px; align-items: center; padding: 14px; margin-bottom: 10px; cursor: pointer; transition: border-color .2s, transform .2s; }
+.missao:hover { border-color: #33405a; }
+.missao:active { transform: scale(.99); }
+.missao .ic { width: 52px; height: 52px; border-radius: 14px; display: grid; place-items: center; font-size: 24px; background: #0a0d13; border: 1px solid var(--linha); }
+.missao[data-tipo="treino"] .ic { color: #ff9a3c; }
+.missao[data-tipo="mindset"] .ic { color: var(--ouro2); }
+.missao[data-tipo="digital"] .ic { color: var(--ciano); }
+.missao b { display: block; font-size: 17px; }
+.missao span { color: var(--cinza); font-size: 14px; }
+.missao .xp { font-family: "Anton"; color: var(--ouro2); font-size: 15px; letter-spacing: .5px; text-align: right; }
+.missao.feita { opacity: .65; }
+.missao.feita .xp { color: var(--verde); }
+.dica { font-family: "Kalam"; color: var(--ouro2); font-size: 18px; margin: 6px 0 0; }
+
+/* folha */
+.folha { position: fixed; inset: 0; z-index: 20; display: none; align-items: flex-end; justify-content: center; background: rgba(0,0,0,.6); backdrop-filter: blur(4px); }
+.folha.on { display: flex; }
+.folha .caixa { width: 100%; max-width: 560px; max-height: 92dvh; overflow: auto; background: var(--placa); border: 1px solid var(--linha); border-radius: 22px 22px 0 0; padding: 20px 18px calc(22px + env(safe-area-inset-bottom)); animation: sobe .35s cubic-bezier(.2,.9,.3,1); }
+@keyframes sobe { from { transform: translateY(40px); opacity: 0; } }
+.folha h2 { font-size: 30px; margin: 6px 0 6px; font-style: italic; }
+.passos { list-style: none; padding: 0; margin: 14px 0; counter-reset: p; }
+.passos li { counter-increment: p; display: grid; grid-template-columns: 30px 1fr; gap: 10px; padding: 10px 0; border-bottom: 1px dashed var(--linha); font-size: 16px; }
+.passos li::before { content: counter(p, decimal-leading-zero); font-family: "Anton"; color: var(--ouro2); }
+.texto-m { font-size: 17px; line-height: 1.5; color: #d5dbe4; }
+.relogio { font-family: "Anton"; font-size: 64px; text-align: center; letter-spacing: 2px; margin: 10px 0; color: var(--ouro2); }
+.relogio.ok { color: var(--verde); }
+.fechar { float: right; background: none; border: 0; color: var(--cinza); font-size: 28px; line-height: 1; padding: 4px; }
+
+/* insígnias, recompensas, esquadrão */
+.grelha { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+.ins { text-align: center; padding: 14px 8px; }
+.ins .med { width: 58px; height: 58px; margin: 0 auto 8px; border-radius: 50%; display: grid; place-items: center; font-family: "Anton"; font-size: 22px; background: #0a0d13; border: 2px dashed #2a3244; color: #3a4458; }
+.ins.tem .med { border: 2px solid var(--ouro2); color: #1a1a1a; background: radial-gradient(circle at 35% 30%, #fff3c4, var(--ouro2) 45%, #9a7422); box-shadow: 0 0 18px rgba(233,196,106,.35); }
+.ins b { display: block; font-size: 13px; line-height: 1.2; }
+.ins small { color: var(--cinza); font-size: 11px; }
+.rec { margin-bottom: 10px; }
+.rec h4 { margin: 0 0 4px; font-size: 18px; }
+.rec p { margin: 0 0 10px; color: #c2c9d4; font-size: 15px; }
+.rec .lin { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.rec .bloq { color: var(--cinza); font-size: 13px; margin-top: 8px; }
+.rec .btn { width: auto; min-height: 40px; padding: 0 16px; font-size: 14px; }
+.req { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 8px; }
+.req span { font-size: 12px; padding: 3px 8px; border-radius: 999px; border: 1px solid var(--linha); color: var(--cinza); }
+.esq li { display: grid; grid-template-columns: 34px 1fr auto; gap: 10px; align-items: center; padding: 12px 4px; border-bottom: 1px solid var(--linha); }
+.esq li.eu { background: rgba(30,170,230,.06); border-radius: 10px; }
+.esq .pos { font-family: "Anton"; color: var(--cinza); }
+.esq li:nth-child(1) .pos { color: var(--ouro2); }
+.esq ul { list-style: none; padding: 0; margin: 0; }
+.pedido { font-size: 14px; color: var(--cinza); padding: 8px 0; border-bottom: 1px dashed var(--linha); display: flex; justify-content: space-between; gap: 8px; }
+
+/* doca */
+.doca { position: fixed; left: 50%; transform: translateX(-50%); bottom: calc(10px + env(safe-area-inset-bottom)); width: min(540px, calc(100% - 20px)); display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px; padding: 6px; border-radius: 18px; background: rgba(15,18,26,.92); border: 1px solid var(--linha); backdrop-filter: blur(10px); z-index: 10; }
+.doca button { border: 0; background: transparent; color: var(--cinza); min-height: 52px; border-radius: 12px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; font-size: 12px; letter-spacing: .5px; text-transform: uppercase; }
+.doca button span { font-size: 18px; }
+.doca button.on { background: linear-gradient(135deg, var(--ouro2), var(--ouro)); color: #111; }
+.vista { display: none; }
+.vista.on { display: block; animation: aparece .3s ease; }
+@keyframes aparece { from { opacity: 0; transform: translateY(8px); } }
+
+/* recompensa ganha */
+.toast { position: fixed; left: 50%; top: 18px; transform: translate(-50%, -140%); z-index: 30; background: var(--placa2); border: 1px solid var(--ouro); border-radius: 14px; padding: 12px 16px; min-width: 260px; max-width: calc(100% - 32px); text-align: center; box-shadow: 0 20px 60px rgba(0,0,0,.6); transition: transform .45s cubic-bezier(.2,1.3,.4,1); }
+.toast.on { transform: translate(-50%, 0); }
+.toast b { font-family: "Anton"; color: var(--ouro2); font-size: 22px; letter-spacing: .5px; }
+.promo { position: fixed; inset: 0; z-index: 40; display: none; place-items: center; background: radial-gradient(circle, rgba(210,166,60,.25), rgba(0,0,0,.9) 60%); text-align: center; padding: 24px; }
+.promo.on { display: grid; animation: aparece .4s ease; }
+.promo h2 { font-size: clamp(44px, 14vw, 80px); color: var(--ouro2); margin: 6px 0; font-style: italic; }
+.rodape { color: #6b7385; font-size: 12px; text-align: center; margin: 26px 0 0; line-height: 1.5; }
+@media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } }
+</style>
+</head>
+<body>
+<div class="cx">
+
+  <!-- ENTRADA -->
+  <section id="entrada" hidden>
+    <a class="marca" href="/ricardogarcia" style="text-decoration:none;color:inherit"><img src="/ricardogarcia/logo-rg-monograma-transparente.png" alt=""><b>RICARDO <i>GARCIA</i></b></a>
+    <div class="hero-app">
+      <h1>Missão<br><span>diária</span></h1>
+      <p>Três missões por dia: treino sem pesos, mindset e digital com IA. Sobe de patente, ganha insígnias e troca moedas por recompensas reais.</p>
+    </div>
+    <div class="trio"><div><b>🔥 Treino</b><small>7 a 10 min</small></div><div><b>🧠 Mindset</b><small>5 min</small></div><div><b>⚡ Digital</b><small>IA e marca</small></div></div>
+    <div class="placa cantos">
+      <div class="abas" role="tablist"><button class="on" data-modo="registar" type="button">Alistar-me</button><button data-modo="entrar" type="button">Já tenho conta</button></div>
+      <form id="fAuth" novalidate>
+        <div id="soReg">
+          <label for="aNome">Nome</label><input id="aNome" autocomplete="name" required>
+          <label for="aTel">Telemóvel (opcional)</label><input id="aTel" type="tel" autocomplete="tel">
+        </div>
+        <label for="aEmail">Email</label><input id="aEmail" type="email" autocomplete="email" required>
+        <label for="aPass">Palavra-passe</label><input id="aPass" type="password" autocomplete="new-password" minlength="8" required>
+        <input type="text" name="empresa" id="aEmpresa" tabindex="-1" autocomplete="off" style="position:absolute;left:-9999px" aria-hidden="true">
+        <label class="consent" id="soReg2"><input type="checkbox" id="aOk"> Aceito que o Ricardo Garcia e a MoreThanMoney guardem os meus dados para gerir a app e me contactarem sobre a minha evolução. Posso pedir para apagar a qualquer momento.</label>
+        <div class="erro" id="aErro" role="alert"></div>
+        <button class="btn" id="aBtn" type="submit">Começar a missão</button>
+      </form>
+    </div>
+    <p class="rodape">App gratuita de desenvolvimento pessoal. Conteúdo educativo: não é aconselhamento financeiro, médico nem de treino personalizado. Se tens alguma limitação física, adapta os exercícios ou fala com um profissional.<br><a href="/ricardogarcia">Voltar à página do Ricardo</a></p>
+  </section>
+
+  <!-- APP -->
+  <section id="app" hidden>
+    <header class="topo">
+      <a class="marca" href="/ricardogarcia" style="text-decoration:none;color:inherit"><img src="/ricardogarcia/logo-rg-monograma-transparente.png" alt="Página do Ricardo" style="width:34px;height:34px"></a>
+      <div class="saldo"><span class="pill"><span class="chama">🔥</span><b id="tSeq">0</b></span><span class="pill"><i class="moeda"></i><b id="tMoedas">0</b></span></div>
+    </header>
+
+    <div class="vista on" id="vBase">
+      <div class="placa cantos patente">
+        <div class="galao" id="galao"></div>
+        <div>
+          <div class="mono" id="pOla">Recruta</div>
+          <h2 id="pNome">Recruta</h2>
+          <div class="mono" id="pProx"></div>
+          <div class="barra"><i id="pBarra"></i></div>
+        </div>
+      </div>
+      <div class="stats"><div><b id="sXp">0</b><small>XP</small></div><div><b id="sDias">0</b><small>Dias activos</small></div><div><b id="sMelhor">0</b><small>Melhor série</small></div></div>
+      <div class="sec-tit"><h3>Missões de hoje</h3><span class="mono" id="mFeitas">0/3</span></div>
+      <div id="listaMissoes"></div>
+      <p class="dica" id="dicaDia"></p>
+    </div>
+
+    <div class="vista" id="vIns">
+      <div class="sec-tit"><h3>Insígnias</h3><span class="mono">Cada uma vale moedas</span></div>
+      <div class="grelha" id="gIns"></div>
+      <div class="sec-tit"><h3>Patentes</h3><span class="mono">Por XP</span></div>
+      <div class="placa" id="gPat"></div>
+    </div>
+
+    <div class="vista" id="vRec">
+      <div class="sec-tit"><h3>Recompensas</h3><span class="mono">Aprovadas pelo Ricardo</span></div>
+      <p class="texto-m" style="margin-top:0;font-size:15px;color:var(--cinza)">Ganhas moedas com dias completos, séries de 7 dias, insígnias e subidas de patente. As recompensas maiores pedem tempo e constância na app. É de propósito.</p>
+      <div id="gRec"></div>
+      <div class="sec-tit"><h3>Os teus pedidos</h3></div>
+      <div class="placa" id="gPed"></div>
+    </div>
+
+    <div class="vista esq" id="vEsq">
+      <div class="sec-tit"><h3>Esquadrão</h3><span class="mono">Top 10 por XP</span></div>
+      <div class="placa"><ul id="gEsq"></ul></div>
+      <div class="placa cantos" style="margin-top:14px">
+        <h3 style="margin:0 0 6px;font-size:20px">Queres ir mais longe?</h3>
+        <p class="texto-m" style="margin:0 0 12px;font-size:15px">Educação financeira, ferramentas de IA e uma comunidade a sério na MoreThanMoney.</p>
+        <a class="btn" href="/ricardogarcia?utm_source=app-missao#caminhos" style="text-decoration:none">Ver os caminhos</a>
+        <button class="btn sec" id="bSair" type="button" style="margin-top:10px">Sair da conta</button>
+      </div>
+    </div>
+    <p class="rodape">Conteúdo educativo. Não é aconselhamento financeiro, médico nem de treino personalizado.</p>
+  </section>
+</div>
+
+<nav class="doca" id="doca" hidden>
+  <button class="on" data-v="vBase" type="button"><span>⌂</span>Base</button>
+  <button data-v="vIns" type="button"><span>✦</span>Insígnias</button>
+  <button data-v="vRec" type="button"><span>◈</span>Recompensas</button>
+  <button data-v="vEsq" type="button"><span>⚑</span>Esquadrão</button>
+</nav>
+
+<div class="folha" id="folha" role="dialog" aria-modal="true"><div class="caixa" id="folhaC"></div></div>
+<div class="toast" id="toast" role="status"></div>
+<div class="promo" id="promo"><div><div class="mono">Promoção</div><h2 id="promoN"></h2><p class="texto-m">Subiste de patente. A disciplina está a pagar.</p><button class="btn" type="button" onclick="this.closest('.promo').classList.remove('on')" style="max-width:260px">Continuar</button></div></div>
+
+<script>
+(function () {
+  var API = '/api/ricardogarcia/app', E = null, modo = 'registar', relogio = null;
+  var $ = function (id) { return document.getElementById(id); };
+  var esc = function (s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); };
+  var ICON = { treino: '🔥', mindset: '🧠', digital: '⚡' };
+  var DICAS = ['A disciplina é escolher o que queres mais em vez do que queres agora.', 'Um dia de cada vez. Hoje conta.', 'Não precisas de motivação. Precisas de começar.', 'Pequeno e feito ganha a perfeito e adiado.', 'Quem aparece todos os dias acaba por chegar.'];
+
+  function api(body) {
+    return fetch(API, { method: body ? 'POST' : 'GET', headers: body ? { 'Content-Type': 'application/json' } : {}, body: body ? JSON.stringify(body) : undefined, credentials: 'same-origin' })
+      .then(function (r) { return r.json().catch(function () { return { ok: false, erro: 'Sem ligação. Tenta outra vez.' }; }); });
+  }
+  function toast(html, ms) { var t = $('toast'); t.innerHTML = html; t.classList.add('on'); clearTimeout(toast.t); toast.t = setTimeout(function () { t.classList.remove('on'); }, ms || 3200); }
+
+  function galao(p) {
+    var n = Math.min(4, (p % 4) + 1), oficial = p >= 6, estrelas = p >= 9 ? p - 8 : 0, s = '';
+    for (var i = 0; i < n && !estrelas; i++) s += '<path d="M14 ' + (52 - i * 11) + ' L42 ' + (38 - i * 11) + ' L70 ' + (52 - i * 11) + '" fill="none" stroke="url(#g)" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/>';
+    for (var k = 0; k < estrelas; k++) s += '<polygon transform="translate(' + (42 + (k - (estrelas - 1) / 2) * 20) + ',38) scale(.9)" points="0,-10 3,-3 10,-3 4,2 6,9 0,5 -6,9 -4,2 -10,-3 -3,-3" fill="url(#g)"/>';
+    return '<svg viewBox="0 0 84 84" aria-hidden="true"><defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#fff3c4"/><stop offset=".5" stop-color="#E9C46A"/><stop offset="1" stop-color="#9a7422"/></linearGradient></defs>' +
+      '<path d="M42 4 L76 18 V44 C76 62 60 74 42 80 C24 74 8 62 8 44 V18 Z" fill="#0f121a" stroke="' + (oficial ? '#E9C46A' : '#1EAAE6') + '" stroke-width="2"/>' + s + '</svg>';
+  }
+
+  function render(e) {
+    E = e; var m = e.membro;
+    $('entrada').hidden = true; $('app').hidden = false; $('doca').hidden = false;
+    $('tSeq').textContent = m.sequencia; $('tMoedas').textContent = m.moedas;
+    $('galao').innerHTML = galao(m.patente);
+    $('pOla').textContent = 'Olá, ' + m.primeiro; $('pNome').textContent = m.patente_nome;
+    var pct = m.prox_xp ? Math.round((m.xp - m.base_xp) / (m.prox_xp - m.base_xp) * 100) : 100;
+    $('pProx').textContent = m.prox_nome ? (m.prox_xp - m.xp) + ' XP para ' + m.prox_nome : 'Patente máxima';
+    requestAnimationFrame(function () { $('pBarra').style.width = pct + '%'; });
+    $('sXp').textContent = m.xp; $('sDias').textContent = m.dias_ativos; $('sMelhor').textContent = m.melhor_sequencia;
+    var feitas = e.missoes.filter(function (x) { return x.estado === 'feita'; }).length;
+    $('mFeitas').textContent = feitas + '/' + e.missoes.length;
+    $('listaMissoes').innerHTML = e.missoes.map(function (x) {
+      return '<div class="placa missao ' + (x.estado === 'feita' ? 'feita' : '') + '" data-tipo="' + x.tipo + '" data-id="' + esc(x.id) + '" role="button" tabindex="0"><div class="ic">' + ICON[x.tipo] + '</div><div><b>' + esc(x.titulo) + '</b><span>' + esc(x.resumo || '') + '</span></div><div class="xp">' + (x.estado === 'feita' ? '✓ +' + x.xp_ganho : '+' + x.xp + ' XP') + '</div></div>';
+    }).join('');
+    $('dicaDia').textContent = feitas === e.missoes.length ? 'Missão do dia cumprida. Amanhã há mais.' : DICAS[new Date().getDate() % DICAS.length];
+    $('gIns').innerHTML = e.insignias.map(function (i) { return '<div class="placa ins ' + (i.tem ? 'tem' : '') + '"><div class="med">' + (i.tem ? '★' : '?') + '</div><b>' + esc(i.nome) + '</b><small>' + esc(i.desc) + '</small></div>'; }).join('');
+    $('gPat').innerHTML = e.patentes.map(function (p, i) { return '<div class="pedido"><span style="color:' + (i <= m.patente ? 'var(--ouro2)' : 'inherit') + '">' + (i <= m.patente ? '★ ' : '') + esc(p.nome) + '</span><span>' + p.xp + ' XP</span></div>'; }).join('');
+    $('gRec').innerHTML = e.recompensas.map(function (r) {
+      return '<div class="placa rec"><h4>' + esc(r.titulo) + '</h4><p>' + esc(r.descricao || '') + '</p><div class="req"><span>' + r.min_dias_conta + ' dias na app</span><span>' + r.min_dias_ativos + ' dias activos</span><span>' + esc(e.patentes[r.min_patente].nome) + '+</span></div>' +
+        '<div class="lin"><span class="pill"><i class="moeda"></i><b>' + r.custo + '</b></span><button class="btn" data-rec="' + esc(r.id) + '" ' + (r.bloqueio ? 'disabled' : '') + ' type="button">Pedir</button></div>' + (r.bloqueio ? '<div class="bloq">🔒 ' + esc(r.bloqueio) + '</div>' : '') + '</div>';
+    }).join('') || '<p class="mono">Sem recompensas activas.</p>';
+    var nomeRec = {}; e.recompensas.forEach(function (r) { nomeRec[r.id] = r.titulo; });
+    var EST = { pendente: '⏳ À espera do Ricardo', aprovado: '✅ Aprovado', recusado: '↩︎ Recusado (moedas devolvidas)', entregue: '🎁 Entregue' };
+    $('gPed').innerHTML = e.resgates.length ? e.resgates.map(function (p) { return '<div class="pedido"><span>' + esc(nomeRec[p.recompensa_id] || 'Recompensa') + '</span><span>' + EST[p.estado] + '</span></div>'; }).join('') : '<span class="mono">Ainda não pediste nada.</span>';
+    $('gEsq').innerHTML = e.esquadrao.map(function (x, i) { return '<li class="' + (x.eu ? 'eu' : '') + '"><span class="pos">#' + (i + 1) + '</span><span>' + esc(x.nome) + (x.eu ? ' (tu)' : '') + '<br><small class="mono">' + esc(x.patente) + '</small></span><b class="anton">' + x.xp + '</b></li>'; }).join('');
+  }
+
+  function abrir(id) {
+    var x = E.missoes.filter(function (k) { return k.id === id; })[0]; if (!x) return;
+    var c = x.conteudo || {}, h = '<button class="fechar" type="button" aria-label="Fechar">×</button><div class="mono">' + ICON[x.tipo] + ' ' + x.tipo + ' · +' + x.xp + ' XP</div><h2>' + esc(x.titulo) + '</h2>';
+    if (x.tipo === 'treino') {
+      h += '<ol class="passos">' + (c.passos || []).map(function (p) { return '<li>' + esc(p) + '</li>'; }).join('') + '</ol>' + (c.nota ? '<p class="dica">' + esc(c.nota) + '</p>' : '');
+      h += '<div class="relogio" id="rel">' + fmt(x.min_seg) + '</div>';
+      if (x.estado === 'feita') h += '<button class="btn sec" disabled>Feita hoje ✓</button>';
+      else if (x.estado === 'por_fazer') h += '<button class="btn" id="bGo" type="button">Começar treino</button>';
+      else h += '<button class="btn" id="bFim" type="button" disabled>Concluir treino</button>';
+    } else {
+      h += '<p class="texto-m">' + esc(c.texto || '') + '</p><label for="resp">' + esc(c.pergunta || c.acao || 'A tua resposta') + '</label><textarea id="resp" rows="5" maxlength="1500" ' + (x.estado === 'feita' ? 'disabled' : '') + '></textarea>';
+      h += x.estado === 'feita' ? '<button class="btn sec" disabled style="margin-top:12px">Feita hoje ✓</button>' : '<button class="btn" id="bFim" type="button" style="margin-top:12px">Concluir missão</button>';
+    }
+    h += '<div class="erro" id="fErro" role="alert"></div>';
+    $('folhaC').innerHTML = h; $('folha').classList.add('on');
+    $('folhaC').querySelector('.fechar').onclick = fechar;
+    if (x.tipo === 'treino' && x.estado === 'em_curso') contar(x);
+    var go = $('bGo'); if (go) go.onclick = function () { go.disabled = true; api({ accao: 'iniciar', missao: x.id }).then(function (r) { if (!r.ok) { $('fErro').textContent = r.erro; go.disabled = false; return; } render(r); abrir(x.id); }); };
+    var fim = $('bFim'); if (fim) fim.onclick = function () {
+      fim.disabled = true; var resp = $('resp') ? $('resp').value : '';
+      api({ accao: 'concluir', missao: x.id, resposta: resp }).then(function (r) {
+        if (!r.ok) { $('fErro').textContent = r.erro; fim.disabled = false; return; }
+        var antes = E.membro.patente; fechar(); render(r);
+        var g = r.ganho || {}; toast('<b>+' + g.xp + ' XP</b>' + (g.moedas ? ' · <i class="moeda" style="display:inline-block;vertical-align:-2px"></i> +' + g.moedas : '') + (g.completo ? '<br>Dia completo. 🔥' : '') + (g.insignias && g.insignias.length ? '<br>Insígnia: ' + esc(g.insignias.join(', ')) : ''), 4200);
+        if (g.subiu) { $('promoN').textContent = r.membro.patente_nome; $('promo').classList.add('on'); }
+      });
+    };
+  }
+  function fmt(s) { s = Math.max(0, Math.ceil(s)); return Math.floor(s / 60) + ':' + ('0' + (s % 60)).slice(-2); }
+  function contar(x) {
+    clearInterval(relogio);
+    var fimT = Date.parse(x.iniciado) + x.min_seg * 1000;
+    var tick = function () { var r = (fimT - Date.now()) / 1000, el = $('rel'), b = $('bFim'); if (!el) return clearInterval(relogio);
+      el.textContent = r > 0 ? fmt(r) : 'FEITO'; el.classList.toggle('ok', r <= 0); if (b) b.disabled = r > 5; if (r <= 0) clearInterval(relogio); };
+    tick(); relogio = setInterval(tick, 500);
+  }
+  function fechar() { clearInterval(relogio); $('folha').classList.remove('on'); }
+  $('folha').addEventListener('click', function (e) { if (e.target === $('folha')) fechar(); });
+  document.addEventListener('keydown', function (e) { if (e.key === 'Escape') fechar(); });
+  $('listaMissoes').addEventListener('click', function (e) { var c = e.target.closest('.missao'); if (c) abrir(c.getAttribute('data-id')); });
+  $('listaMissoes').addEventListener('keydown', function (e) { var c = e.target.closest('.missao'); if (c && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); abrir(c.getAttribute('data-id')); } });
+  $('gRec').addEventListener('click', function (e) {
+    var b = e.target.closest('[data-rec]'); if (!b || b.disabled) return;
+    var r = E.recompensas.filter(function (k) { return k.id === b.getAttribute('data-rec'); })[0];
+    $('folhaC').innerHTML = '<button class="fechar" type="button" aria-label="Fechar">×</button><div class="mono">Confirmar pedido</div><h2>' + esc(r.titulo) + '</h2><p class="texto-m">Vais usar ' + r.custo + ' moedas. O Ricardo confirma o pedido e fala contigo. Se for recusado, as moedas voltam para ti.</p><button class="btn" id="bConf" type="button">Confirmar</button><div class="erro" id="fErro"></div>';
+    $('folha').classList.add('on'); $('folhaC').querySelector('.fechar').onclick = fechar;
+    $('bConf').onclick = function () { this.disabled = true; api({ accao: 'resgatar', recompensa: r.id }).then(function (x) { if (!x.ok) { $('fErro').textContent = x.erro; return; } fechar(); render(x); toast('<b>Pedido enviado</b><br>O Ricardo vai ver.'); }); };
+  });
+  $('doca').addEventListener('click', function (e) {
+    var b = e.target.closest('button'); if (!b) return;
+    document.querySelectorAll('.doca button').forEach(function (k) { k.classList.toggle('on', k === b); });
+    document.querySelectorAll('.vista').forEach(function (v) { v.classList.toggle('on', v.id === b.getAttribute('data-v')); });
+    window.scrollTo(0, 0);
+  });
+  $('bSair').onclick = function () { api({ accao: 'sair' }).then(function () { location.reload(); }); };
+
+  // entrada
+  document.querySelectorAll('.abas button').forEach(function (b) { b.onclick = function () {
+    modo = b.getAttribute('data-modo'); document.querySelectorAll('.abas button').forEach(function (k) { k.classList.toggle('on', k === b); });
+    $('soReg').hidden = $('soReg2').hidden = modo !== 'registar'; $('aPass').autocomplete = modo === 'registar' ? 'new-password' : 'current-password';
+    $('aBtn').textContent = modo === 'registar' ? 'Começar a missão' : 'Entrar'; $('aErro').textContent = '';
+  }; });
+  try { if (new URLSearchParams(location.search).get('entrar')) document.querySelector('.abas button[data-modo="entrar"]').click(); } catch (_) {}
+  $('fAuth').addEventListener('submit', function (e) {
+    e.preventDefault(); var b = $('aBtn'); b.disabled = true; $('aErro').textContent = '';
+    var q = new URLSearchParams(location.search);
+    var body = modo === 'registar'
+      ? { accao: 'registar', nome: $('aNome').value, telefone: $('aTel').value, email: $('aEmail').value, pass: $('aPass').value, consentimento: $('aOk').checked, empresa: $('aEmpresa').value, origem: q.get('utm_source') || q.get('o') || 'app' }
+      : { accao: 'entrar', email: $('aEmail').value, pass: $('aPass').value };
+    api(body).then(function (r) { b.disabled = false; if (!r.ok) { $('aErro').textContent = r.erro; return; } carregar(true); });
+  });
+
+  function carregar(novo) {
+    api().then(function (e) {
+      if (!e.membro) { $('entrada').hidden = false; $('app').hidden = true; $('doca').hidden = true; return; }
+      render(e); if (novo) toast('<b>Bem-vindo, ' + esc(e.membro.primeiro) + '</b><br>Começa pela primeira missão.');
+    }, function () { $('entrada').hidden = false; });
+  }
+  carregar(false);
+  if ('serviceWorker' in navigator) navigator.serviceWorker.register('/ricardogarcia/app-sw.js', { scope: '/ricardogarcia/' }).catch(function () {});
+  // Instalar no ecrã principal (Android/desktop: pedido nativo; iPhone: instrução Partilhar → Ecrã principal)
+  var pedidoInstalar = null, standalone = matchMedia('(display-mode: standalone)').matches || navigator.standalone;
+  window.addEventListener('beforeinstallprompt', function (e) { e.preventDefault(); pedidoInstalar = e; mostrarInstalar(); });
+  function mostrarInstalar() {
+    if (standalone || $('instalar')) return;
+    var ios = /iphone|ipad|ipod/i.test(navigator.userAgent);
+    if (!pedidoInstalar && !ios) return;
+    var d = document.createElement('div'); d.id = 'instalar'; d.className = 'placa'; d.style.cssText = 'margin-top:14px;display:flex;gap:12px;align-items:center';
+    d.innerHTML = '<img src="/ricardogarcia/app-icones/192.png" alt="" width="44" height="44" style="border-radius:10px"><div style="flex:1"><b>Instala a app</b><br><span class="mono" style="text-transform:none;letter-spacing:0">' + (pedidoInstalar ? 'Fica no teu ecrã principal, como uma app.' : 'No Safari: Partilhar → Adicionar ao ecrã principal.') + '</span></div>' + (pedidoInstalar ? '<button class="btn" style="width:auto;min-height:40px" type="button">Instalar</button>' : '');
+    var b = d.querySelector('button'); if (b) b.onclick = function () { pedidoInstalar.prompt(); pedidoInstalar.userChoice.then(function () { d.remove(); }); };
+    var alvo = $('dicaDia'); if (alvo) alvo.parentNode.insertBefore(d, alvo.nextSibling);
+  }
+  setTimeout(mostrarInstalar, 1500);
+})();
+</script>
+</body>
+</html>

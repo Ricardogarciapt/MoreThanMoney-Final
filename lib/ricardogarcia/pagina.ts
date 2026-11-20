@@ -53,14 +53,19 @@ export function linkDoProduto(p: Pick<RgProduto, 'marketplace_slug' | 'url'>): s
 /** O que a landing pública mostra: só o que está ligado. */
 export async function paginaPublica() {
   const db = getSupabaseAdmin()
-  const [{ data: pag }, { data: prods }] = await Promise.all([
+  const [{ data: pag }, { data: prods }, { data: blocos }] = await Promise.all([
     db.from('rg_pagina').select('seccoes, atualizado').eq('id', 1).maybeSingle(),
+    db.from('rg_dados').select('v').eq('k', 'landing_blocos').maybeSingle(),
     db.from('rg_produtos').select('*').eq('activo', true).order('ordem').order('criado'),
   ])
+  // Ordem e visibilidade dos blocos grandes da landing (painel → Página → Ordem da página)
+  const ordem = (Array.isArray(blocos?.v) ? (blocos!.v as any[]) : [])
+    .filter(b => b && typeof b.id === 'string' && /^[a-z]{2,20}$/.test(b.id)).slice(0, 20)
+    .map(b => ({ id: b.id as string, ativo: b.ativo !== false }))
   const seccoes = limparSeccoes(pag?.seccoes).filter(s => s.ativo).map(s => ({ ...s, itens: s.itens.filter(i => i.ativo) }))
   const produtos = ((prods as RgProduto[] | null) ?? []).map(p => ({
     id: p.id, titulo: p.titulo, subtitulo: p.subtitulo, descricao: p.descricao,
     preco_cents: p.preco_cents, imagem_url: p.imagem_url, link: linkDoProduto(p),
   })).filter(p => p.link)
-  return { seccoes, produtos, atualizado: pag?.atualizado ?? null }
+  return { seccoes, produtos, ordem, atualizado: pag?.atualizado ?? null }
 }

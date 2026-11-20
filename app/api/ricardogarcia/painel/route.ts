@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getSupabaseAdmin } from '@/lib/supabase-admin-client'
-import { requireAdmin } from '@/lib/admin-api-helpers'
+import { requireSuperAdmin } from '@/lib/super-admin'
 import { limparSeccoes, urlSegura } from '@/lib/ricardogarcia/pagina'
 
 export const dynamic = 'force-dynamic'
@@ -10,7 +10,7 @@ const ESTADOS = ['novo', 'respondido', 'agendado', 'cliente', 'arquivado']
 
 // Painel pessoal do Ricardo: só administradores.
 export async function GET(req: NextRequest) {
-  const bloqueio = await requireAdmin(req)
+  const bloqueio = await requireSuperAdmin(req)
   if (bloqueio) return bloqueio
   const db = getSupabaseAdmin()
   const agora = new Date(), daqui = new Date(Date.now() + 14 * 864e5), ontem = new Date(Date.now() - 864e5)
@@ -48,7 +48,7 @@ export async function GET(req: NextRequest) {
 }
 
 export async function POST(req: NextRequest) {
-  const bloqueio = await requireAdmin(req)
+  const bloqueio = await requireSuperAdmin(req)
   if (bloqueio) return bloqueio
   const db = getSupabaseAdmin()
   let b: any = {}

@@ -1,0 +1,19 @@
+{
+  "name": "Missão · Ricardo Garcia",
+  "short_name": "Missão",
+  "description": "Missões diárias de treino, mindset e digital com o Ricardo Garcia.",
+  "id": "/ricardogarcia/app",
+  "start_url": "/ricardogarcia/app?o=pwa",
+  "scope": "/ricardogarcia/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#07080c",
+  "theme_color": "#07080c",
+  "lang": "pt-PT",
+  "categories": ["education", "health", "lifestyle"],
+  "icons": [
+    { "src": "/ricardogarcia/app-icones/192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "/ricardogarcia/app-icones/512.png", "sizes": "512x512", "type": "image/png" },
+    { "src": "/ricardogarcia/app-icones/maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}
