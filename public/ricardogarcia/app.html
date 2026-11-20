@@ -289,6 +289,25 @@ input, textarea, select { font-size: 16px !important; }
 .det-lista li.agora { background: rgba(210,166,60,.08); border-radius: 10px; padding-left: 8px; padding-right: 8px; }
 .det-big { font-family: "Anton"; font-size: 56px; line-height: 1; color: var(--ouro2); margin: 6px 0; }
 .det-img { width: 100%; border-radius: 14px; margin: 6px 0 10px; }
+
+/* plano de 39 dias */
+.missao[data-tipo="networking"] { border-left-color: #7fb8ff; }
+.missao[data-tipo="networking"] .ic { color: #7fb8ff; }
+.entrada-diario[data-tipo="networking"] { border-left-color: #7fb8ff; }
+.plano39 { margin: 14px 0 4px; padding: 14px 16px; cursor: pointer; }
+.plano39 .lin { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; }
+.plano39 .num { font-family: "Anton"; font-size: 30px; line-height: 1; color: var(--ouro2); }
+.plano39 .num small { font-size: 15px; color: var(--cinza); font-family: "Oswald"; }
+.plano39 .fase { font-size: 14px; color: var(--cinza); margin-top: 4px; }
+.barra39 { display: grid; grid-template-columns: repeat(39, 1fr); gap: 2px; margin-top: 10px; }
+.barra39 i { height: 6px; border-radius: 2px; background: #1c2230; }
+.barra39 i.ok { background: linear-gradient(90deg, var(--ciano), var(--ouro2)); }
+.barra39 i.hoje { background: var(--ouro2); box-shadow: 0 0 8px rgba(233,196,106,.7); }
+.barra39 i.f { margin-left: 4px; }
+.grelha39 { display: grid; grid-template-columns: repeat(13, 1fr); gap: 4px; margin: 6px 0 14px; }
+.grelha39 span { aspect-ratio: 1; border-radius: 6px; background: #141a26; display: grid; place-items: center; font-size: 11px; color: var(--cinza); }
+.grelha39 span.ok { background: rgba(30,170,230,.25); color: var(--texto); }
+.grelha39 span.hoje { background: var(--ouro2); color: #111; font-weight: 600; }
 /* perfil e avatar */
 .perfil-bt { display: flex; align-items: center; gap: 8px; background: none; border: 0; padding: 0; color: var(--texto); min-width: 0; }
 .perfil-bt .av { width: 40px; height: 40px; flex: 0 0 40px; font-size: 18px; border: 2px solid var(--ouro); }
@@ -431,6 +450,7 @@ input, textarea, select { font-size: 16px !important; }
       </div>
       <div class="stats"><div><b id="sXp">0</b><small>XP</small></div><div><b id="sDias">0</b><small>Dias activos</small></div><div><b id="sMelhor">0</b><small>Melhor série</small></div></div>
       <div class="placa dia" id="cDia"><div class="lin"><span class="mono">XP das missões hoje</span><span><b id="dXp">0</b> <span class="mono" id="dMax">/ 110</span></span></div><div class="seg" id="dSeg"><i></i><i></i><i></i><i></i></div></div>
+      <div class="placa plano39" id="cPlano" hidden></div>
       <div class="sec-tit"><h3>Missões de hoje</h3><span class="mono" id="mFeitas">0/4</span></div>
       <div id="listaMissoes"></div>
       <p class="dica" id="dicaDia"></p>
@@ -541,7 +561,7 @@ input, textarea, select { font-size: 16px !important; }
   var API = '/api/ricardogarcia/app', E = null, modo = 'registar', relogio = null;
   var $ = function (id) { return document.getElementById(id); };
   var esc = function (s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); };
-  var ICON = { treino: '🔥', mindset: '🧠', digital: '⚡', produtividade: '⏱' };
+  var ICON = { treino: '🔥', mindset: '🧠', digital: '⚡', produtividade: '⏱', networking: '🤝' };
   var DICAS = ['A disciplina é escolher o que queres mais em vez do que queres agora.', 'Um dia de cada vez. Hoje conta.', 'Não precisas de motivação. Precisas de começar.', 'Pequeno e feito ganha a perfeito e adiado.', 'Quem aparece todos os dias acaba por chegar.'];
 
   function api(body) {
@@ -575,6 +595,12 @@ input, textarea, select { font-size: 16px !important; }
     var diarias = e.missoes.filter(function (x) { return !x.desafio; });
     var feitas = diarias.filter(function (x) { return x.estado === 'feita'; }).length;
     $('mFeitas').textContent = feitas + '/' + diarias.length;
+    var PL = e.plano;
+    if (PL) {
+      var bar = ''; for (var q = 1; q <= PL.total; q++) bar += '<i class="' + (q < PL.dia ? 'ok' : q === PL.dia ? 'hoje' : '') + (q === 14 || q === 27 ? ' f' : '') + '"></i>';
+      $('cPlano').hidden = false;
+      $('cPlano').innerHTML = '<div class="lin"><span class="mono">Plano 39' + (PL.ciclo > 1 ? ' · ciclo ' + PL.ciclo : '') + '</span><span class="num">Dia ' + PL.dia + ' <small>/ ' + PL.total + '</small></span></div><div class="fase">Fase ' + PL.fase.n + ' · ' + esc(PL.fase.nome) + '</div><div class="barra39">' + bar + '</div>';
+    }
     $('dSeg').innerHTML = diarias.map(function (x) { return '<i class="' + (x.estado === 'feita' ? 'ok' : '') + '" title="' + esc(x.titulo) + '"></i>'; }).join('');
     var H = e.historico || [], ativos = 0, completos = 0;
     var pad = H.length ? (new Date(H[0].dia + 'T12:00:00Z').getUTCDay() + 6) % 7 : 0, cel = '';
@@ -1064,7 +1090,7 @@ input, textarea, select { font-size: 16px !important; }
     var dia = (E && E.hoje && E.hoje.dia) || new Date().toISOString().slice(0, 10);
     try { if (!forcar && localStorage.getItem('missaoIntro') === dia) return; localStorage.setItem('missaoIntro', dia); } catch (_) { if (!forcar) return; }
     var ms = (E && E.missoes) || [], el = $('intro');
-    $('introTxt').textContent = ms.length ? ms.length + ' missões · ' + (ms[0].titulo || '') : 'Bora.';
+    $('introTxt').textContent = (E && E.plano ? 'Dia ' + E.plano.dia + ' de 39 · Fase ' + E.plano.fase.nome + ' · ' : '') + (ms.length ? ms.length + ' missões' : 'Bora.');
     el.classList.remove('vai'); el.classList.add('on');
     el.onclick = function () { if (el.classList.contains('vai')) return; Som.desbloquear(); Som.intro(); el.classList.add('vai'); setTimeout(function () { el.classList.remove('on', 'vai'); }, 3000); };
   }
@@ -1082,6 +1108,18 @@ input, textarea, select { font-size: 16px !important; }
   }
   var DET = [
     ['.placa.patente, #gPat .pedido', function () { modal(escada()); }],
+    ['#cPlano', function () {
+      var PL = E.plano; if (!PL) return;
+      var g = ''; for (var q = 1; q <= PL.total; q++) g += '<span class="' + (q < PL.dia ? 'ok' : q === PL.dia ? 'hoje' : '') + '">' + q + '</span>';
+      var SL = { treino: '🔥 Corpo', mindset: '🧠 Mente', networking: '🤝 Rede', digital: '⚡ Rede · digital', produtividade: '⏱ Melhoria' };
+      modal('<div class="mono">Plano 39' + (PL.ciclo > 1 ? ' · ciclo ' + PL.ciclo : '') + '</div><h2>Dia ' + PL.dia + ' de ' + PL.total + '</h2>' +
+        '<p class="texto-m" style="font-size:15px">Todos os dias há quatro missões: corpo, mente, rede (pessoas e presença) e melhoria. Não é só treino: é tornares-te uma pessoa mais forte, mais organizada e com mais gente boa à volta.</p>' +
+        '<div class="grelha39">' + g + '</div>' +
+        '<ul class="det-lista">' + PL.fases.map(function (f) { return '<li class="' + (f.n === PL.fase.n ? 'on agora' : f.n < PL.fase.n ? 'on' : '') + '" style="display:block"><b>Fase ' + f.n + ' · ' + esc(f.nome) + '</b> <span class="mono">dias ' + f.de + '–' + f.ate + '</span><br><span style="font-size:14px;color:var(--cinza)">' + esc(f.lema) + '</span></li>'; }).join('') + '</ul>' +
+        '<div class="mono" style="margin-top:8px">Hoje</div><ul class="det-lista">' + (E.missoes || []).filter(function (x) { return !x.desafio; }).map(function (x) { return '<li class="' + (x.estado === 'feita' ? 'on' : '') + '"><span>' + (SL[x.tipo] || x.tipo) + ' · ' + esc(x.titulo) + '</span><button class="btn sec" style="width:auto;padding:6px 14px" type="button" data-abrirm="' + esc(x.id) + '">' + (x.estado === 'feita' ? 'Ver' : 'Fazer') + '</button></li>'; }).join('') + '</ul>' +
+        (PL.dia === PL.total ? '<p class="texto-m" style="font-size:14px">Amanhã começa o ciclo ' + (PL.ciclo + 1) + ', com treinos mais intensos.</p>' : ''),
+        function (b) { var id = b.getAttribute('data-abrirm'); if (id) { fechar(); abrir(id); } });
+    }],
     ['.stats > div', function (el) {
       var m = E.membro, i = Array.prototype.indexOf.call(el.parentNode.children, el), H = E.historico || [];
       var sem = H.slice(-7).reduce(function (s, d) { return s + (d.xp || 0); }, 0);
