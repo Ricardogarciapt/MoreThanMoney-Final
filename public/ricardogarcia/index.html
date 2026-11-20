@@ -453,6 +453,7 @@ html:not(.com-gsap) .fp { opacity: 1; }
 .pr h3 { font-size: 24px; font-style: italic; line-height: 1.05; }
 .pr p { margin: 0; font-size: 15px; }
 .pr .preco { font-family: "Anton", sans-serif; font-size: 30px; color: var(--ouro-claro); line-height: 1; margin-top: auto; padding-top: 8px; }
+.pr .preco s { font-size: 18px; color: var(--cinza, #8b93a3); margin-right: 10px; text-decoration-thickness: 2px; }
 .pr .btn { width: 100%; }
 .contacto-rg { padding: 20px 0 70px; }
 .form-rg { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 18px; background: var(--cartao); border: 1px solid var(--linha); border-radius: 20px; padding: 20px; }
@@ -1091,7 +1092,8 @@ html:not(.com-gsap) .fp { opacity: 1; }
     if (loja && secP && d.produtos && d.produtos.length) {
       document.getElementById('lojaSub').textContent = secP.sub || '';
       document.getElementById('produtosRg').innerHTML = d.produtos.map(function (p) {
-        var preco = p.preco_cents == null ? '' : (p.preco_cents / 100).toLocaleString('pt-PT', { style: 'currency', currency: 'EUR' });
+        var eur = function (c) { return (c / 100).toLocaleString('pt-PT', { style: 'currency', currency: 'EUR', minimumFractionDigits: c % 100 ? 2 : 0 }); };
+        var preco = p.preco_cents == null ? '' : (p.preco_antes_cents ? '<s>' + eur(p.preco_antes_cents) + esc(p.preco_sufixo || '') + '</s>' : '') + eur(p.preco_cents) + (p.preco_antes_cents ? '' : esc(p.preco_sufixo || ''));
         var u = comOrigem(p.link), ext = externo(p.link);
         return '<article class="pr"><div class="img">' + (p.imagem_url ? '<img src="' + esc(p.imagem_url) + '" alt="" loading="lazy">' : '<b>' + esc(p.titulo) + '</b>') + '</div><div class="corpo"><h3>' + esc(p.titulo) + '</h3>' + (p.subtitulo ? '<p>' + esc(p.subtitulo) + '</p>' : '') +
           (preco ? '<div class="preco">' + preco + '</div>' : '') + '<a class="btn btn-azul" href="' + esc(u) + '" data-rg="' + esc(p.id) + '" data-rg-tipo="produto"' + (ext ? ' target="_blank" rel="noopener"' : '') + '>Quero este</a></div></article>';

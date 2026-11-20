@@ -69,6 +69,8 @@ export async function POST(req: NextRequest) {
         preco_cents: p.preco_cents === '' || p.preco_cents == null ? null : Math.max(0, Math.round(Number(p.preco_cents) || 0)),
         imagem_url: urlSegura(p.imagem_url) || null, marketplace_slug: t(p.marketplace_slug, 160) || null,
         url: urlSegura(p.url) || null, so_landing: p.so_landing !== false, activo: p.activo !== false,
+        preco_antes_cents: p.preco_antes_cents === '' || p.preco_antes_cents == null ? null : Math.max(0, Math.round(Number(p.preco_antes_cents) || 0)),
+        preco_sufixo: t(p.preco_sufixo, 20) || null,
         ordem: Number.isFinite(Number(p.ordem)) ? Number(p.ordem) : 0, atualizado: new Date().toISOString(),
       }
       if (!linha.titulo) return falha('O produto precisa de um nome.')
