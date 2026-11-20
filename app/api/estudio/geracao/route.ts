@@ -151,6 +151,16 @@ export async function GET(request: NextRequest) {
     })
   }
 
+  // ?sincronizar=heygen (robô cinemático, com o segredo do motor): fecha os vídeos da HeyGen que já
+  // acabaram mesmo sem ninguém com o /estudio aberto — é isto que cria os projectos cinemáticos.
+  if (request.nextUrl.searchParams.get('sincronizar') === 'heygen' && ehMotor(request)) {
+    const { data: pend } = await db.from('estudio_geracoes')
+      .select('id, estado, motor, params, pedido_por').eq('motor', 'heygen').eq('estado', 'a_gerar')
+      .order('criado_em', { ascending: true }).limit(4)
+    const estados = await Promise.all((pend ?? []).map((g) => sincronizarHeygen(db, g)))
+    return NextResponse.json({ ok: true, vistos: estados.length, prontos: estados.filter((e) => e === 'pronto').length })
+  }
+
   const { data: recentes } = await db
     .from('estudio_geracoes')
     .select('id, tipo, estado, params, origem, ensaio, saida_ativo_id, erro, criado_em, terminado_em')

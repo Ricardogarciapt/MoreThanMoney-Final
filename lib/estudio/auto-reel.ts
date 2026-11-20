@@ -9,7 +9,7 @@ import type { SupabaseClient } from '@supabase/supabase-js'
 import { MARCAS_CASA } from '@/lib/conteudo-magnetico/acesso'
 import { normalizarCortes, normalizarPalavras } from './texto'
 import { lerComando } from './comando'
-import { montarDeTake, type Projeto } from './projeto'
+import { montarDeTake, normalizarProjeto, type Projeto } from './projeto'
 
 /** Pedido do robô: o ritmo dos reels do Ricardo (gancho → plano → take → plano), 15 s, 3 planos. */
 export const COMANDO_ROBO = 'Cria um reel do Ricardo em 3 planos, 15 s'
@@ -58,10 +58,30 @@ export async function roboReelDoTake(db: SupabaseClient, takeId: string): Promis
     if (ja?.length) return null
     const r = await projetoDoTake(db, takeId, { comando: COMANDO_ROBO })
     if (!r || !r.projeto.clips.length) return null
-    const { data: dono } = await db.from('conteudo_magnetico_pecas').select('user_id').eq('id', t.peca_id).maybeSingle()
+    const { data: dono } = await db.from('conteudo_magnetico_pecas').select('user_id, guiao').eq('id', t.peca_id).maybeSingle()
     if (!dono?.user_id) return null
+    // 20/11: o reel do robô sai no MOLDE CINEMÁTICO (o take dele por baixo, edição AnuncioReel por cima),
+    // montado pelo robô video/cinematico/robo-cinematico.mjs. O «Montar com IA» à mão continua na timeline.
+    const take = r.projeto.clips.find((c) => c.fonte.tipo === 'take') ?? r.projeto.clips[0]
+    const g = (dono.guiao ?? {}) as any
+    const seg0 = Array.isArray(g.reel?.segmentos) ? g.reel.segmentos[0] : null
+    const projeto = normalizarProjeto({
+      ...r.projeto,
+      clips: [take],
+      textos: [],
+      molde: 'cinematico',
+      cinematico: {
+        marca: r.marca === 'morethanmoney' ? 'morethanmoney' : 'ricardo-garcia',
+        gancho: String(seg0?.texto_ecra || ''),
+        palavra_chave: String(g.palavra_chave || ''),
+        nicho: String(g.nicho || ''),
+        texto: (Array.isArray(g.reel?.segmentos) ? g.reel.segmentos : []).map((x: any) => String(x?.fala || '')).join(' '),
+        apoio: [],
+        cta_url: String(g.cta_url || ''),
+      },
+    })
     const { data } = await db.from('estudio_projetos')
-      .insert({ user_id: dono.user_id, titulo: `${r.titulo} · robô`.slice(0, 120), marca: r.marca, projeto: r.projeto, estado: 'a_render' })
+      .insert({ user_id: dono.user_id, titulo: `${r.titulo} · robô`.slice(0, 120), marca: r.marca, projeto, estado: 'a_render' })
       .select('id').maybeSingle()
     return data?.id ?? null
   } catch {

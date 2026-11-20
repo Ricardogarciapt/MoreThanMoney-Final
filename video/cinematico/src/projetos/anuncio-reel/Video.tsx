@@ -1,7 +1,7 @@
 import React from 'react'
 import { AbsoluteFill, Audio, Freeze, Img, OffthreadVideo, Sequence, getInputProps, interpolate, spring, staticFile, useCurrentFrame, useVideoConfig } from 'remotion'
 import { LightLeak } from '@remotion/light-leaks'
-import { ANUNCIOS, LEGENDAS, fimVoz, type Anuncio, type Imagem } from './anuncios'
+import { anuncioDe, segsDe, videoDe, musicaDe, fimVoz, type Anuncio, type Imagem } from './anuncios'
 import { FPS, OURO, OURO_CLARO, FUNDO, MARCA } from '../../motor/marca'
 import { Pelicula, Clarao, Plano, clamp, ease } from '../../motor/util'
 
@@ -27,7 +27,7 @@ function modoPip(fr: number, imgs: Imagem[]) {
 
 /* ── Cortes secos com zoom (jump cut) a cada frase ── */
 function zoomFrase(t: number, k: string) {
-  const segs = LEGENDAS[k]
+  const segs = segsDe(k)
   const niveis = [1.0, 1.16, 1.06, 1.2]
   let n = 0
   for (let i = 1; i < segs.length; i++) {
@@ -48,7 +48,7 @@ const Gemeo: React.FC<{ k: string; a: Anuncio }> = ({ k, a }) => {
   const x = interpolate(m, [0, 1], [0, PIP.x]), y = interpolate(m, [0, 1], [0, PIP.y])
   const zf = zoomFrase(t, k)
   // pequeno tremor no corte
-  const ultimoCorte = LEGENDAS[k].filter((s, i, arr) => i > 0 && s[0] <= t && /[.?:!]$/.test(arr[i - 1][2].trim())).pop()
+  const ultimoCorte = segsDe(k).filter((s, i, arr) => i > 0 && s[0] <= t && /[.?:!]$/.test(arr[i - 1][2].trim())).pop()
   const desdeCorte = ultimoCorte ? fr - f(ultimoCorte[0]) : 99
   const shake = desdeCorte < 6 ? (6 - desdeCorte) * 1.6 * Math.sin(desdeCorte * 2.3) : 0
   const push = interpolate(fr, [0, f(fim)], [1.0, 1.05])
@@ -58,9 +58,9 @@ const Gemeo: React.FC<{ k: string; a: Anuncio }> = ({ k, a }) => {
   return (
     <div style={{ position: 'absolute', left: x, top: y, width: w, height: h, borderRadius: m * 30, overflow: 'hidden', zIndex: 5, boxShadow: m > 0.05 ? `0 30px 90px rgba(0,0,0,.65), 0 0 0 ${3 * m}px ${OURO_CLARO}, 0 0 ${50 * m}px ${OURO}` : undefined }}>
       {fr < f(fim) + 2 ? (
-        <OffthreadVideo src={staticFile(`stock/anuncios/${k}.mp4`)} style={estilo} />
+        <OffthreadVideo src={staticFile(videoDe(k))} style={estilo} />
       ) : (
-        <Freeze frame={f(fim)}><OffthreadVideo src={staticFile(`stock/anuncios/${k}.mp4`)} muted style={estilo} /></Freeze>
+        <Freeze frame={f(fim)}><OffthreadVideo src={staticFile(videoDe(k))} muted style={estilo} /></Freeze>
       )}
       <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(180deg, rgba(0,0,0,.35) 0%, rgba(0,0,0,0) 22%, rgba(0,0,0,0) 55%, rgba(0,0,0,.55) 100%)' }} />
     </div>
@@ -137,7 +137,7 @@ const Legendas: React.FC<{ k: string; a: Anuncio }> = ({ k, a }) => {
   const t = fr / FPS
   if (t < a.gancho.ate || t >= a.cta.de - 0.05) return null
   if (a.destaque && t >= a.destaque.em && t <= a.destaque.ate) return null
-  const seg = LEGENDAS[k].find((s) => t >= s[0] - 0.05 && t <= s[1] + 0.25)
+  const seg = segsDe(k).find((s) => t >= s[0] - 0.05 && t <= s[1] + 0.25)
   if (!seg) return null
   const palavras = seg[2].split(' ')
   const pos = (t - seg[0]) / Math.max(0.2, seg[1] - seg[0])
@@ -274,7 +274,7 @@ const Moldura: React.FC<{ k: string; a: Anuncio; total: number }> = ({ k, a, tot
 
 export const Video: React.FC = () => {
   const k = chave()
-  const a = ANUNCIOS[k]
+  const a = anuncioDe(k)
   const { durationInFrames } = useVideoConfig()
   const fim = f(fimVoz(k))
   const fr = useCurrentFrame()
@@ -302,15 +302,15 @@ export const Video: React.FC = () => {
       {/* transições: clarão + fuga de luz a cada imagem e no CTA */}
       <AbsoluteFill style={{ zIndex: 15, pointerEvents: 'none' }}>
         <Clarao em={2} dur={10} />
-        <Sequence from={0} durationInFrames={36}><LightLeak durationInFrames={36} seed={2} hueShift={k.startsWith('rg') ? 190 : 20} /></Sequence>
+        <Sequence from={0} durationInFrames={36}><LightLeak durationInFrames={36} seed={2} hueShift={a.marca === 'ricardo-garcia' ? 190 : 20} /></Sequence>
         {[...a.imagens.map((i) => i.de), a.cta.de].map((s, n) => (
-          <Sequence key={n} from={Math.max(0, f(s) - 10)} durationInFrames={28}><LightLeak durationInFrames={28} seed={n * 3 + 5} hueShift={k.startsWith('rg') ? 190 : 20} /></Sequence>
+          <Sequence key={n} from={Math.max(0, f(s) - 10)} durationInFrames={28}><LightLeak durationInFrames={28} seed={n * 3 + 5} hueShift={a.marca === 'ricardo-garcia' ? 190 : 20} /></Sequence>
         ))}
         <Clarao em={f(a.cta.de)} dur={8} />
       </AbsoluteFill>
       <AbsoluteFill style={{ zIndex: 16, pointerEvents: 'none' }}><Pelicula /></AbsoluteFill>
       <Moldura k={k} a={a} total={durationInFrames} />
-      <Audio src={staticFile(`stock/anuncios/${k}-musica.wav`)} volume={volMusica} />
+      <Audio src={staticFile(musicaDe(k))} volume={volMusica} />
     </AbsoluteFill>
   )
 }

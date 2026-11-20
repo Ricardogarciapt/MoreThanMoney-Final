@@ -1,6 +1,7 @@
 // Reels de anúncio (Meta) com o gémeo HeyGen como camada base e edição completa por cima.
 // Render: bash video/cinematico/projetos-anuncio.sh <chave>   (chaves: cor seg edu b2b rgs rgl)
 // Tempos em SEGUNDOS da voz (legendas.json vem das .srt da HeyGen; stock/anuncios/<chave>.mp4 é o vídeo sem legendas).
+import { getInputProps } from 'remotion'
 import legendas from './legendas.json'
 
 export type Imagem = { de: number; ate: number; src: string; tipo: 'video' | 'app'; grade?: 'noite' | 'frio' | 'ouro' | 'neutro' }
@@ -122,5 +123,21 @@ export const ANUNCIOS: Record<string, Anuncio> = {
 
 export type Seg = [number, number, string]
 export const LEGENDAS = legendas as unknown as Record<string, Seg[]>
-export const fimVoz = (k: string) => LEGENDAS[k][LEGENDAS[k].length - 1][1]
-export const duracao = (k: string) => fimVoz(k) + CAUDA
+
+/*
+ * MODO AUTO (20/11, reels diários): o mesmo molde, mas a peça vem nas props em vez de estar escrita
+ * aqui à mão. O robô (video/cinematico/robo-cinematico.mjs) gera-a com auto.mjs a partir do vídeo do
+ * gémeo + Whisper + guião e passa { anuncio: 'auto', auto: { config, legendas, video, musica } }.
+ */
+export type Auto = { config: Anuncio; legendas: Seg[]; video: string; musica: string }
+type Props = { anuncio?: string; auto?: Auto }
+const propsAtuais = (): Props => {
+  try { return getInputProps() as Props } catch { return {} }
+}
+const autoDe = (k: string, props?: Props): Auto | null => (k === 'auto' ? (props ?? propsAtuais()).auto ?? null : null)
+export const anuncioDe = (k: string, props?: Props): Anuncio => autoDe(k, props)?.config ?? ANUNCIOS[k]
+export const segsDe = (k: string, props?: Props): Seg[] => autoDe(k, props)?.legendas ?? LEGENDAS[k]
+export const videoDe = (k: string) => autoDe(k)?.video ?? `stock/anuncios/${k}.mp4`
+export const musicaDe = (k: string) => autoDe(k)?.musica ?? `stock/anuncios/${k}-musica.wav`
+export const fimVoz = (k: string, props?: Props) => { const s = segsDe(k, props); return s[s.length - 1][1] }
+export const duracao = (k: string, props?: Props) => fimVoz(k, props) + CAUDA
