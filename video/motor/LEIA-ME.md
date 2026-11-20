@@ -69,6 +69,6 @@ Os ids `morethanmoney` e `ricardo-garcia` são os mesmos que já estão na base 
 node video/motor/motor.mjs marcas
 node video/motor/motor.mjs finalizar heygen.mp4 "$(node video/motor/motor.mjs saida ricardo-garcia reels clone-01)" --formato=reel
 bash video/cinematico/render.sh Solucoes ricardo-garcia --voz=narracao/voz --slug=landing-ricardo
-bash video/cinematico/render.sh LandingRicardo ricardo-garcia --slug=landing   # vídeo da landing /marca/ricardogarciapt (avatar em MTM-Assets/stock/cinematico/landing-ricardo/raw.mp4)
+bash video/cinematico/render.sh LandingRicardo ricardo-garcia --slug=landing   # vídeo da landing /ricardogarcia (avatar em MTM-Assets/stock/cinematico/landing-ricardo/raw.mp4)
 bash video/cinematico/render.sh Solucoes modelo-b2b --cliente='{"nome":"Estúdio Ana","cores":{"destaque":"#C0392B","destaque2":"#E74C3C"}}'
 ```

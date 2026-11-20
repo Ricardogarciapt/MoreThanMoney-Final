@@ -38,9 +38,9 @@
       "ficheiro": "fontes/Kalam.ttf"
     }
   },
-  "logo": "public/marca/ricardogarciapt/logo-ricardo-garcia.png",
-  "logo_video": "marca/ricardogarciapt/logo-ricardo-garcia.png",
-  "logo_alternativo": "public/marca/ricardogarciapt/logo-rg-monograma-transparente.png",
+  "logo": "public/ricardogarcia/logo-ricardo-garcia.png",
+  "logo_video": "ricardogarcia/logo-ricardo-garcia.png",
+  "logo_alternativo": "public/ricardogarcia/logo-rg-monograma-transparente.png",
   "grade": "teal",
   "legendas": {
     "estilo": "karaoke",
@@ -65,7 +65,7 @@
     "texto": "Comenta a palavra",
     "url": "morethanmoney.pt"
   },
-  "brand_kit": "https://www.morethanmoney.pt/marca/ricardogarciapt",
+  "brand_kit": "https://www.morethanmoney.pt/ricardogarcia",
   "regras": [
     "Primeira pessoa, directo, história de vida e disciplina. PT-PT, «tu».",
     "Reels 7–15 s, gémeo IA plano a plano, looks verticais HeyGen.",

@@ -31,15 +31,22 @@ const nextConfig = {
   async rewrites() {
     return {
       // Páginas estáticas em public/ servidas sem o «/index.html» no endereço. Sem isto,
-      // /marca/ricardogarciapt dava 404 (o Next não abre o index.html de uma pasta de public/).
+      // /ricardogarcia dava 404 (o Next não abre o index.html de uma pasta de public/).
       beforeFiles: [
-        { source: '/marca/ricardogarciapt', destination: '/marca/ricardogarciapt/index.html' },
-        { source: '/marca/ricardogarciapt/', destination: '/marca/ricardogarciapt/index.html' },
+        { source: '/ricardogarcia', destination: '/ricardogarcia/index.html' },
+        { source: '/ricardogarcia/', destination: '/ricardogarcia/index.html' },
       ],
     }
   },
   async redirects() {
     return [
+      // A página do Ricardo saiu de /marca/ricardogarciapt para /ricardogarcia (pedido do dono 20/11/2026);
+      // o kit de marca deixou de existir. Links antigos caem na página nova.
+      { source: '/marca/ricardogarciapt', destination: '/ricardogarcia', permanent: true },
+      { source: '/marca/ricardogarciapt/', destination: '/ricardogarcia', permanent: true },
+      { source: '/marca/ricardogarciapt/index.html', destination: '/ricardogarcia', permanent: true },
+      { source: '/marca/ricardogarciapt/kit.html', destination: '/ricardogarcia', permanent: true },
+      { source: '/marca/ricardogarciapt/:ficheiro*', destination: '/ricardogarcia/:ficheiro*', permanent: true },
       {
         // AIOS saiu do site (decisão do dono 06/10): links guardados de /aios e /jarvis vão para
         // o admin em vez de dar 404. O AIOS vive agora só localmente.
