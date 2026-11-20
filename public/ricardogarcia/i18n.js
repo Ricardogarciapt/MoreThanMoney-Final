@@ -65,7 +65,7 @@
     'SOLDADO': 'PRIVATE', '180 XP para Cabo': '180 XP to Corporal', '🔥 Circuito de arranque': '🔥 Starter circuit',
     '🧠 O que controlas hoje': '🧠 What you control today', '⚡ O teu primeiro prompt': '⚡ Your first prompt', 'Exemplo ilustrativo': 'Illustrative example',
     'Produtos': 'Digital', 'digitais': 'products', 'Feitos por mim, para começares com estrutura.': 'Made by me, so you start with structure.',
-    'da marca': 'of the brand', 'Como marca pessoal, trabalho com duas fintech que nos ajudam a chegar a mais pessoas e a ter melhores soluções de pagamento.': 'As a personal brand, I work with two fintechs that help us reach more people and offer better payment solutions.',
+    'da marca': 'of the brand', 'Como marca pessoal, trabalho com duas fintech que nos ajudam a chegar a mais pessoas e a ter melhores soluções de pagamento, e com a PU Prime, a corretora que recomendo.': 'As a personal brand, I work with two fintechs that help us reach more people and offer better payment solutions, and with PU Prime, the broker I recommend.',
     'Fintech · alcance e pagamentos': 'Fintech · reach and payments', 'A casa de tudo o que construímos': 'The home of everything we build',
     'Falamos': 'Talk for', '10 minutos?': '10 minutes?',
     'Conta-me onde estás e para onde queres ir. Dizemos-te com sinceridade se a MoreThanMoney é para ti, e por onde começar.': "Tell me where you are and where you want to go. We'll tell you honestly whether MoreThanMoney is for you, and where to start.",
@@ -79,6 +79,13 @@
     'Assistente MTM': 'MTM Assistant', 'Falar': 'Talk',
     'Conteúdo educativo, não constitui aconselhamento financeiro. O trading envolve risco de perda de capital e resultados passados não garantem resultados futuros. As contas MTM Funded são simuladas; a MoreThanMoney não é uma prop firm nem custodia fundos de clientes.':
       'Educational content, not financial advice. Trading involves risk of capital loss and past results do not guarantee future results. MTM Funded accounts are simulated; MoreThanMoney is not a prop firm and does not hold client funds.',
+    'Corretora parceira': 'Partner broker',
+    'A corretora com que trabalho. Abres conta pelo link da MoreThanMoney, validas no nosso Telegram e eu acompanho o teu arranque.': 'The broker I work with. Open your account through the MoreThanMoney link, validate it on our Telegram and I will guide your start.',
+    'Abre a conta': 'Open the account', 'Pelo link da MoreThanMoney, para ficares ligado à nossa equipa.': 'Through the MoreThanMoney link, so you are connected to our team.',
+    'Valida no Telegram': 'Validate on Telegram', 'O assistente MTM pede-te o UID da conta e confirma que está ligada a nós.': 'The MTM assistant asks for your account UID and confirms it is linked to us.',
+    'Onboarding comigo': 'Onboarding with me', 'Eu confirmo a tua conta e fazemos juntos os primeiros passos.': 'I confirm your account and we take the first steps together.',
+    '1 · Abrir conta': '1 · Open account', '2 · Validar no Telegram': '2 · Validate on Telegram', 'Falar comigo': 'Talk to me',
+    'O trading envolve risco de perda de capital. A conta é tua e fica na corretora; a MoreThanMoney nunca guarda o teu dinheiro.': 'Trading involves risk of capital loss. The account is yours and stays with the broker; MoreThanMoney never holds your money.',
     // atributos
     'Ricardo Garcia, início': 'Ricardo Garcia, home', 'Logótipo RG de Ricardo Garcia': 'Ricardo Garcia RG logo', 'Secções': 'Sections',
     'Entrar na app do Ricardo': "Log in to Ricardo's app", 'Ricardo Garcia em Lisboa, ao fim da tarde, com o portátil': 'Ricardo Garcia in Lisbon, late afternoon, with his laptop',
@@ -146,6 +153,7 @@
             .replace('Olá Ricardo, quero ser parceiro de negócios da MTM', 'Hi Ricardo, I want to be an MTM business partner')
             .replace('Olá Ricardo, quero trabalhar com a corretora recomendada', 'Hi Ricardo, I want to work with the recommended broker')
             .replace('Olá Ricardo, vim da tua página', 'Hi Ricardo, I came from your page')
+            .replace('Olá Ricardo, abri conta na PU Prime e quero fazer o onboarding', 'Hi Ricardo, I opened a PU Prime account and want to do the onboarding')
             .replace(/ educador$/, ' educator').replace(/ comercial$/, ' sales rep');
           return 'text=' + encodeURIComponent(txt);
         });
