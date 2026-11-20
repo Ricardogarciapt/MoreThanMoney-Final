@@ -53,3 +53,40 @@ create table if not exists rg_app_mentor (
 );
 create index if not exists rg_app_mentor_membro_idx on rg_app_mentor (membro_id, criado desc);
 alter table rg_app_mentor enable row level security;
+
+-- Diário livre e desafios criados pelos membros (app Missão)
+create table if not exists rg_app_diario_livre (
+  id uuid primary key default gen_random_uuid(),
+  membro_id uuid not null references rg_app_membros(id) on delete cascade,
+  dia date not null default current_date,
+  titulo text,
+  texto text not null,
+  humor smallint check (humor between 1 and 5),
+  criado timestamptz not null default now()
+);
+create index if not exists rg_app_diario_livre_m on rg_app_diario_livre (membro_id, criado desc);
+alter table rg_app_diario_livre enable row level security;
+create table if not exists rg_app_desafios_m (
+  id uuid primary key default gen_random_uuid(),
+  autor_id uuid not null references rg_app_membros(id) on delete cascade,
+  titulo text not null,
+  descricao text,
+  dias smallint not null check (dias in (3,7,14,30)),
+  publico boolean not null default true,
+  denuncias int not null default 0,
+  oculto boolean not null default false,
+  criado timestamptz not null default now()
+);
+create index if not exists rg_app_desafios_m_pub on rg_app_desafios_m (publico, oculto, criado desc);
+alter table rg_app_desafios_m enable row level security;
+create table if not exists rg_app_desafios_m_adesoes (
+  desafio_id uuid not null references rg_app_desafios_m(id) on delete cascade,
+  membro_id uuid not null references rg_app_membros(id) on delete cascade,
+  inicio date not null default current_date,
+  checkins int not null default 0,
+  ultimo date,
+  concluido timestamptz,
+  primary key (desafio_id, membro_id)
+);
+create index if not exists rg_app_desafios_m_adesoes_m on rg_app_desafios_m_adesoes (membro_id);
+alter table rg_app_desafios_m_adesoes enable row level security;

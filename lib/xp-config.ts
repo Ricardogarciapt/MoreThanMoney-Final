@@ -24,6 +24,9 @@ export const XP_ACTION_DEFAULTS: Record<
   app_desafio: { amount: 50, label: 'Desafio do Ricardo' },
   app_story: { amount: 5, dailyCap: 1, label: 'Story na app' },
   app_chat: { amount: 2, dailyCap: 5, label: 'Mensagem na comunidade' },
+  app_diario: { amount: 3, dailyCap: 1, label: 'Página do diário' },
+  app_desafio_membro_dia: { amount: 5, dailyCap: 3, label: 'Dia de desafio da comunidade' },
+  app_desafio_membro_fim: { amount: 20, dailyCap: 2, label: 'Desafio da comunidade concluído' },
 }
 
 /**
