@@ -26,6 +26,7 @@ video/cinematico/      motor cinemático Remotion + Three.js (estilo /solucoes),
 | Reel/story de guião automático (voz TTS, cartões, Pexels) | Conteúdo Magnético (`services/conteudo-magnetico-render`) | VPS |
 | Reels diários dos educadores | `tools/reels-educadores/diario.mjs` | GitHub Actions |
 | Bootcamps de estratégia (YouTube, gráfico fiel ao Pine) | `video/bootcamp` | Mac (`fila.sh`) |
+| Aulas dos cursos (Estúdio de Cursos) narradas pelo gémeo num círculo | `video/bootcamp/render.mjs … --gemeo` → passo `gemeo` | Mac + HeyGen |
 | Vídeo de apresentação MTM em 7 línguas | `video/apresentacao` | Mac |
 | Stories MTM | `video/stories-mtm` | Mac |
 | Vídeo narrado de 1 imagem (app de desktop no Mac) | Studify (MCP `criar_video`) → depois `motor.mjs finalizar` | Mac |

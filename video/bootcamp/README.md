@@ -23,6 +23,21 @@ de cada estratégia no YouTube (que o canal do educador MTM em /live/9739ae1a…
   `--preview` para rever o ritmo a 8 fps; `--de=SEG --ate=SEG` para um troço.
 - `capa.mjs`: `node video/bootcamp/capa.mjs defy` → capas 1280×720 por módulo e língua.
 
+## Cursos do Estúdio de Cursos (aulas narradas pelo gémeo)
+
+Desde 20/11/2026 as aulas dos cursos pedidos no Estúdio de Cursos MTM (artefacto, coleção `cursos`)
+saem por este mesmo motor, com o gémeo do Ricardo a narrar num círculo com aro dourado no canto
+inferior esquerdo (o formato aprovado no vídeo de /apresentacao).
+
+1. Guião da aula no formato dos bootcamps: `guioes/curso-<slug>.pt.json` (um `video` por aula).
+2. Voz Fish do Ricardo (PT-PT): `node video/bootcamp/voz.mjs curso-<slug> all pt`.
+3. Créditos antes de gastar: `node video/bootcamp/render.mjs curso-<slug> 1 pt --gemeo-estimar`
+   (avatar_iii ≈ 7 créditos/min). Acima de 60 créditos faz-se uma aula de amostra e pede-se OK ao Ricardo.
+4. Render com o gémeo: `node video/bootcamp/render.mjs curso-<slug> <aula> pt --gemeo` → `<base>-gemeo.mp4`.
+   O passo é o `gemeo` do motor único (`video/motor/gemeo.mjs`): lip sync HeyGen sobre a narração,
+   círculo, `finalizar` (1080p, -14 LUFS). `--gemeo=twin|trader|podcast` troca o look.
+5. Se o curso tiver «Só voz» no estúdio, renderiza-se sem `--gemeo`.
+
 Música opcional: `musica.mp3` nesta pasta entra baixa, com ducking pela voz.
 `saida/` e `voz/` não vão para o git.
 
