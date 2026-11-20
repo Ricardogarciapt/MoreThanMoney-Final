@@ -576,7 +576,7 @@ dialog h2 { font-size: 24px; font-style: italic; margin-bottom: 14px; }
         .catch(function (e) { el.innerHTML = '<p class="vazio">Não abriu: ' + esc(e.message) + '</p>'; }); return; }
     function post(c) { return fetch('/api/ricardogarcia/painel/app', { method: 'POST', credentials: 'same-origin', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(c) }).then(function (r) { return r.json(); }).then(function (j) { if (!j.ok) throw new Error(j.erro || 'Erro'); return j; }); }
     function recarregar(msg) { A = null; if (msg) aviso(msg); vApp(el); }
-    var R = A.resumo, ABAS = [['pedidos', 'Pedidos' + (R.pendentes ? ' (' + R.pendentes + ')' : '')], ['membros', 'Membros'], ['recompensas', 'Recompensas'], ['eventos', 'Desafios e eventos'], ['presencas', 'Presenças'], ['missoes', 'Missões'], ['economia', 'Economia'], ['convidar', 'Convidar leads']];
+    var R = A.resumo, ABAS = [['pedidos', 'Pedidos' + (R.pendentes ? ' (' + R.pendentes + ')' : '')], ['membros', 'Membros'], ['recompensas', 'Recompensas'], ['eventos', 'Desafios e eventos'], ['presencas', 'Presenças'], ['comunidade', 'Comunidade' + (A.comunidade && A.comunidade.mensagens.concat(A.comunidade.stories).some(function (x) { return x.denuncias && !x.fora; }) ? ' 🚩' : '')], ['missoes', 'Missões'], ['economia', 'Economia'], ['convidar', 'Convidar leads']];
     var h = '<div class="cab"><div><h1>App Missão</h1><p>A tua app para leads: missões diárias, patentes, moedas e recompensas. Cada membro entra no pipeline MTM.</p></div><a class="btn" href="/ricardogarcia/app" target="_blank" rel="noopener">Abrir a app ↗</a></div>' +
       '<div class="kpis"><div class="kpi"><b>' + R.membros + '</b><span>Membros</span></div><div class="kpi"><b>' + R.ativos7 + '</b><span>Activos em 7 dias</span></div><div class="kpi"><b>' + R.hoje + '</b><span>Activos hoje</span></div><div class="kpi"><b>' + R.pendentes + '</b><span>Pedidos por decidir</span></div></div>' +
       '<div class="filtros" style="margin:16px 0">' + ABAS.map(function (a) { return '<button class="btn peq ' + (abaApp === a[0] ? 'pri' : '') + '" data-aa="' + a[0] + '">' + a[1] + '</button>'; }).join('') + '</div><section class="cx">';
@@ -637,6 +637,17 @@ dialog h2 { font-size: 24px; font-style: italic; margin-bottom: 14px; }
     if (abaApp === 'presencas') h += '<p class="vazio" style="margin-top:0">Presenças em aulas e sessões dos últimos 14 dias. Com comprovativo dão 20 XP; sem prova, 10. Os links das imagens valem 1 hora.</p>' + (A.presencas.length ? A.presencas.map(function (p) {
       return '<div class="contacto"><div><b>' + esc(p.nome) + '</b> <span class="pilula ' + (p.prova ? 'novo' : '') + '">' + (p.prova ? 'Com comprovativo' : 'Sem prova') + '</span><div class="sub">' + esc(p.dia) + ' · ' + (p.tipo === 'sessao' ? 'Sessão gratuita' : 'Aula da plataforma') + ' · +' + p.xp + ' XP' + (p.nota ? ' · ' + esc(p.nota) : '') + '</div></div><div class="acc">' + (p.prova ? '<a class="btn peq" target="_blank" rel="noopener" href="' + esc(p.prova) + '">Ver print</a>' : '') + '</div></div>';
     }).join('') : '<p class="vazio">Ainda ninguém registou presença.</p>');
+    if (abaApp === 'comunidade') {
+      var CM = A.comunidade || { stories: [], mensagens: [] };
+      var linhaC = function (x) {
+        return '<div class="contacto"' + (x.fora ? ' style="opacity:.5"' : '') + '><div><b>' + esc(x.nome) + '</b> ' + (x.denuncias ? '<span class="pilula">🚩 ' + x.denuncias + '</span> ' : '') + (x.fora ? '<span class="pilula">Fora do ar</span> ' : '') + (x.expirada ? '<span class="pilula">Expirou</span>' : '') +
+          '<div class="sub">' + new Date(x.criado).toLocaleString('pt-PT', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }) + (x.texto ? ' · ' + esc(x.texto) : '') + '</div></div><div class="acc">' + (x.imagem ? '<a class="btn peq" target="_blank" rel="noopener" href="' + esc(x.imagem) + '">Ver foto</a>' : '') +
+          '<button class="btn peq ' + (x.fora ? 'pri' : '') + '" data-mod="' + x.alvo + '|' + x.id + '|' + (x.fora ? '0' : '1') + '">' + (x.fora ? 'Repor' : 'Tirar do ar') + '</button></div></div>';
+      };
+      h += '<p class="vazio" style="margin-top:0">O que os membros publicam na app. Com 3 denúncias sai do ar sozinho e chega-te um aviso no Telegram. Aqui tiras ou repões. Os links das fotos valem 1 hora.</p>' +
+        '<h3 style="margin:10px 0 6px;font-size:16px">Stories (48 h)</h3>' + (CM.stories.length ? CM.stories.map(linhaC).join('') : '<p class="vazio">Sem stories.</p>') +
+        '<h3 style="margin:16px 0 6px;font-size:16px">Conversa</h3>' + (CM.mensagens.length ? CM.mensagens.map(linhaC).join('') : '<p class="vazio">Sem mensagens.</p>');
+    }
     if (abaApp === 'economia') {
       var NOM = { xp_dia_max: 'Tecto de XP por dia', bonus_dia_completo: 'XP extra por dia completo', moedas_dia_completo: 'Moedas por dia completo', moedas_semana: 'Moedas por 7 dias seguidos', moedas_patente: 'Moedas por subida de patente', moedas_insignia: 'Moedas por insígnia', min_resposta: 'Caracteres mínimos numa reflexão' };
       h += '<p class="vazio" style="margin-top:0">O XP mede a reputação e não se gasta. As moedas gastam-se, e só se ganham com constância. Com os valores de origem, alguém muito constante junta à volta de 12 moedas por semana: a mensalidade (150) pede uns 3 meses.</p><div class="linha2" style="grid-template-columns:repeat(2,1fr)">' +
@@ -653,6 +664,7 @@ dialog h2 { font-size: 24px; font-style: italic; margin-bottom: 14px; }
     el.onclick = function (e) {
       var b = e.target.closest('button'); if (!b) return; var a, cx;
       if ((a = b.getAttribute('data-rs'))) { var p = a.split('|'); if (p[1] === 'recusado' && !confirm('Recusar e devolver as moedas?')) return; b.disabled = true; post({ acao: 'resgate', id: p[0], estado: p[1] }).then(function () { recarregar('Pedido actualizado ✓'); }, function (er) { aviso(er.message); b.disabled = false; }); }
+      else if ((a = b.getAttribute('data-mod'))) { var mo = a.split('|'); b.disabled = true; post({ acao: 'moderar', alvo: mo[0], id: mo[1], fora: mo[2] === '1' }).then(function () { recarregar(mo[2] === '1' ? 'Tirado do ar ✓' : 'Reposto ✓'); }, function (er) { aviso(er.message); b.disabled = false; }); }
       else if ((a = b.getAttribute('data-me'))) { var q = a.split('|'); post({ acao: 'membro_estado', id: q[0], estado: q[1] }).then(function () { recarregar('Membro actualizado ✓'); }, function (er) { aviso(er.message); }); }
       else if ((a = b.getAttribute('data-grec')) != null) {
         cx = el.querySelector('[data-rec="' + a + '"]'); var base = A.recompensas[+a] || {}, r = { id: base.id };

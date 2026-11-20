@@ -22,6 +22,8 @@ export const XP_ACTION_DEFAULTS: Record<
   app_rota_ponto: { amount: 15, dailyCap: 3, label: 'Ponto da rota' },
   app_saude: { amount: 10, dailyCap: 1, label: 'Movimento do dia' },
   app_desafio: { amount: 50, label: 'Desafio do Ricardo' },
+  app_story: { amount: 5, dailyCap: 1, label: 'Story na app' },
+  app_chat: { amount: 2, dailyCap: 5, label: 'Mensagem na comunidade' },
 }
 
 /**
