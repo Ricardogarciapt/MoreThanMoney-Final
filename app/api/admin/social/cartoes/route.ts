@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server"
-import { requireAdmin } from "@/lib/admin-api-helpers"
+import { exigirSocial } from '@/lib/social-acesso'
+
 import { renderCarrossel, renderSocialCardBuffer, type Lamina, type SocialCardParams } from "@/lib/social-card"
 import { uploadBufferToBucket } from "@/lib/instagram/publish"
 import { chamarIA, mensagemIndisponivel } from '@/lib/ia/chamar'
@@ -54,7 +55,7 @@ async function escreverLaminas(tema: string, cta: string, quantas: number): Prom
 }
 
 export async function POST(req: NextRequest) {
-  const guarda = await requireAdmin(req)
+  const guarda = await exigirSocial(req)
   if (guarda) return guarda
 
   const corpo = (await req.json().catch(() => ({}))) as {

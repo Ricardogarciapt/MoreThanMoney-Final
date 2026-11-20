@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server"
-import { requireAdmin } from "@/lib/admin-api-helpers"
+import { exigirSocial } from '@/lib/social-acesso'
+
 import { getSupabaseAdmin } from "@/lib/supabase-admin-client"
 import {
   lerFila,
@@ -15,7 +16,7 @@ export const maxDuration = 60
 
 /** A fila: os comentários prontos e os contadores. */
 export async function GET(req: NextRequest) {
-  const guard = await requireAdmin(req)
+  const guard = await exigirSocial(req)
   if (guard) return guard
   return NextResponse.json({ ok: true, ...(await lerFila(getSupabaseAdmin())) })
 }
@@ -25,7 +26,7 @@ export async function GET(req: NextRequest) {
  * dono fez no Instagram. O agente do Mac usa /api/operador/fila-comentarios.
  */
 export async function POST(req: NextRequest) {
-  const guard = await requireAdmin(req)
+  const guard = await exigirSocial(req)
   if (guard) return guard
 
   const corpo = (await req.json().catch(() => ({}))) as { acao?: string; id?: string }

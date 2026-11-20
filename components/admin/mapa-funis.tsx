@@ -114,24 +114,24 @@ function CamposDoBloco({
   if (!campos.length) return null
 
   return (
-    <div className="space-y-2.5 rounded-lg border bg-neutral-50 p-2.5">
+    <div className="space-y-2.5 rounded-lg border bg-white/[0.03] p-2.5">
       {campos.filter((c) => campoVisivel(c, valores)).map((c) => {
         const v = valores[c.chave] ?? c.padrao ?? ""
 
         const rotulo = (
-          <label className="text-[11px] font-medium text-neutral-600">
+          <label className="text-[11px] font-medium text-zinc-300">
             {c.rotulo}
-            {c.sufixo && <span className="ml-1 font-normal text-neutral-600">({c.sufixo})</span>}
+            {c.sufixo && <span className="ml-1 font-normal text-zinc-300">({c.sufixo})</span>}
             {c.obrigatorio && <span className="ml-0.5 text-red-500">*</span>}
-            {c.dica && <span className="ml-1 font-normal text-neutral-600">· {c.dica}</span>}
+            {c.dica && <span className="ml-1 font-normal text-zinc-300">· {c.dica}</span>}
           </label>
         )
-        const ajuda = c.ajuda ? <p className="mt-0.5 text-[11px] text-neutral-600">{c.ajuda}</p> : null
+        const ajuda = c.ajuda ? <p className="mt-0.5 text-[11px] text-zinc-300">{c.ajuda}</p> : null
 
         // Um aviso não guarda valor nenhum: está ali para explicar.
         if (c.tipo === "aviso") {
           return (
-            <p key={c.chave} className="rounded border border-amber-200 bg-amber-50 px-2 py-1.5 text-[11px] text-amber-800">
+            <p key={c.chave} className="rounded border border-amber-500/30 bg-amber-500/10 px-2 py-1.5 text-[11px] text-amber-300">
               {c.ajuda}
             </p>
           )
@@ -150,14 +150,14 @@ function CamposDoBloco({
               {ajuda}
               <div className="mt-1 space-y-1.5">
                 {linhas.map((linha, i) => (
-                  <div key={i} className="rounded border bg-white p-1.5">
+                  <div key={i} className="rounded border bg-zinc-900/60 p-1.5">
                     <div className="mb-1 flex items-center justify-between">
-                      <span className="text-[10.5px] font-bold uppercase tracking-wide text-neutral-600">
+                      <span className="text-[10.5px] font-bold uppercase tracking-wide text-zinc-300">
                         {i + 1}
                       </span>
                       <button
                         onClick={() => aoMudar(c.chave, linhas.filter((_, j) => j !== i))}
-                        className="text-neutral-600 hover:text-red-500"
+                        className="text-zinc-300 hover:text-red-500"
                         title="Apagar esta linha"
                       >
                         ×
@@ -175,7 +175,7 @@ function CamposDoBloco({
               </div>
               <button
                 onClick={() => aoMudar(c.chave, [...linhas, valoresDaLinha(c.linha ?? [])])}
-                className="mt-1 w-full rounded border border-dashed py-1 text-[11px] text-neutral-600 hover:bg-white"
+                className="mt-1 w-full rounded border border-dashed py-1 text-[11px] text-zinc-300 hover:bg-zinc-900/60"
               >
                 + {c.rotuloAcrescentar ?? "Acrescentar"}
               </button>
@@ -188,8 +188,8 @@ function CamposDoBloco({
             <label key={c.chave} className="flex cursor-pointer items-start gap-2">
               <input type="checkbox" checked={v === true} onChange={(e) => aoMudar(c.chave, e.target.checked)} className="mt-0.5" />
               <span>
-                <span className="text-[11px] font-medium text-neutral-600">{c.rotulo}</span>
-                {c.ajuda && <span className="block text-[11px] text-neutral-600">{c.ajuda}</span>}
+                <span className="text-[11px] font-medium text-zinc-300">{c.rotulo}</span>
+                {c.ajuda && <span className="block text-[11px] text-zinc-300">{c.ajuda}</span>}
               </span>
             </label>
           )
@@ -210,7 +210,7 @@ function CamposDoBloco({
               <select
                 value={String(v)}
                 onChange={(e) => aoMudar(c.chave, e.target.value)}
-                className="mt-0.5 w-full rounded-md border bg-white px-2 py-1 text-[12px]"
+                className="mt-0.5 w-full rounded-md border bg-zinc-900/60 px-2 py-1 text-[12px]"
               >
                 <option value="">— escolher —</option>
                 {opcoes.map((o) => (
@@ -231,7 +231,7 @@ function CamposDoBloco({
                 rows={3}
                 placeholder={c.exemplo}
                 onChange={(e) => aoMudar(c.chave, e.target.value)}
-                className="mt-0.5 w-full rounded-md border bg-white px-2 py-1 text-[12px]"
+                className="mt-0.5 w-full rounded-md border bg-zinc-900/60 px-2 py-1 text-[12px]"
               />
               {ajuda}
             </div>
@@ -558,9 +558,9 @@ export function MapaFunis() {
   }
 
   if (aLer) {
-    return <div className="flex justify-center py-20"><Loader2 className="h-6 w-6 animate-spin text-neutral-600" /></div>
+    return <div className="flex justify-center py-20"><Loader2 className="h-6 w-6 animate-spin text-zinc-300" /></div>
   }
-  if (!funil) return <p className="py-20 text-center text-sm text-neutral-600">Sem funis.</p>
+  if (!funil) return <p className="py-20 text-center text-sm text-zinc-300">Sem funis.</p>
 
   const noSelecionado = funil.nos.find((n) => n.id === selecionado) ?? null
 
@@ -572,7 +572,7 @@ export function MapaFunis() {
             key={f.id}
             onClick={() => { setAtivo(i); setSelecionado(null); setALigar(null) }}
             className={`rounded-full px-3 py-1.5 text-xs font-medium transition ${
-              i === ativo ? "bg-neutral-900 text-white" : "border bg-white text-neutral-600"
+              i === ativo ? "bg-[#D2A63C]/15 text-[#E9C46A] ring-1 ring-[#D2A63C]/40" : "border bg-zinc-900/60 text-zinc-300"
             }`}
           >
             {f.nome}
@@ -631,12 +631,12 @@ export function MapaFunis() {
         </Button>
       </div>
 
-      <p className="text-xs text-neutral-600">{funil.descricao}</p>
+      <p className="text-xs text-zinc-300">{funil.descricao}</p>
 
       <div className="flex gap-3">
         {/* Paleta de blocos */}
-        <div className="w-40 shrink-0 space-y-1 rounded-xl border bg-white p-2">
-          <p className="px-1 pb-1 text-[11px] font-semibold uppercase tracking-wide text-neutral-600">Blocos</p>
+        <div className="w-40 shrink-0 space-y-1 rounded-xl border bg-zinc-900/60 p-2">
+          <p className="px-1 pb-1 text-[11px] font-semibold uppercase tracking-wide text-zinc-300">Blocos</p>
           {(Object.keys(BLOCOS) as TipoDeNo[]).map((t) => {
             const b = BLOCOS[t]
             return (
@@ -669,7 +669,7 @@ export function MapaFunis() {
               setSelecionado(null)
             }}
             style={{ height: altura }}
-            className="relative cursor-grab overflow-hidden rounded-xl border border-neutral-300 bg-white bg-[radial-gradient(#d4d4d4_1px,transparent_1px)] [background-size:20px_20px] text-neutral-900 active:cursor-grabbing"
+            className="relative cursor-grab overflow-hidden rounded-xl border border-white/10 bg-zinc-900/60 bg-[radial-gradient(#d4d4d4_1px,transparent_1px)] [background-size:20px_20px] text-zinc-200 active:cursor-grabbing"
           >
             <div
               style={{
@@ -734,7 +734,7 @@ export function MapaFunis() {
                       onPointerDown={(e) => e.stopPropagation()}
                       onClick={() => setInserirEm({ de: n.id, para: idDestino, x: mx, y: my })}
                       title="Meter um bloco aqui"
-                      className="absolute z-[5] flex h-5 w-5 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full border bg-white text-[13px] leading-none text-neutral-600 opacity-40 shadow-sm transition hover:opacity-100"
+                      className="absolute z-[5] flex h-5 w-5 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full border bg-zinc-900/60 text-[13px] leading-none text-zinc-300 opacity-40 shadow-sm transition hover:opacity-100"
                       style={{ left: mx, top: my }}
                     >
                       +
@@ -746,10 +746,10 @@ export function MapaFunis() {
               {/* A escolha do bloco que entra na seta. */}
               {inserirEm && (
                 <div
-                  className="absolute z-20 w-44 rounded-lg border border-neutral-300 bg-white p-1.5 text-neutral-900 shadow-lg"
+                  className="absolute z-20 w-44 rounded-lg border border-white/10 bg-zinc-900/60 p-1.5 text-zinc-200 shadow-lg"
                   style={{ left: inserirEm.x + 12, top: inserirEm.y }}
                 >
-                  <p className="mb-1 px-1 text-[10.5px] font-bold uppercase tracking-wide text-neutral-600">
+                  <p className="mb-1 px-1 text-[10.5px] font-bold uppercase tracking-wide text-zinc-300">
                     Meter aqui
                   </p>
                   {(Object.keys(BLOCOS) as TipoDeNo[])
@@ -809,7 +809,7 @@ export function MapaFunis() {
                             setInserirEm(null)
                             setSujo(true)
                           }}
-                          className="flex w-full items-center gap-1.5 rounded px-1.5 py-1 text-left text-[11.5px] text-neutral-900 hover:bg-neutral-100"
+                          className="flex w-full items-center gap-1.5 rounded px-1.5 py-1 text-left text-[11.5px] text-zinc-200 hover:bg-white/[0.06]"
                         >
                           <b.Icone className="h-3 w-3 shrink-0" style={{ color: b.borda }} />
                           {b.rotulo}
@@ -818,7 +818,7 @@ export function MapaFunis() {
                     })}
                   <button
                     onClick={() => setInserirEm(null)}
-                    className="mt-1 w-full rounded px-1.5 py-1 text-[11px] text-neutral-600 hover:bg-neutral-100"
+                    className="mt-1 w-full rounded px-1.5 py-1 text-[11px] text-zinc-300 hover:bg-white/[0.06]"
                   >
                     cancelar
                   </button>
@@ -854,22 +854,22 @@ export function MapaFunis() {
                       {(() => {
                         const falta = camposEmFalta(CAMPOS_POR_TIPO[n.tipo] ?? [], n.config ?? {})
                         return falta.length ? (
-                          <span className="text-[10.5px] font-bold text-amber-600" title={`Falta: ${falta.join(", ")}`}>
+                          <span className="text-[10.5px] font-bold text-amber-400" title={`Falta: ${falta.join(", ")}`}>
                             falta {falta.length}
                           </span>
                         ) : null
                       })()}
-                      {semSaida && <span className="ml-1 text-[10.5px] font-bold text-red-600">sem saída</span>}
+                      {semSaida && <span className="ml-1 text-[10.5px] font-bold text-red-400">sem saída</span>}
                     </div>
                     <p className="mt-0.5 text-[12.5px] font-semibold leading-snug" style={{ color: b.texto }}>{n.titulo}</p>
-                    {n.detalhe && <p className="mt-0.5 text-[11px] leading-snug text-neutral-600">{n.detalhe}</p>}
+                    {n.detalhe && <p className="mt-0.5 text-[11px] leading-snug text-zinc-300">{n.detalhe}</p>}
                     {/* O que o bloco está CONFIGURADO a fazer, numa linha. Sem isto um mapa com
                         trinta caixas obriga a clicar em cada uma para saber o que faz — e a razão
                         de haver mapa é precisamente não ter de o fazer. */}
                     {(() => {
                       const r = resumoDoNo(n.tipo, n.config)
                       return r ? (
-                        <p className="mt-1 truncate rounded bg-white/70 px-1.5 py-0.5 font-mono text-[10.5px] text-neutral-600" title={r}>
+                        <p className="mt-1 truncate rounded bg-zinc-900/60 px-1.5 py-0.5 font-mono text-[10.5px] text-zinc-300" title={r}>
                           {r}
                         </p>
                       ) : null
@@ -883,7 +883,7 @@ export function MapaFunis() {
                       onClick={(e) => { e.stopPropagation(); setSelecionado(n.id) }}
                       onPointerDown={(e) => e.stopPropagation()}
                       title="Configurar este bloco"
-                      className="absolute right-1.5 top-1.5 flex h-5 w-5 items-center justify-center rounded border bg-white/80 opacity-0 transition group-hover:opacity-100"
+                      className="absolute right-1.5 top-1.5 flex h-5 w-5 items-center justify-center rounded border bg-zinc-900/60 opacity-0 transition group-hover:opacity-100"
                       style={{ borderColor: `${b.borda}66`, color: b.borda }}
                     >
                       <Settings2 className="h-3 w-3" />
@@ -909,7 +909,7 @@ export function MapaFunis() {
                         setInserirEm({ de: n.id, para: "", x: n.x + LARGURA / 2, y: n.y + ALTURA + 40 })
                       }}
                       title="Arrasta para ligar · carrega para acrescentar um passo"
-                      className="absolute -bottom-2.5 left-1/2 flex h-5 w-5 -translate-x-1/2 cursor-crosshair items-center justify-center rounded-full border-2 bg-white text-[13px] font-bold leading-none hover:scale-110"
+                      className="absolute -bottom-2.5 left-1/2 flex h-5 w-5 -translate-x-1/2 cursor-crosshair items-center justify-center rounded-full border-2 bg-zinc-900/60 text-[13px] font-bold leading-none hover:scale-110"
                       style={{ borderColor: b.borda, color: b.borda }}
                     >
                       +
@@ -928,8 +928,8 @@ export function MapaFunis() {
             if (!problemas.length) return null
             const erros = problemas.filter((p) => p.gravidade === "erro")
             return (
-              <div className="absolute right-3 top-3 max-h-[40%] w-72 overflow-auto rounded-lg border border-neutral-300 bg-white p-2 text-neutral-900 shadow-sm">
-                <p className="mb-1 text-[11px] font-bold uppercase tracking-wide text-neutral-600">
+              <div className="absolute right-3 top-3 max-h-[40%] w-72 overflow-auto rounded-lg border border-white/10 bg-zinc-900/60 p-2 text-zinc-200 shadow-sm">
+                <p className="mb-1 text-[11px] font-bold uppercase tracking-wide text-zinc-300">
                   {erros.length ? `${erros.length} a corrigir` : "Reparos"} · {problemas.length}
                 </p>
                 <div className="space-y-1">
@@ -937,15 +937,15 @@ export function MapaFunis() {
                     <button
                       key={i}
                       onClick={() => pb.noId && setSelecionado(pb.noId)}
-                      className={`block w-full rounded px-1.5 py-1 text-left text-[11px] leading-snug hover:bg-neutral-100 ${
-                        pb.gravidade === "erro" ? "text-red-600" : "text-amber-700"
+                      className={`block w-full rounded px-1.5 py-1 text-left text-[11px] leading-snug hover:bg-white/[0.06] ${
+                        pb.gravidade === "erro" ? "text-red-400" : "text-amber-300"
                       }`}
                     >
                       {pb.texto}
                     </button>
                   ))}
                   {problemas.length > 12 && (
-                    <p className="px-1.5 text-[11px] text-neutral-600">e mais {problemas.length - 12}</p>
+                    <p className="px-1.5 text-[11px] text-zinc-300">e mais {problemas.length - 12}</p>
                   )}
                 </div>
               </div>
@@ -955,14 +955,14 @@ export function MapaFunis() {
           {/* JSON e IA. Ficam por cima da tela porque é sobre ela que se quer olhar enquanto se
               lê o que vai entrar. */}
           {painelJson !== "nenhum" && (
-            <div className="absolute left-1/2 top-3 z-10 w-[520px] max-w-[90%] -translate-x-1/2 rounded-lg border border-neutral-300 bg-white p-3 text-neutral-900 shadow-lg">
+            <div className="absolute left-1/2 top-3 z-10 w-[520px] max-w-[90%] -translate-x-1/2 rounded-lg border border-white/10 bg-zinc-900/60 p-3 text-zinc-200 shadow-lg">
               <div className="mb-2 flex items-center justify-between">
-                <p className="text-[11px] font-bold uppercase tracking-wide text-neutral-600">
+                <p className="text-[11px] font-bold uppercase tracking-wide text-zinc-300">
                   {painelJson === "exportar" && "Copiar este funil"}
                   {painelJson === "importar" && "Colar um funil"}
                   {painelJson === "ia" && "Pedir à IA que monte"}
                 </p>
-                <button onClick={() => setPainelJson("nenhum")} className="text-neutral-600 hover:text-neutral-900">×</button>
+                <button onClick={() => setPainelJson("nenhum")} className="text-zinc-300 hover:text-zinc-200">×</button>
               </div>
 
               {painelJson === "exportar" && (
@@ -971,7 +971,7 @@ export function MapaFunis() {
                     readOnly
                     rows={8}
                     value={JSON.stringify(funil, null, 2)}
-                    className="w-full rounded border bg-neutral-50 p-2 font-mono text-[10.5px]"
+                    className="w-full rounded border bg-white/[0.03] p-2 font-mono text-[10.5px]"
                   />
                   <div className="mt-2 flex gap-2">
                     <Button size="sm" onClick={() => {
@@ -1066,7 +1066,7 @@ export function MapaFunis() {
                     }}>
                       {aMontar ? "A montar..." : "Montar"}
                     </Button>
-                    <span className="text-[10.5px] text-neutral-600">
+                    <span className="text-[10.5px] text-zinc-300">
                       Entra como funil novo. Nada e enviado ate ligares o motor.
                     </span>
                   </div>
@@ -1078,24 +1078,24 @@ export function MapaFunis() {
           {/* O que o ensaio viu. Fica por cima da tela porque é sobre ELA que se quer olhar
               enquanto se lê o caminho. */}
           {ensaio && (
-            <div className="absolute bottom-3 right-3 max-h-[55%] w-96 overflow-auto rounded-lg border border-neutral-300 bg-white p-2.5 text-neutral-900 shadow-lg">
+            <div className="absolute bottom-3 right-3 max-h-[55%] w-96 overflow-auto rounded-lg border border-white/10 bg-zinc-900/60 p-2.5 text-zinc-200 shadow-lg">
               <div className="mb-1.5 flex items-center justify-between">
-                <p className="text-[11px] font-bold uppercase tracking-wide text-neutral-600">
+                <p className="text-[11px] font-bold uppercase tracking-wide text-zinc-300">
                   Ensaio · {ensaio.length} passos · não tocou em ninguém
                 </p>
-                <button onClick={() => setEnsaio(null)} className="text-neutral-600 hover:text-neutral-700">×</button>
+                <button onClick={() => setEnsaio(null)} className="text-zinc-300 hover:text-zinc-200">×</button>
               </div>
               <ol className="space-y-1">
                 {ensaio.map((p, i) => (
                   <li key={i}>
                     <button
                       onClick={() => setSelecionado(p.no)}
-                      className="block w-full rounded px-1.5 py-1 text-left hover:bg-neutral-100"
+                      className="block w-full rounded px-1.5 py-1 text-left hover:bg-white/[0.06]"
                     >
-                      <span className="text-[11px] font-medium text-neutral-800">
+                      <span className="text-[11px] font-medium text-zinc-200">
                         {i + 1}. {p.titulo}
                       </span>
-                      <span className="block text-[11px] leading-snug text-neutral-600">{p.fez}</span>
+                      <span className="block text-[11px] leading-snug text-zinc-300">{p.fez}</span>
                     </button>
                   </li>
                 ))}
@@ -1104,11 +1104,11 @@ export function MapaFunis() {
           )}
 
           {/* Zoom */}
-          <div className="absolute bottom-3 left-3 flex items-center gap-1 rounded-lg border border-neutral-300 bg-white p-1 text-neutral-900 shadow-sm">
+          <div className="absolute bottom-3 left-3 flex items-center gap-1 rounded-lg border border-white/10 bg-zinc-900/60 p-1 text-zinc-200 shadow-sm">
             <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => setZoom((z) => Math.max(ZOOM_MIN, z * 0.85))}>
               <ZoomOut className="h-3.5 w-3.5" />
             </Button>
-            <span className="w-10 text-center text-[11px] tabular-nums text-neutral-600">{Math.round(zoom * 100)}%</span>
+            <span className="w-10 text-center text-[11px] tabular-nums text-zinc-300">{Math.round(zoom * 100)}%</span>
             <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => setZoom((z) => Math.min(ZOOM_MAX, z * 1.15))}>
               <ZoomIn className="h-3.5 w-3.5" />
             </Button>
@@ -1117,22 +1117,22 @@ export function MapaFunis() {
             </Button>
           </div>
 
-          <p className="absolute bottom-3 right-3 rounded-lg bg-white/90 px-2 py-1 text-[11px] text-neutral-600">
+          <p className="absolute bottom-3 right-3 rounded-lg bg-zinc-900/60 px-2 py-1 text-[11px] text-zinc-300">
             arrasta o fundo para mover · ⌘/ctrl + roda para ampliar
           </p>
         </div>
 
         {/* Painel do bloco */}
-        <div className="w-60 shrink-0 space-y-3 rounded-xl border bg-white p-3">
+        <div className="w-60 shrink-0 space-y-3 rounded-xl border bg-zinc-900/60 p-3">
           {!noSelecionado ? (
             <>
               <p className="text-sm font-semibold">O mapa</p>
-              <p className="text-xs leading-relaxed text-neutral-600">
+              <p className="text-xs leading-relaxed text-zinc-300">
                 Escolhe um bloco à esquerda para o acrescentar. Arrasta a bolinha de baixo de um
-                bloco para outro para os ligar. Os marcados <b className="text-red-600">sem saída</b>{" "}
+                bloco para outro para os ligar. Os marcados <b className="text-red-400">sem saída</b>{" "}
                 são onde o funil trava — é isso que este mapa serve para ver.
               </p>
-              <p className="rounded-lg bg-amber-50 p-2.5 text-[11px] leading-relaxed text-amber-900">
+              <p className="rounded-lg bg-amber-500/10 p-2.5 text-[11px] leading-relaxed text-amber-300">
                 Isto é o desenho, não o motor. Quem responde no Telegram continua a ser o código —
                 mexer aqui documenta, não muda o comportamento.
               </p>
@@ -1153,7 +1153,7 @@ export function MapaFunis() {
                   {aPensar ? <><Loader2 className="mr-1 h-3.5 w-3.5 animate-spin" /> A ler o funil…</> : "Analisar"}
                 </Button>
                 {resposta && (
-                  <p className="mt-2 whitespace-pre-wrap rounded-lg bg-neutral-50 p-2.5 text-[11.5px] leading-relaxed text-neutral-700">
+                  <p className="mt-2 whitespace-pre-wrap rounded-lg bg-white/[0.03] p-2.5 text-[11.5px] leading-relaxed text-zinc-200">
                     {resposta}
                   </p>
                 )}
@@ -1162,15 +1162,15 @@ export function MapaFunis() {
           ) : (
             <>
               <div>
-                <label className="text-xs text-neutral-600">Título</label>
+                <label className="text-xs text-zinc-300">Título</label>
                 <Input value={noSelecionado.titulo} onChange={(e) => mexerNo(noSelecionado.id, { titulo: e.target.value })} />
               </div>
               <div>
-                <label className="text-xs text-neutral-600">Detalhe</label>
+                <label className="text-xs text-zinc-300">Detalhe</label>
                 <Input value={noSelecionado.detalhe ?? ""} onChange={(e) => mexerNo(noSelecionado.id, { detalhe: e.target.value })} />
               </div>
               <div>
-                <label className="text-xs text-neutral-600">Tipo</label>
+                <label className="text-xs text-zinc-300">Tipo</label>
                 <div className="mt-1 flex flex-wrap gap-1">
                   {(Object.keys(BLOCOS) as TipoDeNo[]).map((t) => (
                     <button
@@ -1211,24 +1211,24 @@ export function MapaFunis() {
               />
 
               <div>
-                <label className="text-xs text-neutral-600">Vai para</label>
+                <label className="text-xs text-zinc-300">Vai para</label>
                 <div className="mt-1 space-y-1">
                   {noSelecionado.seguintes.length === 0 && (
-                    <p className="text-[11px] text-neutral-600">Nada — arrasta a bolinha para ligar.</p>
+                    <p className="text-[11px] text-zinc-300">Nada — arrasta a bolinha para ligar.</p>
                   )}
                   {noSelecionado.seguintes.map((s, i) => (
                     <div key={s} className="flex items-center justify-between gap-1 rounded border px-2 py-1 text-[11px]">
                       {/* Numa condição as duas setas não são iguais: uma é o sim e a outra o não.
                           Sem nome, o mapa mostra que se parte em dois e esconde o que interessa. */}
                       {nomesDosRamos(noSelecionado.tipo, noSelecionado.config)[i] && (
-                        <span className="shrink-0 rounded bg-neutral-200 px-1 font-medium">
+                        <span className="shrink-0 rounded bg-white/[0.06] px-1 font-medium">
                           {nomesDosRamos(noSelecionado.tipo, noSelecionado.config)[i]}
                         </span>
                       )}
                       <span className="flex-1 truncate">{funil.nos.find((x) => x.id === s)?.titulo ?? s}</span>
                       <button
                         onClick={() => mexerNo(noSelecionado.id, { seguintes: noSelecionado.seguintes.filter((x) => x !== s) })}
-                        className="shrink-0 text-neutral-600 hover:text-red-500"
+                        className="shrink-0 text-zinc-300 hover:text-red-500"
                       >
                         ×
                       </button>

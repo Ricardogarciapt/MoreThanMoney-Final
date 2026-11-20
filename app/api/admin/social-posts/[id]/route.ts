@@ -5,7 +5,8 @@
  */
 
 import { NextRequest, NextResponse } from "next/server"
-import { getSupabaseAdmin, requireAdmin, verifyAdminAccess } from "@/lib/admin-api-helpers"
+import { exigirSocial } from '@/lib/social-acesso'
+import { getSupabaseAdmin, verifyAdminAccess } from "@/lib/admin-api-helpers"
 
 const supabase = getSupabaseAdmin()
 
@@ -13,7 +14,7 @@ export async function PATCH(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> },
 ) {
-  const authCheck = await requireAdmin(request)
+  const authCheck = await exigirSocial(request)
   if (authCheck) return authCheck
 
   try {
@@ -70,7 +71,7 @@ export async function DELETE(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> },
 ) {
-  const authCheck = await requireAdmin(request)
+  const authCheck = await exigirSocial(request)
   if (authCheck) return authCheck
 
   try {

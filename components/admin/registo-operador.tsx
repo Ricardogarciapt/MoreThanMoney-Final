@@ -90,7 +90,7 @@ export function RegistoOperador({ compacto = false }: { compacto?: boolean }) {
           <h2 id="operador-titulo" className="flex items-center gap-2 text-sm font-semibold" style={{ color: OURO_CLARO }}>
             <Bot className="h-4 w-4" aria-hidden="true" /> O que os agentes fizeram por ti
           </h2>
-          <p className="mt-0.5 max-w-2xl text-[12px] leading-relaxed text-neutral-400">
+          <p className="mt-0.5 max-w-2xl text-[12px] leading-relaxed text-zinc-400">
             De meia em meia hora, das 8h às 22h, o AG-OPERADOR aprova os posts do @morethanmoney.pt que
             passam nas regras da casa, deixa sair as mensagens por aprovar depois de 3 h à tua espera e
             tira da fila os comentários velhos. O agente do Mac publica os comentários. Nunca toca no
@@ -107,7 +107,7 @@ export function RegistoOperador({ compacto = false }: { compacto?: boolean }) {
               setACorrer(false)
             }}
             disabled={aCorrer}
-            className="flex min-h-[36px] cursor-pointer items-center gap-1.5 rounded-lg border border-neutral-700 px-3 text-xs text-neutral-200 hover:bg-neutral-800 disabled:opacity-40"
+            className="flex min-h-[36px] cursor-pointer items-center gap-1.5 rounded-lg border border-zinc-700 px-3 text-xs text-zinc-200 hover:bg-zinc-800 disabled:opacity-40"
           >
             {aCorrer ? <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden="true" /> : <Play className="h-3.5 w-3.5" aria-hidden="true" />}
             Correr agora
@@ -116,7 +116,7 @@ export function RegistoOperador({ compacto = false }: { compacto?: boolean }) {
             onClick={() => void buscar()}
             disabled={aLer}
             aria-label="Actualizar o registo"
-            className="flex min-h-[36px] min-w-[36px] cursor-pointer items-center justify-center rounded-lg border border-neutral-700 hover:bg-neutral-800"
+            className="flex min-h-[36px] min-w-[36px] cursor-pointer items-center justify-center rounded-lg border border-zinc-700 hover:bg-zinc-800"
           >
             {aLer ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" /> : <RefreshCw className="h-4 w-4" aria-hidden="true" />}
           </button>
@@ -141,7 +141,7 @@ export function RegistoOperador({ compacto = false }: { compacto?: boolean }) {
               {m === "ensaio" ? "Ensaio" : m === "ligado" ? "Ligado" : "Desligado"}
             </button>
           ))}
-          <span className="text-[12px] text-neutral-400">{MODO[cfg.modo]}</span>
+          <span className="text-[12px] text-zinc-400">{MODO[cfg.modo]}</span>
         </div>
       )}
 
@@ -151,7 +151,7 @@ export function RegistoOperador({ compacto = false }: { compacto?: boolean }) {
             <button
               key={f}
               onClick={() => setFiltro(f)}
-              className={`cursor-pointer rounded px-2 py-0.5 text-[11px] ${filtro === f ? "bg-neutral-700 text-neutral-100" : "text-neutral-400 hover:bg-neutral-800"}`}
+              className={`cursor-pointer rounded px-2 py-0.5 text-[11px] ${filtro === f ? "bg-zinc-700 text-zinc-100" : "text-zinc-400 hover:bg-zinc-800"}`}
             >
               {f === "todas" ? "Tudo" : AREA[f]}
             </button>
@@ -159,19 +159,19 @@ export function RegistoOperador({ compacto = false }: { compacto?: boolean }) {
         </div>
       )}
 
-      <ul className="mt-2 divide-y divide-neutral-800" aria-live="polite">
+      <ul className="mt-2 divide-y divide-zinc-800" aria-live="polite">
         {!aLer && visiveis.length === 0 && (
-          <li className="py-4 text-center text-sm text-neutral-400">Ainda nada. A primeira passagem escreve aqui.</li>
+          <li className="py-4 text-center text-sm text-zinc-400">Ainda nada. A primeira passagem escreve aqui.</li>
         )}
         {visiveis.map((l) => (
           <li key={l.id} className={`flex flex-wrap items-start gap-x-3 gap-y-1 py-2 ${l.desfeito_em ? "opacity-50" : ""}`}>
-            <span className="w-24 shrink-0 text-[11px] tabular-nums text-neutral-500">{hora(l.criado_em)}</span>
+            <span className="w-24 shrink-0 text-[11px] tabular-nums text-zinc-500">{hora(l.criado_em)}</span>
             <div className="min-w-0 flex-1">
-              <p className="text-[13px] text-neutral-100">
-                {l.modo === "ensaio" && <span className="mr-1.5 rounded bg-neutral-800 px-1.5 text-[10.5px] text-neutral-300">faria</span>}
+              <p className="text-[13px] text-zinc-100">
+                {l.modo === "ensaio" && <span className="mr-1.5 rounded bg-zinc-800 px-1.5 text-[10.5px] text-zinc-300">faria</span>}
                 {l.resumo}
               </p>
-              <p className="text-[11px] text-neutral-500">
+              <p className="text-[11px] text-zinc-500">
                 {AREA[l.area]} · {l.agente}
                 {l.motivo ? ` · ${l.motivo}` : ""}
                 {l.desfeito_em ? ` · desfeito ${hora(l.desfeito_em)}` : ""}
@@ -184,7 +184,7 @@ export function RegistoOperador({ compacto = false }: { compacto?: boolean }) {
                   setAviso(j.ok ? "Desfeito." : j.erro ?? "Não deu para desfazer.")
                   await buscar()
                 }}
-                className="flex min-h-[32px] cursor-pointer items-center gap-1 rounded-lg border border-neutral-700 px-2.5 text-[11.5px] text-neutral-200 hover:bg-neutral-800"
+                className="flex min-h-[32px] cursor-pointer items-center gap-1 rounded-lg border border-zinc-700 px-2.5 text-[11.5px] text-zinc-200 hover:bg-zinc-800"
               >
                 <Undo2 className="h-3.5 w-3.5" aria-hidden="true" /> Desfazer
               </button>

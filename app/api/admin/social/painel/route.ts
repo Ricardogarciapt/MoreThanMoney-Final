@@ -1,4 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { exigirSocial } from '@/lib/social-acesso'
+import { contextoBackoffice } from '@/lib/backoffice-sessao'
+import { pode } from '@/lib/backoffice-papeis'
 import { getSupabaseAdmin } from '@/lib/supabase-admin-client'
 import { factosParaCartao, getPipsProof, notaViesPreco, publicavel, RESSALVA_LEGAL } from '@/lib/pips-proof'
 import { buildSalesState, salesStateSummary } from '@/lib/sales-machine'
@@ -19,19 +22,9 @@ export const maxDuration = 30
  *   • o FUNIL — quantas pessoas em cada degrau, do lead ao pagante
  */
 
+/** Acesso decidido no back-office (admin ou «Social & conteúdo») — ver lib/social-acesso.ts. */
 async function autorizar(request: NextRequest): Promise<boolean> {
-  const cabecalho = request.headers.get('Authorization') ?? ''
-  const token = cabecalho.replace(/^Bearer\s+/i, '').trim()
-  const db = getSupabaseAdmin()
-  if (token) {
-    const { data } = await db.auth.getUser(token)
-    if (data.user) {
-      const { data: p } = await db.from('profiles').select('user_type').eq('id', data.user.id).maybeSingle()
-      if (p?.user_type === 'admin') return true
-    }
-  }
-  // A página do admin já corre atrás do middleware; o cabeçalho é o segundo cadeado, não o único.
-  return false
+  return !(await exigirSocial(request))
 }
 
 export async function GET(request: NextRequest) {
@@ -86,8 +79,12 @@ export async function GET(request: NextRequest) {
   const perf = perfis ?? []
   const ativo = (x: { user_type?: string | null }) => x.user_type !== 'inactive'
 
+  // O back-office decide o que cada um vê: as Ligações (tokens, webhook da Meta) são só do dono.
+  const ctx = await contextoBackoffice(request)
+  const dono = ctx ? pode(ctx.capacidades, 'bo.dono') : false
   return NextResponse.json({
     ok: true,
+    acesso: { dono },
 
     // ── A máquina de vendas, em números ───────────────────────────────────────────────────
     maquina: maquina

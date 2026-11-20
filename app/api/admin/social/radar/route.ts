@@ -1,6 +1,7 @@
 import { filtroFrescoPostgrest } from "@/lib/instagram/radar-frescura"
+import { exigirSocial } from '@/lib/social-acesso'
 import { NextRequest, NextResponse } from "next/server"
-import { requireAdmin } from "@/lib/admin-api-helpers"
+
 import { getSupabaseAdmin } from "@/lib/supabase-admin-client"
 import { correrRadar } from "@/lib/instagram/radar"
 import { mensagemIndisponivel } from '@/lib/ia/chamar'
@@ -12,7 +13,7 @@ export const maxDuration = 60
 
 /** A lista do radar: as conversas por onde vale a pena entrar, por ordem. */
 export async function GET(req: NextRequest) {
-  const guard = await requireAdmin(req)
+  const guard = await exigirSocial(req)
   if (guard) return guard
 
   const db = getSupabaseAdmin()
@@ -35,7 +36,7 @@ export async function GET(req: NextRequest) {
 
 /** Marcar um prospeto (já entrei / não serve), ou correr o radar agora. */
 export async function POST(req: NextRequest) {
-  const guard = await requireAdmin(req)
+  const guard = await exigirSocial(req)
   if (guard) return guard
 
   const corpo = (await req.json().catch(() => ({}))) as {

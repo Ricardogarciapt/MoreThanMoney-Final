@@ -11,8 +11,9 @@ import type { Capacidade } from '@/lib/backoffice-papeis'
  *   · `bo.dono`             → só o dono (contas, Telegram, agentes, dashboard, acessos)
  *   · `bo.gestao_crm`       → acesso «Clientes & CRM» (agenda, WhatsApp, leads, formulários)
  *   · `bo.gestao_comercial` → acesso «Comercial» (tráfego, cupões)
+ *   · `bo.gestao_social`    → acesso «Social & conteúdo» (Centro Social; as Ligações só para o dono)
  */
-export type GrupoGestao = 'Operação' | 'Clientes & CRM' | 'Comercial' | 'Inteligência' | 'Equipa'
+export type GrupoGestao = 'Operação' | 'Clientes & CRM' | 'Social' | 'Comercial' | 'Inteligência' | 'Equipa'
 
 export type ModuloGestao = {
   slug: string
@@ -41,6 +42,8 @@ export const MODULOS_GESTAO: readonly ModuloGestao[] = [
     descricao: 'Leads quentes à espera de resposta, e por origem: trabalhados, avançados, ganhos e tempo até ao 1.º contacto.' },
   { slug: 'formularios', nome: 'Formulários', grupo: 'Clientes & CRM', exige: 'bo.gestao_crm',
     descricao: 'Criar formulários de captação e ler as submissões — cada submissão entra no pipeline.' },
+  { slug: 'social', nome: 'Centro Social', grupo: 'Social', exige: 'bo.gestao_social',
+    descricao: 'Instagram e funis num só sítio: o que se publica, o radar de leads, os funis e automações, e as ligações à Meta (estas só para o dono).' },
   { slug: 'trafego', nome: 'Tráfego', grupo: 'Comercial', exige: 'bo.gestao_comercial',
     descricao: 'Campanhas Meta (gasto, cliques, leads, CPL) ao lado do que entrou no CRM e na agenda, com diagnóstico e acções.' },
   { slug: 'marketing', nome: 'Marketing', grupo: 'Comercial', exige: 'bo.gestao_comercial',
@@ -60,7 +63,7 @@ export const MODULOS_GESTAO: readonly ModuloGestao[] = [
     vistas: [{ id: 'gestao', nome: 'Acessos à Gestão' }, { id: 'estudio', nome: 'Estúdio' }, { id: 'papeis', nome: 'Papéis de venda' }] },
 ] as const
 
-export const GRUPOS_GESTAO: readonly GrupoGestao[] = ['Operação', 'Clientes & CRM', 'Comercial', 'Inteligência', 'Equipa']
+export const GRUPOS_GESTAO: readonly GrupoGestao[] = ['Operação', 'Clientes & CRM', 'Social', 'Comercial', 'Inteligência', 'Equipa']
 
 export function moduloGestao(slug: string): ModuloGestao | undefined {
   return MODULOS_GESTAO.find((m) => m.slug === slug)
