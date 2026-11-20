@@ -9,6 +9,9 @@
  * (Telegram / briefing 9h30, lib/estudio/reel-aprovacao.ts). Nada sai sozinho.
  *
  * Interruptor: site_settings.reels_cinematicos = {"ligado": true, "por_dia": {"ricardo-garcia": 1, "morethanmoney": 1}, "reserva": 30}
+ * `via` (20/11 23:51, escolha do Ricardo): 'mcp' (omissão) = o pedido fica em 'aguarda_mcp' e a rotina
+ * diária das 04:30 UTC gera o gémeo com os créditos do PLANO HeyGen (a chave da API não tem saldo);
+ * 'api' = pede direto à API v3 (precisa de saldo de API).
  * Sem linha = ligado com 1 + 1 por dia. `reserva` = créditos HeyGen que nunca se gastam (abaixo
  * disso não se pede nada e o Ricardo sabe pelo «Hoje»).
  */
@@ -19,7 +22,7 @@ import { pedirReelDoClone } from './clone-reel'
 export const CHAVE_REELS_CINEMATICOS = 'reels_cinematicos'
 export const MARCAS = ['ricardo-garcia', 'morethanmoney'] as const
 type Marca = (typeof MARCAS)[number]
-export type Interruptor = { ligado: boolean; porDia: Record<Marca, number>; reserva: number }
+export type Interruptor = { ligado: boolean; porDia: Record<Marca, number>; reserva: number; via: 'api' | 'mcp' }
 
 export function lerInterruptor(v: unknown): Interruptor {
   const o = (v && typeof v === 'object' ? v : {}) as Record<string, any>
@@ -28,6 +31,7 @@ export function lerInterruptor(v: unknown): Interruptor {
   return {
     ligado: o.ligado !== false,
     porDia: { 'ricardo-garcia': n(pd['ricardo-garcia'], 1), morethanmoney: n(pd.morethanmoney, 1) },
+    via: o.via === 'api' ? 'api' : 'mcp',
     reserva: o.reserva !== undefined && Number.isFinite(Number(o.reserva)) ? Math.max(0, Number(o.reserva)) : 30,
   }
 }
@@ -53,8 +57,8 @@ export async function pedirDoDia(db: SupabaseClient): Promise<Record<string, unk
   const { data: cfgRow } = await db.from('site_settings').select('value').eq('key', CHAVE_REELS_CINEMATICOS).maybeSingle()
   const cfg = lerInterruptor(cfgRow?.value)
   if (!cfg.ligado) return { ok: true, desligado: true }
-  if (!heygenConfig()) return { ok: false, erro: 'Falta a HEYGEN_API_KEY na Vercel.' }
-  const creditos = await creditosHeygen()
+  if (cfg.via === 'api' && !heygenConfig()) return { ok: false, erro: 'Falta a HEYGEN_API_KEY na Vercel.' }
+  const creditos = cfg.via === 'api' ? await creditosHeygen() : null
   if (creditos !== null && creditos <= cfg.reserva) return { ok: true, sem_creditos: true, creditos, reserva: cfg.reserva }
 
   const hoje = new Date(); hoje.setUTCHours(0, 0, 0, 0)
@@ -71,10 +75,10 @@ export async function pedirDoDia(db: SupabaseClient): Promise<Record<string, unk
       .eq('marca', marca).order('criado_em', { ascending: true }).limit(200)
     const livres = (pecas ?? []).filter((p) => !usados.has(p.id) && temFalas(p.guiao)).slice(0, faltam)
     for (const p of livres) {
-      const r = await pedirReelDoClone(db, p.id, p.user_id ?? null)
+      const r = await pedirReelDoClone(db, p.id, p.user_id ?? null, cfg.via)
       pedidos.push({ marca, peca: p.id, status: r.status, ...r.corpo })
     }
     if (!livres.length) pedidos.push({ marca, aviso: 'sem guiões novos com falas' })
   }
-  return { ok: true, creditos, pedidos }
+  return { ok: true, via: cfg.via, creditos, pedidos }
 }

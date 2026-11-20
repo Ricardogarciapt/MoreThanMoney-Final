@@ -106,7 +106,10 @@ export async function sincronizarHeygen(db: SupabaseClient, g: Geracao): Promise
   const vid = g.params?.heygen_id
   if (g.motor !== 'heygen' || g.estado !== 'a_gerar' || !cfg || typeof vid !== 'string') return g.estado
   try {
-    const d = await estadoHeygen(cfg.chave, vid)
+    // Gerado pela rotina do plano (MCP): o URL já vem no pedido e não se pergunta nada à API.
+    const d = typeof g.params?.heygen_url === 'string'
+      ? { status: 'completed', video_url: g.params.heygen_url as string, duration: Number(g.params?.duracao) || undefined, erro: undefined }
+      : await estadoHeygen(cfg.chave, vid)
     const agora = new Date().toISOString()
     if (d.status === 'failed') {
       const erro = `heygen: ${String(d.erro || 'falhou').slice(0, 300)}`

@@ -6,10 +6,10 @@
  */
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { enviarHeygen } from './heygen'
-import { cenasDoGuiao } from './heygen-looks'
+import { cenasDoGuiao, lookDoPlano, VOZ_RICARDO } from './heygen-looks'
 import { falarParaStorage } from '@/lib/voz'
 
-export async function pedirReelDoClone(db: SupabaseClient, pecaId: string, userId: string | null): Promise<{ status: number; corpo: Record<string, unknown> }> {
+export async function pedirReelDoClone(db: SupabaseClient, pecaId: string, userId: string | null, via: 'api' | 'mcp' = 'mcp'): Promise<{ status: number; corpo: Record<string, unknown> }> {
   const { data: peca } = await db.from('conteudo_magnetico_pecas').select('id, user_id, marca, guiao').eq('id', pecaId).maybeSingle()
   if (!peca) return { status: 404, corpo: { erro: 'Guião não encontrado.' } }
   // 20/11: o molde cinemático serve as duas marcas (os anúncios da MTM já usam o gémeo).
@@ -24,11 +24,26 @@ export async function pedirReelDoClone(db: SupabaseClient, pecaId: string, userI
 
   // Um pedido de cada vez por guião (evita gastar créditos duas vezes num duplo clique).
   const { data: ja } = await db.from('estudio_geracoes').select('id')
-    .eq('origem', 'clone-reel').eq('estado', 'a_gerar').contains('params', { peca_id: pecaId }).limit(1)
+    .eq('origem', 'clone-reel').in('estado', ['a_gerar', 'aguarda_mcp']).contains('params', { peca_id: pecaId }).limit(1)
   if (ja?.length) return { status: 200, corpo: { ok: true, id: ja[0].id, estado: 'a_gerar', cenas: cenas.length, repetido: true } }
 
   const texto = cenas.map((c) => c.texto).join(' ').slice(0, 1500)
   const nicho = String((peca.guiao as any)?.nicho || '').slice(0, 80)
+
+  // Via plano (MCP): só regista o pedido com tudo o que a rotina diária precisa para o gerar.
+  if (via === 'mcp') {
+    const look = lookDoPlano(cenas[0].plano, process.env.HEYGEN_AVATAR_ID?.trim() || null)
+    const { data: m, error: em } = await db.from('estudio_geracoes').insert({
+      tipo: 'falar',
+      estado: 'aguarda_mcp',
+      params: { aspecto: '9:16', texto, marca, peca_id: pecaId, cenas, apoio, look_id: look.id, voz_id: process.env.HEYGEN_VOICE_ID?.trim() || VOZ_RICARDO, titulo: nicho ? `MTM · ${nicho}` : `MTM · ${marca}` },
+      origem: 'clone-reel',
+      pedido_por: userId || peca.user_id,
+      motor: 'heygen',
+    }).select('id').single()
+    if (em || !m) return { status: 500, corpo: { erro: 'Não consegui registar o pedido.' } }
+    return { status: 200, corpo: { ok: true, id: m.id, estado: 'aguarda_mcp', cenas: cenas.length } }
+  }
   const { data: g, error } = await db.from('estudio_geracoes').insert({
     tipo: 'falar',
     estado: 'fila',
