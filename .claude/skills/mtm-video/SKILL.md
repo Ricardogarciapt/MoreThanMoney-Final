@@ -22,6 +22,9 @@ Antes de escrever código ou renderizar, lê `video/motor/LEIA-ME.md` (tabela «
    SFX sintetizados, stock com grade) = `video/cinematico`, com um projecto novo em
    `src/projetos/<nome>/` que reutiliza `src/motor/util.tsx` (Titulo, Plano, Pelicula, Clarao).
    Take filmado = editor do `/estudio`. Clone = HeyGen (`/api/estudio/clone-reel`).
+   Gémeo a apresentar/narrar um vídeo que já existe (círculo no canto, lip sync sobre o áudio do vídeo):
+   `node video/motor/motor.mjs gemeo <base> <saida> --look=mentor` — corre primeiro com `--estimar`
+   (créditos HeyGen são limitados) e nunca re-renderizes a base só para isto.
 3. **Formato.** `reel` (1080×1920), `feed` (1080×1350), `quadrado`, `youtube` (1920×1080). 30 fps.
 4. **Render.** Nada de `-c:v libx264 -crf …` nem `loudnorm=…` escritos à mão: `motor.codificar()`,
    `motor.LOUDNORM`, `motor.enquadrar()` (Node), `motor.codificar()` (Python),

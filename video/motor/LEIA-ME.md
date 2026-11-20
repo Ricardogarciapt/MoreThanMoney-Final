@@ -28,6 +28,7 @@ video/cinematico/      motor cinemático Remotion + Three.js (estilo /solucoes),
 | Bootcamps de estratégia (YouTube, gráfico fiel ao Pine) | `video/bootcamp` | Mac (`fila.sh`) |
 | Vídeo de apresentação MTM em 7 línguas | `video/apresentacao` | Mac |
 | Stories MTM | `video/stories-mtm` | Mac |
+| **Gémeo do Ricardo a apresentar um vídeo que já existe** (círculo com aro da marca, lip sync HeyGen sobre o áudio do próprio vídeo: apresentações, cursos, bootcamps) | `node video/motor/motor.mjs gemeo <base> <saida> [--look=mentor] [--estimar]` (`video/motor/gemeo.mjs`) | onde houver `HEYGEN_API_KEY`; ≈ 7 créditos/min (`avatar_iii`) |
 | Vídeo narrado de 1 imagem (app de desktop no Mac) | Studify (MCP `criar_video`) → depois `motor.mjs finalizar` | Mac |
 
 Studify, HeyGen e qualquer vídeo que venha de fora passam sempre por `finalizar` antes de ir para

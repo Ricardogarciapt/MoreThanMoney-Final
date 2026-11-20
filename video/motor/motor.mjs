@@ -14,6 +14,8 @@
 //   node video/motor/motor.mjs pasta <marca> <produto>
 //   node video/motor/motor.mjs finalizar <entrada> <saida> [--formato=reel] [--qualidade=final]
 //   node video/motor/motor.mjs verificar <ficheiro> [--formato=reel]
+//   node video/motor/motor.mjs gemeo <base.mp4> <saida.mp4> [--formato=youtube] [--look=mentor] [--estimar]   (gemeo.mjs)
+//   node video/motor/motor.mjs gemeo-pip <base.mp4> <avatar.mp4> <saida.mp4> [--formato=youtube]
 import { spawn, spawnSync, execFileSync } from 'node:child_process'
 import fs from 'node:fs'
 import path from 'node:path'
@@ -206,11 +208,15 @@ if (process.argv[1] && fileURLToPath(import.meta.url) === path.resolve(process.a
   } else if (cmd === 'finalizar') {
     await finalizar(pos[0], pos[1], { formato: opt('formato', 'reel'), qualidade: opt('qualidade', 'final') })
     console.log(JSON.stringify(verificar(pos[1], opt('formato', 'reel'))))
+  } else if (cmd === 'gemeo' || cmd === 'gemeo-pip') {
+    // gemeo.mjs importa este módulo: corre noutro processo para não haver import circular
+    const c = spawnSync(process.execPath, [path.join(DIR, 'gemeo.mjs'), cmd, ...r], { stdio: 'inherit' })
+    process.exit(c.status ?? 1)
   } else if (cmd === 'verificar') {
     const v = verificar(pos[0], opt('formato', null))
     console.log(JSON.stringify(v, null, 2))
     process.exit(v.ok ? 0 : 1)
   } else {
-    console.log('uso: motor.mjs marcas | pasta <marca> <produto> | saida <marca> <produto> <slug> | finalizar <in> <out> [--formato=reel] [--qualidade=final] | verificar <f> [--formato=reel]')
+    console.log('uso: motor.mjs marcas | pasta <marca> <produto> | saida <marca> <produto> <slug> | finalizar <in> <out> [--formato=reel] [--qualidade=final] | verificar <f> [--formato=reel] | gemeo <base> <saida> [--look=mentor] [--estimar] | gemeo-pip <base> <avatar> <saida>')
   }
 }
