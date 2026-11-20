@@ -250,6 +250,76 @@ label { display: block; font-size: 13px; letter-spacing: 1.5px; text-transform: 
 .dica-chave { font-family: "Kalam"; font-size: 20px; line-height: 1.45; color: #f0f2f6; }
 .doca { grid-template-columns: repeat(6, 1fr); }
 .doca button { font-size: 10px; letter-spacing: 0; }
+/* comunidade: stories e conversa */
+.stories { display: flex; gap: 12px; overflow-x: auto; padding: 4px 2px 10px; scrollbar-width: none; }
+.stories::-webkit-scrollbar { display: none; }
+.st { flex: 0 0 auto; width: 68px; background: none; border: 0; color: var(--texto); text-align: center; padding: 0; }
+.st .aro { width: 64px; height: 64px; border-radius: 50%; padding: 3px; background: var(--linha); margin: 0 auto 4px; transition: transform .2s; }
+.st:active .aro { transform: scale(.94); }
+.st.nova .aro { background: conic-gradient(var(--ouro2), var(--ciano), var(--ouro), var(--ouro2)); }
+.av { width: 100%; height: 100%; border-radius: 50%; background: #0a0d13 center/cover no-repeat; border: 2px solid var(--fundo); display: flex; align-items: center; justify-content: center; font-family: "Anton"; font-size: 22px; color: var(--ouro2); overflow: hidden; }
+.st small { display: block; font-size: 11px; color: var(--cinza); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.st.mais .av { color: var(--ciano); font-size: 30px; }
+.chat { display: flex; flex-direction: column; gap: 12px; padding-bottom: 96px; }
+.msg { max-width: 86%; align-self: flex-start; }
+.msg.eu { align-self: flex-end; }
+.msg .cab { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; font-size: 12px; color: var(--cinza); margin: 0 4px 3px; }
+.msg.eu .cab { justify-content: flex-end; }
+.msg .cab b { color: var(--texto); font-weight: 600; font-size: 13px; }
+.selo { font-size: 10px; letter-spacing: .08em; text-transform: uppercase; padding: 1px 6px; border-radius: 6px; background: rgba(210,166,60,.18); color: var(--ouro2); }
+.selo.eq { background: rgba(30,170,230,.16); color: var(--ciano); }
+.pat { font-size: 11px; color: var(--cinza); }
+.bolha { background: var(--placa2); border: 1px solid var(--linha); border-radius: 16px 16px 16px 4px; padding: 10px 12px; font-size: 16px; line-height: 1.4; white-space: pre-wrap; overflow-wrap: anywhere; cursor: pointer; transition: box-shadow .3s; }
+.msg.eu .bolha { background: linear-gradient(135deg, rgba(233,196,106,.16), rgba(210,166,60,.08)); border-color: rgba(210,166,60,.35); border-radius: 16px 16px 4px 16px; }
+.msg.pisca .bolha { box-shadow: 0 0 0 2px var(--ciano); }
+.bolha img { display: block; max-width: 100%; max-height: 340px; border-radius: 10px; margin-bottom: 6px; }
+.bolha.apagada { color: var(--cinza); font-style: italic; cursor: default; }
+.cita { border-left: 3px solid var(--ciano); padding: 4px 8px; margin-bottom: 6px; font-size: 13px; color: var(--cinza); background: rgba(30,170,230,.06); border-radius: 4px; white-space: normal; }
+.cita b { color: var(--ciano); font-weight: 600; }
+.reacs { display: flex; gap: 4px; flex-wrap: wrap; margin: 4px 4px 0; }
+.msg.eu .reacs { justify-content: flex-end; }
+.reac { border: 1px solid var(--linha); background: #0a0d13; color: var(--texto); border-radius: 999px; padding: 2px 9px; font-size: 13px; }
+.reac.eu { border-color: var(--ouro); background: rgba(210,166,60,.12); }
+.compor { position: fixed; left: 50%; transform: translateX(-50%); bottom: calc(84px + env(safe-area-inset-bottom)); width: min(540px, calc(100% - 20px)); background: rgba(15,18,26,.96); border: 1px solid var(--linha); border-radius: 16px; padding: 8px; z-index: 9; backdrop-filter: blur(10px); }
+.compor .linha { display: flex; gap: 6px; align-items: flex-end; }
+.compor textarea { min-height: 44px; max-height: 120px; resize: none; padding: 10px 12px; }
+.compor .ic { flex: 0 0 44px; height: 44px; border-radius: 12px; border: 1px solid var(--linha); background: var(--placa2); color: var(--texto); font-size: 18px; }
+.compor .env { background: linear-gradient(135deg, var(--ouro2), var(--ouro)); color: #111; border: 0; }
+.compor .resp { display: flex; justify-content: space-between; align-items: center; gap: 8px; font-size: 13px; color: var(--cinza); padding: 0 6px 6px; }
+.compor .resp span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.menu-msg { display: grid; grid-template-columns: repeat(6, 1fr); gap: 6px; margin: 12px 0; }
+.menu-msg button { font-size: 24px; min-height: 50px; border-radius: 12px; border: 1px solid var(--linha); background: var(--placa2); }
+.visor { position: fixed; inset: 0; z-index: 30; background: #000; display: none; touch-action: manipulation; }
+.visor.on { display: block; }
+.visor .barras { position: absolute; top: calc(10px + env(safe-area-inset-top)); left: 10px; right: 10px; display: flex; gap: 4px; z-index: 3; }
+.visor .barras i { flex: 1; height: 3px; background: rgba(255,255,255,.25); border-radius: 2px; overflow: hidden; }
+.visor .barras i b { display: block; height: 100%; width: 0; background: #fff; }
+.visor .vtopo { position: absolute; top: calc(20px + env(safe-area-inset-top)); left: 12px; right: 12px; display: flex; align-items: center; gap: 8px; z-index: 3; font-size: 14px; text-shadow: 0 1px 4px #000; }
+.visor .vtopo .av { width: 36px; height: 36px; flex: 0 0 36px; font-size: 16px; }
+.visor .vtopo .fechar { margin-left: auto; color: #fff; float: none; font-size: 34px; }
+.visor .tela { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; }
+.visor .tela img { max-width: 100%; max-height: 100%; object-fit: contain; }
+.visor .tela .txt { padding: 0 28px; font-family: "Kalam"; font-size: 30px; line-height: 1.35; text-align: center; color: #fff; overflow-wrap: anywhere; }
+.visor .leg { position: absolute; left: 0; right: 0; bottom: calc(84px + env(safe-area-inset-bottom)); text-align: center; padding: 14px 20px; font-size: 18px; background: linear-gradient(transparent, rgba(0,0,0,.75)); z-index: 2; }
+.visor .base { position: absolute; left: 0; right: 0; bottom: calc(16px + env(safe-area-inset-bottom)); display: flex; gap: 6px; justify-content: center; align-items: center; z-index: 3; flex-wrap: wrap; padding: 0 10px; }
+.visor .base button { font-size: 20px; background: rgba(255,255,255,.1); border: 1px solid rgba(255,255,255,.22); border-radius: 999px; width: 42px; height: 42px; color: #fff; }
+.visor .base button.on { border-color: var(--ouro2); background: rgba(210,166,60,.25); }
+.visor .base .mini { font-size: 13px; width: auto; padding: 0 14px; }
+.visor .base .info { font-size: 14px; color: #fff; }
+.visor .zona { position: absolute; top: 80px; bottom: 90px; z-index: 2; }
+.visor .zona.esq { left: 0; width: 33%; }
+.visor .zona.dir { right: 0; width: 67%; }
+.f-ouro { background: radial-gradient(circle at 30% 20%, #E9C46A, #7a5812 75%); }
+.f-ciano { background: radial-gradient(circle at 30% 20%, #1EAAE6, #0b2f57 75%); }
+.f-carvao { background: radial-gradient(circle at 30% 20%, #2a3140, #07080c 75%); }
+.f-azul { background: linear-gradient(135deg, #1256BE, #07080c); }
+.fundos { display: flex; gap: 10px; margin: 8px 0; }
+.fundos button { width: 36px; height: 36px; border-radius: 50%; border: 2px solid transparent; }
+.fundos button.on { border-color: #fff; }
+.st-pre { width: 100%; aspect-ratio: 9/14; max-height: 44dvh; border-radius: 16px; display: flex; align-items: center; justify-content: center; overflow: hidden; position: relative; margin: 8px 0; }
+.st-pre img { width: 100%; height: 100%; object-fit: cover; }
+.st-pre .txt { position: absolute; padding: 0 18px; font-family: "Kalam"; font-size: 22px; text-align: center; color: #fff; text-shadow: 0 1px 6px rgba(0,0,0,.6); overflow-wrap: anywhere; }
+.st-pre img + .txt { bottom: 14px; font-family: "Oswald"; font-size: 17px; }
 @media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } }
 </style>
 </head>
@@ -362,13 +432,21 @@ label { display: block; font-size: 13px; letter-spacing: 1.5px; text-transform: 
     </div>
 
     <div class="vista esq" id="vEsq">
-      <div class="sec-tit"><h3>Esquadrão</h3><span class="mono">Top 10 por XP</span></div>
-      <div class="placa"><ul id="gEsq"></ul></div>
-      <div class="placa cantos" style="margin-top:14px">
-        <h3 style="margin:0 0 6px;font-size:20px">Queres ir mais longe?</h3>
-        <p class="texto-m" style="margin:0 0 12px;font-size:15px">Educação financeira, ferramentas de IA e uma comunidade a sério na MoreThanMoney.</p>
-        <a class="btn" href="/ricardogarcia?utm_source=app-missao#caminhos" style="text-decoration:none">Ver os caminhos</a>
-        <button class="btn sec" id="bSair" type="button" style="margin-top:10px">Sair da conta</button>
+      <div class="sec-tit"><h3>Comunidade</h3><span class="mono">Stories duram 24 h</span></div>
+      <div class="stories" id="gStories" aria-label="Stories"></div>
+      <div class="seg2" id="cAbas"><button type="button" class="on" data-ca="chat">💬 Conversa</button><button type="button" data-ca="rank">⚑ Ranking</button></div>
+      <div id="cChat">
+        <p class="texto-m" style="margin:0 0 12px;font-size:14px;color:var(--cinza)">Aqui falam todos os que estão na missão. Respeito sempre, nada de vendas nem de promessas de dinheiro. Toca numa mensagem para reagir, responder ou denunciar.</p>
+        <div class="chat" id="gChat"><p class="vazio">A carregar a conversa…</p></div>
+      </div>
+      <div id="cRank" hidden>
+        <div class="placa"><ul id="gEsq"></ul></div>
+        <div class="placa cantos" style="margin-top:14px">
+          <h3 style="margin:0 0 6px;font-size:20px">Queres ir mais longe?</h3>
+          <p class="texto-m" style="margin:0 0 12px;font-size:15px">Educação financeira, ferramentas de IA e uma comunidade a sério na MoreThanMoney.</p>
+          <a class="btn" href="/ricardogarcia?utm_source=app-missao#caminhos" style="text-decoration:none">Ver os caminhos</a>
+          <button class="btn sec" id="bSair" type="button" style="margin-top:10px">Sair da conta</button>
+        </div>
       </div>
     </div>
     <p class="rodape">Conteúdo educativo. Não é aconselhamento financeiro, médico nem de treino personalizado.</p>
@@ -378,12 +456,26 @@ label { display: block; font-size: 13px; letter-spacing: 1.5px; text-transform: 
 <nav class="doca" id="doca" hidden>
   <button class="on" data-v="vBase" type="button"><span>⌂</span>Base</button>
   <button data-v="vRotas" type="button"><span>⌖</span>Rotas</button>
+  <button data-v="vEsq" type="button"><span>💬</span>Chat</button>
   <button data-v="vEventos" type="button"><span>★</span>Ricardo</button>
   <button data-v="vDiario" type="button"><span>✎</span>Diário</button>
   <button data-v="vRec" type="button"><span>◈</span>Prémios</button>
-  <button data-v="vEsq" type="button"><span>⚑</span>Esquadrão</button>
+  
 </nav>
 
+<div class="compor" id="compor" hidden>
+  <div class="resp" id="cResp" hidden><span id="cRespT"></span><button type="button" class="fechar" id="cRespX" aria-label="Cancelar resposta" style="font-size:22px">×</button></div>
+  <img id="cImgPre" hidden alt="Foto a enviar" style="max-height:90px;border-radius:10px;margin:0 0 6px 4px">
+  <div class="linha"><button class="ic" type="button" id="cFoto" aria-label="Juntar foto">📷</button><textarea id="cTxt" rows="1" maxlength="1000" placeholder="Escreve à comunidade…" aria-label="Mensagem"></textarea><button class="ic env" type="button" id="cEnv" aria-label="Enviar">➤</button></div>
+  <input type="file" id="cFich" accept="image/*" hidden>
+</div>
+<div class="visor" id="visor" role="dialog" aria-modal="true" aria-label="Stories">
+  <div class="barras" id="vBarras"></div>
+  <div class="vtopo"><div class="av" id="vAv"></div><div><b id="vNome"></b> <span id="vSelo"></span><br><span class="pat" id="vPat"></span></div><button class="fechar" id="vFechar" type="button" aria-label="Fechar">×</button></div>
+  <div class="tela" id="vTela"></div>
+  <div class="zona esq" id="vAnt"></div><div class="zona dir" id="vSeg"></div>
+  <div class="base" id="svBase"></div>
+</div>
 <div class="folha" id="folha" role="dialog" aria-modal="true"><div class="caixa" id="folhaC"></div></div>
 <div class="toast" id="toast" role="status"></div>
 <canvas id="confete" aria-hidden="true"></canvas>
@@ -716,6 +808,7 @@ label { display: block; font-size: 13px; letter-spacing: 1.5px; text-transform: 
     document.querySelectorAll('.doca button').forEach(function (k) { k.classList.toggle('on', k === b); });
     document.querySelectorAll('.vista').forEach(function (v) { v.classList.toggle('on', v.id === b.getAttribute('data-v')); });
     window.scrollTo(0, 0);
+    abrirComunidade(b.getAttribute('data-v') === 'vEsq');
   });
   $('bSair').onclick = function () { api({ accao: 'sair' }).then(function () { location.reload(); }); };
 
@@ -735,6 +828,190 @@ label { display: block; font-size: 13px; letter-spacing: 1.5px; text-transform: 
       : { accao: 'entrar', email: $('aEmail').value, pass: $('aPass').value };
     api(body).then(function (r) { b.disabled = false; if (!r.ok) { $('aErro').textContent = r.erro; return; } carregar(true); });
   });
+
+  // ── Comunidade: stories de 24 h e conversa entre membros ──────────────────
+  var C = { st: [], msgs: [], desde: null, resp: null, img: null, poll: null, equipa: false, emojis: ['🔥', '💪', '👏', '😂', '❤️', '🎯'], fundos: ['ouro', 'ciano', 'carvao', 'azul'], aba: 'chat', aberta: false, primeira: true };
+  var V = { g: 0, i: 0, t: null, ini: 0, dur: 5000 };
+  function capi(body, q) {
+    return fetch(API + '/comunidade' + (q || ''), { method: body ? 'POST' : 'GET', headers: body ? { 'Content-Type': 'application/json' } : {}, body: body ? JSON.stringify(body) : undefined, credentials: 'same-origin' })
+      .then(function (r) { return r.json().catch(function () { return { ok: false, erro: 'Sem ligação. Tenta outra vez.' }; }); }, function () { return { ok: false, erro: 'Sem ligação. Tenta outra vez.' }; });
+  }
+  function inicial(n) { return esc(String(n || '?').trim().charAt(0).toUpperCase()); }
+  function selo(a) { return a.selo === 'Ricardo' ? '<span class="selo">Ricardo</span>' : a.selo === 'Equipa' ? '<span class="selo eq">Equipa</span>' : ''; }
+  function avatar(a, cls) { return '<div class="av' + (cls ? ' ' + cls : '') + '"' + (a.avatar ? ' style="background-image:url(&quot;' + esc(a.avatar) + '&quot;)"' : '') + '>' + (a.avatar ? '' : inicial(a.nome)) + '</div>'; }
+  function quando(t) { var d = (Date.now() - Date.parse(t)) / 60000; if (d < 1) return 'agora'; if (d < 60) return Math.floor(d) + ' min'; if (d < 1440) return Math.floor(d / 60) + ' h'; return new Date(t).toLocaleDateString('pt-PT', { day: '2-digit', month: '2-digit' }); }
+
+  function renderStories() {
+    $('gStories').innerHTML = '<button class="st mais" type="button" data-stnova><div class="aro"><div class="av">+</div></div><small>Publicar</small></button>' +
+      C.st.map(function (g, i) { return '<button class="st' + (g.por_ver ? ' nova' : '') + '" type="button" data-st="' + i + '"><div class="aro">' + avatar(g) + '</div><small>' + (g.eu ? 'A tua' : esc(g.nome)) + '</small></button>'; }).join('');
+  }
+  function msgHtml(x) {
+    var a = x.autor, r = x.reacoes.map(function (e) { return '<button class="reac' + (e.eu ? ' eu' : '') + '" type="button" data-reac="' + x.id + '" data-e="' + e.emoji + '">' + e.emoji + ' ' + e.n + '</button>'; }).join('');
+    return '<div class="msg' + (x.eu ? ' eu' : '') + '" id="m-' + x.id + '"><div class="cab"><b>' + esc(x.eu ? 'Tu' : a.nome) + '</b>' + selo(a) + '<span class="pat">' + esc(a.patente_nome) + ' · ' + quando(x.criado) + '</span></div>' +
+      '<div class="bolha' + (x.apagado ? ' apagada' : '') + '" data-msg="' + x.id + '">' + (x.resposta ? '<div class="cita" data-ir="' + x.resposta.id + '"><b>' + esc(x.resposta.nome) + '</b><br>' + esc(x.resposta.texto) + '</div>' : '') +
+      (x.apagado ? 'Mensagem apagada' : (x.imagem ? '<a href="' + esc(x.imagem) + '" target="_blank" rel="noopener"><img src="' + esc(x.imagem) + '" alt="Foto enviada por ' + esc(a.nome) + '" loading="lazy"></a>' : '') + esc(x.texto || '')) + '</div>' +
+      (r ? '<div class="reacs">' + r + '</div>' : '') + '</div>';
+  }
+  function renderChat(rolar) {
+    var perto = window.innerHeight + window.scrollY >= document.body.scrollHeight - 220;
+    $('gChat').innerHTML = C.msgs.length ? C.msgs.map(msgHtml).join('') : '<p class="vazio">Ainda ninguém falou. Começa tu: diz de onde és e qual é a tua missão deste mês.</p>';
+    if (rolar || perto) { window.scrollTo(0, document.body.scrollHeight); $('gChat').querySelectorAll('img').forEach(function (i) { if (!i.complete) i.addEventListener('load', function () { window.scrollTo(0, document.body.scrollHeight); }); }); }
+  }
+  function juntar(novas) {
+    var ids = {}; C.msgs.forEach(function (k) { ids[k.id] = 1; });
+    var n = (novas || []).filter(function (k) { return !ids[k.id]; });
+    C.msgs = C.msgs.concat(n).slice(-150); if (C.msgs.length) C.desde = C.msgs[C.msgs.length - 1].criado;
+    return n.length;
+  }
+  function puxar(completo) {
+    if (document.hidden && !completo) return;
+    var q = completo || !C.desde ? '?so=tudo' : '?so=chat&desde=' + encodeURIComponent(C.desde);
+    capi(null, q).then(function (r) {
+      if (!r.ok) { if (C.primeira) $('gChat').innerHTML = '<p class="vazio">' + esc(r.erro || 'Não consegui abrir a conversa.') + '</p>'; return; }
+      C.equipa = !!r.equipa; if (r.emojis) C.emojis = r.emojis; if (r.fundos) C.fundos = r.fundos;
+      if (r.stories) { C.st = r.stories; renderStories(); }
+      if (q.indexOf('desde') < 0) { C.msgs = r.mensagens || []; if (C.msgs.length) C.desde = C.msgs[C.msgs.length - 1].criado; }
+      else if (!juntar(r.mensagens)) return;
+      if (C.aba === 'chat' && C.aberta && !$('visor').classList.contains('on')) renderChat(C.primeira);
+      C.primeira = false;
+    });
+  }
+  function abrirComunidade(on) {
+    C.aberta = on; clearInterval(C.poll); $('compor').hidden = !(on && C.aba === 'chat');
+    if (!on) return;
+    C.primeira = true; puxar(true); var n = 0;
+    C.poll = setInterval(function () { n++; puxar(n % 10 === 0); }, 6000);
+  }
+  $('cAbas').addEventListener('click', function (e) {
+    var b = e.target.closest('button'); if (!b) return; C.aba = b.getAttribute('data-ca');
+    this.querySelectorAll('button').forEach(function (k) { k.classList.toggle('on', k === b); });
+    $('cChat').hidden = C.aba !== 'chat'; $('cRank').hidden = C.aba !== 'rank'; $('compor').hidden = C.aba !== 'chat';
+    if (C.aba === 'chat') renderChat(true);
+  });
+
+  // escrever
+  function responderA(x) {
+    C.resp = x; $('cResp').hidden = !x;
+    if (x) { $('cRespT').innerHTML = '↩ A responder a <b>' + esc(x.eu ? 'ti' : x.autor.nome) + '</b>: ' + esc((x.texto || '📷 Foto').slice(0, 80)); $('cTxt').focus(); }
+  }
+  $('cRespX').onclick = function () { responderA(null); };
+  $('cFoto').onclick = function () { $('cFich').click(); };
+  $('cFich').onchange = function () { var f = this.files[0]; this.value = ''; if (!f) return; reduzir(f, function (d) { if (!d) { toast('Não consegui ler essa imagem.'); return; } C.img = d; $('cImgPre').src = d; $('cImgPre').hidden = false; }); };
+  $('cImgPre').onclick = function () { C.img = null; this.hidden = true; };
+  $('cTxt').addEventListener('input', function () { this.style.height = 'auto'; this.style.height = Math.min(120, this.scrollHeight) + 'px'; });
+  $('cTxt').addEventListener('keydown', function (e) { if (e.key === 'Enter' && !e.shiftKey && !('ontouchstart' in window)) { e.preventDefault(); $('cEnv').click(); } });
+  $('cEnv').onclick = function () {
+    var t = $('cTxt').value.trim(), b = this; if ((!t && !C.img) || b.disabled) return; b.disabled = true;
+    capi({ accao: 'mensagem', texto: t, imagem: C.img, resposta_a: C.resp && C.resp.id, desde: C.desde }).then(function (r) {
+      b.disabled = false; if (!r.ok) { toast(esc(r.erro)); return; }
+      $('cTxt').value = ''; $('cTxt').style.height = ''; C.img = null; $('cImgPre').hidden = true; responderA(null);
+      juntar(r.mensagens); renderChat(true);
+    });
+  };
+
+  // tocar numa mensagem
+  function msgPorId(id) { return C.msgs.filter(function (k) { return k.id === id; })[0]; }
+  function reagir(id, e) {
+    var x = msgPorId(id); if (!x) return;
+    var r = x.reacoes.filter(function (k) { return k.emoji === e; })[0];
+    if (r && r.eu) { r.n--; r.eu = false; if (!r.n) x.reacoes = x.reacoes.filter(function (k) { return k !== r; }); }
+    else if (r) { r.n++; r.eu = true; } else x.reacoes.push({ emoji: e, n: 1, eu: true });
+    renderChat(false); capi({ accao: 'reagir', id: id, emoji: e });
+  }
+  function menuMsg(id) {
+    var x = msgPorId(id); if (!x || x.apagado) return;
+    $('folhaC').innerHTML = '<button class="fechar" type="button" aria-label="Fechar">×</button><div class="mono">' + esc(x.eu ? 'A tua mensagem' : x.autor.nome + ' · ' + x.autor.patente_nome) + '</div>' +
+      '<div class="menu-msg">' + C.emojis.map(function (e) { return '<button type="button" data-me="' + e + '" aria-label="Reagir ' + e + '">' + e + '</button>'; }).join('') + '</div>' +
+      '<div class="dois"><button class="btn" type="button" id="mResp">↩ Responder</button>' + (x.eu || C.equipa ? '<button class="btn sec" type="button" id="mApag">Apagar</button>' : '<button class="btn sec" type="button" id="mDen">🚩 Denunciar</button>') + '</div>';
+    $('folha').classList.add('on'); $('folhaC').querySelector('.fechar').onclick = fechar;
+    $('folhaC').querySelectorAll('[data-me]').forEach(function (b) { b.onclick = function () { fechar(); reagir(id, b.getAttribute('data-me')); }; });
+    $('mResp').onclick = function () { fechar(); responderA(x); };
+    var ap = $('mApag'); if (ap) ap.onclick = function () {
+      if (!ap.dataset.ok) { ap.dataset.ok = 1; ap.textContent = 'Toca outra vez para apagar'; return; }
+      fechar(); x.apagado = true; x.texto = null; x.imagem = null; renderChat(false); capi({ accao: 'apagar', id: id });
+    };
+    var dn = $('mDen'); if (dn) dn.onclick = function () {
+      if (!dn.dataset.ok) { dn.dataset.ok = 1; dn.textContent = 'Confirmar denúncia'; return; }
+      capi({ accao: 'denunciar', alvo: 'mensagem', id: id }).then(function (r) { fechar(); toast(r.ok ? '<b>Obrigado</b><br>A equipa vai rever.' : esc(r.erro)); });
+    };
+  }
+  $('gChat').addEventListener('click', function (ev) {
+    var r = ev.target.closest('[data-reac]'); if (r) { reagir(r.getAttribute('data-reac'), r.getAttribute('data-e')); return; }
+    var c = ev.target.closest('[data-ir]'); if (c) { var el = $('m-' + c.getAttribute('data-ir')); if (el) { el.scrollIntoView({ behavior: 'smooth', block: 'center' }); el.classList.add('pisca'); setTimeout(function () { el.classList.remove('pisca'); }, 1400); } return; }
+    if (ev.target.closest('a')) return;
+    var m = ev.target.closest('[data-msg]'); if (m) menuMsg(m.getAttribute('data-msg'));
+  });
+
+  // publicar uma story
+  function novaStory() {
+    var S = { img: null, fundo: 'ouro', txt: '' };
+    function pinta() {
+      $('folhaC').innerHTML = '<button class="fechar" type="button" aria-label="Fechar">×</button><div class="mono">Nova story · fica 24 h</div><h2>Mostra o teu dia</h2>' +
+        '<div class="st-pre f-' + S.fundo + '">' + (S.img ? '<img src="' + S.img + '" alt="Foto da story">' : '') + '<div class="txt" id="sPreT">' + esc(S.txt || (S.img ? '' : 'Escreve qualquer coisa…')) + '</div></div>' +
+        (S.img ? '' : '<div class="fundos">' + C.fundos.map(function (f) { return '<button type="button" class="f-' + f + (f === S.fundo ? ' on' : '') + '" data-f="' + f + '" aria-label="Fundo ' + f + '"></button>'; }).join('') + '</div>') +
+        '<textarea id="sTxt" rows="2" maxlength="220" placeholder="' + (S.img ? 'Legenda (opcional)' : 'O treino de hoje, uma vitória, uma lição…') + '">' + esc(S.txt) + '</textarea>' +
+        '<input type="file" id="sFich" accept="image/*" hidden><div class="dois" style="margin-top:10px"><button class="btn sec" id="sFoto" type="button">📷 ' + (S.img ? 'Tirar foto' : 'Juntar foto') + '</button><button class="btn" id="sPub" type="button">Publicar</button></div>' +
+        '<p class="mono" style="text-transform:none;letter-spacing:0;margin:10px 0 0">Todos na app vêem durante 24 horas. A primeira do dia dá XP. Não mostres dados de outras pessoas.</p><div class="erro" id="sErro"></div>';
+      $('folhaC').querySelector('.fechar').onclick = fechar;
+      $('sTxt').oninput = function () { S.txt = this.value; $('sPreT').textContent = S.txt || (S.img ? '' : 'Escreve qualquer coisa…'); };
+      $('folhaC').querySelectorAll('[data-f]').forEach(function (b) { b.onclick = function () { S.fundo = b.getAttribute('data-f'); pinta(); }; });
+      $('sFoto').onclick = function () { if (S.img) { S.img = null; pinta(); } else $('sFich').click(); };
+      $('sFich').onchange = function () { var f = this.files[0]; if (!f) return; reduzir(f, function (d) { if (!d) { $('sErro').textContent = 'Não consegui ler essa imagem.'; return; } S.img = d; pinta(); }); };
+      $('sPub').onclick = function () {
+        var b = this; b.disabled = true; $('sErro').textContent = '';
+        capi({ accao: 'story', texto: S.txt, fundo: S.fundo, imagem: S.img }).then(function (r) {
+          b.disabled = false; if (!r.ok) { $('sErro').textContent = r.erro; return; }
+          fechar(); C.st = r.stories || C.st; renderStories(); toast('<b>Story publicada</b><br>Fica no ar 24 horas.');
+        });
+      };
+    }
+    pinta(); $('folha').classList.add('on');
+  }
+
+  // ver stories
+  function fecharVisor() { clearInterval(V.t); $('visor').classList.remove('on'); document.body.style.overflow = ''; renderStories(); }
+  function mostrarStory() {
+    var g = C.st[V.g]; if (!g) { fecharVisor(); return; }
+    var s = g.itens[V.i]; if (!s) { V.g++; V.i = 0; mostrarStory(); return; }
+    clearInterval(V.t);
+    $('vBarras').innerHTML = g.itens.map(function (_, k) { return '<i><b style="width:' + (k < V.i ? 100 : 0) + '%"></b></i>'; }).join('');
+    $('vAv').outerHTML = avatar(g).replace('<div class="av"', '<div class="av" id="vAv"');
+    $('vNome').textContent = g.eu ? 'A tua story' : g.nome; $('vSelo').innerHTML = selo(g); $('vPat').textContent = g.patente_nome + ' · ' + quando(s.criado);
+    $('vTela').className = 'tela' + (s.imagem ? '' : ' f-' + (s.fundo || 'ouro'));
+    $('vTela').innerHTML = s.imagem ? '<img src="' + esc(s.imagem) + '" alt="Story de ' + esc(g.nome) + '">' + (s.texto ? '<div class="leg">' + esc(s.texto) + '</div>' : '') : '<div class="txt">' + esc(s.texto || '') + '</div>';
+    if (g.eu) $('svBase').innerHTML = '<span class="info">👁 ' + (s.vistas || 0) + ' ' + (s.reacoes && s.reacoes.length ? '· ' + s.reacoes.slice(0, 12).join('') : '') + '</span><button class="mini" type="button" data-vapag>Apagar</button>';
+    else $('svBase').innerHTML = C.emojis.map(function (e) { return '<button type="button" data-vr="' + e + '" class="' + (s.minha_reacao === e ? 'on' : '') + '" aria-label="Reagir ' + e + '">' + e + '</button>'; }).join('') + (C.equipa ? '<button class="mini" type="button" data-vapag>Tirar</button>' : '<button class="mini" type="button" data-vden aria-label="Denunciar">🚩</button>');
+    if (!s.vista && !g.eu) { s.vista = true; capi({ accao: 'story_vista', id: s.id }); }
+    g.por_ver = g.itens.some(function (k) { return !k.vista; });
+    V.dur = s.imagem ? 6000 : 5000; V.ini = Date.now(); V.pausa = 0;
+    var barra = $('vBarras').children[V.i].firstChild;
+    V.t = setInterval(function () {
+      if (V.pausa) return;
+      var p = Math.min(1, (Date.now() - V.ini) / V.dur); barra.style.width = (p * 100) + '%';
+      if (p >= 1) { V.i++; mostrarStory(); }
+    }, 50);
+  }
+  function abrirStories(gi) { V.g = gi; var g = C.st[gi]; V.i = Math.max(0, g.itens.findIndex(function (k) { return !k.vista; })); if (g.eu) V.i = 0; $('visor').classList.add('on'); document.body.style.overflow = 'hidden'; mostrarStory(); }
+  $('gStories').addEventListener('click', function (e) {
+    var b = e.target.closest('button'); if (!b) return;
+    if (b.hasAttribute('data-stnova')) novaStory(); else abrirStories(+b.getAttribute('data-st'));
+  });
+  $('vFechar').onclick = fecharVisor;
+  $('vSeg').onclick = function () { V.i++; mostrarStory(); };
+  $('vAnt').onclick = function () { if (V.i > 0) V.i--; else if (V.g > 0) { V.g--; V.i = 0; } mostrarStory(); };
+  $('svBase').addEventListener('click', function (e) {
+    var b = e.target.closest('button'); if (!b) return; var s = C.st[V.g].itens[V.i];
+    if (b.hasAttribute('data-vr')) { s.minha_reacao = b.getAttribute('data-vr'); $('svBase').querySelectorAll('[data-vr]').forEach(function (k) { k.classList.toggle('on', k === b); }); capi({ accao: 'story_reagir', id: s.id, emoji: s.minha_reacao }); toast(s.minha_reacao + ' enviado', 1400); }
+    else if (b.hasAttribute('data-vapag')) {
+      if (!b.dataset.ok) { b.dataset.ok = 1; V.pausa = Date.now(); b.textContent = 'Confirmar'; return; }
+      capi({ accao: 'story_apagar', id: s.id }).then(function (r) { if (r.ok && r.stories) C.st = r.stories; fecharVisor(); });
+    } else if (b.hasAttribute('data-vden')) {
+      if (!b.dataset.ok) { b.dataset.ok = 1; V.pausa = Date.now(); b.textContent = 'Confirmar denúncia'; return; }
+      capi({ accao: 'denunciar', alvo: 'story', id: s.id }).then(function (r) { toast(r.ok ? '<b>Obrigado</b><br>A equipa vai rever.' : esc(r.erro)); V.i++; mostrarStory(); });
+    }
+  });
+  document.addEventListener('keydown', function (e) { if (!$('visor').classList.contains('on')) return; if (e.key === 'Escape') fecharVisor(); else if (e.key === 'ArrowRight') $('vSeg').onclick(); else if (e.key === 'ArrowLeft') $('vAnt').onclick(); });
+  document.addEventListener('visibilitychange', function () { if (!document.hidden && C.aberta) puxar(true); });
 
   function carregar(novo) {
     api().then(function (e) {

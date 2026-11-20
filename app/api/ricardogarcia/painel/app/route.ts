@@ -47,6 +47,23 @@ export async function GET(req: NextRequest) {
   const caminhos = (pres.data || []).map(p => p.prova_path).filter(Boolean) as string[]
   const { data: assinados } = caminhos.length ? await db().storage.from('rg-app-provas').createSignedUrls(caminhos, 3600) : { data: [] as any[] }
   const urlDe = new Map((assinados || []).map((a: any) => [a.path, a.signedUrl]))
+  // Comunidade: stories das últimas 48 h e as últimas mensagens, incluindo o que saiu do ar, para moderar.
+  const [cst, cmsg] = await Promise.all([
+    db().from('rg_app_stories').select('id, membro_id, imagem_path, texto, criado, expira, oculta, denuncias').gte('criado', new Date(Date.now() - 48 * 36e5).toISOString()).order('criado', { ascending: false }).limit(80),
+    db().from('rg_app_chat').select('id, membro_id, texto, imagem_path, criado, apagado, denuncias').order('criado', { ascending: false }).limit(120),
+  ])
+  const caminhosC = [...(cst.data || []), ...(cmsg.data || [])].map(x => x.imagem_path).filter(Boolean) as string[]
+  const { data: assinC } = caminhosC.length ? await db().storage.from('rg-app-media').createSignedUrls(caminhosC, 3600) : { data: [] as any[] }
+  const urlC = new Map((assinC || []).map((a: any) => [a.path, a.signedUrl]))
+  const quemC = async (lista: any[]) => {
+    const fora = lista.map(x => x.membro_id).filter(id => !nomeMembro.has(id))
+    if (!fora.length) return
+    const { data } = await db().from('profiles').select('id, full_name, email').in('id', Array.from(new Set(fora)))
+    ;(data || []).forEach((p: any) => nomeMembro.set(p.id, { nome: p.full_name || String(p.email || '').split('@')[0], email: p.email } as any))
+  }
+  await quemC([...(cst.data || []), ...(cmsg.data || [])])
+  const linhaC = (alvo: string) => (x: any) => ({ alvo, id: x.id, texto: x.texto, criado: x.criado, denuncias: x.denuncias || 0, fora: alvo === 'story' ? x.oculta : x.apagado,
+    expirada: alvo === 'story' ? Date.parse(x.expira) < Date.now() : false, imagem: x.imagem_path ? urlC.get(x.imagem_path) || null : null, nome: nomeMembro.get(x.membro_id)?.nome || 'Membro' })
   const dia = hoje()
   const naApp = new Set(emails)
   return NextResponse.json({
@@ -62,6 +79,7 @@ export async function GET(req: NextRequest) {
       return { ...e, inscritos: l.map(i => ({ estado: i.estado, resposta: i.resposta, criado: i.criado, nome: nomeMembro.get(i.membro_id)?.nome || 'Membro', email: nomeMembro.get(i.membro_id)?.email || null, telefone: nomeMembro.get(i.membro_id)?.telefone || null })) }
     }),
     presencas: (pres.data || []).map(p => ({ dia: p.dia, tipo: p.ref, xp: p.xp, nota: (p.dados as any)?.nota || null, nome: nomeMembro.get(p.membro_id)?.nome || 'Membro', prova: p.prova_path ? urlDe.get(p.prova_path) || null : null })),
+    comunidade: { stories: (cst.data || []).map(linhaC('story')), mensagens: (cmsg.data || []).map(linhaC('mensagem')) },
     convidar: (leads.data || []).filter(l => !l.email || !naApp.has(String(l.email).toLowerCase())).slice(0, 30),
   })
 }
@@ -120,6 +138,13 @@ export async function POST(req: NextRequest) {
       if (e.quando && isNaN(Date.parse(e.quando))) return falha('Data inválida.')
       const q = e.id ? db().from('rg_app_eventos').update(linha).eq('id', t(e.id, 40)) : db().from('rg_app_eventos').insert(linha)
       const { error } = await q
+      return error ? falha(error.message, 500) : ok()
+    }
+    case 'moderar': {
+      const fora = !!b.fora, id = t(b.id, 40)
+      const { error } = b.alvo === 'story'
+        ? await db().from('rg_app_stories').update({ oculta: fora }).eq('id', id)
+        : await db().from('rg_app_chat').update({ apagado: fora }).eq('id', id)
       return error ? falha(error.message, 500) : ok()
     }
     case 'membro_estado': {
