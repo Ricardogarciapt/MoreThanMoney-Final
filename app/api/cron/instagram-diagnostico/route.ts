@@ -18,7 +18,8 @@ export const maxDuration = 30
  * Acesso: `Authorization: Bearer CRON_SECRET` (o mesmo dos crons).
  */
 const GRAPH = 'https://graph.facebook.com/v21.0'
-const CAMPOS = 'messages,messaging_postbacks,message_reactions,feed'
+// leadgen: os formulários instantâneos dos anúncios chegam a /api/webhooks/meta-leadgen.
+const CAMPOS = 'messages,messaging_postbacks,message_reactions,feed,leadgen'
 
 const CONTAS = [
   { conta: 'morethanmoney.pt', ig: '17841474872672009', chave: 'INSTAGRAM_TOKEN' },
