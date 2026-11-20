@@ -569,6 +569,41 @@ dialog h2 { font-size: 24px; font-style: italic; margin-bottom: 14px; }
   // ───────────── METAS ─────────────
   var mesVista = null;
   // ───────────── APP «MISSÃO» ─────────────
+  // Mapa do separador «Pontos no mapa» (Leaflet, o mesmo da app).
+  function pontosMapa(el, post) {
+    var f = function () { return el.querySelector('#pForm'); };
+    var ler = function () { var v = {}; $$('[data-k]', f()).forEach(function (i) { v[i.getAttribute('data-k')] = i.type === 'checkbox' ? i.checked : i.value; }); v.id = (window.__pontoEd || {}).id || ''; return v; };
+    var por = function (lat, lon, nome) { f().querySelector('[data-k="lat"]').value = (+lat).toFixed(6); f().querySelector('[data-k="lon"]').value = (+lon).toFixed(6); if (nome && !f().querySelector('[data-k="nome"]').value) f().querySelector('[data-k="nome"]').value = nome; marcar(+lat, +lon, true); };
+    var mapa = null, alvo = null;
+    function marcar(lat, lon, centrar) { if (!mapa) return; if (alvo) alvo.remove(); alvo = L.marker([lat, lon]).addTo(mapa); if (centrar) mapa.setView([lat, lon], 16); }
+    function iniciar() {
+      var c = el.querySelector('#pMapa'); if (!c) return;
+      mapa = L.map(c); L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', { maxZoom: 19, attribution: '© OpenStreetMap · © CARTO' }).addTo(mapa);
+      var lim = (A.pontos || []).map(function (x) { return [x.lat, x.lon]; });
+      (A.pontos || []).forEach(function (x, i) { L.circleMarker([x.lat, x.lon], { radius: 9, color: '#E9C46A', weight: 2, fillColor: '#D2A63C', fillOpacity: x.activo ? .7 : .2 }).bindTooltip(x.nome).on('click', function () { window.__pontoEd = A.pontos[i]; vApp(el); }).addTo(mapa); });
+      var ed = window.__pontoEd;
+      if (ed && ed.lat) mapa.setView([ed.lat, ed.lon], 16); else if (lim.length) mapa.fitBounds(lim, { padding: [30, 30], maxZoom: 15 }); else mapa.setView([39.5, -8.0], 7);
+      if (ed && ed.lat) marcar(ed.lat, ed.lon, false);
+      mapa.on('click', function (e) { por(e.latlng.lat, e.latlng.lng); });
+      setTimeout(function () { mapa.invalidateSize(); }, 60);
+    }
+    if (window.L) iniciar(); else {
+      var css = document.createElement('link'); css.rel = 'stylesheet'; css.href = 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css'; document.head.appendChild(css);
+      var js = document.createElement('script'); js.src = 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js'; js.onload = iniciar; js.onerror = function () { var c = el.querySelector('#pMapa'); if (c) c.innerHTML = '<p class="vazio">O mapa não abriu. Podes colar um link do Google Maps ou escrever as coordenadas.</p>'; }; document.head.appendChild(js);
+    }
+    if (el.__pc) el.removeEventListener('click', el.__pc);
+    el.__pc = function (e) {
+      var b = e.target.closest('button'); if (!b || !el.contains(b)) return; var a;
+      if (b.hasAttribute('data-plink')) { var l = el.querySelector('#pLink').value; if (!l) return; b.disabled = true; post({ acao: 'link_coords', link: l }).then(function (r) { b.disabled = false; por(r.lat, r.lon, r.nome); aviso('Sítio encontrado ✓'); }, function (er) { b.disabled = false; aviso(er.message); }); }
+      else if (b.hasAttribute('data-paqui')) { navigator.geolocation.getCurrentPosition(function (g) { por(g.coords.latitude, g.coords.longitude); }, function () { aviso('Sem localização neste dispositivo.'); }, { enableHighAccuracy: true, timeout: 15000 }); }
+      else if (b.hasAttribute('data-pguardar')) { var v = ler(); b.disabled = true; post({ acao: 'ponto', ponto: v }).then(function () { window.__pontoEd = null; A = null; aviso(v.id ? 'Ponto guardado ✓' : 'Ponto publicado na app ✓'); vApp(el); }, function (er) { b.disabled = false; aviso(er.message); }); }
+      else if ((a = b.getAttribute('data-papag'))) { if (!confirm('Apagar este ponto? Sai da app.')) return; post({ acao: 'ponto_apagar', id: a }).then(function () { window.__pontoEd = null; A = null; aviso('Ponto apagado'); vApp(el); }, function (er) { aviso(er.message); }); }
+      else if ((a = b.getAttribute('data-ped')) != null) { window.__pontoEd = A.pontos[+a]; vApp(el); window.scrollTo(0, 0); }
+      else if (b.hasAttribute('data-pnovo')) { window.__pontoEd = null; vApp(el); }
+    };
+    el.addEventListener('click', el.__pc);
+  }
+
   var A = null, abaApp = 'pedidos';
   function vApp(el) {
     if (!A) { el.innerHTML = '<div class="cab"><div><h1>App Missão</h1><p>A carregar…</p></div></div>';
@@ -576,7 +611,7 @@ dialog h2 { font-size: 24px; font-style: italic; margin-bottom: 14px; }
         .catch(function (e) { el.innerHTML = '<p class="vazio">Não abriu: ' + esc(e.message) + '</p>'; }); return; }
     function post(c) { return fetch('/api/ricardogarcia/painel/app', { method: 'POST', credentials: 'same-origin', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(c) }).then(function (r) { return r.json(); }).then(function (j) { if (!j.ok) throw new Error(j.erro || 'Erro'); return j; }); }
     function recarregar(msg) { A = null; if (msg) aviso(msg); vApp(el); }
-    var R = A.resumo, ABAS = [['pedidos', 'Pedidos' + (R.pendentes ? ' (' + R.pendentes + ')' : '')], ['membros', 'Membros'], ['recompensas', 'Recompensas'], ['eventos', 'Desafios e eventos'], ['presencas', 'Presenças'], ['comunidade', 'Comunidade' + (A.comunidade && A.comunidade.mensagens.concat(A.comunidade.stories).some(function (x) { return x.denuncias && !x.fora; }) ? ' 🚩' : '')], ['missoes', 'Missões'], ['economia', 'Economia'], ['convidar', 'Convidar leads']];
+    var R = A.resumo, ABAS = [['pedidos', 'Pedidos' + (R.pendentes ? ' (' + R.pendentes + ')' : '')], ['membros', 'Membros'], ['recompensas', 'Recompensas'], ['eventos', 'Desafios e eventos'], ['presencas', 'Presenças'], ['pontos', 'Pontos no mapa'], ['comunidade', 'Comunidade' + (A.comunidade && A.comunidade.mensagens.concat(A.comunidade.stories).some(function (x) { return x.denuncias && !x.fora; }) ? ' 🚩' : '')], ['missoes', 'Missões'], ['economia', 'Economia'], ['convidar', 'Convidar leads']];
     var h = '<div class="cab"><div><h1>App Missão</h1><p>A tua app para leads: missões diárias, patentes, moedas e recompensas. Cada membro entra no pipeline MTM.</p></div><a class="btn" href="/ricardogarcia/app" target="_blank" rel="noopener">Abrir a app ↗</a></div>' +
       '<div class="kpis"><div class="kpi"><b>' + R.membros + '</b><span>Membros</span></div><div class="kpi"><b>' + R.ativos7 + '</b><span>Activos em 7 dias</span></div><div class="kpi"><b>' + R.hoje + '</b><span>Activos hoje</span></div><div class="kpi"><b>' + R.pendentes + '</b><span>Pedidos por decidir</span></div></div>' +
       '<div class="filtros" style="margin:16px 0">' + ABAS.map(function (a) { return '<button class="btn peq ' + (abaApp === a[0] ? 'pri' : '') + '" data-aa="' + a[0] + '">' + a[1] + '</button>'; }).join('') + '</div><section class="cx">';
@@ -648,6 +683,26 @@ dialog h2 { font-size: 24px; font-style: italic; margin-bottom: 14px; }
         '<h3 style="margin:10px 0 6px;font-size:16px">Stories (48 h)</h3>' + (CM.stories.length ? CM.stories.map(linhaC).join('') : '<p class="vazio">Sem stories.</p>') +
         '<h3 style="margin:16px 0 6px;font-size:16px">Conversa</h3>' + (CM.mensagens.length ? CM.mensagens.map(linhaC).join('') : '<p class="vazio">Sem mensagens.</p>');
     }
+    if (abaApp === 'pontos') {
+      var PT = A.pontos || [], novo = { id: '', nome: '', tipo: 'Ponto do Ricardo', lat: '', lon: '', area: '', descricao: '', licao_titulo: '', licao_texto: '', video_url: '', xp_extra: 20, raio_m: 80, activo: true };
+      var ed = window.__pontoEd || novo;
+      var areasOp = '<option value="">Qualquer área</option>' + (A.areas_rota || []).map(function (a) { return '<option value="' + a.id + '" ' + (ed.area === a.id ? 'selected' : '') + '>' + esc(a.nome) + '</option>'; }).join('');
+      h += '<p class="vazio" style="margin-top:0">Pontos teus com uma lição. Aparecem na app, no separador Rotas, a quem estiver a 5 km ou menos, e a lição só se abre quando a pessoa lá chega. Toca no mapa para escolher o sítio, ou cola um link do Google Maps ou do Apple Maps. Escolhe só lugares públicos e seguros.</p>' +
+        '<div id="pMapa" style="height:340px;border-radius:14px;border:1px solid #232a38;margin-bottom:12px;background:#0a0d13"></div>' +
+        '<div class="sec aberta" style="margin-bottom:14px"><div class="sec-cab"><h3>' + (ed.id ? 'Editar: ' + esc(ed.nome) : '+ Novo ponto') + '</h3>' + (ed.id ? '<button class="btn peq" data-pnovo>Novo</button>' : '') + '</div><div class="sec-corpo" id="pForm">' +
+        '<div class="linha2"><label class="campo"><span>Link do Google Maps ou do Apple Maps</span><input id="pLink" placeholder="https://maps.app.goo.gl/…"></label><div style="display:flex;gap:8px;align-items:flex-end;margin-bottom:12px"><button class="btn peq" data-plink>Usar o link</button><button class="btn peq" data-paqui>A minha localização</button></div></div>' +
+        '<div class="linha2" style="grid-template-columns:repeat(3,1fr)"><label class="campo"><span>Nome do sítio</span><input data-k="nome" maxlength="80" value="' + esc(ed.nome) + '"></label><label class="campo"><span>Latitude</span><input data-k="lat" value="' + esc(ed.lat) + '"></label><label class="campo"><span>Longitude</span><input data-k="lon" value="' + esc(ed.lon) + '"></label>' +
+        '<label class="campo"><span>Tipo</span><input data-k="tipo" maxlength="30" value="' + esc(ed.tipo) + '" placeholder="Jardim, miradouro, praia…"></label><label class="campo"><span>Área da lição</span><select data-k="area">' + areasOp + '</select></label><label class="campo"><span>Raio de chegada (m, 30–300)</span><input type="number" data-k="raio_m" value="' + (ed.raio_m || 80) + '"></label></div>' +
+        '<label class="campo"><span>Frase de convite (o que aparece antes de ir)</span><input data-k="descricao" maxlength="300" value="' + esc(ed.descricao || '') + '" placeholder="Foi aqui que decidi mudar de vida. Vem cá e percebe porquê."></label>' +
+        '<label class="campo"><span>Título da lição</span><input data-k="licao_titulo" maxlength="120" value="' + esc(ed.licao_titulo || '') + '"></label>' +
+        '<label class="campo"><span>Lição (abre quando chegam)</span><textarea data-k="licao_texto" rows="5">' + esc(ed.licao_texto || '') + '</textarea></label>' +
+        '<div class="linha2"><label class="campo"><span>Vídeo (link, opcional)</span><input data-k="video_url" placeholder="https://youtu.be/…" value="' + esc(ed.video_url || '') + '"></label><label class="campo"><span>XP extra na 1.ª visita (máx. 100)</span><input type="number" data-k="xp_extra" value="' + (ed.xp_extra || 0) + '"></label></div>' +
+        '<div style="display:flex;justify-content:space-between;align-items:center"><label style="display:flex;gap:8px;align-items:center"><input type="checkbox" data-k="activo" ' + (ed.activo !== false ? 'checked' : '') + '> Visível na app</label><div style="display:flex;gap:8px">' + (ed.id ? '<button class="btn peq" data-papag="' + esc(ed.id) + '">Apagar</button>' : '') + '<button class="btn peq pri" data-pguardar>' + (ed.id ? 'Guardar' : 'Publicar na app') + '</button></div></div>' +
+        '</div></div>' +
+        '<h3 style="margin:10px 0 6px;font-size:16px">Os teus pontos (' + PT.length + ')</h3>' + (PT.length ? PT.map(function (x, i) {
+          return '<div class="contacto"' + (x.activo ? '' : ' style="opacity:.5"') + '><div><b>' + esc(x.nome) + '</b> <span class="pilula">' + esc(x.tipo) + '</span> ' + (x.activo ? '' : '<span class="pilula">Escondido</span>') + '<div class="sub">' + (x.licao_titulo ? esc(x.licao_titulo) + ' · ' : 'Sem lição · ') + x.visitas + ' visitas · +' + (x.xp_extra || 0) + ' XP extra</div></div><div class="acc"><a class="btn peq" target="_blank" rel="noopener" href="https://www.google.com/maps/search/?api=1&query=' + x.lat + ',' + x.lon + '">Maps ↗</a><button class="btn peq" data-ped="' + i + '">Editar</button></div></div>';
+        }).join('') : '<p class="vazio">Ainda não criaste pontos.</p>');
+    }
     if (abaApp === 'economia') {
       var NOM = { xp_dia_max: 'Tecto de XP por dia', bonus_dia_completo: 'XP extra por dia completo', moedas_dia_completo: 'Moedas por dia completo', moedas_semana: 'Moedas por 7 dias seguidos', moedas_patente: 'Moedas por subida de patente', moedas_insignia: 'Moedas por insígnia', min_resposta: 'Caracteres mínimos numa reflexão' };
       h += '<p class="vazio" style="margin-top:0">O XP mede a reputação e não se gasta. As moedas gastam-se, e só se ganham com constância. Com os valores de origem, alguém muito constante junta à volta de 12 moedas por semana: a mensalidade (150) pede uns 3 meses.</p><div class="linha2" style="grid-template-columns:repeat(2,1fr)">' +
@@ -660,6 +715,7 @@ dialog h2 { font-size: 24px; font-style: italic; margin-bottom: 14px; }
       return '<div class="contacto"><div><b>' + esc(l.nome) + '</b> <span class="pilula">' + esc(l.origem || '') + ' · ' + esc(l.estado || '') + '</span><div class="sub">' + esc(l.telefone || '') + (l.email ? ' · ' + esc(l.email) : '') + '</div></div><div class="acc"><a class="btn peq pri" target="_blank" rel="noopener" href="https://wa.me/' + esc(tel) + '?text=' + encodeURIComponent(txt) + '">Convidar no WhatsApp</a></div></div>';
     }).join('') : '<p class="vazio">Sem leads por convidar.</p>');
     el.innerHTML = h + '</section>';
+    if (abaApp === 'pontos') pontosMapa(el, post);
     $$('[data-aa]', el).forEach(function (b) { b.addEventListener('click', function () { abaApp = b.getAttribute('data-aa'); vApp(el); }); });
     el.onclick = function (e) {
       var b = e.target.closest('button'); if (!b) return; var a, cx;

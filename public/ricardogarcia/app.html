@@ -2,7 +2,7 @@
 <html lang="pt-PT">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
 <title>Missão · Ricardo Garcia</title>
 <meta name="description" content="Missões diárias de treino, mindset e digital com o Ricardo Garcia. Sobe de patente, ganha insígnias e troca moedas por recompensas.">
 <meta name="theme-color" content="#07080c">
@@ -22,6 +22,7 @@
 .ou { display: flex; align-items: center; gap: 10px; margin: 16px 0 12px; color: var(--cinza); font-size: 12px; text-transform: uppercase; letter-spacing: .12em; } .ou::before, .ou::after { content: ''; flex: 1; height: 1px; background: var(--linha); }
 .sociais { display: grid; gap: 10px; } .btn-social { display: flex; align-items: center; justify-content: center; gap: 10px; padding: 12px; border-radius: 12px; border: 1px solid var(--linha); background: var(--placa2); color: var(--texto); font-weight: 600; text-decoration: none; } .btn-social:hover { border-color: #3a4357; } .mais-op { text-align: center; font-size: 13px; color: var(--cinza); }
 .nota-conta { margin-top: 12px; font-size: 13px; color: var(--cinza); line-height: 1.45; } .nota-conta a { color: var(--ciano); }
+html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; touch-action: manipulation; overscroll-behavior-y: none; }
 html, body { margin: 0; background: var(--fundo); color: var(--texto); font-family: "Oswald", system-ui, sans-serif; font-size: 16px; }
 body { min-height: 100dvh; background: radial-gradient(700px 400px at 80% -10%, rgba(210,166,60,.10), transparent 70%), radial-gradient(600px 400px at 0% 0%, rgba(30,170,230,.10), transparent 70%), var(--fundo); }
 body::before { content: ""; position: fixed; inset: 0; pointer-events: none; background-image: linear-gradient(rgba(255,255,255,.025) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,.025) 1px, transparent 1px); background-size: 32px 32px; mask-image: linear-gradient(180deg, #000, transparent 70%); }
@@ -62,7 +63,7 @@ label { display: block; font-size: 13px; letter-spacing: 1.5px; text-transform: 
 .consent input { width: 20px; height: 20px; flex: 0 0 20px; margin-top: 2px; }
 
 /* base */
-.topo { display: flex; align-items: center; justify-content: space-between; padding: 16px 0 10px; position: sticky; top: 0; z-index: 5; background: linear-gradient(180deg, var(--fundo) 70%, transparent); }
+.topo { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: calc(12px + env(safe-area-inset-top)) 0 10px; position: sticky; top: 0; z-index: 5; background: linear-gradient(180deg, var(--fundo) 70%, transparent); }
 .saldo { display: flex; gap: 8px; }
 .pill { display: inline-flex; align-items: center; gap: 6px; padding: 6px 12px; border-radius: 999px; background: var(--placa); border: 1px solid var(--linha); font-size: 15px; }
 .pill b { font-family: "Anton"; font-weight: 400; letter-spacing: .5px; }
@@ -247,9 +248,33 @@ label { display: block; font-size: 13px; letter-spacing: 1.5px; text-transform: 
 .evento .acc { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
 .evento .acc .btn { min-height: 44px; font-size: 14px; }
 .evento .estado { color: var(--verde); font-size: 14px; margin-bottom: 10px; }
+.ponto.rg { border-color: rgba(233,196,106,.55); background: linear-gradient(135deg, rgba(233,196,106,.10), transparent); }
+.ponto.rg b { color: var(--ouro2); }
+.lig { display: grid; grid-template-columns: 1fr auto; gap: 10px; align-items: center; padding: 12px; border-radius: 12px; background: #0a0d13; border: 1px solid var(--linha); margin-bottom: 8px; }
+.lig b { display: block; } .lig small { color: var(--cinza); font-size: 13px; } .lig .btn { width: auto; min-height: 40px; padding: 0 14px; font-size: 13px; }
+.passos-at { padding-left: 0; list-style: none; margin: 14px 0; } .passos-at li { padding: 8px 0; border-bottom: 1px solid var(--linha); font-size: 15px; line-height: 1.45; color: #d5dbe4; }
 .dica-chave { font-family: "Kalam"; font-size: 20px; line-height: 1.45; color: #f0f2f6; }
 .doca { grid-template-columns: repeat(6, 1fr); }
 .doca button { font-size: 10px; letter-spacing: 0; }
+
+/* ecrã do telemóvel */
+#entrada { padding-top: env(safe-area-inset-top); }
+input, textarea, select { font-size: 16px !important; }
+* { -webkit-tap-highlight-color: transparent; }
+/* perfil e avatar */
+.perfil-bt { display: flex; align-items: center; gap: 8px; background: none; border: 0; padding: 0; color: var(--texto); min-width: 0; }
+.perfil-bt .av { width: 40px; height: 40px; flex: 0 0 40px; font-size: 18px; border: 2px solid var(--ouro); }
+.perfil-bt .marca-mini { width: 30px; height: 30px; }
+.av-grande { width: 112px; height: 112px; margin: 6px auto 10px; }
+.av-grande .av { font-size: 44px; border: 3px solid var(--ouro); }
+.grelha-av { display: grid; grid-template-columns: repeat(6, 1fr); gap: 6px; margin: 8px 0 12px; }
+.grelha-av button { aspect-ratio: 1; border-radius: 12px; border: 1px solid var(--linha); background: var(--placa2); font-size: 24px; display: grid; place-items: center; padding: 0; }
+.grelha-av button.on { border-color: var(--ouro2); box-shadow: inset 0 0 0 2px var(--ouro2); }
+.cores-av { display: flex; gap: 10px; flex-wrap: wrap; margin: 8px 0 12px; }
+.cores-av button { width: 38px; height: 38px; border-radius: 50%; border: 2px solid transparent; padding: 0; }
+.cores-av button.on { border-color: #fff; }
+.cores-av.mold button { background: #0a0d13; border-width: 4px; }
+.cores-av.mold button.on { outline: 2px solid #fff; outline-offset: 2px; }
 /* comunidade: stories e conversa */
 .stories { display: flex; gap: 12px; overflow-x: auto; padding: 4px 2px 10px; scrollbar-width: none; }
 .stories::-webkit-scrollbar { display: none; }
@@ -362,7 +387,7 @@ label { display: block; font-size: 13px; letter-spacing: 1.5px; text-transform: 
   <!-- APP -->
   <section id="app" hidden>
     <header class="topo">
-      <a class="marca" href="/ricardogarcia" style="text-decoration:none;color:inherit"><img src="/ricardogarcia/app-emblema.png" alt="Página do Ricardo" style="width:38px;height:38px"></a>
+      <button class="perfil-bt" type="button" id="bPerfil" aria-label="O teu perfil"><div class="av" id="tAv"></div><img class="marca-mini" src="/ricardogarcia/app-emblema.png" alt=""></button>
       <div class="saldo"><span class="pill"><span class="chama">🔥</span><b id="tSeq">0</b></span><span class="pill"><i class="moeda"></i><b id="tMoedas">0</b></span></div>
     </header>
 
@@ -402,6 +427,7 @@ label { display: block; font-size: 13px; letter-spacing: 1.5px; text-transform: 
       <div class="erro" id="rErro" role="alert"></div>
       <div id="mapa" hidden></div>
       <div id="rLista"></div>
+      <div id="rRicardo"></div>
       <div class="sec-tit"><h3>Movimento</h3><span class="mono">Saúde</span></div>
       <div class="placa cartao" id="cSaude"></div>
     </div>
@@ -507,6 +533,7 @@ label { display: block; font-size: 13px; letter-spacing: 1.5px; text-transform: 
     E = e; var m = e.membro;
     $('entrada').hidden = true; $('app').hidden = false; $('doca').hidden = false;
     $('tSeq').textContent = m.sequencia; $('tMoedas').textContent = m.moedas;
+    $('tAv').outerHTML = avatar({ avatar: m.avatar_url, nome: m.primeiro }).replace('<div class="av"', '<div class="av" id="tAv"');
     $('galao').innerHTML = galao(m.patente);
     $('pOla').textContent = 'Olá, ' + m.primeiro; $('pNome').textContent = m.patente_nome;
     var pct = m.prox_xp ? Math.round((m.xp - m.base_xp) / (m.prox_xp - m.base_xp) * 100) : 100;
@@ -621,9 +648,26 @@ label { display: block; font-size: 13px; letter-spacing: 1.5px; text-transform: 
     var dist = function (p) { return ultimaPos ? Math.round(distM(ultimaPos, p)) : p.dist; };
     $('rLista').innerHTML = PONTOS.map(function (p) {
       var d = dist(p), feito = vis[p.id];
-      return '<div class="ponto ' + (feito ? 'feito' : '') + (alvo === p.id ? ' alvo' : '') + '"><div><b>' + esc(p.nome) + '</b><small>' + esc(p.tipo) + ' · ' + (d >= 1000 ? (d / 1000).toFixed(1) + ' km' : d + ' m') + (feito ? ' · visitado ✓' : '') + '</small></div>' +
+      return '<div class="ponto ' + (feito ? 'feito' : '') + (alvo === p.id ? ' alvo' : '') + (p.ricardo ? ' rg' : '') + '"><div><b>' + (p.ricardo ? '★ ' : '') + esc(p.nome) + '</b><small>' + (p.ricardo ? 'Lição do Ricardo · ' : '') + esc(p.tipo) + ' · ' + (d >= 1000 ? (d / 1000).toFixed(1) + ' km' : d + ' m') + (feito ? ' · visitado ✓' : '') + '</small></div>' +
         (feito ? '<button class="btn sec" type="button" data-dica="' + esc(p.id) + '">Ver dica</button>' : alvo === p.id ? '<button class="btn" type="button" data-chegar="' + esc(p.id) + '">Cheguei</button>' : '<button class="btn sec" type="button" data-ir="' + esc(p.id) + '">Ir</button>') + '</div>';
     }).join('');
+    pintaRicardo();
+  }
+  // Os pontos do Ricardo aparecem sempre, mesmo antes de procurar: perto ou longe, dá para abrir no mapa.
+  function pintaRicardo() {
+    var L2 = ((E && E.extra && E.extra.rotas) || {}).ricardo || [], vis = {}; (((E && E.extra && E.extra.rotas) || {}).visitados || []).forEach(function (v) { vis[v.ponto] = 1; });
+    if (!L2.length) { $('rRicardo').innerHTML = ''; return; }
+    var com = L2.map(function (p) { return { p: p, d: ultimaPos ? distM(ultimaPos, p) : null }; }).sort(function (a, b) { return (a.d == null ? 1e12 : a.d) - (b.d == null ? 1e12 : b.d); });
+    $('rRicardo').innerHTML = '<div class="sec-tit"><h3>Pontos do Ricardo</h3><span class="mono">Lição ao chegar</span></div>' + com.map(function (k) {
+      var p = k.p, d = k.d == null ? '' : ' · ' + (k.d >= 1000 ? (k.d / 1000).toFixed(1) + ' km' : Math.round(k.d) + ' m');
+      return '<div class="ponto rg' + (vis[p.id] ? ' feito' : '') + '"><div><b>★ ' + esc(p.nome) + '</b><small>' + esc(p.descricao || p.licao_titulo || p.tipo) + d + (p.xp_extra ? ' · +' + p.xp_extra + ' XP extra' : '') + (vis[p.id] ? ' · visitado ✓' : '') + '</small></div><button class="btn sec" type="button" data-irr="' + esc(p.id) + '">Ir</button></div>';
+    }).join('');
+  }
+  function linksMapa(p) {
+    var ios = /iPhone|iPad|iPod|Macintosh/.test(navigator.userAgent) && 'ontouchend' in document;
+    var g = 'https://www.google.com/maps/dir/?api=1&travelmode=walking&destination=' + p.lat + ',' + p.lon, a = 'https://maps.apple.com/?daddr=' + p.lat + ',' + p.lon + '&dirflg=w';
+    return ios ? '<a class="btn" href="' + a + '" target="_blank" rel="noopener" style="text-decoration:none">Abrir no Mapas (Apple)</a><a class="btn sec" href="' + g + '" target="_blank" rel="noopener" style="text-decoration:none;margin-top:10px">Abrir no Google Maps</a>'
+      : '<a class="btn" href="' + g + '" target="_blank" rel="noopener" style="text-decoration:none">Abrir no Google Maps</a>';
   }
   function distM(a, b) { var R = 6371000, r = Math.PI / 180, dLa = (b.lat - a.lat) * r, dLo = (b.lon - a.lon) * r; var h = Math.pow(Math.sin(dLa / 2), 2) + Math.cos(a.lat * r) * Math.cos(b.lat * r) * Math.pow(Math.sin(dLo / 2), 2); return 2 * R * Math.asin(Math.sqrt(h)); }
   function carregarLeaflet(cb) {
@@ -638,7 +682,7 @@ label { display: block; font-size: 13px; letter-spacing: 1.5px; text-transform: 
       var lim = [[pos.lat, pos.lon]]; PONTOS.forEach(function (p) { lim.push([p.lat, p.lon]); });
       mapa.invalidateSize(); mapa.fitBounds(lim, { padding: [24, 24], maxZoom: 16 });
       if (camada) camada.remove(); camada = L.layerGroup().addTo(mapa);
-      PONTOS.forEach(function (p) { L.circleMarker([p.lat, p.lon], { radius: 9, color: '#E9C46A', weight: 2, fillColor: '#D2A63C', fillOpacity: .55 }).bindTooltip(p.nome).addTo(camada); L.circle([p.lat, p.lon], { radius: 80, color: '#1EAAE6', weight: 1, fillOpacity: .06, opacity: .4 }).addTo(camada); });
+      PONTOS.forEach(function (p) { L.circleMarker([p.lat, p.lon], p.ricardo ? { radius: 12, color: '#fff3c4', weight: 3, fillColor: '#E9C46A', fillOpacity: .95 } : { radius: 9, color: '#E9C46A', weight: 2, fillColor: '#D2A63C', fillOpacity: .55 }).bindTooltip((p.ricardo ? '★ ' : '') + p.nome).addTo(camada); L.circle([p.lat, p.lon], { radius: p.raio_m || 80, color: '#1EAAE6', weight: 1, fillOpacity: .06, opacity: .4 }).addTo(camada); });
       if (eu) eu.remove(); eu = L.circleMarker([pos.lat, pos.lon], { radius: 8, color: '#fff', weight: 3, fillColor: '#1EAAE6', fillOpacity: 1 }).addTo(mapa);
       setTimeout(function () { mapa.invalidateSize(); }, 50);
     });
@@ -653,7 +697,7 @@ label { display: block; font-size: 13px; letter-spacing: 1.5px; text-transform: 
       pintaPontos();
     }, function () {}, { enableHighAccuracy: true, maximumAge: 5000, timeout: 20000 });
   }
-  function mostrarDica(d, titulo) { $('folhaC').innerHTML = '<button class="fechar" type="button" aria-label="Fechar">×</button><div class="mono">⌖ ' + esc(titulo || 'Dica-chave') + '</div><h2>' + esc(d.titulo) + '</h2><p class="dica-chave">' + esc(d.texto) + '</p><button class="btn" type="button" id="bDicaOk">Seguir caminho</button>'; $('folha').classList.add('on'); $('folhaC').querySelector('.fechar').onclick = fechar; $('bDicaOk').onclick = fechar; }
+  function mostrarDica(d, titulo) { $('folhaC').innerHTML = '<button class="fechar" type="button" aria-label="Fechar">×</button><div class="mono">⌖ ' + (d.ricardo ? '★ Lição do Ricardo · ' : '') + esc(titulo || 'Dica-chave') + '</div><h2>' + esc(d.titulo) + '</h2><p class="dica-chave" style="white-space:pre-line">' + esc(d.texto) + '</p>' + (d.video && /^https:\/\//.test(d.video) ? '<a class="btn sec" href="' + esc(d.video) + '" target="_blank" rel="noopener" style="text-decoration:none;margin-bottom:10px">▶ Ver o vídeo do Ricardo</a>' : '') + '<button class="btn" type="button" id="bDicaOk">Seguir caminho</button>'; $('folha').classList.add('on'); $('folhaC').querySelector('.fechar').onclick = fechar; $('bDicaOk').onclick = fechar; }
   $('vRotas').addEventListener('click', function (ev) {
     var b = ev.target.closest('button'); if (!b) return; var v;
     if ((v = b.getAttribute('data-area'))) { AREA = v; try { localStorage.setItem('rg-area', v); } catch (_) {} renderRotas(E.extra); }
@@ -670,11 +714,15 @@ label { display: block; font-size: 13px; letter-spacing: 1.5px; text-transform: 
         });
       }, function () { b.disabled = false; b.textContent = 'Encontrar pontos seguros perto de mim'; $('rErro').textContent = 'Preciso da tua localização para encontrar os pontos. Ativa-a nas definições do browser.'; }, { enableHighAccuracy: true, timeout: 15000 });
     }
+    else if ((v = b.getAttribute('data-irr'))) {
+      var pr = (E.extra.rotas.ricardo || []).filter(function (k) { return k.id === v; })[0]; if (!pr) return;
+      if (!PONTOS.some(function (k) { return k.id === v; })) PONTOS.unshift(pr);
+      seguir(); if (ultimaPos) pintaMapa(ultimaPos);
+      var irB = document.createElement('button'); irB.setAttribute('data-ir', v); irB.type = 'button'; $('rLista').appendChild(irB); irB.click(); irB.remove();
+    }
     else if ((v = b.getAttribute('data-ir'))) {
       alvo = v; seguir.avisado = null; pintaPontos(); var p = PONTOS.filter(function (k) { return k.id === v; })[0];
-      var ios = /iPhone|iPad|iPod/.test(navigator.userAgent);
-      var url = ios ? 'https://maps.apple.com/?daddr=' + p.lat + ',' + p.lon + '&dirflg=w' : 'https://www.google.com/maps/dir/?api=1&travelmode=walking&destination=' + p.lat + ',' + p.lon;
-      $('folhaC').innerHTML = '<button class="fechar" type="button" aria-label="Fechar">×</button><div class="mono">⌖ Próximo ponto</div><h2>' + esc(p.nome) + '</h2><p class="texto-m">Abre o caminho a pé no mapa do telemóvel. A app fica a contar a distância e vibra quando chegares. Ao chegar, pára e carrega em «Cheguei» para receber a dica.</p><a class="btn" href="' + url + '" target="_blank" rel="noopener" style="text-decoration:none">Abrir caminho a pé</a><button class="btn sec" type="button" id="bFicar" style="margin-top:10px">Já sei o caminho</button>';
+      $('folhaC').innerHTML = '<button class="fechar" type="button" aria-label="Fechar">×</button><div class="mono">⌖ ' + (p.ricardo ? '★ Ponto do Ricardo' : 'Próximo ponto') + '</div><h2>' + esc(p.nome) + '</h2>' + (p.descricao ? '<p class="dica-chave" style="font-size:18px">' + esc(p.descricao) + '</p>' : '') + '<p class="texto-m">Abre o caminho a pé no mapa do telemóvel. A app fica a contar a distância e vibra quando chegares. Ao chegar, pára e carrega em «Cheguei» para ' + (p.ricardo ? 'abrir a lição do Ricardo' : 'receber a dica') + '.</p>' + linksMapa(p) + '<button class="btn sec" type="button" id="bFicar" style="margin-top:10px">Já sei o caminho</button>';
       $('folha').classList.add('on'); $('folhaC').querySelector('.fechar').onclick = fechar; $('bFicar').onclick = fechar;
     }
     else if ((v = b.getAttribute('data-chegar'))) {
@@ -706,10 +754,39 @@ label { display: block; font-size: 13px; letter-spacing: 1.5px; text-transform: 
       '<p>5000 passos ou 20 minutos de exercício valem +10 XP por dia.' + (S.xp ? ' <b style="color:var(--verde)">Já ganhaste hoje ✓</b>' : '') + '</p>' +
       (ponte ? '<button class="btn" type="button" id="bSaudeLer">Ler da app ' + (ponte === 'apple' ? 'Saúde (Apple)' : 'Health Connect') + '</button>' :
         '<div class="dois"><div><label for="sPassos">Passos</label><input id="sPassos" type="number" inputmode="numeric" min="0" max="100000" value="' + (S.passos || '') + '"></div><div><label for="sMin">Minutos</label><input id="sMin" type="number" inputmode="numeric" min="0" max="600" value="' + (S.minutos || '') + '"></div></div><button class="btn sec" type="button" id="bSaude" style="margin-top:10px">Guardar movimento</button>' +
-        '<p style="margin:10px 0 0;font-size:13.5px;color:var(--cinza)">A leitura automática da Apple Saúde e do Health Connect (Android) liga-se na app instalada pela loja. No browser, copia o número da app Saúde do telemóvel.</p>');
+        '') + ligacoesSaude(S.ligacoes || {});
+  }
+  // Ligar automaticamente: Atalho da app Saúde (iPhone) e Strava (iPhone e Android).
+  function ligacoesSaude(Lg) {
+    var hora = function (t) { return t ? ' · última vez ' + new Date(t).toLocaleString('pt-PT', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }) : ''; };
+    var h = '<div class="ligs"><div class="mono" style="margin:16px 0 8px">Contar sozinho</div>';
+    h += '<div class="lig"><div><b>🍎 App Saúde do iPhone</b><small>' + (Lg.atalho ? 'Ligada' + hora(Lg.atalho_sync) : 'Um Atalho envia os teus passos todas as noites') + '</small></div>' + (Lg.atalho ? '<button class="btn sec" type="button" data-lig="atalho">Ver passos</button>' : '<button class="btn sec" type="button" data-lig="atalho">Ligar</button>') + '</div>';
+    if (Lg.strava_disponivel || Lg.strava) h += '<div class="lig"><div><b>🟠 Strava</b><small>' + (Lg.strava ? 'Ligado' + hora(Lg.strava_sync) : 'iPhone e Android: os minutos das tuas actividades contam') + '</small></div>' + (Lg.strava ? '<button class="btn sec" type="button" data-lig="strava_sync">Atualizar</button>' : '<a class="btn sec" href="/api/ricardogarcia/app/saude/strava" style="text-decoration:none">Ligar</a>') + '</div>';
+    h += '<p style="margin:8px 0 0;font-size:13px;color:var(--cinza)">No Android, a leitura direta do Health Connect chega com a app da loja. Até lá, liga o Strava ou escreve os números acima.</p></div>';
+    return h;
+  }
+  function folhaAtalho(url) {
+    var passo = function (n, t) { return '<li><b>' + n + '.</b> ' + t + '</li>'; };
+    $('folhaC').innerHTML = '<button class="fechar" type="button" aria-label="Fechar">×</button><div class="mono">🍎 App Saúde → Missão</div><h2>Liga o teu iPhone</h2>' +
+      '<p class="texto-m" style="font-size:15px">Este é o teu link pessoal. Não o partilhes: quem o tiver pode registar passos por ti.</p>' +
+      '<div class="lig" style="margin:8px 0"><code style="font-size:12px;word-break:break-all;color:var(--ouro2)">' + esc(url) + '</code></div><button class="btn" type="button" id="bCopia">Copiar o link</button>' +
+      '<ol class="passos-at">' +
+      passo(1, 'Abre a app <b>Atalhos</b> e carrega em <b>+</b>.') +
+      passo(2, 'Junta <b>Encontrar amostras de saúde</b>: tipo <b>Passos</b>, data de início <b>hoje</b>. A seguir junta <b>Calcular estatísticas</b> → <b>Soma</b>.') +
+      passo(3, 'Repete com o tipo <b>Minutos de exercício</b> (outra vez <b>Calcular estatísticas</b> → <b>Soma</b>).') +
+      passo(4, 'Junta <b>Obter conteúdo do URL</b>: cola o link, método <b>POST</b>, corpo <b>JSON</b> com dois campos: <b>passos</b> = 1.ª soma e <b>minutos</b> = 2.ª soma.') +
+      passo(5, 'Dá-lhe o nome «Missão» e corre uma vez. Na primeira vez o iPhone pede acesso à Saúde: aceita.') +
+      passo(6, 'Em <b>Automatização</b> → <b>Hora do dia</b>, escolhe as 21:00, <b>Executar imediatamente</b> e o atalho «Missão». A partir daí conta sozinho.') +
+      '</ol><button class="btn sec" type="button" id="bAtDesl" style="margin-top:6px">Desligar este link</button>';
+    $('folha').classList.add('on'); $('folhaC').querySelector('.fechar').onclick = fechar;
+    $('bCopia').onclick = function () { try { navigator.clipboard.writeText(url).then(function () { toast('Link copiado'); }); } catch (_) { toast('Seleciona o link e copia à mão.'); } };
+    $('bAtDesl').onclick = function () { api({ accao: 'saude_desligar', fonte: 'atalho' }).then(function (r) { fechar(); if (r.membro) render(r); toast('Link desligado'); }); };
   }
   $('vRotas').addEventListener('click', function (ev) {
     var b = ev.target.closest('button'); if (!b) return;
+    var lg = b.getAttribute('data-lig');
+    if (lg === 'atalho') { b.disabled = true; api({ accao: 'saude_atalho' }).then(function (r) { b.disabled = false; if (!r.ok) { toast(esc(r.erro)); return; } folhaAtalho(r.url); }); return; }
+    if (lg === 'strava_sync') { b.disabled = true; api({ accao: 'saude_sync' }).then(function (r) { b.disabled = false; if (!r.ok) { toast(esc(r.erro)); return; } render(r); ganhoToast(r, r.strava ? r.strava.actividades + ' actividades hoje · ' + r.strava.minutos + ' min' : ''); }); return; }
     if (b.id === 'bSaude') { b.disabled = true; api({ accao: 'saude', passos: +$('sPassos').value || 0, minutos: +$('sMin').value || 0, fonte: 'manual' }).then(function (r) { b.disabled = false; if (!r.ok) { toast(esc(r.erro)); return; } render(r); ganhoToast(r); }); }
     if (b.id === 'bSaudeLer') { var p = ponteSaude(); try { if (p === 'apple') window.webkit.messageHandlers.mtmSaude.postMessage({ pedir: 'hoje' }); else window.mtmSaudeResposta(JSON.parse(window.MTMSaude.passosHoje())); } catch (_) { toast('Não consegui ler a app Saúde.'); } }
   });
@@ -810,6 +887,63 @@ label { display: block; font-size: 13px; letter-spacing: 1.5px; text-transform: 
     window.scrollTo(0, 0);
     abrirComunidade(b.getAttribute('data-v') === 'vEsq');
   });
+  // Perfil: foto ou avatar montado (emblema + fundo + moldura). O servidor gera o SVG só a partir destas opções.
+  var FUNDOS_AV = { ouro: ['#E9C46A', '#7a5812'], ciano: ['#1EAAE6', '#0b2f57'], carvao: ['#2a3140', '#07080c'], azul: ['#1256BE', '#07080c'], verde: ['#3ccf8e', '#0b3b2a'], vinho: ['#b8485a', '#2a0b12'] };
+  var MOLD_AV = { ouro: '#E9C46A', ciano: '#1EAAE6', branco: '#f3f5f8', nenhuma: 'transparent' };
+  function folhaPerfil() {
+    var m = E.membro, op = E.avatar_opcoes || { rostos: ['🦁'], fundos: ['ouro'], molduras: ['ouro'] };
+    var sel = { rosto: (m.avatar && m.avatar.rosto) || op.rostos[0], fundo: (m.avatar && m.avatar.fundo) || 'ouro', moldura: (m.avatar && m.avatar.moldura) || 'ouro' };
+    var modo = m.avatar_url && !m.avatar ? 'foto' : 'montar';
+    function previa() {
+      var f = FUNDOS_AV[sel.fundo] || FUNDOS_AV.ouro, mo = MOLD_AV[sel.moldura] || 'transparent';
+      return '<div class="av" style="background:radial-gradient(circle at 30% 25%,' + f[0] + ',' + f[1] + ' 90%);box-shadow:inset 0 0 0 5px ' + mo + ';border-color:var(--fundo)">' + sel.rosto + '</div>';
+    }
+    function pinta() {
+      var c = $('folhaC');
+      c.innerHTML = '<button class="fechar" type="button" aria-label="Fechar">×</button><div class="mono">O teu perfil</div><h2>' + esc(m.primeiro) + ' · ' + esc(m.patente_nome) + '</h2>' +
+        '<div class="av-grande" id="avPre">' + (modo === 'foto' && m.avatar_url ? avatar({ avatar: m.avatar_url, nome: m.primeiro }) : previa()) + '</div>' +
+        '<div class="seg2"><button type="button" data-avm="montar" class="' + (modo === 'montar' ? 'on' : '') + '">🛡️ Montar avatar</button><button type="button" data-avm="foto" class="' + (modo === 'foto' ? 'on' : '') + '">📷 Usar foto</button></div>' +
+        (modo === 'montar'
+          ? '<div class="mono" style="margin-top:12px">Emblema</div><div class="grelha-av">' + op.rostos.map(function (r) { return '<button type="button" data-avr="' + r + '" class="' + (r === sel.rosto ? 'on' : '') + '">' + r + '</button>'; }).join('') + '</div>' +
+            '<div class="mono">Fundo</div><div class="cores-av">' + op.fundos.map(function (k) { var f = FUNDOS_AV[k] || FUNDOS_AV.ouro; return '<button type="button" aria-label="Fundo ' + k + '" data-avf="' + k + '" class="' + (k === sel.fundo ? 'on' : '') + '" style="background:radial-gradient(circle at 30% 25%,' + f[0] + ',' + f[1] + ')"></button>'; }).join('') + '</div>' +
+            '<div class="mono">Moldura</div><div class="cores-av mold">' + op.molduras.map(function (k) { return '<button type="button" aria-label="Moldura ' + k + '" data-avo="' + k + '" class="' + (k === sel.moldura ? 'on' : '') + '" style="border-color:' + (k === 'nenhuma' ? '#333' : MOLD_AV[k]) + '"></button>'; }).join('') + '</div>' +
+            '<button class="btn" type="button" id="bAvGuardar">Guardar avatar</button>'
+          : '<p class="texto-m" style="font-size:15px;margin:12px 0">Escolhe uma foto tua, de cara, com boa luz. Aparece no chat, nos stories e no ranking.</p><input type="file" id="avFich" accept="image/*" hidden><button class="btn" type="button" id="bAvFoto">Escolher foto</button>') +
+        '<button class="btn sec" type="button" id="bSair2" style="margin-top:18px">Sair da conta</button>' +
+        '<p class="texto-m" style="font-size:13px;color:var(--cinza);margin:8px 0 0">Para voltar, entras com o mesmo email ou com Google, Apple ou PrimeVerse.</p>';
+      c.querySelector('.fechar').onclick = fechar;
+    }
+    function guardar(corpo, b) {
+      b.disabled = true;
+      api(Object.assign({ accao: 'avatar' }, corpo)).then(function (r) { b.disabled = false; if (!r.ok) { toast(esc(r.erro || 'Não consegui guardar.')); return; } fechar(); render(r); toast('Perfil atualizado ✓'); }, function () { b.disabled = false; toast('Sem ligação. Tenta outra vez.'); });
+    }
+    pinta();
+    $('folhaC').onclick = function (ev) {
+      var b = ev.target.closest('button'); if (!b) return; var v;
+      if ((v = b.getAttribute('data-avm'))) { modo = v; pinta(); }
+      else if ((v = b.getAttribute('data-avr'))) { sel.rosto = v; pinta(); }
+      else if ((v = b.getAttribute('data-avf'))) { sel.fundo = v; pinta(); }
+      else if ((v = b.getAttribute('data-avo'))) { sel.moldura = v; pinta(); }
+      else if (b.id === 'bAvGuardar') guardar({ tipo: 'montar', rosto: sel.rosto, fundo: sel.fundo, moldura: sel.moldura }, b);
+      else if (b.id === 'bAvFoto') {
+        var fi = $('avFich'); fi.onchange = function () {
+          var f = fi.files && fi.files[0]; if (!f) return;
+          reduzirQuadrado(f, function (d) { if (!d) { toast('Não consegui ler essa imagem.'); return; } $('avPre').innerHTML = '<div class="av" style="background-image:url(&quot;' + d + '&quot;)"></div>'; guardar({ tipo: 'foto', imagem: d }, b); });
+        }; fi.click();
+      }
+      else if (b.id === 'bSair2') { if (!confirm('Sair da conta neste telemóvel?')) return; api({ accao: 'sair' }).then(function () { location.reload(); }); }
+    };
+    $('folha').classList.add('on');
+  }
+  // Foto de perfil: recorte quadrado ao centro, 512 px, JPEG.
+  function reduzirQuadrado(f, cb) {
+    var rd = new FileReader(); rd.onload = function () { var im = new Image(); im.onload = function () {
+      var l = Math.min(im.width, im.height), cv = document.createElement('canvas'); cv.width = cv.height = 512;
+      cv.getContext('2d').drawImage(im, (im.width - l) / 2, (im.height - l) / 2, l, l, 0, 0, 512, 512); cb(cv.toDataURL('image/jpeg', .85)); }; im.onerror = function () { cb(null); }; im.src = rd.result; }; rd.onerror = function () { cb(null); }; rd.readAsDataURL(f);
+  }
+  $('bPerfil').onclick = function () { if (E) folhaPerfil(); };
+  // iOS ignora user-scalable=no: trava o gesto de pinça (o duplo toque já fica preso pelo touch-action).
+  document.addEventListener('gesturestart', function (e) { e.preventDefault(); }, { passive: false });
   $('bSair').onclick = function () { api({ accao: 'sair' }).then(function () { location.reload(); }); };
 
   // entrada
@@ -819,6 +953,7 @@ label { display: block; font-size: 13px; letter-spacing: 1.5px; text-transform: 
     $('aBtn').textContent = modo === 'registar' ? 'Começar a missão' : 'Entrar'; $('aErro').textContent = '';
   }; });
   try { if (new URLSearchParams(location.search).get('erro') === 'oauth') $('aErro').textContent = 'Não foi possível entrar com essa conta. Tenta outra vez ou usa email e palavra-passe.'; } catch (_) {}
+  try { var sq = new URLSearchParams(location.search).get('saude'); if (sq) setTimeout(function () { toast({ strava_ok: '<b>Strava ligado</b><br>As actividades de hoje já contam.', strava_off: 'A ligação ao Strava ainda não está ativa.', strava_recusado: 'Ligação ao Strava cancelada.', strava_erro: 'Não consegui ligar o Strava. Tenta outra vez.' }[sq] || '', 5000); var rb = document.querySelector('.doca button[data-v="vRotas"]'); if (rb && sq === 'strava_ok') rb.click(); }, 1200); } catch (_) {}
   try { if (new URLSearchParams(location.search).get('entrar')) document.querySelector('.abas button[data-modo="entrar"]').click(); } catch (_) {}
   $('fAuth').addEventListener('submit', function (e) {
     e.preventDefault(); var b = $('aBtn'); b.disabled = true; $('aErro').textContent = '';

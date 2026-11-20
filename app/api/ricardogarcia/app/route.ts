@@ -7,8 +7,10 @@ import {
 } from '@/lib/ricardogarcia/app'
 import { awardXp } from '@/lib/xp-service'
 import {
-  XP_DIA, SUGESTOES_HABITOS, AREAS_ROTA, curiosidadeDoDia, quizDoDia, dicaPara, pontosPerto, distanciaM, guardarProva,
+  XP_DIA, SUGESTOES_HABITOS, AREAS_ROTA, curiosidadeDoDia, quizDoDia, dicaPara, pontosPerto, pontosDoRicardo, distanciaM, guardarProva,
 } from '@/lib/ricardogarcia/diario'
+import { FUNDOS, MOLDURAS, ROSTOS, guardarAvatar } from '@/lib/ricardogarcia/avatar'
+import { ligacoes, novoTokenAtalho, registarMovimento, sincronizarStrava } from '@/lib/ricardogarcia/saude'
 
 export const dynamic = 'force-dynamic'
 
@@ -52,9 +54,9 @@ async function extras(m: any, dia: string) {
     presenca: { feita: it.has('presenca'), prova: !!it.get('presenca')?.prova_path, xp: it.get('presenca')?.xp || 0, xp_prova: XP_DIA.presenca_prova, xp_sem: XP_DIA.presenca_sem },
     habitos: (habs.data || []).map(h => ({ id: h.id, nome: h.nome, icone: h.icone, feito: feitosSet.has(h.id) })),
     habitos_xp: XP_DIA.habito, habitos_max: XP_DIA.habitos_max, sugestoes: SUGESTOES_HABITOS,
-    saude: { ...(it.get('saude')?.dados || {}), xp: it.get('saude')?.xp || 0 },
+    saude: { ...(it.get('saude')?.dados || {}), xp: it.get('saude')?.xp || 0, ligacoes: await ligacoes(m.id) },
     rotas: { areas: AREAS_ROTA, hoje: rotas.length, max: XP_DIA.rota_max_dia, xp: XP_DIA.rota_ponto,
-      visitados: rotas.map(r => ({ ponto: r.item.slice(5), nome: r.dados?.nome, dica: r.dados?.dica })) },
+      visitados: rotas.map(r => ({ ponto: r.item.slice(5), nome: r.dados?.nome, dica: r.dados?.dica })), ricardo: await pontosDoRicardo() },
     eventos: (evs.data || []).filter(e => e.tipo === 'desafio' || !e.quando || Date.parse(e.quando) > agora - 6 * 3600_000).map(e => ({
       id: e.id, tipo: e.tipo, titulo: e.titulo, descricao: e.descricao, quando: e.quando, local: e.local, imagem_url: e.imagem_url,
       preco_eur: e.preco_eur, preco_antes_eur: e.preco_antes_eur, link_compra: e.link_compra, vagas: e.vagas, xp: e.xp, meu: meu.get(e.id) || null,
@@ -99,7 +101,9 @@ async function estado(m: any) {
       nome: m.nome, primeiro: primeiroNome(m.nome), xp: m.xp, moedas: m.moedas, dias_ativos: m.dias_ativos,
       sequencia: m.sequencia, melhor_sequencia: m.melhor_sequencia, dias_conta: diasEntre(String(m.criado).slice(0, 10), dia),
       patente: p, patente_nome: PATENTES[p].nome, prox_nome: prox?.nome || null, prox_xp: prox?.xp || null, base_xp: PATENTES[p].xp,
+      avatar_url: m.avatar_url || null, avatar: m.avatar || null,
     },
+    avatar_opcoes: { rostos: ROSTOS, fundos: Object.keys(FUNDOS), molduras: Object.keys(MOLDURAS) },
     patentes: PATENTES,
     hoje: { dia, xp: porDia.get(dia)?.xp || 0, max: eco.xp_dia_max + eco.bonus_dia_completo },
     historico,
@@ -333,16 +337,31 @@ export async function POST(req: NextRequest) {
   }
 
   if (accao === 'saude') {
-    const passos = Math.min(100_000, Math.max(0, Math.round(Number(b?.passos) || 0)))
-    const minutos = Math.min(600, Math.max(0, Math.round(Number(b?.minutos) || 0)))
     const fonte = ['apple', 'google', 'manual'].includes(b?.fonte) ? b.fonte : 'manual'
-    const conta = passos >= 5000 || minutos >= 20
-    const { data: ja } = await db().from('rg_app_diarios').select('id, xp').eq('membro_id', m.id).eq('dia', dia).eq('item', 'saude').maybeSingle()
-    const dados = { passos, minutos, fonte, hora: new Date().toISOString() }
-    const xp = conta && !(ja?.xp) ? XP_DIA.saude : 0
-    if (ja) await db().from('rg_app_diarios').update({ dados, xp: (ja.xp || 0) + xp }).eq('id', ja.id)
-    else await registarDia('saude', xp, { dados })
-    return responder(await darXp('app_saude', xp, `Movimento ${dia}: ${passos} passos, ${minutos} min`))
+    const r = await registarMovimento(m.id, Number(b?.passos) || 0, Number(b?.minutos) || 0, fonte, dia)
+    return responder(await darXp('app_saude', r.xp, `Movimento ${dia}: ${r.dados.passos} passos, ${r.dados.minutos} min`))
+  }
+
+  // Ligações de saúde: Atalho do iPhone (link pessoal) e Strava.
+  if (accao === 'avatar') {
+    if (!checkRateLimit('rg-avatar:' + m.id, 20, 60 * 60_000).allowed) return erro('Muitas mudanças seguidas. Tenta daqui a pouco.', 429)
+    const g = await guardarAvatar(m.id, b)
+    if (g.erro) return erro(g.erro)
+    return NextResponse.json(await estado({ ...m, avatar_url: g.url, avatar: b?.tipo === 'foto' ? m.avatar : { rosto: b?.rosto, fundo: b?.fundo, moldura: b?.moldura } }))
+  }
+  if (accao === 'saude_atalho') {
+    const token = await novoTokenAtalho(m.id)
+    return NextResponse.json({ ok: true, url: `${req.nextUrl.origin}/api/ricardogarcia/app/saude/atalho?t=${token}` })
+  }
+  if (accao === 'saude_desligar') {
+    await db().from('rg_app_saude_ligacoes').delete().eq('membro_id', m.id).eq('fonte', b?.fonte === 'strava' ? 'strava' : 'atalho')
+    return NextResponse.json(await estado(m))
+  }
+  if (accao === 'saude_sync') {
+    if (!checkRateLimit('rg-strava:' + m.id, 12, 60 * 60_000).allowed) return erro('Já sincronizaste há pouco. Tenta daqui a uns minutos.', 429)
+    const r = await sincronizarStrava(m.id)
+    if (!r) return erro('Não consegui falar com o Strava. Liga outra vez a conta.')
+    return responder(await darXp('app_saude', r.xp, `Movimento (Strava) ${dia}: ${r.dados.minutos} min`), { strava: { actividades: r.actividades, minutos: r.dados.minutos } })
   }
 
   if (accao === 'rota_pontos') {
@@ -359,14 +378,21 @@ export async function POST(req: NextRequest) {
     if (!p) return erro('Ponto desconhecido. Procura os pontos outra vez.', 404)
     if (!Number.isFinite(lat) || !Number.isFinite(lon)) return erro('Sem localização.')
     const dist = distanciaM({ lat, lon }, p)
-    // Parques e praças são grandes: conta chegar a 80 m do centro (mais a margem do GPS, até 50 m).
-    if (dist > 80 + Math.min(50, prec)) return erro(`Ainda estás a ${Math.round(dist)} m de ${p.nome}.`)
+    // Parques e praças são grandes: conta chegar a 80 m do centro (os pontos do Ricardo têm o raio dele), mais a margem do GPS até 50 m.
+    const raio = p.origem === 'ricardo' ? Math.max(30, Math.min(300, p.raio_m || 80)) : 80
+    if (dist > raio + Math.min(50, prec)) return erro(`Ainda estás a ${Math.round(dist)} m de ${p.nome}.`)
     const { count } = await db().from('rg_app_diarios').select('id', { count: 'exact', head: true }).eq('membro_id', m.id).eq('dia', dia).like('item', 'rota:%')
     const area = t(b?.area, 20)
-    const dica: any = await dicaPara(area, m.id)
-    const xp = (count || 0) < XP_DIA.rota_max_dia ? XP_DIA.rota_ponto : 0
-    if (!(await registarDia('rota:' + p.id, xp, { ref: area, dados: { nome: p.nome, tipo: p.tipo, dica: dica ? { titulo: dica.titulo, texto: dica.texto } : null } }))) return erro(`Já passaste por ${p.nome} hoje.`)
-    return responder(await darXp('app_rota_ponto', xp, `Rota: ${p.nome}`), { dica: dica ? { titulo: dica.titulo, texto: dica.texto, ponto: p.nome } : null })
+    // Num ponto do Ricardo a dica é a lição dele; o XP extra só conta na primeira visita de sempre.
+    const licao = p.origem === 'ricardo' && p.licao_texto ? { titulo: p.licao_titulo || p.nome, texto: p.licao_texto, video: p.video_url || null } : null
+    const dica: any = licao || await dicaPara(area, m.id)
+    let xp = (count || 0) < XP_DIA.rota_max_dia ? XP_DIA.rota_ponto : 0
+    if (p.origem === 'ricardo' && p.xp_extra) {
+      const { count: antes } = await db().from('rg_app_diarios').select('id', { count: 'exact', head: true }).eq('membro_id', m.id).eq('item', 'rota:' + p.id)
+      if (!antes) xp += Math.min(100, p.xp_extra)
+    }
+    if (!(await registarDia('rota:' + p.id, xp, { ref: area, dados: { nome: p.nome, tipo: p.tipo, ricardo: p.origem === 'ricardo', dica: dica ? { titulo: dica.titulo, texto: dica.texto, video: dica.video || null } : null } }))) return erro(`Já passaste por ${p.nome} hoje.`)
+    return responder(await darXp('app_rota_ponto', xp, `Rota: ${p.nome}`), { dica: dica ? { titulo: dica.titulo, texto: dica.texto, video: dica.video || null, ponto: p.nome, ricardo: p.origem === 'ricardo' } : null })
   }
 
   if (accao === 'evento') {

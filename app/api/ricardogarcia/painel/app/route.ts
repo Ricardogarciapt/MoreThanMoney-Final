@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { requireSuperAdmin } from '@/lib/super-admin'
 import { db, economia, ECONOMIA_BASE, PATENTES, patenteDe, hoje, somarMoedas } from '@/lib/ricardogarcia/app'
+import { AREAS_ROTA, coordenadasDeLink } from '@/lib/ricardogarcia/diario'
 
 export const dynamic = 'force-dynamic'
 const t = (v: unknown, n: number) => String(v ?? '').trim().slice(0, n)
@@ -64,6 +65,12 @@ export async function GET(req: NextRequest) {
   await quemC([...(cst.data || []), ...(cmsg.data || [])])
   const linhaC = (alvo: string) => (x: any) => ({ alvo, id: x.id, texto: x.texto, criado: x.criado, denuncias: x.denuncias || 0, fora: alvo === 'story' ? x.oculta : x.apagado,
     expirada: alvo === 'story' ? Date.parse(x.expira) < Date.now() : false, imagem: x.imagem_path ? urlC.get(x.imagem_path) || null : null, nome: nomeMembro.get(x.membro_id)?.nome || 'Membro' })
+  // Pontos do Ricardo no mapa, com quantas visitas já tiveram.
+  const [pts, visitas] = await Promise.all([
+    db().from('rg_app_pontos').select('*').eq('origem', 'ricardo').order('activo', { ascending: false }).order('nome').limit(300),
+    db().from('rg_app_diarios').select('item').like('item', 'rota:rg:%').limit(20000),
+  ])
+  const nVis = new Map<string, number>(); (visitas.data || []).forEach(v => nVis.set(v.item.slice(5), (nVis.get(v.item.slice(5)) || 0) + 1))
   const dia = hoje()
   const naApp = new Set(emails)
   return NextResponse.json({
@@ -80,6 +87,7 @@ export async function GET(req: NextRequest) {
     }),
     presencas: (pres.data || []).map(p => ({ dia: p.dia, tipo: p.ref, xp: p.xp, nota: (p.dados as any)?.nota || null, nome: nomeMembro.get(p.membro_id)?.nome || 'Membro', prova: p.prova_path ? urlDe.get(p.prova_path) || null : null })),
     comunidade: { stories: (cst.data || []).map(linhaC('story')), mensagens: (cmsg.data || []).map(linhaC('mensagem')) },
+    pontos: (pts.data || []).map(p => ({ ...p, visitas: nVis.get(p.id) || 0 })), areas_rota: AREAS_ROTA,
     convidar: (leads.data || []).filter(l => !l.email || !naApp.has(String(l.email).toLowerCase())).slice(0, 30),
   })
 }
@@ -146,6 +154,28 @@ export async function POST(req: NextRequest) {
         ? await db().from('rg_app_stories').update({ oculta: fora }).eq('id', id)
         : await db().from('rg_app_chat').update({ apagado: fora }).eq('id', id)
       return error ? falha(error.message, 500) : ok()
+    }
+    case 'ponto': {
+      const p = b.ponto || {}
+      const lat = Number(p.lat), lon = Number(p.lon)
+      if (!Number.isFinite(lat) || !Number.isFinite(lon) || Math.abs(lat) > 90 || Math.abs(lon) > 180) return falha('Escolhe o sítio no mapa ou cola um link do Google Maps.')
+      const nome = t(p.nome, 80); if (nome.length < 3) return falha('Dá um nome ao ponto.')
+      const linha = { nome, tipo: t(p.tipo, 30) || 'Ponto do Ricardo', lat, lon, origem: 'ricardo', area: AREAS_ROTA.some(a => a.id === p.area) ? p.area : null,
+        descricao: t(p.descricao, 300) || null, licao_titulo: t(p.licao_titulo, 120) || null, licao_texto: t(p.licao_texto, 2000) || null,
+        video_url: /^https:\/\//.test(String(p.video_url || '')) ? t(p.video_url, 300) : null, xp_extra: Math.min(100, int(p.xp_extra)),
+        raio_m: Math.max(30, Math.min(300, int(p.raio_m, 80))), activo: p.activo !== false, atualizado: new Date().toISOString() }
+      const id = String(p.id || '').startsWith('rg:') ? t(p.id, 60) : 'rg:' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6)
+      const { error } = await db().from('rg_app_pontos').upsert({ id, ...linha }, { onConflict: 'id' })
+      return error ? falha(error.message, 500) : ok({ id })
+    }
+    case 'ponto_apagar': {
+      const id = t(b.id, 60); if (!id.startsWith('rg:')) return falha('Só se apagam pontos teus.')
+      await db().from('rg_app_pontos').delete().eq('id', id).eq('origem', 'ricardo')
+      return ok()
+    }
+    case 'link_coords': {
+      const c = await coordenadasDeLink(t(b.link, 600))
+      return c ? ok(c) : falha('Não consegui ler o sítio nesse link. Abre o local no Google Maps, carrega em Partilhar e cola o link aqui.')
     }
     case 'membro_estado': {
       if (!['ativo', 'bloqueado'].includes(b.estado)) return falha('Estado inválido.')
