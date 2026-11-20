@@ -48,13 +48,11 @@ import { useT, useI18n } from "@/components/i18n-provider"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
+import { nomePatente, progressoPatente } from "@/lib/xp-config"
 import { chavePerfilUi, type ChavePerfil, type PerfilUi } from "@/lib/perfil-ui"
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
-function xpProgressInLevel(totalXp: number): number {
-  return totalXp % 1000
-}
 
 /**
  * O plano, como o cliente o vê nas Definições.
@@ -685,7 +683,7 @@ export default function SettingsMobile() {
             <Badge className={`border text-xs ${plan.bg} ${plan.color}`}>{t(plan.label)}</Badge>
             <span className="inline-flex items-center gap-1 rounded-full border border-yellow-500/30 bg-yellow-500/10 px-2 py-0.5 text-xs font-semibold text-yellow-400">
               <Zap className="w-3 h-3" />
-              {xpData.total_xp.toLocaleString(locale)} XP · {t("appmobile.levelShort")} {xpData.current_level}
+              {xpData.total_xp.toLocaleString(locale)} XP · {nomePatente(xpData.current_level)}
             </span>
           </div>
         </div>
@@ -697,7 +695,7 @@ export default function SettingsMobile() {
               <div className="flex items-center justify-between mb-2">
                 <div className="flex items-center gap-1.5">
                   <Award className="w-3.5 h-3.5 text-[#D2A63C]" />
-                  <span className="text-xs text-gray-400 font-medium">{t("appmobile.level")} {xpData.current_level}</span>
+                  <span className="text-xs text-[#E9C46A] font-semibold uppercase tracking-wide">{nomePatente(xpData.current_level)}</span>
                 </div>
                 <div className="flex items-center gap-1">
                   <Zap className="w-3 h-3 text-yellow-400" />
@@ -709,11 +707,16 @@ export default function SettingsMobile() {
               <div className="w-full bg-gray-700/60 rounded-full h-1.5">
                 <div
                   className="bg-gradient-to-r from-[#D2A63C] to-[#BB8525] h-1.5 rounded-full transition-all duration-500"
-                  style={{ width: `${(xpProgressInLevel(xpData.total_xp) / 1000) * 100}%` }}
+                  style={{ width: `${progressoPatente(xpData.total_xp).pct}%` }}
                 />
               </div>
               <p className="text-[10px] text-gray-500 mt-1 text-right">
-                {xpProgressInLevel(xpData.total_xp)}/1000 XP {t("appmobile.xpToLevel")} {xpData.current_level + 1}
+                {progressoPatente(xpData.total_xp).proxima
+                  ? `${progressoPatente(xpData.total_xp).falta.toLocaleString(locale)} XP para ${progressoPatente(xpData.total_xp).proxima}`
+                  : "Patente máxima"}
+              </p>
+              <p className="text-[11px] mt-2 text-center">
+                <a href="/ricardogarcia/app" className="font-semibold text-[#E9C46A] hover:underline">Missões do dia, moedas e recompensas →</a>
               </p>
             </div>
           </div>

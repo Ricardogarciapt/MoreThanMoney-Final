@@ -1,6 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerClient } from '@supabase/ssr'
 import { cookies } from 'next/headers'
+import { getSupabaseAdmin } from '@/lib/supabase-admin-client'
+import { nomePatente } from '@/lib/xp-config'
+
+// Moedas da carteira (app do Ricardo): uma só economia para toda a MTM.
+async function moedasDe(id: string) {
+  try { const { data } = await getSupabaseAdmin().from('rg_app_membros').select('moedas').eq('id', id).maybeSingle(); return data?.moedas ?? 0 } catch { return 0 }
+}
 
 // GET: Obter XP do utilizador
 export async function GET(request: NextRequest) {
@@ -48,6 +55,8 @@ export async function GET(request: NextRequest) {
           user_id: session.user.id,
           total_xp: 0,
           current_level: 1,
+          patente: nomePatente(1),
+          moedas: await moedasDe(session.user.id),
           badges: []
         }
       })
@@ -67,6 +76,8 @@ export async function GET(request: NextRequest) {
         user_id: userXP.user_id,
         total_xp: userXP.total_xp || 0,
         current_level: userXP.current_level || 1,
+        patente: nomePatente(userXP.current_level || 1),
+        moedas: await moedasDe(session.user.id),
         badges: userXP.badges || []
       }
     })

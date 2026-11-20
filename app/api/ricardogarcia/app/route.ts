@@ -2,9 +2,10 @@ import { NextRequest, NextResponse } from 'next/server'
 import { checkRateLimit } from '@/lib/admin-api-helpers'
 import { avisarAdmin } from '@/lib/primegate/verificacao'
 import {
-  COOKIE, PATENTES, INSIGNIAS, db, hoje, diasEntre, patenteDe, hashPass, confere, criarSessao, membroDaSessao,
-  terminarSessao, economia, missoesDoDia, ligarAoCrm, podeResgatar,
+  PATENTES, INSIGNIAS, db, hoje, diasEntre, membroDaSessao, clienteSessao, carteira, somarMoedas,
+  economia, missoesDoDia, ligarAoCrm, podeResgatar,
 } from '@/lib/ricardogarcia/app'
+import { awardXp } from '@/lib/xp-service'
 
 export const dynamic = 'force-dynamic'
 
@@ -12,10 +13,18 @@ const t = (v: unknown, n: number) => String(v ?? '').replace(/[\u0000-\u001f]/g,
 const erro = (m: string, s = 400) => NextResponse.json({ ok: false, erro: m }, { status: s })
 const primeiroNome = (n: string) => String(n || '').trim().split(/\s+/)[0].slice(0, 20)
 
-function comSessao(res: NextResponse, token: string) {
-  res.cookies.set(COOKIE, token, { httpOnly: true, secure: true, sameSite: 'lax', path: '/', maxAge: 90 * 86400 })
-  return res
+
+// Os 10 com mais XP entre quem usa a app (XP de toda a MTM, porque é um só).
+async function esquadrao() {
+  const { data: ids } = await db().from('rg_app_membros').select('id').eq('estado', 'ativo').limit(2000)
+  const lista = (ids || []).map(x => x.id)
+  if (!lista.length) return { data: [] as any[] }
+  const { data: xp } = await db().from('user_xp').select('user_id, total_xp').in('user_id', lista).order('total_xp', { ascending: false }).limit(10)
+  const { data: nomes } = await db().from('profiles').select('id, full_name, email').in('id', (xp || []).map(x => x.user_id))
+  const nome = new Map((nomes || []).map(n => [n.id, n.full_name || String(n.email || '').split('@')[0]]))
+  return { data: (xp || []).map(x => ({ id: x.user_id, nome: nome.get(x.user_id) || 'Recruta', xp: x.total_xp || 0, patente: patenteIdx(x.total_xp || 0) })) }
 }
+const patenteIdx = (xp: number) => { let i = 0; PATENTES.forEach((p, k) => { if (xp >= p.xp) i = k }); return i }
 
 async function estado(m: any) {
   const dia = hoje()
@@ -25,7 +34,7 @@ async function estado(m: any) {
     db().from('rg_app_conquistas').select('insignia, criado').eq('membro_id', m.id),
     db().from('rg_app_recompensas').select('*').eq('activo', true).order('ordem'),
     db().from('rg_app_resgates').select('id, recompensa_id, custo, estado, criado').eq('membro_id', m.id).order('criado', { ascending: false }).limit(20),
-    db().from('rg_app_membros').select('id, nome, xp, patente, sequencia').eq('estado', 'ativo').order('xp', { ascending: false }).limit(10),
+    esquadrao(),
   ])
   const porMissao = new Map((regs.data || []).map(r => [r.missao_id, r]))
   const recompensas = await Promise.all((recs.data || []).map(async r => ({
@@ -74,29 +83,40 @@ export async function POST(req: NextRequest) {
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return erro('O email não parece válido.')
     if (pass.length < 8) return erro('A palavra-passe precisa de pelo menos 8 caracteres.')
     if (!b?.consentimento) return erro('Precisamos do teu consentimento para criar a conta.')
-    const { data: ja } = await db().from('rg_app_membros').select('id').eq('email', email).maybeSingle()
-    if (ja) return erro('Já existe uma conta com este email. Entra com a tua palavra-passe.', 409)
-    const { data: m, error } = await db().from('rg_app_membros').insert({
-      nome, email, telefone: telefone || null, pass_hash: hashPass(pass), consentimento: true, origem: t(b?.origem, 60) || 'app',
-    }).select('*').single()
-    if (error || !m) return erro('Não consegui criar a conta. Tenta outra vez.', 500)
-    await ligarAoCrm(m)
-    try { await avisarAdmin(db(), `🎖️ Novo recruta na app Missão\n${nome} · ${email}${telefone ? ' · ' + telefone : ''}\nJá está no pipeline (origem app-ricardo).`) } catch {}
-    return comSessao(NextResponse.json({ ok: true }), await criarSessao(m.id))
+    // Conta MoreThanMoney a sério: a mesma que abre a app-mobile.
+    const { data: criado, error } = await db().auth.admin.createUser({
+      email, password: pass, email_confirm: true, user_metadata: { full_name: nome, origem: 'app-ricardo' },
+    })
+    if (error || !criado?.user) {
+      // Não se diz se o email existe (evita usar o formulário para descobrir contas).
+      const ja = /already|exists|registered|duplicate/i.test(error?.message || '')
+      return erro(ja ? 'Não foi possível criar a conta com este email. Se já tens conta MoreThanMoney, entra com ela.' : 'Não consegui criar a conta. Tenta outra vez.', ja ? 409 : 500)
+    }
+    const id = criado.user.id
+    const { data: perfil } = await db().from('profiles').select('id').eq('id', id).maybeSingle()
+    if (!perfil) await db().from('profiles').insert({ id, email, full_name: nome, phone: telefone || null, user_type: 'lead', member_category: 'standard', is_active: true })
+    await carteira(id, t(b?.origem, 60) || 'app')
+    await ligarAoCrm({ id, nome, email, telefone })
+    const sb = await clienteSessao()
+    await sb.auth.signInWithPassword({ email, password: pass })
+    try { await avisarAdmin(db(), `🎖️ Novo recruta na app do Ricardo\n${nome} · ${email}${telefone ? ' · ' + telefone : ''}\nConta MTM criada e já no pipeline (origem app-ricardo).`) } catch {}
+    return NextResponse.json({ ok: true })
   }
 
   if (accao === 'entrar') {
     if (!checkRateLimit('rg-app-in:' + ip, 10, 15 * 60_000).allowed) return erro('Muitas tentativas. Espera uns minutos.', 429)
-    const email = t(b?.email, 160).toLowerCase()
-    const { data: m } = await db().from('rg_app_membros').select('id, pass_hash, estado').eq('email', email).maybeSingle()
-    if (!m || !confere(String(b?.pass || ''), m.pass_hash)) return erro('Email ou palavra-passe errados.', 401)
-    if (m.estado !== 'ativo') return erro('Esta conta está suspensa. Fala com o Ricardo.', 403)
-    return comSessao(NextResponse.json({ ok: true }), await criarSessao(m.id))
+    const sb = await clienteSessao()
+    const { data, error } = await sb.auth.signInWithPassword({ email: t(b?.email, 160).toLowerCase(), password: String(b?.pass || '') })
+    if (error || !data?.user) return erro('Email ou palavra-passe errados.', 401)
+    const c = await carteira(data.user.id)
+    if (c?.estado !== 'ativo') { await sb.auth.signOut(); return erro('Esta conta está suspensa na app. Fala com o Ricardo.', 403) }
+    return NextResponse.json({ ok: true })
   }
 
   if (accao === 'sair') {
-    await terminarSessao(req)
-    const r = NextResponse.json({ ok: true }); r.cookies.delete(COOKIE); return r
+    const sb = await clienteSessao()
+    await sb.auth.signOut()
+    return NextResponse.json({ ok: true })
   }
 
   const m = await membroDaSessao(req)
@@ -128,7 +148,7 @@ export async function POST(req: NextRequest) {
     await db().from('rg_app_registos').update({ concluido: new Date().toISOString(), xp, resposta: resposta || null }).eq('id', reg.id)
 
     const up: any = {}
-    let moedas = 0, xpTotal = m.xp + xp, bonus = 0
+    let moedas = 0, bonus = 0
     if (feitasAntes === 0) {
       const ontem = new Date(Date.parse(dia) - 86_400_000).toISOString().slice(0, 10)
       const seq = m.ultimo_dia === ontem ? m.sequencia + 1 : m.ultimo_dia === dia ? m.sequencia : 1
@@ -138,11 +158,14 @@ export async function POST(req: NextRequest) {
     const completo = feitasAntes + 1 >= missoes.length
     if (completo) {
       bonus = Math.max(0, Math.min(eco.bonus_dia_completo, eco.xp_dia_max - ganhoHoje - xp))
-      if (bonus) { xpTotal += bonus; await db().from('rg_app_registos').update({ xp: xp + bonus }).eq('id', reg.id) }
+      if (bonus) await db().from('rg_app_registos').update({ xp: xp + bonus }).eq('id', reg.id)
       moedas += eco.moedas_dia_completo
     }
-    const pat = patenteDe(xpTotal)
-    if (pat > m.patente) moedas += eco.moedas_patente * (pat - m.patente)
+    // O XP entra no registo único da MTM (o mesmo do chat, feed e lives). As moedas da subida de
+    // patente são dadas lá dentro, para valerem também quando o XP vem da app-mobile.
+    let xpTotal = m.xp, pat = m.patente
+    if (xp) { const r = await awardXp(db(), m.id, 'missao_concluida', { amount: xp, actionDescription: `Missão: ${mi.titulo}` }); xpTotal = r.total_xp; pat = r.level - 1 }
+    if (bonus) { const r = await awardXp(db(), m.id, 'missao_dia_completo', { amount: bonus, actionDescription: `Dia completo ${dia}` }); xpTotal = r.total_xp; pat = r.level - 1 }
     const novo = { ...m, ...up, xp: xpTotal, patente: pat, _completo: completo }
     const { data: tem } = await db().from('rg_app_conquistas').select('insignia').eq('membro_id', m.id)
     const novas = INSIGNIAS.filter(i => !(tem || []).some(c => c.insignia === i.id) && i.teste(novo))
@@ -150,9 +173,12 @@ export async function POST(req: NextRequest) {
       await db().from('rg_app_conquistas').insert(novas.map(i => ({ membro_id: m.id, insignia: i.id })))
       moedas += eco.moedas_insignia * novas.length
     }
-    await db().from('rg_app_membros').update({ ...up, xp: xpTotal, patente: pat, moedas: m.moedas + moedas }).eq('id', m.id)
-    const atual = { ...m, ...up, xp: xpTotal, patente: pat, moedas: m.moedas + moedas }
-    return NextResponse.json({ ...(await estado(atual)), ganho: { xp: xp + bonus, moedas, subiu: pat > m.patente, insignias: novas.map(i => i.nome), completo } })
+    if (Object.keys(up).length) await db().from('rg_app_membros').update(up).eq('id', m.id)
+    await somarMoedas(m.id, moedas)
+    const subiu = pat > m.patente
+    if (subiu) moedas += eco.moedas_patente * (pat - m.patente)
+    const atual = (await membroDaSessao()) || { ...m, ...up, xp: xpTotal, patente: pat }
+    return NextResponse.json({ ...(await estado(atual)), ganho: { xp: xp + bonus, moedas, subiu, insignias: novas.map(i => i.nome), completo } })
   }
 
   if (accao === 'resgatar') {

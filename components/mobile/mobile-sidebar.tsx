@@ -34,7 +34,7 @@ import {
 import Image from "next/image"
 import { SiteLogo } from "@/components/site-logo"
 import Link from "next/link"
-import { xpProgressInLevel } from "@/lib/xp-config"
+import { nomePatente, progressoPatente } from "@/lib/xp-config"
 import { chavePerfilUi, type ChavePerfil } from "@/lib/perfil-ui"
 import { useT } from "@/components/i18n-provider"
 
@@ -89,7 +89,7 @@ export default function MobileSidebar({
   }, [])
 
   const [unreadMessagesCount, setUnreadMessagesCount] = useState(0)
-  const [xpData, setXpData] = useState<{ xp: number; level: number } | null>(null)
+  const [xpData, setXpData] = useState<{ xp: number; level: number; moedas?: number } | null>(null)
   const [unreadMentorNotifications, setUnreadMentorNotifications] = useState(0)
 
   useEffect(() => {
@@ -142,6 +142,7 @@ export default function MobileSidebar({
         setXpData({
           xp: data.user_xp.total_xp || 0,
           level: data.user_xp.current_level || 1,
+          moedas: data.user_xp.moedas ?? 0,
         })
       }
     } catch (error) {
@@ -288,7 +289,7 @@ export default function MobileSidebar({
                 <div className="flex items-center justify-between mb-2">
                   <div className="flex items-center gap-2">
                     <Award className="w-4 h-4 text-[#D2A63C]" />
-                    <span className="text-xs text-gray-400">{t('amB.sidebar.level').replace('{n}', String(xpData.level))}</span>
+                    <span className="text-xs font-semibold text-[#E9C46A] uppercase tracking-wide">{nomePatente(xpData.level)}</span>
                   </div>
                   <div className="flex items-center gap-1">
                     <Zap className="w-3 h-3 text-yellow-400" />
@@ -301,9 +302,13 @@ export default function MobileSidebar({
                   <div
                     className="bg-gradient-to-r from-[#D2A63C] to-[#BB8525] h-1.5 rounded-full transition-all"
                     style={{
-                      width: `${(xpProgressInLevel(xpData.xp) / 1000) * 100}%`,
+                      width: `${progressoPatente(xpData.xp).pct}%`,
                     }}
                   />
+                </div>
+                <div className="mt-2 flex items-center justify-between">
+                  <span className="text-[11px] text-gray-400">● {(xpData.moedas ?? 0).toLocaleString()} moedas</span>
+                  <a href="/ricardogarcia/app" className="text-[11px] font-semibold text-[#E9C46A] hover:underline">Missões do dia →</a>
                 </div>
               </div>
             )}

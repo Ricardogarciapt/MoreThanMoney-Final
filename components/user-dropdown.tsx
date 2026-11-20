@@ -32,6 +32,7 @@ import Link from "next/link"
 import Image from "next/image"
 import { LanguageMenuItem } from "@/components/language-menu-item"
 import { chavePerfilUi, ehAdminUi, type ChavePerfil, type PerfilUi } from "@/lib/perfil-ui"
+import { nomePatente, progressoPatente } from "@/lib/xp-config"
 
 interface UserProfile {
   id: string
@@ -533,17 +534,17 @@ export default function UserDropdown() {
           <DropdownMenuLabel className="font-normal py-2">
             <div className="px-2">
               <div className="flex items-center justify-between mb-2">
-                <span className="text-xs text-gray-400">Nível {xpData.level}</span>
+                <span className="text-xs font-semibold text-[#E9C46A] uppercase">{nomePatente(xpData.level)}</span>
                 <span className="text-xs font-semibold text-[#D2A63C]">{xpData.xp.toLocaleString()} XP</span>
               </div>
               <div className="h-2 bg-gray-800 rounded-full overflow-hidden">
                 <div 
                   className="h-full bg-gradient-to-r from-[#D2A63C] to-yellow-400 transition-all duration-500"
-                  style={{ width: `${Math.min(100, ((xpData.xp % 100) / 100) * 100)}%` }}
+                  style={{ width: `${progressoPatente(xpData.xp).pct}%` }}
                 />
               </div>
               <p className="text-xs text-gray-500 mt-1">
-                {Math.max(0, 100 - (xpData.xp % 100))} XP até próximo nível
+                {progressoPatente(xpData.xp).proxima ? `${progressoPatente(xpData.xp).falta} XP para ${progressoPatente(xpData.xp).proxima}` : 'Patente máxima'} · <a href="/ricardogarcia/app" className="text-[#E9C46A] hover:underline">Missões</a>
               </p>
             </div>
           </DropdownMenuLabel>

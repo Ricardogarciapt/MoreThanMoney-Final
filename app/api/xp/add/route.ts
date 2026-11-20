@@ -39,10 +39,18 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ success: false, error: 'action_type é obrigatório' }, { status: 400 })
     }
 
+    // XP vale moedas (subidas de patente), por isso o browser só pode pedir acções conhecidas, e uma
+    // vez por descrição. Missões, chat, feed e lives dão XP no servidor, não por aqui.
+    const PERMITIDAS = ['scanner_access_view', 'scanner_checklist_item', 'scanner_complete_checklist']
+    if (!PERMITIDAS.includes(action_type)) {
+      return NextResponse.json({ success: false, error: 'Acção não permitida' }, { status: 400 })
+    }
+
     const supabase = getSupabaseAdmin()
     const result = await awardXp(supabase, session.user.id, action_type, {
-      actionDescription: action_description,
-      oncePerDescription: action_type.startsWith('onboarding_'),
+      actionDescription: String(action_description || '').slice(0, 160),
+      oncePerDescription: true,
+      dailyCap: 25,
     })
 
     return NextResponse.json({
