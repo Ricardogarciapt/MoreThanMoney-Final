@@ -14,6 +14,9 @@ assert.equal(caminhoSuperAdmin('/dashboard-gestao'), true)
 assert.equal(caminhoSuperAdmin('/dashboard-gestao/x'), true)
 assert.equal(caminhoSuperAdmin('/admin/agentes'), true)
 assert.equal(caminhoSuperAdmin('/admin/agentes-equipa'), false)
+assert.equal(caminhoSuperAdmin('/mtmos'), true)
+assert.equal(caminhoSuperAdmin('/mtmos/index.html'), true)
+assert.equal(caminhoSuperAdmin('/api/mtmos/db'), false)
 assert.equal(caminhoSuperAdmin('/admin'), false)
 
 // As APIs destas páginas usam a guarda de super admin, não a de admin.

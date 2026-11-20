@@ -16,5 +16,5 @@ export function eSuperAdmin(email: string | null | undefined, env?: string): boo
 
 /** Caminhos de página que só o super admin abre. */
 export function caminhoSuperAdmin(pathname: string): boolean {
-  return /^\/dashboard-gestao(\/|$)/.test(pathname) || /^\/admin\/agentes(\/|$)/.test(pathname)
+  return /^\/dashboard-gestao(\/|$)/.test(pathname) || /^\/admin\/agentes(\/|$)/.test(pathname) || /^\/mtmos(\/|$)/.test(pathname)
 }
