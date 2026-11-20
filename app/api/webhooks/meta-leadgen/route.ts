@@ -28,6 +28,11 @@ export const maxDuration = 60
 
 const GRAPH = 'https://graph.facebook.com/v21.0'
 
+/** «RG · …» ou «Ricardo Garcia …» → `rg`; tudo o resto → `mtm`. Fica na origem do pedido e no CRM. */
+function marcaDoFormulario(nome?: string | null): 'rg' | 'mtm' {
+  return /^\s*(rg\b|ricardo\s*garcia)/i.test(nome ?? '') ? 'rg' : 'mtm'
+}
+
 export async function GET(request: NextRequest) {
   const url = new URL(request.url)
   const mode = url.searchParams.get('hub.mode')
@@ -139,7 +144,8 @@ export async function POST(req: NextRequest) {
     }))
 
     const { pedido, linhas, motivo } = pedidoDoLeadMeta(lead, caixas, {
-      origem: `meta_lead_ads:${formId ?? 'form'}`,
+      // A marca vem do nome do formulário: «RG · …» = Ricardo Garcia; o resto é MoreThanMoney.
+      origem: `meta_lead_ads:${marcaDoFormulario(form?.name)}:${formId ?? 'form'}`,
       ag: AG.SOCIAL,
       avisoLegal: cd?.body?.text ?? null,
     })
