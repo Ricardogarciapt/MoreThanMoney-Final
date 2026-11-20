@@ -1,10 +1,13 @@
 // Monta um vídeo de bootcamp: cenas.html desenhada frame a frame (Playwright) + narração na voz do Ricardo.
-// Uso: node video/bootcamp/render.mjs <estrategia> <video> <pt|en> [--preview] [--de=SEG --ate=SEG] [--legendas]
+// Uso: node video/bootcamp/render.mjs <estrategia> <video> <pt|en> [--preview] [--de=SEG --ate=SEG] [--legendas] [--gemeo[=look]]
+//   --gemeo: depois do render, o gémeo do Ricardo narra a aula num círculo com aro dourado (passo «gemeo» do
+//   motor único: lip sync HeyGen sobre esta mesma narração). Sai <base>-gemeo.mp4 ao lado. ~7 créditos/min.
+//   --gemeo-estimar: só mostra quantos créditos gastaria, sem gastar.
 //   ex.: node video/bootcamp/render.mjs defy 1 pt
 // Guião: guioes/<estrategia>.<lang>.json · Voz: voz/<estrategia>/v<n>/<lang>/<cena>.mp3 (gerada por voz.mjs)
 // Sem voz usa durações estimadas e sai sem áudio (para rever o ritmo). As legendas saem em .vtt para as CC do YouTube.
 import { createRequire } from 'node:module'
-import { spawn, execFileSync } from 'node:child_process'
+import { spawn, spawnSync, execFileSync } from 'node:child_process'
 import fs from 'node:fs'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -101,3 +104,15 @@ fs.writeFileSync(path.join(out, `${base}.vtt`), 'WEBVTT\n\n' + TL.flatMap(c => c
 const caps = TL.filter(c => cenas[c.id].tipo === 'capitulo' || cenas[c.id].tipo === 'abertura')
 fs.writeFileSync(path.join(out, `${base}-capitulos.txt`), caps.map((c, i) => `${new Date((i ? c.ini : 0) * 1000).toISOString().slice(i ? 14 : 14, 19)} ${cenas[c.id].titulo.replace(/<[^>]+>/g, '')}`).join('\n') + '\n')
 console.log('feito:', mp4)
+
+// Aulas de cursos narradas pelo gémeo (pedido do Ricardo 20/11): o passo vive no motor único, não aqui.
+const gemeoArg = process.argv.find(a => a === '--gemeo' || a.startsWith('--gemeo=') || a === '--gemeo-estimar')
+if (gemeoArg && !preview && falas.length) {
+  const look = gemeoArg.startsWith('--gemeo=') ? gemeoArg.split('=')[1] : 'mentor'
+  const destino = mp4.replace(/\.mp4$/, '-gemeo.mp4')
+  const args = [path.join(DIR, '..', 'motor', 'motor.mjs'), 'gemeo', mp4, destino, '--formato=youtube', `--marca=${G.marcaVideo || 'morethanmoney'}`, `--look=${look}`]
+  if (gemeoArg === '--gemeo-estimar') args.push('--estimar')
+  const r = spawnSync('node', args, { encoding: 'utf8', stdio: ['ignore', 'pipe', 'inherit'] })
+  process.stdout.write(r.stdout || '')
+  if (r.status !== 0) { console.error('gémeo falhou (o vídeo sem gémeo ficou feito):', mp4); process.exitCode = 3 }
+}
