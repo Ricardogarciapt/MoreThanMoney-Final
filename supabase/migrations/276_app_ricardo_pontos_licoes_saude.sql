@@ -27,3 +27,14 @@ create table if not exists rg_app_saude_ligacoes (
 alter table rg_app_saude_ligacoes enable row level security;
 
 alter table rg_app_membros add column if not exists avatar jsonb;
+
+-- Notificações push da app Missão (aplicada pelo MCP: app_ricardo_push).
+create table if not exists rg_app_push (
+  token text primary key,
+  membro_id uuid not null,
+  criado timestamptz default now(),
+  visto timestamptz default now()
+);
+create index if not exists rg_app_push_membro_idx on rg_app_push (membro_id);
+alter table rg_app_push enable row level security;
+alter table rg_app_membros add column if not exists push_prefs jsonb default '{"missao":true,"chat":true,"serie":true}'::jsonb;
