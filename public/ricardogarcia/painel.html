@@ -600,6 +600,12 @@ dialog h2 { font-size: 24px; font-style: italic; margin-bottom: 14px; }
       else if ((a = b.getAttribute('data-papag'))) { if (!confirm('Apagar este ponto? Sai da app.')) return; post({ acao: 'ponto_apagar', id: a }).then(function () { window.__pontoEd = null; A = null; aviso('Ponto apagado'); vApp(el); }, function (er) { aviso(er.message); }); }
       else if ((a = b.getAttribute('data-ped')) != null) { window.__pontoEd = A.pontos[+a]; vApp(el); window.scrollTo(0, 0); }
       else if (b.hasAttribute('data-pnovo')) { window.__pontoEd = null; vApp(el); }
+      else if (b.hasAttribute('data-ptipos')) {
+        var act = [], ar = {};
+        el.querySelectorAll('[data-tipo-on]').forEach(function (c) { if (c.checked) act.push(c.getAttribute('data-tipo-on')); });
+        el.querySelectorAll('[data-tipo-area]').forEach(function (s) { ar[s.getAttribute('data-tipo-area')] = s.value || null; });
+        b.disabled = true; post({ acao: 'tipos_locais', activos: act, areas: ar }).then(function () { A = null; aviso('Tipos de locais guardados ✓'); vApp(el); }, function (er) { b.disabled = false; aviso(er.message); });
+      }
     };
     el.addEventListener('click', el.__pc);
   }
@@ -687,6 +693,13 @@ dialog h2 { font-size: 24px; font-style: italic; margin-bottom: 14px; }
       var PT = A.pontos || [], novo = { id: '', nome: '', tipo: 'Ponto do Ricardo', lat: '', lon: '', area: '', descricao: '', licao_titulo: '', licao_texto: '', video_url: '', xp_extra: 20, raio_m: 80, activo: true };
       var ed = window.__pontoEd || novo;
       var areasOp = '<option value="">Qualquer área</option>' + (A.areas_rota || []).map(function (a) { return '<option value="' + a.id + '" ' + (ed.area === a.id ? 'selected' : '') + '>' + esc(a.nome) + '</option>'; }).join('');
+      var TC = A.tipos_cfg || { activos: [], areas: {} };
+      h += '<div class="sec aberta" style="margin-bottom:16px"><div class="sec-cab"><h3>Locais automáticos (em qualquer cidade)</h3></div><div class="sec-corpo">' +
+        '<p class="vazio" style="margin-top:0">A app encontra sozinha estes tipos de sítios à volta de cada pessoa (dados do OpenStreetMap) e transforma-os em pontos de rota com lição e XP. Escolhe os tipos e, se quiseres, a área da lição de cada um. Sem área, vale a área que a pessoa escolheu.</p>' +
+        '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:8px">' + (A.tipos_locais || []).map(function (x) {
+          return '<div class="contacto" style="margin:0;align-items:center"><label style="display:flex;gap:8px;align-items:center;flex:1"><input type="checkbox" data-tipo-on="' + x.id + '"' + (TC.activos.indexOf(x.id) >= 0 ? ' checked' : '') + '> ' + esc(x.nome) + '</label><select data-tipo-area="' + x.id + '" style="max-width:130px"><option value="">Área da pessoa</option>' +
+            (A.areas_rota || []).map(function (a) { return '<option value="' + a.id + '"' + (TC.areas[x.id] === a.id ? ' selected' : '') + '>' + esc(a.nome) + '</option>'; }).join('') + '</select></div>';
+        }).join('') + '</div><div style="margin-top:10px"><button class="btn" data-ptipos>Guardar tipos</button></div></div></div>';
       h += '<p class="vazio" style="margin-top:0">Pontos teus com uma lição. Aparecem na app, no separador Rotas, a quem estiver a 5 km ou menos, e a lição só se abre quando a pessoa lá chega. Toca no mapa para escolher o sítio, ou cola um link do Google Maps ou do Apple Maps. Escolhe só lugares públicos e seguros.</p>' +
         '<div id="pMapa" style="height:340px;border-radius:14px;border:1px solid #232a38;margin-bottom:12px;background:#0a0d13"></div>' +
         '<div class="sec aberta" style="margin-bottom:14px"><div class="sec-cab"><h3>' + (ed.id ? 'Editar: ' + esc(ed.nome) : '+ Novo ponto') + '</h3>' + (ed.id ? '<button class="btn peq" data-pnovo>Novo</button>' : '') + '</div><div class="sec-corpo" id="pForm">' +
