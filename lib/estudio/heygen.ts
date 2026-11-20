@@ -11,7 +11,7 @@
  * Storage do estúdio e cria o ativo, como faz o worker da GPU.
  */
 import type { SupabaseClient } from '@supabase/supabase-js'
-import { LOOKS, VOZ_RICARDO, entradaDaCena, type Cena } from './heygen-looks'
+import { LOOKS, VOZ_RICARDO, lookDoPlano, type Cena } from './heygen-looks'
 import { PROJETO_VAZIO, normalizarProjeto } from './projeto'
 
 const API = 'https://api.heygen.com'
@@ -40,23 +40,58 @@ export async function enviarHeygen(texto: string | Cena[], aspecto = '9:16', tit
   if (!cfg) return { erro: 'HeyGen não configurada.' }
   const cenas: Cena[] = typeof texto === 'string' ? [{ texto, plano: 'fechado' }] : texto
   if (!cenas.length) return { erro: 'Sem texto para o clone dizer.' }
+  // API v3 (a v2 foi retirada a 20/11/2026: «POST /v2/video/generate has been retired»). A v3 faz um
+  // look por vídeo: o reel vai inteiro no look do primeiro plano e as falas seguem-se numa só voz.
+  // Os planos seguintes mudam de look entre reels (o guião de cada dia começa noutro plano).
+  const c0 = cenas[0]
+  const sobreMedia = c0.visual !== 'apresentador' && !!c0.media_url
+  const look = lookDoPlano(c0.plano, cfg.avatarEnv)
+  const audio = cenas.length === 1 ? c0.audio_url : null
+  const script = cenas.map((c) => c.texto).join(' ').replace(/\s+/g, ' ').trim().slice(0, 5000)
   try {
-    const r = await fetch(`${API}/v2/video/generate`, {
+    const r = await fetch(`${API}/v3/videos`, {
       method: 'POST',
       headers: { 'x-api-key': cfg.chave, 'content-type': 'application/json' },
       body: JSON.stringify({
+        type: 'avatar',
+        avatar_id: look.id,
         ...(titulo ? { title: titulo.slice(0, 100) } : {}),
-        video_inputs: cenas.slice(0, 50).map((c) => entradaDaCena(c, cfg.voz, cfg.avatarEnv)),
-        dimension: DIMENSOES[aspecto] ?? DIMENSOES['9:16'],
+        ...(audio
+          ? { audio_url: audio }
+          : { script, voice_id: cfg.voz, voice_settings: { engine_settings: { engine_type: 'heygen_voice' } } }),
+        engine: { type: 'avatar_iii' }, // ≈7 créditos/min (o Avatar 6 por omissão gasta ~3×)
+        aspect_ratio: DIMENSOES[aspecto] ? aspecto : '9:16',
+        resolution: '1080p',
+        ...(sobreMedia && !VIDEO_URL.test(c0.media_url!) ? { background: { type: 'image', url: c0.media_url } } : {}),
       }),
       signal: AbortSignal.timeout(15000),
     })
     const j = await r.json().catch(() => ({}))
-    const id = j?.data?.video_id
-    if (!r.ok || typeof id !== 'string') return { erro: `heygen ${r.status}: ${String(j?.error?.message || j?.message || 'sem video_id').slice(0, 200)}` }
+    const d = j?.data ?? j
+    const id = d?.video_id ?? d?.id
+    if (!r.ok || typeof id !== 'string') return { erro: `heygen ${r.status}: ${String(j?.error?.message || j?.message || j?.detail || 'sem video_id').slice(0, 200)}` }
     return { id }
   } catch (e) {
     return { erro: `heygen sem resposta: ${(e as Error).message}`.slice(0, 200) }
+  }
+}
+
+const VIDEO_URL = /\.(mp4|mov|webm)(\?|$)/i
+
+/** Estado de um vídeo: v3 primeiro, v1 se a v3 não o conhecer. Normaliza para {status, video_url, duration, erro}. */
+export async function estadoHeygen(chave: string, vid: string): Promise<{ status: string; video_url?: string; duration?: number; erro?: string }> {
+  const ler = async (url: string) => {
+    const r = await fetch(url, { headers: { 'x-api-key': chave }, signal: AbortSignal.timeout(10000) })
+    const j = await r.json().catch(() => ({}))
+    return { ok: r.ok, d: j?.data ?? j ?? {} }
+  }
+  let { ok, d } = await ler(`${API}/v3/videos/${encodeURIComponent(vid)}`)
+  if (!ok || !d?.status) ({ ok, d } = await ler(`${API}/v1/video_status.get?video_id=${encodeURIComponent(vid)}`))
+  return {
+    status: String(d?.status || 'desconhecido').toLowerCase(),
+    video_url: typeof d?.video_url === 'string' ? d.video_url : undefined,
+    duration: Number(d?.duration) || undefined,
+    erro: d?.failure_message || d?.error?.message || (typeof d?.error === 'string' ? d.error : undefined),
   }
 }
 
@@ -71,13 +106,10 @@ export async function sincronizarHeygen(db: SupabaseClient, g: Geracao): Promise
   const vid = g.params?.heygen_id
   if (g.motor !== 'heygen' || g.estado !== 'a_gerar' || !cfg || typeof vid !== 'string') return g.estado
   try {
-    const r = await fetch(`${API}/v1/video_status.get?video_id=${encodeURIComponent(vid)}`, {
-      headers: { 'x-api-key': cfg.chave }, signal: AbortSignal.timeout(10000),
-    })
-    const d = (await r.json().catch(() => ({})))?.data ?? {}
+    const d = await estadoHeygen(cfg.chave, vid)
     const agora = new Date().toISOString()
     if (d.status === 'failed') {
-      const erro = `heygen: ${String(d.error?.message || d.error || 'falhou').slice(0, 300)}`
+      const erro = `heygen: ${String(d.erro || 'falhou').slice(0, 300)}`
       await db.from('estudio_geracoes').update({ estado: 'erro', erro, terminado_em: agora }).eq('id', g.id).eq('estado', 'a_gerar')
       return 'erro'
     }
