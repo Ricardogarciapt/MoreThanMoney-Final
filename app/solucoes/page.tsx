@@ -19,6 +19,7 @@ import { alternativas, idiomaDoPedido, tradutorServidor } from "@/lib/site-soluc
 import { IdiomaSolucoes, SeletorIdioma } from "@/components/solucoes/idioma"
 import { MiniTelemovel } from "@/components/solucoes/mini-telemovel"
 import { MODELOS } from "@/lib/site-solucoes/showroom"
+import MedicaoConsentida from "@/components/funis/medicao-consentida"
 
 // Página dinâmica: o idioma vem de cada pedido (?lang=, cookie, browser). A «demo de hoje» muda
 // sozinha à meia-noite de Lisboa.
@@ -68,6 +69,8 @@ export default async function SolucoesPage({ searchParams }: Props) {
   return (
     <IdiomaSolucoes idioma={idioma} dic={dicionario(idioma)}>
     <div lang={idioma} className="min-h-[100dvh] bg-[#08090C] text-zinc-100 antialiased">
+      {/* Pixel Meta só com «Aceitar» (anúncios B2B, 20/11/2026) */}
+      <MedicaoConsentida funil="b2b" conteudo="solucoes" />
       {/* Navegação */}
       <header className="sticky top-0 z-40 border-b border-white/5 bg-[#08090C]/85 backdrop-blur">
         <nav className="mx-auto flex h-16 max-w-6xl items-center justify-between px-4">

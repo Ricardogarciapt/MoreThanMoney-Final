@@ -20,8 +20,14 @@ declare global {
 export const CHAVE_ESCOLHA = 'mtm_cookies_medicao'
 export type Escolha = 'sim' | 'nao'
 
+/**
+ * Conjunto de dados da conta de anúncios com pagamento (237752214). O ID é público (vai no HTML
+ * de qualquer site com pixel); a variável de ambiente continua a mandar se existir (20/11/2026).
+ */
+const PIXEL_PADRAO = '255864064922734'
+
 export function pixelId(): string {
-  return (process.env.NEXT_PUBLIC_META_PIXEL_ID || '').trim()
+  return (process.env.NEXT_PUBLIC_META_PIXEL_ID || PIXEL_PADRAO).trim()
 }
 
 export function escolhaGuardada(): Escolha | null {
