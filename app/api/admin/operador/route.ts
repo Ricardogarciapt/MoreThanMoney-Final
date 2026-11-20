@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server"
-import { requireAdmin } from "@/lib/admin-api-helpers"
+import { exigirSocial } from '@/lib/social-acesso'
+
 import { getSupabaseAdmin } from "@/lib/supabase-admin-client"
 import { desfazer, gravarConfigOperador, lerConfigOperador, lerRegisto, passagemOperador } from "@/lib/operador/servidor"
 import { lerConfig } from "@/lib/operador/regras"
@@ -10,7 +11,7 @@ export const maxDuration = 60
 
 /** O registo do agente operador, para o dono auditar. */
 export async function GET(req: NextRequest) {
-  const guard = await requireAdmin(req)
+  const guard = await exigirSocial(req)
   if (guard) return guard
   return NextResponse.json({ ok: true, ...(await lerRegisto(getSupabaseAdmin())) })
 }
@@ -21,7 +22,7 @@ export async function GET(req: NextRequest) {
  * { acao: "config", modo?, posts?, envios?, comentarios? } → muda o modo e as áreas
  */
 export async function POST(req: NextRequest) {
-  const guard = await requireAdmin(req)
+  const guard = await exigirSocial(req)
   if (guard) return guard
   const corpo = (await req.json().catch(() => ({}))) as Record<string, unknown>
   const db = getSupabaseAdmin()

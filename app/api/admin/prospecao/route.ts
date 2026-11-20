@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server"
-import { requireAdmin } from "@/lib/admin-api-helpers"
+import { exigirSocial } from '@/lib/social-acesso'
+
 import { getSupabaseAdmin } from "@/lib/supabase-admin-client"
 import { correrRadarProspecao, lerListaPrioritaria } from "@/lib/prospecao/correr-radar"
 import { carregarPerfil } from "@/lib/prospecao/perfil-lead"
@@ -20,7 +21,7 @@ export const maxDuration = 60
  * uma decisão, não um disparo.
  */
 export async function GET(req: NextRequest) {
-  const guard = await requireAdmin(req)
+  const guard = await exigirSocial(req)
   if (guard) return guard
 
   const db = getSupabaseAdmin()
@@ -58,7 +59,7 @@ export async function GET(req: NextRequest) {
 
 /** Marcar um contacto (já falei / não serve), ou correr a arrumação agora. */
 export async function POST(req: NextRequest) {
-  const guard = await requireAdmin(req)
+  const guard = await exigirSocial(req)
   if (guard) return guard
 
   const corpo = (await req.json().catch(() => ({}))) as {

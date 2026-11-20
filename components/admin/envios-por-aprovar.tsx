@@ -85,31 +85,31 @@ export function EnviosPorAprovar() {
     <div className="mb-6 rounded-xl border p-4">
       <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
         <h2 className="text-sm font-semibold">Envios por aprovar ({total})</h2>
-        <span className="text-[11.5px] text-neutral-500">
+        <span className="text-[11.5px] text-zinc-500">
           Respostas a quem escreveu saem sozinhas. O que a máquina inicia espera aqui.
         </span>
       </div>
-      {aviso && <p className="mb-2 rounded-lg bg-neutral-100 px-3 py-2 text-[12px] text-neutral-600">{aviso}</p>}
+      {aviso && <p className="mb-2 rounded-lg bg-white/[0.06] px-3 py-2 text-[12px] text-zinc-300">{aviso}</p>}
       {aCarregar ? (
-        <Loader2 className="h-4 w-4 animate-spin text-neutral-400" />
+        <Loader2 className="h-4 w-4 animate-spin text-zinc-400" />
       ) : total === 0 ? (
-        <p className="text-[12px] text-neutral-400">Nada por decidir.</p>
+        <p className="text-[12px] text-zinc-400">Nada por decidir.</p>
       ) : (
         <div className="space-y-2">
           {ig.map((s) => (
             <div key={s.comment_id} className="rounded-lg border p-2.5">
               <div className="mb-1 flex flex-wrap items-center gap-2 text-[11.5px]">
-                <span className="rounded bg-neutral-100 px-1.5 text-neutral-500">Instagram · setter</span>
-                <span className="font-semibold text-neutral-100">@{s.commenter ?? "?"}</span>
+                <span className="rounded bg-white/[0.06] px-1.5 text-zinc-500">Instagram · setter</span>
+                <span className="font-semibold text-zinc-100">@{s.commenter ?? "?"}</span>
                 {!s.dm_possivel && <span className="text-amber-400">sem DM: {s.dm_motivo ?? "?"}</span>}
                 {s.publica_enviada_em && <span className="text-emerald-400">pública já saiu</span>}
               </div>
-              <p className="text-[12px] italic text-neutral-400">“{s.comment_text}”</p>
+              <p className="text-[12px] italic text-zinc-400">“{s.comment_text}”</p>
               {s.texto_publico && !s.publica_enviada_em && (
-                <p className="mt-1 text-[12.5px] text-neutral-200"><span className="text-neutral-500">público → </span>{s.texto_publico}</p>
+                <p className="mt-1 text-[12.5px] text-zinc-200"><span className="text-zinc-500">público → </span>{s.texto_publico}</p>
               )}
               {s.texto_dm && s.dm_possivel && (
-                <p className="mt-1 whitespace-pre-line text-[12.5px] text-neutral-200"><span className="text-neutral-500">DM → </span>{s.texto_dm}</p>
+                <p className="mt-1 whitespace-pre-line text-[12.5px] text-zinc-200"><span className="text-zinc-500">DM → </span>{s.texto_dm}</p>
               )}
               <Botoes id={s.comment_id} aDecidir={aDecidir} decidir={decidir} />
             </div>
@@ -117,10 +117,10 @@ export function EnviosPorAprovar() {
           {fila.map((f) => (
             <div key={f.id} className="rounded-lg border p-2.5">
               <div className="mb-1 flex flex-wrap items-center gap-2 text-[11.5px]">
-                <span className="rounded bg-neutral-100 px-1.5 text-neutral-500">{ROTULO[f.kind] ?? f.kind}</span>
-                <span className="font-semibold text-neutral-100">{f.title}</span>
+                <span className="rounded bg-white/[0.06] px-1.5 text-zinc-500">{ROTULO[f.kind] ?? f.kind}</span>
+                <span className="font-semibold text-zinc-100">{f.title}</span>
               </div>
-              {f.details && <p className="whitespace-pre-line text-[12.5px] text-neutral-200">{f.details}</p>}
+              {f.details && <p className="whitespace-pre-line text-[12.5px] text-zinc-200">{f.details}</p>}
               <Botoes id={f.id} aDecidir={aDecidir} decidir={decidir} />
             </div>
           ))}

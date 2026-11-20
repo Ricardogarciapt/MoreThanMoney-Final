@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { requireAdmin, verifyAdminAccess } from '@/lib/admin-api-helpers'
+import { exigirSocial } from '@/lib/social-acesso'
+import { verifyAdminAccess } from '@/lib/admin-api-helpers'
 import { getSupabaseAdmin } from '@/lib/supabase-admin-client'
 
 export const runtime = 'nodejs'
@@ -22,7 +23,7 @@ export const maxDuration = 20
 const COLUNAS = 'id, handle, formato, tipo, urls, textos, params, created_at, updated_at'
 
 export async function GET(req: NextRequest) {
-  const guarda = await requireAdmin(req)
+  const guarda = await exigirSocial(req)
   if (guarda) return guarda
 
   const { data, error } = await getSupabaseAdmin()
@@ -36,7 +37,7 @@ export async function GET(req: NextRequest) {
 }
 
 export async function POST(req: NextRequest) {
-  const guarda = await requireAdmin(req)
+  const guarda = await exigirSocial(req)
   if (guarda) return guarda
 
   const corpo = (await req.json().catch(() => ({}))) as {
@@ -87,7 +88,7 @@ export async function POST(req: NextRequest) {
 }
 
 export async function DELETE(req: NextRequest) {
-  const guarda = await requireAdmin(req)
+  const guarda = await exigirSocial(req)
   if (guarda) return guarda
 
   const id = req.nextUrl.searchParams.get('id')

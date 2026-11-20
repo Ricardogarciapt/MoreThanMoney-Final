@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { requireAdmin } from '@/lib/admin-api-helpers'
+import { exigirSocial } from '@/lib/social-acesso'
+
 import { uploadBufferToBucket } from '@/lib/instagram/publish'
 import { getSupabaseAdmin } from '@/lib/supabase-admin-client'
 
@@ -51,7 +52,7 @@ async function guardarNaGaleria(url: string): Promise<void> {
 }
 
 export async function POST(req: NextRequest) {
-  const guarda = await requireAdmin(req)
+  const guarda = await exigirSocial(req)
   if (guarda) return guarda
 
   const tipo = req.headers.get('content-type') ?? ''
@@ -193,7 +194,7 @@ export async function POST(req: NextRequest) {
 
 /** O retrato guardado, para o estúdio saber se já pode oferecer «com o Ricardo». */
 export async function GET(req: NextRequest) {
-  const guarda = await requireAdmin(req)
+  const guarda = await exigirSocial(req)
   if (guarda) return guarda
 
   const db = getSupabaseAdmin()

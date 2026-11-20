@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server"
-import { requireAdmin } from "@/lib/admin-api-helpers"
+import { exigirSocial } from '@/lib/social-acesso'
+
 import { getSupabaseAdmin } from "@/lib/supabase-admin-client"
 import { andar, bracosDeEnsaio, funilPorId } from "@/lib/funis-motor"
 
@@ -17,7 +18,7 @@ export const dynamic = "force-dynamic"
  * caminho inventado, e é o caminho REAL que se quer ver antes de ligar.
  */
 export async function POST(req: NextRequest) {
-  const guard = await requireAdmin(req)
+  const guard = await exigirSocial(req)
   if (guard) return guard
 
   const { funilId, pessoa } = (await req.json().catch(() => ({}))) as { funilId?: string; pessoa?: string }

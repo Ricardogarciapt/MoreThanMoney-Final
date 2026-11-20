@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { requireAdmin } from '@/lib/admin-api-helpers'
+import { exigirSocial } from '@/lib/social-acesso'
+
 import { getSupabaseAdmin } from '@/lib/supabase-admin-client'
 
 export const dynamic = 'force-dynamic'
@@ -23,7 +24,7 @@ const CONTAS: Record<string, { id: string; username: string }> = {
 }
 
 export async function POST(req: NextRequest) {
-  const guarda = await requireAdmin(req)
+  const guarda = await exigirSocial(req)
   if (guarda) return guarda
 
   const corpo = await req.json().catch(() => ({}))

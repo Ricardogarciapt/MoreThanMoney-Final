@@ -5,13 +5,14 @@
  */
 
 import { NextRequest, NextResponse } from "next/server"
-import { getSupabaseAdmin, requireAdmin, verifyAdminAccess } from "@/lib/admin-api-helpers"
+import { exigirSocial } from '@/lib/social-acesso'
+import { getSupabaseAdmin, verifyAdminAccess } from "@/lib/admin-api-helpers"
 import { usernameForAccount, rehostMedia, IG_ACCOUNTS } from "@/lib/instagram/publish"
 
 const supabase = getSupabaseAdmin()
 
 export async function GET(request: NextRequest) {
-  const authCheck = await requireAdmin(request)
+  const authCheck = await exigirSocial(request)
   if (authCheck) return authCheck
 
   try {
@@ -39,7 +40,7 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
-  const authCheck = await requireAdmin(request)
+  const authCheck = await exigirSocial(request)
   if (authCheck) return authCheck
 
   try {

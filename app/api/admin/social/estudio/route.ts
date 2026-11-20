@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { exigirSocial } from '@/lib/social-acesso'
 import { getSupabaseAdmin } from '@/lib/supabase-admin-client'
 import { factosParaCartao, getPipsProof, notaViesPreco, publicavel, RESSALVA_LEGAL } from '@/lib/pips-proof'
 import { chamarIA, ErroIA, mensagemIndisponivel } from '@/lib/ia/chamar'
@@ -21,14 +22,9 @@ export const maxDuration = 60
  * sistema. Quando não há amostra que chegue, escreve-se sem número nenhum.
  */
 
+/** Acesso decidido no back-office (admin ou «Social & conteúdo») — ver lib/social-acesso.ts. */
 async function ehAdmin(request: NextRequest): Promise<boolean> {
-  const token = (request.headers.get('Authorization') ?? '').replace(/^Bearer\s+/i, '').trim()
-  if (!token) return false
-  const db = getSupabaseAdmin()
-  const { data } = await db.auth.getUser(token)
-  if (!data.user) return false
-  const { data: p } = await db.from('profiles').select('user_type').eq('id', data.user.id).maybeSingle()
-  return p?.user_type === 'admin'
+  return !(await exigirSocial(request))
 }
 
 /** Pela porta única da IA (Groq → Gemini → Ollama → OpenAI → Anthropic); o `catch` do POST mostra a frase honesta. */

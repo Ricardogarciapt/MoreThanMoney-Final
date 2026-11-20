@@ -54,10 +54,10 @@ export function AutoPublicarAgentes() {
 
   const ligado = cfg?.ligado === true
   return (
-    <div className="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-lg border border-[#D2A63C]/30 bg-neutral-900/60 px-4 py-3">
+    <div className="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-lg border border-[#D2A63C]/30 bg-zinc-900/60 px-4 py-3">
       <div className="min-w-0">
-        <div className="text-sm font-medium text-neutral-100">Auto-publicar posts dos agentes</div>
-        <div className="text-xs text-neutral-400">
+        <div className="text-sm font-medium text-zinc-100">Auto-publicar posts dos agentes</div>
+        <div className="text-xs text-zinc-400">
           {cfg
             ? `Guarda da marca + tecto ${cfg.posts_dia_conta} posts e ${cfg.historias_dia_conta} história por conta/dia. Hoje: ${hoje?.posts ?? "?"} posts, ${hoje?.historias ?? "?"} histórias.`
             : erro
@@ -72,9 +72,9 @@ export function AutoPublicarAgentes() {
         aria-label="Auto-publicar posts dos agentes"
         disabled={!cfg || aGravar}
         onClick={mudar}
-        className={`relative h-7 w-12 shrink-0 rounded-full transition ${ligado ? "bg-[#D2A63C]" : "bg-neutral-700"} disabled:opacity-50`}
+        className={`relative h-7 w-12 shrink-0 rounded-full transition ${ligado ? "bg-[#D2A63C]" : "bg-zinc-700"} disabled:opacity-50`}
       >
-        <span className={`absolute top-1 h-5 w-5 rounded-full bg-neutral-950 transition-all ${ligado ? "left-6" : "left-1"}`} />
+        <span className={`absolute top-1 h-5 w-5 rounded-full bg-zinc-950 transition-all ${ligado ? "left-6" : "left-1"}`} />
       </button>
     </div>
   )

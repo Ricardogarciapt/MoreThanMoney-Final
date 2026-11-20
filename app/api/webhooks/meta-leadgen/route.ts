@@ -38,8 +38,18 @@ export async function GET(request: NextRequest) {
   const mode = url.searchParams.get('hub.mode')
   const token = url.searchParams.get('hub.verify_token')
   const challenge = url.searchParams.get('hub.challenge')
+  // 1.º o token guardado no Centro Social → Ligações → Leads da Meta; depois o ambiente; por fim a omissão antiga.
+  let doPainel: string | null = null
+  try {
+    const { data } = await getSupabaseAdmin().from('site_settings').select('value').eq('key', 'meta_leadgen_verify_token').maybeSingle()
+    const v = data?.value as string | { token?: string } | null
+    const t = typeof v === 'string' ? v : v?.token
+    doPainel = t && t.trim() ? t.trim() : null
+  } catch {
+    /* cai para o ambiente */
+  }
   const verify =
-    process.env.META_LEADGEN_VERIFY_TOKEN?.trim() || process.env.IG_WEBHOOK_VERIFY_TOKEN?.trim() || 'mtm-ig-webhook-2026'
+    doPainel || process.env.META_LEADGEN_VERIFY_TOKEN?.trim() || process.env.IG_WEBHOOK_VERIFY_TOKEN?.trim() || 'mtm-ig-webhook-2026'
   if (mode === 'subscribe' && token === verify) return new NextResponse(challenge ?? '', { status: 200 })
   return NextResponse.json({ error: 'verify failed' }, { status: 403 })
 }

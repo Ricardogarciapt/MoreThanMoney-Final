@@ -8,19 +8,19 @@
  * a mesma regra e a mesma transição condicional. Ver lib/envios-fila.ts.
  */
 import { NextRequest, NextResponse } from "next/server"
-import { requireAdmin } from "@/lib/admin-api-helpers"
+import { exigirLeadsSociais } from "@/lib/social-acesso"
 import { aprovarEnvio, listarEnviosPendentes, rejeitarEnvio } from "@/lib/envios-fila"
 
 export const dynamic = "force-dynamic"
 
 export async function GET(request: NextRequest) {
-  const authCheck = await requireAdmin(request)
+  const authCheck = await exigirLeadsSociais(request)
   if (authCheck) return authCheck
   return NextResponse.json(await listarEnviosPendentes(100))
 }
 
 export async function POST(request: NextRequest) {
-  const authCheck = await requireAdmin(request)
+  const authCheck = await exigirLeadsSociais(request)
   if (authCheck) return authCheck
   let body: { acao?: string; id?: string; motivo?: string } = {}
   try {

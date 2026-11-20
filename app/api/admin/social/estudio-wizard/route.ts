@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { requireAdmin } from '@/lib/admin-api-helpers'
+import { exigirSocial } from '@/lib/social-acesso'
+
 import { getSupabaseAdmin } from '@/lib/supabase-admin-client'
 import { uploadBufferToBucket } from '@/lib/instagram/publish'
 import { chamarIA, ErroIA, mensagemIndisponivel } from '@/lib/ia/chamar'
@@ -97,7 +98,7 @@ ${blocoFramework('conteudo')}`,
 }
 
 export async function POST(req: NextRequest) {
-  const negado = await requireAdmin(req)
+  const negado = await exigirSocial(req)
   if (negado) return negado
 
   const corpo = await req.json().catch(() => ({}))

@@ -85,10 +85,10 @@ export function ProspecaoTelegram() {
     <div className="space-y-3">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div>
-          <h2 className="flex items-center gap-2 text-sm font-semibold text-neutral-100">
+          <h2 className="flex items-center gap-2 text-sm font-semibold text-zinc-100">
             <Users className="h-4 w-4" /> Prospeção no Telegram
           </h2>
-          <p className="mt-0.5 text-[11px] text-neutral-400">
+          <p className="mt-0.5 text-[11px] text-zinc-400">
             Quem falou, entrou ou saiu dos nossos grupos e nunca chegou ao funil. O bot não lhes pode
             escrever primeiro — a API do Telegram não deixa — por isso a lista prepara a abordagem e
             não dispara nada.
@@ -107,11 +107,11 @@ export function ProspecaoTelegram() {
               setACorrer(false)
             }}
             disabled={aCorrer}
-            className="rounded-lg border px-3 py-1 text-sm hover:bg-neutral-800 disabled:opacity-40"
+            className="rounded-lg border px-3 py-1 text-sm hover:bg-zinc-800 disabled:opacity-40"
           >
             {aCorrer ? "A arrumar…" : "Arrumar agora"}
           </button>
-          <button onClick={() => void buscar()} disabled={aLer} className="rounded-lg border p-1.5 hover:bg-neutral-800">
+          <button onClick={() => void buscar()} disabled={aLer} className="rounded-lg border p-1.5 hover:bg-zinc-800">
             {aLer ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
           </button>
         </div>
@@ -129,13 +129,13 @@ export function ProspecaoTelegram() {
 
       <div className="flex flex-wrap items-center gap-2 text-[11px]">
         {(["novo", "abordado", "no_funil", "ignorado"] as const).map((e) => (
-          <span key={e} className="rounded-full bg-neutral-100 px-2 py-0.5 text-neutral-400">
+          <span key={e} className="rounded-full bg-white/[0.06] px-2 py-0.5 text-zinc-400">
             {e}: <b className="tabular-nums">{porEstado[e] ?? 0}</b>
           </span>
         ))}
         <button
           onClick={() => setAba(aba === "pessoas" ? "grupos" : "pessoas")}
-          className="rounded-full border border-neutral-700 px-2 py-0.5 text-neutral-300 hover:bg-neutral-800"
+          className="rounded-full border border-zinc-700 px-2 py-0.5 text-zinc-300 hover:bg-zinc-800"
         >
           {aba === "pessoas" ? `ver mapa dos grupos (${grupos.length})` : `ver pessoas (${lista.length})`}
         </button>
@@ -144,7 +144,7 @@ export function ProspecaoTelegram() {
       {aba === "pessoas" && (
         <>
           {!aLer && !lista.length && (
-            <div className="rounded-lg border border-dashed border-neutral-700 p-4 text-center text-sm text-neutral-400">
+            <div className="rounded-lg border border-dashed border-zinc-700 p-4 text-center text-sm text-zinc-400">
               <p>Ninguém por tratar.</p>
               <p className="mt-1 text-[11px]">
                 O radar só conta a partir de agora — não vê o passado. Se ficar vazio durante dias e o
@@ -160,15 +160,15 @@ export function ProspecaoTelegram() {
                 <div className="flex flex-wrap items-center gap-2 text-[11px]">
                   <span
                     className={`rounded px-1.5 py-0.5 font-bold ${
-                      c.pontuacao >= 60 ? "bg-emerald-950 text-emerald-300" : "bg-neutral-100 text-neutral-400"
+                      c.pontuacao >= 60 ? "bg-emerald-950 text-emerald-300" : "bg-white/[0.06] text-zinc-400"
                     }`}
                   >
                     {c.pontuacao}
                   </span>
-                  <span className="font-semibold text-neutral-100">{c.firstName ?? "sem nome"}</span>
-                  {c.username && <span className="text-neutral-400">@{c.username}</span>}
+                  <span className="font-semibold text-zinc-100">{c.firstName ?? "sem nome"}</span>
+                  {c.username && <span className="text-zinc-400">@{c.username}</span>}
                   {c.mensagens > 0 && (
-                    <span className="inline-flex items-center gap-1 text-neutral-400">
+                    <span className="inline-flex items-center gap-1 text-zinc-400">
                       <MessageSquare className="h-3 w-3" /> {c.mensagens}
                     </span>
                   )}
@@ -177,10 +177,10 @@ export function ProspecaoTelegram() {
                       <LogOut className="h-3 w-3" /> saiu
                     </span>
                   )}
-                  <span className="text-neutral-400">· {c.porque}</span>
+                  <span className="text-zinc-400">· {c.porque}</span>
                 </div>
 
-                <p className="mt-1.5 text-[12.5px] leading-snug text-neutral-200">{c.comoAbordar}</p>
+                <p className="mt-1.5 text-[12.5px] leading-snug text-zinc-200">{c.comoAbordar}</p>
 
                 <div className="mt-2 flex flex-wrap gap-2">
                   {c.username && (
@@ -196,13 +196,13 @@ export function ProspecaoTelegram() {
                   )}
                   <button
                     onClick={() => void marcar(c.tgUserId, "abordado")}
-                    className="rounded-lg border border-neutral-700 px-3 py-1 text-xs text-neutral-100 hover:bg-neutral-800"
+                    className="rounded-lg border border-zinc-700 px-3 py-1 text-xs text-zinc-100 hover:bg-zinc-800"
                   >
                     Já falei
                   </button>
                   <button
                     onClick={() => void marcar(c.tgUserId, "ignorado")}
-                    className="rounded-lg border border-neutral-800 px-3 py-1 text-xs text-neutral-300 hover:bg-neutral-800"
+                    className="rounded-lg border border-zinc-800 px-3 py-1 text-xs text-zinc-300 hover:bg-zinc-800"
                   >
                     Não serve
                   </button>
@@ -229,20 +229,20 @@ export function ProspecaoTelegram() {
               <div className="flex flex-wrap items-center gap-2 text-[11px]">
                 <span
                   className={`rounded px-1.5 py-0.5 font-semibold ${
-                    g.nosso ? "bg-emerald-950 text-emerald-300" : "bg-neutral-100 text-neutral-400"
+                    g.nosso ? "bg-emerald-950 text-emerald-300" : "bg-white/[0.06] text-zinc-400"
                   }`}
                 >
                   {g.nosso ? "nosso" : "terceiros"}
                 </span>
-                <span className="font-semibold text-neutral-100">{g.titulo ?? g.chat_id}</span>
-                {g.membros != null && <span className="text-neutral-400">{g.membros} membros</span>}
-                <span className="text-neutral-500">via {g.fonte}</span>
+                <span className="font-semibold text-zinc-100">{g.titulo ?? g.chat_id}</span>
+                {g.membros != null && <span className="text-zinc-400">{g.membros} membros</span>}
+                <span className="text-zinc-500">via {g.fonte}</span>
               </div>
-              {g.nota && <p className="mt-1 text-[12px] leading-snug text-neutral-300">{g.nota}</p>}
+              {g.nota && <p className="mt-1 text-[12px] leading-snug text-zinc-300">{g.nota}</p>}
             </div>
           ))}
           {!grupos.length && !aLer && (
-            <p className="rounded-lg border border-dashed border-neutral-700 p-4 text-center text-sm text-neutral-400">
+            <p className="rounded-lg border border-dashed border-zinc-700 p-4 text-center text-sm text-zinc-400">
               Mapa vazio. Carrega em «Arrumar agora» para o desenhar.
             </p>
           )}

@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { exigirSocial } from '@/lib/social-acesso'
 import { getSupabaseAdmin } from '@/lib/supabase-admin-client'
 import { guardarMensagem, listarMensagens } from '@/lib/mensagens-funil'
 
@@ -12,14 +13,9 @@ export const dynamic = 'force-dynamic'
  * mensagem que envelhece.
  */
 
+/** Acesso decidido no back-office (admin ou «Social & conteúdo») — ver lib/social-acesso.ts. */
 async function ehAdmin(request: NextRequest): Promise<boolean> {
-  const token = (request.headers.get('Authorization') ?? '').replace(/^Bearer\s+/i, '').trim()
-  if (!token) return false
-  const db = getSupabaseAdmin()
-  const { data } = await db.auth.getUser(token)
-  if (!data.user) return false
-  const { data: p } = await db.from('profiles').select('user_type').eq('id', data.user.id).maybeSingle()
-  return p?.user_type === 'admin'
+  return !(await exigirSocial(request))
 }
 
 export async function GET(request: NextRequest) {

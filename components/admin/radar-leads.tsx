@@ -65,10 +65,10 @@ export function RadarLeads() {
 
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div>
-          <h2 className="flex items-center gap-2 text-sm font-semibold text-neutral-100">
+          <h2 className="flex items-center gap-2 text-sm font-semibold text-zinc-100">
             <Radar className="h-4 w-4" /> Radar de leads
           </h2>
-          <p className="mt-0.5 text-[11px] text-neutral-400">
+          <p className="mt-0.5 text-[11px] text-zinc-400">
             Procura de meia em meia hora, das 9h às 17h, e só guarda posts com menos de 3 dias. Os
             melhores passam para a fila de cima, onde o Prospector escreve o comentário. Para comentar
             um post daqui fora da fila, usa «Escrever comentário».
@@ -78,7 +78,7 @@ export function RadarLeads() {
           {quota && (
             <span
               className={`rounded-full px-2 py-0.5 text-[11px] ${
-                quota.gastas >= quota.limite - 3 ? "bg-amber-950 text-amber-300" : "bg-neutral-100 text-neutral-400"
+                quota.gastas >= quota.limite - 3 ? "bg-amber-950 text-amber-300" : "bg-white/[0.06] text-zinc-400"
               }`}
               title="O Instagram só deixa procurar 30 hashtags diferentes em cada 7 dias"
             >
@@ -97,18 +97,18 @@ export function RadarLeads() {
               setACorrer(false)
             }}
             disabled={aCorrer}
-            className="rounded-lg border px-3 py-1 text-sm hover:bg-neutral-800 disabled:opacity-40"
+            className="rounded-lg border px-3 py-1 text-sm hover:bg-zinc-800 disabled:opacity-40"
           >
             {aCorrer ? "A procurar…" : "Procurar agora"}
           </button>
-          <button onClick={() => void buscar()} disabled={aLer} className="rounded-lg border p-1.5 hover:bg-neutral-800">
+          <button onClick={() => void buscar()} disabled={aLer} className="rounded-lg border p-1.5 hover:bg-zinc-800">
             {aLer ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
           </button>
         </div>
       </div>
 
       {!aLer && !prospetos.length && (
-        <p className="rounded-lg border border-dashed border-neutral-700 p-4 text-center text-sm text-neutral-400">
+        <p className="rounded-lg border border-dashed border-zinc-700 p-4 text-center text-sm text-zinc-400">
           Nada por ver. O radar volta a passar dentro de meia hora, ou carrega em "Procurar agora".
         </p>
       )}
@@ -120,17 +120,17 @@ export function RadarLeads() {
               {/* A pontuação primeiro: é a ordem por que a lista existe. */}
               <span
                 className={`rounded px-1.5 py-0.5 font-bold ${
-                  p.pontuacao >= 70 ? "bg-emerald-950 text-emerald-300" : "bg-neutral-100 text-neutral-400"
+                  p.pontuacao >= 70 ? "bg-emerald-950 text-emerald-300" : "bg-white/[0.06] text-zinc-400"
                 }`}
               >
                 {p.pontuacao}
               </span>
-              <span className="rounded bg-neutral-100 px-1.5 py-0.5 text-neutral-400">#{p.hashtag}</span>
-              <span className="text-neutral-400">{p.comentarios} comentários · {p.gostos} gostos</span>
-              <span className="text-neutral-400">— {p.porque}</span>
+              <span className="rounded bg-white/[0.06] px-1.5 py-0.5 text-zinc-400">#{p.hashtag}</span>
+              <span className="text-zinc-400">{p.comentarios} comentários · {p.gostos} gostos</span>
+              <span className="text-zinc-400">— {p.porque}</span>
             </div>
 
-            <p className="mt-1.5 line-clamp-3 text-[12.5px] leading-snug text-neutral-200">{p.legenda}</p>
+            <p className="mt-1.5 line-clamp-3 text-[12.5px] leading-snug text-zinc-200">{p.legenda}</p>
 
             {/* O comentário escrito. O trabalho nunca foi carregar em "publicar" — era olhar
                 para o post e encontrar a frase que abre conversa sem parecer anúncio. */}
@@ -179,12 +179,12 @@ export function RadarLeads() {
                     if (comentarios[p.id]) void navigator.clipboard.writeText(comentarios[p.id])
                     void marcar(p.id, "usado")
                   }}
-                  className="inline-flex items-center gap-1 rounded-lg border border-neutral-700 px-3 py-1 text-xs font-semibold text-neutral-100 hover:bg-neutral-800"
+                  className="inline-flex items-center gap-1 rounded-lg border border-zinc-700 px-3 py-1 text-xs font-semibold text-zinc-100 hover:bg-zinc-800"
                 >
                   {comentarios[p.id] ? "Copiar e abrir" : "Abrir"} <ExternalLink className="h-3 w-3" />
                 </a>
               )}
-              <button onClick={() => void marcar(p.id, "ignorado")} className="rounded-lg border border-neutral-800 px-3 py-1 text-xs text-neutral-300 hover:bg-neutral-800">
+              <button onClick={() => void marcar(p.id, "ignorado")} className="rounded-lg border border-zinc-800 px-3 py-1 text-xs text-zinc-300 hover:bg-zinc-800">
                 Não serve
               </button>
             </div>

@@ -598,7 +598,7 @@ export function EstudioCartoes() {
     setAGerar(null)
   }
 
-  const campo = "w-full rounded-md border border-neutral-700 bg-neutral-900 px-2.5 py-1.5 text-sm text-neutral-100"
+  const campo = "w-full rounded-md border border-zinc-700 bg-zinc-900 px-2.5 py-1.5 text-sm text-zinc-100"
 
   const estilo = estiloDaConta(handle)
 
@@ -613,7 +613,7 @@ export function EstudioCartoes() {
             <Wand2 className="h-4 w-4 text-amber-400" />
             <span className="text-[12.5px] font-semibold text-amber-300">Fazer tudo com IA</span>
           </div>
-          <p className="mt-1 text-[11.5px] leading-snug text-neutral-400">
+          <p className="mt-1 text-[11.5px] leading-snug text-zinc-400">
             Escreve o gancho, as lâminas e a legenda, gera o fundo e monta o carrossel. Depois
             revês e mudas o que quiseres — nada sai sem tu mandares.
           </p>
@@ -639,37 +639,37 @@ export function EstudioCartoes() {
           {passos.length > 0 && (
             <ul className="mt-2 space-y-0.5">
               {passos.map((p, i) => (
-                <li key={i} className="text-[11.5px] text-neutral-400">· {p}</li>
+                <li key={i} className="text-[11.5px] text-zinc-400">· {p}</li>
               ))}
             </ul>
           )}
         </div>
 
         <div>
-          <label className="text-[11px] uppercase tracking-wide text-neutral-400">Conta</label>
+          <label className="text-[11px] uppercase tracking-wide text-zinc-400">Conta</label>
           <select value={handle} onChange={(e) => setHandle(e.target.value)} className={campo}>
             {CONTAS.map((c) => (
               <option key={c.handle} value={c.handle}>{c.nome}</option>
             ))}
           </select>
-          <p className="mt-1 text-[11px] text-neutral-500">
+          <p className="mt-1 text-[11px] text-zinc-500">
             A conta decide o desenho inteiro: a marca sai preta e dourada; o pessoal sai com a
             tipografia em duas faixas.
           </p>
         </div>
 
         <div>
-          <label className="text-[11px] uppercase tracking-wide text-neutral-400">Frase</label>
+          <label className="text-[11px] uppercase tracking-wide text-zinc-400">Frase</label>
           <textarea rows={2} value={hook} onChange={(e) => setHook(e.target.value)} className={campo} />
         </div>
 
         <div className="grid grid-cols-2 gap-3">
           <div>
-            <label className="text-[11px] uppercase tracking-wide text-neutral-400">Palavra do CTA</label>
+            <label className="text-[11px] uppercase tracking-wide text-zinc-400">Palavra do CTA</label>
             <input value={cta} onChange={(e) => setCta(e.target.value.toUpperCase())} className={campo} />
           </div>
           <div>
-            <label className="text-[11px] uppercase tracking-wide text-neutral-400">Formato</label>
+            <label className="text-[11px] uppercase tracking-wide text-zinc-400">Formato</label>
             <select
               value={formato}
               onChange={(e) => setFormato(e.target.value as "post" | "reel")}
@@ -682,21 +682,21 @@ export function EstudioCartoes() {
           </div>
         </div>
 
-        <div className="rounded-lg border border-neutral-800 p-3">
+        <div className="rounded-lg border border-zinc-800 p-3">
           {/*
             AS TRÊS CAMADAS: fundo, pessoa, texto.
             O texto é sempre o de cima, por isso não se escolhe — o que se escolhe é para onde
             vai a próxima imagem. Sem este interruptor, largar uma foto no cartão teria de
             adivinhar se era cenário ou pessoa, e adivinharia mal metade das vezes.
           */}
-          <div className="mb-3 flex gap-1 rounded-md bg-neutral-900 p-1">
+          <div className="mb-3 flex gap-1 rounded-md bg-zinc-900 p-1">
             {([["fundo", "Fundo"], ["destaque", "Destaque"]] as const).map(([k, r]) => (
               <button
                 key={k}
                 type="button"
                 onClick={() => setCamada(k)}
                 className={`flex-1 rounded px-2 py-1.5 text-[12px] font-semibold transition ${
-                  camada === k ? "bg-amber-500 text-black" : "text-neutral-400 hover:text-neutral-200"
+                  camada === k ? "bg-amber-500 text-black" : "text-zinc-400 hover:text-zinc-200"
                 }`}
               >
                 {r}
@@ -708,14 +708,14 @@ export function EstudioCartoes() {
           {camada === "destaque" && (
             <div className="mb-3 space-y-2">
               <div className="flex items-center justify-between gap-2">
-                <label className="text-[11px] uppercase tracking-wide text-neutral-400">
+                <label className="text-[11px] uppercase tracking-wide text-zinc-400">
                   Pessoa recortada
                 </label>
                 {destaque && (
                   <button
                     type="button"
                     onClick={() => setDestaque("")}
-                    className="text-[11px] font-medium text-neutral-400 hover:text-red-400 hover:underline"
+                    className="text-[11px] font-medium text-zinc-400 hover:text-red-400 hover:underline"
                   >
                     Remover
                   </button>
@@ -743,11 +743,11 @@ export function EstudioCartoes() {
 
               {recortes.length > 0 && (
                 <div>
-                  <p className="mb-1 text-[11px] text-neutral-500">Já recortados</p>
+                  <p className="mb-1 text-[11px] text-zinc-500">Já recortados</p>
                   <div className="flex flex-wrap gap-1.5">
                     {recortes.slice(0, 12).map((u) => (
                       <button key={u} type="button" onClick={() => setDestaque(u)}
-                        className={`h-14 w-14 overflow-hidden rounded border ${destaque === u ? "border-amber-500" : "border-neutral-700"}`}>
+                        className={`h-14 w-14 overflow-hidden rounded border ${destaque === u ? "border-amber-500" : "border-zinc-700"}`}>
                         {/* eslint-disable-next-line @next/next/no-img-element */}
                         <img src={u} alt="" className="h-full w-full object-contain" />
                       </button>
@@ -756,7 +756,7 @@ export function EstudioCartoes() {
                 </div>
               )}
 
-              <p className="text-[11px] text-neutral-500">
+              <p className="text-[11px] text-zinc-500">
                 A foto que largares aqui é recortada antes de entrar. A primeira palavra fica
                 atrás da pessoa, a segunda à frente — é isso que dá a profundidade.
               </p>
@@ -764,14 +764,14 @@ export function EstudioCartoes() {
           )}
 
           <div className="flex items-center justify-between gap-2">
-            <label className="text-[11px] uppercase tracking-wide text-neutral-400">
+            <label className="text-[11px] uppercase tracking-wide text-zinc-400">
               {camada === "destaque" ? "Endereço do recorte" : "Fundo"}
             </label>
             {fundo && (
               <button
                 type="button"
                 onClick={() => setFundo("")}
-                className="text-[11px] font-medium text-neutral-400 underline-offset-2 hover:text-red-400 hover:underline"
+                className="text-[11px] font-medium text-zinc-400 underline-offset-2 hover:text-red-400 hover:underline"
               >
                 Remover
               </button>
@@ -788,7 +788,7 @@ export function EstudioCartoes() {
           />
 
           <div className="mt-2 flex flex-wrap items-center gap-2">
-            <label className="inline-flex cursor-pointer items-center gap-1.5 rounded-md border border-neutral-700 px-2.5 py-1.5 text-[12px] font-medium text-neutral-200 hover:bg-neutral-800">
+            <label className="inline-flex cursor-pointer items-center gap-1.5 rounded-md border border-zinc-700 px-2.5 py-1.5 text-[12px] font-medium text-zinc-200 hover:bg-zinc-800">
               <Upload className="h-3.5 w-3.5" />
               {(camada === "destaque" ? destaque : fundo) ? "Trocar" : "Escolher"} imagem
               <input
@@ -804,7 +804,7 @@ export function EstudioCartoes() {
               />
             </label>
 
-            <label className="inline-flex cursor-pointer items-center gap-1.5 rounded-md border border-neutral-700 px-2.5 py-1.5 text-[12px] font-medium text-neutral-200 hover:bg-neutral-800">
+            <label className="inline-flex cursor-pointer items-center gap-1.5 rounded-md border border-zinc-700 px-2.5 py-1.5 text-[12px] font-medium text-zinc-200 hover:bg-zinc-800">
               <UserRound className="h-3.5 w-3.5" />
               {retrato ? "Trocar retrato" : "Guardar o meu retrato"}
               <input
@@ -819,20 +819,20 @@ export function EstudioCartoes() {
               />
             </label>
 
-            {aSubir && <Loader2 className="h-4 w-4 animate-spin text-neutral-400" />}
+            {aSubir && <Loader2 className="h-4 w-4 animate-spin text-zinc-400" />}
           </div>
 
-          <p className="mt-2 text-[11px] text-neutral-500">
+          <p className="mt-2 text-[11px] text-zinc-500">
             Arrasta a fotografia para cima do cartão, à direita — ela entra como fundo. Sem foto,
             a tipografia aguenta sozinha.
           </p>
 
           {/* ── pedir o fundo à IA ─────────────────────────────────────────── */}
           {temIA && (
-            <div className="mt-3 border-t border-neutral-800 pt-3">
+            <div className="mt-3 border-t border-zinc-800 pt-3">
               <div className="flex items-center gap-1.5">
                 <Sparkles className="h-3.5 w-3.5 text-amber-400" />
-                <span className="text-[11px] uppercase tracking-wide text-neutral-400">
+                <span className="text-[11px] uppercase tracking-wide text-zinc-400">
                   Pedir {camada === "destaque" ? "a pessoa" : "o fundo"} à IA
                 </span>
               </div>
@@ -845,7 +845,7 @@ export function EstudioCartoes() {
               />
               <div className="mt-2 flex flex-wrap items-center gap-2">
                 <label
-                  className={`inline-flex items-center gap-1.5 text-[12px] ${retrato ? "cursor-pointer text-neutral-200" : "cursor-not-allowed text-neutral-600"}`}
+                  className={`inline-flex items-center gap-1.5 text-[12px] ${retrato ? "cursor-pointer text-zinc-200" : "cursor-not-allowed text-zinc-300"}`}
                   title={retrato ? "" : "Guarda primeiro um retrato teu"}
                 >
                   <input
@@ -866,7 +866,7 @@ export function EstudioCartoes() {
                   Gerar {camada === "destaque" ? "pessoa" : "fundo"}
                 </button>
               </div>
-              <p className="mt-1.5 text-[11px] text-neutral-500">
+              <p className="mt-1.5 text-[11px] text-zinc-500">
                 {camada === "destaque"
                   ? "Sai já recortada, pronta a entrar como camada."
                   : "O fundo sai de propósito escuro e vazio ao centro — é onde a frase vai assentar."}
@@ -877,14 +877,14 @@ export function EstudioCartoes() {
         </div>
 
         <div>
-          <label className="text-[11px] uppercase tracking-wide text-neutral-400">Linha de prova</label>
+          <label className="text-[11px] uppercase tracking-wide text-zinc-400">Linha de prova</label>
           <input
             value={proof}
             onChange={(e) => setProof(e.target.value)}
             placeholder="vazio = sem linha"
             className={campo}
           />
-          <p className="mt-1 text-[11px] text-neutral-500">
+          <p className="mt-1 text-[11px] text-zinc-500">
             Só números que existam. Um número inventado num cartão é uma promessa falsa a circular.
           </p>
         </div>
@@ -901,7 +901,7 @@ export function EstudioCartoes() {
           <button
             onClick={() => void gerar("carrossel")}
             disabled={aGerar !== null}
-            className="inline-flex items-center gap-1.5 rounded-lg border border-neutral-700 px-3.5 py-2 text-sm font-semibold text-neutral-100 hover:bg-neutral-800 disabled:opacity-40"
+            className="inline-flex items-center gap-1.5 rounded-lg border border-zinc-700 px-3.5 py-2 text-sm font-semibold text-zinc-100 hover:bg-zinc-800 disabled:opacity-40"
           >
             {aGerar === "carrossel" ? <Loader2 className="h-4 w-4 animate-spin" /> : <Images className="h-4 w-4" />}
             Gerar carrossel (6+)
@@ -913,8 +913,8 @@ export function EstudioCartoes() {
         {/* As lâminas escritas ficam editáveis: a IA acerta na estrutura e falha no tom, e o tom
             é o que distingue um carrossel dele de um carrossel qualquer. */}
         {textos.length > 0 && (
-          <div className="space-y-1.5 rounded-lg border border-neutral-800 p-3">
-            <p className="text-[11px] uppercase tracking-wide text-neutral-400">
+          <div className="space-y-1.5 rounded-lg border border-zinc-800 p-3">
+            <p className="text-[11px] uppercase tracking-wide text-zinc-400">
               Lâminas ({textos.length}) — edita e gera outra vez
             </p>
             {textos.map((t, i) => (
@@ -933,7 +933,7 @@ export function EstudioCartoes() {
                     onClick={() => void refazerLamina(i)}
                     disabled={aRefazer !== null}
                     title="Refazer esta lâmina"
-                    className="mt-1 shrink-0 rounded-md border border-neutral-700 p-1.5 text-neutral-300 hover:bg-neutral-800 disabled:opacity-40"
+                    className="mt-1 shrink-0 rounded-md border border-zinc-700 p-1.5 text-zinc-300 hover:bg-zinc-800 disabled:opacity-40"
                   >
                     {aRefazer === i ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <RefreshCw className="h-3.5 w-3.5" />}
                   </button>
@@ -945,11 +945,11 @@ export function EstudioCartoes() {
 
         {saida.length > 0 && (
           <div>
-            <p className="mb-1.5 text-[11px] uppercase tracking-wide text-neutral-400">
+            <p className="mb-1.5 text-[11px] uppercase tracking-wide text-zinc-400">
               {saida.length} imagem(ns) guardada(s){pecaId ? " · na galeria" : ""}
             </p>
             {!estilo.movel && (
-              <p className="mb-1.5 text-[11px] text-neutral-500">
+              <p className="mb-1.5 text-[11px] text-zinc-500">
                 O cartão da marca tem a composição fixa — o editor de posições só existe no pessoal.
               </p>
             )}
@@ -963,7 +963,7 @@ export function EstudioCartoes() {
                   {i === 0 && estilo.movel ? (
                     <button type="button" onClick={() => setAEditar(true)} title="Mover texto e pessoa" className="block w-full">
                       {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img src={u} alt="" className="w-full rounded border border-neutral-800 group-hover:border-amber-500/60" />
+                      <img src={u} alt="" className="w-full rounded border border-zinc-800 group-hover:border-amber-500/60" />
                       <span className="absolute bottom-1 left-1 inline-flex items-center gap-1 rounded-md bg-black/70 px-1.5 py-1 text-[10.5px] font-semibold text-amber-300">
                         <Move className="h-3 w-3" /> Mover
                       </span>
@@ -971,14 +971,14 @@ export function EstudioCartoes() {
                   ) : (
                     <a href={u} target="_blank" rel="noreferrer">
                       {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img src={u} alt="" className="w-full rounded border border-neutral-800" />
+                      <img src={u} alt="" className="w-full rounded border border-zinc-800" />
                     </a>
                   )}
                   <button
                     type="button"
                     onClick={() => void descarregar(u, nomeDoFicheiro(i))}
                     title="Descarregar"
-                    className="absolute right-1 top-1 rounded-md bg-black/70 p-1.5 text-neutral-200 opacity-0 transition group-hover:opacity-100 hover:text-amber-400"
+                    className="absolute right-1 top-1 rounded-md bg-black/70 p-1.5 text-zinc-200 opacity-0 transition group-hover:opacity-100 hover:text-amber-400"
                   >
                     <Download className="h-3.5 w-3.5" />
                   </button>
@@ -987,7 +987,7 @@ export function EstudioCartoes() {
             </div>
 
             <div className="mt-3">
-              <label className="text-[11px] uppercase tracking-wide text-neutral-400">
+              <label className="text-[11px] uppercase tracking-wide text-zinc-400">
                 Legenda da publicação
               </label>
               <textarea
@@ -1005,7 +1005,7 @@ export function EstudioCartoes() {
               <button
                 type="button"
                 onClick={() => void descarregarTudo()}
-                className="inline-flex items-center gap-1.5 rounded-md border border-neutral-700 px-2.5 py-1.5 text-[12px] font-medium text-neutral-200 hover:bg-neutral-800"
+                className="inline-flex items-center gap-1.5 rounded-md border border-zinc-700 px-2.5 py-1.5 text-[12px] font-medium text-zinc-200 hover:bg-zinc-800"
               >
                 <Download className="h-3.5 w-3.5" />
                 Descarregar {saida.length > 1 ? "todas" : ""}
@@ -1034,7 +1034,7 @@ export function EstudioCartoes() {
                     type="button"
                     onClick={() => void publicar("manual")}
                     disabled={aPublicar}
-                    className="inline-flex items-center gap-1.5 rounded-md border border-neutral-700 px-3 py-1.5 text-[12px] font-semibold text-neutral-200 hover:bg-neutral-800 disabled:opacity-40"
+                    className="inline-flex items-center gap-1.5 rounded-md border border-zinc-700 px-3 py-1.5 text-[12px] font-semibold text-zinc-200 hover:bg-zinc-800 disabled:opacity-40"
                     title="Fica em rascunho para reveres no separador Publicações"
                   >
                     <Clock className="h-3.5 w-3.5" />
@@ -1045,7 +1045,7 @@ export function EstudioCartoes() {
               <button
                 type="button"
                 onClick={() => void partilhar()}
-                className="inline-flex items-center gap-1.5 rounded-md border border-neutral-700 px-3 py-1.5 text-[12px] font-semibold text-neutral-200 hover:bg-neutral-800"
+                className="inline-flex items-center gap-1.5 rounded-md border border-zinc-700 px-3 py-1.5 text-[12px] font-semibold text-zinc-200 hover:bg-zinc-800"
                 title="Abre a folha de partilha do telemóvel — daí escolhes o Instagram"
               >
                 <Share2 className="h-3.5 w-3.5" />
@@ -1062,13 +1062,13 @@ export function EstudioCartoes() {
       {/* Pré-visualização ao vivo — e o sítio onde se larga a fotografia */}
       <div className="lg:sticky lg:top-4">
         <div className="mb-1.5 flex items-center justify-between gap-2">
-          <p className="text-[11px] uppercase tracking-wide text-neutral-400">
+          <p className="text-[11px] uppercase tracking-wide text-zinc-400">
             Como vai sair {formato === "reel" ? "· 1080×1920" : "· 1080×1350"}
           </p>
           <button
             type="button"
             onClick={() => void descarregar(previa, nomeDoFicheiro())}
-            className="inline-flex items-center gap-1 text-[11px] font-medium text-neutral-400 hover:text-amber-400"
+            className="inline-flex items-center gap-1 text-[11px] font-medium text-zinc-400 hover:text-amber-400"
           >
             <Download className="h-3.5 w-3.5" />
             Descarregar
@@ -1101,7 +1101,7 @@ export function EstudioCartoes() {
           }}
           tabIndex={0}
           className={`relative overflow-hidden rounded-lg border transition ${
-            porCima ? "border-amber-400 ring-2 ring-amber-400/40" : "border-neutral-800"
+            porCima ? "border-amber-400 ring-2 ring-amber-400/40" : "border-zinc-800"
           }`}
         >
           {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -1123,25 +1123,25 @@ export function EstudioCartoes() {
           )}
         </div>
 
-        <p className="mt-1.5 text-[11px] text-neutral-500">
+        <p className="mt-1.5 text-[11px] text-zinc-500">
           Arrasta uma fotografia para aqui, ou cola uma captura de ecrã.
         </p>
       </div>
     </div>
 
       {/* ── a galeria ─────────────────────────────────────────────────────── */}
-      <section className="rounded-lg border border-neutral-800 p-3">
+      <section className="rounded-lg border border-zinc-800 p-3">
         <div className="mb-2 flex items-center justify-between gap-2">
-          <span className="inline-flex items-center gap-1.5 text-[12.5px] font-semibold text-neutral-200">
+          <span className="inline-flex items-center gap-1.5 text-[12.5px] font-semibold text-zinc-200">
             <FolderOpen className="h-4 w-4 text-amber-400" />
             O que já se fez no estúdio ({galeria.length})
           </span>
-          <button type="button" onClick={() => void carregarGaleria()} className="text-neutral-500 hover:text-neutral-200" title="Actualizar">
+          <button type="button" onClick={() => void carregarGaleria()} className="text-zinc-500 hover:text-zinc-200" title="Actualizar">
             <RefreshCw className="h-3.5 w-3.5" />
           </button>
         </div>
         {galeria.length === 0 ? (
-          <p className="text-[11.5px] text-neutral-500">Cada cartão ou carrossel gerado fica guardado aqui.</p>
+          <p className="text-[11.5px] text-zinc-500">Cada cartão ou carrossel gerado fica guardado aqui.</p>
         ) : (
           <div className="grid grid-cols-3 gap-2 sm:grid-cols-5 lg:grid-cols-8">
             {galeria.map((p) => (
@@ -1149,15 +1149,15 @@ export function EstudioCartoes() {
                 key={p.id}
                 type="button"
                 onClick={() => setPecaAberta(p)}
-                className={`group relative overflow-hidden rounded border text-left ${pecaId === p.id ? "border-amber-500" : "border-neutral-800 hover:border-neutral-600"}`}
+                className={`group relative overflow-hidden rounded border text-left ${pecaId === p.id ? "border-amber-500" : "border-zinc-800 hover:border-zinc-600"}`}
               >
                 {p.urls[0] && (
                   // eslint-disable-next-line @next/next/no-img-element
                   <img src={p.urls[0]} alt="" className={`w-full object-cover ${p.formato === "reel" ? "aspect-[9/16]" : "aspect-[4/5]"}`} />
                 )}
                 <span className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/90 to-transparent px-1.5 pb-1 pt-4">
-                  <span className="block truncate text-[10.5px] font-medium text-neutral-100">{p.params?.hook || p.textos?.[0] || "sem título"}</span>
-                  <span className="block text-[9.5px] text-neutral-400">
+                  <span className="block truncate text-[10.5px] font-medium text-zinc-100">{p.params?.hook || p.textos?.[0] || "sem título"}</span>
+                  <span className="block text-[9.5px] text-zinc-400">
                     {p.handle === "morethanmoney.pt" ? "marca" : "pessoal"} · {p.urls.length} {p.urls.length === 1 ? "imagem" : "imagens"}
                   </span>
                 </span>
@@ -1198,7 +1198,7 @@ export function EstudioCartoes() {
                       )
                     }
                     title="Descarregar"
-                    className="absolute right-1 top-1 rounded-md bg-black/70 p-1.5 text-neutral-200 hover:text-amber-400"
+                    className="absolute right-1 top-1 rounded-md bg-black/70 p-1.5 text-zinc-200 hover:text-amber-400"
                   >
                     <Download className="h-3.5 w-3.5" />
                   </button>

@@ -78,6 +78,9 @@ export const CAPACIDADES = [
   'bo.gestao_crm',
   /** Gestão · Comercial: tráfego e cupões. Dada por acesso, não por papel. */
   'bo.gestao_comercial',
+  /** Gestão · Social & conteúdo: o Centro Social (publicações, radar de leads, funis, automações).
+   *  As Ligações (tokens, webhook da Meta) ficam no `bo.dono`. Dada por acesso, não por papel. */
+  'bo.gestao_social',
 ] as const
 export type Capacidade = (typeof CAPACIDADES)[number]
 
@@ -127,10 +130,10 @@ const MAPA: Record<Papel, readonly Capacidade[]> = {
  * `backoffice_gestao_acessos`, migração 203). Não são papéis: não levam comissão nem pipeline, e por
  * isso não entram no CHECK dos papéis de venda. Cada área abre um grupo de módulos da Gestão.
  */
-export const AREAS_GESTAO = ['crm', 'comercial'] as const
+export const AREAS_GESTAO = ['crm', 'comercial', 'social'] as const
 export type AreaGestao = (typeof AREAS_GESTAO)[number]
-export const AREA_GESTAO_NOME: Record<AreaGestao, string> = { crm: 'Clientes & CRM', comercial: 'Comercial' }
-const CAPACIDADE_DA_AREA: Record<AreaGestao, Capacidade> = { crm: 'bo.gestao_crm', comercial: 'bo.gestao_comercial' }
+export const AREA_GESTAO_NOME: Record<AreaGestao, string> = { crm: 'Clientes & CRM', comercial: 'Comercial', social: 'Social & conteúdo' }
+const CAPACIDADE_DA_AREA: Record<AreaGestao, Capacidade> = { crm: 'bo.gestao_crm', comercial: 'bo.gestao_comercial', social: 'bo.gestao_social' }
 
 export function normalizarAreasGestao(v: unknown): AreaGestao[] {
   if (!Array.isArray(v)) return []
@@ -169,7 +172,7 @@ export function capacidadesDe(
 
 /** Pode abrir a área Gestão (algum módulo dela)? */
 export function entraNaGestao(capacidades: ReadonlySet<Capacidade>): boolean {
-  return ['bo.dono', 'bo.gestao_crm', 'bo.gestao_comercial'].some((c) => capacidades.has(c as Capacidade))
+  return ['bo.dono', 'bo.gestao_crm', 'bo.gestao_comercial', 'bo.gestao_social'].some((c) => capacidades.has(c as Capacidade))
 }
 
 /** A pergunta que as rotas fazem. Sem capacidade → falso. Sempre. */

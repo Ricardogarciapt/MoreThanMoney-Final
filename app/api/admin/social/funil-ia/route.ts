@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server"
-import { requireAdmin } from "@/lib/admin-api-helpers"
+import { exigirSocial } from '@/lib/social-acesso'
+
 import { CAMPOS_POR_TIPO, problemasDoFunil } from "@/lib/funis-campos"
 import type { Funil, NoDoFunil, TipoDeNo } from "@/lib/funis"
 // Os preços e a regra do bónus vêm da fonte única. Este ficheiro ainda dizia «300 $» meses
@@ -45,7 +46,7 @@ function vocabulario(): string {
 }
 
 export async function POST(req: NextRequest) {
-  const guard = await requireAdmin(req)
+  const guard = await exigirSocial(req)
   if (guard) return guard
 
   const { pedido, existente } = (await req.json().catch(() => ({}))) as { pedido?: string; existente?: Funil }

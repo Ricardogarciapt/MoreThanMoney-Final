@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { requireAdmin } from '@/lib/admin-api-helpers'
+import { exigirSocial } from '@/lib/social-acesso'
+
 import { getSupabaseAdmin } from '@/lib/supabase-admin-client'
 import { MTMCOPY_BOT_USERNAME } from '@/lib/mtmcopy/telegram-bot'
 
@@ -19,7 +20,7 @@ export const dynamic = 'force-dynamic'
 interface Turno { role?: string; text?: string }
 
 export async function GET(req: NextRequest) {
-  const guarda = await requireAdmin(req)
+  const guarda = await exigirSocial(req)
   if (guarda) return guarda
 
   const db = getSupabaseAdmin()

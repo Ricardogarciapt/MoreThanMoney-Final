@@ -7,7 +7,7 @@ import { MODULOS_GESTAO } from "@/lib/backoffice-gestao"
 
 type Pessoa = { user_id: string; email: string | null; nome: string | null; areas: AreaGestao[]; atualizado_at: string }
 
-const CAP: Record<AreaGestao, string> = { crm: "bo.gestao_crm", comercial: "bo.gestao_comercial" }
+const CAP: Record<AreaGestao, string> = { crm: "bo.gestao_crm", comercial: "bo.gestao_comercial", social: "bo.gestao_social" }
 const modulosDa = (a: AreaGestao) => MODULOS_GESTAO.filter((m) => m.exige === CAP[a]).map((m) => m.nome).join(", ")
 
 /**
