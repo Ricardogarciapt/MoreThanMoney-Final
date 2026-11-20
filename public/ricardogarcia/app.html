@@ -281,12 +281,13 @@ label { display: block; font-size: 13px; letter-spacing: 1.5px; text-transform: 
     $('pProx').textContent = m.prox_nome ? (m.prox_xp - m.xp) + ' XP para ' + m.prox_nome : 'Patente máxima';
     requestAnimationFrame(function () { $('pBarra').style.width = pct + '%'; });
     $('sXp').textContent = m.xp; $('sDias').textContent = m.dias_ativos; $('sMelhor').textContent = m.melhor_sequencia;
-    var feitas = e.missoes.filter(function (x) { return x.estado === 'feita'; }).length;
-    $('mFeitas').textContent = feitas + '/' + e.missoes.length;
+    var diarias = e.missoes.filter(function (x) { return !x.desafio; });
+    var feitas = diarias.filter(function (x) { return x.estado === 'feita'; }).length;
+    $('mFeitas').textContent = feitas + '/' + diarias.length;
     $('listaMissoes').innerHTML = e.missoes.map(function (x) {
-      return '<div class="placa missao ' + (x.estado === 'feita' ? 'feita' : '') + '" data-tipo="' + x.tipo + '" data-id="' + esc(x.id) + '" role="button" tabindex="0"><div class="ic">' + ICON[x.tipo] + '</div><div><b>' + esc(x.titulo) + '</b><span>' + esc(x.resumo || '') + '</span></div><div class="xp">' + (x.estado === 'feita' ? '✓ +' + x.xp_ganho : '+' + x.xp + ' XP') + '</div></div>';
+      return '<div class="placa missao ' + (x.estado === 'feita' ? 'feita' : '') + '" data-tipo="' + x.tipo + '" data-id="' + esc(x.id) + '" role="button" tabindex="0"' + (x.desafio ? ' style="border-color:var(--ouro);background:linear-gradient(135deg,rgba(210,166,60,.14),transparent)"' : '') + '><div class="ic">' + ICON[x.tipo] + '</div><div>' + (x.desafio ? '<small style="display:block;color:var(--ouro2);font-size:11px;letter-spacing:.08em;text-transform:uppercase">Desafio da semana do Ricardo</small>' : '') + '<b>' + esc(x.titulo) + '</b><span>' + esc(x.resumo || '') + '</span></div><div class="xp">' + (x.estado === 'feita' ? '✓ +' + x.xp_ganho : '+' + x.xp + ' XP') + '</div></div>';
     }).join('');
-    $('dicaDia').textContent = feitas === e.missoes.length ? 'Missão do dia cumprida. Amanhã há mais.' : DICAS[new Date().getDate() % DICAS.length];
+    $('dicaDia').textContent = feitas === diarias.length ? 'Missão do dia cumprida. Amanhã há mais.' : DICAS[new Date().getDate() % DICAS.length];
     $('gIns').innerHTML = e.insignias.map(function (i) { return '<div class="placa ins ' + (i.tem ? 'tem' : '') + '"><div class="med">' + (i.tem ? '★' : '?') + '</div><b>' + esc(i.nome) + '</b><small>' + esc(i.desc) + '</small></div>'; }).join('');
     $('gPat').innerHTML = e.patentes.map(function (p, i) { return '<div class="pedido"><span style="color:' + (i <= m.patente ? 'var(--ouro2)' : 'inherit') + '">' + (i <= m.patente ? '★ ' : '') + esc(p.nome) + '</span><span>' + p.xp + ' XP</span></div>'; }).join('');
     $('gRec').innerHTML = e.recompensas.map(function (r) {

@@ -118,6 +118,21 @@ export default function PainelConteudoMagnetico({ onGravar }: { onGravar?: (peca
   const [aEnfileirar, setAEnfileirar] = useState(false)
   const [clone, setClone] = useState<{ estado: string; msg: string } | null>(null)
   const previasRef = useRef<(string | null)[]>([])
+  // Dia do plano de 30 dias do painel do Ricardo que abriu esta página (?plano=N): o guião criado
+  // aqui volta ao plano, para lá se ver o estado (guião → gravado → vídeo pronto).
+  const [diaPlano, setDiaPlano] = useState<number | null>(null)
+
+  useEffect(() => {
+    const q = new URLSearchParams(window.location.search)
+    const f = q.get('formato')
+    if (f === 'carrossel' || f === 'post' || f === 'story' || f === 'reel') setFormato(f)
+    if (q.get('tema')) setNicho(q.get('tema')!.slice(0, 200))
+    if (q.get('notas')) setNotas(q.get('notas')!.slice(0, 1000))
+    const o = q.get('objectivo')
+    if (o && OBJECTIVOS.some((x) => x.id === o)) setObjectivo(o)
+    const d = Number(q.get('plano'))
+    if (Number.isInteger(d) && d >= 1 && d <= 30) setDiaPlano(d)
+  }, [])
 
   // ── arranque: que marcas posso usar ─────────────────────────────────────────
   useEffect(() => {
@@ -228,6 +243,14 @@ export default function PainelConteudoMagnetico({ onGravar }: { onGravar?: (peca
       if (!r.ok || !j.ok) throw new Error(j.erro || 'Não foi possível gerar.')
       setGuiao(j.guiao)
       setPecaId(j.id)
+      if (diaPlano && j.id) {
+        fetch('/api/ricardogarcia/painel/plano', {
+          method: 'POST',
+          credentials: 'same-origin',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify({ acao: 'ligar', dia: diaPlano, peca_id: j.id }),
+        }).catch(() => {})
+      }
       setAvisos(j.avisos || [])
       setFornecedor(j.fornecedor ? `${j.fornecedor} · ${j.modelo}` : null)
       previasRef.current = []
@@ -362,6 +385,12 @@ export default function PainelConteudoMagnetico({ onGravar }: { onGravar?: (peca
   return (
     <div className="min-h-screen bg-[#07080b] pb-24 pt-6 text-white">
       <div className="mx-auto max-w-6xl px-4">
+        {diaPlano && (
+          <a href="/ricardogarcia/painel#metas" className="mb-4 flex items-center justify-between gap-3 rounded-xl border border-[#D2A63C]/40 bg-[#D2A63C]/10 px-4 py-3 text-sm text-[#E9C46A]">
+            <span>Dia {diaPlano} do teu plano de 30 dias. O guião que criares aqui fica ligado ao plano.</span>
+            <span className="shrink-0 underline">Voltar ao plano</span>
+          </a>
+        )}
         {/* Cabeçalho */}
         <div className="mb-8 flex items-center gap-3">
           <div className="flex h-11 w-11 items-center justify-center rounded-xl border border-[#D2A63C]/40 bg-[#D2A63C]/10">
