@@ -292,3 +292,123 @@ export async function criarCampanhaPausada(c: NovaCampanhaMeta): Promise<
     return { ok: false, erro: `Parou no passo «${passo}»: ${e instanceof Error ? e.message : String(e)}`, criados }
   }
 }
+
+/* ─────────────────────────────────────────────────────────────────────────────────────────────
+ * AO VIVO — todas as campanhas que não estão apagadas, com ou sem entrega (os insights só devolvem
+ * campanhas que já gastaram, por isso uma campanha em revisão não aparecia). Para cada uma: estado,
+ * orçamento vitalício ou diário, datas, gasto desde o início e o estado de revisão de cada anúncio.
+ * E a conta: gasto total, por faturar e limite. Nunca devolve dados do método de pagamento.
+ * ───────────────────────────────────────────────────────────────────────────────────────────── */
+export type AnuncioVivo = { id: string; nome: string; estado: string; motivo: string | null }
+export type CampanhaViva = {
+  conta: string
+  id: string
+  nome: string
+  estado: string
+  objectivo: string | null
+  orcamentoVitalicio: number | null
+  orcamentoDiario: number | null
+  inicio: string | null
+  fim: string | null
+  gasto: number
+  impressoes: number
+  alcance: number
+  cliques: number
+  resultados: number
+  anuncios: AnuncioVivo[]
+}
+export type ContaViva = {
+  conta: string
+  nome: string | null
+  moeda: string | null
+  estado: number | null
+  gastoTotal: number
+  porFaturar: number
+  limite: number | null
+  gastoMes: number
+}
+export type LeituraViva =
+  | { configurado: false; falta: string[] }
+  | { configurado: true; lidoEm: string; contas: ContaViva[]; campanhas: CampanhaViva[]; erros: string[] }
+
+const ESTADOS_VISIVEIS = ['ACTIVE', 'PAUSED', 'IN_PROCESS', 'WITH_ISSUES', 'PENDING_REVIEW', 'DISAPPROVED', 'PREAPPROVED', 'PENDING_BILLING_INFO', 'CAMPAIGN_PAUSED', 'ADSET_PAUSED']
+
+async function graph(caminho: string, params: Record<string, string>, token: string) {
+  const q = new URLSearchParams({ ...params, access_token: token })
+  const r = await fetch(`https://graph.facebook.com/${VERSAO}/${caminho}?${q}`, { cache: 'no-store' })
+  const d = await r.json().catch(() => ({}))
+  if (!r.ok || d?.error) throw new Error(d?.error?.message ?? `HTTP ${r.status}`)
+  return d
+}
+
+export async function lerAoVivoMeta(): Promise<LeituraViva> {
+  const token = await tokenAnuncios()
+  const contas = contasConfiguradas()
+  const falta = [!token && 'META_ADS_ACCESS_TOKEN', !contas.length && 'META_AD_ACCOUNT_IDS'].filter(Boolean) as string[]
+  if (falta.length) return { configurado: false, falta }
+
+  const erros: string[] = []
+  const contasVivas: ContaViva[] = []
+  const campanhas: CampanhaViva[] = []
+  const filtro = JSON.stringify([{ field: 'effective_status', operator: 'IN', value: ESTADOS_VISIVEIS }])
+
+  await Promise.all(contas.map(async (conta) => {
+    try {
+      const [c, mes, camps, ads] = await Promise.all([
+        graph(`act_${conta}`, { fields: 'name,currency,account_status,amount_spent,balance,spend_cap' }, token!),
+        graph(`act_${conta}/insights`, { date_preset: 'this_month', fields: 'spend' }, token!).catch(() => ({ data: [] })),
+        graph(`act_${conta}/campaigns`, {
+          fields: 'name,effective_status,objective,lifetime_budget,daily_budget,start_time,stop_time,insights.date_preset(maximum){spend,impressions,reach,clicks,actions}',
+          filtering: filtro,
+          limit: '100',
+        }, token!),
+        graph(`act_${conta}/ads`, { fields: 'name,effective_status,campaign_id,ad_review_feedback', filtering: filtro, limit: '200' }, token!).catch(() => ({ data: [] })),
+      ])
+      // A Meta dá amount_spent/balance/spend_cap em cêntimos da moeda da conta.
+      contasVivas.push({
+        conta,
+        nome: c.name ?? null,
+        moeda: c.currency ?? null,
+        estado: c.account_status ?? null,
+        gastoTotal: num(c.amount_spent) / 100,
+        porFaturar: num(c.balance) / 100,
+        limite: c.spend_cap && num(c.spend_cap) > 0 ? num(c.spend_cap) / 100 : null,
+        gastoMes: num(mes?.data?.[0]?.spend),
+      })
+      const porCampanha = new Map<string, AnuncioVivo[]>()
+      for (const a of ads.data ?? []) {
+        const fb = a.ad_review_feedback?.global ? Object.values(a.ad_review_feedback.global).join(' · ') : null
+        const lista = porCampanha.get(a.campaign_id) ?? []
+        lista.push({ id: a.id, nome: a.name, estado: a.effective_status, motivo: fb ? String(fb).slice(0, 240) : null })
+        porCampanha.set(a.campaign_id, lista)
+      }
+      for (const k of camps.data ?? []) {
+        const ins = k.insights?.data?.[0] ?? {}
+        const resultados = (ins.actions ?? []).reduce((m: number, a: { action_type: string; value: string }) =>
+          ACCOES_DE_LEAD.has(a.action_type) || a.action_type === 'landing_page_view' || a.action_type === 'link_click' ? Math.max(m, num(a.value)) : m, 0)
+        campanhas.push({
+          conta,
+          id: k.id,
+          nome: k.name,
+          estado: k.effective_status,
+          objectivo: k.objective ?? null,
+          orcamentoVitalicio: k.lifetime_budget ? num(k.lifetime_budget) / 100 : null,
+          orcamentoDiario: k.daily_budget ? num(k.daily_budget) / 100 : null,
+          inicio: k.start_time ?? null,
+          fim: k.stop_time ?? null,
+          gasto: num(ins.spend),
+          impressoes: num(ins.impressions),
+          alcance: num(ins.reach),
+          cliques: num(ins.clicks),
+          resultados,
+          anuncios: porCampanha.get(k.id) ?? [],
+        })
+      }
+    } catch (e) {
+      erros.push(`act_${conta}: ${e instanceof Error ? e.message : String(e)}`)
+    }
+  }))
+  const ordem = (e: string) => (e === 'ACTIVE' ? 0 : e === 'IN_PROCESS' || e === 'PENDING_REVIEW' ? 1 : e === 'WITH_ISSUES' || e === 'DISAPPROVED' ? 2 : 3)
+  campanhas.sort((a, b) => ordem(a.estado) - ordem(b.estado) || b.gasto - a.gasto)
+  return { configurado: true, lidoEm: new Date().toISOString(), contas: contasVivas, campanhas, erros }
+}

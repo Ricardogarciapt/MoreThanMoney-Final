@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Loader2, Pause, Play, RefreshCw } from 'lucide-react'
 import type { CampanhaMeta, LeituraMeta, PeriodoMeta } from '@/lib/trafego/meta'
 import { diagnosticar, type Gravidade } from '@/lib/trafego/diagnostico'
+import TrafegoAoVivo from './trafego-ao-vivo'
 
 /**
  * GESTÃO DE TRÁFEGO — o que a Meta diz que se gastou e gerou, ao lado do que entrou de facto no CRM
@@ -93,6 +94,7 @@ export default function TrafegoPainel() {
 
   return (
     <div className="space-y-4 bg-black p-4 text-zinc-200">
+      <TrafegoAoVivo />
       <div className="flex flex-wrap items-center gap-2">
         {(Object.keys(NOME_PERIODO) as PeriodoMeta[]).map((p) => (
           <button key={p} type="button" onClick={() => setPeriodo(p)}
