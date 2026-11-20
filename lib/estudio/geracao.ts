@@ -31,7 +31,7 @@ export const ELEVACOES = ['low', 'eye', 'elevated', 'high'] as const
 export const DISTANCIAS = ['close', 'medium', 'wide'] as const
 export const ASPECTOS = ['9:16', '1:1', '4:5', '16:9'] as const
 
-export const ESTADOS_GERACAO = ['fila', 'a_gerar', 'pronto', 'erro', 'cancelado'] as const
+export const ESTADOS_GERACAO = ['fila', 'a_gerar', 'pronto', 'erro', 'cancelado', 'aguarda_mcp'] as const
 export type EstadoGeracao = (typeof ESTADOS_GERACAO)[number]
 
 /** Um motor que não dá sinal há mais do que isto conta como desligado. */
