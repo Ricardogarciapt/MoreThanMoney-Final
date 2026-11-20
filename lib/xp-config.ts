@@ -12,14 +12,46 @@ export const XP_ACTION_DEFAULTS: Record<
   social_like_post: { amount: 3, dailyCap: 30, label: 'Like no feed' },
   social_create_comment: { amount: 8, dailyCap: 20, label: 'Comentário no feed' },
   login_daily: { amount: 10, dailyCap: 1, label: 'Login diário' },
+  missao_concluida: { amount: 20, label: 'Missão do dia' },
+  missao_dia_completo: { amount: 10, dailyCap: 1, label: 'Dia completo' },
 }
 
-export const XP_PER_LEVEL = 1000
+/**
+ * Patentes: o único sistema de progressão da MTM (app-mobile, site e app do Ricardo).
+ * Substituem os antigos níveis de 1000 XP. `current_level` em user_xp = índice da patente + 1
+ * (a função SQL mtm_patente_nivel faz o mesmo cálculo).
+ */
+export const PATENTES = [
+  { nome: 'Recruta', xp: 0 }, { nome: 'Cadete', xp: 150 }, { nome: 'Soldado', xp: 400 }, { nome: 'Cabo', xp: 800 },
+  { nome: 'Furriel', xp: 1400 }, { nome: 'Sargento', xp: 2200 }, { nome: 'Alferes', xp: 3300 }, { nome: 'Tenente', xp: 4700 },
+  { nome: 'Capitão', xp: 6500 }, { nome: 'Major', xp: 8800 }, { nome: 'Coronel', xp: 11500 }, { nome: 'General', xp: 15000 },
+]
 
+/** Índice da patente (0 = Recruta). */
+export function patenteDe(totalXp: number): number {
+  let i = 0
+  PATENTES.forEach((p, k) => { if (totalXp >= p.xp) i = k })
+  return i
+}
+
+/** Nível guardado em user_xp.current_level (1 a 12). */
 export function levelFromXp(totalXp: number): number {
-  return Math.max(1, Math.floor(totalXp / XP_PER_LEVEL) + 1)
+  return patenteDe(totalXp) + 1
 }
 
+export function nomePatente(level: number): string {
+  return PATENTES[Math.max(0, Math.min(PATENTES.length - 1, (level || 1) - 1))].nome
+}
+
+/** Progresso dentro da patente actual: XP feito, XP que falta, percentagem e nome da próxima. */
+export function progressoPatente(totalXp: number) {
+  const i = patenteDe(totalXp), base = PATENTES[i].xp, prox = PATENTES[i + 1]
+  if (!prox) return { feito: totalXp - base, falta: 0, pct: 100, proxima: null as string | null }
+  const span = prox.xp - base
+  return { feito: totalXp - base, falta: prox.xp - totalXp, pct: Math.round(((totalXp - base) / span) * 100), proxima: prox.nome }
+}
+
+/** Compatibilidade: XP já feito dentro da patente actual. */
 export function xpProgressInLevel(totalXp: number): number {
-  return totalXp % XP_PER_LEVEL
+  return progressoPatente(totalXp).feito
 }

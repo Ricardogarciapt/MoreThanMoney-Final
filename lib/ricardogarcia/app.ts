@@ -1,22 +1,21 @@
-// App «Missão» do Ricardo: contas próprias (email + palavra-passe), missões diárias, patentes, moedas e recompensas.
-// Economia pensada para criar hábito e alimentar leads, sem oferecer valor a quem acabou de chegar.
-import { randomBytes, scryptSync, timingSafeEqual, createHash } from 'crypto'
+// App do Ricardo: missões diárias, moedas e recompensas, em cima do sistema que a MTM já tem.
+// Uma só conta (Supabase Auth, a mesma da app-mobile), um só XP (user_xp / xp_log) e as patentes
+// de lib/xp-config.ts. Aqui só vive o que é novo: a carteira (rg_app_membros, id = profiles.id),
+// as missões, as insígnias e as recompensas.
 import type { NextRequest } from 'next/server'
+import { cookies } from 'next/headers'
+import { createServerClient } from '@supabase/ssr'
 import { getSupabaseAdmin } from '@/lib/supabase-admin-client'
+import { PATENTES, patenteDe } from '@/lib/xp-config'
 
-export const COOKIE = 'rg_app'
-export const PATENTES = [
-  { nome: 'Recruta', xp: 0 }, { nome: 'Cadete', xp: 150 }, { nome: 'Soldado', xp: 400 }, { nome: 'Cabo', xp: 800 },
-  { nome: 'Furriel', xp: 1400 }, { nome: 'Sargento', xp: 2200 }, { nome: 'Alferes', xp: 3300 }, { nome: 'Tenente', xp: 4700 },
-  { nome: 'Capitão', xp: 6500 }, { nome: 'Major', xp: 8800 }, { nome: 'Coronel', xp: 11500 }, { nome: 'General', xp: 15000 },
-]
+export { PATENTES, patenteDe }
 // Valores por omissão; o Ricardo afina-os no painel (rg_dados → app_economia).
 export const ECONOMIA_BASE = {
-  xp_dia_max: 100,          // tecto de XP por dia (missões + bónus)
+  xp_dia_max: 100,          // tecto de XP por dia nas missões (+ bónus)
   bonus_dia_completo: 10,   // XP extra por fazer as 3 missões do dia
   moedas_dia_completo: 1,   // 1 moeda por dia completo
   moedas_semana: 5,         // a cada 7 dias seguidos
-  moedas_patente: 5,        // ao subir de patente
+  moedas_patente: 5,        // ao subir de patente (com XP de qualquer parte da MTM)
   moedas_insignia: 3,       // por insígnia nova
   min_resposta: 20,         // caracteres mínimos numa reflexão ou acção
 }
@@ -37,34 +36,59 @@ export const INSIGNIAS: { id: string; nome: string; desc: string; teste: (m: any
 export const db = () => getSupabaseAdmin()
 export const hoje = () => new Date().toISOString().slice(0, 10)
 export const diasEntre = (a: string, b: string) => Math.round((Date.parse(b) - Date.parse(a)) / 86_400_000)
-export const patenteDe = (xp: number) => { let i = 0; PATENTES.forEach((p, k) => { if (xp >= p.xp) i = k }); return i }
 
-export function hashPass(p: string) { const s = randomBytes(16); return 's1$' + s.toString('hex') + '$' + scryptSync(p, s, 32).toString('hex') }
-export function confere(p: string, h: string) {
-  const [, s, k] = h.split('$'); if (!s || !k) return false
-  const a = scryptSync(p, Buffer.from(s, 'hex'), 32), b = Buffer.from(k, 'hex')
-  return a.length === b.length && timingSafeEqual(a, b)
+/** Cliente com a sessão do site (cookies sb-*): entrar aqui é entrar na app-mobile e vice-versa. */
+export async function clienteSessao() {
+  const jar = await cookies()
+  return createServerClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!, {
+    cookies: {
+      getAll: () => jar.getAll(),
+      setAll: (lista) => { try { lista.forEach(({ name, value, options }) => jar.set(name, value, options)) } catch {} },
+    },
+  })
 }
-const sha = (t: string) => createHash('sha256').update(t).digest('hex')
 
-export async function criarSessao(membroId: string) {
-  const token = randomBytes(32).toString('base64url')
-  await db().from('rg_app_sessoes').insert({ token_hash: sha(token), membro_id: membroId, expira: new Date(Date.now() + 90 * 86_400_000).toISOString() })
-  return token
+/** Garante a carteira de uma conta MTM (quem já é membro entra na app sem registo novo). */
+export async function carteira(userId: string, origem = 'mtm') {
+  const { data } = await db().from('rg_app_membros').select('*').eq('id', userId).maybeSingle()
+  if (data) return data
+  const { data: nova } = await db().from('rg_app_membros').upsert({ id: userId, origem, consentimento: true }, { onConflict: 'id' }).select('*').single()
+  return nova
 }
-export async function membroDaSessao(req: NextRequest) {
-  const t = req.cookies.get(COOKIE)?.value; if (!t) return null
-  const { data: s } = await db().from('rg_app_sessoes').select('membro_id, expira').eq('token_hash', sha(t)).maybeSingle()
-  if (!s || Date.parse(s.expira) < Date.now()) return null
-  const { data: m } = await db().from('rg_app_membros').select('*').eq('id', s.membro_id).maybeSingle()
-  return m && m.estado === 'ativo' ? m : null
+
+/** O membro com sessão: carteira + nome/email do perfil + XP e patente do sistema da MTM. */
+export async function membroDaSessao(_req?: NextRequest) {
+  const sb = await clienteSessao()
+  const { data: { user } } = await sb.auth.getUser()
+  if (!user) return null
+  const [c, perfil, xp] = await Promise.all([
+    carteira(user.id),
+    db().from('profiles').select('full_name, email, phone, user_type').eq('id', user.id).maybeSingle(),
+    db().from('user_xp').select('total_xp').eq('user_id', user.id).maybeSingle(),
+  ])
+  if (!c || c.estado !== 'ativo') return null
+  const total = xp.data?.total_xp ?? 0
+  return { ...c, nome: perfil.data?.full_name || String(user.email || '').split('@')[0], email: perfil.data?.email || user.email,
+    telefone: perfil.data?.phone || null, user_type: perfil.data?.user_type || null, xp: total, patente: patenteDe(total) }
 }
-export async function terminarSessao(req: NextRequest) {
-  const t = req.cookies.get(COOKIE)?.value; if (t) await db().from('rg_app_sessoes').delete().eq('token_hash', sha(t))
-}
+
 export async function economia(): Promise<Economia> {
   const { data } = await db().from('rg_dados').select('v').eq('k', 'app_economia').maybeSingle()
   return { ...ECONOMIA_BASE, ...((data?.v as any) || {}) }
+}
+
+export async function somarMoedas(userId: string, n: number) {
+  if (!n) return
+  const { error } = await db().rpc('rg_app_somar_moedas', { p_id: userId, p_n: n })
+  if (error) console.error('[app-ricardo] moedas:', error.message)
+}
+
+/** Chamado pelo xp-service quando alguém sobe de patente, venha o XP de onde vier. */
+export async function aoSubirPatente(userId: string, subidas: number) {
+  const eco = await economia()
+  const c = await carteira(userId)
+  if (!c || subidas <= 0) return
+  await somarMoedas(userId, eco.moedas_patente * subidas)
 }
 
 // Missões do dia: uma de cada tipo, a rodar pelo número do dia (igual para todos).

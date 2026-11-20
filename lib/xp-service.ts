@@ -9,6 +9,8 @@ export interface AwardXpOptions {
   cooldownMinutes?: number
   /** Máximo de prémios deste tipo por dia (UTC). */
   dailyCap?: number
+  /** XP a dar nesta acção (sobrepõe o xp_config; usado pelas missões, que têm XP próprio). */
+  amount?: number
 }
 
 export interface AwardXpResult {
@@ -16,6 +18,8 @@ export interface AwardXpResult {
   xp_gained: number
   total_xp: number
   level: number
+  /** Nível (patente + 1) antes deste prémio. */
+  previous_level?: number
   reason?: string
 }
 
@@ -126,7 +130,7 @@ export async function awardXp(
     }
   }
 
-  const xpAmount = await resolveXpAmount(supabase, actionType)
+  const xpAmount = options.amount != null ? Math.max(0, Math.round(options.amount)) : await resolveXpAmount(supabase, actionType)
   if (xpAmount <= 0) {
     const existing = await getUserXp(supabase, userId)
     return {
@@ -171,11 +175,23 @@ export async function awardXp(
     action_description: description,
   })
 
+  // Subiu de patente: a carteira ganha moedas, venha o XP de onde vier (chat, feed, lives ou missões).
+  const previousLevel = existingXP ? levelFromXp(existingXP.total_xp ?? 0) : 1
+  if (newLevel > previousLevel) {
+    try {
+      const { aoSubirPatente } = await import('@/lib/ricardogarcia/app')
+      await aoSubirPatente(userId, newLevel - previousLevel)
+    } catch (e) {
+      console.error('[xp] moedas da patente falharam:', e)
+    }
+  }
+
   return {
     awarded: true,
     xp_gained: xpAmount,
     total_xp: newTotalXP,
     level: newLevel,
+    previous_level: previousLevel,
   }
 }
 
