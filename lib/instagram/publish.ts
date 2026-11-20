@@ -62,8 +62,15 @@ export const CRIADOR_REELS_PESSOAL = "reels-ricardo:ricardo"
  * ele carregar «Publicar» no Telegram (lib/estudio/reel-aprovacao.ts passa-o de draft a approved).
  */
 export const CRIADOR_REELS_CLONE = "estudio-clone:ricardo"
+/**
+ * Quarta excepção, pedida pelo Ricardo a 20/11/2026 19:33: «publica os destaques e stories de forma a
+ * que fiquem com a organização correta». Só STORIES do pacote de destaques
+ * (/mnt/project-files/destaques-instagram), metidas na fila uma a uma, pela ordem dos destaques.
+ */
+export const CRIADOR_DESTAQUES_PESSOAL = "destaques:ricardo"
 export function autorizadoNaPessoal(row: { created_by?: string | null; media_type?: string | null }): boolean {
   if (row.created_by === CRIADOR_AUTORIZADO_PESSOAL && row.media_type === "CAROUSEL") return true
+  if (row.created_by === CRIADOR_DESTAQUES_PESSOAL && row.media_type === "STORIES") return true
   if (row.created_by === CRIADOR_REELS_CLONE && row.media_type === "REELS") return true
   return row.created_by === CRIADOR_REELS_PESSOAL && row.media_type === "REELS"
 }
