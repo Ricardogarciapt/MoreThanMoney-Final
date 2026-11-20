@@ -400,6 +400,58 @@ html:not(.com-gsap) .fp { opacity: 1; }
   .cap .txt { justify-content: flex-start; padding: 18px 18px 22px; }
   .cap .meta .num { font-size: 48px; }
 }
+/* ── v6: atalhos, loja e contacto geridos no painel (substitui o Beacons) ── */
+.atalhos { padding: 70px 0 40px; }
+.atalhos .chips { display: flex; gap: 8px; flex-wrap: wrap; margin: 18px 0 18px; }
+.atalhos .chips button { border: 1px solid #2a3040; background: rgba(255,255,255,.03); color: #cfd4de; border-radius: 999px; padding: 9px 16px; min-height: 44px; font: inherit; font-size: 15px; letter-spacing: .4px; cursor: pointer; transition: border-color .2s, background .2s, color .2s; }
+.atalhos .chips button:hover { border-color: var(--ciano-claro); color: #fff; }
+.atalhos .chips button[aria-selected="true"] { background: linear-gradient(135deg, var(--ciano-claro), var(--azul-faixa)); border-color: transparent; color: #fff; }
+.atalhos .sub-sec { color: var(--cinza); margin: -6px 0 14px; font-size: 16px; }
+.lista-links { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; }
+.lk { display: grid; grid-template-columns: 56px 1fr 22px; gap: 14px; align-items: center; padding: 12px 14px; min-height: 76px; border-radius: 16px; background: var(--cartao); border: 1px solid var(--linha); text-decoration: none; transition: border-color .2s, transform .2s, background .2s; }
+.lk:hover { border-color: rgba(30,170,230,.6); transform: translateY(-2px); background: #121725; }
+.lk.destaque { border-color: rgba(233,196,106,.55); background: linear-gradient(135deg, rgba(210,166,60,.10), rgba(15,18,26,1) 60%); }
+.lk .ic { width: 56px; height: 56px; border-radius: 12px; background: #161b28; display: grid; place-items: center; overflow: hidden; }
+.lk .ic img { width: 100%; height: 100%; object-fit: cover; }
+.lk .ic svg { width: 26px; height: 26px; fill: #fff; }
+.lk b { display: block; font-weight: 500; font-size: 17px; line-height: 1.25; color: #fff; }
+.lk span { display: block; color: var(--cinza); font-size: 14px; line-height: 1.35; margin-top: 2px; }
+.lk .seta { color: var(--ciano-claro); font-size: 18px; }
+.loja { padding: 60px 0; }
+.produtos-rg { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 16px; margin-top: 20px; }
+.pr { display: flex; flex-direction: column; border-radius: 20px; overflow: hidden; background: var(--cartao); border: 1px solid var(--linha); }
+.pr .img { aspect-ratio: 16/10; background: radial-gradient(circle at 30% 20%, rgba(30,170,230,.25), transparent 60%), radial-gradient(circle at 80% 80%, rgba(210,166,60,.25), transparent 60%), #0b0f18; display: grid; place-items: center; }
+.pr .img img { width: 100%; height: 100%; object-fit: cover; }
+.pr .img b { font-family: "Anton", sans-serif; font-style: italic; text-transform: uppercase; font-size: 30px; color: rgba(255,255,255,.85); text-align: center; padding: 0 18px; line-height: 1.05; font-weight: 400; }
+.pr .corpo { padding: 18px; display: flex; flex-direction: column; gap: 8px; flex: 1; }
+.pr h3 { font-size: 24px; font-style: italic; line-height: 1.05; }
+.pr p { margin: 0; font-size: 15px; }
+.pr .preco { font-family: "Anton", sans-serif; font-size: 30px; color: var(--ouro-claro); line-height: 1; margin-top: auto; padding-top: 8px; }
+.pr .btn { width: 100%; }
+.contacto-rg { padding: 20px 0 70px; }
+.form-rg { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 18px; background: var(--cartao); border: 1px solid var(--linha); border-radius: 20px; padding: 20px; }
+.form-rg label { display: block; font-size: 14px; color: var(--cinza); letter-spacing: .4px; }
+.form-rg label > span { display: block; margin-bottom: 6px; }
+.form-rg .larga { grid-column: 1 / -1; }
+.form-rg input, .form-rg select, .form-rg textarea { width: 100%; background: #0a0d14; border: 1px solid #262d3d; color: #fff; border-radius: 12px; padding: 12px 14px; min-height: 48px; font: inherit; font-size: 16px; outline: none; }
+.form-rg textarea { min-height: 110px; resize: vertical; }
+.form-rg input:focus, .form-rg select:focus, .form-rg textarea:focus { border-color: var(--ciano-claro); box-shadow: 0 0 0 3px rgba(30,170,230,.18); }
+.form-rg .consent { display: flex; gap: 10px; align-items: flex-start; color: #c9ced8; font-size: 14px; }
+.form-rg .consent input { width: 20px; height: 20px; min-height: 0; flex: none; margin-top: 2px; accent-color: var(--ciano-claro); }
+.form-rg .armadilha { position: absolute; left: -9999px; width: 1px; height: 1px; overflow: hidden; }
+.form-rg .estado { grid-column: 1 / -1; margin: 0; font-size: 15px; min-height: 1.4em; }
+.form-rg .estado.ok { color: #3ecf8e; } .form-rg .estado.erro { color: #f87171; }
+.app-convite { display: flex; gap: 14px; align-items: center; flex-wrap: wrap; margin-top: 16px; padding: 14px 16px; border-radius: 16px; border: 1px dashed rgba(233,196,106,.5); color: #d6d6d6; font-size: 15px; }
+@media (max-width: 760px) {
+  .atalhos { padding: 50px 0 24px; }
+  .lista-links { grid-template-columns: 1fr; }
+  .lk { grid-template-columns: 48px 1fr 18px; min-height: 68px; }
+  .lk .ic { width: 48px; height: 48px; }
+  .form-rg { grid-template-columns: 1fr; padding: 16px; }
+  .atalhos .chips { flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; margin-left: -16px; margin-right: -16px; padding: 0 16px; }
+  .atalhos .chips::-webkit-scrollbar { display: none; }
+  .atalhos .chips button { flex: none; }
+}
 </style>
 </head>
 <body>
@@ -415,11 +467,12 @@ html:not(.com-gsap) .fp { opacity: 1; }
       <span>Ricardo <span class="c">Garcia</span></span>
     </a>
     <nav aria-label="Secções" class="nav-pilula" id="nav">
+      <a href="#atalhos" data-sec="atalhos">Links</a>
       <a href="#historia" data-sec="historia">História</a>
       <a href="#trajeto" data-sec="trajeto">Trajeto</a>
       <a href="#caminhos" data-sec="caminhos">Caminhos</a>
       <a href="#parceiros" data-sec="parceiros">Parceiros</a>
-      <a href="#redes" data-sec="redes">Redes</a>
+      <a href="#contacto" data-sec="contacto">Contacto</a>
       <i class="indicador" aria-hidden="true"></i>
     </nav>
     <a class="btn btn-azul" href="/agendar?t=fecho-alto-valor">Marcar conversa</a>
@@ -450,12 +503,26 @@ html:not(.com-gsap) .fp { opacity: 1; }
     <a class="desce" href="#historia" aria-label="Descer para a história">desliza<i></i></a>
   </section>
 
+  <section class="atalhos" id="atalhos" aria-label="Atalhos">
+    <div class="wrap">
+      <h2 class="titulo palavras" data-palavras>Por onde <span class="c">queres ir?</span></h2>
+      <div class="chips" role="tablist" aria-label="Escolhe um tema" id="chipsRg"></div>
+      <p class="sub-sec" id="subRg"></p>
+      <div class="lista-links" id="linksRg" role="tabpanel">
+        <a class="lk destaque" href="https://www.morethanmoney.pt/FreeSession" data-rg="i1"><span class="ic"></span><div><b>Assiste às minhas aulas</b><span>Acesso às sessões onde educo, de graça</span></div><i class="seta">→</i></a>
+        <a class="lk" href="/agendar?t=fecho-alto-valor" data-rg="h1"><span class="ic"></span><div><b>Agenda uma conversa comigo</b><span>Sessão 1 para 1 para te esclarecer</span></div><i class="seta">→</i></a>
+        <a class="lk" href="https://www.morethanmoney.pt/marketplace" data-rg="i3"><span class="ic"></span><div><b>Marketplace e ofertas</b><span>Produtos digitais e ferramentas</span></div><i class="seta">→</i></a>
+        <a class="lk" href="https://wa.me/351912666699" data-rg="i4"><span class="ic"></span><div><b>Fala comigo no WhatsApp</b><span>Manda mensagem e esclareço-te</span></div><i class="seta">→</i></a>
+      </div>
+    </div>
+  </section>
+
   <section class="video-sec" id="historia">
     <div class="wrap">
       <h2 class="titulo palavras" data-palavras>A minha <span class="c">história</span>, contada por mim</h2>
       <p class="lead aparece" data-preencher>De onde vim, o que tive de destruir e porque é que a MoreThanMoney existe.</p>
       <div class="ecra aparece" id="ecra">
-        <video id="video-ricardo" preload="metadata" playsinline muted poster="/ricardogarcia/apresentacao-ricardo-poster.jpg">
+        <video id="video-ricardo" preload="metadata" playsinline poster="/ricardogarcia/apresentacao-ricardo-poster.jpg">
           <source src="/ricardogarcia/apresentacao-ricardo.mp4" type="video/mp4">
           <track kind="captions" srclang="pt" label="Português" src="/ricardogarcia/apresentacao-ricardo.vtt">
         </video>
@@ -616,6 +683,15 @@ html:not(.com-gsap) .fp { opacity: 1; }
     </div>
   </section>
 
+
+  <section class="loja" id="loja" hidden>
+    <div class="wrap">
+      <h2 class="titulo palavras" data-palavras id="lojaTit">Produtos <span class="c">digitais</span></h2>
+      <p class="lead" id="lojaSub">Feitos por mim, para começares com estrutura.</p>
+      <div class="produtos-rg" id="produtosRg"></div>
+    </div>
+  </section>
+
   <section class="parceiros" id="parceiros">
     <div class="wrap">
       <h2 class="titulo palavras" data-palavras>Parceiros <span class="c">da marca</span></h2>
@@ -634,10 +710,29 @@ html:not(.com-gsap) .fp { opacity: 1; }
         <h2 class="titulo">Falamos <span class="c">10 minutos?</span></h2>
         <p class="lead">Conta-me onde estás e para onde queres ir. Dizemos-te com sinceridade se a MoreThanMoney é para ti, e por onde começar.</p>
         <div class="acoes">
-          <a class="btn btn-azul" href="/agendar?t=fecho-alto-valor">Marcar uma conversa</a>
-          <a class="btn btn-linha" href="https://wa.me/351912666699?text=Ol%C3%A1%20Ricardo%2C%20vim%20da%20tua%20p%C3%A1gina" target="_blank" rel="noopener">Falar no WhatsApp</a>
+          <a class="btn btn-azul" href="/agendar?t=fecho-alto-valor" data-rg="cta-agendar">Marcar uma conversa</a>
+          <a class="btn btn-linha" href="https://wa.me/351912666699?text=Ol%C3%A1%20Ricardo%2C%20vim%20da%20tua%20p%C3%A1gina" target="_blank" rel="noopener" data-rg="cta-whatsapp">Falar no WhatsApp</a>
         </div>
       </div>
+    </div>
+  </section>
+
+
+  <section class="contacto-rg" id="contacto">
+    <div class="wrap">
+      <h2 class="titulo" id="contTit">Fala <span class="c">comigo</span></h2>
+      <p class="lead" id="contSub">Deixa a tua mensagem e respondo eu.</p>
+      <form class="form-rg" id="formRg" novalidate>
+        <label><span>Nome</span><input name="nome" autocomplete="name" maxlength="120" required></label>
+        <label><span>O que te traz aqui?</span><select name="motivo"><option value="conversa">Quero falar contigo</option><option value="aprender">Quero aprender</option><option value="negocio">Tenho um negócio</option><option value="trabalhar">Quero trabalhar convosco</option><option value="parceria">Proposta de parceria</option></select></label>
+        <label><span>Email</span><input name="email" type="email" autocomplete="email" maxlength="160" inputmode="email"></label>
+        <label><span>Telemóvel</span><input name="telefone" type="tel" autocomplete="tel" maxlength="40" inputmode="tel"></label>
+        <label class="larga"><span>Mensagem (opcional)</span><textarea name="mensagem" maxlength="2000"></textarea></label>
+        <label class="armadilha" aria-hidden="true">Empresa<input name="empresa" tabindex="-1" autocomplete="off"></label>
+        <label class="consent larga"><input type="checkbox" name="consentimento" required><span>Aceito que o Ricardo e a MoreThanMoney usem estes dados para me responder. Consulta a <a href="/privacidade" target="_blank" rel="noopener">política de privacidade</a>.</span></label>
+        <div class="larga"><button class="btn btn-azul" type="submit" style="width:100%">Enviar mensagem</button></div>
+        <p class="estado" id="estadoRg" role="status" aria-live="polite"></p>
+      </form>
     </div>
   </section>
 
@@ -669,7 +764,7 @@ html:not(.com-gsap) .fp { opacity: 1; }
 
 <nav class="doca" aria-label="Atalhos">
   <a href="#historia" data-sec="historia"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5v14l11-7z"/></svg>História</a>
-  <a href="#trajeto" data-sec="trajeto"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 12h4l3-8 4 16 3-8h4"/></svg>Trajeto</a>
+  <a href="#atalhos" data-sec="atalhos"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M10.6 13.4a1 1 0 0 0 1.4 1.4l4.2-4.2a3 3 0 0 0-4.2-4.2l-1.4 1.4 1.4 1.4 1.4-1.4a1 1 0 0 1 1.4 1.4zM13.4 10.6a1 1 0 0 0-1.4-1.4l-4.2 4.2a3 3 0 0 0 4.2 4.2l1.4-1.4-1.4-1.4-1.4 1.4a1 1 0 0 1-1.4-1.4z"/></svg>Links</a>
   <a href="#caminhos" data-sec="caminhos" class="doca-cta"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2 2 7l10 5 10-5-10-5zm0 13L2 10v4l10 5 10-5v-4l-10 5z"/></svg>Caminhos</a>
   <a href="#parceiros" data-sec="parceiros"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 11a4 4 0 1 1 0-8 4 4 0 0 1 0 8zm10 0a4 4 0 1 1 0-8 4 4 0 0 1 0 8zM1 21c0-4 3-6 6-6s6 2 6 6zm10 0c0-2-.6-3.6-1.6-4.7.8-.2 1.6-.3 2.6-.3 3 0 6 2 6 5z"/></svg>Parceiros</a>
   <a href="/agendar?t=fecho-alto-valor"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 2v2H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2h-2V2h-2v2H9V2zm-2 8h14v10H5z"/></svg>Falar</a>
@@ -803,7 +898,7 @@ html:not(.com-gsap) .fp { opacity: 1; }
       var melhor = null, r = 0; Object.keys(vis).forEach(function (k) { if (vis[k] > r) { r = vis[k]; melhor = k; } });
       activar(melhor);
     }, { threshold: [0, .15, .3, .5, .7], rootMargin: '-30% 0px -40% 0px' });
-    ['historia', 'trajeto', 'caminhos', 'parceiros', 'redes'].forEach(function (id) { var el = document.getElementById(id); if (el) so.observe(el); });
+    ['atalhos', 'historia', 'trajeto', 'caminhos', 'loja', 'parceiros', 'contacto', 'redes'].forEach(function (id) { var el = document.getElementById(id); if (el) so.observe(el); });
   }
   if (!reduz && window.matchMedia('(hover: hover)').matches) {
     document.querySelectorAll('.holo').forEach(function (c) {
@@ -824,11 +919,24 @@ html:not(.com-gsap) .fp { opacity: 1; }
     // pausa quando sai. Um toque liga o som; depois disso não volta a tocar sozinho se o pausarem.
     var v = ecra.querySelector('video'), b = ecra.querySelector('.play'), som = ecra.querySelector('.som');
     var dono = false, pausouAMao = false, visivel = false;
+    // Tenta sempre com som. Se o browser não deixar (não houve ainda toque/clique na página),
+    // arranca sem som e liga o som sozinho ao primeiro toque, clique ou tecla do visitante.
+    var jaComSom = false;
     function tocar(comSom) {
-      if (comSom) { v.muted = false; dono = true; ecra.classList.remove('mudo'); v.controls = true; }
-      ecra.classList.add('a-tocar'); if (v.muted) ecra.classList.add('mudo');
-      var p = v.play(); if (p && p.catch) p.catch(function () { if (!v.muted) { v.muted = true; ecra.classList.add('mudo'); v.play().catch(function () { ecra.classList.remove('a-tocar', 'mudo'); }); } });
+      if (comSom) dono = true;
+      v.muted = false; ecra.classList.add('a-tocar');
+      var p = v.play();
+      var ok = function () { jaComSom = !v.muted; ecra.classList.toggle('mudo', v.muted); if (!v.muted) v.controls = true; };
+      if (p && p.then) p.then(ok, function () {
+        v.muted = true; ecra.classList.add('mudo');
+        v.play().then(ok, function () { ecra.classList.remove('a-tocar', 'mudo'); });
+      }); else ok();
     }
+    function ligarSomAoGesto(e) {
+      if (jaComSom || (e && e.target && e.target.closest && e.target.closest('#ecra'))) return;
+      if (!v.paused && v.muted) { v.muted = false; var p = v.play(); if (p && p.then) p.then(function () { jaComSom = true; ecra.classList.remove('mudo'); v.controls = true; }, function () { v.muted = true; }); else { jaComSom = true; ecra.classList.remove('mudo'); } }
+    }
+    ['pointerdown', 'keydown', 'touchend'].forEach(function (ev) { document.addEventListener(ev, ligarSomAoGesto, { passive: true, capture: true }); });
     b.addEventListener('click', function () { tocar(true); });
     som.addEventListener('click', function (e) { e.stopPropagation(); if (v.muted) v.currentTime = 0; tocar(true); });
     v.addEventListener('click', function () { if (v.muted) tocar(true); });
@@ -845,6 +953,121 @@ html:not(.com-gsap) .fp { opacity: 1; }
       ecra.addEventListener('pointerenter', function () { if (!pausouAMao && v.paused && !reduz) tocar(false); });
     }
   }
+})();
+</script>
+
+<script>
+// v6 · Atalhos, produtos e formulário vêm do painel do Ricardo (/ricardogarcia/painel), sem Beacons.
+// Mede visitas e cliques (conversões) sem dados pessoais.
+(function () {
+  var esc = function (t) { return String(t == null ? '' : t).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); };
+  var origem = (function () { try { var q = new URLSearchParams(location.search); return q.get('utm_source') || q.get('ref') || (document.referrer ? new URL(document.referrer).hostname : 'direto'); } catch (e) { return 'direto'; } })();
+  function medir(alvo, tipo) {
+    var corpo = JSON.stringify({ alvo: alvo, tipo: tipo || 'link', origem: origem });
+    try { if (navigator.sendBeacon && navigator.sendBeacon('/api/ricardogarcia/clique', new Blob([corpo], { type: 'text/plain' }))) return; } catch (e) {}
+    try { fetch('/api/ricardogarcia/clique', { method: 'POST', body: corpo, keepalive: true }); } catch (e) {}
+  }
+  window.__rgMedir = medir;
+  medir('pagina', 'visita');
+  document.addEventListener('click', function (e) {
+    var a = e.target.closest && e.target.closest('[data-rg]'); if (!a) return;
+    medir(a.getAttribute('data-rg'), a.getAttribute('data-rg-tipo') || 'link');
+  }, true);
+  var vid = document.getElementById('video-ricardo'), visto = false;
+  if (vid) vid.addEventListener('timeupdate', function () { if (!visto && vid.currentTime > 15) { visto = true; medir('video', 'video'); } });
+
+  var ICONES = {
+    instagram: '<svg viewBox="0 0 24 24"><path d="M12 7a5 5 0 1 0 0 10 5 5 0 0 0 0-10zm0 8.2a3.2 3.2 0 1 1 0-6.4 3.2 3.2 0 0 1 0 6.4zM17.3 5.5a1.2 1.2 0 1 0 0 2.4 1.2 1.2 0 0 0 0-2.4zM16.5 2h-9A5.5 5.5 0 0 0 2 7.5v9A5.5 5.5 0 0 0 7.5 22h9a5.5 5.5 0 0 0 5.5-5.5v-9A5.5 5.5 0 0 0 16.5 2zm3.7 14.5a3.7 3.7 0 0 1-3.7 3.7h-9a3.7 3.7 0 0 1-3.7-3.7v-9a3.7 3.7 0 0 1 3.7-3.7h9a3.7 3.7 0 0 1 3.7 3.7z"/></svg>',
+    youtube: '<svg viewBox="0 0 24 24"><path d="M23 7.2a3 3 0 0 0-2.1-2.1C19 4.6 12 4.6 12 4.6s-7 0-8.9.5A3 3 0 0 0 1 7.2 31 31 0 0 0 .5 12a31 31 0 0 0 .5 4.8 3 3 0 0 0 2.1 2.1c1.9.5 8.9.5 8.9.5s7 0 8.9-.5a3 3 0 0 0 2.1-2.1 31 31 0 0 0 .5-4.8 31 31 0 0 0-.5-4.8zM9.7 15V9l5.8 3z"/></svg>',
+    linkedin: '<svg viewBox="0 0 24 24"><path d="M4.98 3.5a2.5 2.5 0 1 1 0 5 2.5 2.5 0 0 1 0-5zM3 9.5h4V21H3zm7 0h3.8v1.6h.1c.5-1 1.8-2 3.7-2 4 0 4.7 2.6 4.7 6V21h-4v-5.2c0-1.2 0-2.8-1.7-2.8s-2 1.3-2 2.7V21h-4z"/></svg>',
+    whatsapp: '<svg viewBox="0 0 24 24"><path d="M12 2a10 10 0 0 0-8.6 15.1L2 22l5-1.3A10 10 0 1 0 12 2zm0 18.2a8.2 8.2 0 0 1-4.2-1.2l-.3-.2-3 .8.8-2.9-.2-.3A8.2 8.2 0 1 1 12 20.2zm4.5-6.1c-.2-.1-1.5-.7-1.7-.8s-.4-.1-.6.1-.7.8-.8 1-.3.2-.5.1a6.7 6.7 0 0 1-3.3-2.9c-.3-.4.3-.4.7-1.4.1-.2 0-.3 0-.4l-.8-1.8c-.2-.5-.4-.4-.6-.4h-.5a1 1 0 0 0-.7.3 3 3 0 0 0-.9 2.2 5.2 5.2 0 0 0 1.1 2.7 11.8 11.8 0 0 0 4.5 4c1.7.7 2.3.8 3.2.6a2.7 2.7 0 0 0 1.8-1.2 2.2 2.2 0 0 0 .1-1.3c0-.1-.2-.2-.5-.3z"/></svg>',
+    tiktok: '<svg viewBox="0 0 24 24"><path d="M16.6 5.8A4.3 4.3 0 0 1 15.5 3h-3.1v12.4a2.6 2.6 0 1 1-1.8-2.5V9.7a5.7 5.7 0 1 0 4.9 5.7V9.1a7.4 7.4 0 0 0 4.3 1.4V7.4a4.3 4.3 0 0 1-3.2-1.6z"/></svg>',
+    agenda: '<svg viewBox="0 0 24 24"><path d="M7 2v2H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2h-2V2h-2v2H9V2zm-2 8h14v10H5z"/></svg>',
+    loja: '<svg viewBox="0 0 24 24"><path d="M6 7h12l-1.2 13H7.2zM9 7a3 3 0 0 1 6 0h-2a1 1 0 0 0-2 0z"/></svg>',
+    mtm: '<svg viewBox="0 0 24 24"><path d="M12 2 2 7l10 5 10-5zm0 13L2 10v4l10 5 10-5v-4z"/></svg>',
+    seta: '<svg viewBox="0 0 24 24"><path d="M5 12h11.2l-4.6-4.6L13 6l7 6-7 6-1.4-1.4 4.6-4.6H5z"/></svg>'
+  };
+  function icone(u) {
+    var x = String(u || '').toLowerCase();
+    if (/instagram\.com/.test(x)) return ICONES.instagram;
+    if (/youtube\.com|youtu\.be/.test(x)) return ICONES.youtube;
+    if (/linkedin\.com/.test(x)) return ICONES.linkedin;
+    if (/wa\.me|whatsapp/.test(x)) return ICONES.whatsapp;
+    if (/tiktok\.com/.test(x)) return ICONES.tiktok;
+    if (/agendar/.test(x)) return ICONES.agenda;
+    if (/marketplace|shop|loja/.test(x)) return ICONES.loja;
+    if (/morethanmoney/.test(x)) return ICONES.mtm;
+    return ICONES.seta;
+  }
+  // Os links para a casa levam a origem, para o back-office MTM saber que o lead veio da página do Ricardo.
+  function comOrigem(u) {
+    try { var x = new URL(u, location.origin); if (/morethanmoney\.pt$/.test(x.hostname) || x.origin === location.origin) { if (!x.searchParams.has('utm_source')) { x.searchParams.set('utm_source', 'ricardogarcia'); x.searchParams.set('utm_medium', 'landing'); } } return x.toString(); } catch (e) { return u; }
+  }
+  function externo(u) { try { return new URL(u, location.origin).origin !== location.origin; } catch (e) { return false; } }
+  function linkHtml(it) {
+    var u = comOrigem(it.url), ext = externo(it.url);
+    return '<a class="lk' + (it.destaque ? ' destaque' : '') + '" href="' + esc(u) + '" data-rg="' + esc(it.id) + '"' + (ext ? ' target="_blank" rel="noopener"' : '') + '><span class="ic">' + (it.img ? '<img src="' + esc(it.img) + '" alt="" loading="lazy">' : icone(it.url)) + '</span><div><b>' + esc(it.titulo) + '</b>' + (it.sub ? '<span>' + esc(it.sub) + '</span>' : '') + '</div><i class="seta" aria-hidden="true">→</i></a>';
+  }
+  // Ícones no conteúdo estático, antes de chegarem os dados.
+  Array.prototype.forEach.call(document.querySelectorAll('#linksRg .lk .ic'), function (s) { if (!s.innerHTML) s.innerHTML = icone(s.parentNode.getAttribute('href')); });
+
+  fetch('/api/ricardogarcia/pagina', { credentials: 'omit' }).then(function (r) { return r.ok ? r.json() : null; }).then(function (d) {
+    if (!d || !d.seccoes) return;
+    var links = d.seccoes.filter(function (s) { return s.tipo === 'links' && s.itens.length; });
+    var chips = document.getElementById('chipsRg'), lista = document.getElementById('linksRg'), sub = document.getElementById('subRg');
+    if (links.length && chips && lista) {
+      var mostrar = function (k) {
+        Array.prototype.forEach.call(chips.children, function (b, i) { b.setAttribute('aria-selected', i === k ? 'true' : 'false'); b.tabIndex = i === k ? 0 : -1; });
+        sub.textContent = links[k].sub || ''; lista.innerHTML = links[k].itens.map(linkHtml).join('');
+      };
+      chips.innerHTML = links.map(function (s, i) { return '<button type="button" role="tab" id="chip-' + esc(s.id) + '" aria-controls="linksRg">' + esc(s.titulo) + '</button>'; }).join('');
+      Array.prototype.forEach.call(chips.children, function (b, i) {
+        b.addEventListener('click', function () { mostrar(i); medir('tema-' + links[i].id, 'link'); });
+        b.addEventListener('keydown', function (e) { if (e.key === 'ArrowRight' || e.key === 'ArrowLeft') { e.preventDefault(); var n = (i + (e.key === 'ArrowRight' ? 1 : -1) + links.length) % links.length; mostrar(n); chips.children[n].focus(); } });
+      });
+      mostrar(0);
+    }
+    var secP = d.seccoes.filter(function (s) { return s.tipo === 'produtos'; })[0];
+    var loja = document.getElementById('loja');
+    if (loja && secP && d.produtos && d.produtos.length) {
+      document.getElementById('lojaSub').textContent = secP.sub || '';
+      document.getElementById('produtosRg').innerHTML = d.produtos.map(function (p) {
+        var preco = p.preco_cents == null ? '' : (p.preco_cents / 100).toLocaleString('pt-PT', { style: 'currency', currency: 'EUR' });
+        var u = comOrigem(p.link), ext = externo(p.link);
+        return '<article class="pr"><div class="img">' + (p.imagem_url ? '<img src="' + esc(p.imagem_url) + '" alt="" loading="lazy">' : '<b>' + esc(p.titulo) + '</b>') + '</div><div class="corpo"><h3>' + esc(p.titulo) + '</h3>' + (p.subtitulo ? '<p>' + esc(p.subtitulo) + '</p>' : '') +
+          (preco ? '<div class="preco">' + preco + '</div>' : '') + '<a class="btn btn-azul" href="' + esc(u) + '" data-rg="' + esc(p.id) + '" data-rg-tipo="produto"' + (ext ? ' target="_blank" rel="noopener"' : '') + '>Quero este</a></div></article>';
+      }).join('');
+      loja.hidden = false;
+      setTimeout(function () { var t = document.getElementById('lojaTit'); if (t) t.classList.add('vis'); }, 400);
+    }
+    var secC = d.seccoes.filter(function (s) { return s.tipo === 'contacto'; })[0];
+    var cont = document.getElementById('contacto');
+    if (cont) {
+      if (!secC) cont.hidden = true;
+      else { if (secC.sub) document.getElementById('contSub').textContent = secC.sub; }
+    }
+    if (window.ScrollTrigger) setTimeout(function () { window.ScrollTrigger.refresh(); }, 50);
+  }).catch(function () {});
+
+  var f = document.getElementById('formRg');
+  if (f) f.addEventListener('submit', function (e) {
+    e.preventDefault();
+    var est = document.getElementById('estadoRg'), b = f.querySelector('button[type=submit]');
+    var dados = { nome: f.nome.value, motivo: f.motivo.value, email: f.email.value, telefone: f.telefone.value, mensagem: f.mensagem.value, empresa: f.empresa.value, consentimento: f.consentimento.checked, origem: origem };
+    est.className = 'estado';
+    if (!dados.nome.trim()) { est.textContent = 'Diz-me o teu nome.'; est.classList.add('erro'); f.nome.focus(); return; }
+    if (!dados.email.trim() && !dados.telefone.trim()) { est.textContent = 'Deixa um email ou telemóvel para te responder.'; est.classList.add('erro'); f.email.focus(); return; }
+    if (!dados.consentimento) { est.textContent = 'Confirma o consentimento para te podermos responder.'; est.classList.add('erro'); return; }
+    b.disabled = true; b.textContent = 'A enviar…';
+    fetch('/api/ricardogarcia/contacto', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(dados) })
+      .then(function (r) { return r.json().catch(function () { return {}; }).then(function (j) { return { ok: r.ok && j.ok, j: j }; }); })
+      .then(function (x) {
+        if (x.ok) { est.textContent = 'Recebido! Respondo-te em breve. 🙌'; est.classList.add('ok'); f.reset(); medir('contacto', 'contacto'); }
+        else { est.textContent = x.j.erro || 'Não consegui enviar. Tenta outra vez.'; est.classList.add('erro'); }
+      })
+      .catch(function () { est.textContent = 'Sem ligação. Tenta outra vez.'; est.classList.add('erro'); })
+      .then(function () { b.disabled = false; b.textContent = 'Enviar mensagem'; });
+  });
 })();
 </script>
 

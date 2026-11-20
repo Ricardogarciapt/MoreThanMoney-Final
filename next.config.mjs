@@ -35,6 +35,8 @@ const nextConfig = {
       beforeFiles: [
         { source: '/ricardogarcia', destination: '/ricardogarcia/index.html' },
         { source: '/ricardogarcia/', destination: '/ricardogarcia/index.html' },
+        // Painel pessoal do Ricardo (só admin; a API é que guarda o acesso).
+        { source: '/ricardogarcia/painel', destination: '/ricardogarcia/painel.html' },
       ],
     }
   },
