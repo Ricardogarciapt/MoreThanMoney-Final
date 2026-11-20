@@ -58,7 +58,7 @@ export async function pedirDoDia(db: SupabaseClient): Promise<Record<string, unk
   if (creditos !== null && creditos <= cfg.reserva) return { ok: true, sem_creditos: true, creditos, reserva: cfg.reserva }
 
   const hoje = new Date(); hoje.setUTCHours(0, 0, 0, 0)
-  const { data: feitos } = await db.from('estudio_geracoes').select('params, criado_em').eq('origem', 'clone-reel')
+  const { data: feitos } = await db.from('estudio_geracoes').select('params, criado_em').eq('origem', 'clone-reel').neq('estado', 'erro')
   const usados = new Set((feitos ?? []).map((g: any) => String(g.params?.peca_id || '')))
   const hojePorMarca: Record<string, number> = {}
   for (const g of feitos ?? []) if (new Date((g as any).criado_em) >= hoje) hojePorMarca[(g as any).params?.marca] = (hojePorMarca[(g as any).params?.marca] ?? 0) + 1

@@ -87,22 +87,22 @@ export async function heygenGemeo(audio, destino, { look = 'mentor', motor = 'av
   const assetId = ju?.data?.id
   if (!up.ok || !assetId) throw new Error(`heygen upload ${up.status}: ${JSON.stringify(ju).slice(0, 200)}`)
   // 2) pedir o vídeo
-  const personagem = L.tipo === 'avatar' ? { type: 'avatar', avatar_id: L.id } : { type: 'talking_photo', talking_photo_id: L.id }
-  const dim = aspecto === '9:16' ? { width: 720, height: 1280 } : { width: 1280, height: 720 }
-  const corpo = { title: titulo.slice(0, 100), video_inputs: [{ character: personagem, voice: { type: 'audio', audio_asset_id: assetId } }], dimension: dim }
-  if (motor === 'avatar_iv') corpo.video_inputs[0].character.use_avatar_iv_model = true
-  const r = await fetch(`${API}/v2/video/generate`, { method: 'POST', headers: { 'x-api-key': chave, 'content-type': 'application/json' }, body: JSON.stringify(corpo) })
+  // API v3 (a v2 foi retirada a 20/11/2026). Os IDs dos looks servem de avatar_id.
+  const corpo = { type: 'avatar', avatar_id: L.id, title: titulo.slice(0, 100), audio_asset_id: assetId, engine: { type: motor === 'avatar_iv' ? 'avatar_iv' : 'avatar_iii' }, aspect_ratio: aspecto === '9:16' ? '9:16' : '16:9', resolution: '720p' }
+  const r = await fetch(`${API}/v3/videos`, { method: 'POST', headers: { 'x-api-key': chave, 'content-type': 'application/json' }, body: JSON.stringify(corpo) })
   const jr = await r.json().catch(() => ({}))
-  const id = jr?.data?.video_id
+  const id = (jr?.data ?? jr)?.video_id ?? (jr?.data ?? jr)?.id
   if (!r.ok || !id) throw new Error(`heygen generate ${r.status}: ${JSON.stringify(jr).slice(0, 300)}`)
   console.log(`[gemeo] heygen ${id} (${look}, ${motor})`)
   // 3) esperar
   const fim = Date.now() + esperaMin * 60e3
   while (Date.now() < fim) {
     await new Promise((ok) => setTimeout(ok, 30e3))
-    const s = await fetch(`${API}/v1/video_status.get?video_id=${id}`, { headers: { 'x-api-key': chave } }).then((x) => x.json()).catch(() => ({}))
-    const d = s?.data || {}
-    if (d.status === 'failed') throw new Error(`heygen ${id} falhou: ${JSON.stringify(d.error || '').slice(0, 200)}`)
+    let s = await fetch(`${API}/v3/videos/${id}`, { headers: { 'x-api-key': chave } }).then((x) => x.json()).catch(() => ({}))
+    if (!(s?.data ?? s)?.status) s = await fetch(`${API}/v1/video_status.get?video_id=${id}`, { headers: { 'x-api-key': chave } }).then((x) => x.json()).catch(() => ({}))
+    const d = s?.data ?? s ?? {}
+    d.status = String(d.status || '').toLowerCase()
+    if (d.status === 'failed') throw new Error(`heygen ${id} falhou: ${JSON.stringify(d.failure_message || d.error || '').slice(0, 200)}`)
     if (d.status === 'completed' && d.video_url) {
       const v = await fetch(d.video_url)
       if (!v.ok) throw new Error(`descarregar ${id}: ${v.status}`)
