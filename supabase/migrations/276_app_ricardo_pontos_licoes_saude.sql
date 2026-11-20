@@ -38,3 +38,6 @@ create table if not exists rg_app_push (
 create index if not exists rg_app_push_membro_idx on rg_app_push (membro_id);
 alter table rg_app_push enable row level security;
 alter table rg_app_membros add column if not exists push_prefs jsonb default '{"missao":true,"chat":true,"serie":true}'::jsonb;
+
+-- Plano de 39 dias: dia 1 do plano de cada membro (vazio = data de entrada). Aplicada pelo MCP: app_ricardo_plano39.
+alter table rg_app_membros add column if not exists plano_inicio date;

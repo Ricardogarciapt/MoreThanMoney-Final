@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { db, hoje, missoesDoDia } from '@/lib/ricardogarcia/app'
+import { db, hoje } from '@/lib/ricardogarcia/app'
+import { diaDoPlano } from '@/lib/ricardogarcia/plano39'
 import { enviarPush } from '@/lib/ricardogarcia/push'
 
 /**
@@ -20,13 +21,18 @@ export async function GET(req: NextRequest) {
   const { data: comToken } = await db().from('rg_app_push').select('membro_id')
   const ids = [...new Set((comToken || []).map(x => x.membro_id))]
   if (!ids.length) return NextResponse.json({ ok: true, tipo, enviados: 0 })
-  const { data: membros } = await db().from('rg_app_membros').select('id, nome, sequencia, ultimo_dia').eq('estado', 'ativo').in('id', ids)
+  const { data: membros } = await db().from('rg_app_membros').select('id, nome, sequencia, ultimo_dia, criado, plano_inicio').eq('estado', 'ativo').in('id', ids)
   const dia = hoje()
   let enviados = 0
   if (tipo === 'missao') {
-    const ms = await missoesDoDia(dia)
-    const titulo = ms[0]?.titulo ? `Hoje: ${ms[0].titulo}` : 'A missão de hoje está pronta'
-    enviados = await enviarPush((membros || []).map(m => m.id), 'missao', { titulo: '🎖️ Missão do dia', corpo: `${titulo}. ${ms.length} missões à tua espera.`, url: '/ricardogarcia/app?intro=1', tag: 'missao-' + dia })
+    // Agrupa por dia do plano: quem está no mesmo dia recebe a mesma mensagem.
+    const grupos = new Map<string, string[]>()
+    for (const m of membros || []) {
+      const pd = diaDoPlano(m, dia)
+      const k = `Dia ${pd.dia} de 39 · Fase ${pd.fase.nome}`
+      grupos.set(k, [...(grupos.get(k) || []), m.id])
+    }
+    for (const [k, ids] of grupos) enviados += await enviarPush(ids, 'missao', { titulo: '🎖️ Missão do dia', corpo: `${k}. Corpo, mente, rede e melhoria à tua espera.`, url: '/ricardogarcia/app?intro=1', tag: 'missao-' + dia })
   } else {
     const alvo = (membros || []).filter(m => (m.sequencia || 0) >= 2 && m.ultimo_dia !== dia)
     for (const m of alvo) {

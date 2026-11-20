@@ -3,7 +3,7 @@ import { checkRateLimit } from '@/lib/admin-api-helpers'
 import { avisarAdmin } from '@/lib/primegate/verificacao'
 import {
   PATENTES, INSIGNIAS, db, hoje, diasEntre, membroDaSessao, clienteSessao, carteira, somarMoedas,
-  economia, missoesDoDia, ligarAoCrm, podeResgatar,
+  economia, ligarAoCrm, podeResgatar,
 } from '@/lib/ricardogarcia/app'
 import { awardXp } from '@/lib/xp-service'
 import {
@@ -12,6 +12,7 @@ import {
 import { FUNDOS, MOLDURAS, ROSTOS, guardarAvatar } from '@/lib/ricardogarcia/avatar'
 import { ligacoes, novoTokenAtalho, registarMovimento, sincronizarStrava } from '@/lib/ricardogarcia/saude'
 import { configPush, guardarToken, tirarToken } from '@/lib/ricardogarcia/push'
+import { missoesDoMembro, FASES } from '@/lib/ricardogarcia/plano39'
 
 export const dynamic = 'force-dynamic'
 
@@ -68,8 +69,8 @@ async function extras(m: any, dia: string) {
 async function estado(m: any) {
   const dia = hoje()
   const desde = new Date(Date.parse(dia) - 41 * 86_400_000).toISOString().slice(0, 10)
-  const [missoes, regs, conq, recs, resg, top, hist, eco, extra] = await Promise.all([
-    missoesDoDia(dia),
+  const [doDia, regs, conq, recs, resg, top, hist, eco, extra] = await Promise.all([
+    missoesDoMembro(m, dia),
     db().from('rg_app_registos').select('missao_id, iniciado, concluido, xp').eq('membro_id', m.id).eq('dia', dia),
     db().from('rg_app_conquistas').select('insignia, criado').eq('membro_id', m.id),
     db().from('rg_app_recompensas').select('*').eq('activo', true).order('ordem'),
@@ -80,6 +81,7 @@ async function estado(m: any) {
     extras(m, dia),
   ])
   // Calendário das últimas 6 semanas (XP e missões por dia) e Diário de campo (as tuas respostas).
+  const missoes = doDia.missoes
   const porDia = new Map<string, { xp: number; feitas: number }>()
   for (const r of hist.data || []) { const d = porDia.get(r.dia) || { xp: 0, feitas: 0 }; d.xp += r.xp || 0; d.feitas++; porDia.set(r.dia, d) }
   const historico = Array.from({ length: 42 }, (_, i) => {
@@ -110,6 +112,7 @@ async function estado(m: any) {
     hoje: { dia, xp: porDia.get(dia)?.xp || 0, max: eco.xp_dia_max + eco.bonus_dia_completo },
     historico,
     diario,
+    plano: { ...doDia.plano, fases: FASES },
     missoes: missoes.map(x => {
       const r: any = porMissao.get(x.id)
       return { id: x.id, desafio: !!x.desafio, tipo: x.tipo, titulo: x.titulo, resumo: x.resumo, conteudo: x.conteudo, xp: x.xp, min_seg: x.min_seg,
@@ -207,7 +210,7 @@ export async function POST(req: NextRequest) {
   const dia = hoje()
 
   if (accao === 'iniciar' || accao === 'concluir') {
-    const missoes = await missoesDoDia(dia)
+    const { missoes } = await missoesDoMembro(m, dia)
     const mi = missoes.find(x => x.id === b?.missao)
     if (!mi) return erro('Esta missão não é de hoje.')
     if (accao === 'iniciar') {
