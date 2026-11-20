@@ -329,6 +329,34 @@ footer .aviso { margin-top: 18px; font-size: 13px; color: #777; max-width: 90ch;
   .holo::before, .cap .img .scan::after { animation: none; }
   .holo { transform: none !important; }
 }
+
+/* ── v4 scroll de autor: Lenis + GSAP ScrollTrigger (cinema com o polegar) ── */
+html.lenis, html.lenis body { height: auto; }
+.lenis.lenis-smooth { scroll-behavior: auto !important; }
+.lenis.lenis-stopped { overflow: hidden; }
+.hero { position: relative; overflow: hidden; }
+.caminhos { overflow-x: clip; }
+.faixa-scroll { position: relative; padding: 70px 0 40px; overflow: hidden; pointer-events: none; }
+.faixa-scroll .linha { display: flex; white-space: nowrap; will-change: transform; font-family: "Anton", sans-serif; font-style: italic; text-transform: uppercase; font-size: clamp(54px, 9vw, 150px); line-height: 1.02; }
+.faixa-scroll .linha span { padding-right: .35em; }
+.faixa-scroll .linha .oco { color: transparent; -webkit-text-stroke: 1.5px rgba(30,170,230,.75); }
+.faixa-scroll .linha .ouro-t { color: var(--ouro); }
+.faixa-scroll .linha .estrela { color: var(--ouro-claro); font-style: normal; font-size: .5em; vertical-align: middle; }
+.faixa-scroll .linha.b { opacity: .55; margin-top: -.08em; }
+.manifesto { padding: 60px 0 110px; }
+.manifesto p { font-family: "Anton", sans-serif; text-transform: uppercase; font-style: italic; font-size: clamp(34px, 5.6vw, 84px); line-height: 1.04; color: #fff; margin: 0; max-width: 1050px; }
+.manifesto p .ouro { color: var(--ouro-claro); }
+.manifesto p .c { color: var(--ciano-claro); }
+.manifesto .assina { font-family: "Kalam", cursive; color: var(--ouro); font-size: 26px; margin-top: 22px; }
+.fp { opacity: .14; transition: none; }
+.com-gsap .fp { will-change: opacity; }
+html:not(.com-gsap) .fp { opacity: 1; }
+.com-gsap [data-preencher].aparece { opacity: 1; transform: none; }
+.com-gsap .ecra { will-change: transform; transform-origin: 50% 0; }
+.trajeto.preso .trilho { overflow: hidden; scroll-snap-type: none; scroll-behavior: auto; }
+.trajeto .contador { font-family: "Anton", sans-serif; font-size: 15px; letter-spacing: 3px; color: var(--cinza); }
+.trajeto .contador b { color: var(--ouro-claro); font-weight: 400; }
+@media (prefers-reduced-motion: reduce) { .fp { opacity: 1 !important; } .faixa-scroll .linha { transform: none !important; } }
 </style>
 </head>
 <body>
@@ -382,7 +410,7 @@ footer .aviso { margin-top: 18px; font-size: 13px; color: #777; max-width: 90ch;
   <section class="video-sec" id="historia">
     <div class="wrap">
       <h2 class="titulo palavras" data-palavras>A minha <span class="c">história</span>, contada por mim</h2>
-      <p class="lead aparece">De onde vim, o que tive de destruir e porque é que a MoreThanMoney existe.</p>
+      <p class="lead aparece" data-preencher>De onde vim, o que tive de destruir e porque é que a MoreThanMoney existe.</p>
       <div class="ecra aparece" id="ecra">
         <video id="video-ricardo" preload="none" playsinline poster="/ricardogarcia/apresentacao-ricardo-poster.jpg">
           <source src="/ricardogarcia/apresentacao-ricardo.mp4" type="video/mp4">
@@ -455,11 +483,23 @@ footer .aviso { margin-top: 18px; font-size: 13px; color: #777; max-width: 90ch;
     <div class="progresso" id="progresso" aria-hidden="true"><span></span><span></span><span></span><span></span><span></span><span></span></div>
   </section>
 
+  <div class="faixa-scroll" aria-hidden="true">
+    <div class="linha a"><span>Disciplina</span><span class="estrela">✦</span><span class="oco">Família</span><span class="estrela">✦</span><span class="ouro-t">Recomeço</span><span class="estrela">✦</span><span class="oco">Missão</span><span class="estrela">✦</span><span>Disciplina</span><span class="estrela">✦</span><span class="oco">Família</span><span class="estrela">✦</span><span class="ouro-t">Recomeço</span><span class="estrela">✦</span><span class="oco">Missão</span><span class="estrela">✦</span></div>
+    <div class="linha b"><span class="oco">Porto</span><span class="estrela">✦</span><span>2003 · 2008 · 2010</span><span class="estrela">✦</span><span class="oco">Liliana &amp; Constança</span><span class="estrela">✦</span><span class="ouro-t">MoreThanMoney</span><span class="estrela">✦</span><span class="oco">Porto</span><span class="estrela">✦</span><span>2003 · 2008 · 2010</span><span class="estrela">✦</span><span class="oco">Liliana &amp; Constança</span><span class="estrela">✦</span><span class="ouro-t">MoreThanMoney</span><span class="estrela">✦</span></div>
+  </div>
+
+  <section class="manifesto" aria-label="Manifesto">
+    <div class="wrap">
+      <p data-preencher>Não há resultados garantidos. Há <span class="ouro">trabalho</span>, <span class="ouro">disciplina</span> e uma <span class="c">equipa ao teu lado</span>. É isso que eu não tive, e é isso que te quero dar.</p>
+      <div class="assina">Ricardo</div>
+    </div>
+  </section>
+
   <section class="liga" id="liga">
     <div class="wrap">
       <div>
         <h2 class="titulo palavras" data-palavras>Onde tudo <span class="ouro">se liga</span></h2>
-        <p class="lead aparece">A marca pessoal é a porta. A MoreThanMoney é a casa. Tudo o que crio vai parar a um destes caminhos, para aprenderes, automatizares ou levares a IA para o teu negócio.</p>
+        <p class="lead aparece" data-preencher>A marca pessoal é a porta. A MoreThanMoney é a casa. Tudo o que crio vai parar a um destes caminhos, para aprenderes, automatizares ou levares a IA para o teu negócio.</p>
         <p class="aparece" style="color:var(--cinza)">Um ecossistema, uma regra: educação primeiro, transparência sempre, nenhuma promessa de lucro.</p>
       </div>
       <svg viewBox="0 0 460 400" role="img" aria-label="Diagrama: Ricardo Garcia ligado à MoreThanMoney, que se liga a Formação, MTM Auto, MTM Funded e Soluções com IA">
@@ -485,7 +525,7 @@ footer .aviso { margin-top: 18px; font-size: 13px; color: #777; max-width: 90ch;
   <section class="caminhos" id="caminhos">
     <div class="wrap">
       <h2 class="titulo palavras" data-palavras>Escolhe o teu <span class="c">caminho</span></h2>
-      <p class="lead aparece">Se a minha história te tocou, há três formas de caminharmos juntos.</p>
+      <p class="lead aparece" data-preencher>Se a minha história te tocou, há três formas de caminharmos juntos.</p>
       <div class="portas">
         <article class="porta holo aparece" data-cor="ouro">
           <span class="hud" aria-hidden="true"></span>
@@ -679,7 +719,7 @@ footer .aviso { margin-top: 18px; font-size: 13px; color: #777; max-width: 90ch;
       caps.forEach(function (c, i) { c.classList.toggle('ativo', i === k); });
       barras.forEach(function (b, i) { b.classList.toggle('on', i <= k); });
     }
-    function ir(k) { k = Math.max(0, Math.min(caps.length - 1, k)); var c = caps[k]; trilho.scrollTo({ left: c.offsetLeft - (trilho.clientWidth - c.clientWidth) / 2, behavior: reduz ? 'auto' : 'smooth' }); }
+    function ir(k) { k = Math.max(0, Math.min(caps.length - 1, k)); if (window.__irTrajeto) { window.__irTrajeto(k); return; } var c = caps[k]; trilho.scrollTo({ left: c.offsetLeft - (trilho.clientWidth - c.clientWidth) / 2, behavior: reduz ? 'auto' : 'smooth' }); }
     function centro() {
       var m = trilho.scrollLeft + trilho.clientWidth / 2, best = 0, bd = 1e9;
       caps.forEach(function (c, i) { var d = Math.abs(c.offsetLeft + c.clientWidth / 2 - m); if (d < bd) { bd = d; best = i; } });
@@ -734,6 +774,121 @@ footer .aviso { margin-top: 18px; font-size: 13px; color: #777; max-width: 90ch;
     v.addEventListener('ended', function () { ecra.classList.remove('a-tocar'); v.controls = false; });
   }
 })();
+</script>
+
+<script src="/ricardogarcia/js/gsap.min.js" defer></script>
+<script src="/ricardogarcia/js/ScrollTrigger.min.js" defer></script>
+<script src="/ricardogarcia/js/lenis.min.js" defer></script>
+<script>
+// v4 · scroll de autor. Técnicas de sites premiados (Awwwards/FWA): scroll inercial (Lenis), cenas
+// presas com scrub (GSAP ScrollTrigger), trajeto horizontal guiado pelo scroll vertical, texto que
+// se preenche palavra a palavra, ecrã do vídeo que se abre, faixas cinéticas que reagem à velocidade.
+// Tudo é melhoria: se as bibliotecas não carregarem, a página continua igual à v3.
+window.addEventListener('load', function () {
+  var reduz = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  if (reduz || !window.gsap || !window.ScrollTrigger) return;
+  var gsap = window.gsap, ST = window.ScrollTrigger;
+  gsap.registerPlugin(ST);
+  document.documentElement.classList.add('com-gsap');
+  var largo = window.matchMedia('(min-width: 900px)').matches;
+
+  // 1. Scroll inercial (só rato/trackpad; no toque fica o nativo)
+  var lenis = null;
+  if (window.Lenis) {
+    lenis = new window.Lenis({ duration: 1.15, easing: function (t) { return Math.min(1, 1.001 - Math.pow(2, -10 * t)); }, smoothWheel: true });
+    lenis.on('scroll', ST.update);
+    gsap.ticker.add(function (t) { lenis.raf(t * 1000); });
+    gsap.ticker.lagSmoothing(0);
+    document.querySelectorAll('a[href^="#"]').forEach(function (a) {
+      a.addEventListener('click', function (e) {
+        var id = a.getAttribute('href'); if (id.length < 2) return;
+        var alvo = document.querySelector(id); if (!alvo) return;
+        e.preventDefault(); lenis.scrollTo(alvo, { offset: -70, duration: 1.4 });
+      });
+    });
+  }
+
+  // 2. Herói que se afasta: foto em profundidade, texto sobe e apaga, rede CGI recua
+  var hero = document.querySelector('.hero');
+  if (hero) {
+    var tl = gsap.timeline({ scrollTrigger: { trigger: hero, start: 'top top', end: 'bottom top', scrub: true } });
+    tl.to('.hero .foto', { yPercent: -14, scale: 1.06, rotate: -1.5, ease: 'none' }, 0)
+      .to('.hero .wrap > div:first-child', { y: -90, opacity: .15, ease: 'none' }, 0)
+      .to('#cgi', { opacity: .25, scale: 1.15, ease: 'none' }, 0)
+      .to('.desce', { opacity: 0, ease: 'none' }, 0);
+  }
+
+  // 3. O ecrã do vídeo abre-se à medida que chega
+  var ecra = document.getElementById('ecra');
+  document.querySelectorAll('.hero .foto, #ecra').forEach(function (el) { el.classList.remove('aparece'); });
+  if (ecra) {
+    gsap.fromTo(ecra, { scale: .84, borderRadius: 48, filter: 'brightness(.55)' }, { scale: 1, borderRadius: 20, filter: 'brightness(1)', ease: 'none',
+      scrollTrigger: { trigger: ecra, start: 'top 95%', end: 'top 25%', scrub: true } });
+  }
+
+  // 4. Texto que se preenche palavra a palavra
+  document.querySelectorAll('[data-preencher]').forEach(function (el) {
+    (function partir(n) {
+      Array.prototype.slice.call(n.childNodes).forEach(function (c) {
+        if (c.nodeType === 3) {
+          var frag = document.createDocumentFragment();
+          c.textContent.split(/(\s+)/).forEach(function (t) {
+            if (!t) return;
+            if (/^\s+$/.test(t)) { frag.appendChild(document.createTextNode(t)); return; }
+            var s = document.createElement('span'); s.className = 'fp'; s.textContent = t; frag.appendChild(s);
+          });
+          n.replaceChild(frag, c);
+        } else if (c.nodeType === 1) { partir(c); }
+      });
+    })(el);
+    var grande = el.closest('.manifesto');
+    gsap.to(el.querySelectorAll('.fp'), { opacity: 1, stagger: .08, ease: 'none',
+      scrollTrigger: { trigger: el, start: grande ? 'top 80%' : 'top 88%', end: grande ? 'bottom 45%' : 'bottom 60%', scrub: true } });
+  });
+
+  // 5. Trajeto: em ecrã largo, a secção fica presa e o scroll vertical percorre os capítulos
+  var sec = document.getElementById('trajeto'), trilho = document.getElementById('trilho');
+  if (sec && trilho && largo) {
+    sec.classList.add('preso');
+    var caps = trilho.querySelectorAll('.cap');
+    var maxL = function () { return trilho.scrollWidth - trilho.clientWidth; };
+    var alvoDe = function (k) { var c = caps[k]; return Math.max(0, Math.min(maxL(), c.offsetLeft - (trilho.clientWidth - c.clientWidth) / 2)); };
+    var stT = ST.create({
+      trigger: sec, start: 'top 64px', end: function () { return '+=' + Math.round(maxL() * 1.15); }, pin: true, scrub: .6, anticipatePin: 1,
+      animation: gsap.to(trilho, { scrollLeft: function () { return maxL(); }, ease: 'none' }),
+      invalidateOnRefresh: true
+    });
+    window.__irTrajeto = function (k) {
+      k = Math.max(0, Math.min(caps.length - 1, k));
+      var y = stT.start + (alvoDe(k) / maxL()) * (stT.end - stT.start);
+      if (lenis) lenis.scrollTo(y, { duration: 1.1 }); else window.scrollTo({ top: y, behavior: 'smooth' });
+    };
+  }
+
+  // 6. Faixas cinéticas: andam com o scroll e inclinam com a velocidade
+  var linhas = document.querySelectorAll('.faixa-scroll .linha');
+  if (linhas.length) {
+    gsap.fromTo(linhas[0], { xPercent: 0 }, { xPercent: -28, ease: 'none', scrollTrigger: { trigger: '.faixa-scroll', start: 'top bottom', end: 'bottom top', scrub: .4 } });
+    if (linhas[1]) gsap.fromTo(linhas[1], { xPercent: -30 }, { xPercent: -2, ease: 'none', scrollTrigger: { trigger: '.faixa-scroll', start: 'top bottom', end: 'bottom top', scrub: .4 } });
+    var inclina = gsap.quickTo('.faixa-scroll', 'skewY', { duration: .5, ease: 'power3' });
+    ST.create({ onUpdate: function (self) { inclina(gsap.utils.clamp(-4, 4, self.getVelocity() / -320)); } });
+  }
+
+  // 7. Os três caminhos entram como cartas a erguer-se
+  var portas = document.querySelectorAll('.porta');
+  if (portas.length) {
+    portas.forEach(function (p) { p.classList.remove('aparece'); });
+    gsap.from(portas, { y: 140, rotateX: 22, transformPerspective: 1100, opacity: 0, stagger: .14, duration: 1.1, ease: 'expo.out', clearProps: 'transform,opacity',
+      scrollTrigger: { trigger: '.portas', start: 'top 85%', once: true } });
+  }
+
+  // 8. Paralaxe suave no diagrama «onde tudo se liga»
+  gsap.utils.toArray('.liga svg').forEach(function (el, i) {
+    gsap.fromTo(el, { y: 50 + (i % 3) * 25 }, { y: -30, ease: 'none', scrollTrigger: { trigger: el, start: 'top bottom', end: 'bottom top', scrub: true } });
+  });
+
+  ST.refresh();
+});
 </script>
 </body>
 </html>
