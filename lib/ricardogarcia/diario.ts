@@ -43,9 +43,10 @@ export const AREAS_ROTA = [
 const numDia = (dia: string) => Math.floor(Date.parse(dia) / 86_400_000)
 
 // Na primeira vez, o banco de conteúdo entra a partir do ficheiro do repositório.
-let semeado = false
-async function semear() {
-  if (semeado) return
+// Uma só sementeira por instância: a curiosidade e o quiz pedem-na em paralelo.
+let semeando: Promise<void> | null = null
+function semear() { return (semeando ||= semearAgora().catch(e => { semeando = null; console.error('[app-ricardo] semear:', e) })) }
+async function semearAgora() {
   const { count } = await db().from('rg_app_conteudo').select('id', { count: 'exact', head: true })
   if (!count) {
     const base: any = conteudoBase
@@ -66,18 +67,22 @@ async function semear() {
       conteudo: { texto: p.texto, acao: p.acao }, xp: 20, min_seg: 0, ordem: k + 1, activo: true,
     })), { onConflict: 'id', ignoreDuplicates: true })
   }
-  semeado = true
 }
 
 /** Um item do banco (curiosidade ou quiz), o mesmo para todos no mesmo dia. */
 async function doDia(tipo: 'curiosidade' | 'quiz', dia: string) {
   await semear()
-  const { count } = await db().from('rg_app_conteudo').select('id', { count: 'exact', head: true }).eq('tipo', tipo).eq('activo', true)
-  if (!count) return null
+  // Roda pelas posições (ordem 1..N): uma linha repetida com a mesma ordem nunca aparece duas vezes.
+  const { data: ult } = await db().from('rg_app_conteudo').select('ordem').eq('tipo', tipo).order('ordem', { ascending: false }).limit(1)
+  const total = ult?.[0]?.ordem || 0
+  if (!total) return null
   // O quiz anda desfasado da curiosidade para não repetirem o mesmo tema no mesmo dia.
-  const n = (numDia(dia) + (tipo === 'quiz' ? 7 : 0)) % count
-  const { data } = await db().from('rg_app_conteudo').select('*').eq('tipo', tipo).eq('activo', true).order('ordem').order('id').range(n, n)
-  return data?.[0] || null
+  const base = numDia(dia) + (tipo === 'quiz' ? 7 : 0)
+  for (let i = 0; i < 5; i++) {
+    const { data } = await db().from('rg_app_conteudo').select('*').eq('tipo', tipo).eq('activo', true).eq('ordem', ((base + i) % total) + 1).order('id').limit(1)
+    if (data?.[0]) return data[0]
+  }
+  return null
 }
 export const curiosidadeDoDia = (dia = hoje()) => doDia('curiosidade', dia)
 export const quizDoDia = (dia = hoje()) => doDia('quiz', dia)
@@ -86,10 +91,12 @@ export const quizDoDia = (dia = hoje()) => doDia('quiz', dia)
 export async function dicaPara(area: string, membroId: string) {
   await semear()
   const cat = AREAS_ROTA.some(a => a.id === area) ? area : 'mindset'
-  const { data } = await db().from('rg_app_conteudo').select('id, titulo, texto, categoria').eq('tipo', 'dica').eq('categoria', cat).eq('activo', true).order('ordem').order('id')
-  if (!data?.length) return null
+  const { data } = await db().from('rg_app_conteudo').select('id, titulo, texto, categoria, ordem').eq('tipo', 'dica').eq('categoria', cat).eq('activo', true).order('ordem').order('id')
+  const vistas = new Set<number>()
+  const lista = (data || []).filter((d: any) => !vistas.has(d.ordem) && vistas.add(d.ordem))
+  if (!lista.length) return null
   const { count } = await db().from('rg_app_diarios').select('id', { count: 'exact', head: true }).eq('membro_id', membroId).like('item', 'rota:%')
-  return data[(count || 0) % data.length]
+  return lista[(count || 0) % lista.length]
 }
 
 // ── Rotas: pontos seguros à volta do membro ──────────────────────────────
