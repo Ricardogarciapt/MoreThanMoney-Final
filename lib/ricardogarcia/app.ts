@@ -95,9 +95,14 @@ export async function aoSubirPatente(userId: string, subidas: number) {
 export async function missoesDoDia(dia = hoje()) {
   const { data } = await db().from('rg_app_missoes').select('*').eq('activo', true).order('ordem')
   const n = Math.floor(Date.parse(dia) / 86_400_000)
-  return (['treino', 'mindset', 'digital'] as const).map(t => {
-    const l = (data || []).filter(m => m.tipo === t); return l.length ? l[n % l.length] : null
+  // Os desafios da semana (ids «semana-…», publicados no plano de 30 dias do painel) não rodam:
+  // aparecem em cima, como missão extra, só entre as datas do próprio desafio.
+  const rotacao = (data || []).filter(m => !String(m.id).startsWith('semana-'))
+  const desafio = (data || []).find(m => String(m.id).startsWith('semana-') && (!m.conteudo?.de || m.conteudo.de <= dia) && (!m.conteudo?.ate || m.conteudo.ate >= dia))
+  const diarias = (['treino', 'mindset', 'digital'] as const).map(t => {
+    const l = rotacao.filter(m => m.tipo === t); return l.length ? l[n % l.length] : null
   }).filter(Boolean) as any[]
+  return desafio ? [{ ...desafio, desafio: true }, ...diarias] : diarias
 }
 
 // Ligação ao CRM MTM: cada membro da app entra (ou é ligado) no pipeline de vendas, e vice-versa.

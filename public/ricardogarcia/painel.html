@@ -179,6 +179,35 @@ dialog h2 { font-size: 24px; font-style: italic; margin-bottom: 14px; }
   .contacto .acc { justify-content: start; }
   .toast { bottom: 90px; }
 }
+.p30-hero { display: grid; grid-template-columns: 1.3fr 1fr; gap: 16px; }
+.p30-hoje { background: linear-gradient(135deg, rgba(210,166,60,.13), rgba(30,170,230,.06)); border-color: rgba(210,166,60,.45); }
+.p30-hoje .tema { font-size: 22px; font-style: italic; margin: 6px 0; line-height: 1.2; }
+.p30-hoje .gancho { font-family: "Kalam", cursive; color: var(--ouro-claro); font-size: 19px; margin: 0 0 12px; }
+.p30-acoes { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+.p30-anel { display: flex; align-items: center; gap: 16px; }
+.p30-anel svg { width: 92px; height: 92px; flex: none; }
+.p30-dias { display: grid; grid-template-columns: repeat(10, minmax(0, 1fr)); gap: 6px; }
+.p30-dia { position: relative; min-width: 0; overflow: hidden; aspect-ratio: 1; border-radius: 10px; border: 1px solid #232a38; background: #0b0e15; color: #c4cad6; cursor: pointer; font: inherit; padding: 4px; display: flex; flex-direction: column; justify-content: space-between; text-align: left; min-height: 44px; }
+.p30-dia b { font-family: "Anton", sans-serif; font-weight: 400; font-size: 16px; line-height: 1; }
+.p30-dia small { font-size: 10px; letter-spacing: .6px; text-transform: uppercase; color: var(--suave); }
+.p30-dia.hoje { outline: 2px solid var(--ouro); outline-offset: 1px; }
+.p30-dia.sel { border-color: var(--ciano-claro); background: #101827; }
+.p30-dia.passado { opacity: .75; }
+.p30-dia i { position: absolute; top: 5px; right: 5px; width: 8px; height: 8px; border-radius: 50%; background: #2a3142; }
+.p30-dia i.guiao { background: var(--ciano-claro); } .p30-dia i.gravado { background: #a78bfa; } .p30-dia i.video { background: var(--ouro); } .p30-dia i.pub { background: var(--bom); }
+.p30-leg { display: flex; gap: 14px; flex-wrap: wrap; font-size: 13px; color: var(--suave); margin-top: 10px; }
+.p30-leg span::before { content: ""; display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 6px; background: var(--c); }
+.p30-sem { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
+.p30-sem .cx { display: flex; flex-direction: column; gap: 8px; }
+.p30-sem ol { margin: 0; padding-left: 18px; color: #c4cad6; font-size: 14px; }
+.p30-sem .rel { font-size: 13px; color: #c4cad6; background: #0b0e15; border-radius: 10px; padding: 10px; max-height: 160px; overflow: auto; white-space: pre-wrap; }
+.p30-foco { display: flex; gap: 8px; flex-wrap: wrap; }
+.p30-foco label { display: inline-flex; align-items: center; gap: 6px; padding: 8px 12px; border: 1px solid #2a3142; border-radius: 999px; cursor: pointer; min-height: 40px; }
+.p30-foco input { accent-color: var(--ouro); }
+#p30 .form label { display: block; margin-bottom: 8px; color: var(--suave); font-size: 14px; }
+#p30 .form label input, #p30 .form label select, #p30 .form label textarea { margin-top: 4px; color: #fff; }
+#p30 input[type=date] { background: #0b0e15; border: 1px solid #262d3d; border-radius: 10px; padding: 8px 10px; min-height: 44px; color: #fff; color-scheme: dark; }
+@media (max-width: 1000px) { .p30-hero, .p30-sem { grid-template-columns: 1fr; } .p30-dias { grid-template-columns: repeat(5, minmax(0, 1fr)); } }
 @media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }
 </style>
 </head>
@@ -619,32 +648,151 @@ dialog h2 { font-size: 24px; font-style: italic; margin-bottom: 14px; }
     };
   }
 
-  function vMetas(el) {
+  function vMetasMes(el) {
     var d = new Date(); if (!mesVista) mesVista = d.getFullYear() + '-' + pad(d.getMonth() + 1);
     var km = 'metas:' + mesVista, M = dado(km, []), O = dado('objetivos', []);
     var y = +mesVista.slice(0, 4), mo = +mesVista.slice(5);
     var pct = M.length ? Math.round(M.filter(function (m) { return m.ok; }).length / M.length * 100) : 0;
-    el.innerHTML = '<div class="cab"><div><h1>Metas</h1><p>O mês, os objetivos grandes e o caminho até lá.</p></div>' +
+    el.innerHTML = '<div class="cab" style="margin-top:28px"><div><h2 style="font-size:28px;font-style:italic">Metas do mês</h2><p>O mês e os objetivos grandes.</p></div>' +
       '<div style="display:flex;gap:8px;align-items:center"><button class="btn peq" data-mm="-1" aria-label="Mês anterior">‹</button><span class="kalam" style="font-size:22px;min-width:150px;text-align:center">' + MESES[mo - 1] + ' ' + y + '</span><button class="btn peq" data-mm="1" aria-label="Mês seguinte">›</button></div></div>' +
       '<div class="grelha"><section class="cx c6"><h2>Metas do mês<small>' + pct + '%</small></h2><div class="barra" style="margin-bottom:10px"><i style="width:' + pct + '%"></i></div>' +
         (M.length ? M.map(function (m) { return '<label class="check ' + (m.ok ? 'feito' : '') + '"><input type="checkbox" data-mt="' + m.id + '" ' + (m.ok ? 'checked' : '') + '><span>' + esc(m.t) + '</span><button type="button" class="x" data-mtx="' + m.id + '" aria-label="Apagar meta">×</button></label>'; }).join('') : '<p class="vazio">O que queres conquistar este mês?</p>') +
         '<form class="addrow" id="fMeta"><input maxlength="140" placeholder="Nova meta (ex.: 10 conversas marcadas)" required aria-label="Nova meta"><button class="btn pri" aria-label="Adicionar meta">+</button></form></section>' +
       '<section class="cx c6"><h2>Objetivos maiores</h2>' + (O.length ? O.map(function (o) { return '<div style="padding:8px 0;border-bottom:1px solid #161b27"><div style="display:flex;gap:8px;align-items:center"><b style="flex:1;font-weight:500">' + esc(o.t) + '</b><span class="kalam">' + o.p + '%</span><button type="button" class="x" data-obx="' + o.id + '" aria-label="Apagar objetivo">×</button></div><input type="range" min="0" max="100" step="5" value="' + o.p + '" data-ob="' + o.id + '" style="width:100%;accent-color:var(--ouro)" aria-label="Progresso de ' + esc(o.t) + '"></div>'; }).join('') : '<p class="vazio">Ex.: 100 membros activos, app nas stores.</p>') +
         '<form class="addrow" id="fObj"><input maxlength="140" placeholder="Novo objetivo" required aria-label="Novo objetivo"><button class="btn pri" aria-label="Adicionar objetivo">+</button></form></section></div>';
-    $$('[data-mm]', el).forEach(function (b) { b.addEventListener('click', function () { var dd = new Date(y, mo - 1 + (+b.getAttribute('data-mm')), 1); mesVista = dd.getFullYear() + '-' + pad(dd.getMonth() + 1); vMetas(el); }); });
+    $$('[data-mm]', el).forEach(function (b) { b.addEventListener('click', function () { var dd = new Date(y, mo - 1 + (+b.getAttribute('data-mm')), 1); mesVista = dd.getFullYear() + '-' + pad(dd.getMonth() + 1); vMetasMes(el); }); });
     el.addEventListener('change', function onc(e) {
       var id;
-      if ((id = e.target.getAttribute('data-mt'))) { guardarDado(km, dado(km, []).map(function (m) { return m.id === id ? Object.assign({}, m, { ok: e.target.checked }) : m; })); vMetas(el); }
-      if ((id = e.target.getAttribute('data-ob'))) { guardarDado('objetivos', dado('objetivos', []).map(function (o) { return o.id === id ? Object.assign({}, o, { p: +e.target.value }) : o; })); vMetas(el); }
+      if ((id = e.target.getAttribute('data-mt'))) { guardarDado(km, dado(km, []).map(function (m) { return m.id === id ? Object.assign({}, m, { ok: e.target.checked }) : m; })); vMetasMes(el); }
+      if ((id = e.target.getAttribute('data-ob'))) { guardarDado('objetivos', dado('objetivos', []).map(function (o) { return o.id === id ? Object.assign({}, o, { p: +e.target.value }) : o; })); vMetasMes(el); }
     }, { once: true });
     el.addEventListener('click', function (e) {
       var b = e.target.closest('button'); if (!b) return; var id;
-      if ((id = b.getAttribute('data-mtx'))) { e.preventDefault(); guardarDado(km, dado(km, []).filter(function (m) { return m.id !== id; })); vMetas(el); }
-      if ((id = b.getAttribute('data-obx'))) { e.preventDefault(); guardarDado('objetivos', dado('objetivos', []).filter(function (o) { return o.id !== id; })); vMetas(el); }
+      if ((id = b.getAttribute('data-mtx'))) { e.preventDefault(); guardarDado(km, dado(km, []).filter(function (m) { return m.id !== id; })); vMetasMes(el); }
+      if ((id = b.getAttribute('data-obx'))) { e.preventDefault(); guardarDado('objetivos', dado('objetivos', []).filter(function (o) { return o.id !== id; })); vMetasMes(el); }
     }, { once: true });
-    $('#fMeta').addEventListener('submit', function (e) { e.preventDefault(); var i = e.target.querySelector('input'); guardarDado(km, dado(km, []).concat([{ id: uid(), t: i.value.trim(), ok: false }])); vMetas(el); });
-    $('#fObj').addEventListener('submit', function (e) { e.preventDefault(); var i = e.target.querySelector('input'); guardarDado('objetivos', dado('objetivos', []).concat([{ id: uid(), t: i.value.trim(), p: 0 }])); vMetas(el); });
+    $('#fMeta').addEventListener('submit', function (e) { e.preventDefault(); var i = e.target.querySelector('input'); guardarDado(km, dado(km, []).concat([{ id: uid(), t: i.value.trim(), ok: false }])); vMetasMes(el); });
+    $('#fObj').addEventListener('submit', function (e) { e.preventDefault(); var i = e.target.querySelector('input'); guardarDado('objetivos', dado('objetivos', []).concat([{ id: uid(), t: i.value.trim(), p: 0 }])); vMetasMes(el); });
   }
+
+  // ───────────── Metas: plano de 30 dias (ligado ao /estudio, à app e ao público virtual) ─────────────
+  var P30 = null, p30Sel = null, p30Ocupado = false;
+  var API_P30 = '/api/ricardogarcia/painel/plano';
+  var FMT = { reel: 'Reel', carrossel: 'Carrossel', story: 'Story', post: 'Post' };
+  var OBJN = { atracao: 'Atração', autoridade: 'Autoridade', conversao: 'Conversão' };
+  var EST30 = { guiao: 'Guião criado', gravado: 'Gravado', video: 'Vídeo pronto', perdido: 'Guião apagado' };
+  var FOCOS = ['Reels com o clone', 'Carrosséis', 'Levar à app', 'Trading consciente', 'Mindset', 'IA e digital', 'Treino', 'Vendas e conversas'];
+  function p30(corpo) {
+    return fetch(API_P30, { method: corpo ? 'POST' : 'GET', credentials: 'same-origin', headers: corpo ? { 'Content-Type': 'application/json' } : {}, body: corpo ? JSON.stringify(corpo) : undefined })
+      .then(function (r) { return r.json().then(function (j) { if (!r.ok || j.ok === false) throw new Error(j.erro || j.message || 'Erro'); return j; }); });
+  }
+  function diaAtual() { if (!P30 || !P30.plano) return 0; var n = Math.floor((Date.parse(P30.hoje) - Date.parse(P30.plano.inicio)) / 864e5) + 1; return n; }
+  function estadoDia(d) { if (d.publicado) return 'pub'; return d.peca_id ? (P30.estudio[d.peca_id] || 'guiao') : ''; }
+  function linkEstudio(d) {
+    var notas = 'Gancho: ' + d.gancho + (P30.plano.objetivo ? '\nObjetivo do mês: ' + P30.plano.objetivo : '') + '\nDia ' + d.d + ' do plano de 30 dias.';
+    return '/estudio?tab=criar&formato=' + d.formato + '&objectivo=' + d.objectivo + '&plano=' + d.d + '&tema=' + encodeURIComponent(d.tema) + '&notas=' + encodeURIComponent(notas);
+  }
+  function semanaDe(d) { return Math.min(3, Math.floor((d - 1) / 7)); }
+
+  function vMetas(el) {
+    el.innerHTML = '<div class="cab"><div><h1>Metas</h1><p>O plano de 30 dias, ligado ao Estúdio e à app. Depois, o mês e os objetivos grandes.</p></div></div><div id="p30"><p class="vazio">A carregar o plano…</p></div><div id="metasMes"></div>';
+    vMetasMes($('#metasMes'));
+    p30().then(function (j) { P30 = j; desenharP30(); }).catch(function (e) { $('#p30').innerHTML = '<p class="vazio">Não carregou o plano: ' + esc(e.message) + '</p>'; });
+  }
+
+  function desenharP30() {
+    var box = $('#p30'); if (!box) return;
+    var a = P30.app || {};
+    if (!P30.plano) {
+      box.innerHTML = '<section class="cx p30-hoje"><h2>Plano de 30 dias<small>' + a.membros + ' na app · ' + a.leads + ' leads da app no CRM</small></h2>' +
+        '<p style="margin:0 0 12px">Diz-me onde queres chegar daqui a 30 dias. Eu monto o mês: um conteúdo por dia pronto a abrir no Estúdio, uma acção de negócio por dia e um desafio por semana para a comunidade da app.</p>' +
+        '<form id="fP30" class="form"><label>O que queres conquistar nestes 30 dias?<textarea name="objetivo" rows="2" maxlength="300" placeholder="Ex.: 300 pessoas na app, 10 conversas marcadas, a landing a converter">' + '</textarea></label>' +
+        '<div style="margin:10px 0"><span style="color:var(--suave);font-size:14px">Foco</span><div class="p30-foco">' + FOCOS.map(function (f, i) { return '<label><input type="checkbox" name="foco" value="' + esc(f) + '"' + (i < 3 ? ' checked' : '') + '>' + esc(f) + '</label>'; }).join('') + '</div></div>' +
+        '<div class="p30-acoes"><label style="display:flex;gap:8px;align-items:center">Começa a <input type="date" name="inicio" value="' + P30.hoje + '" style="width:auto"></label><button class="btn ouro" type="submit">Montar o meu mês</button></div></form></section>';
+      $('#fP30').onsubmit = function (e) {
+        e.preventDefault(); if (p30Ocupado) return; p30Ocupado = true;
+        var f = e.target, foco = $$('input[name=foco]:checked', f).map(function (i) { return i.value; });
+        var bt = f.querySelector('button[type=submit]'); bt.disabled = true; bt.textContent = 'A montar o teu mês… (até 1 minuto)';
+        p30({ acao: 'gerar', objetivo: f.objetivo.value, foco: foco, inicio: f.inicio.value })
+          .then(function () { return p30(); }).then(function (j) { P30 = j; p30Sel = null; desenharP30(); aviso('Plano pronto.'); })
+          .catch(function (er) { aviso(er.message); bt.disabled = false; bt.textContent = 'Montar o meu mês'; })
+          .then(function () { p30Ocupado = false; });
+      };
+      return;
+    }
+    var pl = P30.plano, n = diaAtual(), dias = pl.dias;
+    var hojeD = dias.filter(function (d) { return d.d === Math.max(1, Math.min(30, n)); })[0];
+    var sel = dias.filter(function (d) { return d.d === p30Sel; })[0] || hojeD;
+    var criados = dias.filter(function (d) { return d.peca_id; }).length, gravados = dias.filter(function (d) { var s = estadoDia(d); return s === 'gravado' || s === 'video' || s === 'pub'; }).length;
+    var publicados = dias.filter(function (d) { return d.publicado; }).length, accoes = dias.filter(function (d) { return d.accao_feita; }).length;
+    var pctDias = Math.max(0, Math.min(100, Math.round(Math.min(n, 30) / 30 * 100))), R = 40, C = 2 * Math.PI * R;
+    var estadoTxt = n < 1 ? 'Começa a ' + pl.inicio : n > 30 ? 'Plano terminado' : 'Dia ' + n + ' de 30';
+
+    var html = '<div class="p30-hero">' + cartaoDia(sel, n) +
+      '<section class="cx"><h2>O teu mês<small>' + esc(estadoTxt) + '</small></h2><div class="p30-anel"><svg viewBox="0 0 100 100" aria-hidden="true"><circle cx="50" cy="50" r="' + R + '" fill="none" stroke="#1a1f2b" stroke-width="10"/><circle cx="50" cy="50" r="' + R + '" fill="none" stroke="url(#gP30)" stroke-width="10" stroke-linecap="round" stroke-dasharray="' + C.toFixed(1) + '" stroke-dashoffset="' + (C * (1 - pctDias / 100)).toFixed(1) + '" transform="rotate(-90 50 50)"/><defs><linearGradient id="gP30"><stop offset="0" stop-color="#1EAAE6"/><stop offset="1" stop-color="#D2A63C"/></linearGradient></defs><text x="50" y="57" text-anchor="middle" fill="#fff" font-family="Anton" font-size="22">' + pctDias + '%</text></svg>' +
+        '<div><p class="kalam" style="margin:0;font-size:18px">' + esc(pl.objetivo || 'Sem objetivo escrito') + '</p>' + (pl.foco && pl.foco.length ? '<p class="vazio" style="font-size:13px">' + esc(pl.foco.join(' · ')) + '</p>' : '') + '</div></div>' +
+        '<div class="kpis" style="margin-top:14px"><div class="kpi ciano"><b>' + criados + '</b><span>guiões no Estúdio</span></div><div class="kpi"><b>' + gravados + '</b><span>gravados</span></div><div class="kpi ouro"><b>' + publicados + '</b><span>publicados</span></div><div class="kpi"><b>' + accoes + '/30</b><span>acções feitas</span></div></div>' +
+        '<div class="kpis" style="margin-top:12px"><div class="kpi ouro"><b>' + (a.membros || 0) + '</b><span>na app</span></div><div class="kpi"><b>+' + (a.novos30 || 0) + '</b><span>novos em 30 dias</span></div><div class="kpi ciano"><b>' + (a.leads || 0) + '</b><span>leads da app no CRM</span></div><div class="kpi"><b>' + Object.keys(P30.desafios || {}).reduce(function (s, k) { return s + P30.desafios[k]; }, 0) + '</b><span>desafios cumpridos</span></div></div></section></div>';
+
+    html += '<section class="cx" style="margin-top:16px"><h2>Os 30 dias<small>toca num dia para o abrir</small></h2><div class="p30-dias">' + dias.map(function (d) {
+      var e = estadoDia(d), dt = maisDias(pl.inicio, d.d - 1);
+      return '<button type="button" class="p30-dia' + (d.d === n ? ' hoje' : '') + (sel && d.d === sel.d ? ' sel' : '') + (d.d < n ? ' passado' : '') + '" data-p30d="' + d.d + '" aria-label="Dia ' + d.d + ', ' + FMT[d.formato] + ', ' + esc(d.tema) + '"><i class="' + e + '"></i><b>' + d.d + '</b><small>' + ({ reel: 'Reel', carrossel: 'Carr.', story: 'Story', post: 'Post' })[d.formato] + '<br>' + dt.slice(8) + '/' + dt.slice(5, 7) + '</small></button>';
+    }).join('') + '</div><div class="p30-leg"><span style="--c:#2a3142">Por criar</span><span style="--c:var(--ciano-claro)">Guião</span><span style="--c:#a78bfa">Gravado</span><span style="--c:var(--ouro)">Vídeo pronto</span><span style="--c:var(--bom)">Publicado</span></div></section>';
+
+    html += '<div class="p30-sem" style="margin-top:16px">' + pl.semanas.map(function (s, i) {
+      var de = maisDias(pl.inicio, i * 7), ate = maisDias(pl.inicio, i === 3 ? 29 : i * 7 + 6), t = s.teste_id ? (P30.testes || {})[s.teste_id] : null;
+      var feitos = s.missao_id ? (P30.desafios || {})[s.missao_id] || 0 : 0, agora = n >= i * 7 + 1 && n <= (i === 3 ? 30 : i * 7 + 7);
+      return '<section class="cx"' + (agora ? ' style="border-color:rgba(210,166,60,.5)"' : '') + '><h2>Semana ' + (i + 1) + '<small>' + de.slice(8) + '/' + de.slice(5, 7) + ' a ' + ate.slice(8) + '/' + ate.slice(5, 7) + '</small></h2>' +
+        '<b style="font-weight:500;font-size:17px">' + esc(s.tema) + '</b>' +
+        '<div style="color:var(--suave);font-size:13px;letter-spacing:1px;text-transform:uppercase;margin-top:4px">Desafio da app · ' + esc(s.desafio.tipo) + '</div><b style="font-weight:500">' + esc(s.desafio.titulo) + '</b><ol>' + s.desafio.passos.map(function (x) { return '<li>' + esc(x) + '</li>'; }).join('') + '</ol>' +
+        (s.missao_id ? '<span class="pilula on">Na app · ' + feitos + ' cumpriram</span>' : '<button type="button" class="btn peq ouro" data-p30app="' + i + '">Publicar na app</button>') +
+        (t ? '<div><span class="pilula ' + (t.estado === 'feito' ? 'on' : t.estado === 'falhou' || t.estado === 'recusado' ? 'off' : 'novo') + '">Público virtual · ' + esc(t.estado) + '</span>' + (t.resumo ? '<div class="rel" style="margin-top:6px">' + esc(t.resumo) + '</div>' : '') + '</div>'
+          : '<button type="button" class="btn peq" data-p30mf="' + i + '">Testar ideias no público virtual</button>') + '</section>';
+    }).join('') + '</div>';
+    html += '<p style="margin-top:10px;display:flex;gap:10px;flex-wrap:wrap;align-items:center"><span class="vazio" style="font-size:13px">Plano montado por ' + esc(pl.gerado_por || '—') + ' a ' + esc(String(pl.criado).slice(0, 10)) + '.</span><button type="button" class="btn peq fant" data-p30novo="1">Montar um plano novo</button></p>';
+    box.innerHTML = html;
+    box.onclick = cliqueP30;
+    box.onchange = mudancaP30;
+  }
+
+  function cartaoDia(d, n) {
+    if (!d) return '';
+    var e = estadoDia(d), dt = maisDias(P30.plano.inicio, d.d - 1), quando = d.d === n ? 'Hoje' : (d.d < n ? 'Já passou' : 'Daqui a ' + (d.d - n) + ' dia' + (d.d - n === 1 ? '' : 's'));
+    return '<section class="cx p30-hoje"><h2>Dia ' + d.d + ' · ' + dt.slice(8) + '/' + dt.slice(5, 7) + '<small>' + quando + '</small></h2>' +
+      '<div class="p30-acoes"><span class="pilula novo">' + FMT[d.formato] + '</span><span class="pilula">' + OBJN[d.objectivo] + '</span>' + (e && e !== 'pub' ? '<span class="pilula on">' + EST30[e] + '</span>' : '') + (d.publicado ? '<span class="pilula on">Publicado</span>' : '') + '</div>' +
+      '<p class="tema">' + esc(d.tema) + '</p><p class="gancho">«' + esc(d.gancho) + '»</p>' +
+      '<div class="p30-acoes">' + (d.peca_id && e !== 'perdido'
+        ? '<a class="btn ouro" href="/estudio?tab=gravar&peca=' + encodeURIComponent(d.peca_id) + '">Gravar no teleprompter</a><a class="btn" href="/estudio?tab=ativos&peca=' + encodeURIComponent(d.peca_id) + '">Abrir no Estúdio</a>'
+        : '<a class="btn ouro" href="' + esc(linkEstudio(d)) + '">Criar no Estúdio</a>') +
+      '<label class="check" style="border:0;padding:0 6px"><input type="checkbox" data-p30pub="' + d.d + '"' + (d.publicado ? ' checked' : '') + '><span>Publicado</span></label></div>' +
+      '<label class="check ' + (d.accao_feita ? 'feito' : '') + '" style="margin-top:10px;border-top:1px solid #232a38;border-bottom:0"><input type="checkbox" data-p30ac="' + d.d + '"' + (d.accao_feita ? ' checked' : '') + '><span><small style="display:block;color:var(--ouro-claro);font-size:12px;letter-spacing:1px;text-transform:uppercase;text-decoration:none">Acção do dia</small>' + esc(d.accao) + '</span></label>' +
+      '<details style="margin-top:8px"><summary style="cursor:pointer;color:var(--suave);font-size:14px">Mudar este dia</summary><form class="form" data-p30ed="' + d.d + '" style="margin-top:8px">' +
+        '<label>Tema<input name="tema" maxlength="120" value="' + esc(d.tema) + '"></label><label>Gancho<input name="gancho" maxlength="140" value="' + esc(d.gancho) + '"></label>' +
+        '<div class="linha2"><label>Formato<select name="formato">' + Object.keys(FMT).map(function (k) { return '<option value="' + k + '"' + (k === d.formato ? ' selected' : '') + '>' + FMT[k] + '</option>'; }).join('') + '</select></label><label>Objectivo<select name="objectivo">' + Object.keys(OBJN).map(function (k) { return '<option value="' + k + '"' + (k === d.objectivo ? ' selected' : '') + '>' + OBJN[k] + '</option>'; }).join('') + '</select></label></div>' +
+        '<label>Acção do dia<input name="accao" maxlength="140" value="' + esc(d.accao) + '"></label><button class="btn pri peq" type="submit">Guardar</button></form></details></section>';
+  }
+
+  function aplicar(pr, ok) {
+    if (p30Ocupado) return; p30Ocupado = true;
+    pr.then(function () { return p30(); }).then(function (j) { P30 = j; desenharP30(); if (ok) aviso(ok); })
+      .catch(function (e) { aviso(e.message); }).then(function () { p30Ocupado = false; });
+  }
+  function cliqueP30(e) {
+    var b = e.target.closest('[data-p30d],[data-p30app],[data-p30mf],[data-p30novo]'); if (!b) return;
+    if (b.hasAttribute('data-p30d')) { p30Sel = +b.getAttribute('data-p30d'); desenharP30(); var h = $('.p30-hoje'); if (h && window.innerWidth < 1000) h.scrollIntoView({ behavior: 'smooth', block: 'start' }); return; }
+    if (b.hasAttribute('data-p30app')) { b.disabled = true; aplicar(p30({ acao: 'missao_app', semana: +b.getAttribute('data-p30app') }), 'Desafio publicado na app. Aparece em cima das missões dessa semana.'); return; }
+    if (b.hasAttribute('data-p30mf')) { b.disabled = true; aplicar(p30({ acao: 'mirofish', semana: +b.getAttribute('data-p30mf') }), 'Pedido enviado ao público virtual. O resultado aparece aqui quando o Mac o correr.'); return; }
+    if (b.hasAttribute('data-p30novo')) { if (!confirm('Montar um plano novo? O actual sai, e o desafio publicado na app também.')) return; P30.plano = null; desenharP30(); }
+  }
+  function mudancaP30(e) {
+    var i = e.target, d;
+    if ((d = i.getAttribute('data-p30pub'))) aplicar(p30({ acao: 'marcar', dia: +d, campo: 'publicado', v: i.checked }), i.checked ? 'Marcado como publicado.' : '');
+    if ((d = i.getAttribute('data-p30ac'))) aplicar(p30({ acao: 'marcar', dia: +d, campo: 'accao_feita', v: i.checked }), i.checked ? 'Feito. Mais um passo.' : '');
+  }
+  document.addEventListener('submit', function (e) {
+    var f = e.target; if (!f.hasAttribute || !f.hasAttribute('data-p30ed')) return; e.preventDefault();
+    aplicar(p30({ acao: 'editar', dia: +f.getAttribute('data-p30ed'), campos: { tema: f.tema.value, gancho: f.gancho.value, accao: f.accao.value, formato: f.formato.value, objectivo: f.objectivo.value } }), 'Dia guardado.');
+  });
 
   // ───────────── arranque ─────────────
   function bloqueado(msg) {

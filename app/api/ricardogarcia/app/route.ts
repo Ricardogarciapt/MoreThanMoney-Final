@@ -52,7 +52,7 @@ async function estado(m: any) {
     patentes: PATENTES,
     missoes: missoes.map(x => {
       const r: any = porMissao.get(x.id)
-      return { id: x.id, tipo: x.tipo, titulo: x.titulo, resumo: x.resumo, conteudo: x.conteudo, xp: x.xp, min_seg: x.min_seg,
+      return { id: x.id, desafio: !!x.desafio, tipo: x.tipo, titulo: x.titulo, resumo: x.resumo, conteudo: x.conteudo, xp: x.xp, min_seg: x.min_seg,
         estado: r?.concluido ? 'feita' : r ? 'em_curso' : 'por_fazer', iniciado: r?.iniciado || null, xp_ganho: r?.xp || 0 }
     }),
     insignias: INSIGNIAS.map(i => ({ id: i.id, nome: i.nome, desc: i.desc, tem: (conq.data || []).some(c => c.insignia === i.id) })),
@@ -161,7 +161,7 @@ export async function POST(req: NextRequest) {
     const resposta = t(b?.resposta, 1500)
     if (mi.tipo !== 'treino' && resposta.length < eco.min_resposta) return erro(`Escreve pelo menos ${eco.min_resposta} caracteres. É aqui que a missão conta.`)
 
-    const { data: hojeRegs } = await db().from('rg_app_registos').select('xp, concluido').eq('membro_id', m.id).eq('dia', dia)
+    const { data: hojeRegs } = await db().from('rg_app_registos').select('missao_id, xp, concluido').eq('membro_id', m.id).eq('dia', dia)
     const ganhoHoje = (hojeRegs || []).reduce((s, r) => s + (r.xp || 0), 0)
     const feitasAntes = (hojeRegs || []).filter(r => r.concluido).length
     let xp = Math.max(0, Math.min(mi.xp, eco.xp_dia_max - ganhoHoje))
@@ -175,7 +175,9 @@ export async function POST(req: NextRequest) {
       up.sequencia = seq; up.melhor_sequencia = Math.max(m.melhor_sequencia, seq); up.ultimo_dia = dia; up.dias_ativos = m.dias_ativos + 1
       if (seq > 0 && seq % 7 === 0 && m.ultimo_dia !== dia) moedas += eco.moedas_semana
     }
-    const completo = feitasAntes + 1 >= missoes.length
+    // O dia fica completo com as 3 missões diárias; o desafio da semana é um extra.
+    const diarias = missoes.filter(x => !x.desafio).map(x => x.id)
+    const completo = !mi.desafio && diarias.every(id => id === mi.id || (hojeRegs || []).some(r => r.missao_id === id && r.concluido))
     if (completo) {
       bonus = Math.max(0, Math.min(eco.bonus_dia_completo, eco.xp_dia_max - ganhoHoje - xp))
       if (bonus) await db().from('rg_app_registos').update({ xp: xp + bonus }).eq('id', reg.id)
