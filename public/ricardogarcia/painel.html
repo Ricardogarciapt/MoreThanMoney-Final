@@ -253,9 +253,10 @@ dialog h2 { font-size: 24px; font-style: italic; margin-bottom: 14px; }
     produtos: '<svg viewBox="0 0 24 24"><path d="M6 7h12l-1 13H7z"/><path d="M9 7a3 3 0 0 1 6 0"/></svg>',
     contactos: '<svg viewBox="0 0 24 24"><path d="M4 5h16v11H8l-4 4z"/><path d="M8 10h8"/></svg>',
     agenda: '<svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></svg>',
-    metas: '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1.5"/></svg>'
+    metas: '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1.5"/></svg>',
+    app: '<svg viewBox="0 0 24 24"><path d="M12 2l8 3v6c0 5-3.5 9-8 11-4.5-2-8-6-8-11V5z"/><path d="M8 12l3 3 5-6"/></svg>'
   };
-  var VISTAS = [['hoje', 'Hoje'], ['pagina', 'Página'], ['produtos', 'Produtos'], ['contactos', 'Contactos'], ['agenda', 'Agenda'], ['metas', 'Metas']];
+  var VISTAS = [['hoje', 'Hoje'], ['pagina', 'Página'], ['produtos', 'Produtos'], ['contactos', 'Contactos'], ['agenda', 'Agenda'], ['metas', 'Metas'], ['app', 'App']];
 
   function cl(id) { return ((S.metricas || {}).porAlvo || {})[id] || 0; }
   function novos() { return S.contactos.filter(function (c) { return c.estado === 'novo'; }).length; }
@@ -276,7 +277,7 @@ dialog h2 { font-size: 24px; font-style: italic; margin-bottom: 14px; }
     if (v !== 'pagina') sujo = false;
     vista = v; try { history.replaceState(null, '', '#' + v); } catch (e) {}
     $$('[data-v]').forEach(function (b) { b.classList.toggle('on', b.getAttribute('data-v') === v); });
-    var el = $('#vista'); ({ hoje: vHoje, pagina: vPagina, produtos: vProdutos, contactos: vContactos, agenda: vAgenda, metas: vMetas })[v](el);
+    var el = $('#vista'); el.onclick = null; ({ hoje: vHoje, pagina: vPagina, produtos: vProdutos, contactos: vContactos, agenda: vAgenda, metas: vMetas, app: vApp })[v](el);
     window.scrollTo(0, 0);
   }
   function badges() { $$('[data-v="contactos"]').forEach(function (b) { var n = b.querySelector('.n'), k = novos(); if (k) { if (!n) { n = document.createElement('span'); n.className = 'n'; b.appendChild(n); } n.textContent = k; } else if (n) n.remove(); }); }
@@ -377,7 +378,7 @@ dialog h2 { font-size: 24px; font-style: italic; margin-bottom: 14px; }
     var TIPOS = { links: 'Links', produtos: 'Produtos', contacto: 'Formulário' };
     el.innerHTML = '<div class="cab"><div><h1>A minha página</h1><p>Secções, atalhos e links da tua landing. Liga, desliga, reordena e escreve.</p></div>' +
       '<div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn" id="novaSec">+ Secção</button><a class="btn" href="/ricardogarcia#atalhos" target="_blank" rel="noopener">Pré-visualizar ↗</a></div></div>' +
-      '<div id="lSec"></div><div class="barra-guardar" id="barGuardar" hidden><span>Tens alterações por publicar.</span><span style="display:flex;gap:8px"><button class="btn fant" id="descartar">Descartar</button><button class="btn ouro" id="publicar">Publicar na página</button></span></div>';
+      '<div class="sec aberta" id="lBlocos"></div><h2 style="margin:22px 0 10px;font-size:20px">Botões dos atalhos</h2><div id="lSec"></div><div class="barra-guardar" id="barGuardar" hidden><span>Tens alterações por publicar.</span><span style="display:flex;gap:8px"><button class="btn fant" id="descartar">Descartar</button><button class="btn ouro" id="publicar">Publicar na página</button></span></div>';
     var abertas = vPagina.abertas || (vPagina.abertas = {});
     function marcar() { sujo = true; $('#barGuardar').hidden = false; }
     function pinta() {
@@ -400,6 +401,31 @@ dialog h2 { font-size: 24px; font-style: italic; margin-bottom: 14px; }
       $('#barGuardar').hidden = !sujo;
     }
     pinta();
+    // Ordem e visibilidade dos blocos grandes da landing (guarda logo, sem precisar de publicar)
+    var NOMES_B = { historia: 'Vídeo · A minha história', trajeto: 'O trajeto (6 cartões)', manifesto: 'Manifesto', liga: 'Onde tudo se liga', caminhos: 'Escolhe o teu caminho', atalhos: 'Por onde queres ir? (atalhos)', app: 'A minha app: Missão', loja: 'Produtos digitais', parceiros: 'Parceiros', agendar: 'Marcar conversa', contacto: 'Formulário de contacto', redes: 'Redes sociais' };
+    var PADRAO_B = ['historia', 'trajeto', 'manifesto', 'liga', 'caminhos', 'atalhos', 'app', 'loja', 'parceiros', 'agendar', 'contacto', 'redes'];
+    function blocos() {
+      var g = dado('landing_blocos', null), lista = [];
+      (Array.isArray(g) ? g : []).forEach(function (b) { if (NOMES_B[b.id] && !lista.some(function (x) { return x.id === b.id; })) lista.push({ id: b.id, ativo: b.ativo !== false }); });
+      PADRAO_B.forEach(function (id) { if (!lista.some(function (x) { return x.id === id; })) lista.push({ id: id, ativo: true }); });
+      return lista;
+    }
+    function pintaBlocos() {
+      var l = blocos();
+      $('#lBlocos').innerHTML = '<div class="sec-cab"><h3>Ordem da página</h3><span class="pilula tipo">guarda sozinho</span></div><div class="sec-corpo"><p class="vazio" style="margin-top:0">O topo (foto e título) fica sempre primeiro. Sobe, desce ou esconde os blocos da landing.</p>' +
+        l.map(function (b, i) { return '<div class="item" style="grid-template-columns:auto 1fr auto auto;display:grid;gap:10px;align-items:center"><label class="toggle" title="Mostrar"><input type="checkbox" data-ba="' + i + '" ' + (b.ativo ? 'checked' : '') + ' aria-label="Mostrar ' + esc(NOMES_B[b.id]) + '"><i></i></label><span' + (b.ativo ? '' : ' style="opacity:.5"') + '>' + esc(NOMES_B[b.id]) + '</span><button class="x" data-bup="' + i + '" aria-label="Subir" ' + (i ? '' : 'disabled') + '>↑</button><button class="x" data-bdn="' + i + '" aria-label="Descer" ' + (i < l.length - 1 ? '' : 'disabled') + '>↓</button></div>'; }).join('') + '</div>';
+    }
+    pintaBlocos();
+    $('#lBlocos').addEventListener('click', function (e) {
+      var b = e.target.closest('button'); if (!b) return; var l = blocos(), a;
+      if ((a = b.getAttribute('data-bup')) != null) l.splice(+a - 1, 0, l.splice(+a, 1)[0]);
+      else if ((a = b.getAttribute('data-bdn')) != null) l.splice(+a + 1, 0, l.splice(+a, 1)[0]);
+      else return;
+      guardarDado('landing_blocos', l); pintaBlocos(); aviso('Ordem guardada ✓');
+    });
+    $('#lBlocos').addEventListener('change', function (e) {
+      var a = e.target.getAttribute('data-ba'); if (a == null) return; var l = blocos(); l[+a].ativo = e.target.checked; guardarDado('landing_blocos', l); pintaBlocos();
+    });
     var L = $('#lSec');
     L.addEventListener('input', function (e) {
       var t = e.target, a;
@@ -511,6 +537,86 @@ dialog h2 { font-size: 24px; font-style: italic; margin-bottom: 14px; }
 
   // ───────────── METAS ─────────────
   var mesVista = null;
+  // ───────────── APP «MISSÃO» ─────────────
+  var A = null, abaApp = 'pedidos';
+  function vApp(el) {
+    if (!A) { el.innerHTML = '<div class="cab"><div><h1>App Missão</h1><p>A carregar…</p></div></div>';
+      fetch('/api/ricardogarcia/painel/app', { credentials: 'same-origin' }).then(function (r) { return r.json(); }).then(function (j) { if (j.error) throw new Error(j.message || j.error); A = j; vApp(el); })
+        .catch(function (e) { el.innerHTML = '<p class="vazio">Não abriu: ' + esc(e.message) + '</p>'; }); return; }
+    function post(c) { return fetch('/api/ricardogarcia/painel/app', { method: 'POST', credentials: 'same-origin', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(c) }).then(function (r) { return r.json(); }).then(function (j) { if (!j.ok) throw new Error(j.erro || 'Erro'); return j; }); }
+    function recarregar(msg) { A = null; if (msg) aviso(msg); vApp(el); }
+    var R = A.resumo, ABAS = [['pedidos', 'Pedidos' + (R.pendentes ? ' (' + R.pendentes + ')' : '')], ['membros', 'Membros'], ['recompensas', 'Recompensas'], ['missoes', 'Missões'], ['economia', 'Economia'], ['convidar', 'Convidar leads']];
+    var h = '<div class="cab"><div><h1>App Missão</h1><p>A tua app para leads: missões diárias, patentes, moedas e recompensas. Cada membro entra no pipeline MTM.</p></div><a class="btn" href="/ricardogarcia/app" target="_blank" rel="noopener">Abrir a app ↗</a></div>' +
+      '<div class="kpis"><div class="kpi"><b>' + R.membros + '</b><span>Membros</span></div><div class="kpi"><b>' + R.ativos7 + '</b><span>Activos em 7 dias</span></div><div class="kpi"><b>' + R.hoje + '</b><span>Activos hoje</span></div><div class="kpi"><b>' + R.pendentes + '</b><span>Pedidos por decidir</span></div></div>' +
+      '<div class="filtros" style="margin:16px 0">' + ABAS.map(function (a) { return '<button class="btn peq ' + (abaApp === a[0] ? 'pri' : '') + '" data-aa="' + a[0] + '">' + a[1] + '</button>'; }).join('') + '</div><section class="cx">';
+    var EST = { pendente: 'Por decidir', aprovado: 'Aprovado', recusado: 'Recusado', entregue: 'Entregue' };
+    if (abaApp === 'pedidos') h += A.resgates.length ? A.resgates.map(function (r) {
+      return '<div class="contacto"><div><b>' + esc(r.recompensa || '') + '</b> <span class="pilula ' + (r.estado === 'pendente' ? 'novo' : '') + '">' + EST[r.estado] + '</span><div class="sub">' + esc(r.membro || '') + ' · ' + esc(r.email || '') + ' · ' + r.custo + ' moedas · ' + new Date(r.criado).toLocaleDateString('pt-PT') + '</div></div><div class="acc">' +
+        (r.estado === 'pendente' ? '<button class="btn peq pri" data-rs="' + r.id + '|aprovado">Aprovar</button><button class="btn peq" data-rs="' + r.id + '|recusado">Recusar e devolver</button>' : r.estado === 'aprovado' ? '<button class="btn peq pri" data-rs="' + r.id + '|entregue">Marcar entregue</button>' : '') + '</div></div>';
+    }).join('') : '<p class="vazio">Sem pedidos de recompensa ainda.</p>';
+    if (abaApp === 'membros') h += A.membros.length ? A.membros.map(function (m) {
+      var tel = (m.telefone || '').replace(/[^\d+]/g, ''), wa = tel ? 'https://wa.me/' + tel.replace(/^\+/, '').replace(/^(9\d{8})$/, '351$1') : '';
+      return '<div class="contacto"><div><b>' + esc(m.nome) + '</b> <span class="pilula">' + esc(m.patente_nome || '') + '</span>' + (m.conta_mtm ? ' <span class="pilula novo">Conta MTM: ' + esc(m.conta_mtm) + '</span>' : '') + (m.pipeline ? ' <span class="pilula">Pipeline: ' + esc(m.pipeline) + '</span>' : '') + (m.estado !== 'ativo' ? ' <span class="pilula">Bloqueado</span>' : '') +
+        '<div class="sub">' + esc(m.email) + (m.telefone ? ' · ' + esc(m.telefone) : '') + ' · ' + m.xp + ' XP · ' + m.moedas + ' moedas · ' + m.dias_ativos + ' dias activos · série ' + m.sequencia + ' · desde ' + new Date(m.criado).toLocaleDateString('pt-PT') + '</div></div><div class="acc">' +
+        (wa ? '<a class="btn peq pri" href="' + esc(wa) + '" target="_blank" rel="noopener">WhatsApp</a>' : '') + '<button class="btn peq" data-me="' + m.id + '|' + (m.estado === 'ativo' ? 'bloqueado' : 'ativo') + '">' + (m.estado === 'ativo' ? 'Bloquear' : 'Reactivar') + '</button></div></div>';
+    }).join('') : '<p class="vazio">Ainda ninguém se alistou. Partilha morethanmoney.pt/ricardogarcia/app.</p>';
+    if (abaApp === 'recompensas') {
+      h += '<p class="vazio" style="margin-top:0">Os travões (dias na app, dias activos, patente, intervalo e stock por mês) são verificados no servidor. Ninguém recebe uma mensalidade na primeira semana.</p>' + A.recompensas.concat([{ id: '', titulo: '', descricao: '', custo: 50, min_dias_conta: 14, min_dias_ativos: 10, min_patente: 1, cooldown_dias: 60, stock_mes: '', activo: true, ordem: 9 }]).map(function (r, i) {
+        var ehNova = !r.id;
+        return '<div class="sec aberta" style="margin-bottom:12px"><div class="sec-cab"><h3>' + (ehNova ? '+ Nova recompensa' : esc(r.titulo)) + '</h3></div><div class="sec-corpo" data-rec="' + i + '">' +
+          '<div class="linha2"><label class="campo"><span>Nome</span><input data-k="titulo" value="' + esc(r.titulo) + '"></label><label class="campo"><span>Descrição</span><input data-k="descricao" value="' + esc(r.descricao || '') + '"></label></div>' +
+          '<div class="linha2" style="grid-template-columns:repeat(3,1fr)"><label class="campo"><span>Custo (moedas)</span><input type="number" data-k="custo" value="' + r.custo + '"></label><label class="campo"><span>Dias mínimos na app</span><input type="number" data-k="min_dias_conta" value="' + r.min_dias_conta + '"></label><label class="campo"><span>Dias activos mínimos</span><input type="number" data-k="min_dias_ativos" value="' + r.min_dias_ativos + '"></label>' +
+          '<label class="campo"><span>Patente mínima</span><select data-k="min_patente">' + A.patentes.map(function (p, k) { return '<option value="' + k + '" ' + (k === r.min_patente ? 'selected' : '') + '>' + p.nome + '</option>'; }).join('') + '</select></label><label class="campo"><span>Intervalo entre pedidos (dias)</span><input type="number" data-k="cooldown_dias" value="' + r.cooldown_dias + '"></label><label class="campo"><span>Stock por mês (vazio = sem limite)</span><input type="number" data-k="stock_mes" value="' + (r.stock_mes == null ? '' : r.stock_mes) + '"></label></div>' +
+          '<div style="display:flex;justify-content:space-between;align-items:center;margin-top:10px"><label style="display:flex;gap:8px;align-items:center"><input type="checkbox" data-k="activo" ' + (r.activo ? 'checked' : '') + '> Activa</label><button class="btn peq pri" data-grec="' + i + '">' + (ehNova ? 'Criar' : 'Guardar') + '</button></div></div></div>';
+      }).join('');
+    }
+    if (abaApp === 'missoes') {
+      var TIP = { treino: '🔥 Treino', mindset: '🧠 Mindset', digital: '⚡ Digital' };
+      h += '<p class="vazio" style="margin-top:0">Rodam por dia: uma de cada tipo. Nos treinos, o tempo mínimo é verificado no servidor. Em mindset e digital, a pessoa escreve uma reflexão ou acção.</p>' + A.missoes.concat([{ id: '', tipo: 'treino', titulo: '', resumo: '', conteudo: { passos: [] }, xp: 30, min_seg: 420, ordem: 9, activo: true }]).map(function (m, i) {
+        var c = m.conteudo || {}, corpo = m.tipo === 'treino' ? (c.passos || []).join('\n') : (c.texto || '');
+        var perg = m.tipo === 'treino' ? (c.nota || '') : (c.pergunta || c.acao || '');
+        return '<div class="sec ' + (m.activo ? '' : 'off') + '" style="margin-bottom:10px"><div class="sec-cab"><h3>' + (m.id ? esc(m.titulo) : '+ Nova missão') + '</h3><span class="pilula tipo">' + TIP[m.tipo] + (m.id ? ' · +' + m.xp + ' XP' : '') + '</span><button class="btn peq" data-mab="' + i + '">Editar</button></div><div class="sec-corpo" data-mis="' + i + '" data-id="' + esc(m.id) + '">' +
+          '<div class="linha2"><label class="campo"><span>Tipo</span><select data-k="tipo">' + Object.keys(TIP).map(function (t) { return '<option value="' + t + '" ' + (t === m.tipo ? 'selected' : '') + '>' + TIP[t] + '</option>'; }).join('') + '</select></label><label class="campo"><span>Título</span><input data-k="titulo" value="' + esc(m.titulo) + '"></label></div>' +
+          '<label class="campo"><span>Resumo</span><input data-k="resumo" value="' + esc(m.resumo || '') + '"></label>' +
+          '<label class="campo"><span>Treino: um passo por linha · Mindset/Digital: o texto</span><textarea data-k="corpo" rows="5">' + esc(corpo) + '</textarea></label>' +
+          '<label class="campo"><span>Treino: nota · Mindset/Digital: pergunta ou acção</span><input data-k="perg" value="' + esc(perg) + '"></label>' +
+          '<div class="linha2" style="grid-template-columns:repeat(3,1fr)"><label class="campo"><span>XP (máx. 60)</span><input type="number" data-k="xp" value="' + m.xp + '"></label><label class="campo"><span>Tempo mínimo (s, treino)</span><input type="number" data-k="min_seg" value="' + m.min_seg + '"></label><label class="campo"><span>Ordem</span><input type="number" data-k="ordem" value="' + m.ordem + '"></label></div>' +
+          '<div style="display:flex;justify-content:space-between;align-items:center;margin-top:10px"><label style="display:flex;gap:8px;align-items:center"><input type="checkbox" data-k="activo" ' + (m.activo ? 'checked' : '') + '> Activa</label><button class="btn peq pri" data-gmis="' + i + '">' + (m.id ? 'Guardar' : 'Criar') + '</button></div></div></div>';
+      }).join('');
+    }
+    if (abaApp === 'economia') {
+      var NOM = { xp_dia_max: 'Tecto de XP por dia', bonus_dia_completo: 'XP extra por dia completo', moedas_dia_completo: 'Moedas por dia completo', moedas_semana: 'Moedas por 7 dias seguidos', moedas_patente: 'Moedas por subida de patente', moedas_insignia: 'Moedas por insígnia', min_resposta: 'Caracteres mínimos numa reflexão' };
+      h += '<p class="vazio" style="margin-top:0">O XP mede a reputação e não se gasta. As moedas gastam-se, e só se ganham com constância. Com os valores de origem, alguém muito constante junta à volta de 12 moedas por semana: a mensalidade (150) pede uns 3 meses.</p><div class="linha2" style="grid-template-columns:repeat(2,1fr)">' +
+        Object.keys(NOM).map(function (k) { return '<label class="campo"><span>' + NOM[k] + ' (origem ' + A.economia_base[k] + ')</span><input type="number" data-eco="' + k + '" value="' + A.economia[k] + '"></label>'; }).join('') + '</div><button class="btn pri" id="gEco" style="margin-top:12px">Guardar economia</button>' +
+        '<h3 style="margin:22px 0 8px">Patentes</h3>' + A.patentes.map(function (p) { return '<span class="pilula" style="margin:0 6px 6px 0;display:inline-block">' + p.nome + ' · ' + p.xp + ' XP</span>'; }).join('');
+    }
+    if (abaApp === 'convidar') h += '<p class="vazio" style="margin-top:0">Leads do pipeline MTM que ainda não estão na app. Um toque abre o WhatsApp com o convite pronto.</p>' + (A.convidar.length ? A.convidar.map(function (l) {
+      var tel = (l.telefone || '').replace(/[^\d+]/g, '').replace(/^\+/, '').replace(/^(9\d{8})$/, '351$1');
+      var txt = 'Olá ' + String(l.nome || '').split(' ')[0] + ', é o Ricardo Garcia. Criei uma app grátis com missões diárias de treino, mindset e digital com IA. Começa aqui: https://www.morethanmoney.pt/ricardogarcia/app?o=convite';
+      return '<div class="contacto"><div><b>' + esc(l.nome) + '</b> <span class="pilula">' + esc(l.origem || '') + ' · ' + esc(l.estado || '') + '</span><div class="sub">' + esc(l.telefone || '') + (l.email ? ' · ' + esc(l.email) : '') + '</div></div><div class="acc"><a class="btn peq pri" target="_blank" rel="noopener" href="https://wa.me/' + esc(tel) + '?text=' + encodeURIComponent(txt) + '">Convidar no WhatsApp</a></div></div>';
+    }).join('') : '<p class="vazio">Sem leads por convidar.</p>');
+    el.innerHTML = h + '</section>';
+    $$('[data-aa]', el).forEach(function (b) { b.addEventListener('click', function () { abaApp = b.getAttribute('data-aa'); vApp(el); }); });
+    el.onclick = function (e) {
+      var b = e.target.closest('button'); if (!b) return; var a, cx;
+      if ((a = b.getAttribute('data-rs'))) { var p = a.split('|'); if (p[1] === 'recusado' && !confirm('Recusar e devolver as moedas?')) return; b.disabled = true; post({ acao: 'resgate', id: p[0], estado: p[1] }).then(function () { recarregar('Pedido actualizado ✓'); }, function (er) { aviso(er.message); b.disabled = false; }); }
+      else if ((a = b.getAttribute('data-me'))) { var q = a.split('|'); post({ acao: 'membro_estado', id: q[0], estado: q[1] }).then(function () { recarregar('Membro actualizado ✓'); }, function (er) { aviso(er.message); }); }
+      else if ((a = b.getAttribute('data-grec')) != null) {
+        cx = el.querySelector('[data-rec="' + a + '"]'); var base = A.recompensas[+a] || {}, r = { id: base.id };
+        $$('[data-k]', cx).forEach(function (i) { r[i.getAttribute('data-k')] = i.type === 'checkbox' ? i.checked : i.value; });
+        b.disabled = true; post({ acao: 'recompensa', recompensa: r }).then(function () { recarregar('Recompensa guardada ✓'); }, function (er) { aviso(er.message); b.disabled = false; });
+      }
+      else if ((a = b.getAttribute('data-mab')) != null) { b.closest('.sec').classList.toggle('aberta'); }
+      else if ((a = b.getAttribute('data-gmis')) != null) {
+        cx = el.querySelector('[data-mis="' + a + '"]'); var v = {}; $$('[data-k]', cx).forEach(function (i) { v[i.getAttribute('data-k')] = i.type === 'checkbox' ? i.checked : i.value; });
+        var conteudo = v.tipo === 'treino' ? { passos: v.corpo.split('\n').map(function (x) { return x.trim(); }).filter(Boolean), nota: v.perg } : v.tipo === 'mindset' ? { texto: v.corpo, pergunta: v.perg } : { texto: v.corpo, acao: v.perg };
+        b.disabled = true; post({ acao: 'missao', missao: { id: cx.getAttribute('data-id'), tipo: v.tipo, titulo: v.titulo, resumo: v.resumo, conteudo: conteudo, xp: v.xp, min_seg: v.tipo === 'treino' ? v.min_seg : 0, ordem: v.ordem, activo: v.activo } })
+          .then(function () { recarregar('Missão guardada ✓'); }, function (er) { aviso(er.message); b.disabled = false; });
+      }
+      else if (b.id === 'gEco') { var eco = {}; $$('[data-eco]', el).forEach(function (i) { eco[i.getAttribute('data-eco')] = i.value; }); post({ acao: 'economia', economia: eco }).then(function () { recarregar('Economia guardada ✓'); }, function (er) { aviso(er.message); }); }
+    };
+  }
+
   function vMetas(el) {
     var d = new Date(); if (!mesVista) mesVista = d.getFullYear() + '-' + pad(d.getMonth() + 1);
     var km = 'metas:' + mesVista, M = dado(km, []), O = dado('objetivos', []);

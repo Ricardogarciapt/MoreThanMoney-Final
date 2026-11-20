@@ -1,0 +1,262 @@
+<!doctype html>
+<html lang="pt-PT">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Missão · a app de disciplina do Ricardo Garcia</title>
+<meta name="description" content="Três missões por dia: treino, mindset e digital. Sobe de patente, ganha insígnias e troca a tua constância por recompensas reais. Grátis.">
+<meta name="theme-color" content="#07080c">
+<link rel="icon" href="/ricardogarcia/icone.png">
+<link rel="apple-touch-icon" href="/ricardogarcia/app-icones/apple-180.png">
+<link rel="canonical" href="https://www.morethanmoney.pt/missao">
+<meta property="og:title" content="Missão · a app de disciplina do Ricardo Garcia">
+<meta property="og:description" content="Três missões por dia. Patentes, insígnias e recompensas que se ganham com constância.">
+<meta property="og:image" content="https://www.morethanmoney.pt/ricardogarcia/app-icones/512.png">
+<meta property="og:url" content="https://www.morethanmoney.pt/missao">
+<style>
+@font-face { font-family: "Anton"; src: url(/ricardogarcia/fontes/Anton.ttf); font-display: swap; }
+@font-face { font-family: "Oswald"; src: url(/ricardogarcia/fontes/Oswald.ttf); font-display: swap; }
+@font-face { font-family: "Kalam"; src: url(/ricardogarcia/fontes/Kalam.ttf); font-display: swap; }
+:root { --fundo:#07080c; --placa:#0f121a; --placa2:#141925; --linha:#232a38; --texto:#e9edf3; --cinza:#8b93a3; --ciano:#1EAAE6; --azul:#1256BE; --ouro:#D2A63C; --ouro2:#E9C46A; }
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html { scroll-behavior: smooth; }
+body { background: var(--fundo); color: var(--texto); font-family: "Oswald", system-ui, sans-serif; line-height: 1.5; overflow-x: hidden;
+  background-image: linear-gradient(rgba(255,255,255,.025) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,.025) 1px, transparent 1px); background-size: 44px 44px; }
+a { color: inherit; text-decoration: none; }
+.wrap { max-width: 1120px; margin: 0 auto; padding: 0 20px; }
+header { position: sticky; top: 0; z-index: 10; background: rgba(7,8,12,.85); backdrop-filter: blur(10px); border-bottom: 1px solid var(--linha); }
+header .wrap { display: flex; align-items: center; justify-content: space-between; height: 64px; gap: 12px; }
+.marca { display: flex; align-items: center; gap: 10px; font-family: "Anton"; font-size: 22px; letter-spacing: .04em; }
+.marca img { width: 34px; height: 34px; border-radius: 8px; }
+.marca small { font-family: "Oswald"; font-size: 12px; color: var(--cinza); letter-spacing: .12em; text-transform: uppercase; }
+.btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; padding: 13px 22px; border-radius: 12px; font-weight: 600; letter-spacing: .03em; border: 1px solid transparent; transition: transform .15s, box-shadow .2s; cursor: pointer; white-space: nowrap; }
+.btn:hover { transform: translateY(-1px); }
+.btn-ouro { background: linear-gradient(135deg, var(--ouro2), var(--ouro)); color: #17130a; box-shadow: 0 8px 30px rgba(210,166,60,.25); }
+.btn-linha { border-color: var(--linha); background: var(--placa); }
+.btn-pq { padding: 9px 16px; font-size: 14px; }
+.hero { padding-top: 72px; padding-bottom: 56px; display: grid; grid-template-columns: 1.15fr .85fr; gap: 48px; align-items: center; }
+.selo { display: inline-flex; gap: 8px; align-items: center; font-size: 13px; letter-spacing: .14em; text-transform: uppercase; color: var(--ouro2); border: 1px solid rgba(210,166,60,.35); padding: 6px 12px; border-radius: 999px; }
+h1 { font-family: "Anton"; font-weight: 400; font-size: clamp(44px, 7vw, 86px); line-height: .98; letter-spacing: .01em; margin: 18px 0 18px; text-transform: uppercase; }
+h1 em { font-style: normal; color: var(--ouro2); }
+.lead { font-size: 19px; color: #c4cad6; max-width: 560px; font-weight: 300; }
+.acoes { display: flex; gap: 12px; flex-wrap: wrap; margin-top: 28px; }
+.nota { margin-top: 14px; font-size: 13px; color: var(--cinza); }
+.tel { justify-self: center; width: 290px; aspect-ratio: 9/19; border-radius: 40px; background: #0b0d13; border: 1px solid #2a3142; padding: 14px; box-shadow: 0 40px 90px rgba(0,0,0,.6), 0 0 0 8px #10131b, 0 0 80px rgba(30,170,230,.12); position: relative; }
+.tel .ecra { height: 100%; border-radius: 28px; background: var(--fundo); padding: 22px 14px; display: flex; flex-direction: column; gap: 10px; overflow: hidden; }
+.tel .topo { display: flex; justify-content: space-between; align-items: center; font-size: 12px; color: var(--cinza); }
+.tel .moeda { color: var(--ouro2); font-weight: 600; }
+.escudo { display: flex; align-items: center; gap: 12px; padding: 12px; border-radius: 16px; background: var(--placa); border: 1px solid var(--linha); }
+.escudo svg { flex: 0 0 auto; }
+.escudo b { font-family: "Anton"; font-weight: 400; font-size: 20px; letter-spacing: .03em; display: block; }
+.barra { height: 6px; background: #1c2230; border-radius: 9px; margin-top: 6px; overflow: hidden; }
+.barra i { display: block; height: 100%; width: 62%; background: linear-gradient(90deg, var(--ciano), var(--ouro2)); }
+.mini { display: flex; gap: 10px; align-items: center; padding: 11px; border-radius: 14px; background: var(--placa); border: 1px solid var(--linha); font-size: 13px; }
+.mini span:first-child { font-size: 20px; }
+.mini .xp { margin-left: auto; color: var(--ouro2); font-weight: 600; }
+.mini.feita .xp { color: #3ccf8e; }
+.tel .ilus { position: absolute; bottom: -28px; left: 0; right: 0; text-align: center; font-size: 11px; color: var(--cinza); letter-spacing: .1em; text-transform: uppercase; }
+section { padding: 64px 0; }
+.titulo { font-family: "Anton"; font-weight: 400; font-size: clamp(32px, 4.6vw, 52px); text-transform: uppercase; line-height: 1.05; margin-bottom: 12px; }
+.titulo em { font-style: normal; color: var(--ciano); }
+.sub { color: var(--cinza); font-size: 17px; max-width: 640px; margin-bottom: 34px; }
+.grelha { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+.cartao { background: linear-gradient(180deg, var(--placa2), var(--placa)); border: 1px solid var(--linha); border-radius: 20px; padding: 26px; }
+.cartao .ic { font-size: 30px; }
+.cartao h3 { font-family: "Anton"; font-weight: 400; font-size: 26px; letter-spacing: .02em; text-transform: uppercase; margin: 10px 0 6px; }
+.cartao p { color: #b5bcc9; font-weight: 300; }
+.cartao ul { margin-top: 12px; list-style: none; color: var(--cinza); font-size: 15px; }
+.cartao li::before { content: "› "; color: var(--ouro); }
+.passos { counter-reset: p; display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; }
+.passo { border-top: 2px solid var(--ouro); padding-top: 16px; }
+.passo::before { counter-increment: p; content: "0" counter(p); font-family: "Anton"; font-size: 36px; color: var(--ouro2); }
+.passo h4 { font-size: 19px; margin: 4px 0; }
+.passo p { color: var(--cinza); font-weight: 300; font-size: 15px; }
+.patentes { display: flex; flex-wrap: wrap; gap: 8px; }
+.patentes span { padding: 8px 14px; border: 1px solid var(--linha); border-radius: 999px; background: var(--placa); font-size: 14px; letter-spacing: .04em; }
+.patentes span:nth-child(n+6) { border-color: rgba(30,170,230,.35); }
+.patentes span:nth-child(n+9) { border-color: rgba(210,166,60,.5); color: var(--ouro2); }
+.recs { display: grid; grid-template-columns: repeat(5, 1fr); gap: 12px; }
+.rec { border: 1px solid var(--linha); background: var(--placa); border-radius: 16px; padding: 18px; }
+.rec b { display: block; font-size: 17px; margin-bottom: 6px; }
+.rec small { color: var(--cinza); font-size: 13px; display: block; }
+.regras { margin-top: 22px; padding: 18px 20px; border-left: 3px solid var(--ciano); background: rgba(30,170,230,.06); border-radius: 0 12px 12px 0; color: #c4cad6; font-weight: 300; }
+.frase { font-family: "Kalam"; font-size: clamp(24px, 3.4vw, 36px); color: var(--ouro2); text-align: center; max-width: 820px; margin: 0 auto; line-height: 1.4; }
+.instalar { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+.faq details { border-bottom: 1px solid var(--linha); padding: 18px 0; }
+.faq summary { cursor: pointer; font-size: 19px; list-style: none; display: flex; justify-content: space-between; gap: 12px; }
+.faq summary::after { content: "+"; color: var(--ouro2); font-size: 24px; line-height: 1; }
+.faq details[open] summary::after { content: "–"; }
+.faq p { color: #b5bcc9; font-weight: 300; margin-top: 10px; max-width: 760px; }
+.final { text-align: center; padding: 80px 0; }
+.final .acoes { justify-content: center; }
+footer { border-top: 1px solid var(--linha); padding: 30px 0 40px; color: var(--cinza); font-size: 13px; }
+footer .wrap { display: flex; flex-wrap: wrap; gap: 14px; justify-content: space-between; }
+footer a { color: #c4cad6; }
+@media (max-width: 960px) {
+  .hero { grid-template-columns: 1fr; padding-top: 44px; }
+  .tel { width: 250px; }
+  .grelha, .instalar { grid-template-columns: 1fr; }
+  .passos { grid-template-columns: 1fr 1fr; }
+  .recs { grid-template-columns: 1fr 1fr; }
+}
+@media (max-width: 520px) {
+  .marca small { display: none; }
+  .passos, .recs { grid-template-columns: 1fr; }
+  .acoes .btn { flex: 1 1 100%; }
+  section { padding: 48px 0; }
+}
+@media (prefers-reduced-motion: reduce) { .btn { transition: none; } html { scroll-behavior: auto; } }
+</style>
+</head>
+<body>
+<header>
+  <div class="wrap">
+    <a class="marca" href="/missao"><img src="/ricardogarcia/app-icones/192.png" alt="" width="34" height="34">MISSÃO <small>com o Ricardo Garcia</small></a>
+    <div style="display:flex;gap:8px">
+      <a class="btn btn-linha btn-pq" href="/ricardogarcia/app?utm_source=missao&entrar=1" data-alvo="entrar">Entrar</a>
+      <a class="btn btn-ouro btn-pq" href="/ricardogarcia/app?utm_source=missao&utm_medium=topo&r=1" data-alvo="alistar-topo">Começar grátis</a>
+    </div>
+  </div>
+</header>
+
+<main>
+  <div class="wrap hero">
+    <div>
+      <span class="selo">● App gratuita · web, Android e iPhone</span>
+      <h1>Três missões por dia.<br><em>Uma versão melhor de ti.</em></h1>
+      <p class="lead">Um treino com o peso do corpo, uma reflexão de mindset e uma acção digital. Quinze minutos que, repetidos, viram disciplina. Sobes de patente, ganhas insígnias e trocas a tua constância por recompensas.</p>
+      <div class="acoes">
+        <a class="btn btn-ouro" href="/ricardogarcia/app?utm_source=missao&utm_medium=hero&r=1" data-alvo="alistar-hero">Alistar-me agora</a>
+        <a class="btn btn-linha" href="#como">Como funciona</a>
+      </div>
+      <p class="nota">Sem cartão. Sem publicidade. Instalas no ecrã principal em 10 segundos.</p>
+    </div>
+    <div class="tel" aria-hidden="true">
+      <div class="ecra">
+        <div class="topo"><span>BASE</span><span class="moeda">● 12</span></div>
+        <div class="escudo">
+          <svg width="44" height="50" viewBox="0 0 44 50"><path d="M22 2 40 9v14c0 12-8 21-18 25C12 44 4 35 4 23V9z" fill="#141925" stroke="#E9C46A" stroke-width="2"/><path d="m14 24 6 6 10-12" fill="none" stroke="#1EAAE6" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          <div style="flex:1"><small style="color:var(--cinza);font-size:11px">PATENTE</small><b>SOLDADO</b><div class="barra"><i></i></div></div>
+        </div>
+        <div class="mini feita"><span>🔥</span><span>Core de aço</span><span class="xp">✓ +30</span></div>
+        <div class="mini"><span>🧠</span><span>O que controlas hoje</span><span class="xp">+20</span></div>
+        <div class="mini"><span>⚡</span><span>A tua bio em 3 linhas</span><span class="xp">+25</span></div>
+        <div class="mini"><span>🏅</span><span>Sete dias seguidos</span><span class="xp">3/7</span></div>
+        <div class="mini" style="margin-top:auto;border-color:rgba(210,166,60,.4)"><span>🎁</span><span>Guia em PDF</span><span class="xp">15 ●</span></div>
+        <p style="font-family:Kalam;color:var(--ouro2);font-size:13px;text-align:center;line-height:1.3">Aparece todos os dias.</p>
+      </div>
+      <div class="ilus">Exemplo ilustrativo</div>
+    </div>
+  </div>
+
+  <section id="pilares">
+    <div class="wrap">
+      <h2 class="titulo">Corpo, cabeça e <em>competências</em></h2>
+      <p class="sub">Todos os dias a app escolhe uma missão de cada tipo. São iguais para todos, por isso o esquadrão avança junto.</p>
+      <div class="grelha">
+        <div class="cartao"><div class="ic">🔥</div><h3>Treino</h3><p>Treinos curtos com o peso do corpo, sem ginásio nem material.</p><ul><li>Tabata, core, pernas, mobilidade</li><li>6 a 8 minutos, com cronómetro</li><li>Só conclui quando o tempo acaba</li></ul></div>
+        <div class="cartao"><div class="ic">🧠</div><h3>Mindset</h3><p>Uma pergunta por dia para pensares com calma e escreveres a tua resposta.</p><ul><li>Controlo, identidade, emoções</li><li>Gratidão e gestão do tempo</li><li>A tua resposta fica só contigo</li></ul></div>
+        <div class="cartao"><div class="ic">⚡</div><h3>Digital</h3><p>Uma acção prática para ganhares terreno no mundo digital e com IA.</p><ul><li>Prompts de IA, marca pessoal</li><li>Automatizar, criar conteúdo</li><li>Segurança das tuas contas</li></ul></div>
+      </div>
+    </div>
+  </section>
+
+  <section id="como">
+    <div class="wrap">
+      <h2 class="titulo">Como <em>funciona</em></h2>
+      <p class="sub">Simples de propósito. O difícil é aparecer todos os dias.</p>
+      <div class="passos">
+        <div class="passo"><h4>Alista-te</h4><p>Nome, email e palavra-passe. Instala a app no ecrã principal.</p></div>
+        <div class="passo"><h4>Cumpre a missão</h4><p>Três missões por dia dão XP. Há um tecto diário, por isso não dá para fazer batota.</p></div>
+        <div class="passo"><h4>Sobe de patente</h4><p>De Recruta a General. Cada patente nova e cada insígnia dão moedas.</p></div>
+        <div class="passo"><h4>Troca as moedas</h4><p>Guias, sessões de mindset, formação e conversas comigo.</p></div>
+      </div>
+    </div>
+  </section>
+
+  <section id="patentes">
+    <div class="wrap">
+      <h2 class="titulo">Doze <em>patentes</em></h2>
+      <p class="sub">A patente mostra a tua constância, não o teu talento. Ninguém a compra, só se ganha.</p>
+      <div class="patentes">
+        <span>Recruta</span><span>Cadete</span><span>Soldado</span><span>Cabo</span><span>Furriel</span><span>Sargento</span><span>Alferes</span><span>Tenente</span><span>Capitão</span><span>Major</span><span>Coronel</span><span>General</span>
+      </div>
+    </div>
+  </section>
+
+  <section id="recompensas">
+    <div class="wrap">
+      <h2 class="titulo">Recompensas <em>reais</em></h2>
+      <p class="sub">As moedas ganham-se com dias completos, semanas seguidas, patentes e insígnias. Cada recompensa pede tempo de casa e constância.</p>
+      <div class="recs">
+        <div class="rec"><b>Guia em PDF</b><small>A partir da 1.ª semana</small></div>
+        <div class="rec"><b>Sessão de mindset em grupo</b><small>A partir de 3 semanas</small></div>
+        <div class="rec"><b>Módulo de formação</b><small>A partir de 1 mês</small></div>
+        <div class="rec"><b>1 mês de Membro MTM</b><small>A partir de 2 meses</small></div>
+        <div class="rec"><b>Conversa 1:1 comigo</b><small>A partir de 3 meses</small></div>
+      </div>
+      <p class="regras">Regras justas: cada recompensa tem dias mínimos na app, dias activos, patente mínima e um intervalo até poderes pedir outra vez. Algumas têm vagas limitadas por mês. Cada pedido é revisto por mim antes de ser entregue.</p>
+    </div>
+  </section>
+
+  <section>
+    <div class="wrap"><p class="frase">«A disciplina é escolher o que queres mais em vez do que queres agora.»</p></div>
+  </section>
+
+  <section id="instalar">
+    <div class="wrap">
+      <h2 class="titulo">Instala em <em>qualquer ecrã</em></h2>
+      <p class="sub">A Missão é uma web app: funciona no browser e instala-se como uma app normal, com ícone próprio.</p>
+      <div class="instalar">
+        <div class="cartao"><h3>iPhone</h3><p>Abre no Safari, toca em Partilhar e depois em «Adicionar ao ecrã principal».</p></div>
+        <div class="cartao"><h3>Android</h3><p>Abre no Chrome e toca em «Instalar app» quando aparecer o aviso, ou no menu ⋮.</p></div>
+        <div class="cartao"><h3>Computador</h3><p>No Chrome ou Edge, clica no ícone de instalar na barra de endereço.</p></div>
+      </div>
+    </div>
+  </section>
+
+  <section id="faq" class="faq">
+    <div class="wrap">
+      <h2 class="titulo">Perguntas <em>frequentes</em></h2>
+      <details><summary>É mesmo grátis?</summary><p>Sim. A app é gratuita e não tem publicidade. As recompensas também não custam dinheiro: custam constância.</p></details>
+      <details><summary>Preciso de experiência a treinar?</summary><p>Não. Os treinos usam o peso do corpo e podes adaptar o ritmo. Se tens alguma limitação física, fala primeiro com um profissional de saúde.</p></details>
+      <details><summary>Quanto tempo leva por dia?</summary><p>Entre 15 e 20 minutos para as três missões. Podes fazê-las à hora que quiseres, desde que seja no mesmo dia.</p></details>
+      <details><summary>O que acontece se falhar um dia?</summary><p>A sequência de dias seguidos volta a zero, mas o XP, a patente e as moedas ficam. Recomeça amanhã.</p></details>
+      <details><summary>Quem é o Ricardo?</summary><p>Fundador da MoreThanMoney. Começou como canalizador e construiu o caminho dele com disciplina. A história completa está na <a href="/ricardogarcia?utm_source=missao" style="color:var(--ciano)">página dele</a>.</p></details>
+    </div>
+  </section>
+
+  <section class="final">
+    <div class="wrap">
+      <h2 class="titulo">A primeira missão <em>é hoje</em></h2>
+      <p class="sub" style="margin:0 auto 10px">Leva menos tempo do que um café.</p>
+      <div class="acoes">
+        <a class="btn btn-ouro" href="/ricardogarcia/app?utm_source=missao&utm_medium=final&r=1" data-alvo="alistar-final">Alistar-me agora</a>
+        <a class="btn btn-linha" href="/ricardogarcia?utm_source=missao" data-alvo="pagina-ricardo">Conhecer o Ricardo</a>
+      </div>
+    </div>
+  </section>
+</main>
+
+<footer>
+  <div class="wrap">
+    <span>© MoreThanMoney · Missão com o Ricardo Garcia</span>
+    <span><a href="/ricardogarcia">Ricardo Garcia</a> · <a href="/privacidade">Privacidade</a> · <a href="/termos">Termos</a></span>
+    <span style="flex-basis:100%">Conteúdo educativo. Não é aconselhamento financeiro, médico nem de treino personalizado.</span>
+  </div>
+</footer>
+<script>
+// Mede visitas e cliques no mesmo registo da página do Ricardo (sem dados pessoais).
+(function () {
+  var origem = (function () { try { var q = new URLSearchParams(location.search); return q.get('utm_source') || (document.referrer ? new URL(document.referrer).hostname : 'direto'); } catch (e) { return 'direto'; } })();
+  function medir(alvo, tipo) {
+    var corpo = JSON.stringify({ alvo: alvo, tipo: tipo, origem: origem });
+    try { if (navigator.sendBeacon && navigator.sendBeacon('/api/ricardogarcia/clique', new Blob([corpo], { type: 'text/plain' }))) return; } catch (e) {}
+    try { fetch('/api/ricardogarcia/clique', { method: 'POST', body: corpo, keepalive: true }); } catch (e) {}
+  }
+  medir('missao', 'visita');
+  document.addEventListener('click', function (e) { var a = e.target.closest && e.target.closest('[data-alvo]'); if (a) medir('missao:' + a.getAttribute('data-alvo'), 'link'); });
+})();
+</script>
+</body>
+</html>
