@@ -261,6 +261,24 @@ label { display: block; font-size: 13px; letter-spacing: 1.5px; text-transform: 
 #entrada { padding-top: env(safe-area-inset-top); }
 input, textarea, select { font-size: 16px !important; }
 * { -webkit-tap-highlight-color: transparent; }
+
+/* intro da missão do dia */
+.intro { position: fixed; inset: 0; z-index: 40; display: none; align-items: center; justify-content: center; flex-direction: column; gap: 14px; background: radial-gradient(circle at 50% 40%, rgba(210,166,60,.22), transparent 60%), #05070b; text-align: center; padding: 24px; }
+.intro.on { display: flex; }
+.intro .emb { width: 120px; height: 120px; filter: drop-shadow(0 0 30px rgba(233,196,106,.45)); }
+.intro h2 { font-family: "Anton"; font-weight: 400; font-style: italic; font-size: 46px; line-height: 1; margin: 0; letter-spacing: 1px; padding-right: .1em; }
+.intro h2 span { color: var(--ouro2); }
+.intro p { margin: 0; color: var(--cinza); font-size: 15px; }
+.intro .toca { margin-top: 10px; font-size: 13px; letter-spacing: .2em; text-transform: uppercase; color: var(--ouro2); animation: pulsa 1.4s ease-in-out infinite; }
+@keyframes pulsa { 50% { opacity: .35; } }
+.intro.vai .emb { animation: emb 3s cubic-bezier(.2,.9,.3,1) both; }
+.intro.vai h2 { animation: sobe 3s cubic-bezier(.2,.9,.3,1) both; }
+.intro.vai .toca { display: none; }
+@keyframes emb { 0% { transform: scale(.4) rotate(-12deg); opacity: 0; } 25% { transform: scale(1.08) rotate(0); opacity: 1; } 85% { transform: scale(1); opacity: 1; } 100% { transform: scale(1.6); opacity: 0; } }
+@keyframes sobe { 0%, 30% { transform: translateY(24px); opacity: 0; } 50% { transform: none; opacity: 1; } 88% { opacity: 1; } 100% { opacity: 0; } }
+@media (prefers-reduced-motion: reduce) { .intro.vai .emb, .intro.vai h2 { animation-duration: .01s; } }
+.interr { display: flex; justify-content: space-between; align-items: center; gap: 10px; padding: 10px 0; border-top: 1px solid var(--linha); font-size: 15px; }
+.interr input { width: 46px; height: 26px; accent-color: var(--ouro2); }
 /* perfil e avatar */
 .perfil-bt { display: flex; align-items: center; gap: 8px; background: none; border: 0; padding: 0; color: var(--texto); min-width: 0; }
 .perfil-bt .av { width: 40px; height: 40px; flex: 0 0 40px; font-size: 18px; border: 2px solid var(--ouro); }
@@ -502,6 +520,7 @@ input, textarea, select { font-size: 16px !important; }
   <div class="zona esq" id="vAnt"></div><div class="zona dir" id="vSeg"></div>
   <div class="base" id="svBase"></div>
 </div>
+<div class="intro" id="intro" role="dialog" aria-label="Missão do dia"><img class="emb" src="/ricardogarcia/app-emblema.png" alt=""><h2>Missão<br><span>do dia</span></h2><p id="introTxt"></p><div class="toca">Toca para começar</div></div>
 <div class="folha" id="folha" role="dialog" aria-modal="true"><div class="caixa" id="folhaC"></div></div>
 <div class="toast" id="toast" role="status"></div>
 <canvas id="confete" aria-hidden="true"></canvas>
@@ -909,6 +928,7 @@ input, textarea, select { font-size: 16px !important; }
             '<div class="mono">Moldura</div><div class="cores-av mold">' + op.molduras.map(function (k) { return '<button type="button" aria-label="Moldura ' + k + '" data-avo="' + k + '" class="' + (k === sel.moldura ? 'on' : '') + '" style="border-color:' + (k === 'nenhuma' ? '#333' : MOLD_AV[k]) + '"></button>'; }).join('') + '</div>' +
             '<button class="btn" type="button" id="bAvGuardar">Guardar avatar</button>'
           : '<p class="texto-m" style="font-size:15px;margin:12px 0">Escolhe uma foto tua, de cara, com boa luz. Aparece no chat, nos stories e no ranking.</p><input type="file" id="avFich" accept="image/*" hidden><button class="btn" type="button" id="bAvFoto">Escolher foto</button>') +
+        blocoAvisos() +
         '<button class="btn sec" type="button" id="bSair2" style="margin-top:18px">Sair da conta</button>' +
         '<p class="texto-m" style="font-size:13px;color:var(--cinza);margin:8px 0 0">Para voltar, entras com o mesmo email ou com Google, Apple ou PrimeVerse.</p>';
       c.querySelector('.fechar').onclick = fechar;
@@ -918,6 +938,11 @@ input, textarea, select { font-size: 16px !important; }
       api(Object.assign({ accao: 'avatar' }, corpo)).then(function (r) { b.disabled = false; if (!r.ok) { toast(esc(r.erro || 'Não consegui guardar.')); return; } fechar(); render(r); toast('Perfil atualizado ✓'); }, function () { b.disabled = false; toast('Sem ligação. Tenta outra vez.'); });
     }
     pinta();
+    $('folhaC').onchange = function (ev) {
+      var k = ev.target.getAttribute('data-pp');
+      if (k === 'som') { Som.ligado(ev.target.checked); if (ev.target.checked) Som.plim(); return; }
+      if (!k) return; var pr = Object.assign({}, E.push_prefs || {}); pr[k] = ev.target.checked; E.push_prefs = pr; api({ accao: 'push_prefs', prefs: pr });
+    };
     $('folhaC').onclick = function (ev) {
       var b = ev.target.closest('button'); if (!b) return; var v;
       if ((v = b.getAttribute('data-avm'))) { modo = v; pinta(); }
@@ -931,7 +956,8 @@ input, textarea, select { font-size: 16px !important; }
           reduzirQuadrado(f, function (d) { if (!d) { toast('Não consegui ler essa imagem.'); return; } $('avPre').innerHTML = '<div class="av" style="background-image:url(&quot;' + d + '&quot;)"></div>'; guardar({ tipo: 'foto', imagem: d }, b); });
         }; fi.click();
       }
-      else if (b.id === 'bSair2') { if (!confirm('Sair da conta neste telemóvel?')) return; api({ accao: 'sair' }).then(function () { location.reload(); }); }
+      else if (b.id === 'bPushOn') { b.disabled = true; Push.ligar().then(function (r) { toast(r); pinta(); }); }
+      else if (b.id === 'bSair2') { if (!confirm('Sair da conta neste telemóvel?')) return; api({ accao: 'sair', push_token: Push.token() }).then(function () { location.reload(); }); }
     };
     $('folha').classList.add('on');
   }
@@ -940,6 +966,97 @@ input, textarea, select { font-size: 16px !important; }
     var rd = new FileReader(); rd.onload = function () { var im = new Image(); im.onload = function () {
       var l = Math.min(im.width, im.height), cv = document.createElement('canvas'); cv.width = cv.height = 512;
       cv.getContext('2d').drawImage(im, (im.width - l) / 2, (im.height - l) / 2, l, l, 0, 0, 512, 512); cb(cv.toDataURL('image/jpeg', .85)); }; im.onerror = function () { cb(null); }; im.src = rd.result; }; rd.onerror = function () { cb(null); }; rd.readAsDataURL(f);
+  }
+  // ── Sons (gerados no telemóvel, sem ficheiros): toque militar, «plim» e a intro de 3 s ──
+  var Som = (function () {
+    var ctx = null;
+    function liga() { try { ctx = ctx || new (window.AudioContext || window.webkitAudioContext)(); if (ctx.state === 'suspended') ctx.resume(); } catch (_) { ctx = null; } return ctx; }
+    function ligado(v) { try { if (v !== undefined) localStorage.setItem('missaoSom', v ? '1' : '0'); return localStorage.getItem('missaoSom') !== '0'; } catch (_) { return true; } }
+    // Corneta: dente-de-serra filtrado, ataque rápido.
+    function nota(f, t0, d, vol) {
+      var c = ctx, o = c.createOscillator(), fl = c.createBiquadFilter(), g = c.createGain();
+      o.type = 'sawtooth'; o.frequency.value = f; fl.type = 'lowpass'; fl.frequency.value = 2200; fl.Q.value = 2;
+      g.gain.setValueAtTime(0, t0); g.gain.linearRampToValueAtTime(vol || .22, t0 + .025); g.gain.setValueAtTime((vol || .22) * .85, t0 + d - .05); g.gain.linearRampToValueAtTime(0, t0 + d);
+      o.connect(fl); fl.connect(g); g.connect(c.destination); o.start(t0); o.stop(t0 + d + .02);
+    }
+    function tambor(t0, vol) {
+      var c = ctx, n = c.sampleRate * .12, buf = c.createBuffer(1, n, c.sampleRate), d = buf.getChannelData(0);
+      for (var i = 0; i < n; i++) d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / n, 3);
+      var s = c.createBufferSource(), fl = c.createBiquadFilter(), g = c.createGain(); s.buffer = buf; fl.type = 'highpass'; fl.frequency.value = 900; g.gain.value = vol || .3;
+      s.connect(fl); fl.connect(g); g.connect(c.destination); s.start(t0);
+    }
+    function pronto() { return ligado() && liga(); }
+    return {
+      ligado: ligado, desbloquear: liga,
+      militar: function () { if (!pronto()) return; var t = ctx.currentTime + .02; tambor(t, .25); nota(392, t + .05, .12); nota(523.25, t + .19, .12); nota(659.25, t + .33, .12); nota(783.99, t + .47, .42); },
+      plim: function () { if (!pronto()) return; var t = ctx.currentTime + .01; [1568, 2349.3].forEach(function (f, i) { var o = ctx.createOscillator(), g = ctx.createGain(); o.type = 'sine'; o.frequency.value = f; g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(i ? .06 : .16, t + .008); g.gain.exponentialRampToValueAtTime(.0001, t + .55); o.connect(g); g.connect(ctx.destination); o.start(t); o.stop(t + .6); }); },
+      intro: function () {
+        if (!pronto()) return; var t = ctx.currentTime + .03;
+        for (var i = 0, x = 0; x < 1.5; i++) { tambor(t + x, .12 + x * .12); x += Math.max(.045, .2 - i * .012); }
+        tambor(t + 1.55, .45); nota(523.25, t + 1.6, .16, .2); nota(659.25, t + 1.78, .16, .2); nota(783.99, t + 1.96, .16, .2); nota(1046.5, t + 2.14, .8, .24); nota(523.25, t + 2.14, .8, .1);
+      },
+    };
+  })();
+  document.addEventListener('pointerdown', function () { Som.desbloquear(); }, { once: true, passive: true });
+
+  // ── Notificações push (Firebase web push do projecto MTM, através do service worker da app) ──
+  var Push = (function () {
+    var TOK = null;
+    try { TOK = localStorage.getItem('missaoPushTok'); } catch (_) {}
+    function suportado() { return 'serviceWorker' in navigator && 'PushManager' in window && 'Notification' in window; }
+    function iosSemInstalar() { return /iP(hone|ad|od)/.test(navigator.userAgent) && !(window.navigator.standalone || matchMedia('(display-mode: standalone)').matches); }
+    function carregaSdk() {
+      if (window.firebase && firebase.messaging) return Promise.resolve();
+      var um = function (src) { return new Promise(function (ok, ko) { var s = document.createElement('script'); s.src = src; s.onload = ok; s.onerror = ko; document.head.appendChild(s); }); };
+      return um('https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js').then(function () { return um('https://www.gstatic.com/firebasejs/10.14.1/firebase-messaging-compat.js'); });
+    }
+    function obterToken() {
+      var cfg = E && E.push; if (!cfg) return Promise.reject(new Error('cfg'));
+      return carregaSdk().then(function () {
+        if (!firebase.apps.length) firebase.initializeApp(cfg.firebase);
+        return navigator.serviceWorker.register('/ricardogarcia/app-sw.js', { scope: '/ricardogarcia/' });
+      }).then(function (reg) { return firebase.messaging().getToken({ vapidKey: cfg.vapid, serviceWorkerRegistration: reg }); })
+        .then(function (t) { if (!t) throw new Error('sem token'); TOK = t; try { localStorage.setItem('missaoPushTok', t); } catch (_) {} return api({ accao: 'push_token', token: t }); });
+    }
+    return {
+      token: function () { return TOK; },
+      estado: function () { if (!suportado()) return iosSemInstalar() ? 'ios' : 'nao'; if (Notification.permission === 'denied') return 'negado'; return Notification.permission === 'granted' && TOK ? 'on' : 'off'; },
+      ligar: function () {
+        if (!suportado()) return Promise.resolve(iosSemInstalar() ? 'No iPhone, primeiro põe a app no ecrã principal (Partilhar → Adicionar ao ecrã principal) e abre-a por lá.' : 'Este navegador não recebe notificações.');
+        return Notification.requestPermission().then(function (p) {
+          if (p !== 'granted') return 'Sem autorização, não te posso avisar. Podes mudar isso nas definições do telemóvel.';
+          return obterToken().then(function () { Som.militar(); return 'Notificações ligadas ✓'; }, function () { return 'Não consegui ligar as notificações. Tenta outra vez daqui a pouco.'; });
+        });
+      },
+      // Renova o token em silêncio quando já há autorização (os tokens mudam).
+      renovar: function () { if (suportado() && Notification.permission === 'granted' && E && E.push) obterToken().catch(function () {}); },
+    };
+  })();
+  function blocoAvisos() {
+    var st = Push.estado(), pr = E.push_prefs || {};
+    var linha = function (k, t) { return '<label class="interr"><span>' + t + '</span><input type="checkbox" data-pp="' + k + '" ' + (pr[k] !== false ? 'checked' : '') + '></label>'; };
+    var topo = st === 'on' ? '<p class="texto-m" style="font-size:14px;margin:6px 0 4px">✅ Notificações ligadas neste telemóvel.</p>'
+      : st === 'negado' ? '<p class="texto-m" style="font-size:14px;margin:6px 0 4px">As notificações estão bloqueadas nas definições do telemóvel para este site.</p>'
+      : st === 'nao' ? '<p class="texto-m" style="font-size:14px;margin:6px 0 4px">Este navegador não recebe notificações.</p>'
+      : '<p class="texto-m" style="font-size:14px;margin:6px 0 8px">' + (st === 'ios' ? 'No iPhone, as notificações só funcionam com a app no ecrã principal: Partilhar → Adicionar ao ecrã principal.' : 'Recebe a missão do dia, as respostas no chat e o aviso antes de perderes a série.') + '</p>' + (E.push && st !== 'ios' ? '<button class="btn" type="button" id="bPushOn">🔔 Ligar notificações</button>' : '');
+    return '<div class="mono" style="margin-top:20px">Notificações e sons</div>' + topo +
+      (st === 'on' ? linha('missao', '🎖️ Missão do dia (manhã)') + linha('chat', '💬 Respostas no chat') + linha('serie', '🔥 Aviso da série (20h)') : '') +
+      '<label class="interr"><span>🔊 Sons da app</span><input type="checkbox" data-pp="som" ' + (Som.ligado() ? 'checked' : '') + '></label>';
+  }
+  if ('serviceWorker' in navigator) navigator.serviceWorker.addEventListener('message', function (ev) {
+    var d = ev.data || {};
+    if (d.tipo === 'push') { var x = d.dados || {}; if (x.tipo === 'chat') Som.plim(); else Som.militar(); toast('<b>' + esc(x.titulo || '') + '</b><br>' + esc(x.corpo || ''), 5000); }
+    else if (d.tipo === 'abrir') { try { var u = new URL(d.url, location.origin); if (u.searchParams.get('v') === 'chat') { var cb = document.querySelector('.doca button[data-v="vEsq"]'); if (cb) cb.click(); } else if (u.searchParams.get('intro')) introDoDia(true); } catch (_) {} }
+  });
+
+  // ── Intro da missão do dia: uma vez por dia (ou ao abrir pela notificação), 3 s com som ──
+  function introDoDia(forcar) {
+    var dia = (E && E.hoje && E.hoje.dia) || new Date().toISOString().slice(0, 10);
+    try { if (!forcar && localStorage.getItem('missaoIntro') === dia) return; localStorage.setItem('missaoIntro', dia); } catch (_) { if (!forcar) return; }
+    var ms = (E && E.missoes) || [], el = $('intro');
+    $('introTxt').textContent = ms.length ? ms.length + ' missões · ' + (ms[0].titulo || '') : 'Bora.';
+    el.classList.remove('vai'); el.classList.add('on');
+    el.onclick = function () { if (el.classList.contains('vai')) return; Som.desbloquear(); Som.intro(); el.classList.add('vai'); setTimeout(function () { el.classList.remove('on', 'vai'); }, 3000); };
   }
   $('bPerfil').onclick = function () { if (E) folhaPerfil(); };
   // iOS ignora user-scalable=no: trava o gesto de pinça (o duplo toque já fica preso pelo touch-action).
@@ -1006,7 +1123,7 @@ input, textarea, select { font-size: 16px !important; }
       C.equipa = !!r.equipa; if (r.emojis) C.emojis = r.emojis; if (r.fundos) C.fundos = r.fundos;
       if (r.stories) { C.st = r.stories; renderStories(); }
       if (q.indexOf('desde') < 0) { C.msgs = r.mensagens || []; if (C.msgs.length) C.desde = C.msgs[C.msgs.length - 1].criado; }
-      else if (!juntar(r.mensagens)) return;
+      else { var antes = C.msgs.length; if (!juntar(r.mensagens)) return; if (C.msgs.slice(antes).some(function (k) { return !k.eu; }) && C.aberta) Som.plim(); }
       if (C.aba === 'chat' && C.aberta && !$('visor').classList.contains('on')) renderChat(C.primeira);
       C.primeira = false;
     });
@@ -1152,6 +1269,13 @@ input, textarea, select { font-size: 16px !important; }
     api().then(function (e) {
       if (!e.membro) { $('entrada').hidden = false; $('app').hidden = true; $('doca').hidden = true; return; }
       render(e); if (novo) toast('<b>Bem-vindo, ' + esc(e.membro.primeiro) + '</b><br>Começa pela primeira missão.');
+      if (!carregar.feito) {
+        carregar.feito = true; Push.renovar();
+        var q = new URLSearchParams(location.search);
+        if (q.get('v') === 'chat') { var cb = document.querySelector('.doca button[data-v="vEsq"]'); if (cb) cb.click(); }
+        else if (!novo) introDoDia(!!q.get('intro'));
+        if (q.get('v') || q.get('intro')) history.replaceState(null, '', location.pathname);
+      }
     }, function () { $('entrada').hidden = false; });
   }
   carregar(false);

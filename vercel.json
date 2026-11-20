@@ -391,6 +391,14 @@
     {
       "path": "/api/cron/instagram-diagnostico?acao=subscrever",
       "schedule": "17 */6 * * *"
+    },
+    {
+      "path": "/api/cron/missao-push?tipo=missao",
+      "schedule": "30 8 * * *"
+    },
+    {
+      "path": "/api/cron/missao-push?tipo=serie",
+      "schedule": "0 20 * * *"
     }
   ]
 }

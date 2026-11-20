@@ -2,12 +2,13 @@
 // Ideias trazidas do chat da app MTM: respostas com citação, imagens, reações, patente ao lado do
 // nome, apagar a própria mensagem e moderação pela equipa. Sem tempo real no browser: a app pede
 // as novidades de poucos em poucos segundos com ?desde=, o que chega para este volume.
-import { NextRequest, NextResponse } from 'next/server'
+import { NextRequest, NextResponse, after } from 'next/server'
 import { checkRateLimit } from '@/lib/admin-api-helpers'
 import { avisarAdmin } from '@/lib/primegate/verificacao'
 import { db, membroDaSessao, PATENTES, patenteDe } from '@/lib/ricardogarcia/app'
 import { eSuperAdmin } from '@/lib/super-admin-regras'
 import { awardXp } from '@/lib/xp-service'
+import { enviarPush } from '@/lib/ricardogarcia/push'
 
 export const dynamic = 'force-dynamic'
 
@@ -155,11 +156,16 @@ export async function POST(req: NextRequest) {
     let caminho: string | null = null
     if (b?.imagem) { const g = await guardarImagem(m.id, 'chat', String(b.imagem)); if (g.erro) return erro(g.erro); caminho = g.caminho! }
     if (!texto && !caminho) return erro('Escreve uma mensagem.')
-    let resposta: string | null = t(b?.resposta_a, 40) || null
-    if (resposta) { const { data: r } = await db().from('rg_app_chat').select('id').eq('id', resposta).maybeSingle(); if (!r) resposta = null }
+    let resposta: string | null = t(b?.resposta_a, 40) || null, autorCitado: string | null = null
+    if (resposta) { const { data: r } = await db().from('rg_app_chat').select('id, membro_id').eq('id', resposta).maybeSingle(); if (!r) resposta = null; else autorCitado = r.membro_id }
     const { error } = await db().from('rg_app_chat').insert({ membro_id: m.id, texto: texto || null, imagem_path: caminho, resposta_a: resposta })
     if (error) return erro('Não consegui enviar. Tenta outra vez.', 500)
     if (texto.length >= 15 || caminho) await darXp('app_chat', 2, 'Mensagem na comunidade')
+    // Quem foi citado recebe um aviso no telemóvel (se tiver as notificações ligadas).
+    if (autorCitado && autorCitado !== m.id) {
+      const quem = primeiro(m.nome), alvo = autorCitado
+      after(() => enviarPush([alvo], 'chat', { titulo: `💬 ${quem} respondeu-te`, corpo: texto ? texto.slice(0, 140) : '📷 Foto', url: '/ricardogarcia/app?v=chat', tag: 'chat-resp' }).catch(() => 0))
+    }
     return NextResponse.json({ ok: true, mensagens: await mensagens(m, t(b?.desde, 40) || null) })
   }
 

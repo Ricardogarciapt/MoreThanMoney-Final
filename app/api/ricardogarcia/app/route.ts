@@ -11,6 +11,7 @@ import {
 } from '@/lib/ricardogarcia/diario'
 import { FUNDOS, MOLDURAS, ROSTOS, guardarAvatar } from '@/lib/ricardogarcia/avatar'
 import { ligacoes, novoTokenAtalho, registarMovimento, sincronizarStrava } from '@/lib/ricardogarcia/saude'
+import { configPush, guardarToken, tirarToken } from '@/lib/ricardogarcia/push'
 
 export const dynamic = 'force-dynamic'
 
@@ -104,6 +105,7 @@ async function estado(m: any) {
       avatar_url: m.avatar_url || null, avatar: m.avatar || null,
     },
     avatar_opcoes: { rostos: ROSTOS, fundos: Object.keys(FUNDOS), molduras: Object.keys(MOLDURAS) },
+    push: configPush(), push_prefs: { missao: true, chat: true, serie: true, ...(m.push_prefs || {}) },
     patentes: PATENTES,
     hoje: { dia, xp: porDia.get(dia)?.xp || 0, max: eco.xp_dia_max + eco.bonus_dia_completo },
     historico,
@@ -193,6 +195,7 @@ export async function POST(req: NextRequest) {
   }
 
   if (accao === 'sair') {
+    if (typeof b?.push_token === 'string' && b.push_token) await db().from('rg_app_push').delete().eq('token', b.push_token)
     const sb = await clienteSessao()
     await sb.auth.signOut()
     return NextResponse.json({ ok: true })
@@ -342,13 +345,26 @@ export async function POST(req: NextRequest) {
     return responder(await darXp('app_saude', r.xp, `Movimento ${dia}: ${r.dados.passos} passos, ${r.dados.minutos} min`))
   }
 
-  // Ligações de saúde: Atalho do iPhone (link pessoal) e Strava.
+  // Notificações push (tokens FCM próprios da app) e o que cada um quer receber.
+  if (accao === 'push_token') {
+    if (!checkRateLimit('rg-push:' + m.id, 20, 60 * 60_000).allowed) return erro('Muitos pedidos seguidos.', 429)
+    return (await guardarToken(m.id, String(b?.token || ''))) ? NextResponse.json({ ok: true }) : erro('Token inválido.')
+  }
+  if (accao === 'push_off') { await tirarToken(m.id, typeof b?.token === 'string' ? b.token : undefined); return NextResponse.json({ ok: true }) }
+  if (accao === 'push_prefs') {
+    const p = b?.prefs || {}
+    const prefs = { missao: p.missao !== false, chat: p.chat !== false, serie: p.serie !== false }
+    await db().from('rg_app_membros').update({ push_prefs: prefs }).eq('id', m.id)
+    return NextResponse.json({ ok: true, push_prefs: prefs })
+  }
+
   if (accao === 'avatar') {
     if (!checkRateLimit('rg-avatar:' + m.id, 20, 60 * 60_000).allowed) return erro('Muitas mudanças seguidas. Tenta daqui a pouco.', 429)
     const g = await guardarAvatar(m.id, b)
     if (g.erro) return erro(g.erro)
     return NextResponse.json(await estado({ ...m, avatar_url: g.url, avatar: b?.tipo === 'foto' ? m.avatar : { rosto: b?.rosto, fundo: b?.fundo, moldura: b?.moldura } }))
   }
+  // Ligações de saúde: Atalho do iPhone (link pessoal) e Strava.
   if (accao === 'saude_atalho') {
     const token = await novoTokenAtalho(m.id)
     return NextResponse.json({ ok: true, url: `${req.nextUrl.origin}/api/ricardogarcia/app/saude/atalho?t=${token}` })
