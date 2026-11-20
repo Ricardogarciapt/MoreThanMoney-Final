@@ -147,8 +147,17 @@
       // Vídeo da história em inglês (tradução com a voz e os lábios do Ricardo).
       var v = document.getElementById('video-ricardo');
       if (v) {
-        var src = v.querySelector('source'); if (src) src.setAttribute('src', '/ricardogarcia/apresentacao-ricardo-en.mp4');
+        // Troca directa do src (o Safari do iPhone nem sempre recarrega quando só muda o <source>).
+        // Se o vídeo inglês falhar, volta ao português com legendas em inglês ligadas.
+        var EN_MP4 = '/ricardogarcia/apresentacao-ricardo-en.mp4', PT_MP4 = '/ricardogarcia/apresentacao-ricardo.mp4';
+        var src = v.querySelector('source'); if (src) src.parentNode.removeChild(src);
         var tr = v.querySelector('track'); if (tr) { tr.setAttribute('src', '/ricardogarcia/apresentacao-ricardo-en.vtt'); tr.setAttribute('srclang', 'en'); tr.setAttribute('label', 'English'); }
+        v.addEventListener('error', function recuo() {
+          if (v.getAttribute('src') !== EN_MP4) return;
+          v.removeEventListener('error', recuo); v.setAttribute('src', PT_MP4);
+          try { v.load(); if (v.textTracks && v.textTracks[0]) v.textTracks[0].mode = 'showing'; } catch (e) {}
+        });
+        v.setAttribute('src', EN_MP4);
         try { v.load(); } catch (e) {}
       }
       ['meta[name=description]', 'meta[property="og:description"]'].forEach(function (s) { var m = document.querySelector(s); if (m && EN[norm(m.content)]) m.content = EN[norm(m.content)]; });
