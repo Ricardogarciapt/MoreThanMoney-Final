@@ -12,6 +12,8 @@ O tempo limitado não torna ninguém mais esperto. Torna-o menos vulnerável ao 
 
 [[grafico:rotina-15min]]
 
+[[foto: rg-lisboa.jpg | Quinze minutos por dia cabem em qualquer sítio. Até numa esplanada. | larga]]
+
 ## A estrutura dos 15 minutos
 
 Divido a rotina em três blocos. Cada um tem um objetivo claro, e nenhum deles é «encontrar a operação».
@@ -43,6 +45,14 @@ Se uma destas caixas ficar por marcar, não entras. Parece rígido. Na prática,
 A pergunta «não estou a operar para recuperar uma perda?» é a que mais falha. Quem a responde «não» com sinceridade raramente se sente pressionado. Quem hesita já tem a resposta.
 :::
 
+:::cartao Checklist pré-operação
+- [ ] Conheço a tendência do gráfico maior.
+- [ ] O stop está definido e cabe no meu 1 %.
+- [ ] Não há notícia forte nos próximos 30 minutos.
+- [ ] Estou calmo e descansado.
+- [ ] Se esta operação perder, fico bem.
+:::
+
 ## O diário de trading
 
 O diário é onde a rotina deixa de ser ideia e passa a ser dado. Sem ele, lembras-te das operações que correram bem, esqueces-te das outras, e acabas a contar uma história que te agrada. Com ele, consegues ver o padrão real.
@@ -56,6 +66,16 @@ Este é o modelo que uso como base. Cada linha é uma decisão, e a coluna «por
 | | | | | | | | | |
 
 Repara que a última coluna é a mais importante. Muitas vezes, uma operação com resultado positivo deve ser registada como «não» na coluna do plano. Ganhar por acaso e seguir o plano são coisas diferentes, e o diário é o único sítio onde essa diferença fica visível.
+
+:::ecra Notas · Diário de trading (exemplo)
+Data: terça, 08:40
+Par: XAU/USD
+Porquê entrei: tendência a subir, recuo à média
+Risco: 1 %
+Resultado: stop
+Como me senti: impaciente, entrei cedo
+Lição: esperar pela vela de confirmação
+:::
 
 ## Regras de paragem
 
@@ -73,6 +93,12 @@ Exemplo ilustrativo: numa conta de 2 000 $, um limite de 2% são 40 $. Se as dua
 4. Hora a partir da qual não abro novas operações: ______
 5. Sinal de que estou emocionalmente fora de controlo (ex.: aperto o peito, mexo mais no telemóvel): ____________________
 6. O que faço quando esse sinal aparecer: ____________________
+:::
+
+:::nota
+Hoje não há sinal claro?
+Fecho a plataforma.
+Não operar também é uma decisão.
 :::
 
 ## A revisão de domingo

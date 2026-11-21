@@ -29,6 +29,8 @@ São coisas diferentes, e misturá-las é uma das fontes mais comuns de problema
 
 Neste livro falo de negociação, e do que isso exige de ti. Se o teu objetivo é só poupar e investir a longo prazo, o capítulo 5 é mais útil para ti do que este.
 
+[[foto: rg-ouro.jpg | O ouro foi o mercado onde mais aprendi. E onde mais paguei para aprender. | polaroid]]
+
 ## Forex, em duas frases
 
 O mercado de Forex (de «foreign exchange», câmbio de moedas) é onde se trocam moedas umas pelas outras. Quando negocias EUR/USD estás a apostar, em termos simples, na subida ou na descida do euro face ao dólar. Não compras euros nem dólares em papel: compras ou vendes um contrato sobre a variação do preço.
@@ -76,6 +78,11 @@ A alavancagem multiplica os ganhos e as perdas da mesma maneira. Uma alavancagem
 
 Na Europa, os reguladores (a ESMA, por exemplo) limitam a alavancagem disponível para clientes de retalho. Nos pares de moedas principais, o teto é 30:1. Esse limite existe porque o regulador concluiu que muitos clientes de retalho não aguentam bem alavancagens altas.
 
+:::post @morethanmoney.pt
+imagem: Ninguém te mostra o print da conta que rebentou.
+legenda: Nas redes vês os ganhos. Não vês as contas queimadas por alavancagem a mais e risco a menos. Aprende primeiro a proteger o capital. Conteúdo educativo, não constitui aconselhamento financeiro.
+:::
+
 ## Porque é que a maioria perde
 
 Não tenho estatísticas para te dar, e não vou inventá-las. Mas posso descrever o padrão, que é o que interessa, porque se repete em quase todas as histórias que ouço.
@@ -90,6 +97,12 @@ Há ainda uma razão que quase ninguém quer ouvir. A corretora ganha com o spre
 
 :::destaque
 Os reguladores europeus obrigam as corretoras a publicar a percentagem de contas de retalho que perdem dinheiro em CFD. Vai ler essa informação antes de abrires qualquer conta, na corretora que escolheres.
+:::
+
+:::conversa Instagram · Mensagem que recebo muitas vezes
+Seguidor: Mano, entrei com tudo no ouro e perdi metade da conta. Como recupero rápido?
+eu: Primeiro, para. Recuperar 50 % pede ganhar 100 %. Pressa agora é o que mais te pode custar.
+eu: Volta a lote mínimo, risco de 1 % e diário de operações. Devagar.
 :::
 
 ## A matemática que ninguém te mostra: a recuperação
@@ -112,6 +125,14 @@ Exemplo ilustrativo, com valores redondos: uma conta de 1 000 €. Perde 50% e f
 
 :::alerta
 A conta de recuperação é a armadilha mais cara do trading. Quanto maior a perda, maior o esforço para a recuperar, e mais tentador fica arriscar mais. É exatamente essa espiral que a gestão de risco do capítulo 8 existe para evitar.
+:::
+
+:::cartao Antes de abrir conta numa corretora
+- Está regulada? Por quem? Confirmei no site do regulador?
+- O dinheiro dos clientes fica separado?
+- Conheço os custos: spread, comissões, swaps?
+- Consigo levantar sem condições estranhas?
+- Abri primeiro uma conta demo?
 :::
 
 ## Escolher a corretora: o que verificar

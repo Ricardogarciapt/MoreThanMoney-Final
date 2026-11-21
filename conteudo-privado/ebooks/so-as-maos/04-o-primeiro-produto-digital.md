@@ -5,11 +5,18 @@ Há uma armadilha clássica em quem começa: passar meses a planear um curso eno
 
 O primeiro produto digital serve para aprender. Deve ser pequeno, claro e feito com cuidado, mas não precisa de ser completo. Neste capítulo vês os tipos de produto mais comuns, como os validar antes de os criar e como pensar numa escada de valor que te dê caminhos para crescer.
 
+:::ecra Lista de espera · Guia da horta
+Título: Guia da horta na varanda
+Formulário: nome e e-mail, com consentimento
+Inscritos: ____
+Estado: a validar
+:::
+
 ## O que é um produto digital
 
 Um produto digital é um conteúdo que entregas sem stock, sem envio e sem embalagem. Pode ser um ficheiro para descarregar, um acesso a uma área privada, um conjunto de vídeos ou um modelo que a pessoa usa no computador. Vende-se uma vez, ou por assinatura, e pode ser entregue automaticamente.
 
-Essa natureza é uma vantagem enorme: o custo de entregar mais uma cópia é quase zero. Mas também tem uma desvantagem: como não há nada físico, o valor tem de estar todo na clareza do que se oferece.
+Essa natureza é uma vantagem enorme: o custo de entregar mais uma cópia é quase zero. Mas também tem uma desvantagem. Como não há nada físico, o valor tem de estar todo na clareza do que se oferece.
 
 ## Os tipos mais comuns
 
@@ -23,7 +30,7 @@ A tabela seguinte compara os formatos mais usados. Os tempos são apenas ordens 
 | Planner | Organizar uma rotina | Alguns dias | Planner semanal para quem trabalha por turnos |
 | Mini-curso | Ensinar um processo em etapas | Algumas semanas | Quatro aulas curtas sobre fazer faturas simples |
 
-Não há formato melhor em abstrato. Há o formato que resolve o problema que a tua pessoa tem, com o tempo que tens para o construir.
+Não há formato melhor em abstrato. Há o formato que resolve o problema da tua pessoa, com o tempo que tens para o construir.
 
 ## Valida antes de criar
 
@@ -33,8 +40,13 @@ Validar significa confirmar que alguém quer aquilo antes de passares semanas a 
 2. **Cria uma lista de espera.** Uma página simples ou um formulário onde as pessoas deixam o e-mail a dizer que querem ser avisadas. Se ninguém se inscreve, aprendeste alguma coisa.
 3. **Vende a versão pequena primeiro.** Se já tens uma parte pronta, oferece-a a um preço baixo e com entrega clara. Se ainda não tens nada, sê transparente sobre o prazo de entrega.
 
+:::post @planear.a.semana
+imagem: Antes de criares o curso, pergunta.
+legenda: Pergunta a dez pessoas o que fizeram da última vez que tentaram resolver isto. As respostas valem mais do que o teu plano.
+:::
+
 :::alerta
-Se cobras por algo que ainda não existe, diz claramente o que vai ser entregue, quando e como. Nunca recebas pagamento por um produto que não tens e não possas entregar. Isto é uma questão de honestidade e, muitas vezes, de lei de defesa do consumidor.
+Se cobras por algo que ainda não existe, diz claramente o que vai ser entregue, quando e como. Nunca recebas pagamento por um produto que não tens nem consegues entregar. Isto é uma questão de honestidade e, em muitos casos, de defesa do consumidor.
 :::
 
 :::alerta
@@ -42,6 +54,12 @@ Não cries um curso de dez módulos antes de saber se alguém quer o primeiro. Q
 :::
 
 [[citacao: Não te peço um produto perfeito. Peço-te um produto que alguém use e que te diga o que falta. | Maria Costa]]
+
+:::cartao Perguntas de validação
+- Qual foi a última vez que tentaste resolver isto? O que fizeste?
+- O que te fez desistir da última tentativa?
+- Quanto pagavas por uma solução que te poupasse tempo?
+:::
 
 ## A escada de valor
 
@@ -56,7 +74,7 @@ Os degraus costumam ser:
 - **O produto principal.** Um mini-curso ou um e-book mais aprofundado, para quem quer ir mais longe.
 - **O acompanhamento.** Uma comunidade, um programa com mentoria ou encontros, para quem quer ser acompanhado.
 
-Repara que o isco gratuito não é um presente sem intenção. Recolhe o e-mail de quem o pede (com consentimento) e dá-te a oportunidade de explicar o próximo passo.
+O isco gratuito não é um presente sem intenção. Recolhe o e-mail de quem o pede, com consentimento, e dá-te a oportunidade de explicar o próximo passo.
 
 ## Como escolher o primeiro
 
@@ -70,7 +88,19 @@ Para escolher o primeiro produto, responde a quatro perguntas com honestidade:
 | Cabe na minha semana sem me esgotar? | Simplifica o formato. |
 
 :::historia
-**Caso ilustrativo: o Rui.** O Rui, uma pessoa fictícia, queria fazer um curso completo de fotografia. Passou dois meses a planear. Quando perguntou a algumas pessoas o que as travava, ouviu uma coisa diferente: queriam fotografar os produtos das suas lojas online com o telemóvel e não sabiam por onde começar. O Rui escreveu um guia de doze páginas sobre isso. Não foi o curso que tinha imaginado, mas foi o primeiro produto que as pessoas lhe pediram de volta, com perguntas e com dúvidas. Foi aí que percebeu o que devia construir a seguir.
+**Caso ilustrativo: o Rui.** O Rui é uma personagem fictícia. Passou dois meses a planear um curso completo de fotografia. Quando perguntou a algumas pessoas o que as travava, ouviu outra coisa: queriam fotografar os produtos das suas lojas online com o telemóvel e não sabiam por onde começar. O Rui escreveu um guia de doze páginas sobre isso. Não foi o curso que tinha imaginado, mas foi o primeiro produto que as pessoas lhe pediram de volta, com perguntas e dúvidas. Foi aí que percebeu o que devia construir a seguir.
+:::
+
+:::story
+Queres receber o guia gratuito quando estiver pronto?
+sticker: Sim | Ainda não
+:::
+
+:::conversa WhatsApp · Paulo (exemplo)
+Paulo: Vi a tua pergunta sobre hortas. Tenho uma varanda pequena, serve?
+eu: Serve, é mesmo para varandas. Queres ser das primeiras pessoas a ver a versão de teste?
+Paulo: Quero. Quando é?
+eu: Ainda não sei ao certo. Deixo-te o e-mail quando tiver uma data, sem pressa nenhuma.
 :::
 
 ## Exercício: escolhe o teu primeiro produto
@@ -87,7 +117,6 @@ ____________________________________________________________
 ____________________________________________________________
 ____________________________________________________________
 ____________________________________________________________
-____________________________________________________________
 :::
 
 ## Em resumo
@@ -96,7 +125,11 @@ ____________________________________________________________
 - Os formatos mais comuns são o e-book, o template, o guia de bolso, o planner e o mini-curso.
 - Valida com perguntas abertas, com uma lista de espera ou com uma versão pequena.
 - A escada de valor mostra-te onde o primeiro produto encaixa no percurso da pessoa.
+- Não te prometo que o primeiro produto dá dinheiro ao fim do mês. Os resultados dependem do trabalho de cada pessoa.
 
-## A tua missão desta semana
+## Para fazer hoje
 
-Faz o exercício «O meu primeiro produto» e envia as perguntas de validação a dez pessoas antes de escreveres uma única linha do produto.
+1. Escreve três ideias de produto no telemóvel, cada uma com o problema que resolve numa frase.
+2. Envia as perguntas do cartão de validação a três pessoas hoje, por mensagem. Não precisas de dez para começar.
+3. Cria um formulário gratuito com nome, e-mail e uma frase a dizer o que vais preparar. Inclui uma linha de consentimento para poderes contactar.
+4. Desenha os três degraus da escada numa folha: isco, produto de entrada e produto principal. Não precisa de estar bonito.

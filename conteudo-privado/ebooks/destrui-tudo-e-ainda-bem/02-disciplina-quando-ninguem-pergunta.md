@@ -10,6 +10,8 @@ Quando estás numa organização com regras claras, a disciplina vem de fora. H�
 
 Isso é valioso. Só que tem um limite que quase ninguém te explica: a disciplina que vem de fora desaparece quando a porta se fecha. Na vida civil, ninguém confere se bebeste água, se pagaste a conta da luz ou se fizeste a tarefa que ficou por fazer na semana passada. Se a disciplina não passar a vir de dentro, desaparece.
 
+[[foto: rg-pb.jpg | A disciplina não se vê na foto. Vê-se no que fazes quando ninguém está a ver. | larga]]
+
 ## Disciplina não é ser duro
 
 Há uma ideia errada muito comum: disciplina é aguentar tudo sem reclamar, levantar cedo, ignorar o cansaço. Não é. Isso é teimosia, e a teimosia esgota-se rapidamente.
@@ -32,6 +34,18 @@ Um padrão mínimo tem três características. É pequeno o suficiente para não
 
 :::destaque
 Motivação aparece e desaparece. Padrão mínimo fica. Constrói a disciplina sobre o padrão e não sobre o humor do dia.
+:::
+
+:::story
+O teu padrão mínimo de hoje está cumprido?
+sticker: Sim, tudo | Ainda não
+:::
+:::story
+Uma coisa só. Pequena. Todos os dias.
+sticker: Qual é a tua?
+:::
+:::story
+Dia mau conta. Dia zero é que não.
 :::
 
 ## A checklist que ninguém te pede
@@ -72,6 +86,14 @@ Rotina rígida demais parte-se à primeira semana difícil. Se o teu plano exige
 
 Há um lado escuro desta conversa. Algumas pessoas usam a disciplina para não olhar para o que as incomoda: enchem o calendário, fazem mil tarefas e nunca tocam no que realmente importa. Estar ocupado não é o mesmo que estar a avançar. Pergunta sempre: esta tarefa aproxima-me do que quero, ou só me mantém ocupado?
 
+:::cartao O meu padrão mínimo (preenche)
+- Acordo às: ______
+- Movimento: ______ minutos
+- Leio ou estudo: ______ minutos
+- Uma tarefa que me aproxima do objetivo: ______
+- Deito-me às: ______
+:::
+
 ## Quando a rotina encontra o cansaço
 
 Toda a rotina vai ser posta à prova. Vai chegar uma semana em que o trabalho aperta, alguém adoece, a conta do carro aparece de surpresa e o sono foge. Nessa semana, a rotina que desenhaste vai parecer uma coisa que não é para ti. É aí que se decide se a disciplina era de verdade.
@@ -87,6 +109,13 @@ Cuidado com a culpa como motor. Culpa ajuda a começar, mas não aguenta a manut
 ## A disciplina como respeito
 
 Gosto de pensar que a disciplina é uma forma de respeito por quem vais ser amanhã. Quando cumpres o padrão mínimo hoje, estás a oferecer algo a essa pessoa: um dia em que ela não começa do zero. Quando falhas, a pessoa de amanhã herda a dívida. Não é uma questão moral. É uma questão de logística.
+
+:::nota
+Nos dias maus, faço a versão mínima.
+Dez flexões em vez de treino.
+Duas páginas em vez de um capítulo.
+O que conta é não partir a corrente.
+:::
 
 ## Em resumo
 

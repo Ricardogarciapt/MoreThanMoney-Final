@@ -17,6 +17,12 @@ O objetivo destes 30 dias não é ganhar nada. É deixares de decidir de cabeça
 - Nas semanas, há uma revisão de 15 minutos ao fim de cada sete dias (dias 7, 14, 21 e 28; o dia 30 é a revisão final).
 - Usa um caderno físico. Escrever à mão faz-te pensar mais devagar, e é isso que queremos.
 
+:::nota
+Imprime esta tabela.
+Cola-a no frigorífico.
+Risca um dia de cada vez.
+:::
+
 ## Tabela do plano
 
 | Dia | Tarefa | Tempo |
@@ -84,6 +90,18 @@ Preenche uma linha por decisão, e escreve o «porquê» antes de saber o result
 | | | | | | | | | |
 | | | | | | | | | |
 | | | | | | | | | |
+
+:::story
+Dia 1 de 30. Estás comigo?
+sticker: Começo hoje | Começo segunda
+:::
+:::story
+Dia 15. Metade feita. Não desistas agora.
+:::
+:::story
+Dia 30. Escreve o que mudou.
+sticker: Conta-me aqui
+:::
 
 ## Glossário
 

@@ -16,6 +16,8 @@ A regra que defendo nesta casa é simples: não arriscar mais de 1% do capital n
 
 Exemplo ilustrativo, com valores redondos e conta em dólares para simplificar: uma conta de 2 000 $. Um 1% são 20 $. Isso significa que, se a operação correr mal e atingir o stop-loss, perdes 20 $ e nada mais. Não 200 $, não «o que faltava para recuperar».
 
+[[foto: rg-cerebro.jpg | O risco gere-se aqui, antes de chegar ao botão de comprar. | polaroid]]
+
 ## A fórmula do tamanho da posição
 
 O tamanho da posição liga três coisas: o risco que aceitas, a distância do stop e o valor de cada pip. A fórmula é esta:
@@ -47,6 +49,14 @@ Nota honesta: o valor do pip de um par depende da moeda da conta e do câmbio do
 4. Confirma na corretora o valor do pip por lote para o instrumento: ____________
 5. Aplica a fórmula: risco ÷ (pips × valor do pip). Tamanho: ____________ lotes
 6. Faz a prova: pips × valor do pip × tamanho deve dar o teu risco em dinheiro. Confirmou? ____
+:::
+
+:::ecra Calculadora de posição (exemplo ilustrativo)
+Saldo da conta: 1.000 $
+Risco por operação: 1 % = 10 $
+Distância ao stop: 50 pips
+Valor por pip (0,01 lote): ≈ 0,10 $
+Lote máximo: 0,02
 :::
 
 ## Risco e retorno: a conta do equilíbrio
@@ -96,6 +106,14 @@ Uma sequência de perdas não é prova de que o plano está errado. Antes de a j
 Caso ilustrativo. Um operador tem uma semana de cinco perdas. Em vez de parar, aumenta o lote na sexta-feira para «recuperar tudo de uma vez». A sexta-feira acaba pior do que a semana inteira. O plano não falhou na sexta. Falhou no momento em que o tamanho da posição deixou de seguir a regra.
 :::
 
+:::cartao Regras do colete
+- Nunca mais de 1 % por operação.
+- Stop definido antes de entrar.
+- Duas perdas seguidas: paro o dia.
+- Perdi 5 % na semana: paro a semana.
+- Nunca mexer no stop para longe.
+:::
+
 ## Como fica o colete no dia a dia
 
 Três regras simples que te ajudam a manter o colete vestido:
@@ -103,6 +121,11 @@ Três regras simples que te ajudam a manter o colete vestido:
 - Definir o risco em dinheiro e o stop antes de entrares. Nunca depois.
 - Nunca aumentar o tamanho da posição para recuperar uma perda.
 - Quando a perda diária atingir o limite que escreveste, fechar o ecrã. O limite diário é o capítulo 9.
+
+:::story
+Qual destas regras é a que mais te custa cumprir?
+sticker: Stop antes de entrar | Parar depois de 2 perdas
+:::
 
 ## Em resumo
 

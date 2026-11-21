@@ -2,33 +2,42 @@
 
 > Quem diz que sabe o que o mercado vai fazer está a vender uma certeza que não existe.
 
-Uma das tentações mais fortes em cripto é a de querer prever. Abres um gráfico, vês uma linha a subir e pensas: «isto vai continuar». No dia seguinte a linha desce, e pensas: «era uma correção, vai voltar». Passas horas a ler padrões que talvez lá não estejam. Este capítulo serve para treinar outro olhar: ler o mercado para compreender o que se passa, sem fingir que consegues adivinhar o que vem a seguir.
+Há uma cena que se repete em muitas casas. Passa das onze da noite, o telemóvel está no sofá ao lado e o polegar faz scroll sem parar. Um gráfico sobe, outro desce, alguém escreve «isto vai explodir». Ninguém te obrigou a ver, mas ficaste. Este capítulo serve para treinar outro olhar: ler o mercado para perceber o que se passa, sem fingir que consegues adivinhar o que vem a seguir.
 
-## Ciclos: as ondas que não são relógio
+:::post @morethanmoney.pt
+imagem: Um gráfico não te diz o que vem a seguir.
+legenda: Diz-te o que aconteceu, e mesmo isso depende do período que escolheste. Conteúdo educativo, não constitui aconselhamento financeiro.
+:::
 
-Os mercados de cripto têm fases de subida forte, de euforia, de queda e de acumulação silenciosa. Os analistas chamam-lhes ciclos. Podes estudá-los com interesse, porque ajudam a perceber o contexto. Mas um ciclo passado não é um horário. Não sabes quando começa nem quando acaba, e cada ciclo tem causas diferentes.
+## Ciclos: ondas que não são relógio
 
-Pensa no mar. Sabes que há marés, e sabes que a maré sobe e desce a cada poucas horas. Não sabes exatamente onde estará a água amanhã às três da tarde, porque o vento, a pressão e as tempestades mudam a conta. Os ciclos de cripto são parecidos: há um padrão geral, mas o detalhe escapa.
+Os mercados de cripto têm fases de subida forte, de euforia, de queda e de acumulação silenciosa. Os analistas chamam-lhes ciclos. Vale a pena estudá-los, porque ajudam a perceber o contexto. Mas um ciclo passado não é um horário. Não sabes quando começa nem quando acaba, e cada ciclo tem causas diferentes.
+
+Pensa no mar. Sabes que há marés, e sabes que a água sobe e desce a cada poucas horas. Não sabes onde estará a água amanhã às três da tarde, porque o vento e a pressão mudam a conta. Os ciclos são parecidos: há um padrão geral, mas o detalhe escapa.
 
 ## Volatilidade: o preço que dança
 
-A volatilidade mede o quanto um preço oscila. Em cripto, a volatilidade costuma ser muito alta, comparada com a de um depósito a prazo ou de um fundo de obrigações. Isto quer dizer que um movimento de 10% num dia não é raro, e isso muda a forma como deves dimensionar qualquer posição.
+A volatilidade mede o quanto um preço oscila. Em cripto costuma ser muito alta, comparada com um depósito a prazo ou um fundo de obrigações. Um movimento de 10% num dia não é raro, e isso muda a forma como deves dimensionar qualquer posição.
 
 :::destaque
-A volatilidade não é um defeito do mercado. É a característica que te obriga a investir só o que podes ver oscilar sem perder o sono.
+A volatilidade não é um defeito do mercado. É a razão para investires só o que consegues ver oscilar sem perder o sono.
 :::
 
 ## Dominância do Bitcoin
 
-Uma métrica que vais ver muito é a dominância do Bitcoin: a percentagem do valor total do mercado de cripto que pertence ao Bitcoin. Quando a dominância sobe, muitas vezes as altcoins têm mais dificuldade. Quando desce, pode haver mais apetite por moedas alternativas. Não é uma regra fixa, mas é um indicador útil para perceber para onde o dinheiro está a ir.
-
-Repara na palavra «útil». Não é um oráculo. É um dado a acrescentar a outros.
+Vais ver muito a dominância do Bitcoin: a percentagem do valor total do mercado de cripto que pertence ao Bitcoin. Quando sobe, muitas vezes as altcoins têm mais dificuldade. Quando desce, pode haver mais apetite por moedas alternativas. Não é uma regra fixa. É um indicador útil para perceber para onde o dinheiro está a ir, e só isso.
 
 ## Notícias contra ruído
 
-O mercado vive de notícias, e a maioria delas é ruído. Um tweet de uma figura pública, um rumor de uma parceria, uma previsão de um influenciador: tudo isto mexe no preço durante minutos ou horas. Quase nunca muda o que precisas de saber sobre um projeto.
+A maioria das notícias de cripto é ruído. Um tweet de uma figura pública, um rumor de parceria, uma previsão de um influenciador: tudo isto mexe no preço durante minutos ou horas, e quase nunca muda o que precisas de saber sobre um projeto.
 
-Distingue dois tipos de informação. A notícia com factos verificáveis, como uma decisão regulatória publicada num site oficial, uma alteração técnica documentada ou um relatório de auditoria. E o ruído, que é emoção embrulhada em frases de impacto, sem fonte e sem data. Quando a informação te deixa com pressa e medo, é quase sempre ruído.
+Separa dois tipos de informação. Há a notícia com factos verificáveis, como uma decisão publicada num site oficial, uma alteração técnica documentada ou um relatório de auditoria. E há o ruído, que é emoção embrulhada em frases de impacto, sem fonte e sem data. Quando a informação te deixa com pressa e medo, quase sempre é ruído.
+
+:::conversa WhatsApp · Ana
+Ana: Viste o gráfico? Isto vai disparar hoje à noite!
+eu: Vi. Mas não tenho fonte nenhuma, é só emoção. Vou esperar 24 horas.
+Ana: Tu e a tua paciência.
+:::
 
 :::alerta
 Se a notícia te faz querer comprar ou vender agora, já é ruído. Espera vinte e quatro horas e volta a ler com calma. Se continuares a querer agir, a decisão é tua, mas agora com mais informação.
@@ -36,9 +45,21 @@ Se a notícia te faz querer comprar ou vender agora, já é ruído. Espera vinte
 
 ## Como ler um gráfico sem te enganares
 
-Um gráfico mostra o passado. Pode ajudar a perceber o contexto, mas não garante o futuro. Quando olhas para um gráfico, pergunta-te três coisas: em que período estou a olhar? Que acontecimentos marcam as subidas e as quedas? O que mudou entre o início e o fim do gráfico?
+Um gráfico mostra o passado. Ajuda a perceber o contexto, mas não garante nada sobre o futuro. Quando olhas para um, pergunta-te três coisas: em que período estou a olhar? Que acontecimentos marcam as subidas e as quedas? O que mudou entre o início e o fim?
 
-Escolher o período também engana. Um gráfico de sete dias pode parecer uma tendência dramática, e um gráfico de cinco anos pode mostrar algo completamente diferente. Muda sempre a escala, e desconfia de quem só te mostra o período que lhe convém.
+Escolher o período também engana. Um gráfico de sete dias pode parecer uma tendência dramática, e um de cinco anos pode contar outra história completa. Muda sempre a escala e desconfia de quem só te mostra o período que lhe convém.
+
+:::ecra Exemplo · mesmo ativo, dois períodos (ilustrativo)
+Período: 7 dias · Leitura: tendência de subida
+Período: 5 anos · Leitura: fase de queda e recuperação
+Conclusão: depende do período que escolheste
+:::
+
+:::cartao O filtro das três perguntas
+- Esta informação vem de uma fonte verificável?
+- Se o preço estivesse 20% abaixo do de hoje, continuava a querer comprar?
+- Estou a agir por causa de uma notícia de hoje ou de um plano que escrevi antes?
+:::
 
 ## Exercício: três perguntas antes de qualquer decisão
 
@@ -55,17 +76,26 @@ ____________________________________________________________
 ## Uma história pequena
 
 :::historia
-Caso ilustrativo: a Beatriz, 31 anos, gestora de loja em Lisboa, passava as noites a ver gráficos. Achava que, se estudasse o suficiente, perceberia o padrão. Um dia, percebeu que o que estava a fazer era ansiedade com outro nome. Reduziu a exposição ao ecrã, passou a ver o mercado uma vez por semana e sentiu-se mais calma e mais atenta ao que realmente importava.
+Caso ilustrativo: a Beatriz, 31 anos, gestora de loja em Lisboa, passava as noites a ver gráficos. Achava que, se estudasse o suficiente, acabaria por perceber o padrão. Um dia percebeu que aquilo era ansiedade com outro nome. Reduziu o tempo de ecrã, passou a ver o mercado uma vez por semana e sentiu-se mais calma e mais atenta ao que importava.
 :::
+
+:::nota
+Hoje: escolhe um dia fixo da semana para ver o mercado. Até lá, desinstala a aplicação do preço do ecrã inicial.
+:::
+
+Conteúdo educativo, não constitui aconselhamento financeiro. O mercado de cripto pode subir ou descer de forma brusca, e tu podes perder o que investires.
 
 ## Em resumo
 
-- Ciclos existem, mas não são horários; ler o contexto é diferente de prever.
+- Ciclos existem, mas não são horários. Ler o contexto não é prever.
 - A volatilidade alta obriga a dimensionar as posições com cuidado.
 - A dominância do Bitcoin é um indicador útil, não um oráculo.
 - Notícias com fonte valem mais do que ruído com emoção.
 - Um gráfico mostra o passado, e o período escolhido muda a leitura.
 
-## A tua missão desta semana
+## Para fazer hoje
 
-Escolhe um dia fixo para ver o mercado, por exemplo sábado de manhã, e não vejas o preço nos outros dias. Anota o que sentiste em cada visita.
+1. Escolhe o dia fixo da semana em que vais ver o mercado, por exemplo sábado de manhã.
+2. Desinstala ou tira do ecrã inicial a aplicação que te mostra o preço o dia todo.
+3. Responde às três perguntas do filtro sobre a última notícia que te deixou ansioso.
+4. Anota, numa linha, como te sentiste depois de ver o preço hoje.

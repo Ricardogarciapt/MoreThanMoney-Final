@@ -1,43 +1,58 @@
 # Antes de começares
 
-> Um livro que não se escreve à mão é um livro que só se lê, e ler, sozinho, não muda ninguém.
+> Pega numa caneta. Este livro foi feito para ser riscado.
 
-Vou pedir-te uma coisa simples antes de passares à página seguinte: pega numa caneta. Não é para decorar frases bonitas. É para escrever, riscar, voltar atrás e discordar de mim, se for preciso. Este livro foi escrito para ser riscado.
+Antes de virares a página, vai buscar uma caneta. A sério. Pode ser a do banco, a que está esquecida no porta-luvas, a que roubaste sem querer num balcão das Finanças. Serve qualquer uma.
 
-Sei como é. Tens o telemóvel ao lado, uma notificação a piscar e a sensação de que já sabes isto tudo. Talvez saibas uma parte. A diferença entre saber e mudar está quase toda no que fazes nos dias a seguir à leitura, e é por aí que vamos.
+Digo isto porque conheço o filme. Lês um livro destes ao domingo, sublinhas meia dúzia de frases, sentes-te motivado até segunda às nove e na quarta já não te lembras do título. Eu fiz isso durante anos. Tenho uma prateleira inteira de livros que me deixaram com vontade e sem plano.
 
-## O que este livro é
+Este é diferente por um motivo prático: tem tarefas. Pequenas, chatas às vezes, mas tarefas. Se as fizeres, daqui a dez semanas sabes onde está o teu tempo, para onde vai o teu dinheiro, quanto aguentas se o salário falhar e como se mexe num mercado sem apostar a casa. Se não as fizeres, leste um livro. Também não faz mal, mas não foi para isso que o escrevi.
 
-Não é um manual para enriquecer. Não tem fórmulas mágicas nem promessas de liberdade financeira garantida. Tem uma pergunta de partida, que foi a mesma que me fiz quando tinha de decidir o que fazer com a minha vida: o que é que eu tenho, de facto, e o que é que estou a deixar que me tire?
+[[foto: rg-estudio.jpg | Onde gravo quase tudo. Uma luz, um tripé e muitas horas de repetição. | polaroid]]
 
-O livro tem dez capítulos. Cada um termina com uma missão para a semana seguinte. Lidos por ordem, formam um sistema de dez semanas: primeiro olhas para o tempo e para o dinheiro, depois para a disciplina, depois para o risco e a rotina. Não precisas de ser perfeito em nenhuma dessas semanas. Precisas de a fazer.
+## O que vais encontrar
 
-### Como ler cada capítulo
+São dez capítulos, um por semana. A ordem importa. Começamos pela tua semana e pelas tuas contas, porque não vale a pena falar de mercados a quem não sabe quanto gasta por mês. Só depois entramos em gráficos, risco e rotina.
 
-Lê o capítulo de seguida, sem parar. Depois volta a lê-lo com a caneta na mão. Vais encontrar blocos com funções diferentes:
+Ao longo do livro vais encontrar uns blocos com cara própria:
 
-- os **destaques** são a ideia que não queres perder;
-- os **exercícios** pedem que escrevas; não há resposta certa, há a tua;
-- os **alertas** são erros comuns, muitos deles meus;
-- as **histórias** são momentos reais ou casos claramente ilustrativos, para veres a ideia a funcionar em pessoas.
+- **Ideias-chave**, em fundo escuro. São as frases que eu gostava que te ficassem na cabeça.
+- **Exercícios**, com linhas para escreveres. Escreve mesmo, na página ou no caderno.
+- **Atenção**, para os erros mais comuns. Muitos foram meus.
+- **Cartões recortáveis**, com tesoura no canto. Imprime, recorta e cola onde os vês todos os dias. O frigorífico funciona bem.
+- **Post-its**, que são aquilo que eu escreveria à mão se estivesse ao teu lado.
 
-Não saltes os exercícios. Quem lê este tipo de livro costuma sublinhar tudo e escrever pouco, e é exatamente o contrário do que funciona.
+:::cartao Como ler este livro
+- Lê o capítulo de uma vez.
+- Volta a ler com a caneta na mão.
+- Faz a tarefa da semana antes de passares ao seguinte.
+- Se uma semana correr mal, não recomeces. Continua.
+:::
 
-### Um aviso antes de tudo
+## O que este livro não é
 
-Este livro é conteúdo educativo. Não é aconselhamento financeiro, nem fiscal, nem jurídico. Quando falar de trading, de cripto ou de mercados, vai estar sempre presente a mesma ideia: o risco de perda é real, e cada decisão sobre o teu dinheiro é tua. Não há resultados garantidos. Há trabalho, método e acompanhamento, e isso é tudo o que te posso prometer.
+Não é um manual para ficares rico. Não tem sinais para copiar, nem segredos, nem aquelas capturas de ecrã com saldos que ninguém consegue confirmar. Quando aparecerem números, vêm marcados como exemplo, porque são exemplo.
 
-### Como usar a semana
+Também não é aconselhamento financeiro, fiscal ou jurídico. É o que eu aprendi, contado da forma mais honesta que consigo. Quando falo de trading, cripto ou mercados, fica sempre a mesma regra por baixo: podes perder dinheiro, incluindo tudo o que puseres lá. A decisão é sempre tua.
 
-Escolhe um dia fixo para a missão, de preferência o mesmo dia em todas as semanas. Domingo à noite serve bem. Abre o capítulo, relê a missão e cumpre-a antes de avançares para o seguinte. Se uma semana correr mal, não recomeces o livro. Continua do ponto onde estás.
+:::post @ricardogarciapt
+imagem: Não há resultados garantidos. Há trabalho, disciplina e uma equipa ao teu lado.
+legenda: Digo isto em todos os vídeos e vou dizê-lo aqui também. Quem te promete o contrário está a vender-te outra coisa.
+:::
 
-## Em resumo
+## Um ritual de domingo
 
-- Este livro é um sistema de dez semanas, não um conjunto de dicas soltas.
-- Lê primeiro, escreve depois. Não saltes os exercícios.
-- Os números de exemplo são sempre ilustrativos e hipotéticos.
-- O risco de perda existe em qualquer mercado. Não é conselho financeiro.
+Escolhe um dia fixo. Eu uso o domingo à noite, depois do jantar, quando a casa acalma. Abres o livro no capítulo da semana, relês a tarefa e decides quando a vais fazer. Põe no calendário do telemóvel, com alarme. Parece exagero. Não é: o que não tem hora marcada acaba sempre empurrado para «quando tiver tempo», e esse dia não chega.
 
-## A tua missão desta semana
+:::nota
+Domingo, 21h30.
+Livro + caderno + 30 minutos.
+Telemóvel noutra divisão.
+:::
 
-Compra um caderno de capa dura, escreve no topo da primeira página a data de hoje e a frase: «Quero saber onde está o meu tempo e o meu dinheiro.» Não precisas de mais nada para começar.
+## Para fazer hoje
+
+1. Compra ou arranja um caderno só para isto. De capa dura, se puderes, porque vai andar contigo.
+2. Na primeira página escreve a data de hoje e esta frase: «Quero saber onde está o meu tempo e o meu dinheiro.»
+3. Marca no telemóvel um alarme semanal com o nome «Livro». Escolhe o dia e a hora agora, não depois.
+4. Passa à página seguinte.
