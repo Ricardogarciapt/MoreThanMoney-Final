@@ -1,5 +1,5 @@
 import React from 'react'
-import { AbsoluteFill, Audio, Freeze, Img, OffthreadVideo, Sequence, getInputProps, interpolate, spring, staticFile, useCurrentFrame, useVideoConfig } from 'remotion'
+import { AbsoluteFill, Audio, Freeze, Img, OffthreadVideo, Sequence, getInputProps, interpolate, random, spring, staticFile, useCurrentFrame, useVideoConfig } from 'remotion'
 import { anuncioDe, segsDe, videoDe, musicaDe, fimVoz, type Anuncio, type Imagem } from './anuncios'
 import { FPS, OURO, OURO_CLARO, FUNDO, MARCA } from '../../motor/marca'
 import { Pelicula, Plano, clamp, ease } from '../../motor/util'
@@ -300,6 +300,69 @@ const Moldura: React.FC<{ k: string; a: Anuncio; total: number }> = ({ k, a, tot
   )
 }
 
+// Fotos reais em vários planos (21/11, pedido do Ricardo). Duas camadas recortadas da mesma foto (fundo desfocado
+// + figura) a mexer a velocidades diferentes (parallax), poeira em primeiro plano e câmara «à mão» muito leve.
+// A janela parte-se em 2 planos: aberto (push-in) → aproximado no rosto (pan contrário). Estética real, sem brilhos.
+const FOCO: Record<string, [number, number]> = {
+  estudio: [0.33, 0.2], farda: [0.52, 0.3], grade: [0.4, 0.28], origem: [0.68, 0.45],
+  palco: [0.47, 0.24], recomeco: [0.45, 0.55], retrato: [0.42, 0.3],
+}
+const UmPlano: React.FC<{ k: string; A: number; B: number; plano: 0 | 1 }> = ({ k, A, B, plano }) => {
+  const fr = useCurrentFrame()
+  if (fr < A - 4 || fr > B + 4) return null
+  const p = clamp01((fr - A) / Math.max(1, B - A))
+  const [fx, fy] = FOCO[k] ?? [0.5, 0.35]
+  const dir = plano === 0 ? 1 : -1
+  const base = plano === 0 ? 1.06 : 1.42
+  const zF = base + (plano === 0 ? 0.05 : 0.04) * p
+  const zP = base + (plano === 0 ? 0.13 : 0.1) * p
+  const xF = -dir * 1.2 * p, xP = dir * 1.8 * p
+  const yP = plano === 1 ? -1.2 * p : 0
+  // câmara à mão: deriva lenta de ~0,25 %
+  const mx = Math.sin(fr / 23) * 0.25 + Math.sin(fr / 9.7) * 0.08, my = Math.cos(fr / 29) * 0.2
+  const op = interpolate(fr, [A - 4, A + 2, B - 2, B + 4], [0, 1, 1, 0], clamp)
+  const origin = `${fx * 100}% ${fy * 100}%`
+  // No plano aproximado o rosto vai para a esquerda-alta (fora da janela do gémeo, que vive em cima à direita).
+  // Fotos 4:5 em «cover» num 9:16: a largura visível é 1080/1536 da foto.
+  const dispX = (fx * 1536 - 228) / 1080
+  const tx = plano === 1 ? Math.max(-22, Math.min(22, (0.36 - dispX) * 100)) : 0
+  const ty = plano === 1 ? Math.max(-18, Math.min(18, (0.33 - fy) * 100)) : 0
+  const camada: React.CSSProperties = { position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', transformOrigin: origin }
+  return (
+    <AbsoluteFill style={{ opacity: op, overflow: 'hidden' }}>
+      <Img src={staticFile(`fotos-planos/${k}-fundo.jpg`)} style={{ ...camada, transform: `translate(${tx + xF + mx}%, ${ty + my}%) scale(${zF})`, filter: 'blur(7px) brightness(0.6) saturate(0.9)' }} />
+      <Img src={staticFile(`fotos-planos/${k}-figura.png`)} style={{ ...camada, transform: `translate(${tx + xP + mx * 1.4}%, ${ty + yP + my * 1.4}%) scale(${zP})`, filter: 'contrast(1.04) saturate(0.95) drop-shadow(0 18px 40px rgba(0,0,0,0.55))' }} />
+      <Poeira semente={k + plano} />
+      <AbsoluteFill style={{ background: 'radial-gradient(ellipse at 50% 45%, transparent 45%, rgba(0,0,0,0.55) 100%)' }} />
+    </AbsoluteFill>
+  )
+}
+const clamp01 = (x: number) => Math.max(0, Math.min(1, x))
+const Poeira: React.FC<{ semente: string }> = ({ semente }) => {
+  const fr = useCurrentFrame()
+  return (
+    <AbsoluteFill style={{ pointerEvents: 'none' }}>
+      {Array.from({ length: 14 }, (_, n) => {
+        const r = (s: string) => random(`${semente}-${n}-${s}`)
+        const tam = 4 + r('t') * 14
+        const x = (r('x') * 110 - 5 + fr * (0.04 + r('v') * 0.08)) % 110
+        const y = (r('y') * 100 - fr * (0.02 + r('w') * 0.05) + 100) % 100
+        return <div key={n} style={{ position: 'absolute', left: `${x}%`, top: `${y}%`, width: tam, height: tam, borderRadius: '50%', background: 'rgba(255,236,200,0.5)', filter: `blur(${2 + r('b') * 5}px)`, opacity: 0.25 + r('o') * 0.35 }} />
+      })}
+    </AbsoluteFill>
+  )
+}
+const FotoPlanos: React.FC<{ k: string; de: number; ate: number }> = ({ k, de, ate }) => {
+  const A = f(de) - 6, B = f(ate) + 6
+  const meio = Math.round(A + (B - A) * 0.52)
+  return (
+    <AbsoluteFill style={{ zIndex: 2 }}>
+      <UmPlano k={k} A={A} B={meio} plano={0} />
+      <UmPlano k={k} A={meio} B={B} plano={1} />
+    </AbsoluteFill>
+  )
+}
+
 export const Video: React.FC = () => {
   const k = chave()
   const a = anuncioDe(k)
@@ -314,6 +377,8 @@ export const Video: React.FC = () => {
       {a.imagens.map((i, n) =>
         i.tipo === 'video' ? (
           <AbsoluteFill key={n} style={{ zIndex: 2 }}><Plano src={i.src} de={f(i.de) - 6} dur={f(i.ate) - f(i.de) + 12} grade={i.grade} zoom={[1.06, 1.18]} escuro={0.15} /></AbsoluteFill>
+        ) : i.tipo === 'foto' ? (
+          <FotoPlanos key={n} k={i.src} de={i.de} ate={i.ate} />
         ) : (
           <Telemovel key={n} src={i.src} srcs={i.srcs} de={i.de} ate={i.ate} />
         ),

@@ -45,7 +45,7 @@ Os reels «à moda antiga» (gémeo plano a plano com gancho + karaoke, fotos an
 **Receita (não mexer sem o Ricardo):** gémeo HeyGen (ou take filmado) por baixo, a falar a ecrã inteiro →
 gancho cinético (Anton, palavra a palavra com mola e desfoque) → legendas palavra a palavra com a palavra
 ativa a ouro → b-roll real (Mixkit) e ecrãs da app em PiP com o gémeo numa janela com aro da marca →
-chips só com o que a voz diz → destaque glitch da palavra-chave → light leaks e clarões nos cortes →
+**fotos reais do Ricardo em vários planos** (ver abaixo) → chips só com o que a voz diz → destaque glitch da palavra-chave → varrimento discreto nas bordas nos cortes (nunca luz por cima das animações) →
 música sintetizada + whooshes/impactos → cartão final com CTA → aviso educativo se falar de trading → -14 LUFS.
 
 **Fluxo automático:**
@@ -58,6 +58,13 @@ música sintetizada + whooshes/impactos → cartão final com CTA → aviso educ
    negócio levam o CTA a `morethanmoney.pt/solucoes`) → `sintese.py` → Remotion → `motor.mjs finalizar/verificar`.
 4. O site põe o reel em RASCUNHO na conta da marca e pede «Publicar/Descartar» ao Ricardo no Telegram
    e no briefing 9h30 (`lib/estudio/reel-aprovacao.ts`, 1 por dia e por conta às 20:30). Nada sai sozinho.
+
+**Fotos em vários planos (21/11, pedido do Ricardo, métodos de conteúdo magnético):** cada reel leva 1–2 fotos
+reais (`video/cinematico/public/fotos-planos/<k>-fundo.jpg` + `<k>-figura.png`, recortadas com rembg
+`u2net_human_seg` e fundo preenchido com inpaint do OpenCV). `auto.mjs` (FOTOS) escolhe pela frase dita;
+o `Video.tsx` (FotoPlanos) faz parallax entre fundo desfocado e figura, poeira em primeiro plano, câmara à mão
+leve e corta em 2 planos (aberto → aproximado com o rosto fora da janela do gémeo). Foto nova = recortar,
+juntar o foco em `FOCO` (Video.tsx) e o tema em `FOTOS` (auto.mjs). Sem fotos de menores.
 
 Ensaio local: `node video/cinematico/robo-cinematico.mjs --ensaio=<video.mp4> --marca=ricardo-garcia --palavra=X`.
 Stock no Actions: `stock-mixkit.sh` (fora do git; no Mac `public/stock` liga ao MTM-Assets).
