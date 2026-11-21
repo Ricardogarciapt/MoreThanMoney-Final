@@ -1,9 +1,8 @@
 import React from 'react'
 import { AbsoluteFill, Audio, Freeze, Img, OffthreadVideo, Sequence, getInputProps, interpolate, spring, staticFile, useCurrentFrame, useVideoConfig } from 'remotion'
-import { LightLeak } from '@remotion/light-leaks'
 import { anuncioDe, segsDe, videoDe, musicaDe, fimVoz, type Anuncio, type Imagem } from './anuncios'
 import { FPS, OURO, OURO_CLARO, FUNDO, MARCA } from '../../motor/marca'
-import { Pelicula, Clarao, Plano, clamp, ease } from '../../motor/util'
+import { Pelicula, Plano, clamp, ease } from '../../motor/util'
 
 const ANTON = "'Anton', sans-serif"
 const OSW = "'Oswald', sans-serif"
@@ -14,6 +13,21 @@ const LOGO = MARCA.id === 'ricardo-garcia' ? 'ricardogarcia/logo-rg-monograma-tr
 const PIP = { w: 360, h: 640, x: W - 360 - 48, y: 250 }
 
 export const chave = () => String((getInputProps() as { anuncio?: string }).anuncio || 'cor')
+
+// Transição discreta: faixa diagonal de luz quente que atravessa só as bordas (máscara radial deixa o centro limpo).
+const Varrimento: React.FC<{ em: number; sentido?: 1 | -1 }> = ({ em, sentido = 1 }) => {
+  const fr = useCurrentFrame()
+  const t = (fr - (em - 6)) / 12
+  if (t <= 0 || t >= 1) return null
+  const x = sentido > 0 ? -40 + 180 * ease(t) : 140 - 180 * ease(t)
+  const o = Math.sin(Math.PI * t) * 0.42
+  const mask = 'radial-gradient(ellipse 62% 48% at 50% 50%, transparent 55%, #000 100%)'
+  return (
+    <AbsoluteFill style={{ opacity: o, mixBlendMode: 'screen', WebkitMaskImage: mask, maskImage: mask }}>
+      <div style={{ position: 'absolute', top: '-20%', bottom: '-20%', left: `${x}%`, width: '28%', transform: 'skewX(-14deg)', background: `linear-gradient(90deg, transparent, color-mix(in srgb, ${OURO_CLARO} 70%, #fff) 50%, transparent)`, filter: 'blur(18px)' }} />
+    </AbsoluteFill>
+  )
+}
 
 /* ── 0..1: quanto o gémeo está em janela pequena (durante as imagens de apoio) ── */
 function modoPip(fr: number, imgs: Imagem[]) {
@@ -77,8 +91,8 @@ const FundoMarca: React.FC = () => {
   )
 }
 
-/* ── Ecrã real da app num telemóvel a flutuar ── */
-const Telemovel: React.FC<{ src: string; de: number; ate: number }> = ({ src, de, ate }) => {
+/* ── Ecrã real (demo/solução do site) num telemóvel a flutuar; com srcs passa por várias opções ── */
+const Telemovel: React.FC<{ src: string; srcs?: string[]; de: number; ate: number }> = ({ src, srcs, de, ate }) => {
   const fr = useCurrentFrame()
   const { fps } = useVideoConfig()
   const A = f(de), B = f(ate)
@@ -86,14 +100,28 @@ const Telemovel: React.FC<{ src: string; de: number; ate: number }> = ({ src, de
   const e = spring({ frame: fr - A, fps, config: { damping: 14, stiffness: 110 } })
   const o = interpolate(fr, [A - 8, A + 4, B - 4, B + 8], [0, 1, 1, 0], clamp)
   const ry = interpolate(e, [0, 1], [-35, 12]) + Math.sin((fr - A) / 22) * 2
-  const scroll = interpolate(fr, [A, B], [0, -180], clamp)
+  const ecras = srcs && srcs.length ? srcs : [src]
+  const fatia = (B - A) / ecras.length
   return (
     <AbsoluteFill style={{ opacity: o, zIndex: 3 }}>
       <FundoMarca />
       <div style={{ position: 'absolute', left: 70, top: 300, width: 540, height: 1110, perspective: 1400 }}>
         <div style={{ width: '100%', height: '100%', transform: `rotateY(${ry}deg) rotateX(4deg) translateY(${(1 - e) * 200}px) scale(${0.85 + 0.15 * e})`, borderRadius: 64, background: '#000', padding: 16, boxShadow: `0 60px 120px rgba(0,0,0,.7), 0 0 0 3px #2a2a2a, 0 0 80px color-mix(in srgb, ${OURO} 45%, transparent)` }}>
           <div style={{ width: '100%', height: '100%', borderRadius: 50, overflow: 'hidden', position: 'relative' }}>
-            <Img src={staticFile(src)} style={{ width: '100%', transform: `translateY(${scroll}px)` }} />
+            {ecras.map((s, n) => {
+              // cada opção entra a deslizar da direita; rola devagar enquanto está à vista
+              const ini = A + n * fatia
+              const x = n === 0 ? 0 : interpolate(fr, [ini - 7, ini + 7], [100, 0], { ...clamp, easing: ease })
+              const sai = n === ecras.length - 1 ? 0 : interpolate(fr, [ini + fatia - 7, ini + fatia + 7], [0, -35], { ...clamp, easing: ease })
+              const rolar = interpolate(fr, [ini, ini + fatia], [0, ecras.length > 1 ? -140 : -260], clamp)
+              if (fr < ini - 8 || (n < ecras.length - 1 && fr > ini + fatia + 8)) return null
+              return <div key={n} style={{ position: 'absolute', inset: 0, background: FUNDO, transform: `translateX(${x + sai}%)`, zIndex: n }}><Img src={staticFile(s)} style={{ width: '100%', transform: `translateY(${rolar}px)` }} /></div>
+            })}
+            {ecras.length > 1 && (
+              <div style={{ position: 'absolute', bottom: 22, left: 0, right: 0, display: 'flex', justifyContent: 'center', gap: 10, zIndex: 20 }}>
+                {ecras.map((_, n) => <div key={n} style={{ width: fr >= A + n * fatia && fr < A + (n + 1) * fatia ? 30 : 10, height: 10, borderRadius: 5, background: fr >= A + n * fatia && fr < A + (n + 1) * fatia ? OURO_CLARO : 'rgba(255,255,255,.5)' }} />)}
+              </div>
+            )}
             <div style={{ position: 'absolute', left: 0, right: 0, top: `${-30 + 160 * (((fr - A) % 70) / 70)}%`, height: '25%', background: 'linear-gradient(115deg, transparent 30%, rgba(255,255,255,.14) 50%, transparent 70%)' }} />
           </div>
         </div>
@@ -191,7 +219,7 @@ const Destaque: React.FC<{ a: Anuncio }> = ({ a }) => {
     <div style={{ position: 'absolute', left: 0, right: 0, top: 1180, textAlign: 'center', zIndex: 9, opacity: o }}>
       <div style={{ display: 'inline-block', fontFamily: OSW, fontSize: 34, letterSpacing: 6, color: OURO_CLARO, background: 'rgba(0,0,0,.6)', padding: '8px 22px', borderRadius: 12, marginBottom: 14, transform: `translateY(${(1 - s) * 40}px)`, opacity: s }}>💬 ESCREVE-ME</div>
       <div style={{ position: 'relative', fontFamily: ANTON, fontSize: 190, lineHeight: 1, transform: `scale(${0.5 + 0.5 * s})`, color: 'transparent', backgroundImage: `linear-gradient(180deg, #fff 10%, ${OURO_CLARO} 55%, ${OURO})`, WebkitBackgroundClip: 'text', backgroundClip: 'text', filter: `drop-shadow(0 0 40px ${OURO}) drop-shadow(0 12px 30px rgba(0,0,0,.8))` }}>
-        <span style={{ position: 'absolute', left: glitch, right: 0, color: 'rgba(0,200,255,.35)', mixBlendMode: 'screen' }}>{glitch ? a.destaque.t : ''}</span>
+        <span style={{ position: 'absolute', left: glitch, right: 0, color: `color-mix(in srgb, ${OURO_CLARO} 45%, transparent)`, mixBlendMode: 'screen' }}>{glitch ? a.destaque.t : ''}</span>
         {a.destaque.t}
       </div>
     </div>
@@ -287,7 +315,7 @@ export const Video: React.FC = () => {
         i.tipo === 'video' ? (
           <AbsoluteFill key={n} style={{ zIndex: 2 }}><Plano src={i.src} de={f(i.de) - 6} dur={f(i.ate) - f(i.de) + 12} grade={i.grade} zoom={[1.06, 1.18]} escuro={0.15} /></AbsoluteFill>
         ) : (
-          <Telemovel key={n} src={i.src} de={i.de} ate={i.ate} />
+          <Telemovel key={n} src={i.src} srcs={i.srcs} de={i.de} ate={i.ate} />
         ),
       )}
       {/* cartão final: fundo da marca */}
@@ -299,15 +327,13 @@ export const Video: React.FC = () => {
       <Destaque a={a} />
       <Cartoes a={a} />
       <Cta k={k} a={a} />
-      {/* transições: clarão + fuga de luz a cada imagem e no CTA */}
-      <AbsoluteFill style={{ zIndex: 15, pointerEvents: 'none' }}>
-        <Clarao em={2} dur={10} />
-        <Sequence from={0} durationInFrames={36}><LightLeak durationInFrames={36} seed={2} hueShift={a.marca === 'ricardo-garcia' ? 190 : 20} /></Sequence>
-        {[...a.imagens.map((i) => i.de), a.cta.de].map((s, n) => (
-          <Sequence key={n} from={Math.max(0, f(s) - 10)} durationInFrames={28}><LightLeak durationInFrames={28} seed={n * 3 + 5} hueShift={a.marca === 'ricardo-garcia' ? 190 : 20} /></Sequence>
-        ))}
-        <Clarao em={f(a.cta.de)} dur={8} />
+      {/* transições (21/11, pedido do Ricardo): o clarão/fuga de luz em ecrã inteiro tapava o gémeo, as legendas e os
+          chips durante ~1 s. Agora a transição vive POR BAIXO das animações (zIndex 3, só sobre as imagens de apoio):
+          um varrimento fino de luz quente nas bordas, centro sempre limpo, 12 frames. Nunca voltar a pôr luz por cima. */}
+      <AbsoluteFill style={{ zIndex: 3, pointerEvents: 'none' }}>
+        {[...a.imagens.map((i) => i.de), a.cta.de].map((s, n) => <Varrimento key={n} em={f(s)} sentido={n % 2 ? -1 : 1} />)}
       </AbsoluteFill>
+      {fr < 10 && <AbsoluteFill style={{ zIndex: 19, background: '#000', opacity: interpolate(fr, [0, 9], [1, 0], clamp), pointerEvents: 'none' }} />}
       <AbsoluteFill style={{ zIndex: 16, pointerEvents: 'none' }}><Pelicula /></AbsoluteFill>
       <Moldura k={k} a={a} total={durationInFrames} />
       <Audio src={staticFile(musicaDe(k))} volume={volMusica} />

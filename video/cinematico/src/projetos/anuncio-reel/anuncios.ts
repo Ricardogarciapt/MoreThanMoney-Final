@@ -4,7 +4,7 @@
 import { getInputProps } from 'remotion'
 import legendas from './legendas.json'
 
-export type Imagem = { de: number; ate: number; src: string; tipo: 'video' | 'app'; grade?: 'noite' | 'frio' | 'ouro' | 'neutro' }
+export type Imagem = { de: number; ate: number; src: string; tipo: 'video' | 'app'; grade?: 'noite' | 'frio' | 'ouro' | 'neutro'; srcs?: string[]; demo?: string[] }
 export type Anuncio = {
   marca: 'morethanmoney' | 'ricardo-garcia'
   gancho: { linhas: string[]; ate: number }

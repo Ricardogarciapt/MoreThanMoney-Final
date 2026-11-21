@@ -59,16 +59,32 @@ const TEMAS = [
   { re: /\b(negocio|empresa|clientes?|ia\b|inteligencia artificial|automat|site|tecnolog)/, clips: ['negocio_tecnologia_1', 'negocio_tecnologia_2'], grade: 'neutro' },
   { re: /\b(telemovel|mensagem|whatsapp|instagram|agenda|marca)/, clips: ['cliente_marca_1', 'cliente_marca_2'], grade: 'neutro' },
 ]
-// Tema da frase → ecrã real da app (public/app-*.jpg).
-const APPS = [
-  { re: /\b(scanner|sinal|sinais|alerta|setup)/, src: 'app-scanner.jpg' },
-  { re: /\b(corretora|conta|operar|webtrader|ordem|grafico)/, src: 'app-webtrader.jpg' },
-  { re: /\b(alerta|notifica)/, src: 'app-alertas.jpg' },
-  { re: /\b(aula|curso|aprend|formac|metodo)/, src: 'app-aulas.jpg' },
-  { re: /\b(comunidade|chat|grupo|membros)/, src: 'app-chat.jpg' },
-  { re: /\b(app|plataforma|feed)/, src: 'app-feed.jpg' },
+// Tema da frase → ecrãs REAIS das Demos e Soluções do site (21/11, pedido do Ricardo: os ecrãs da app MTM System
+// deixaram de servir; mostrar as demos novas e várias opções). O robô captura as páginas ao montar
+// (robo-cinematico.mjs capturarDemos); uma demo ainda não publicada dá 404 e cai fora sozinha.
+// Cada entrada pode ter várias páginas: o telemóvel passa por elas (montra de opções).
+const DEMOS = [
+  { re: /\b(nota de voz|por voz|crm|ficha|visita|comercia)/, p: ['/solucoes/demos/crm-por-voz'] },
+  { re: /\b(reuni|meet|resumo|ata\b)/, p: ['/solucoes/demos/reuniao-com-resumo'] },
+  { re: /\b(marcac|marcar|agenda|horario|whatsapp)/, p: ['/solucoes/demos/marcacoes-whatsapp', '/demos?modelo=barbearia'] },
+  { re: /\b(orcament|formulario|propostas?\b)/, p: ['/solucoes/demos/orcamento-automatico'] },
+  { re: /\b(avaliac|google|estrelas|reviews?)/, p: ['/solucoes/demos/avaliacoes-google'] },
+  { re: /\b(linktree|link na bio|bio\b|pagina|site)/, p: ['/solucoes/demos/linktree-para-app'] },
+  { re: /\b(fatura|contabil|papeis|papelada|fornecedor)/, p: ['/solucoes/demos/faturas-por-email', '/demos?modelo=profissional'] },
+  { re: /\b(mentor|comunidade|alunos|estrategia|scanner|sinais?|trading|trader)/, p: ['/solucoes/demos/mentor-ia-comunidade', '/solucoes/demos/diario-trading-alunos'] },
+  { re: /\b(alojamento|check-?in|hospede|turist)/, p: ['/solucoes/demos/checkin-alojamento-local'] },
+  { re: /\b(pastelaria|encomenda|cozinha|restaurante|tasca|cafe)/, p: ['/solucoes/demos/encomendas-pastelaria', '/demos?modelo=restaurante'] },
+  { re: /\b(mensalidade|ginasio|treino|cobra|pagamento)/, p: ['/solucoes/demos/mensalidades-em-dia', '/demos?modelo=ginasio'] },
+  { re: /\b(imobili|casas?\b|imove)/, p: ['/demos?modelo=imobiliaria'] },
+  { re: /\b(clinica|fisio|saude|consulta)/, p: ['/demos?modelo=clinica'] },
+  { re: /\b(barbear|cabeleir|estetica|beleza|unhas)/, p: ['/demos?modelo=barbearia', '/demos?modelo=beleza'] },
 ]
-const APPS_RODA = ['app-scanner.jpg', 'app-aulas.jpg', 'app-webtrader.jpg', 'app-chat.jpg', 'app-alertas.jpg', 'app-feed.jpg']
+// Fala de negócio/IA sem sector concreto: várias opções seguidas, cada uma com a sua marca fictícia.
+const MONTRA = ['/demos?modelo=restaurante', '/demos?modelo=barbearia', '/demos?modelo=clinica', '/demos?modelo=ginasio']
+const RE_NEGOCIO = /\b(negocio|empresa|clientes?|ia\b|inteligencia artificial|automat|solucoes|sistema|tecnolog|app)/
+/** Nome do ficheiro capturado para uma página (o robô escreve-o em public/stock/auto). */
+export const ficheiroDemo = (p) => `demo-${p.replace(/[^a-z0-9]+/gi, '-').replace(/^-|-$/g, '').toLowerCase()}.jpg`
+const ecraDemo = (paginas) => ({ tipo: 'app', src: `stock/auto/${ficheiroDemo(paginas[0])}`, srcs: paginas.map((x) => `stock/auto/${ficheiroDemo(x)}`), demo: paginas })
 
 // Palavras ditas → chip curto (só repete o que a voz disse; nunca um número).
 const CHIPS = [
@@ -128,7 +144,6 @@ export function anuncioAuto(e) {
   const imagens = []
   const usados = new Set()
   const apoio = [...(e.apoio || [])]
-  let roda = 0
   // Janelas: cada frase do meio, partida em pedaços de ≤ 3,4 s (frases longas dão 2 imagens).
   const janelas = []
   for (let i = 1; i < iFimMeio; i++) {
@@ -152,19 +167,22 @@ export function anuncioAuto(e) {
     if (apoio.length) img = apoio.shift()
     if (!img) {
       const tema = TEMAS.find((x) => x.re.test(t) && x.clips.some((c) => stock.has(c) && !usados.has(c)))
-      const app = APPS.find((x) => x.re.test(t) && !usados.has(x.src))
-      // Ricardo Garcia: mais vida real (stock); MTM: ecrãs da app alternados com vida real.
+      const demo = DEMOS.find((x) => x.re.test(t) && !usados.has(x.p[0]))
+      const montra = !demo && RE_NEGOCIO.test(t) && !usados.has(MONTRA[0])
+      // alterna: depois de um ecrã de demo, se houver vida real a condizer, vai vida real
       const ultimaApp = imagens.length > 0 && imagens[imagens.length - 1].tipo === 'app'
-      const preferirStock = marca === 'ricardo-garcia' ? !!tema : !!tema && (!app || ultimaApp)
-      if (preferirStock) {
-        const c = tema.clips.find((x) => stock.has(x) && !usados.has(x))
-        img = { src: c, tipo: 'video', grade: tema.grade }
-      } else if (app) img = { src: app.src, tipo: 'app' }
+      if (tema && (!(demo || montra) || ultimaApp)) {
+        img = { src: tema.clips.find((x) => stock.has(x) && !usados.has(x)), tipo: 'video', grade: tema.grade }
+      } else if (demo) img = ecraDemo(demo.p)
+      else if (montra) img = ecraDemo(MONTRA)
       else {
-        const livre = APPS_RODA.find((x) => !usados.has(x)) || APPS_RODA[roda++ % APPS_RODA.length]
-        img = { src: livre, tipo: 'app' }
+        const livre = TEMAS.flatMap((x) => x.clips.map((c) => ({ c, g: x.grade }))).find((x) => stock.has(x.c) && !usados.has(x.c))
+        if (livre) img = { src: livre.c, tipo: 'video', grade: livre.g }
+        else if (!usados.has(MONTRA[0])) img = ecraDemo(MONTRA)
+        else continue
       }
     }
+    if (img.demo) img.demo.forEach((x) => usados.add(x))
     usados.add(img.src)
     imagens.push({ de, ate, ...img })
     if (imagens.length >= 4) break
