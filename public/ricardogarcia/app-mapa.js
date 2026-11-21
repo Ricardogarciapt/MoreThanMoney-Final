@@ -58,11 +58,11 @@
   function estilo() {
     var lw = function (a, b) { return ['interpolate', ['exponential', 1.6], ['zoom'], 12, a, 18, b]; };
     return {
-      version: 8, glyphs: GL,
+      version: 8, glyphs: GL, light: { anchor: 'map', color: '#ffe2a8', intensity: .55, position: [1.4, 210, 40] },
       sources: { omt: { type: 'vector', url: 'https://tiles.openfreemap.org/planet', attribution: '<a href="https://openfreemap.org" target="_blank" rel="noopener">OpenFreeMap</a> © <a href="https://www.openmaptiles.org/" target="_blank" rel="noopener">OpenMapTiles</a> © <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a>' } },
       layers: [
-        { id: 'fundo', type: 'background', paint: { 'background-color': '#080a0f' } },
-        { id: 'uso', type: 'fill', source: 'omt', 'source-layer': 'landuse', paint: { 'fill-color': '#0c0f16', 'fill-opacity': .8 } },
+        { id: 'fundo', type: 'background', paint: { 'background-color': '#0b0e14' } },
+        { id: 'uso', type: 'fill', source: 'omt', 'source-layer': 'landuse', paint: { 'fill-color': '#0f131c', 'fill-opacity': .8 } },
         { id: 'verde', type: 'fill', source: 'omt', 'source-layer': 'landcover', filter: ['in', ['get', 'class'], ['literal', ['grass', 'wood', 'farmland', 'wetland']]], paint: { 'fill-color': '#0b1a13', 'fill-opacity': .9 } },
         { id: 'parque', type: 'fill', source: 'omt', 'source-layer': 'park', paint: { 'fill-color': '#0d2117', 'fill-outline-color': '#1c4a32' } },
         { id: 'agua', type: 'fill', source: 'omt', 'source-layer': 'water', paint: { 'fill-color': '#06192a' } },
@@ -70,15 +70,15 @@
         { id: 'rio', type: 'line', source: 'omt', 'source-layer': 'waterway', paint: { 'line-color': '#0c2c45', 'line-width': lw(1, 6) } },
         { id: 'caminho', type: 'line', source: 'omt', 'source-layer': 'transportation', filter: ['in', ['get', 'class'], ['literal', ['path', 'track', 'pedestrian']]], paint: { 'line-color': '#3a4a3a', 'line-width': lw(.6, 2.5), 'line-dasharray': [2, 1.5] } },
         { id: 'rua-c', type: 'line', source: 'omt', 'source-layer': 'transportation', filter: ['in', ['get', 'class'], ['literal', ['minor', 'service', 'tertiary', 'secondary', 'primary', 'trunk', 'motorway']]], layout: { 'line-cap': 'round', 'line-join': 'round' }, paint: { 'line-color': '#030407', 'line-width': lw(1.6, 22) } },
-        { id: 'rua', type: 'line', source: 'omt', 'source-layer': 'transportation', filter: ['in', ['get', 'class'], ['literal', ['minor', 'service', 'tertiary']]], layout: { 'line-cap': 'round', 'line-join': 'round' }, paint: { 'line-color': '#1b212e', 'line-width': lw(.8, 16) } },
-        { id: 'avenida', type: 'line', source: 'omt', 'source-layer': 'transportation', filter: ['in', ['get', 'class'], ['literal', ['secondary', 'primary']]], layout: { 'line-cap': 'round', 'line-join': 'round' }, paint: { 'line-color': '#3b3322', 'line-width': lw(1.2, 20) } },
-        { id: 'via', type: 'line', source: 'omt', 'source-layer': 'transportation', filter: ['in', ['get', 'class'], ['literal', ['trunk', 'motorway']]], layout: { 'line-cap': 'round', 'line-join': 'round' }, paint: { 'line-color': '#6b5323', 'line-width': lw(1.6, 24) } },
+        { id: 'rua', type: 'line', source: 'omt', 'source-layer': 'transportation', filter: ['in', ['get', 'class'], ['literal', ['minor', 'service', 'tertiary']]], layout: { 'line-cap': 'round', 'line-join': 'round' }, paint: { 'line-color': '#2a3244', 'line-width': lw(.8, 16) } },
+        { id: 'avenida', type: 'line', source: 'omt', 'source-layer': 'transportation', filter: ['in', ['get', 'class'], ['literal', ['secondary', 'primary']]], layout: { 'line-cap': 'round', 'line-join': 'round' }, paint: { 'line-color': '#5a4a26', 'line-width': lw(1.2, 20) } },
+        { id: 'via', type: 'line', source: 'omt', 'source-layer': 'transportation', filter: ['in', ['get', 'class'], ['literal', ['trunk', 'motorway']]], layout: { 'line-cap': 'round', 'line-join': 'round' }, paint: { 'line-color': '#8a6a2a', 'line-width': lw(1.6, 24) } },
         { id: 'predios', type: 'fill-extrusion', source: 'omt', 'source-layer': 'building', minzoom: 13.5,
-          paint: { 'fill-extrusion-color': ['interpolate', ['linear'], ['coalesce', ['get', 'render_height'], 8], 0, '#141925', 25, '#1d2333', 60, '#2a2c38', 120, '#3a3424'],
+          paint: { 'fill-extrusion-color': ['interpolate', ['linear'], ['coalesce', ['get', 'render_height'], 8], 0, '#232a3a', 20, '#2c3346', 50, '#3a3d4e', 120, '#5a4b2c'],
             'fill-extrusion-height': ['interpolate', ['linear'], ['zoom'], 13.5, 0, 15, ['coalesce', ['get', 'render_height'], 8]],
             'fill-extrusion-base': ['coalesce', ['get', 'render_min_height'], 0], 'fill-extrusion-opacity': .92, 'fill-extrusion-vertical-gradient': true } },
         { id: 'rua-nome', type: 'symbol', source: 'omt', 'source-layer': 'transportation_name', minzoom: 15, layout: { 'symbol-placement': 'line', 'text-field': ['coalesce', ['get', 'name:pt'], ['get', 'name']], 'text-font': ['Noto Sans Regular'], 'text-size': 11 }, paint: { 'text-color': '#7c8596', 'text-halo-color': '#05070a', 'text-halo-width': 1.4 } },
-        { id: 'lugar', type: 'symbol', source: 'omt', 'source-layer': 'place', filter: ['in', ['get', 'class'], ['literal', ['city', 'town', 'village', 'suburb', 'neighbourhood', 'quarter']]], layout: { 'text-field': ['coalesce', ['get', 'name:pt'], ['get', 'name']], 'text-font': ['Noto Sans Bold'], 'text-size': ['interpolate', ['linear'], ['zoom'], 10, 11, 15, 14], 'text-transform': 'uppercase', 'text-letter-spacing': .15 }, paint: { 'text-color': '#c9a24a', 'text-halo-color': '#05070a', 'text-halo-width': 1.6 } }
+        { id: 'lugar', type: 'symbol', source: 'omt', 'source-layer': 'place', filter: ['in', ['get', 'class'], ['literal', ['city', 'town', 'village', 'suburb', 'neighbourhood', 'quarter']]], layout: { 'text-field': ['coalesce', ['get', 'name:pt'], ['get', 'name']], 'text-font': ['Noto Sans Bold'], 'text-size': ['interpolate', ['linear'], ['zoom'], 10, 10, 15, 12], 'text-transform': 'uppercase', 'text-letter-spacing': .15 }, paint: { 'text-color': '#b39250', 'text-halo-color': '#05070a', 'text-halo-width': 1.6 } }
       ]
     };
   }
@@ -114,7 +114,7 @@
     el.appendChild(leg);
 
     var c0 = op.centro || { lat: 38.7223, lon: -9.1393 };
-    var mapa = new M.Map({ container: dentro, style: estilo(), center: [c0.lon, c0.lat], zoom: op.zoom || 14.6, pitch: 62, bearing: -24, maxPitch: 75, antialias: true, attributionControl: { compact: true }, dragRotate: true, touchPitch: true });
+    var mapa = new M.Map({ container: dentro, style: estilo(), center: [c0.lon, c0.lat], zoom: op.zoom || 15.6, pitch: 62, bearing: -24, maxPitch: 75, antialias: true, attributionControl: { compact: true }, dragRotate: true, touchPitch: true });
     var est = { pontos: [], eu: null, alvo: null, vis: {}, marcas: [], euM: null, pronto: false, rodar: false, tr: trajetoLer() };
 
     function prepara() {
@@ -174,7 +174,7 @@
       if (!pts.length) return;
       if (pts.length === 1) { mapa.easeTo({ center: pts[0], zoom: 16, pitch: 62, duration: anim ? 1400 : 0 }); return; }
       var b = new M.LngLatBounds(pts[0], pts[0]); pts.forEach(function (q) { b.extend(q); });
-      mapa.fitBounds(b, { padding: { top: 70, bottom: 60, left: 50, right: 70 }, maxZoom: 16.4, pitch: 62, bearing: mapa.getBearing(), duration: anim ? 1600 : 0 });
+      mapa.fitBounds(b, { padding: { top: 70, bottom: 60, left: 50, right: 70 }, maxZoom: 16.6, pitch: 62, bearing: mapa.getBearing(), duration: anim ? 1600 : 0 });
     }
     bts.addEventListener('click', function (ev) {
       var b = ev.target.closest('button'); if (!b) return; var k = b.getAttribute('data-mb');
