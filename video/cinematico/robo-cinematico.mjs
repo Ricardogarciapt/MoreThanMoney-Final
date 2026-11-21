@@ -16,7 +16,7 @@ import { spawnSync } from 'node:child_process'
 import fs from 'node:fs'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { anuncioAuto, segmentosDePalavras, temposSom } from './src/projetos/anuncio-reel/auto.mjs'
+import { anuncioAuto, segmentosDePalavras, temposSom, ficheiroDemo } from './src/projetos/anuncio-reel/auto.mjs'
 
 const AQUI = path.dirname(fileURLToPath(import.meta.url))
 const REPO = path.resolve(AQUI, '../..')
@@ -57,6 +57,61 @@ function duracaoVideo(f) {
   return Number(r.stdout.trim()) || 15
 }
 
+/**
+ * Ecrãs das Demos/Soluções (21/11): fotografa no telemóvel (390 px, sai a 1080 px) as páginas que a peça pediu.
+ * /demos?modelo=X → só a montra do modelo (#modelos); /solucoes/demos/<slug> → topo da página (até 1500 px).
+ * Página que falha (404 = demo ainda por publicar) sai da peça; se a imagem ficar sem ecrãs, passa a vida real.
+ */
+async function capturarDemos(config, stock) {
+  const precisa = [...new Set(config.imagens.flatMap((i) => i.demo || []))]
+  if (!precisa.length) return
+  const base = (process.env.DEMOS_BASE || API).replace(/\/+$/, '')
+  const feitos = new Set()
+  let pw = null
+  try { pw = await import('playwright') } catch { log('playwright em falta: sem ecrãs das demos') }
+  if (pw) {
+    let exe
+    for (const d of fs.existsSync('/opt/pw-browsers') ? fs.readdirSync('/opt/pw-browsers') : []) {
+      const b = `/opt/pw-browsers/${d}/chrome-linux64/chrome`
+      if (d.startsWith('chromium-') && fs.existsSync(b)) exe = b
+    }
+    const nav = await pw.chromium.launch(exe ? { executablePath: exe } : {})
+    const ctx = await nav.newContext({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 1080 / 390, isMobile: true, hasTouch: true, colorScheme: 'dark', locale: 'pt-PT' })
+    for (const p of precisa) {
+      const dest = path.join(AUTO, ficheiroDemo(p))
+      const pg = await ctx.newPage()
+      try {
+        const r = await pg.goto(base + p, { waitUntil: 'networkidle', timeout: 45_000 })
+        if (!r || r.status() >= 400) throw new Error(`HTTP ${r?.status()}`)
+        // fora da foto: avisos de cookies, botões flutuantes de chat
+        await pg.addStyleTag({ content: '[id*=cookie],[class*=cookie],[aria-label*=ookie],[class*=chat-flutu],[data-flutuante]{display:none!important}' }).catch(() => {})
+        await pg.waitForTimeout(1500)
+        const montra = p.includes('modelo=') ? pg.locator('#modelos') : null
+        if (montra && (await montra.count())) {
+          await montra.scrollIntoViewIfNeeded()
+          await pg.waitForTimeout(900)
+          await montra.screenshot({ path: dest, type: 'jpeg', quality: 88 })
+        } else {
+          const alto = await pg.evaluate(() => document.documentElement.scrollHeight)
+          await pg.screenshot({ path: dest, type: 'jpeg', quality: 88, fullPage: true, clip: { x: 0, y: 0, width: 390, height: Math.min(alto, 1500) } })
+        }
+        feitos.add(p)
+      } catch (e) { log('demo falhou', p, e.message) }
+      await pg.close()
+    }
+    await nav.close()
+  }
+  const vida = ['negocio_tecnologia_1', 'negocio_tecnologia_2', 'cliente_marca_1', 'cliente_marca_2', 'liberdade_1'].filter((c) => stock.includes(c))
+  config.imagens = config.imagens.flatMap((i) => {
+    if (!i.demo) return [i]
+    const bons = i.demo.filter((p) => feitos.has(p))
+    if (bons.length) return [{ ...i, src: `stock/auto/${ficheiroDemo(bons[0])}`, srcs: bons.map((p) => `stock/auto/${ficheiroDemo(p)}`) }]
+    const c = vida.find((x) => !config.imagens.some((j) => j.src === x))
+    return c ? [{ de: i.de, ate: i.ate, src: c, tipo: 'video', grade: 'neutro' }] : []
+  })
+  log('demos', `${feitos.size}/${precisa.length} capturadas`)
+}
+
 /** Monta um reel: { id, marca, video (ficheiro local), cin } → caminho do MP4 final verificado. */
 async function montar({ id, marca, video, cin }) {
   // apoio do guião → PiP (imagem = telemóvel com o ecrã; vídeo = plano a ecrã inteiro)
@@ -84,6 +139,7 @@ async function montar({ id, marca, video, cin }) {
     marca, legendas, stock: stockPresente(), apoio,
     guiao: { gancho: cin.gancho, palavra_chave: cin.palavra_chave, nicho: cin.nicho, cta_url: cin.cta_url },
   })
+  await capturarDemos(config, stockPresente())
   log('peça', JSON.stringify(config))
   const fim = legendas[legendas.length - 1][1]
   fs.writeFileSync(path.join(AUTO, `${id}-tempos.json`), JSON.stringify(temposSom(config, fim)))

@@ -2,7 +2,7 @@ name: Reels cinemáticos (molde AnuncioReel)
 
 # Desde 20/11/2026 TODOS os reels do gémeo (as duas marcas: @morethanmoney.pt e @ricardogarciapt)
 # saem no molde cinemático aprovado pelo Ricardo: gémeo HeyGen por baixo, gancho cinético, legendas
-# palavra a palavra, PiP com b-roll/ecrãs da app, chips, light leaks, música + SFX, cartão final, -14 LUFS.
+# palavra a palavra, PiP com b-roll/ecrãs das Demos e Soluções, chips, transições discretas, música + SFX, cartão final, -14 LUFS.
 # Esta máquina pega nos projectos 'a_render' do molde cinemático, monta-os e devolve-os ao site, que os
 # põe na fila do Instagram como RASCUNHO e pede aprovação ao Ricardo (Telegram + briefing 9h30).
 # Nada é publicado daqui. Ver video/cinematico/robo-cinematico.mjs e video/motor/LEIA-ME.md.
@@ -60,6 +60,8 @@ jobs:
           sudo apt-get install -y -qq ffmpeg
           pip install -q numpy faster-whisper
           cd video/cinematico && npm ci --no-audit --no-fund --loglevel=error
+          # ecrãs das Demos/Soluções fotografados do site ao montar (capturarDemos)
+          npm i --no-save --no-audit --no-fund --loglevel=error playwright@1.49.1 && npx playwright install --with-deps chromium
 
       - name: Modelo de voz (cache)
         if: steps.ver.outputs.trabalho == '1'
