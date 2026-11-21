@@ -77,8 +77,38 @@ const FACELESS = [
   `${calendario(90, 140, 6, 5, (k) => k < 17, 34)}<path d="M300,330 l20,-20 l20,20" class="a2"/>`,
 ]
 
+
+const RG = [
+  // 0 antes de começares: caderno e caneta
+  `<rect class="f" x="110" y="70" width="180" height="250" rx="10"/><path d="M130,70 v250" class="fino"/><path d="M150,120 h110 M150,150 h90 M150,180 h105" class="fino"/><path d="M300,110 l30,-30 l20,20 l-30,30 z M300,110 l-36,92 l56,-62" class="f a2"/>`,
+  // 1 o dia em que deixei de fingir: crachá de empresa rachado
+  `<rect class="f" x="120" y="90" width="160" height="220" rx="14"/><rect x="175" y="70" width="50" height="30" rx="6" class="fino"/><rect x="150" y="130" width="100" height="80" rx="8" class="fino"/><path d="M150,240 h100 M150,265 h70" class="fino"/><path d="M200,90 l-18,60 l26,30 l-20,50 l16,40 l-12,40" class="a2 grosso"/>`,
+  // 2 disciplina quando ninguém pergunta: despertador 06:00 + checklist
+  `<circle cx="160" cy="190" r="90" class="f"/><circle cx="160" cy="190" r="72" class="fino"/><path d="M160,190 v-48 M160,190 l30,18" class="a2 grosso"/><path d="M90,110 l-26,-26 M230,110 l26,-26" class="grosso"/><path d="M110,290 l-14,24 M210,290 l14,24"/>${[0, 1, 2].map((k) => `<rect x="270" y="${130 + k * 46}" width="28" height="28" rx="6" class="fino"/><path d="M276,${144 + k * 46} l6,6 l12,-14" class="a2"/><path d="M310,${144 + k * 46} h50" class="fino"/>`).join('')}`,
+  // 3 a armadilha das 40 horas: ampulheta numa grade
+  `<path d="M140,80 h120 M140,320 h120 M150,80 c0,70 100,90 100,120 c0,30 -100,50 -100,120 M250,80 c0,70 -100,90 -100,120 c0,30 100,50 100,120" class="f"/><path d="M175,290 q25,-30 50,0 z" class="f a2"/><path d="M200,200 v60" class="a2 tracejado"/>${[0, 1, 2, 3, 4].map((k) => `<path d="M${90 + k * 55},50 v300" class="fino"/>`).join('')}<text x="200" y="372" text-anchor="middle" class="tx" style="font-size:24px">40 h</text>`,
+  // 4 o inventário: prancheta com visto e lupa
+  `<rect class="f" x="100" y="80" width="170" height="240" rx="12"/><rect x="150" y="66" width="70" height="28" rx="8" class="fino"/>${[0, 1, 2, 3].map((k) => `<rect x="122" y="${125 + k * 45}" width="24" height="24" rx="5" class="fino"/>${k < 2 ? `<path d="M127,${137 + k * 45} l6,6 l10,-12" class="a2"/>` : ''}<path d="M160,${137 + k * 45} h80" class="fino"/>`).join('')}<circle cx="290" cy="270" r="44" class="f"/><path d="M322,302 l36,36" class="grosso"/>`,
+  // 5 dinheiro com estrutura: templo de pilares sobre fundação
+  `<path d="M90,150 L200,80 L310,150 Z" class="f"/><path d="M80,310 h240 M90,290 h220" class="grosso"/>${[0, 1, 2, 3].map((k) => `<rect x="${110 + k * 50}" y="160" width="28" height="125" rx="3" class="${k === 1 ? 'f a2' : 'f'}"/>`).join('')}<text x="200" y="135" text-anchor="middle" class="tx" style="font-size:26px">€</text>`,
+  // 6 mercados sem fantasia: bola de cristal riscada + velas reais
+  `<circle cx="150" cy="170" r="70" class="f"/><path d="M95,250 h110 l-15,-25 h-80 z" class="f"/><path d="M85,240 L215,100" class="a2 grosso"/>${[[250, 200, 60, 1], [282, 170, 80, 0], [314, 150, 70, 1], [346, 120, 90, 1]].map(([x, y, h, up]) => `<path d="M${x + 10},${y - 15} v${h + 30}" class="fino"/><rect x="${x}" y="${y}" width="20" height="${h}" rx="3" class="${up ? 'f a2' : 'f'}"/>`).join('')}`,
+  // 7 como leio um gráfico: zonas, velas e linha de tendência
+  `<rect x="60" y="110" width="290" height="44" class="f" rx="4"/><rect x="60" y="250" width="290" height="44" class="f a2" rx="4"/>${[[80, 240, 40, 0], [115, 215, 50, 1], [150, 190, 45, 1], [185, 170, 55, 0], [220, 160, 40, 1], [255, 130, 50, 1], [290, 120, 40, 1]].map(([x, y, h, up]) => `<path d="M${x + 9},${y - 14} v${h + 28}" class="fino"/><rect x="${x}" y="${y}" width="18" height="${h}" rx="3" class="${up ? 'f a2' : 'f'}"/>`).join('')}<path d="M70,300 L330,130" class="tracejado"/>`,
+  // 8 risco, o colete: colete com 1 %
+  `<path d="M140,80 l30,30 h60 l30,-30 l50,40 v170 a20,20 0 0 1 -20,20 h-180 a20,20 0 0 1 -20,-20 v-170 z" class="f"/><path d="M200,110 v210" class="fino"/><rect x="215" y="200" width="70" height="44" rx="8" class="f a2"/><text x="250" y="230" text-anchor="middle" class="tx" style="font-size:22px">1 %</text><path d="M120,180 h60 M120,215 h60" class="fino"/>`,
+  // 9 15 minutos por dia: cronómetro e café
+  `<circle cx="170" cy="210" r="100" class="f"/><path d="M170,110 v-26 M150,84 h40" class="grosso"/><path d="M170,210 L170,110 A100,100 0 0 1 270,210 Z" class="f a2"/><path d="M170,210 l40,-40" class="grosso"/><text x="170" y="270" text-anchor="middle" class="tx" style="font-size:30px">15'</text><path d="M290,280 h50 v40 a25,25 0 0 1 -50,0z" class="f"/><path d="M340,292 h10 a10,10 0 0 1 0,20 h-10" class="fino"/>`,
+  // 10 ninguém chega sozinho: rede de pessoas ligadas (só círculos)
+  `${[[200, 120], [110, 200], [290, 200], [150, 300], [250, 300]].map(([x, y], k) => `<circle cx="${x}" cy="${y}" r="${k ? 26 : 34}" class="${k ? 'f' : 'f a2'}"/>`).join('')}<path d="M180,145 L130,180 M220,145 L270,180 M125,225 L140,275 M275,225 L260,275 M176,300 h48 M136,200 h128" class="fino"/>`,
+  // 11 o mapa do método: mapa com caminho e seis marcos
+  `<path d="M60,90 l90,-30 l100,30 l90,-30 v250 l-90,30 l-100,-30 l-90,30 z" class="f"/><path d="M150,60 v250 M250,90 v250" class="fino"/><path d="M90,300 C130,260 120,220 170,210 S230,160 210,130 S280,100 310,90" class="a2 tracejado"/>${[[90, 300], [140, 240], [190, 205], [215, 140], [265, 108], [310, 90]].map(([x, y], k) => `<circle cx="${x}" cy="${y}" r="9" class="${k === 5 ? 'f a2' : 'f'}"/>`).join('')}`,
+  // 12 plano de 30 dias
+  `${calendario(90, 140, 6, 5, (k) => k < 17, 34)}<path d="M300,330 l20,-20 l20,20" class="a2"/>`,
+]
+
 export function ilustracao(tema, n) {
-  const lista = tema === 'cripto' ? CRIPTO : tema === 'faceless' ? FACELESS : null
+  const lista = tema === 'cripto' ? CRIPTO : tema === 'faceless' ? FACELESS : tema === 'rg' ? RG : null
   const inner = lista?.[n]
   return inner ? S(inner) : ''
 }

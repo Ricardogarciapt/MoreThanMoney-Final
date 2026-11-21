@@ -16,7 +16,7 @@ O euro não tem valor intrínseco como o sal tinha para conservar o peixe. O seu
 
 :::post @morethanmoney.pt
 imagem: O dinheiro vale porque acreditamos nele.
-legenda: Parece uma frase de filósofo, mas é o que faz o euro funcionar todos os dias. Conteúdo educativo, não é aconselhamento financeiro.
+legenda: O euro no teu bolso vale porque milhões de pessoas concordam que vale. O Bitcoin fez a mesma pergunta em voz alta: e se a regra não pudesse ser mudada por ninguém?
 :::
 
 ## Três funções que o dinheiro tem de cumprir

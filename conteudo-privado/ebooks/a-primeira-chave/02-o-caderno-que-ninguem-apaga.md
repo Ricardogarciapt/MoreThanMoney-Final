@@ -22,9 +22,9 @@ A impressão digital, o hash, funciona como um selo de cera que só serve para a
 Na blockchain não se confia numa pessoa. Confia-se nas regras e no número de cópias independentes do registo.
 :::
 
-:::post @ruben.cripto
-foto: ruben-capa-educador.jpg
-legenda: Conteúdo educativo, não é aconselhamento financeiro. Se a explicação te fez pensar, é isso mesmo que queremos.
+:::post @morethanmoney.pt
+imagem: Um caderno que ninguém apaga.
+legenda: É isto uma blockchain. Sem jargão, sem magia: um registo público que milhares de computadores guardam ao mesmo tempo. Quem te disser que é mais complicado do que isto quer vender-te alguma coisa.
 :::
 
 ## Como se chega a acordo, com mineração e proof-of-stake

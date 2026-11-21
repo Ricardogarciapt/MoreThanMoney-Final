@@ -134,6 +134,21 @@ sticker: Conta-me aqui
 
 [[foto: rg-blazer.jpg | Trinta dias. Depois disso, já não és a mesma pessoa a olhar para o mesmo gráfico. | polaroid]]
 
+## Leituras da minha secretária
+
+Não aprendi sozinho e não vais aprender só com este livro. Estes estão sublinhados, dobrados e com café entornado:
+
+- **«Trading in the Zone», de Mark Douglas.** A psicologia de quem opera. Ensina a pensar em probabilidades e a aceitar o risco antes de entrar.
+- **«How to Day Trade for a Living» (em português, «Como Viver do Day Trading»), de Andrew Aziz.** Prático e direto sobre rotina, gestão de risco e preparação do dia. Lê-o pela disciplina, não pela promessa do título.
+- **«Market Wizards», de Jack D. Schwager.** Entrevistas a traders profissionais. Repara como quase todos falam mais de risco do que de entradas.
+- **«Hábitos Atómicos», de James Clear.** Não é sobre trading, mas é sobre o que faz um trader durar: pequenas regras repetidas todos os dias.
+
+:::nota
+Um livro por mês.
+Um sublinhado por dia.
+Uma regra nova por semana, testada antes de confiar nela.
+:::
+
 ## Aviso educativo final
 
 Este livro é conteúdo educativo. Não é aconselhamento financeiro, não é recomendação de compra ou de venda de nenhum ativo, e não garante resultados. Os exemplos são hipotéticos e servem para perceber mecanismos, não para prever nada.

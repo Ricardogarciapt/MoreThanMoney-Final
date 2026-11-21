@@ -6,9 +6,9 @@ DCA quer dizer dollar cost averaging, ou média do custo ao longo do tempo. Em p
 
 A ideia central é simples. Quando o preço está alto, compras menos unidades. Quando está baixo, compras mais. Com o tempo, o preço médio que pagas tende a suavizar-se, em vez de depender de um único dia.
 
-:::post @ruben.cripto
+:::post @morethanmoney.pt
 imagem: Para de adivinhar o fundo.
-legenda: O DCA não te diz quando comprar. Diz-te que compras, sempre no mesmo dia, sempre o mesmo valor. Conteúdo educativo, não constitui aconselhamento financeiro.
+legenda: Ninguém acerta no fundo. Nem os gurus que te vendem o próximo. O DCA tira-te essa pressão: mesmo dia, mesmo valor, e o resto é paciência.
 :::
 
 [[grafico:dca]]

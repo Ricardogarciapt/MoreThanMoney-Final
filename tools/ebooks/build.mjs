@@ -345,7 +345,7 @@ figure{margin:0}
 .ig-texto{display:grid;place-items:center;padding:12%;background:radial-gradient(120% 90% at 20% 10%,color-mix(in srgb,var(--a) 38%,var(--escuro)),var(--escuro) 70%)}
 .ig-texto p{margin:0;font-family:var(--titulo);color:var(--claro-sobre-escuro);font-size:25px;line-height:1.08;text-align:center}
 .tema-rg .ig-texto p{text-transform:uppercase;font-size:27px}.tema-faceless .ig-texto{background:linear-gradient(160deg,#f3eee8,#ddd2c6)}.tema-faceless .ig-texto p{color:#2f2924;font-style:italic;font-size:30px}
-.tema-cripto .ig-texto{background:radial-gradient(110% 90% at 80% 10%,#3a2a0c,#0a0806 70%)}.tema-cripto .ig-texto p{font-family:'Anton',sans-serif;text-transform:uppercase;background:linear-gradient(180deg,#fff,#F3CF73);-webkit-background-clip:text;color:transparent;font-size:28px}
+.tema-cripto .ig-texto{background:radial-gradient(110% 90% at 80% 10%,#3a2a0c,#0a0806 70%)}.tema-cripto .ig-texto p{font-family:'Anton',sans-serif;text-transform:uppercase;color:#F6DC94;text-shadow:0 1px 0 #6b4d10;font-size:28px}
 .ig-acoes{display:flex;gap:14px;padding:9px 12px 4px}.ig-acoes svg{width:22px;height:22px;fill:none;stroke:#111;stroke-width:1.8;stroke-linejoin:round}.ig-acoes .guardar{margin-left:auto}
 .ig-leg{font-size:13px;line-height:1.4;padding:2px 12px 12px;margin:0!important;color:#222}.ig-leg b{font-weight:600}
 .stories{display:flex;gap:10px;justify-content:center;flex-wrap:wrap;margin:2em 0;break-inside:avoid;page-break-inside:avoid}

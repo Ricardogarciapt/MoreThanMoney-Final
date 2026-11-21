@@ -1,10 +1,20 @@
 # Antes de começares
 
-> Um livro bom começa por dizer-te o que não vai fazer por ti.
+> A cripto não precisa de mais barulho. Precisa de quem a explique sem te vender nada.
 
-Vou começar pelo que este livro não é, porque é a parte que mais gente salta. Muita gente acha que essas páginas são burocracia. Na prática, são a parte mais útil do livro. Não é aconselhamento financeiro. Não é uma recomendação de compra. E não te prometo nada. Não sei quanto dinheiro tens, nem quais são as tuas contas, as tuas dívidas, a família que tens ou os objetivos que te fazem acelerar o coração. Por isso não consigo dizer-te o que fazer com o teu dinheiro. Consigo ajudar-te a perceber como este mundo funciona, a fugir às armadilhas mais comuns e a decidir com mais calma.
+A indústria da cripto vive de duas coisas: do teu medo de ficar de fora e da tua pressa. Os anúncios mostram carros, relógios e capturas de ecrã com saldos que ninguém confirma. Os «mentores» vendem sinais. As plataformas premiam quem clica mais vezes. E quase ninguém te explica o básico, porque o básico não dá dinheiro a quem vende.
 
-Escrevo isto logo no início porque a cripto tem muito barulho à volta. Há vídeos com carros e relógios, contagens decrescentes para ficares rico e pessoas a jurar que «é só clicar». Se alguém te promete lucro certo, está a vender-te alguma coisa. Quase sempre, a coisa vendida é a própria promessa.
+Este livro existe para fazer o contrário. Vou mostrar-te como as coisas funcionam por dentro, com palavras normais, sem te pedir que acredites em mim. Vais perceber o que é uma blockchain, onde guardar uma chave, como reconhecer uma burla em cinco segundos e como comprar sem estar colado ao gráfico. Depois decides tu. É esse o ponto: decidir com a cabeça, não com a notificação.
+
+:::cartao O que a indústria não te diz
+- Ninguém sabe onde está o fundo. Nem quem te vende o curso para o encontrar.
+- Quem te promete lucro certo está a vender a promessa, não o lucro.
+- A tua chave vale mais do que qualquer moeda que compres com ela.
+- O método aborrecido costuma vencer o método emocionante.
+- Podes perder tudo o que lá puseres. Começa por aí.
+:::
+
+Uma nota honesta antes de arrancarmos: isto não é aconselhamento financeiro nem uma recomendação de compra, e não te prometo resultados. Não conheço as tuas contas, as tuas dívidas nem os teus objetivos. Conheço o mercado, as armadilhas e o caminho mais calmo para lá entrar.
 
 [[foto: ruben-retrato.jpg | Simplificar o complexo. É para isso que aqui estou. | polaroid]]
 
@@ -29,8 +39,8 @@ Investir em cripto é decidir com o dinheiro que sobra, nunca com o dinheiro que
 :::
 
 :::post @morethanmoney.pt
-imagem: Se perder isto me deixava apertado, espera.
-legenda: A pergunta antes de qualquer compra é esta. Esperar também é uma decisão, e muitas vezes a melhor. Conteúdo educativo, não é aconselhamento financeiro.
+imagem: Se perder isto te aperta o mês, não compres.
+legenda: Regra número um antes de qualquer compra de cripto. Ninguém te vai dizer isto num anúncio, porque não vende. Eu digo.
 :::
 
 ## Como está organizado este livro

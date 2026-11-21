@@ -22,7 +22,7 @@ Nunca envies a tua palavra-passe, o código de duas etapas ou a chave de recuper
 
 :::post @morethanmoney.pt
 imagem: Quem te pede a palavra-passe não está a ajudar-te.
-legenda: Contacto que não pediste, urgência e pedido de códigos são o padrão de quase todas as burlas. Educativo, não é aconselhamento financeiro.
+legenda: Contacto que não pediste, pressa e um pedido de código. Se aparecerem os três juntos, é burla. Sempre.
 :::
 
 ## As taxas, e o que se paga sem dar por isso

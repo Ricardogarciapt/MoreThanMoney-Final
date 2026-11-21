@@ -6,7 +6,7 @@ Há uma cena que se repete em muitas casas. Passa das onze da noite, o telemóve
 
 :::post @morethanmoney.pt
 imagem: Um gráfico não te diz o que vem a seguir.
-legenda: Diz-te o que aconteceu, e mesmo isso depende do período que escolheste. Conteúdo educativo, não constitui aconselhamento financeiro.
+legenda: Diz-te o que aconteceu. O resto é opinião com setas desenhadas por cima. Aprende a ler o que lá está e deixa as previsões para quem vive delas.
 :::
 
 ## Ciclos: ondas que não são relógio
@@ -61,9 +61,9 @@ Conclusão: depende do período que escolheste
 - Estou a agir por causa de uma notícia de hoje ou de um plano que escrevi antes?
 :::
 
-:::post @ruben.cripto
+:::post @morethanmoney.pt
 imagem: Investir sem adivinhar: o método DCA.
-legenda: O método DCA em seis cartões: valor fixo, data fixa, menos emoção, preço médio, começar pequeno e o que o DCA não faz. Guarda para releres na próxima queda. Conteúdo educativo.
+legenda: Valor fixo, data fixa, menos emoção, preço médio, começar pequeno e o que o DCA não faz. Guarda isto para a próxima queda, que é quando mais vais precisar.
 :::
 
 ## Exercício: três perguntas antes de qualquer decisão

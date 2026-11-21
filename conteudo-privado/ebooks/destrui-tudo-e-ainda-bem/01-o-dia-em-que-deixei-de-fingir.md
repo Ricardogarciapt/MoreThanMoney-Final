@@ -29,10 +29,9 @@ Uma coisa que a disciplina ensina muito bem é a cumprir. Cumprir horários, cum
 [[foto: rg-farda.jpg | Catorze anos de farda. A disciplina ficou, a farda não. | polaroid]]
 
 :::galeria Antes de tudo isto, a farda
-rg-paraquedistas.jpg | Paraquedistas. O primeiro grupo a sério.
-rg-fuzileiros.jpg | Escola de Fuzileiros. Formatura, sol e silêncio.
-rg-exercito.jpg | Em exercício. Horas de espera para minutos de ação.
-rg-cavalo.jpg | Na tropa, até a cavalo. Ninguém me tinha avisado.
+rg-exercito.jpg | Exército. Horas de espera para minutos de ação.
+rg-cavalo.jpg | Exército, até a cavalo. Ninguém me tinha avisado.
+rg-curso-gnr.jpg | O meu curso da GNR. A turma toda, de branco.
 :::
 
 ## O emprego que deixou de servir

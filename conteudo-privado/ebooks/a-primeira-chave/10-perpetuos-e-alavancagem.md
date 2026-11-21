@@ -4,9 +4,9 @@
 
 Este é o capítulo que deixei para perto do fim de propósito. Os perpétuos são muito diferentes de comprar uma moeda e guardá-la. Quando os explico a alguém que acabou de começar, a minha preocupação número um é que a pessoa perceba os riscos antes de sentir a tentação de os usar. Se estás a ler isto no início do livro, está tudo bem: podes saltar para o último capítulo e voltar aqui mais tarde.
 
-:::post @ruben.cripto
+:::post @morethanmoney.pt
 imagem: A alavancagem não perdoa.
-legenda: Antes de falar de alavancagem, faz a conta da liquidação. Se não consegues dizer em que preço perdes tudo, ainda não estás pronto. Conteúdo educativo, não constitui aconselhamento financeiro.
+legenda: 100x parece poder. É só um preço de liquidação muito perto. Se não sabes dizer onde perdes tudo, a alavancagem não é para ti. Ainda.
 :::
 
 ## O que são perpétuos

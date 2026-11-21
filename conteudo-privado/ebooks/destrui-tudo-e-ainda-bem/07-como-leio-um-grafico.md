@@ -12,7 +12,6 @@ Imagina que vais todas as manhãs a um café no Porto e que pagas, em média, 1,
 
 Agora imagina que, no mês seguinte, a casa sobe o preço para 1,50 €, e fica aí. Esse novo nível já não é um desvio: é um novo normal. A tua referência tem de mudar. Este exemplo tem as duas ideias que sustentam tudo o resto: existe uma média à volta da qual o preço oscila, e essa média pode mudar.
 
-[[foto: rg-tablet.jpg | Um gráfico é uma conversa entre quem compra e quem vende. Não é uma bola de cristal. | larga]]
 
 :::curso Aula 301 · O que é uma vela
 Cada vela resume o que o preço fez num período: um minuto, uma hora, um dia. Tem quatro pontos.
