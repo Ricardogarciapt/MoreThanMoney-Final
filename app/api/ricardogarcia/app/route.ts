@@ -1,3 +1,4 @@
+import { eSuperAdmin } from '@/lib/super-admin-regras'
 import { NextRequest, NextResponse } from 'next/server'
 import { checkRateLimit } from '@/lib/admin-api-helpers'
 import { avisarAdmin } from '@/lib/primegate/verificacao'
@@ -112,6 +113,7 @@ async function estado(m: any) {
       sequencia: m.sequencia, melhor_sequencia: m.melhor_sequencia, dias_conta: diasEntre(String(m.criado).slice(0, 10), dia),
       patente: p, patente_nome: PATENTES[p].nome, prox_nome: prox?.nome || null, prox_xp: prox?.xp || null, base_xp: PATENTES[p].xp,
       avatar_url: m.avatar_url || null, avatar: m.avatar || null,
+      admin: souAdmin(m),
     },
     avatar_opcoes: { rostos: ROSTOS, fundos: Object.keys(FUNDOS), molduras: Object.keys(MOLDURAS) },
     push: configPush(), push_prefs: { missao: true, chat: true, serie: true, ...(m.push_prefs || {}) },
@@ -131,6 +133,23 @@ async function estado(m: any) {
     extra,
     esquadrao: (top.data || []).map(x => ({ nome: primeiroNome(x.nome), xp: x.xp, patente: PATENTES[x.patente]?.nome, eu: x.id === m.id })),
   }
+}
+
+// Área de admin dentro da app: só o super admin (a mesma regra do painel).
+const souAdmin = (m: any) => m?.user_type === 'admin' && eSuperAdmin(m.email)
+async function resumoAdmin() {
+  const dia = hoje(), seteDias = new Date(Date.now() - 7 * 86_400_000).toISOString()
+  const conta = (q: any) => q.then((r: any) => r.count || 0, () => 0)
+  const [membros, hojeN, novos, pendentes, missoesHoje, chat24, mesas] = await Promise.all([
+    conta(db().from('rg_app_membros').select('id', { count: 'exact', head: true })),
+    conta(db().from('rg_app_membros').select('id', { count: 'exact', head: true }).gte('visto', dia)),
+    conta(db().from('rg_app_membros').select('id', { count: 'exact', head: true }).gte('criado', seteDias)),
+    conta(db().from('rg_app_resgates').select('id', { count: 'exact', head: true }).eq('estado', 'pendente')),
+    conta(db().from('rg_app_registos').select('membro_id', { count: 'exact', head: true }).eq('dia', dia).not('concluido', 'is', null)),
+    conta(db().from('rg_app_chat').select('id', { count: 'exact', head: true }).gte('criado', new Date(Date.now() - 86_400_000).toISOString())),
+    conta(db().from('rg_app_rpg_confrontos').select('membro_id', { count: 'exact', head: true }).gte('atualizado', seteDias)),
+  ])
+  return { membros, hoje: hojeN, novos_7d: novos, resgates_pendentes: pendentes, missoes_hoje: missoesHoje, chat_24h: chat24, confrontos_7d: mesas }
 }
 
 export async function GET(req: NextRequest) {
@@ -215,6 +234,11 @@ export async function POST(req: NextRequest) {
   if (!m) return erro('Sessão terminada. Entra outra vez.', 401)
   if (!checkRateLimit('rg-app:' + m.id, 60, 60_000).allowed) return erro('Calma, recruta. Tenta daqui a um minuto.', 429)
   const dia = hoje()
+
+  if (accao === 'admin_resumo') {
+    if (!souAdmin(m)) return erro('Só para administradores.', 403)
+    return NextResponse.json({ ok: true, resumo: await resumoAdmin() })
+  }
 
   if (accao === 'iniciar' || accao === 'concluir') {
     const { missoes } = await missoesDoMembro(m, dia)
