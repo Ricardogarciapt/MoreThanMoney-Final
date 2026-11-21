@@ -9,6 +9,8 @@ A tentação é grande. Parece sensato espalhar o risco. Na prática, espalhar a
 
 Diversificar faz sentido quando já tens uma base. Essa base pode ser um produto validado por pessoas reais (capítulo 04), uma rotina de conteúdo que aguentas há algumas semanas (capítulo 06) ou uma forma de conversar com quem te segue sem ficares sobrecarregada (capítulo 08). Se ainda não tens nada disto, o canal novo vai tirar-te o tempo que faz falta para consolidar o que já existe.
 
+[[foto: maria-site-cozinha-caneca.jpg | Café, caneca e uma lista de ideias para o próximo produto. | lado]]
+
 ## As quatro opções
 
 **Marketplaces de produtos digitais e artesanato.** Plataformas onde as pessoas procuram produtos prontos, como templates, impressões ou kits. Costumam cobrar taxas por anúncio e por venda, que mudam com o tempo. Confirma sempre as condições na página oficial antes de decidires.

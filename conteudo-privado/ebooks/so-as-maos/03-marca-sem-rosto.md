@@ -21,6 +21,8 @@ A identidade é, no fundo, aquilo que se repete. Numa marca faceless, costuma as
 
 Nenhum destes pilares é uma obra de arte. São escolhas de consistência.
 
+[[foto: maria-site-cabelo-mola.jpg | A marca não é a tua cara. É a cor, o tom, o pormenor. Uma mola no cabelo também conta uma história. | polaroid]]
+
 ## Paleta
 
 Escolhe três cores: uma para o fundo, uma para o destaque e uma neutra para o texto secundário. Antes de decidires, confirma que o texto se lê bem sobre o fundo, sobretudo num telemóvel ao sol.

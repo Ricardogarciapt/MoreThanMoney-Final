@@ -11,6 +11,8 @@ Um lifestyle business tem três características. Cresce ao ritmo que a pessoa a
 
 Estes limites podem parecer uma forma de travar o crescimento. Na prática, impedem que o negócio se torne uma segunda carga que nunca se desliga. Quem não define o fim do dia acaba por trabalhar em todas as horas.
 
+[[foto: maria-site-cozinha-danca.jpg | Um negócio que cabe na tua vida, e não o contrário. | polaroid]]
+
 ## Cabeça, corpo e coração
 
 Penso num negócio sustentável como um equilíbrio entre três dimensões. Se uma domina as outras, o resto começa a ceder.

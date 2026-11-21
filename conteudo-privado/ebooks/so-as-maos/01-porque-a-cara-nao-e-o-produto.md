@@ -20,6 +20,8 @@ A cara serve para criar ligação. A ligação também se cria com a voz, com a 
 Faceless não é sinónimo de sem identidade. Quem não tem nome, história, tom de voz nem forma própria de ver as coisas não cria confiança. Podes não mostrar o rosto, mas tens de mostrar que há uma pessoa real do outro lado.
 :::
 
+[[foto: maria-site-rua-londres.jpg | De costas para a câmara, de frente para o negócio. | polaroid]]
+
 ## Os três mitos que mais te travam
 
 Quando dou formações, há três frases que ouço quase sempre. Vale a pena olhá-las com calma.

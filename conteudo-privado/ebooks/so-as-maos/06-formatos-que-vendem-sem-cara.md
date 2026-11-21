@@ -21,6 +21,8 @@ Quando alguém me pergunta «que tipo de vídeo devo fazer?», a resposta honest
 
 [[foto: maria-telemoveis.jpg | Quatro ecrãs, nenhuma cara. Mãos a escrever, uma secretária, uma cidade à noite: tudo isto vende. | larga]]
 
+[[foto: maria-site-filmar-rua.jpg | Filmar a rua, a chávena, as mãos. O cenário é o teu rosto. | lado]]
+
 ## Matriz formato e objetivo
 
 Lê a matriz na horizontal e escolhe o formato que se encaixa na intenção do dia.

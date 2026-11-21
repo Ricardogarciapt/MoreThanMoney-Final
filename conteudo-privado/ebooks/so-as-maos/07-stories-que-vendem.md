@@ -9,6 +9,8 @@ As stories desaparecem ao fim de umas horas, e por isso as pessoas as veem com o
 
 Um post chega a muita gente de uma vez e depois afunda no meio de outros. Uma story chega a quem já te segue, costuma aparecer no topo da lista e permite resposta direta. Mas uma story isolada pode ser bonita e não dizer nada. Cinco stories com uma lógica clara constroem um pequeno caminho, do interesse à ação.
 
+[[foto: maria-site-selfie-telemovel.jpg | O telemóvel à frente da cara: o truque mais antigo do faceless, e continua a funcionar. | polaroid]]
+
 ## A sequência de cinco stories
 
 A sequência tem cinco passos: gancho, problema, prova, oferta e ação. Estes são os exemplos do Duarte. Adapta-os ao teu produto, ao teu número de páginas e à forma como entregas.
