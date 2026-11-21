@@ -12,6 +12,7 @@ import { EQUIPAS } from '../analise'
 import { sectorGenerico } from '../sector-livre'
 import { KITS, MODELOS, PROTOTIPOS } from '../showroom'
 import { DIA } from '../dia'
+import { FLUXOS } from '../prototipo'
 
 /** Campos que não são texto para ler: identificadores, ligações e datas. */
 const NAO_TEXTO = new Set(['id', 'img', 'url', 'slug', 'data', 'segmentos', 'quem', 'area', 'kit', 'demo', 'marca', 'corPrincipal', 'corFundo', 'corTexto', 'estado', 'codigo', 'letra', 'layout']) 
@@ -30,6 +31,11 @@ export const TEXTOS_SOLTOS = [
   'Como se chama o negócio?', 'Indica o site ou o Instagram do negócio.', 'Escolhe o tamanho da equipa.',
   'Conta-nos em duas frases o que mais te rouba tempo.', 'Precisamos da tua autorização para te responder.',
   'Pedido inválido.', 'Já recebemos os teus pedidos. Respondemos em breve.', 'Não foi possível guardar o pedido. Tenta outra vez.',
+  // Protótipo (/solucoes/prototipo): erros do servidor e passos escolhidos em tempo real.
+  'Precisamos de um email válido para te enviar o protótipo.', 'Deixa o teu telemóvel para combinarmos a reunião.', 'Diz-nos que negócio é.',
+  'Escolhe pelo menos uma solução.', 'Precisamos da tua autorização para preparar o protótipo.',
+  'Já preparámos os teus protótipos desta hora. Marca a reunião e falamos.', 'Não foi possível preparar o protótipo. Tenta outra vez.',
+  'A ler o teu negócio', 'A desenhar a tua app', 'A escrever o teu assistente', 'A montar o plano da demo',
 ]
 
 function recolher(v: unknown, chave: string, out: Set<string>) {
@@ -57,6 +63,10 @@ const FICHEIROS = [
   'components/solucoes/proposta-pdf.tsx',
   'components/solucoes/ra-telemovel.tsx',
   'components/solucoes/dia-antes-depois.tsx',
+  'components/solucoes/pedir-prototipo.tsx',
+  'components/solucoes/ver-prototipo.tsx',
+  'app/solucoes/prototipo/page.tsx',
+  'app/solucoes/prototipo/[slug]/page.tsx',
   'lib/site-solucoes/analise.ts',
 ]
 
@@ -71,7 +81,7 @@ export function textosDoCodigo(raiz = process.cwd()): string[] {
 
 export function textosParaTraduzir(raiz = process.cwd()): string[] {
   const out = new Set<string>()
-  recolher({ PERFIS, DEMOS, CASOS: CASOS.filter((c) => c.autorizado), FAQ, PROXIMOS, MENU, AREAS, TAREFAS, SECTORES, CASO_MTM, DEMOS_DIARIAS, EQUIPAS, g: sectorGenerico(''), KITS, MODELOS, PROTOTIPOS, DIA }, '', out)
+  recolher({ PERFIS, DEMOS, CASOS: CASOS.filter((c) => c.autorizado), FAQ, PROXIMOS, MENU, AREAS, TAREFAS, SECTORES, CASO_MTM, DEMOS_DIARIAS, EQUIPAS, g: sectorGenerico(''), KITS, MODELOS, PROTOTIPOS, DIA, FLUXOS }, '', out)
   for (const x of TEXTOS_SOLTOS) out.add(x)
   for (const x of textosDoCodigo(raiz)) out.add(x)
   return [...out].sort()

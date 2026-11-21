@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react"
 import { createPortal } from "react-dom"
-import { ArrowRight, Download, X } from "lucide-react"
+import { ArrowRight, Download, Sparkles, X } from "lucide-react"
 import type { RelatorioAnalise } from "@/lib/site-solucoes/analise"
 import { dataAteOnde, factos, numeroProposta } from "@/lib/site-solucoes/factos"
 import { IDENTIFICACAO } from "@/lib/legal/identificacao"
@@ -39,6 +39,15 @@ export function PropostaPDF({ rel, agendar, onFechar }: { rel: RelatorioAnalise;
     u.searchParams.set("proposta", numero)
     return u.toString()
   }, [agendar, numero])
+  /** O passo seguinte da proposta: o protótipo da solução feito pela IA, e daí a reunião. */
+  const urlPrototipo = useMemo(() => {
+    const u = new URL("/solucoes/prototipo", "https://www.morethanmoney.pt")
+    u.searchParams.set("proposta", numero)
+    u.searchParams.set("empresa", rel.empresa)
+    u.searchParams.set("sector", rel.sector)
+    if (idioma !== "pt") u.searchParams.set("lang", idioma)
+    return u.toString()
+  }, [numero, rel.empresa, rel.sector, idioma])
   const f = factos(rel.totais)
   const temHoras = rel.oportunidades.length > 0 && rel.totais.horasSemana > 0
   const ate = dataAteOnde(f.diasRepetidosAno, hoje.getFullYear())
@@ -56,7 +65,7 @@ export function PropostaPDF({ rel, agendar, onFechar }: { rel: RelatorioAnalise;
     const antes = document.body.style.overflow
     document.body.style.overflow = "hidden"
     import("qrcode")
-      .then((Q) => Q.toDataURL(urlAgendar, { margin: 1, width: 360, color: { dark: CARVAO, light: "#FFFFFF" } }))
+      .then((Q) => Q.toDataURL(urlPrototipo, { margin: 1, width: 360, color: { dark: CARVAO, light: "#FFFFFF" } }))
       .then(setQr)
       .catch(() => setQr(null))
     return () => {
@@ -64,7 +73,7 @@ export function PropostaPDF({ rel, agendar, onFechar }: { rel: RelatorioAnalise;
       window.removeEventListener("keydown", esc)
       document.body.style.overflow = antes
     }
-  }, [urlAgendar])
+  }, [urlPrototipo])
 
   if (!montado) return null
 
@@ -113,6 +122,9 @@ export function PropostaPDF({ rel, agendar, onFechar }: { rel: RelatorioAnalise;
           <p className="truncate text-sm text-zinc-300">{rel.empresa} · {numero}</p>
         </div>
         <div className="flex shrink-0 items-center gap-2">
+          <a href={urlPrototipo} className="inline-flex min-h-[44px] items-center gap-2 rounded-full border border-[#D2A63C]/60 px-4 text-sm font-semibold text-[#E9C46A] hover:bg-[#D2A63C]/10">
+            <Sparkles className="h-4 w-4" aria-hidden="true" /> <span className="hidden md:inline">{t("Receber o protótipo da minha solução")}</span><span className="md:hidden">{t("Protótipo")}</span>
+          </a>
           <button type="button" onClick={() => window.print()} className="inline-flex min-h-[44px] items-center gap-2 rounded-full bg-[#D2A63C] px-5 text-sm font-semibold text-black hover:bg-[#E9C46A]">
             <Download className="h-4 w-4" aria-hidden="true" /> <span className="hidden sm:inline">{t("Descarregar PDF")}</span><span className="sm:hidden">PDF</span>
           </button>
@@ -377,17 +389,21 @@ export function PropostaPDF({ rel, agendar, onFechar }: { rel: RelatorioAnalise;
             ))}
           </ul>
 
-          <div className="mt-8 flex items-center gap-6 rounded-3xl p-6" style={{ background: CARVAO, color: "#fff" }}>
+          <a href={urlPrototipo} className="mt-8 flex items-center gap-6 rounded-3xl p-6 no-underline" style={{ background: CARVAO, color: "#fff" }}>
             {qr && (
               // eslint-disable-next-line @next/next/no-img-element
               <img src={qr} alt="" width={132} height={132} className="shrink-0 rounded-xl bg-white p-1.5" />
             )}
             <div>
-              <p className="text-[24px] font-black leading-tight">{t("Marca a conversa da análise completa")}</p>
-              <p className="mt-2 text-[13px] text-white/60">{t("Aponta a câmara ao código ou abre:")}</p>
-              <p className="mt-1 break-all text-[13px] font-semibold" style={{ color: OURO_CLARO }}>{urlAgendar.replace(/^https:\/\/(www\.)?/, "")}</p>
+              <p className="text-[11px] font-semibold uppercase tracking-[0.25em]" style={{ color: OURO_CLARO }}>{t("Grátis e sem compromisso")}</p>
+              <p className="mt-1 text-[24px] font-black leading-tight">{t("Recebe já o protótipo da tua solução")}</p>
+              <p className="mt-2 text-[13px] leading-5 text-white/70">{t("A nossa IA monta-o na hora. Marcas a reunião e a demo com a tua marca segue até 24 h depois.")}</p>
+              <p className="mt-2 text-[12px] text-white/50">{t("Aponta a câmara ao código ou toca aqui.")}</p>
             </div>
-          </div>
+          </a>
+          <p className="mt-3 text-[11px] text-black/50">
+            {t("Preferes falar primeiro?")} <span className="font-semibold" style={{ color: "#9C7A24" }}>{urlAgendar.replace(/^https:\/\/(www\.)?/, "")}</span>
+          </p>
         </div>
 
         <div className="absolute inset-x-[56px] bottom-[60px] space-y-2 border-t border-black/10 pt-4 text-[9.5px] leading-[14px] text-black/45">

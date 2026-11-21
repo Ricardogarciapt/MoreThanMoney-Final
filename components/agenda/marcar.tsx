@@ -64,6 +64,28 @@ export default function Marcar({ slugInicial }: { slugInicial?: string }) {
 
   const fuso = useMemo(fusoDoVisitante, [])
 
+  // De onde veio a marcação (protótipo do /solucoes, proposta em PDF, campanhas). Vai no utm e é o
+  // servidor que liga a reunião ao protótipo e conta as 24 h da demo.
+  const [origem, setOrigem] = useState<Record<string, string>>({})
+  useEffect(() => {
+    try {
+      const q = new URLSearchParams(window.location.search)
+      const o: Record<string, string> = {}
+      for (const k of ["prototipo", "proposta", "utm_source", "utm_medium", "utm_campaign", "utm_content"]) {
+        const v = q.get(k)
+        if (v) o[k] = v.slice(0, 80)
+      }
+      setOrigem(o)
+      // Quem acabou de pedir o protótipo já nos deu nome, email e telemóvel: não se pede outra vez.
+      const pre = JSON.parse(sessionStorage.getItem("mtm_agenda_pre") || "null") as { nome?: string; email?: string; telefone?: string } | null
+      if (pre) {
+        if (pre.nome) setNome((x) => x || pre.nome!)
+        if (pre.email) setEmail((x) => x || pre.email!)
+        if (pre.telefone) setTelefone((x) => x || pre.telefone!)
+      }
+    } catch {}
+  }, [])
+
   useEffect(() => {
     void (async () => {
       const r = await fetch("/api/agenda/tipos").then((x) => x.json()).catch(() => ({ tipos: [] }))
@@ -121,6 +143,7 @@ export default function Marcar({ slugInicial }: { slugInicial?: string }) {
         tipo: escolhido.slug, inicio: hora.iso, anfitriao: hora.anfitriaoId,
         nome, email, telefone, fuso, respostas,
         local: onde ?? undefined,
+        utm: origem,
       }),
     }).then((x) => x.json()).catch(() => ({ error: "Falhou. Tenta outra vez." }))
     setAEnviar(false)
@@ -153,6 +176,17 @@ export default function Marcar({ slugInicial }: { slugInicial?: string }) {
               ? <>Sala: <a className="text-[#E9C46A] underline" href={feito.joinUrl} target="_blank" rel="noreferrer">entrar</a></>
               : "O link da sala segue por email."}
         </p>
+        {origem.prototipo && (
+          <a
+            href={`/solucoes/prototipo/${encodeURIComponent(origem.prototipo)}`}
+            className="mt-6 inline-flex min-h-[48px] items-center justify-center gap-2 rounded-full bg-[#D2A63C] px-5 text-[14px] font-semibold text-black"
+          >
+            O teu protótipo já está pronto: abrir
+          </a>
+        )}
+        {origem.prototipo && (
+          <p className="mt-2 text-[13px] text-zinc-400">A demo com a tua marca segue até 24 h depois da reunião.</p>
+        )}
         <p className="mt-6 text-[12.5px] text-zinc-500">
           Enviámos a confirmação para {email}. Precisas de desmarcar?{" "}
           <a className="text-[#E9C46A] underline" href={`/agendar/gerir?t=${feito.token}`}>é aqui</a>.

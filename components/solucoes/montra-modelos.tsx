@@ -53,6 +53,13 @@ export function MontraModelos({ publicadas, agendar, inicial, abrirRA = false }:
     return `${u.pathname}${u.search}`
   }, [agendar, m.id, nome])
 
+  // O passo seguinte do showroom: o protótipo deste negócio, já com o nome e a cor escolhidos.
+  const prototipo = useMemo(() => {
+    const q = new URLSearchParams({ modelo: m.id, cor: principal })
+    if (nome.trim()) q.set("negocio", nome.trim().slice(0, 60))
+    return ligar(`/solucoes/prototipo?${q.toString()}`)
+  }, [m.id, principal, nome, ligar])
+
   return (
     <div>
       <div role="tablist" aria-label={t("Escolhe o sector")} className="-mx-4 flex gap-2 overflow-x-auto px-4 pb-2 md:mx-0 md:flex-wrap md:overflow-visible md:px-0">
@@ -117,13 +124,16 @@ export function MontraModelos({ publicadas, agendar, inicial, abrirRA = false }:
               ))}
             </div>
             <a
-              href={pedir}
-              className="mt-6 flex min-h-[52px] w-full items-center justify-center gap-2 rounded-full bg-[#D2A63C] px-6 text-center font-semibold text-black hover:bg-[#E9C46A]"
+              href={prototipo}
+              className="mt-6 flex min-h-[52px] w-full items-center justify-center gap-2 rounded-full bg-[#D2A63C] px-6 text-center font-semibold text-black shadow-lg shadow-[#D2A63C]/20 hover:bg-[#E9C46A]"
             >
-              <CalendarCheck className="h-4 w-4 shrink-0" aria-hidden="true" />
-              {nome.trim() ? `${t("Quero a app de")} ${marca}` : t("Quero este modelo para o meu negócio")}
+              <Sparkles className="h-4 w-4 shrink-0" aria-hidden="true" />
+              {nome.trim() ? `${t("Receber o protótipo de")} ${marca}` : t("Receber o protótipo da minha solução")}
             </a>
-            <p className="mt-3 text-center text-xs text-zinc-500">{t("Conversa de 30 minutos. Montamos a demo com a tua marca, a preço fechado.")}</p>
+            <p className="mt-3 text-center text-xs text-zinc-500">{t("A nossa IA monta-o na hora. A demo com a tua marca segue até 24 h depois da reunião.")}</p>
+            <a href={pedir} className="mt-2 flex min-h-[44px] items-center justify-center gap-2 text-sm font-semibold text-[#E9C46A] hover:text-white">
+              <CalendarCheck className="h-4 w-4 shrink-0" aria-hidden="true" /> {t("Prefiro marcar já uma conversa")}
+            </a>
           </div>
 
           <p className="mt-4 text-xs text-zinc-500">{t("Negócio fictício, só para mostrar o modelo. Na tua demo entram o teu nome, as tuas cores e os teus serviços.")}</p>
@@ -154,7 +164,7 @@ export function MontraModelos({ publicadas, agendar, inicial, abrirRA = false }:
   )
 }
 
-function Telemovel({ m, marca, principal }: { m: ModeloSector; marca: string; principal: string }) {
+export function Telemovel({ m, marca, principal }: { m: ModeloSector; marca: string; principal: string }) {
   const { t } = useT()
   const [ecra, setEcra] = useState<Ecra>("inicio")
   const [servico, setServico] = useState(m.servicos[0].s)

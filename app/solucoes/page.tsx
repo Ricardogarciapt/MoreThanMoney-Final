@@ -1,6 +1,6 @@
 import Image from "next/image"
 import Link from "next/link"
-import { ArrowRight, ArrowUpRight, Bot, Building2, CandlestickChart, Check, GraduationCap, Mic, Move3d, Server, UserRound } from "lucide-react"
+import { ArrowRight, ArrowUpRight, Bot, Building2, CandlestickChart, Check, GraduationCap, Mic, Move3d, Server, Sparkles, UserRound } from "lucide-react"
 import { linkAgendar } from "@/lib/agenda/link"
 import { IDENTIFICACAO } from "@/lib/legal/identificacao"
 import { CASOS, DEMOS, FAQ, PERFIS, PROXIMOS } from "@/lib/site-solucoes/conteudo"
@@ -119,7 +119,15 @@ export default async function SolucoesPage({ searchParams }: Props) {
                   className="inline-flex items-center rounded-full border border-white/15 px-6 py-3 font-semibold text-zinc-200 transition hover:border-[#D2A63C]/60 active:scale-[0.98]"
                 >{t("Pedir análise ao meu negócio")}</a>
               </div>
-              <Link href={ligar("/demos#modelos")} className="mt-5 inline-flex min-h-[44px] items-center gap-2 text-sm font-semibold text-[#E9C46A] hover:text-white">
+              <Link href={ligar("/solucoes/prototipo")} className="group mt-5 flex max-w-md items-center gap-3 rounded-2xl border border-[#D2A63C]/40 bg-[#D2A63C]/[0.08] px-4 py-3 transition hover:border-[#D2A63C]">
+                <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#D2A63C] text-black"><Sparkles className="h-5 w-5" aria-hidden="true" /></span>
+                <span className="min-w-0">
+                  <span className="block text-sm font-bold text-white">{t("Receber o protótipo da minha solução")}</span>
+                  <span className="block text-xs text-zinc-400">{t("A nossa IA monta-o na hora. A demo com a tua marca segue até 24 h depois da reunião.")}</span>
+                </span>
+                <ArrowRight className="ml-auto h-4 w-4 shrink-0 text-[#E9C46A] transition group-hover:translate-x-0.5" aria-hidden="true" />
+              </Link>
+              <Link href={ligar("/demos#modelos")} className="mt-3 inline-flex min-h-[44px] items-center gap-2 text-sm font-semibold text-[#E9C46A] hover:text-white">
                 {t("Ou vê já a app do teu negócio no showroom")} <ArrowRight className="h-4 w-4" aria-hidden="true" />
               </Link>
             </div>
@@ -403,6 +411,12 @@ export default async function SolucoesPage({ searchParams }: Props) {
             >
               {CTA_LABEL} <ArrowRight className="h-4 w-4" />
             </a>
+            <Link
+              href={ligar("/solucoes/prototipo")}
+              className="ml-0 mt-3 inline-flex items-center gap-2 rounded-full border border-[#08090C]/40 px-6 py-3 font-semibold text-[#08090C] transition hover:bg-[#08090C]/10 sm:ml-3"
+            >
+              <Sparkles className="h-4 w-4" /> {t("Receber o protótipo da minha solução")}
+            </Link>
           </div>
         </section>
       </main>
