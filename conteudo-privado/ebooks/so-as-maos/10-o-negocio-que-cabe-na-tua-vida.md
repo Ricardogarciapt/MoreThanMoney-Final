@@ -69,9 +69,10 @@ Um bom planeamento só serve se consegues ver, depois, o que realmente aconteceu
 
 Não precisas de uma ferramenta específica para esta revisão. Um caderno com três colunas (o que planeei, o que fiz, o que aprendi) chega. O importante é o hábito de rever.
 
-:::post @morethanmoney.pt
-imagem: O teu negócio não precisa da tua cara.
-legenda: Faceless Marketing com a Maria, dentro da MoreThanMoney. Cria conteúdo, automatiza o processo e monetiza o que sabes, ao teu ritmo. Os resultados dependem do trabalho de cada pessoa.
+:::cartao She Is Daily · o planner da minha marca
+- Blocos da semana no sítio certo, com tempo real gasto em cada tarefa
+- Revisão semanal: o que planeaste, o que fizeste, o que aprendeste
+- 7 dias grátis, sem cartão · sheis.pt/daily
 :::
 
 ## Limites que protegem o negócio

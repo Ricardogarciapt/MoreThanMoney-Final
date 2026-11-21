@@ -99,6 +99,11 @@ Se recolhes e-mails ou contactos, tens de ser transparente sobre o que vais faze
 
 Para uma análise do teu caso concreto, fala com um advogado. Aqui fica apenas a lógica geral.
 
+
+:::nota
+Queres que eu olhe para as tuas mensagens e para a tua oferta? É isso que faço na consultoria 1:1 da She Is: sheis.pt/consultoria.
+:::
+
 ## Para fazer hoje
 
 1. Abre as tuas últimas interações (comentários e respostas a stories) e escreve a lista das pessoas que já te falaram.

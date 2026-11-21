@@ -52,7 +52,7 @@ Uma sessão de uma hora em que montas um produto com as mãos pode dar-te um Ree
 Filma uma vez e publica em vários formatos. O mesmo produto aparece de ângulos diferentes sem que tenhas de começar do zero todas as semanas.
 :::
 
-:::curso Aula 4.3 · Do roteiro às cenas de mãos
+:::curso Do roteiro às cenas de mãos
 Um Reel de mãos tem três planos que se repetem: as mãos a fazer, o ecrã a mostrar, o objeto a contar a história. Grava-se tudo de uma vez e monta-se depois.
 
 no curso: filmas um Reel completo em vinte minutos, com o telemóvel e a luz de uma janela.

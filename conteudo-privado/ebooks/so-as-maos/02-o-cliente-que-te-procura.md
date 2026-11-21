@@ -41,7 +41,7 @@ Quantas receitas tens guardadas e nunca fizeste?
 sticker: Mais de dez | Perdi a conta
 :::
 
-:::curso Aula 2.1 · Dor, desejo e linguagem
+:::curso Dor, desejo e linguagem
 Ninguém compra um e-book. Compra a noite de sono que vem depois de resolver o problema. **A oferta nasce da dor do cliente, não do teu gosto.**
 
 no curso: preenches o mapa de empatia com frases reais, copiadas de comentários, e não com palpites.
