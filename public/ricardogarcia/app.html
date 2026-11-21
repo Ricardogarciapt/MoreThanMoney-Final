@@ -465,6 +465,36 @@ html, body { overflow-x: hidden; }
 .adm-grade .alerta b { color: #ff9d7a; }
 .adm-links { display: grid; gap: 8px; } .adm-links a.btn { text-decoration: none; display: flex; align-items: center; justify-content: center; }
 .hud .stats small { font-size: 11px; letter-spacing: .5px; white-space: nowrap; }
+/* Barra de baixo com 7 e Definições (21/11) */
+.doca { grid-template-columns: repeat(7, 1fr); gap: 2px; padding: 5px; border-radius: 20px; background: linear-gradient(180deg, rgba(26,31,44,.94), rgba(9,11,17,.96)); border: 1px solid rgba(233,196,106,.22); box-shadow: 0 18px 40px -12px rgba(0,0,0,.8), inset 0 1px 0 rgba(255,236,180,.12), inset 0 -1px 0 rgba(0,0,0,.6); }
+.doca::before { content: ""; position: absolute; left: 18%; right: 18%; top: -1px; height: 1px; background: linear-gradient(90deg, transparent, rgba(233,196,106,.8), transparent); }
+.doca button { font-size: 9px; letter-spacing: .2px; min-height: 54px; position: relative; transition: transform .2s cubic-bezier(.2,.8,.2,1), color .2s; }
+.doca button span { font-size: 19px; line-height: 1; transition: transform .3s cubic-bezier(.2,.8,.2,1); }
+.doca button:active { transform: scale(.92); }
+.doca button.on { background: radial-gradient(120% 90% at 50% 0%, #fff1c2 0%, var(--ouro2) 35%, var(--ouro) 70%, #8a6418 100%); color: #15110a; font-weight: 600; box-shadow: 0 6px 18px -6px rgba(233,196,106,.7), inset 0 1px 0 rgba(255,255,255,.55), inset 0 -2px 0 rgba(90,60,10,.45); }
+.doca button.on span { transform: translateY(-1px) scale(1.08); }
+@media (min-width: 480px) { .doca button { font-size: 10px; } }
+.def-heroi { display: grid; grid-template-columns: 116px 1fr; gap: 14px; align-items: center; overflow: hidden; position: relative; }
+.def-heroi::after { content: ""; position: absolute; inset: 0; background: radial-gradient(60% 90% at 12% 50%, rgba(233,196,106,.16), transparent 70%); pointer-events: none; }
+.def-emb { width: 100px; height: 100px; display: grid; place-items: center; margin: auto; }
+.def-emb svg { width: 100px; height: 100px; filter: drop-shadow(0 0 18px rgba(210,166,60,.45)); }
+.def-heroi h2 { margin: 2px 0 4px; font-size: 30px; font-style: italic; line-height: 1; }
+.def-heroi .barra { margin-top: 10px; }
+.def-grupo { margin-top: 16px; border-radius: 18px; padding: 6px 14px 8px; background: linear-gradient(180deg, rgba(22,26,37,.92), rgba(12,14,20,.92)); border: 1px solid var(--linha); box-shadow: inset 0 1px 0 rgba(255,255,255,.04), 0 14px 30px -20px rgba(0,0,0,.9); }
+.def-grupo > .mono:first-child, .def-tit { display: block; margin: 10px 0 4px !important; color: var(--ouro2); letter-spacing: 2px; font-size: 11px; }
+.def-lin { width: 100%; display: grid; grid-template-columns: 40px 1fr auto; gap: 12px; align-items: center; padding: 11px 0; border: 0; border-top: 1px solid var(--linha); background: transparent; color: var(--texto); text-align: left; font: inherit; cursor: pointer; text-decoration: none; }
+.def-grupo .def-lin:first-of-type { border-top: 0; }
+.def-lin .ic { width: 40px; height: 40px; border-radius: 12px; display: grid; place-items: center; font-size: 19px; background: radial-gradient(circle at 30% 25%, rgba(233,196,106,.28), rgba(10,13,19,.9) 70%); border: 1px solid rgba(233,196,106,.25); box-shadow: inset 0 1px 0 rgba(255,255,255,.08); }
+.def-lin b { display: block; font-weight: 600; font-size: 16px; } .def-lin small { display: block; color: var(--cinza); font-size: 13px; margin-top: 1px; }
+.def-lin .seta { color: var(--ouro2); font-size: 20px; transition: transform .2s; }
+.def-lin:active { transform: scale(.985); } .def-lin:active .seta { transform: translateX(3px); }
+.def-lin.perigo b { color: #ff9d7a; } .def-lin.perigo .ic { background: radial-gradient(circle at 30% 25%, rgba(255,120,90,.25), rgba(10,13,19,.9) 70%); border-color: rgba(255,120,90,.3); }
+.def-grupo .interr { padding: 12px 0; }
+.def-grupo .interr input { appearance: none; -webkit-appearance: none; width: 50px; height: 28px; border-radius: 999px; background: #1a2030; border: 1px solid var(--linha); position: relative; flex: none; cursor: pointer; transition: background .25s; }
+.def-grupo .interr input::after { content: ""; position: absolute; top: 2px; left: 2px; width: 22px; height: 22px; border-radius: 50%; background: linear-gradient(180deg, #e8ebf1, #9aa3b2); box-shadow: 0 2px 6px rgba(0,0,0,.5); transition: transform .25s cubic-bezier(.2,.8,.2,1); }
+.def-grupo .interr input:checked { background: linear-gradient(135deg, var(--ouro2), var(--ouro)); border-color: transparent; box-shadow: 0 0 12px rgba(233,196,106,.45); }
+.def-grupo .interr input:checked::after { transform: translateX(22px); background: linear-gradient(180deg, #fff, #f3e2b0); }
+.def-versao { text-align: center; color: var(--cinza); font-size: 12px; margin: 18px 0 4px; letter-spacing: 1px; }
 @media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } }
 </style>
 </head>
@@ -606,6 +636,8 @@ html, body { overflow-x: hidden; }
       <div class="placa" id="gPat"></div>
     </div>
 
+    <div class="vista" id="vDef"></div>
+
     <div class="vista esq" id="vEsq">
       <div class="sec-tit"><h3>Comunidade</h3><span class="mono">Stories duram 24 h</span></div>
       <div class="stories" id="gStories" aria-label="Stories"></div>
@@ -635,7 +667,7 @@ html, body { overflow-x: hidden; }
   <button data-v="vEventos" type="button"><span>★</span>Ricardo</button>
   <button data-v="vDiario" type="button"><span>✎</span>Diário</button>
   <button data-v="vRec" type="button"><span>◈</span>Prémios</button>
-  
+  <button data-v="vDef" type="button" aria-label="Mais e definições"><span>☰</span>Mais</button>
 </nav>
 
 <div class="compor" id="compor" hidden>
@@ -684,7 +716,9 @@ html, body { overflow-x: hidden; }
     $('entrada').hidden = true; $('app').hidden = false; $('doca').hidden = false;
     $('tSeq').textContent = m.sequencia; $('tMoedas').textContent = m.moedas;
     $('tAv').outerHTML = avatar({ avatar: m.avatar_url, nome: m.primeiro }).replace('<div class="av"', '<div class="av" id="tAv"');
-    $('galao').innerHTML = galao(m.patente);
+    var gl = $('galao'), gsv = gl.querySelector('svg'); if (gsv) gsv.outerHTML = galao(m.patente); else gl.insertAdjacentHTML('afterbegin', galao(m.patente));
+    if (window.Missao3D) Missao3D.emblema(gl, m.patente);
+    if ($('vDef').classList.contains('on')) pintaDef();
     $('pOla').textContent = 'Olá, ' + m.primeiro; $('pNome').textContent = m.patente_nome;
     var pct = m.prox_xp ? Math.round((m.xp - m.base_xp) / (m.prox_xp - m.base_xp) * 100) : 100;
     $('pProx').textContent = m.prox_nome ? (m.prox_xp - m.xp) + ' XP para ' + m.prox_nome : 'Patente máxima';
@@ -1040,6 +1074,7 @@ html, body { overflow-x: hidden; }
     document.querySelectorAll('.vista').forEach(function (v) { v.classList.toggle('on', v.id === b.getAttribute('data-v')); });
     window.scrollTo(0, 0);
     abrirComunidade(b.getAttribute('data-v') === 'vEsq');
+    if (b.getAttribute('data-v') === 'vDef') pintaDef();
     if (window.MissaoRPG) window.MissaoRPG.parar();
   });
   // Perfil: foto ou avatar montado (emblema + fundo + moldura). O servidor gera o SVG só a partir destas opções.
@@ -1306,6 +1341,57 @@ html, body { overflow-x: hidden; }
   }
   document.querySelectorAll('.seg-dia button').forEach(function (b) { b.addEventListener('click', function () { abrirPd(b.getAttribute('data-pd')); }); });
   try { var pd0 = localStorage.getItem('missaoPd'); if (pd0 && $(pd0)) abrirPd(pd0); } catch (_) {}
+  // ── Mais · Definições ──
+  var vibOrig = navigator.vibrate ? navigator.vibrate.bind(navigator) : null;
+  function vibLigada(v) { try { if (v !== undefined) localStorage.setItem('missaoVib', v ? '1' : '0'); return localStorage.getItem('missaoVib') !== '0'; } catch (_) { return true; } }
+  function aplicaVib() { if (!vibOrig) return; try { navigator.vibrate = vibLigada() ? vibOrig : function () { return false; }; } catch (_) {} }
+  aplicaVib();
+  function opcao(k) { try { return localStorage.getItem(k) !== '0'; } catch (_) { return true; } }
+  function pintaDef() {
+    var m = E.membro, v = $('vDef'); if (!m) return;
+    var pct = m.prox_xp ? Math.round((m.xp - m.base_xp) / (m.prox_xp - m.base_xp) * 100) : 100;
+    var lin = function (acc, ic, t, sub, extra) { return '<button class="def-lin' + (extra || '') + '" type="button" data-d="' + acc + '"><span class="ic">' + ic + '</span><span><b>' + t + '</b>' + (sub ? '<small>' + sub + '</small>' : '') + '</span><span class="seta">›</span></button>'; };
+    var interr = function (k, t, on) { return '<label class="interr"><span>' + t + '</span><input type="checkbox" data-dd="' + k + '" ' + (on ? 'checked' : '') + '></label>'; };
+    var podeInstalar = !standalone && (pedidoInstalar || /iphone|ipad|ipod/i.test(navigator.userAgent));
+    if (window.Missao3D && $('defEmb')) Missao3D.soltar($('defEmb'));
+    v.innerHTML = '<div class="sec-tit"><h3>Mais</h3><span class="mono">Definições e atalhos</span></div>' +
+      '<div class="placa cantos def-heroi fx-heroi"><div class="def-emb" id="defEmb">' + galao(m.patente) + '</div><div><div class="mono">' + esc(m.primeiro) + ' · Nível ' + (m.patente + 1) + '</div><h2>' + esc(m.patente_nome) + '</h2><div class="mono">' + m.xp + ' XP' + (m.prox_nome ? ' · faltam ' + (m.prox_xp - m.xp) + ' para ' + esc(m.prox_nome) : ' · patente máxima') + '</div><div class="barra"><i style="width:' + pct + '%"></i></div></div></div>' +
+      '<div class="def-grupo"><span class="def-tit mono">Conta</span>' + lin('perfil', '🛡️', 'Perfil e avatar', 'Foto, emblema, fundo e moldura') + lin('patentes', '⚑', 'Patentes e progresso', 'O caminho até ao topo') + lin('premios', '◈', 'Prémios e insígnias', m.moedas + ' moedas para usar') + '</div>' +
+      '<div class="def-grupo">' + blocoAvisos() + interr('vib', '📳 Vibração', vibLigada()) + '</div>' +
+      '<div class="def-grupo"><span class="def-tit mono">Gráficos</span>' + interr('3d', '💠 Emblema 3D em tempo real', opcao('missao3d')) + interr('fx', '✨ Efeitos e animações dos cartões', opcao('missaoFx')) + '<p class="texto-m" style="font-size:13px;color:var(--cinza);margin:2px 0 6px">Se o telemóvel aquecer ou ficar lento, desliga estes dois.</p></div>' +
+      '<div class="def-grupo"><span class="def-tit mono">Jogo e app</span>' + lin('rpg', '⚔️', 'Operação Liberdade', 'Capítulos, bosses e escape rooms') + lin('mentor', '🧭', 'Mentor', 'Fala a qualquer hora') + lin('intro', '🎖️', 'Rever a intro do dia') +
+        (podeInstalar ? lin('instalar', '📲', 'Instalar a app', pedidoInstalar ? 'Fica no ecrã principal' : 'Partilhar → Adicionar ao ecrã principal') : '') + lin('atualizar', '⟳', 'Procurar atualização', 'Recarrega a versão mais recente') + '</div>' +
+      (m.admin ? '<div class="def-grupo"><span class="def-tit mono">Admin</span>' + lin('admin', '🛠️', 'Área de admin', 'Números de hoje e painel') + '</div>' : '') +
+      '<div class="def-grupo"><span class="def-tit mono">Ajuda</span>' + lin('ajuda', '❔', 'Como funciona', 'XP, moedas, séries e prémios') + '<a class="def-lin" href="/privacidade" target="_blank" rel="noopener"><span class="ic">🔒</span><span><b>Privacidade</b><small>Como tratamos os teus dados</small></span><span class="seta">›</span></a>' + lin('sair', '⏻', 'Sair da conta', 'Neste telemóvel', ' perigo') + '</div>' +
+      '<p class="def-versao">MISSÃO · VERSÃO 15</p>';
+    if (window.Missao3D) Missao3D.emblema($('defEmb'), m.patente);
+  }
+  $('vDef').addEventListener('change', function (ev) {
+    var t = ev.target, k = t.getAttribute('data-pp'), d = t.getAttribute('data-dd');
+    if (k === 'som') { Som.ligado(t.checked); if (t.checked) Som.plim(); return; }
+    if (k) { var pr = Object.assign({}, E.push_prefs || {}); pr[k] = t.checked; E.push_prefs = pr; api({ accao: 'push_prefs', prefs: pr }); return; }
+    if (d === 'vib') { vibLigada(t.checked); aplicaVib(); if (t.checked) try { navigator.vibrate && navigator.vibrate(30); } catch (_) {} }
+    else if (d === '3d') { try { localStorage.setItem('missao3d', t.checked ? '1' : '0'); } catch (_) {} if (!window.Missao3D) return; if (t.checked) { Missao3D.emblema($('galao'), E.membro.patente); Missao3D.emblema($('defEmb'), E.membro.patente); } else Missao3D.desligar(); }
+    else if (d === 'fx') { try { localStorage.setItem('missaoFx', t.checked ? '1' : '0'); } catch (_) {} toast('A aplicar…', 900); setTimeout(function () { location.reload(); }, 700); }
+  });
+  $('vDef').addEventListener('click', function (ev) {
+    var b = ev.target.closest('button'); if (!b) return;
+    var irPara = function (vid) { var db = document.querySelector('.doca button[data-v="' + vid + '"]'); if (db) db.click(); };
+    switch (b.getAttribute('data-d') || b.id) {
+      case 'perfil': folhaPerfil(); break;
+      case 'patentes': modal(escada()); break;
+      case 'premios': irPara('vRec'); break;
+      case 'rpg': $('cRpg').click(); break;
+      case 'mentor': folhaMentor(); break;
+      case 'intro': introDoDia(true); break;
+      case 'instalar': if (pedidoInstalar) { pedidoInstalar.prompt(); pedidoInstalar.userChoice.then(function () { pedidoInstalar = null; pintaDef(); }); } else modal('<div class="mono">Instalar no iPhone</div><h2>Ecrã principal</h2><p class="texto-m">No Safari, toca em <b>Partilhar</b> e depois em <b>Adicionar ao ecrã principal</b>. A app abre em ecrã inteiro e passa a receber notificações.</p>'); break;
+      case 'atualizar': toast('A procurar…', 1200); (navigator.serviceWorker && navigator.serviceWorker.getRegistration ? navigator.serviceWorker.getRegistration('/ricardogarcia/').then(function (r) { return r && r.update(); }).catch(function () {}) : Promise.resolve()).then(function () { setTimeout(function () { location.reload(); }, 600); }); break;
+      case 'admin': folhaAdmin(); break;
+      case 'ajuda': modal('<div class="mono">Como funciona</div><h2>A tua missão</h2><ul class="det-lista"><li><span>🎖️ Missões do dia dão XP e sobem a tua patente.</span></li><li><span>🔥 Dias completos seguidos fazem a série. Às 20h avisamos se estiver em risco.</span></li><li><span>◈ Dias completos, séries e insígnias dão moedas.</span></li><li><span>🎁 Os prémios pedem-se com moedas e o Ricardo aprova cada pedido.</span></li><li><span>⚔️ No RPG ganhas XP a vencer bosses com boas decisões.</span></li></ul><p class="texto-m" style="font-size:13px;color:var(--cinza)">Conteúdo educativo. Não é aconselhamento financeiro, médico nem de treino personalizado.</p>'); break;
+      case 'bPushOn': b.disabled = true; Push.ligar().then(function (r) { toast(r); pintaDef(); }); break;
+      case 'sair': if (!confirm('Sair da conta neste telemóvel?')) return; api({ accao: 'sair', push_token: Push.token() }).then(function () { location.reload(); }); break;
+    }
+  });
   function folhaAdmin() {
     modal('<div class="mono">Área de admin</div><h2>A tua app hoje</h2><div class="adm-grade" id="admG"><div><b>…</b><small>A carregar</small></div></div>' +
       '<div class="adm-links"><a class="btn" href="/ricardogarcia/painel#app">Gerir a app no painel</a><a class="btn sec" href="/ricardogarcia/painel#hoje">Painel · Hoje</a><a class="btn sec" href="/ricardogarcia/painel#contactos">Contactos e leads</a></div>' +
@@ -1678,7 +1764,8 @@ html, body { overflow-x: hidden; }
   setTimeout(mostrarInstalar, 1500);
 })();
 </script>
-<script src="/ricardogarcia/app-fx.js?v=1" defer></script>
-<script src="/ricardogarcia/app-rpg.js?v=4" defer></script>
+<script src="/ricardogarcia/app-fx.js?v=2" defer></script>
+<script src="/ricardogarcia/app-3d.js?v=1" defer></script>
+<script src="/ricardogarcia/app-rpg.js?v=5" defer></script>
 </body>
 </html>

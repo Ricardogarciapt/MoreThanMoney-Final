@@ -14,6 +14,8 @@ export type Anuncio = {
   destaque?: { em: number; ate: number; t: string }
   cta: { de: number; topo: string; grande: string; botao: string; url: string }
   aviso?: string
+  /** Molde de edição (21/11): cinema (omissão) · impacto (ecrã dividido) · documental (barras de cinema, cortes). */
+  molde?: 'cinema' | 'impacto' | 'documental'
 }
 
 export const CAUDA = 2.4 // s de cartão final depois da voz

@@ -40,9 +40,13 @@ function modoPip(fr: number, imgs: Imagem[]) {
 }
 
 /* ── Cortes secos com zoom (jump cut) a cada frase ── */
-function zoomFrase(t: number, k: string) {
+const moldeDe = (a: Anuncio) => (getInputProps() as { molde?: Anuncio['molde'] }).molde ?? a.molde ?? 'cinema'
+const METADE = Math.round(H * 0.5)
+const BARRA = 170 // barras de cinema do molde documental
+
+function zoomFrase(t: number, k: string, molde = 'cinema') {
   const segs = segsDe(k)
-  const niveis = [1.0, 1.16, 1.06, 1.2]
+  const niveis = molde === 'documental' ? [1.0, 1.05] : molde === 'impacto' ? [1.0, 1.22, 1.1, 1.3] : [1.0, 1.16, 1.06, 1.2]
   let n = 0
   for (let i = 1; i < segs.length; i++) {
     if (segs[i][0] > t) break
@@ -58,19 +62,23 @@ const Gemeo: React.FC<{ k: string; a: Anuncio }> = ({ k, a }) => {
   const fim = fimVoz(k)
   const m = modoPip(fr, a.imagens)
   const fimCena = interpolate(fr, [f(fim), f(fim) + 12], [0, 1], { ...clamp, easing: ease })
-  const w = interpolate(m, [0, 1], [W, PIP.w]), h = interpolate(m, [0, 1], [H, PIP.h])
-  const x = interpolate(m, [0, 1], [0, PIP.x]), y = interpolate(m, [0, 1], [0, PIP.y])
-  const zf = zoomFrase(t, k)
+  const molde = moldeDe(a)
+  // cinema: encolhe para janela · impacto: desce para a metade de baixo · documental: sai de cena (a voz continua)
+  const alvo = molde === 'impacto' ? { w: W, h: H - METADE, x: 0, y: METADE } : molde === 'documental' ? { w: W, h: H, x: 0, y: 0 } : PIP
+  const w = interpolate(m, [0, 1], [W, alvo.w]), h = interpolate(m, [0, 1], [H, alvo.h])
+  const x = interpolate(m, [0, 1], [0, alvo.x]), y = interpolate(m, [0, 1], [0, alvo.y])
+  const opGemeo = molde === 'documental' ? 1 - m : 1
+  const zf = zoomFrase(t, k, molde)
   // pequeno tremor no corte
   const ultimoCorte = segsDe(k).filter((s, i, arr) => i > 0 && s[0] <= t && /[.?:!]$/.test(arr[i - 1][2].trim())).pop()
   const desdeCorte = ultimoCorte ? fr - f(ultimoCorte[0]) : 99
-  const shake = desdeCorte < 6 ? (6 - desdeCorte) * 1.6 * Math.sin(desdeCorte * 2.3) : 0
+  const shake = molde === 'documental' ? 0 : desdeCorte < 6 ? (6 - desdeCorte) * 1.6 * Math.sin(desdeCorte * 2.3) : 0
   const push = interpolate(fr, [0, f(fim)], [1.0, 1.05])
-  const z = (m > 0.5 ? 1.12 : zf) * push
+  const z = (m > 0.5 && molde === 'cinema' ? 1.12 : zf) * push
   const filtro = `contrast(1.08) saturate(1.06) brightness(${1 - fimCena * 0.55}) blur(${fimCena * 14}px)`
   const estilo: React.CSSProperties = { width: '100%', height: '100%', objectFit: 'cover', transform: `translate(${shake}px, ${shake * 0.6}px) scale(${z})`, transformOrigin: '50% 30%', filter: filtro }
   return (
-    <div style={{ position: 'absolute', left: x, top: y, width: w, height: h, borderRadius: m * 30, overflow: 'hidden', zIndex: 5, boxShadow: m > 0.05 ? `0 30px 90px rgba(0,0,0,.65), 0 0 0 ${3 * m}px ${OURO_CLARO}, 0 0 ${50 * m}px ${OURO}` : undefined }}>
+    <div style={{ position: 'absolute', left: x, top: y, width: w, height: h, opacity: opGemeo, borderRadius: molde === 'cinema' ? m * 30 : 0, overflow: 'hidden', zIndex: 5, borderTop: molde === 'impacto' && m > 0.05 ? `${Math.round(6 * m)}px solid ${OURO_CLARO}` : undefined, boxShadow: molde === 'cinema' && m > 0.05 ? `0 30px 90px rgba(0,0,0,.65), 0 0 0 ${3 * m}px ${OURO_CLARO}, 0 0 ${50 * m}px ${OURO}` : undefined }}>
       {fr < f(fim) + 2 ? (
         <OffthreadVideo src={staticFile(videoDe(k))} style={estilo} />
       ) : (
@@ -170,14 +178,25 @@ const Legendas: React.FC<{ k: string; a: Anuncio }> = ({ k, a }) => {
   const palavras = seg[2].split(' ')
   const pos = (t - seg[0]) / Math.max(0.2, seg[1] - seg[0])
   const ativa = Math.min(palavras.length - 1, Math.floor(pos * palavras.length))
-  const top = 1440
+  const molde = moldeDe(a)
+  if (molde === 'documental') {
+    // legenda discreta, frase inteira, por cima da barra de baixo
+    return (
+      <div style={{ position: 'absolute', left: 90, right: 90, top: H - BARRA - 190, textAlign: 'center', zIndex: 9 }}>
+        {palavras.map((p, i) => (
+          <span key={i} style={{ display: 'inline-block', margin: '0 9px', fontFamily: OSW, fontWeight: 600, fontSize: 56, lineHeight: 1.25, color: i === ativa ? OURO_CLARO : '#fff', opacity: i <= ativa ? 1 : 0.55, textShadow: '0 3px 14px rgba(0,0,0,.95)' }}>{p}</span>
+        ))}
+      </div>
+    )
+  }
+  const top = molde === 'impacto' && modoPip(fr, a.imagens) > 0.5 ? METADE - 70 : 1440
   return (
     <div style={{ position: 'absolute', left: 60, right: 60, top, textAlign: 'center', zIndex: 9 }}>
       {palavras.map((p, i) => {
         const s = spring({ frame: fr - f(seg[0]) - i * 2, fps, config: { damping: 13, stiffness: 220 } })
         const on = i === ativa
         return (
-          <span key={i} style={{ display: 'inline-block', margin: '0 17px', fontFamily: ANTON, textTransform: 'uppercase', fontSize: 86, lineHeight: 1.1, color: on ? OURO_CLARO : '#fff', transform: `scale(${(0.7 + 0.3 * s) * (on ? 1.06 : 1)}) translateY(${(1 - s) * 30}px)`, opacity: s, WebkitTextStroke: '3px rgba(0,0,0,.85)', paintOrder: 'stroke fill', textShadow: on ? `0 0 30px ${OURO}, 0 8px 24px rgba(0,0,0,.8)` : '0 8px 24px rgba(0,0,0,.8)' }}>{p}</span>
+          <span key={i} style={{ display: 'inline-block', margin: '0 17px', fontFamily: ANTON, textTransform: 'uppercase', fontSize: molde === 'impacto' ? 98 : 86, lineHeight: 1.1, color: on ? OURO_CLARO : '#fff', transform: `scale(${(0.7 + 0.3 * s) * (on ? 1.06 : 1)}) translateY(${(1 - s) * 30}px)`, opacity: s, WebkitTextStroke: '3px rgba(0,0,0,.85)', paintOrder: 'stroke fill', textShadow: on ? `0 0 30px ${OURO}, 0 8px 24px rgba(0,0,0,.8)` : '0 8px 24px rgba(0,0,0,.8)' }}>{p}</span>
         )
       })}
     </div>
@@ -196,7 +215,7 @@ const Chips: React.FC<{ a: Anuncio }> = ({ a }) => {
         const s = spring({ frame: fr - f(c.em), fps, config: { damping: 14, stiffness: 160 } })
         const out = interpolate(fr, [f(c.em + 2.7), f(c.em + 3.0)], [1, 0], clamp)
         return (
-          <div key={c.i} style={{ position: 'absolute', right: 48, top: 930 + j * 98, zIndex: 8, opacity: s * out, transform: `translateX(${(1 - s) * 220}px) scale(${0.9 + 0.1 * s})` }}>
+          <div key={c.i} style={{ position: 'absolute', right: 48, top: (moldeDe(a) === 'impacto' ? 230 : 930) + j * 98, zIndex: 8, opacity: s * out, transform: `translateX(${(1 - s) * 220}px) scale(${0.9 + 0.1 * s})` }}>
             <div style={{ fontFamily: OSW, fontWeight: 700, fontSize: 40, letterSpacing: 1, textTransform: 'uppercase', color: '#fff', padding: '14px 28px', borderRadius: 999, background: 'rgba(8,8,10,.72)', border: `2px solid ${OURO_CLARO}`, boxShadow: `0 10px 40px rgba(0,0,0,.5), 0 0 24px color-mix(in srgb, ${OURO} 45%, transparent)`, backdropFilter: 'blur(10px)', whiteSpace: 'nowrap' }}>{c.t}</div>
           </div>
         )
@@ -392,19 +411,29 @@ export const Video: React.FC = () => {
   const fim = f(fimVoz(k))
   const fr = useCurrentFrame()
   const volMusica = interpolate(fr, [0, fim - 6, fim + 6], [0.16, 0.16, 0.5], clamp)
+  const molde = moldeDe(a)
   return (
     <AbsoluteFill style={{ background: FUNDO, overflow: 'hidden' }}>
       <style>{FONTES}</style>
-      {/* imagens de apoio por baixo do gémeo em janela */}
+      {/* imagens de apoio por baixo do gémeo em janela (impacto: só na metade de cima) */}
+      <div style={molde === 'impacto' ? { position: 'absolute', left: 0, top: 0, width: W, height: METADE, overflow: 'hidden', zIndex: 2 } : { position: 'absolute', inset: 0, zIndex: 2 }}>
       {a.imagens.map((i, n) =>
         i.tipo === 'video' ? (
           <AbsoluteFill key={n} style={{ zIndex: 2 }}><Plano src={i.src} de={f(i.de) - 6} dur={f(i.ate) - f(i.de) + 12} grade={i.grade} zoom={[1.06, 1.18]} escuro={0.15} /></AbsoluteFill>
         ) : i.tipo === 'foto' ? (
           <FotoPlanos key={n} k={i.src} de={i.de} ate={i.ate} />
         ) : (
-          <Telemovel key={n} src={i.src} srcs={i.srcs} de={i.de} ate={i.ate} />
+          molde === 'impacto'
+            ? <div key={n} style={{ position: 'absolute', left: 0, top: 0, width: W, height: H, transform: 'scale(0.5)', transformOrigin: '50% 0' }}><Telemovel src={i.src} srcs={i.srcs} de={i.de} ate={i.ate} /></div>
+            : <Telemovel key={n} src={i.src} srcs={i.srcs} de={i.de} ate={i.ate} />
         ),
       )}
+      </div>
+      {molde === 'impacto' && modoPip(fr, a.imagens) > 0.01 && <AbsoluteFill style={{ zIndex: 1, opacity: modoPip(fr, a.imagens) }}><FundoMarca /></AbsoluteFill>}
+      {molde === 'documental' && <>
+        <div style={{ position: 'absolute', left: 0, right: 0, top: 0, height: BARRA, background: '#000', zIndex: 7 }} />
+        <div style={{ position: 'absolute', left: 0, right: 0, bottom: 0, height: BARRA, background: '#000', zIndex: 7 }} />
+      </>}
       {/* cartão final: fundo da marca */}
       {fr >= fim - 6 && <AbsoluteFill style={{ zIndex: 4, opacity: interpolate(fr, [fim - 6, fim + 10], [0, 0.6], clamp) }}><FundoMarca /></AbsoluteFill>}
       <Gemeo k={k} a={a} />

@@ -5,6 +5,7 @@
 (function () {
   'use strict';
   var reduz = false; try { reduz = matchMedia('(prefers-reduced-motion: reduce)').matches; } catch (_) {}
+  try { if (localStorage.getItem('missaoFx') === '0') reduz = true; } catch (_) {} // desligado nas Definições
   var toque = matchMedia('(hover: none)').matches;
   var MOLA = 'cubic-bezier(.2,.8,.2,1)';
 

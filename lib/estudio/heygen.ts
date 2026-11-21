@@ -11,8 +11,8 @@
  * Storage do estúdio e cria o ativo, como faz o worker da GPU.
  */
 import type { SupabaseClient } from '@supabase/supabase-js'
-import { LOOKS, VOZ_RICARDO, lookDoPlano, type Cena } from './heygen-looks'
-import { PROJETO_VAZIO, normalizarProjeto } from './projeto'
+import { LOOKS, VOZ_RICARDO, lookDoDia, type Cena } from './heygen-looks'
+import { PROJETO_VAZIO, moldeDoDia, normalizarProjeto } from './projeto'
 
 const API = 'https://api.heygen.com'
 
@@ -42,10 +42,10 @@ export async function enviarHeygen(texto: string | Cena[], aspecto = '9:16', tit
   if (!cenas.length) return { erro: 'Sem texto para o clone dizer.' }
   // API v3 (a v2 foi retirada a 20/11/2026: «POST /v2/video/generate has been retired»). A v3 faz um
   // look por vídeo: o reel vai inteiro no look do primeiro plano e as falas seguem-se numa só voz.
-  // Os planos seguintes mudam de look entre reels (o guião de cada dia começa noutro plano).
+  // O look roda por dia entre três (lookDoDia, 21/11).
   const c0 = cenas[0]
   const sobreMedia = c0.visual !== 'apresentador' && !!c0.media_url
-  const look = lookDoPlano(c0.plano, cfg.avatarEnv)
+  const look = lookDoDia(new Date(), cfg.avatarEnv)
   const audio = cenas.length === 1 ? c0.audio_url : null
   const script = cenas.map((c) => c.texto).join(' ').replace(/\s+/g, ' ').trim().slice(0, 5000)
   try {
@@ -181,6 +181,7 @@ async function projetoDoClone(db: SupabaseClient, g: Geracao, v: { ativoId: stri
         texto: String(g.params?.texto || ''),
         apoio: Array.isArray(g.params?.apoio) ? g.params.apoio : [],
         cta_url: String(gu.cta_url || ''),
+        molde: moldeDoDia(),
       },
     })
     const titulo = gu.nicho ? `Reel · ${String(gu.nicho).slice(0, 60)} · cinemático` : 'Reel cinemático do clone'
@@ -196,6 +197,7 @@ async function projetoDoClone(db: SupabaseClient, g: Geracao, v: { ativoId: stri
         marca: outra,
         palavra_chave: outra === 'morethanmoney' ? 'COMEÇAR' : String(gu.palavra_chave || ''),
         cta_url: outra === 'morethanmoney' ? 'morethanmoney.pt' : String(gu.cta_url || ''),
+        molde: moldeDoDia(new Date(), 1), // reaproveitado → outro molde de edição
       },
     })
     linhas.push({ user_id: g.pedido_por || peca.user_id, titulo: `${titulo} · versão ${outra === 'morethanmoney' ? 'MTM' : 'Ricardo'}`.slice(0, 120), marca: outra, projeto: projetoOutra, estado: 'a_render' })
