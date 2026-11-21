@@ -355,7 +355,9 @@ const Poeira: React.FC<{ semente: string }> = ({ semente }) => {
 // Fotos que já têm um plano em vídeo gerado na HeyGen a partir da própria foto (21/11, pedido do Ricardo: «gerar
 // vídeo com HeyGen e usar a minha foto para teres um plano diferente»). Gerado uma vez (image_to_video, ~4 créditos
 // por 5 s) e reutilizado: public/fotos-planos/<k>-video.mp4. Nunca re-gerar.
-const COM_VIDEO = new Set(['retrato', 'grade', 'palco', 'farda', 'recomeco', 'estudio'])
+// 21/11 (Ricardo): a grade saiu (animação fraca). Com clip HeyGen, o clip ocupa a janela toda (sem o
+// plano aproximado com recorte, que parecia menos real).
+const COM_VIDEO = new Set(['retrato', 'palco', 'farda', 'recomeco', 'estudio'])
 const PlanoVideo: React.FC<{ k: string; A: number; B: number }> = ({ k, A, B }) => {
   const fr = useCurrentFrame()
   if (fr < A - 4 || fr > B + 4) return null
@@ -375,8 +377,10 @@ const FotoPlanos: React.FC<{ k: string; de: number; ate: number }> = ({ k, de, a
   const meio = Math.round(A + (B - A) * 0.52)
   return (
     <AbsoluteFill style={{ zIndex: 2 }}>
-      {COM_VIDEO.has(k) ? <PlanoVideo k={k} A={A} B={meio} /> : <UmPlano k={k} A={A} B={meio} plano={0} />}
-      <UmPlano k={k} A={meio} B={B} plano={1} />
+      {COM_VIDEO.has(k) ? <PlanoVideo k={k} A={A} B={B} /> : <>
+        <UmPlano k={k} A={A} B={meio} plano={0} />
+        <UmPlano k={k} A={meio} B={B} plano={1} />
+      </>}
     </AbsoluteFill>
   )
 }
