@@ -171,14 +171,15 @@ export async function GET(request: NextRequest) {
       media_urls: row.media_urls || [],
       // Última passagem antes de sair: trocas seguras de PT-BR para PT-PT na legenda (só em
       // texto em português; os flyers EN passam intactos). Não toca no que já está publicado.
-      caption: row.caption && parecePortugues(row.caption) ? corrigirPtPt(row.caption).texto : row.caption,
+      // Nov/2026 o Instagram aceita no máximo 5 hashtags: as que passarem disso saem da legenda.
+      caption: maxHashtags(row.caption && parecePortugues(row.caption) ? corrigirPtPt(row.caption).texto : row.caption),
       creation_id: row.creation_id,
       child_creation_ids: row.child_creation_ids,
       // 21/11/2026, Ricardo: «Todos os meus reels devem ser postados como teste» → qualquer REEL do
-      // @ricardogarciapt sai como «reel de teste» do Instagram (primeiro a não seguidores; passa aos
-      // seguidores sozinho se correr bem).
+      // @ricardogarciapt sai como «reel de teste» do Instagram (só a não seguidores). «E depois eu decido
+      // se publico»: graduação MANUAL, a passagem aos seguidores é decisão dele na app.
       trial: row.media_type === "REELS" && (row.ig_account_id === IG_ID.ricardo
-        || (row.created_by === CRIADOR_REELS_PESSOAL && reelsRicardo?.teste)) ? "SS_PERFORMANCE" : null,
+        || (row.created_by === CRIADOR_REELS_PESSOAL && reelsRicardo?.teste)) ? "MANUAL" : null,
     }
 
     try {
@@ -267,4 +268,11 @@ async function agendarReelEmStory(supabase: ReturnType<typeof getSupabaseAdmin>,
     agente_codigo: row.agente_codigo ?? null,
   })
   if (error) console.error("[ig-publish] reel→story:", error.message)
+}
+
+/** Deixa só as primeiras 5 hashtags (regra do Instagram desde nov/2026). */
+function maxHashtags(t: string | null | undefined, max = 5): string | null | undefined {
+  if (!t) return t
+  let n = 0
+  return t.replace(/(^|\s)#[\p{L}\p{N}_]+/gu, (m) => (++n <= max ? m : '')).replace(/[ \t]+\n/g, '\n').trimEnd()
 }
