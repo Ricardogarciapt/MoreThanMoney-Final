@@ -49,6 +49,10 @@
       "schedule": "0 5 * * *"
     },
     {
+      "path": "/api/cron/reels-cinematicos",
+      "schedule": "5 5 * * *"
+    },
+    {
       "path": "/api/cron/perps-position-monitor",
       "schedule": "*/5 * * * *"
     },
