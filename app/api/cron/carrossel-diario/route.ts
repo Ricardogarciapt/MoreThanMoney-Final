@@ -59,7 +59,9 @@ async function avisar(r: Resultado) {
 export async function GET(request: NextRequest) {
   if (!isCronAuthorized(request)) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   const p = request.nextUrl.searchParams.get('perfil')
-  const perfis: Perfil[] = p === 'ricardo' || p === 'mtm' ? [p] : ['mtm', 'ricardo']
+  // 21/11/2026: na MTM a publicação do dia é a linha que roda (linhas.ts, 1 por dia). O carrossel de
+  // valor só sai na MTM se for pedido à mão (?perfil=mtm).
+  const perfis: Perfil[] = p === 'ricardo' || p === 'mtm' ? [p] : ['ricardo']
   const forcar = request.nextUrl.searchParams.get('forcar') === '1'
   const resultados: Resultado[] = []
   for (const perfil of perfis) {
