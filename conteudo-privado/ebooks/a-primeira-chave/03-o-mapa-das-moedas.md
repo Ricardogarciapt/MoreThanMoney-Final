@@ -1,0 +1,80 @@
+# O mapa das moedas
+
+> Há milhares de moedas. Saber distinguir uma ferramenta de um cartaz de feira é metade do caminho.
+
+Quando começas a pesquisar cripto, a primeira sensação é de tontura. Há nomes com animais, nomes com palavras em inglês que não dizem nada, siglas de três letras e moedas que parecem ter sido criadas numa tarde. Vou tentar pôr ordem nisto. Não te vou dar uma lista de compras. Vou dar-te um mapa, para que consigas olhar para qualquer moeda e perceber, pelo menos, de que tipo é.
+
+## Bitcoin: o primeiro e o mais simples
+
+O Bitcoin é a moeda original. Tem um limite de 21 milhões de unidades, uma regra que não muda por decisão de uma equipa. Também tem um mecanismo chamado halving: a cada 210.000 blocos, que acontece em média a cada quatro anos, a recompensa dada aos mineradores é cortada para metade. Isto significa que a emissão de novas moedas abranda com o tempo.
+
+A recompensa seguiu este caminho: 50 unidades no início, 25 em 2012, 12,5 em 2016, 6,25 em 2020 e 3,125 em 2024.
+
+[[grafico:halving]]
+
+O halving é uma regra conhecida e pública, mas isso não garante que o preço vá subir. Há quem o veja como uma razão para comprar. Outros veem-no como um dado entre muitos. A regra é clara; a leitura do mercado é que é subjetiva.
+
+## Ethereum: a plataforma que corre programas
+
+O Ethereum foi lançado em 2015 e é diferente. Não é só uma moeda. É uma plataforma onde se correm contratos inteligentes (smart contracts), que são programas que executam regras automaticamente quando se cumprem certas condições. Muitas aplicações de finanças descentralizadas e de arte digital vivem aqui. Desde setembro de 2022, usa proof-of-stake, como vimos no capítulo anterior.
+
+## Stablecoins: o dólar dentro da cripto
+
+As stablecoins são moedas que procuram manter um valor estável, normalmente indexado ao dólar. As mais conhecidas são o USDC e o USDT. São muito usadas para guardar valor sem sair do ecossistema cripto, ou para transferir dinheiro com rapidez.
+
+Mas atenção: uma stablecoin não é dinheiro sem risco. Depende do emissor, da reserva que diz ter e da confiança de que essa reserva existe. Se o emissor tiver problemas, a moeda pode perder a paridade. Para quem procura estabilidade, é uma ferramenta útil, mas exige que leias quem a emite.
+
+## Altcoins e memecoins: o resto do mapa
+
+Todas as moedas que não são Bitcoin são chamadas altcoins. Entre elas há projetos com tecnologia séria e há projetos que existem sobretudo para atrair atenção. As memecoins são o caso extremo: nascem muitas vezes de piadas, de imagens da internet ou de um tweet, e o seu valor depende quase só de quem entra e sai. Podem subir muito e depressa, e cair ainda mais depressa. Trata-as como o que são: apostas de alto risco.
+
+:::alerta
+Uma moeda com muito marketing, muitos influenciadores a dizer que «vai explodir» e pouca informação verificável é um sinal de alarme, não uma oportunidade.
+:::
+
+## As sete perguntas para avaliar um projeto
+
+Antes de pensares em comprar qualquer moeda que não seja o Bitcoin, faz estas sete perguntas. Não são uma garantia de nada, mas obrigam-te a pensar.
+
+1. **Qual é o problema que resolve?** Se não consegues explicar em duas frases, desconfia.
+2. **Quem está por trás?** Há uma equipa com nomes verificáveis, ou tudo é anónimo?
+3. **Há documentação técnica pública?** Um whitepaper claro, código aberto, datas e metas.
+4. **Quem tem a maioria das moedas?** Se poucos endereços controlam a maior parte, o risco de manipulação é alto.
+5. **Como é que a moeda ganha valor?** Se a resposta é «só porque vai subir», não é uma resposta.
+6. **Há auditorias ou revisões independentes?** Pede provas, não promessas.
+7. **Se o projeto desaparecesse amanhã, o que sobraria?** Esta pergunta é desconfortável, mas é a mais honesta.
+
+:::destaque
+Um projeto sério responde às perguntas difíceis com factos. Um projeto de burla responde com urgência.
+:::
+
+## MiCA: a regra europeia
+
+Na União Europeia, o regulamento MiCA aplica-se às prestadoras de serviços de criptoativos desde 30 de dezembro de 2024. Isto quer dizer que as plataformas que atuam na Europa têm de cumprir requisitos de transparência, de proteção do cliente e de governança. Não resolve tudo, mas é um sinal de que o mercado está a ser organizado. Ao escolheres onde comprar, pergunta sempre se a plataforma cumpre esta regra.
+
+## Exercício: avalia uma moeda com as sete perguntas
+
+:::exercicio Ficha de avaliação
+1. Escolhe uma moeda que tenhas visto nas redes sociais, que não seja Bitcoin.
+2. Procura o whitepaper ou a documentação oficial.
+3. Responde às sete perguntas, uma a uma, com uma frase por resposta.
+4. Se alguma resposta for «não sei», escreve isso mesmo. Não há vergonha em não saber.
+
+____________________________________________________________
+
+____________________________________________________________
+
+____________________________________________________________
+:::
+
+## Em resumo
+
+- O Bitcoin tem limite de 21 milhões e um halving a cada 210.000 blocos.
+- O Ethereum é uma plataforma de contratos inteligentes, desde 2015.
+- As stablecoins dependem do emissor e da reserva, e não são isentas de risco.
+- Altcoins e memecoins são de risco muito elevado.
+- As sete perguntas ajudam a separar projetos sérios de apostas com marketing.
+
+## A tua missão desta semana
+
+Responde às sete perguntas para uma moeda que te interesse. Guarda a ficha. Se a moeda subir ou descer nas próximas semanas, volta à ficha e vê se os teus motivos mudaram.

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { requireSuperAdmin } from '@/lib/super-admin'
+import { ehEbook, assinarEbook, linkEbook } from '@/lib/ebooks/acesso'
 import { db, economia, ECONOMIA_BASE, PATENTES, patenteDe, hoje, somarMoedas } from '@/lib/ricardogarcia/app'
 import { AREAS_ROTA, CHAVE_TIPOS, TIPOS_LOCAIS, configTipos, coordenadasDeLink } from '@/lib/ricardogarcia/diario'
 
@@ -108,7 +109,14 @@ export async function POST(req: NextRequest) {
       const { data: r } = await db().from('rg_app_resgates').select('*').eq('id', t(b.id, 40)).maybeSingle()
       if (!r) return falha('Pedido não encontrado.', 404)
       if (r.estado === 'recusado') return falha('Este pedido já foi recusado.')
-      await db().from('rg_app_resgates').update({ estado, nota: t(b.nota, 500) || r.nota, decidido: new Date().toISOString() }).eq('id', r.id)
+      // E-book como recompensa: ao aprovar, o membro recebe na app um link assinado (1 ano).
+      let link: string | null = r.link ?? null
+      if (estado !== 'recusado' && !link) {
+        const { data: rec } = await db().from('rg_app_recompensas').select('produto_slug').eq('id', r.recompensa_id).maybeSingle()
+        const slug = rec?.produto_slug as string | undefined
+        if (slug && ehEbook(slug)) link = linkEbook(slug, assinarEbook(slug, 365, String(r.membro_id)))
+      }
+      await db().from('rg_app_resgates').update({ estado, nota: t(b.nota, 500) || r.nota, decidido: new Date().toISOString(), ...(link ? { link } : {}) }).eq('id', r.id)
       if (estado === 'recusado') { // devolve as moedas
         await somarMoedas(r.membro_id, r.custo)
       }

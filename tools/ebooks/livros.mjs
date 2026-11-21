@@ -1,0 +1,40 @@
+// Os livros da casa: identidade, tema e textos de capa. Os capítulos vivem em
+// conteudo-privado/ebooks/<slug>/NN-*.md (fora de public/: só saem pela rota com acesso).
+
+export const LIVROS = {
+  'destrui-tudo-e-ainda-bem': {
+    titulo: 'Destruí Tudo.',
+    titulo2: 'E Ainda Bem.',
+    subtitulo: 'Disciplina, dinheiro e mercados: o sistema que construí depois de recomeçar do zero.',
+    autor: 'Ricardo Garcia',
+    autorBio: 'Fundador da MoreThanMoney. Catorze anos de serviço (Exército, Fuzileiros, GNR) antes de recomeçar do zero. Hoje ensina mercados com método: regressão de tendências, scanners e gestão de risco, sem promessas.',
+    selo: 'rg.png',
+    foto: 'ricardo-pb.jpg',
+    fotoInterior: 'ricardo-ouro.jpg',
+    tema: 'rg',
+    edicao: '1.ª edição · novembro de 2026',
+    aviso: 'Conteúdo educativo. Não constitui aconselhamento financeiro nem recomendação de investimento. Negociar Forex, ouro ou CFD envolve risco elevado de perda, incluindo a totalidade do capital. Resultados passados não garantem resultados futuros. Não há resultados garantidos.',
+  },
+  'a-primeira-chave': {
+    titulo: 'A Primeira',
+    titulo2: 'Chave',
+    subtitulo: 'Cripto para iniciantes, sem hype e sem medo — do primeiro euro à carteira segura.',
+    autor: 'Ruben Pereira',
+    autorBio: 'Educador de criptomoedas e perpétuos na MoreThanMoney. Conduz as Salas DCA com MTM, o Império Cripto e o Live Trading Cripto.',
+    selo: 'mtm.png',
+    tema: 'cripto',
+    edicao: '1.ª edição · novembro de 2026',
+    aviso: 'Conteúdo educativo. Não constitui aconselhamento financeiro nem fiscal. Os criptoativos são muito voláteis e podes perder a totalidade do valor investido. As regras fiscais mudam: confirma sempre com um contabilista certificado.',
+  },
+  'so-as-maos': {
+    titulo: 'Só as',
+    titulo2: 'Mãos',
+    subtitulo: 'Vender nas redes sem mostrar a cara — do zero ao teu primeiro produto digital.',
+    autor: 'Maria Costa',
+    autorBio: 'Especialista em infoprodutos e fundadora da She Is Faceless Academy. No marketing desde 2013, ensina a vender sem aparecer.',
+    selo: 'mtm.png',
+    tema: 'faceless',
+    edicao: '1.ª edição · novembro de 2026',
+    aviso: 'Conteúdo educativo. Os resultados dependem do trabalho, do mercado e das decisões de cada pessoa; não há rendimentos garantidos. Respeita sempre as regras das plataformas e o RGPD.',
+  },
+}
