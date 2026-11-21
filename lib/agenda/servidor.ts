@@ -313,7 +313,9 @@ export async function marcar(p: {
 
   // ── Daqui para baixo, NADA pode fazer a marcação falhar. Ela já existe. ──
   await Promise.allSettled([
-    ligarAoPipeline({ id, tipo, nome: p.nome, email: p.email, telefone: p.telefone ?? null, inicio, utm: p.utm ?? {} }),
+    // O protótipo liga-se DEPOIS do pipeline, para apanhar o negócio que este acabou de criar.
+    ligarAoPipeline({ id, tipo, nome: p.nome, email: p.email, telefone: p.telefone ?? null, inicio, utm: p.utm ?? {} })
+      .then(() => ligarAoPrototipo({ id, inicio, fim, utm: p.utm ?? {} })),
     escreverNoGoogle({ id, anfitriao, tipo: { ...tipo, local }, inicio, fim, nome: p.nome, email: p.email, telefone: p.telefone ?? null }),
   ])
 
@@ -367,6 +369,54 @@ async function ligarAoPipeline(p: {
     if (novo?.id) await db().from('agenda_marcacoes').update({ negocio_id: novo.id }).eq('id', p.id)
   } catch (e) {
     console.error('[agenda] a marcação não entrou no pipeline (a chamada está marcada na mesma):', e)
+  }
+}
+
+/**
+ * A reunião veio de um protótipo do /solucoes: o protótipo passa a «reunião marcada», a demo com a
+ * marca do negócio fica com prazo de 24 h depois do FIM da reunião, e o dono recebe o alerta com o
+ * prazo. O negócio no CRM fica com a etiqueta e a nota.
+ */
+async function ligarAoPrototipo(p: { id: string; inicio: Date; fim: Date; utm: Record<string, unknown> }): Promise<void> {
+  const slug = typeof p.utm.prototipo === 'string' ? p.utm.prototipo.trim() : ''
+  if (!/^[a-z0-9-]{6,48}$/.test(slug)) return
+  try {
+    const { prazoDemo } = await import('@/lib/site-solucoes/prototipo')
+    const prazo = prazoDemo(p.fim)
+    const { data: proto } = await db()
+      .from('prototipos_solucao')
+      .update({ estado: 'reuniao_marcada', marcacao_id: p.id, reuniao_em: p.inicio.toISOString(), prazo_demo: prazo.toISOString(), atualizado_em: new Date().toISOString() })
+      .eq('slug', slug)
+      .eq('estado', 'gerado')
+      .select('empresa, negocio_id, solucoes')
+      .maybeSingle()
+    if (!proto) return
+    const { data: marc } = await db().from('agenda_marcacoes').select('negocio_id').eq('id', p.id).maybeSingle()
+    const negocioId = (marc?.negocio_id as string | null) ?? (proto.negocio_id as string | null)
+    if (negocioId) {
+      const { data: neg } = await db().from('vendas_negocios').select('etiquetas').eq('id', negocioId).maybeSingle()
+      const etiquetas = [...new Set([...((neg?.etiquetas as string[] | null) ?? []), 'b2b', 'prototipo', 'demo-24h'])]
+      await db().from('vendas_negocios').update({
+        etiquetas,
+        estado: 'marcado',
+        nota: `Reunião do protótipo (${proto.empresa}) a ${p.inicio.toISOString().slice(0, 16).replace('T', ' ')} UTC. Demo com a marca até ${prazo.toISOString().slice(0, 16).replace('T', ' ')} UTC.`,
+        atualizado_em: new Date().toISOString(),
+      }).eq('id', negocioId)
+      if (!proto.negocio_id) await db().from('prototipos_solucao').update({ negocio_id: negocioId }).eq('slug', slug)
+    }
+    const { avisarDonoSolucoes, escHtml } = await import('@/lib/site-solucoes/avisar-dono')
+    const lx = (d: Date) => d.toLocaleString('pt-PT', { timeZone: 'Europe/Lisbon', weekday: 'short', day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })
+    const site = process.env.NEXT_PUBLIC_SITE_URL || 'https://www.morethanmoney.pt'
+    await avisarDonoSolucoes([
+      '📅 <b>Reunião marcada a partir do protótipo</b>',
+      `${escHtml(String(proto.empresa))} · ${((proto.solucoes as string[] | null) ?? []).join(', ')}`,
+      `Reunião: ${lx(p.inicio)} (Lisboa)`,
+      `⏱️ <b>Demo com a marca até ${lx(prazo)}</b>`,
+      `${site}/solucoes/prototipo/${slug}`,
+      `Ficha para os kits: ${site}/api/admin/solucoes/prototipo/${slug}/ficha`,
+    ].join('\n'))
+  } catch (e) {
+    console.error('[agenda] ligar ao protótipo falhou (a chamada está marcada na mesma):', e)
   }
 }
 

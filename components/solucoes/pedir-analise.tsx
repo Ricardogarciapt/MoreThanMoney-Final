@@ -58,6 +58,10 @@ export function PedirAnalise({
       const j = await res.json().catch(() => ({}))
       if (res.ok && j.ok) {
         setRel(j.relatorio ?? null)
+        // O protótipo não volta a pedir o que já nos deram aqui.
+        try {
+          sessionStorage.setItem("mtm_prototipo_pre", JSON.stringify({ nome: f.nome, email: f.email, telefone: f.telefone, empresa: f.empresa, dores: f.dores }))
+        } catch {}
         setEstado("feito")
         return
       }
@@ -177,7 +181,7 @@ export function PedirAnalise({
 }
 
 function Relatorio({ rel, agendar }: { rel: RelatorioAnalise; agendar: string }) {
-  const { t, tf, n: fmt } = useT()
+  const { t, tf, n: fmt, idioma } = useT()
   const [proposta, setProposta] = useState(false)
   const temHoras = rel.oportunidades.length > 0
   return (
@@ -278,10 +282,16 @@ function Relatorio({ rel, agendar }: { rel: RelatorioAnalise; agendar: string })
 
         <div className="flex flex-wrap items-center gap-3 border-t border-white/10 pt-6 print:hidden">
           <a
-            href={agendar}
-            className="inline-flex items-center gap-2 rounded-full bg-[#D2A63C] px-6 py-3 font-semibold text-[#08090C] transition hover:bg-[#E9C46A] active:scale-[0.98]"
+            href={`/solucoes/prototipo?${new URLSearchParams({ empresa: rel.empresa, sector: rel.sector, ...(idioma !== "pt" ? { lang: idioma } : {}) }).toString()}`}
+            className="inline-flex items-center gap-2 rounded-full bg-[#D2A63C] px-6 py-3 font-semibold text-[#08090C] shadow-lg shadow-[#D2A63C]/25 transition hover:bg-[#E9C46A] active:scale-[0.98]"
           >
-            {t("Marcar a conversa da análise completa")} <ArrowRight className="h-4 w-4" />
+            <Sparkles className="h-4 w-4" /> {t("Receber o protótipo da minha solução")} <ArrowRight className="h-4 w-4" />
+          </a>
+          <a
+            href={agendar}
+            className="inline-flex items-center gap-2 rounded-full border border-white/15 px-5 py-3 text-sm font-semibold text-zinc-200 hover:border-white/40"
+          >
+            {t("Marcar a conversa da análise completa")}
           </a>
           <button
             type="button"
