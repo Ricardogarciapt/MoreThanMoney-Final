@@ -6,7 +6,7 @@
  */
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { enviarHeygen } from './heygen'
-import { cenasDoGuiao, lookDoPlano, VOZ_RICARDO } from './heygen-looks'
+import { cenasDoGuiao, lookDoDia, VOZ_RICARDO } from './heygen-looks'
 import { falarParaStorage } from '@/lib/voz'
 
 export async function pedirReelDoClone(db: SupabaseClient, pecaId: string, userId: string | null, via: 'api' | 'mcp' = 'mcp'): Promise<{ status: number; corpo: Record<string, unknown> }> {
@@ -32,7 +32,7 @@ export async function pedirReelDoClone(db: SupabaseClient, pecaId: string, userI
 
   // Via plano (MCP): só regista o pedido com tudo o que a rotina diária precisa para o gerar.
   if (via === 'mcp') {
-    const look = lookDoPlano(cenas[0].plano, process.env.HEYGEN_AVATAR_ID?.trim() || null)
+    const look = lookDoDia(new Date(), process.env.HEYGEN_AVATAR_ID?.trim() || null)
     const { data: m, error: em } = await db.from('estudio_geracoes').insert({
       tipo: 'falar',
       estado: 'aguarda_mcp',
