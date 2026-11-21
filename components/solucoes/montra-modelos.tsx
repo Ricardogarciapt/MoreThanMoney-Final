@@ -7,7 +7,8 @@ import {
   ArrowRight, Bath, BedDouble, CalendarCheck, Camera, Check, ChevronRight, Clock, Home, MapPin, MessageCircle,
   Move3d, Phone, Snowflake, Sparkles, UtensilsCrossed,
 } from "lucide-react"
-import { MODELOS, type ModeloSector } from "@/lib/site-solucoes/showroom"
+import { KITS, MODELOS, type ModeloSector } from "@/lib/site-solucoes/showroom"
+import { FLUXOS, type SolucaoPrototipo } from "@/lib/site-solucoes/prototipo"
 import { useT } from "@/components/solucoes/idioma"
 
 const RaTelemovel = dynamic(() => import("@/components/solucoes/ra-telemovel").then((x) => x.RaTelemovel), { ssr: false })
@@ -59,6 +60,18 @@ export function MontraModelos({ publicadas, agendar, inicial, abrirRA = false }:
     if (nome.trim()) q.set("negocio", nome.trim().slice(0, 60))
     return ligar(`/solucoes/prototipo?${q.toString()}`)
   }, [m.id, principal, nome, ligar])
+
+  // No showroom, o 3D mostra as três soluções que quase todos os negócios levam.
+  const opcaoRA = useMemo(
+    () => ({
+      solucoes: (["pagina-app", "agenda-lembretes", "agente-ia"] as SolucaoPrototipo[]).map((k) => ({
+        kit: k,
+        nome: t(KITS.find((x) => x.kit === k)?.solucao ?? k),
+        passos: FLUXOS[k].map((p) => t(p.titulo)),
+      })),
+    }),
+    [t],
+  )
 
   return (
     <div>
@@ -157,7 +170,7 @@ export function MontraModelos({ publicadas, agendar, inicial, abrirRA = false }:
             <Move3d className="h-5 w-5" aria-hidden="true" /> {t("Ver em 3D e no meu espaço")}
           </button>
           <style>{`@keyframes ra-brilho{0%{transform:translateX(-100%)}60%,100%{transform:translateX(100%)}}`}</style>
-          {ra && <RaTelemovel m={m} marca={marca} principal={principal} onFechar={() => setRa(false)} />}
+          {ra && <RaTelemovel m={m} marca={marca} principal={principal} opcao={opcaoRA} onFechar={() => setRa(false)} />}
         </div>
       </div>
     </div>

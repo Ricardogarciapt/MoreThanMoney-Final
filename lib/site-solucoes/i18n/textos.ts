@@ -62,6 +62,7 @@ const FICHEIROS = [
   'components/solucoes/pedir-analise.tsx',
   'components/solucoes/proposta-pdf.tsx',
   'components/solucoes/ra-telemovel.tsx',
+  'components/solucoes/ra-ecras.ts',
   'components/solucoes/dia-antes-depois.tsx',
   'components/solucoes/pedir-prototipo.tsx',
   'components/solucoes/ver-prototipo.tsx',

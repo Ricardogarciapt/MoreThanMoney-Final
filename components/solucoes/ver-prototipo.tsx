@@ -1,7 +1,7 @@
 "use client"
 
 import dynamic from "next/dynamic"
-import { useEffect, useState } from "react"
+import { useEffect, useMemo, useState } from "react"
 import { ArrowRight, Bot, CalendarCheck, Check, Clock, Move3d, Share2, Sparkles, Wand2 } from "lucide-react"
 import { useT } from "@/components/solucoes/idioma"
 import { Telemovel } from "@/components/solucoes/montra-modelos"
@@ -34,6 +34,16 @@ export function VerPrototipo({ spec, estado, agendar }: { spec: PrototipoSpec; e
       setFuso(Intl.DateTimeFormat().resolvedOptions().timeZone || "Europe/Lisbon")
     } catch {}
   }, [])
+
+  // O 3D mostra a solução escolhida, ecrã a ecrã, com os passos de cada uma.
+  const opcaoRA = useMemo(
+    () => ({
+      solucoes: spec.solucoes.map((s) => ({ kit: s.kit, nome: t(s.nome), passos: s.fluxo.map((p) => t(p.titulo)) })),
+      boasVindas: spec.assistente.boasVindas,
+      faq: spec.assistente.faq,
+    }),
+    [spec, t],
+  )
 
   const local = idioma === "pt" ? "pt-PT" : idioma
   const quando = (iso: string) => new Date(iso).toLocaleString(local, { timeZone: fuso, weekday: "long", day: "numeric", month: "long", hour: "2-digit", minute: "2-digit" })
@@ -91,13 +101,13 @@ export function VerPrototipo({ spec, estado, agendar }: { spec: PrototipoSpec; e
           </div>
           <div className="mt-4 grid gap-2">
             <button type="button" onClick={() => setRa(true)} className="inline-flex min-h-[48px] items-center justify-center gap-2 rounded-full border border-[#D2A63C]/50 bg-[#D2A63C]/10 text-sm font-semibold text-[#E9C46A]">
-              <Move3d className="h-4 w-4" aria-hidden="true" /> {t("Ver em 3D e no meu espaço")}
+              <Move3d className="h-4 w-4" aria-hidden="true" /> {t("Ver a minha solução em 3D")}
             </button>
             <button type="button" onClick={partilhar} className="inline-flex min-h-[48px] items-center justify-center gap-2 rounded-full border border-white/15 text-sm font-semibold text-zinc-200">
               {copiado ? <Check className="h-4 w-4" aria-hidden="true" /> : <Share2 className="h-4 w-4" aria-hidden="true" />} {copiado ? t("Link copiado") : t("Partilhar com o sócio")}
             </button>
           </div>
-          {ra && <RaTelemovel m={m} marca={spec.empresa} principal={spec.cor} onFechar={() => setRa(false)} />}
+          {ra && <RaTelemovel m={m} marca={spec.empresa} principal={spec.cor} opcao={opcaoRA} real onFechar={() => setRa(false)} />}
         </div>
 
         <div className="space-y-8">
