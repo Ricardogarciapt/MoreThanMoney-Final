@@ -374,9 +374,12 @@ export async function middleware(request: NextRequest) {
   response.headers.set("Referrer-Policy", "strict-origin-when-cross-origin")
   // Studio de streaming interno precisa de câmara/mic/ecrã → permitir para o próprio site (self);
   // continua bloqueado a iframes de terceiros. (Antes: camera=(),microphone=() bloqueava tudo.)
+  // A app Missão (/ricardogarcia/app) precisa do GPS nas Rotas (mapa, chegada aos pontos e trajeto):
+  // geolocation=(self) só aí; o resto do site continua sem localização.
+  const usaGps = pathname.startsWith("/ricardogarcia")
   response.headers.set(
     "Permissions-Policy",
-    "camera=(self), microphone=(self), display-capture=(self), geolocation=()",
+    `camera=(self), microphone=(self), display-capture=(self), geolocation=${usaGps ? "(self)" : "()"}`,
   )
 
   // Rate limiting para APIs (exceto auth e crons Vercel)

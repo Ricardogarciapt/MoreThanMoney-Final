@@ -24,13 +24,14 @@
   var css = document.createElement('style');
   css.textContent = [
     '.m3d{position:relative;height:min(64vh,560px);min-height:380px;border-radius:20px;overflow:hidden;border:1px solid rgba(233,196,106,.25);background:#06080c;box-shadow:0 24px 60px -30px rgba(0,0,0,.9),inset 0 1px 0 rgba(255,236,180,.08);margin:10px 0 14px}',
-    '.m3d.cheio{position:fixed;inset:0;height:auto;min-height:0;border-radius:0;z-index:40;margin:0}body.mapa-cheio .doca,body.mapa-cheio .topo{display:none!important}body.mapa-cheio>.cx{z-index:50}',
+    '.m3d.cheio{position:fixed;inset:0;height:auto;min-height:0;border-radius:0;z-index:40;margin:0}body.mapa-cheio .doca,body.mapa-cheio .topo{display:none!important}body.mapa-cheio>.cx{z-index:50}.m3d.cheio .m3d-hud{top:calc(env(safe-area-inset-top) + 10px)}.m3d.cheio .m3d-bts,.m3d.cheio .m3d-leg{bottom:calc(env(safe-area-inset-bottom) + 34px)}',
     '.m3d .mapa-in{position:absolute;inset:0}',
     '.m3d::before{content:"";position:absolute;left:0;right:0;top:0;height:34%;z-index:2;pointer-events:none;background:linear-gradient(180deg,rgba(40,30,12,.55),rgba(6,8,12,0))}',
     '.m3d::after{content:"";position:absolute;inset:0;z-index:2;pointer-events:none;box-shadow:inset 0 0 80px rgba(0,0,0,.75)}',
     '.m3d-hud{position:absolute;left:10px;right:10px;top:10px;z-index:3;display:flex;justify-content:space-between;align-items:flex-start;gap:8px;pointer-events:none}',
     '.m3d-chip{pointer-events:auto;display:inline-flex;align-items:center;gap:6px;padding:7px 11px;border-radius:999px;background:rgba(10,12,18,.78);border:1px solid rgba(233,196,106,.3);backdrop-filter:blur(8px);color:#f3f4f7;font:600 12px/1 Oswald,sans-serif;letter-spacing:.6px;text-transform:uppercase}',
     '.m3d-chip b{color:#E9C46A;font-family:Anton,sans-serif;font-weight:400;font-size:15px;letter-spacing:.4px}',
+    '.m3d-gps{position:absolute;left:50%;bottom:44px;transform:translateX(-50%);z-index:4;border:0;border-radius:999px;padding:12px 18px;font:600 14px/1 Oswald,sans-serif;letter-spacing:.5px;color:#15110a;background:radial-gradient(120% 90% at 50% 0%,#fff1c2,#E9C46A 40%,#D2A63C 75%,#8a6418);box-shadow:0 10px 26px -8px rgba(233,196,106,.75),inset 0 1px 0 rgba(255,255,255,.6);cursor:pointer;white-space:nowrap}.m3d-gps[hidden]{display:none}',
     '.m3d-bts{position:absolute;right:10px;bottom:34px;z-index:3;display:grid;gap:8px}',
     '.m3d-bts button{width:44px;height:44px;border-radius:14px;border:1px solid rgba(233,196,106,.35);background:linear-gradient(180deg,rgba(28,32,44,.92),rgba(10,12,18,.92));color:#E9C46A;font-size:18px;display:grid;place-items:center;box-shadow:0 8px 20px -8px rgba(0,0,0,.8),inset 0 1px 0 rgba(255,255,255,.08);cursor:pointer}',
     '.m3d-bts button:active{transform:scale(.92)}',
@@ -106,6 +107,9 @@
     var hud = document.createElement('div'); hud.className = 'm3d-hud';
     hud.innerHTML = '<span class="m3d-chip" data-m="pontos">⌖ <b>0</b> pontos</span><span class="m3d-chip" data-m="km">👣 <b>0,0</b> km hoje</span>';
     el.appendChild(hud);
+    var gps = document.createElement('button'); gps.type = 'button'; gps.className = 'm3d-gps'; gps.innerHTML = '📍 Usar a minha localização';
+    gps.addEventListener('click', function () { gps.textContent = 'A localizar…'; if (op.pedirPosicao) op.pedirPosicao(); setTimeout(function () { if (!est.eu) gps.innerHTML = '📍 Usar a minha localização'; }, 15000); });
+    el.appendChild(gps);
     var bts = document.createElement('div'); bts.className = 'm3d-bts';
     bts.innerHTML = '<button type="button" data-mb="eu" aria-label="Centrar em mim">◎</button><button type="button" data-mb="vista" aria-label="Alternar 2D e 3D">2D</button><button type="button" data-mb="rodar" aria-label="Rodar a câmara">⟳</button><button type="button" data-mb="cheio" aria-label="Ecrã inteiro">⛶</button>';
     el.appendChild(bts);
@@ -197,6 +201,7 @@
       alvo: function (id) { est.alvo = id; pinta(); },
       eu: function (pos) {
         est.eu = pos; if (!pos) return;
+        gps.hidden = true;
         if (!est.euM) { var e = document.createElement('div'); e.className = 'm3d-eu'; est.euM = new M.Marker({ element: e }).setLngLat([pos.lon, pos.lat]).addTo(mapa); }
         else est.euM.setLngLat([pos.lon, pos.lat]);
         // Trajeto: só com boa precisão e quando te mexes mais de 8 m
