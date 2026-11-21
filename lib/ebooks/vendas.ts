@@ -89,7 +89,7 @@ export const VENDAS: Record<SlugEbook, PaginaVenda> = {
     sub: 'Vender nas redes sem mostrar a cara: do cliente ideal ao teu primeiro produto digital, com guiões de stories e mensagens prontos a adaptar.',
     autor: 'Maria Costa', autorFoto: '/educadores/mafalda/retrato.jpg',
     autorBio: 'Especialista em infoprodutos e fundadora da She Is Faceless Academy. No marketing desde 2013, ensina homens e mulheres em Portugal a vender sem aparecer.',
-    numeros: [{ v: '122', r: 'páginas' }, { v: '6', r: 'gráficos animados' }, { v: '12', r: 'exercícios' }, { v: '5', r: 'stories-modelo' }],
+    numeros: [{ v: '125', r: 'páginas' }, { v: '6', r: 'gráficos animados' }, { v: '12', r: 'exercícios' }, { v: '5', r: 'stories-modelo' }],
     capitulos: [
       { t: 'Porque a cara não é o produto', d: 'Mitos, vantagens e a mentalidade faceless.' },
       { t: 'O cliente que te procura', d: 'Dor, desejo e linguagem, com mapa de empatia.' },

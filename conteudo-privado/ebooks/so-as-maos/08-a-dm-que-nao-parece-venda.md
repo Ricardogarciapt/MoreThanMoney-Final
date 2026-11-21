@@ -25,6 +25,8 @@ Se nenhuma destas situações existe, não envies. Podes publicar, responder a c
 Mandar a mesma mensagem a duzentas pessoas sem ligação é spam. Pode levar a denúncias, a bloqueios da conta e a perda de confiança de quem te segue. Além disso, pode violar as regras de proteção de dados.
 :::
 
+[[foto: maria-site-sofa-portatil.jpg | As melhores conversas de venda acontecem no sofá, com calma, sem guião decorado. | lado]]
+
 ## O funil em DM
 
 Uma conversa de venda tem etapas, e a pressa costuma sair cara. Cada etapa tem o seu tempo.

@@ -297,6 +297,31 @@ const G = {
     nomes.forEach((n, k) => { s += `<rect x="${x0 + k * 130}" y="${H - 26}" width="14" height="14" rx="4" class="g-fatia g-f${k}"/><text class="g-eixo" x="${x0 + k * 130 + 20}" y="${H - 14}">${n}</text>` })
     return fig('semana-tipo', 'Uma semana-tipo de quem vende sem aparecer', s, 'Cada bloco ≈ 1 hora. Exemplo para quem começa em part-time: ajusta à tua vida.')
   },
+  // MÉTODO FRIO
+  'sessoes-forex': () => {
+    const ss = [['Sydney', 22, 31], ['Tóquio', 24, 33], ['Londres', 8, 17], ['Nova Iorque', 13, 22]]
+    const x0 = 120, x1 = W - 24, y0 = 40, X = (h) => x0 + ((x1 - x0) * (h % 24 === 0 && h ? 24 : h)) / 24
+    let s = ''
+    for (let h = 0; h <= 24; h += 4) s += `<line x1="${X(h)}" x2="${X(h)}" y1="${y0 - 6}" y2="${H - 70}" class="g-grelha"/><text class="g-eixo" x="${X(h)}" y="${H - 52}" text-anchor="middle">${String(h).padStart(2, '0')}h</text>`
+    s += `<rect class="g-barra g-barra-forte surge" style="--d:1s;opacity:.18" x="${X(13)}" y="${y0 - 6}" width="${X(17) - X(13)}" height="${H - 70 - y0 + 6}"/>`
+    ss.forEach(([n, a, b], i) => {
+      const y = y0 + i * 52
+      s += `<text class="g-rot" x="${x0 - 12}" y="${y + 24}" text-anchor="end">${n}</text>`
+      const seg = (u, v) => `<rect class="g-barra${n === 'Londres' || n === 'Nova Iorque' ? ' g-barra-forte' : ''} cresce-x" style="--d:${(i * 0.12).toFixed(2)}s" x="${X(u)}" y="${y}" width="${X(v) - X(u)}" height="34" rx="7"/>`
+      if (b <= 24) s += seg(a, b); else { if (a < 24) s += seg(a, 24); s += seg(0, b - 24) }
+    })
+    s += `<text class="g-eixo surge" style="--d:1.1s" x="${(X(13) + X(17)) / 2}" y="${H - 30}" text-anchor="middle">Londres + Nova Iorque</text>`
+    return fig('sessoes-forex', 'As sessões do Forex, em hora de Lisboa (inverno)', s, 'Com a mudança de hora, tudo pode mexer uma hora. A janela das 13h às 17h é a de mais movimento nos pares do euro e do dólar.')
+  },
+  'valor-pip': () => fig('valor-pip', 'Quanto vale 1 pip no EUR/USD, consoante o lote',
+    barras([['1,00', 'lote standard', 10], ['0,10', 'minilote', 1], ['0,01', 'microlote', 0.1]].map(([r, r2, v]) => ({ r, r2, v, destaque: v === 0.1 })), { unidade: ' $', max: 11, dec: 2, rotuloTopo: (d) => f(d.v, d.v < 1 ? 2 : 0) + ' $' }),
+    'Conta em dólares. Noutra moeda de conta ou noutro par o valor muda: confirma sempre no MetaTrader 5 ou na corretora.'),
+  'custo-spread': () => fig('custo-spread', 'O custo invisível: spread de 1 pip com 0,10 lotes',
+    barras([[5, 'por mês'], [20, 'por mês'], [60, 'por mês'], [200, 'por mês']].map(([n, r2]) => ({ r: `${n} operações`, r2, v: n * 1, destaque: n >= 60 })), { unidade: ' $', max: 220, rotuloTopo: (d) => f(d.v) + ' $' }),
+    'Exemplo ilustrativo: 1 pip × 1 $ por operação, sem comissões nem swap. Quem opera muito paga muito, ganhe ou perca.'),
+  'fluxo-operacao': () => fig('fluxo-operacao', 'O ciclo frio de cada operação',
+    passos([{ r: 'Contexto', s: 'calendário\ne sessão' }, { r: 'Plano', s: 'zona, stop\ne alvo' }, { r: 'Cálculo', s: 'lote pelo\nrisco' }, { r: 'Execução', s: 'ordem com\nSL e TP' }, { r: 'Diário', s: 'foto, nota\ne emoção' }], { circular: true })),
+
 }
 
 export function grafico(id, ctx = {}) {

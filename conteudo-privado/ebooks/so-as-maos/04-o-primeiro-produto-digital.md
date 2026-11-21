@@ -18,6 +18,8 @@ Um produto digital é um conteúdo que entregas sem stock, sem envio e sem embal
 
 Essa natureza é uma vantagem enorme: o custo de entregar mais uma cópia é quase zero. Mas também tem uma desvantagem. Como não há nada físico, o valor tem de estar todo na clareza do que se oferece.
 
+[[foto: maria-site-janela-cafe.jpg | O primeiro produto não precisa de ser perfeito. Precisa de existir. | polaroid]]
+
 ## Os tipos mais comuns
 
 A tabela seguinte compara os formatos mais usados. Os tempos são apenas ordens de grandeza, porque dependem muito da tua disponibilidade e da complexidade do tema.
