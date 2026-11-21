@@ -352,12 +352,30 @@ const Poeira: React.FC<{ semente: string }> = ({ semente }) => {
     </AbsoluteFill>
   )
 }
+// Fotos que já têm um plano em vídeo gerado na HeyGen a partir da própria foto (21/11, pedido do Ricardo: «gerar
+// vídeo com HeyGen e usar a minha foto para teres um plano diferente»). Gerado uma vez (image_to_video, ~4 créditos
+// por 5 s) e reutilizado: public/fotos-planos/<k>-video.mp4. Nunca re-gerar.
+const COM_VIDEO = new Set(['retrato', 'grade', 'palco', 'farda', 'recomeco', 'estudio'])
+const PlanoVideo: React.FC<{ k: string; A: number; B: number }> = ({ k, A, B }) => {
+  const fr = useCurrentFrame()
+  if (fr < A - 4 || fr > B + 4) return null
+  const p = clamp01((fr - A) / Math.max(1, B - A))
+  const op = interpolate(fr, [A - 4, A + 2, B - 2, B + 4], [0, 1, 1, 0], clamp)
+  return (
+    <AbsoluteFill style={{ opacity: op, overflow: 'hidden' }}>
+      <Sequence from={A - 4} durationInFrames={B - A + 8} layout="none">
+        <OffthreadVideo src={staticFile(`fotos-planos/${k}-video.mp4`)} muted style={{ width: '100%', height: '100%', objectFit: 'cover', transform: `scale(${1.04 + 0.04 * p})` }} />
+      </Sequence>
+      <AbsoluteFill style={{ background: 'radial-gradient(ellipse at 50% 45%, transparent 50%, rgba(0,0,0,0.5) 100%)' }} />
+    </AbsoluteFill>
+  )
+}
 const FotoPlanos: React.FC<{ k: string; de: number; ate: number }> = ({ k, de, ate }) => {
   const A = f(de) - 6, B = f(ate) + 6
   const meio = Math.round(A + (B - A) * 0.52)
   return (
     <AbsoluteFill style={{ zIndex: 2 }}>
-      <UmPlano k={k} A={A} B={meio} plano={0} />
+      {COM_VIDEO.has(k) ? <PlanoVideo k={k} A={A} B={meio} /> : <UmPlano k={k} A={A} B={meio} plano={0} />}
       <UmPlano k={k} A={meio} B={B} plano={1} />
     </AbsoluteFill>
   )
