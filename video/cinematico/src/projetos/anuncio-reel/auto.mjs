@@ -86,6 +86,21 @@ const RE_NEGOCIO = /\b(negocio|empresa|clientes?|ia\b|inteligencia artificial|au
 export const ficheiroDemo = (p) => `demo-${p.replace(/[^a-z0-9]+/gi, '-').replace(/^-|-$/g, '').toLowerCase()}.jpg`
 const ecraDemo = (paginas) => ({ tipo: 'app', src: `stock/auto/${ficheiroDemo(paginas[0])}`, srcs: paginas.map((x) => `stock/auto/${ficheiroDemo(x)}`), demo: paginas })
 
+// Fotos REAIS do Ricardo animadas em vários planos (21/11, pedido dele: «anima fotos em vários planos», métodos
+// de conteúdo magnético; estética real, nada de pistas de IA). Cada foto tem o fundo e a figura recortados em
+// public/fotos-planos/<k>-fundo.jpg + <k>-figura.png; o Video.tsx (FotoPlanos) faz parallax entre as camadas e
+// corta em 2 planos (aberto → aproximado no rosto). Máx. 2 por reel, nunca seguidas; pelo menos 1 em cada reel.
+const FOTOS = [
+  { re: /\b(disciplin|rotina|regras|militar|gnr|farda|tropa|servic|ordem|compromisso|plano)/, k: 'farda' },
+  { re: /\b(preso|presa|armadilha|40 ?h|horas|patrao|emprego|salario|prisao|preso|sair d|medo)/, k: 'grade' },
+  { re: /\b(origem|porto|infancia|crianc|pobre|adotad|comec|historia|pais\b|nada\b)/, k: 'origem' },
+  { re: /\b(palco|ensin|partilh|evento|comunidade|mentor|alunos|aprend|formac|metodo)/, k: 'palco' },
+  { re: /\b(liberdade|lisboa|viaj|tempo livre|vida|sonho|recome|resultado|futuro|escolh|paciencia)/, k: 'recomeco' },
+  { re: /\b(conteudo|grav|camara|video|marca|digital|online|instagram|criar|negocio|solucoes|ia\b)/, k: 'estudio' },
+  { re: /\b(decis|conversa|mensagem|telemovel|mentoria|emoc|dinheiro|risco|trading|mercado)/, k: 'retrato' },
+]
+export const FOTOS_PLANOS = FOTOS.map((x) => x.k)
+
 // Palavras ditas → chip curto (só repete o que a voz disse; nunca um número).
 const CHIPS = [
   { re: /gestao de risco|regras de risco|\brisco\b/, t: '✓ Gestão de risco' },
@@ -167,6 +182,10 @@ export function anuncioAuto(e) {
     if (ate - de < 1.4) continue
     let img = null
     if (apoio.length) img = apoio.shift()
+    const nFotos = imagens.filter((x) => x.tipo === 'foto').length
+    const ultimaFoto = imagens.length > 0 && imagens[imagens.length - 1].tipo === 'foto'
+    const foto = !img && nFotos < 2 && !ultimaFoto ? FOTOS.find((x) => x.re.test(t) && !usados.has(`foto:${x.k}`)) : null
+    if (foto) { img = { tipo: 'foto', src: foto.k }; usados.add(`foto:${foto.k}`) }
     if (!img) {
       const tema = TEMAS.find((x) => x.re.test(t) && x.clips.some((c) => stock.has(c) && !usados.has(c)))
       const demo = DEMOS.find((x) => x.re.test(t) && !usados.has(x.p[0]))
@@ -188,6 +207,13 @@ export function anuncioAuto(e) {
     usados.add(img.src)
     imagens.push({ de, ate, ...img })
     if (imagens.length >= 4) break
+  }
+
+  // Pelo menos uma foto real por reel: se nenhuma frase pediu, a primeira imagem de stock dá lugar ao retrato.
+  if (imagens.length && !imagens.some((x) => x.tipo === 'foto')) {
+    const i = imagens.findIndex((x) => x.tipo === 'video')
+    const k = marca === 'ricardo-garcia' ? 'retrato' : 'estudio'
+    if (i >= 0) imagens[i] = { de: imagens[i].de, ate: imagens[i].ate, tipo: 'foto', src: k }
   }
 
   // 4) Chips: palavras que a voz diz, no segmento em que as diz; máx. 4, ≥ 1,1 s entre eles.
