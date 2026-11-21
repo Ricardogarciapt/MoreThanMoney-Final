@@ -4,7 +4,7 @@
 Quem trabalha em marketing há algum tempo repara numa coisa estranha. As pessoas que mais compram raramente compram a cara de quem vende. Compram a solução para um problema que têm naquela semana: a folha de cálculo que não bate certo, o plano de treino que nunca chegam a cumprir, a lista de conteúdos que não sai da cabeça. A cara era, quase sempre, um pormenor.
 
 :::post @maria.vendersemaparecer
-foto: maria-reel-sem-cara.jpg
+imagem: Não precisas de mostrar a cara.
 legenda: Um guia que começou num caderno e acabou em PDF. Sem cara, com processo à vista. Se queres ver o passo a passo, guarda este post.
 :::
 

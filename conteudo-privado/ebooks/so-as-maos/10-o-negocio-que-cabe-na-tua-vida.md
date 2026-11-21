@@ -55,7 +55,7 @@ Domingo: sem trabalho
 :::
 
 :::post @planners.ines
-foto: maria-reel-daily.jpg
+imagem: 10 minutos por dia mudam o mês.
 legenda: O dia de hoje, sem cara. Mãos, uma caneta e a porta fechada às seis da tarde. O resto fica para amanhã.
 :::
 
@@ -68,7 +68,7 @@ Um bom planeamento só serve se consegues ver, depois, o que realmente aconteceu
 Não precisas de uma ferramenta específica para esta revisão. Um caderno com três colunas (o que planeei, o que fiz, o que aprendi) chega. O importante é o hábito de rever.
 
 :::post @morethanmoney.pt
-foto: maria-flyer.jpg
+imagem: O teu negócio não precisa da tua cara.
 legenda: Faceless Marketing com a Maria, dentro da MoreThanMoney. Cria conteúdo, automatiza o processo e monetiza o que sabes, ao teu ritmo. Os resultados dependem do trabalho de cada pessoa.
 :::
 

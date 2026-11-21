@@ -89,6 +89,16 @@ Cuidado com o crédito que parece pequeno. Uma prestação baixa, alargada por m
 4. Só depois, investir. E só o que podes perder.
 :::
 
+:::curso Aula 404 e 405 · Alavancagem e margem
+A alavancagem deixa-te controlar uma posição maior do que o dinheiro que tens na conta. A margem é a parte do teu dinheiro que fica presa como garantia enquanto a posição está aberta.
+
+Exemplo ilustrativo: na Europa, para um particular, a alavancagem máxima nos pares principais é de 1:30. Uma posição de 10 000 € em EUR/USD prende cerca de 333 € de margem. Parece pouco. Mas o ganho e a perda são calculados sobre os 10 000 €, não sobre os 333 €.
+
+**A alavancagem não te dá mais dinheiro. Dá-te mais exposição.** E exposição a mais, com dinheiro de que precisas para a renda, é a receita mais rápida que conheço para estragar um mês.
+
+no curso: fazes as contas de margem à mão, em três pares diferentes, antes de abrires a primeira posição em demo.
+:::
+
 ## Não investir dinheiro de que precisas
 
 Esta é a regra que mais gosto de repetir: não investas dinheiro de que vás precisar nos próximos anos. Investir é aceitar oscilações, e as oscilações podem ser fortes. Se precisares do dinheiro numa fase má do mercado, vendes com prejuízo.
@@ -113,6 +123,8 @@ A diferença, cerca de 17.100 €, são juros. Mas repara no que a conta não mo
 :::alerta
 Os juros compostos jogam a favor de quem poupa e contra quem deve. A mesma matemática que faz crescer o teu fundo faz crescer uma dívida de cartão. Antes de pensares em rendimento, trata das dívidas caras.
 :::
+
+[[foto: rg-esplanada.jpg | O portátil abre-se onde calha. As regras do dinheiro são as mesmas em todo o lado. | larga]]
 
 ## Um lugar para o dinheiro, no dia a dia
 

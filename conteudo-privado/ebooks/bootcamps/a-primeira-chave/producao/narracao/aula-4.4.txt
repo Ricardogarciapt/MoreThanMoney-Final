@@ -1,0 +1,17 @@
+Um papel molhado não lê. Uma foto roubada não protege. Como é que se guarda uma chave durante vinte anos?
+
+Chegámos à última aula do módulo, e ao plano que vais montar. A ideia central é esta: a cópia de segurança tem de sobreviver a três coisas. Fogo, água e o teu próprio esquecimento. Parece uma lista exagerada, mas é a lista de problemas que mais gente reporta quando perde o acesso. Um bom plano pensa nestes três riscos desde o início, e não quando já é tarde.
+
+Papel é barato e serve para começar. Mas papel degrada-se, com humidade, com o tempo, com um café derramado. Por isso, muitas pessoas usam placas de metal, com as palavras gravadas ou estampadas. Um produto que existe na loja MTM é o Cryptotag Zeus, uma placa de metal para registar a seed. Não é o único método, e não é obrigatório. É uma forma de ter uma cópia que não se estraga com facilidade, e isso já é muito.
+
+Vamos construir o plano em quatro passos. Primeiro, decide quantas cópias queres. Duas é o mínimo razoável. Uma cópia só significa que, se se perder, perdes tudo. E se a cópia de papel e a de metal estiverem no mesmo sítio, não estás a fazer duas cópias. Estás a fazer uma, duas vezes. Mais do que três complica a gestão e aumenta a exposição. Duas cópias bem guardadas são, para a maioria das pessoas, o equilíbrio certo entre segurança e simplicidade.
+
+Segundo, escolhe locais diferentes. Se as duas cópias estão na mesma gaveta, um incêndio ou um assalto leva as duas. Pensa em casa, e num sítio de confiança fora dela, com acesso seguro e discreto. O objetivo não é esconder, é dispersar o risco. Uma cópia que sobrevive a um problema em casa é uma cópia que te salva.
+
+Terceiro, decide quem sabe o quê. Ninguém precisa de saber a frase. Basta que alguém de confiança saiba que existe um plano, e onde estão as cópias, para o caso de algo te acontecer. Essa pessoa não precisa de ter as palavras. Se tiver, passa a ser mais um ponto de falha, e mais um sítio onde a frase pode ser copiada sem que tu saibas.
+
+Quarto, testa a recuperação. Esta é a parte que quase ninguém faz, e é a mais importante. Com um valor zero ou irrelevante, numa aplicação oficial, tenta recriar a carteira só com a frase escrita. Se conseguires, a cópia funciona. Se não conseguires, descobriste o problema agora, e não quando precisares de verdade. Um teste falhado hoje é uma lição barata. Um teste que se descobre falhado daqui a dez anos é uma perda. Repete o teste sempre que mudares de carteira ou de aplicação, e pelo menos uma vez por ano, porque as aplicações mudam e a memória também.
+
+Caso ilustrativo: a Inês gravou a frase numa placa de metal, guardou uma segunda cópia em papel num cofre de um familiar, e fez o teste de recuperação com um valor simbólico numa carteira de teste. Demorou uma tarde. Para ela, foi a tarde mais útil do ano em matéria de cripto. Não porque tenha ganho alguma coisa, mas porque deixou de depender da sorte. Repara que o plano não exige nada de técnico. Exige método e disciplina. A Inês não teve de ser especialista. Teve de ter um plano e de o cumprir.
+
+A ideia que quero que leves daqui é que os quatro passos têm um objetivo comum: que a tua chave continue a existir quando tu já não estiveres atento a ela. Uma chave que só funciona na tua cabeça não é uma chave. É uma esperança. E a esperança não é um plano de segurança. Pensa nisto como um seguro: não gostas de pagar, mas nunca o vês como desperdício no dia em que precisas dele.

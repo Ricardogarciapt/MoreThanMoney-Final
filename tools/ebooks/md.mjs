@@ -45,7 +45,7 @@ export function mdParaHtml(md, ctx = {}) {
       continue
     }
     // blocos ilustrados (ver tools/ebooks/ESCRITA.md)
-    const im = t.match(/^:::\s*(post|story|conversa|cartao|cartão|nota|ecra|ecrã)\s*(.*)$/i)
+    const im = t.match(/^:::\s*(post|story|conversa|cartao|cartão|nota|ecra|ecrã|curso|scanner|galeria)\s*(.*)$/i)
     if (im) {
       fecharPara()
       const tipo = im[1].toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '')
@@ -192,6 +192,34 @@ function ilustrado(tipo, arg, corpo, ctx) {
   }
   if (tipo === 'nota') {
     return `<figure class="postit" style="--r:${inclina()}deg">${arg ? `<b>${inline(arg)}</b>` : ''}${corpo.filter((l) => l.trim()).map((l) => `<p>${inline(l.trim().replace(/^[-*]\s+/, '• '))}</p>`).join('')}</figure>`
+  }
+  if (tipo === 'curso') {
+    // «espreitadela» de uma aula do curso: cartão em forma de slide
+    const pe = corpo.find((l) => /^no curso:/i.test(l.trim()))
+    const resto = corpo.filter((l) => l !== pe)
+    const [aula, ...tit] = arg.split('·')
+    return `<figure class="curso"><div class="cu-topo"><span class="cu-marca">Espreitadela do curso · ${esc(ctx?.academia || "MTM Forex Academy")}</span><span class="cu-aula">${inline(aula.trim())}</span></div>${tit.length ? `<h4>${inline(tit.join('·').trim())}</h4>` : ''}<div class="cu-corpo">${mdParaHtml(resto.join('\n'), ctx)}</div>${pe ? `<div class="cu-pe"><b>No curso</b> ${inline(pe.trim().replace(/^no curso:\s*/i, ''))}</div>` : ''}<div class="cu-rot">Espreitadela do curso</div></figure>`
+  }
+  if (tipo === 'scanner') {
+    const ficha = [], texto = []
+    let fotoS = ''
+    for (const l of corpo) {
+      const m = l.trim().match(/^(estilo|ativos|tempo|foto):\s*(.*)$/i)
+      if (m && m[1].toLowerCase() === 'foto') fotoS = m[2].trim()
+      else if (m) ficha.push(`<div><span>${{ estilo: 'Estilo', ativos: 'Ativos', tempo: 'Gráfico' }[m[1].toLowerCase()]}</span><b>${inline(m[2])}</b></div>`)
+      else texto.push(l)
+    }
+    const src = fotoS && ctx?.img ? ctx.img(fotoS) : ''
+    return `<figure class="scanner">${src ? `<img src="${src}" alt="">` : ''}<div class="sc-in"><div class="sc-rot">Ferramenta MTM</div><h4>${inline(arg)}</h4><div class="sc-ficha">${ficha.join('')}</div>${mdParaHtml(texto.join('\n'), ctx)}</div></figure>`
+  }
+  if (tipo === 'galeria') {
+    const itens = corpo.filter((l) => l.trim()).map((l) => {
+      const [f, leg = ''] = l.split('|').map((x) => x.trim())
+      const src = ctx?.img ? ctx.img(f) : ''
+      if (!src) { ctx?.avisos?.push(`foto em falta: ${f}`); return '' }
+      return `<figure style="--r:${inclina()}deg"><img src="${src}" alt=""><figcaption>${inline(leg)}</figcaption></figure>`
+    }).join('')
+    return `<div class="galeria${arg ? '' : ''}">${arg ? `<div class="ga-tit">${inline(arg)}</div>` : ''}<div class="ga-grelha">${itens}</div></div>`
   }
   // ecra
   const linhasE = corpo.filter((l) => l.trim()).map((l) => {

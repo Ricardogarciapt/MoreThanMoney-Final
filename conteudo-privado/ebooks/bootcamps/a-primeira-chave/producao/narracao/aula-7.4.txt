@@ -1,0 +1,13 @@
+O Momentum é um scanner de trading. Então o que é que ele está a fazer num módulo de DCA? Está a fazer de semáforo.
+
+Já ouviste falar do Momentum, o scanner da MTM que funciona por cores. Verde para compra, vermelho para venda. Os traders usam-no em gráficos de quinze minutos ou de uma hora. Nós vamos usá-lo de outra forma: no gráfico diário e no semanal, os gráficos grandes, que mostram a direção de fundo e não o ruído do dia.
+
+O Momentum tem cinco confirmações, e cada uma vale um ponto. A nuvem está presente e com a cor certa? A nuvem está do lado certo das velas? A média exponencial concorda? O volume tem a cor da direção? E o RSI está a cruzar na zona certa? Cinco em cinco é o sinal mais completo. Quatro em cinco ainda é bom. Com menos, o Momentum está a dizer-te que não tem uma opinião forte.
+
+Agora, como é que isto entra no DCA? Com três leituras simples, no teu dia de reforço. Primeira: gráfico diário a verde, com quatro ou cinco confirmações de compra. A tendência de fundo está a favor. Fazes o reforço que o DCA Inteligente sugere. Segunda: gráfico diário a vermelho forte, cinco em cinco de venda. A queda está em curso. Compras a base, mas não esvazias o pote ainda. Esperas que a pressão de venda abrande. Terceira: caixas lilás em cima das velas, mercado lateral. Para um trader, é sítio onde não se entra. Para quem faz DCA, é um dia normal. Compras a base.
+
+E o semanal? Usa-o uma vez por mês, para veres o quadro todo. Se o semanal virou para compra depois de uma descida longa, é um bom momento para rever o teu plano e confirmar que o pote está pronto para as semanas de Forte Compra. Se o semanal está em venda forte, não mudas nada. O DCA foi feito exatamente para essas fases.
+
+A regra de ouro: o Momentum não pára o teu DCA. Nunca. Ele ajuda-te a decidir se usas o pote ou não, e quanto. Se alguma vez te apanhares a dizer esta semana não compro porque está vermelho, volta a esta aula. Vermelho no gráfico diário, para quem faz DCA, quer dizer base, não quer dizer zero.
+
+Exercício: abre o gráfico diário de um ativo do teu plano com o Momentum. Conta as confirmações. Escreve a leitura, os pontos e o que farias na próxima sexta: base, base mais pote, ou base sem pote. Faz isto em três sextas seguidas, sem comprar nada a mais, só a registar. Vais aprender mais com isto do que com qualquer vídeo.

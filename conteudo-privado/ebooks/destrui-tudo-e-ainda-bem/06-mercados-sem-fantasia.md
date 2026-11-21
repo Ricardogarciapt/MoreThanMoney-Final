@@ -31,6 +31,19 @@ Neste livro falo de negociação, e do que isso exige de ti. Se o teu objetivo �
 
 [[foto: rg-ouro.jpg | O ouro foi o mercado onde mais aprendi. E onde mais paguei para aprender. | polaroid]]
 
+:::curso Aula 104 · Quem está do outro lado
+Quando carregas em comprar, alguém está a vender. E quase nunca é alguém como tu.
+
+- **Os grandes bancos** trocam moedas entre si em volumes enormes. São eles que fazem o preço mexer no curto prazo.
+- **Os bancos centrais** mexem nas taxas de juro e, às vezes, intervêm diretamente na moeda.
+- **As multinacionais e os fundos** trocam moedas porque pagam fornecedores lá fora ou porque têm estratégias próprias.
+- **Os particulares**, como tu e eu, são a fatia mais pequena.
+
+Saber isto tira-te uma ilusão útil de perder: o mercado não sabe que existes, nem está contra ti. Simplesmente não quer saber.
+
+no curso: vês como uma decisão de um banco central aparece no gráfico, vela a vela.
+:::
+
 ## Forex, em duas frases
 
 O mercado de Forex (de «foreign exchange», câmbio de moedas) é onde se trocam moedas umas pelas outras. Quando negocias EUR/USD estás a apostar, em termos simples, na subida ou na descida do euro face ao dólar. Não compras euros nem dólares em papel: compras ou vendes um contrato sobre a variação do preço.
@@ -42,6 +55,8 @@ O Forex é o mercado mais líquido do mundo, o que quer dizer que há muitos com
 O ouro negoceia-se contra o dólar com o símbolo XAU/USD. Muita gente olha para o ouro como refúgio, e às vezes ele comporta-se assim. Mas o preço do ouro também sobe e desce com juros, com notícias económicas e com o humor do mercado. Não é um cofre. É um ativo com volatilidade própria, muitas vezes maior do que a de um par de moedas principal.
 
 Por isso, cada instrumento tem o seu ritmo, e tratar o ouro como se fosse um par de moedas qualquer é um erro comum. As regras de um mercado não servem automaticamente para outro.
+
+[[foto: rg-dubai.jpg | Dubai. Um dos sítios onde o mercado nunca para. | polaroid]]
 
 ## As palavras que vais ouvir
 
@@ -135,6 +150,18 @@ A conta de recuperação é a armadilha mais cara do trading. Quanto maior a per
 - Abri primeiro uma conta demo?
 :::
 
+:::curso Aula 302 · O que é um pip
+O pip é a unidade com que se mede o movimento. Na maioria dos pares é a quarta casa decimal: se o EUR/USD passa de 1,1005 para 1,1006, mexeu um pip.
+
+- Num lote padrão de EUR/USD, um pip vale cerca de 10 dólares.
+- Num micro lote (0,01), vale cerca de 10 cêntimos.
+- No ouro, mede-se de outra forma. É uma das primeiras perguntas que se faz em aula, e ainda bem.
+
+Se não sabes quanto vale um pip no par em que estás, não sabes quanto estás a arriscar. É tão simples como isso.
+
+no curso: tens uma folha para calcular o valor do pip em qualquer par e em qualquer tamanho de lote.
+:::
+
 ## Escolher a corretora: o que verificar
 
 A corretora é a porta de entrada. Não é um detalhe. Aqui, a MTM trabalha com a PU Prime, uma corretora regulada. Não quero que a escolhas por recomendação minha: quero que a escolhas com a mesma lista que usarias para comprar qualquer serviço financeiro.
@@ -153,7 +180,7 @@ A MTM não gere dinheiro de clientes. A conta é tua, aberta em teu nome na corr
 1. Escreve, numa folha, as três perguntas que mais te fazes sobre os mercados.
 2. Para cada pergunta, escreve se a resposta está num livro, numa corretora, num vídeo ou só na tua cabeça.
 3. Risca as perguntas cuja resposta só está na tua cabeça. Essas são as que vais testar no papel, não com dinheiro.
-4. Guarda a folha. Vais voltar a ela no capítulo 11.
+4. Guarda a folha. Vais voltar a ela no plano de 30 dias, no fim do livro.
 
 Pergunta 1: ____________________________________________
 Pergunta 2: ____________________________________________

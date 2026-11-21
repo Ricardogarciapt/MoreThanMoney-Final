@@ -61,6 +61,11 @@ Conclusão: depende do período que escolheste
 - Estou a agir por causa de uma notícia de hoje ou de um plano que escrevi antes?
 :::
 
+:::post @ruben.cripto
+imagem: Investir sem adivinhar: o método DCA.
+legenda: O método DCA em seis cartões: valor fixo, data fixa, menos emoção, preço médio, começar pequeno e o que o DCA não faz. Guarda para releres na próxima queda. Conteúdo educativo.
+:::
+
 ## Exercício: três perguntas antes de qualquer decisão
 
 :::exercicio O filtro das três perguntas

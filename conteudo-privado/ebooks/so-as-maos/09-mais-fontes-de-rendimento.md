@@ -19,6 +19,8 @@ Diversificar faz sentido quando já tens uma base. Essa base pode ser um produto
 
 **Serviços digitais.** Oferecer trabalho como gestão de redes sociais, design, copywriting ou organização de documentos, para pessoas ou empresas. É o caminho que mais se parece com a prestação de serviços tradicional, com contratos, faturação e relação direta com o cliente.
 
+[[foto: maria-tel-cidade.jpg | O negócio que cabe num ecrã também cabe numa viagem. Mas só se o sistema estiver montado antes. | polaroid]]
+
 ## Comparação lado a lado
 
 | Opção | Pontos fortes | Pontos de atenção | Para quem faz mais sentido |

@@ -77,6 +77,17 @@ Como me senti: impaciente, entrei cedo
 Lição: esperar pela vela de confirmação
 :::
 
+:::curso Aula 401 · Tipos de ordens
+Há duas formas principais de entrar:
+
+- **Ordem a mercado:** entras já, ao preço que estiver. Rápido, mas às vezes um pouco pior do que viste.
+- **Ordem pendente (limite ou stop):** deixas a ordem à espera de um preço. Entras só se o preço lá chegar.
+
+Para quem tem quinze minutos por dia, as ordens pendentes são uma bênção: decides com calma, deixas a ordem com stop e alvo, e vais à tua vida. O mercado vem ter contigo, ou não vem.
+
+no curso: montas o teu primeiro plano completo com ordem pendente, stop e alvo, em conta de demonstração.
+:::
+
 ## Regras de paragem
 
 Sem regras de paragem, a rotina é só um horário bonito. As duas que mais uso são estas:

@@ -132,6 +132,8 @@ sticker: Conta-me aqui
 | Volatilidade | Intensidade com que o preço se move num dado período |
 | XAU/USD | Símbolo do ouro cotado em dólares |
 
+[[foto: rg-blazer.jpg | Trinta dias. Depois disso, já não és a mesma pessoa a olhar para o mesmo gráfico. | polaroid]]
+
 ## Aviso educativo final
 
 Este livro é conteúdo educativo. Não é aconselhamento financeiro, não é recomendação de compra ou de venda de nenhum ativo, e não garante resultados. Os exemplos são hipotéticos e servem para perceber mecanismos, não para prever nada.

@@ -46,6 +46,8 @@ Colega: Não sei. Mas está em todo o lado.
 eu: Pois. Está em todo o lado é o que me preocupa.
 :::
 
+[[foto: ruben-pereira.jpg | Antes de pôr um euro numa moeda, faço sempre as mesmas sete perguntas. Sempre. | polaroid]]
+
 ## As sete perguntas para avaliar um projeto
 
 Antes de pensares em comprar qualquer moeda que não seja Bitcoin, faz estas sete perguntas. Não são garantia de nada, mas obrigam-te a pensar.

@@ -61,6 +61,14 @@ Não cries um curso de dez módulos antes de saber se alguém quer o primeiro. Q
 - Quanto pagavas por uma solução que te poupasse tempo?
 :::
 
+[[foto: maria-tel-secretaria.jpg | A secretária de quem vende sem aparecer: um caderno, um portátil e um telemóvel. Chega. | polaroid]]
+
+:::curso Aula 3.2 · Validar antes de criar
+Antes de passares três semanas a fazer um produto, pergunta. Uma story com enquete, três DMs, uma lista de espera. Se ninguém levanta a mão, ainda bem que soubeste antes.
+
+no curso: fazes a validação em 48 horas, com o guião da story e da DM já escrito.
+:::
+
 ## A escada de valor
 
 Uma escada de valor é a sequência de produtos e de contactos que levam uma pessoa desde o primeiro contacto até ao produto mais completo. Não tens de a construir tudo de uma vez. Mas ter a escada desenhada ajuda-te a perceber onde o primeiro produto encaixa.

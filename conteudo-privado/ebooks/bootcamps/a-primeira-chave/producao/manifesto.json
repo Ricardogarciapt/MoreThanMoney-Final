@@ -1,0 +1,1456 @@
+{
+  "slug": "a-primeira-chave",
+  "gerado": "2026-11-21",
+  "velocidade": 1.03,
+  "modulos": [
+    {
+      "ficheiro": "modulo-1.md",
+      "titulo": "Módulo 1 — Dinheiro, blockchain e Bitcoin (≈17 min)",
+      "aulas": [
+        {
+          "id": "1.1",
+          "titulo": "Aula 1.1 — O que é dinheiro, afinal",
+          "gancho": "Uma nota de cinquenta euros é um pedaço de papel. Então porque é que aceitas trocar um dia de trabalho por ela?",
+          "cenas": [
+            {
+              "cena": 1,
+              "visual": "Ecrã preto. Texto a aparecer letra a letra: «Conteúdo educativo. Não é aconselhamento financeiro. O risco de perda é real.» Depois, Ruben em plano médio, fundo quase preto, pormenores a ouro.",
+              "narracao": "Olá, eu sou o Ruben Pereira, e este é o bootcamp A Primeira Chave. Antes de começarmos, há um aviso que não se salta. Este bootcamp é educativo. Não é aconselhamento financeiro. Não te vou dizer em que comprar, nem quando. Cripto é um mercado de alto risco: os preços podem cair muito, e podes perder tudo o que lá puseres. Por isso, a primeira regra desta casa é esta: nunca investes dinheiro que não podes perder. Se precisas dele para a renda do mês que vem, esse dinheiro não é para cripto. Fica dito, e volto a dizê-lo no fim do módulo. Se uma coisa deste bootcamp te ficar, que seja esta."
+            },
+            {
+              "cena": 2,
+              "visual": "Animação: um pescador com um cesto de carapaus à porta de uma padaria. Duas setas cruzam-se entre os dois, e entre as setas aparece um ponto de interrogação.",
+              "narracao": "Antes do dinheiro, as pessoas trocavam. Imagina que és pescador em Peniche. Levas um cesto de carapaus à padaria, porque precisas de pão. Mas e se o padeiro não quiser peixe nesse dia? Ou se o peixe estraga antes de ele o querer? Os economistas chamam a isto a falta de coincidência de vontades: quem tem o que queres nem sempre quer o que tens. A troca direta funciona, mas é lenta e depende muito da sorte."
+            },
+            {
+              "cena": 3,
+              "visual": "Linha do tempo animada, da esquerda para a direita: conchas, sal, moedas de metal, uma nota de papel e, no fim, um saldo a piscar no ecrã de um telemóvel. Em cada passo o objeto desaparece e fica a mesma palavra no centro: «confiança».",
+              "narracao": "Por isso, ao longo da história, as pessoas escolheram objetos que quase toda a gente aceitava. Houve conchas, sal, gado, metais. Depois vieram as moedas, e a seguir as notas de papel. Hoje, a maior parte do dinheiro nem sequer é papel. É um número no ecrã do teu banco. Pagas um café com o telemóvel, mandas dinheiro por MB Way, e nada disso passa de mão em mão. Continua a ser dinheiro, porque continuas a confiar no sistema que o registou."
+            },
+            {
+              "cena": 4,
+              "visual": "Um castelo de três pilares, dourado sobre carvão. Os pilares têm legendas: «o padeiro aceita», «o senhorio aceita», «o Estado aceita». Um dos pilares começa a tremer, de forma subtil.",
+              "narracao": "Repara no que isto significa. Se a confiança é a base de tudo, quem controla o sistema controla essa confiança. Um banco central pode criar mais unidades de moeda. Um governo pode mudar as regras dos impostos. Não estou a dizer que isto é mau por definição. Estou a dizer que é uma escolha humana, feita por instituições humanas, e que essas escolhas chegam ao bolso de toda a gente. Enquanto os três pilares estiverem de pé, a nota vale. Se um deles começa a tremer, a conversa muda."
+            },
+            {
+              "cena": 5,
+              "visual": "Uma nota de cinquenta euros ao lado de um cartão multibanco. Por baixo, a frase aparece aos poucos: «Dinheiro é uma promessa.»",
+              "narracao": "A primeira grande consequência de o dinheiro ser uma promessa chama-se inflação. Vais vê-la na próxima aula, com um café e uma conta simples que qualquer pessoa faz de cabeça. Para já, fica com esta ideia: as promessas podem ser cumpridas ou quebradas, devagar e sem barulho."
+            },
+            {
+              "cena": 6,
+              "visual": "Ruben com um caderno aberto em cima da mesa. No canto do ecrã surge um temporizador de dois minutos.",
+              "narracao": "Antes de fechar, um exercício de dois minutos. Pega numa nota, ou olha para o saldo do teu banco. Pergunta-te: em que é que eu acredito, para aceitar isto como valor? Escreve a resposta à mão. Não há resposta certa. O objetivo é perceberes que já confias em muita coisa sem pensar nisso."
+            }
+          ],
+          "palavras": 483,
+          "minutos": 3.1
+        },
+        {
+          "id": "1.2",
+          "titulo": "Aula 1.2 — A inflação e o café",
+          "gancho": "Se guardares mil euros debaixo do colchão durante dez anos, o que é que eles compram no fim?",
+          "cenas": [
+            {
+              "cena": 1,
+              "visual": "Um café numa chávena, com uma etiqueta de um euro. A etiqueta começa a subir, cêntimo a cêntimo, ao ritmo de um contador.",
+              "narracao": "Vamos a uma conta. Um café custa um euro hoje. Parece pouco, e é mesmo pouco. Agora imagina que os preços sobem quatro por cento por ano. Este é um número redondo e hipotético, só para fazermos a conta. É um exemplo ilustrativo, nada mais. Ao fim de um ano, o café custa um euro e quatro cêntimos. Ao fim de cinco anos, passa a custar cerca de um euro e vinte e dois. Ao fim de dez anos, chega a um euro e quarenta e oito. Ninguém dá por nada de especial. É um cêntimo aqui, outro ali, e de repente o mesmo café custa quase metade mais."
+            },
+            {
+              "cena": 2,
+              "visual": "Gráfico de linha animado: o preço do café a subir ano a ano, com os marcos de 1, 5 e 10 anos destacados.",
+              "narracao": "Agora pensa no teu dinheiro. Se tens mil euros parados numa gaveta, daqui a dez anos continuas a ter mil euros no papel. Mas esses mil euros já não compram o que compravam antes. Para continuares a comprar daqui a dez anos o que mil euros compram hoje, precisas de cerca de mil quatrocentos e oitenta euros. Visto ao contrário: os mil euros de hoje valem, em poder de compra, cerca de seiscentos e setenta e seis euros."
+            },
+            {
+              "cena": 3,
+              "visual": "Duas barras lado a lado. A primeira, cheia, marcada «1000 €». A segunda, mais curta, marcada «≈676 € de poder de compra», com a diferença a desaparecer aos bocadinhos.",
+              "narracao": "Repara que esta conta não precisa de um ano especial nem de uma crise. Basta uma inflação pequena e constante. Uma taxa de dois por cento, que é a referência de médio prazo do Banco Central Europeu, já faz o dinheiro perder metade do poder de compra em cerca de trinta e seis anos. Ninguém sente isso num mês. Sente-se numa vida inteira."
+            },
+            {
+              "cena": 4,
+              "visual": "Ecrã dividido: à esquerda, a fórmula «72 ÷ 4 = 18», à direita um relógio de areia que se esvazia até à metade.",
+              "narracao": "Há uma regra prática que vale a pena decorar. Chama-se a regra dos setenta e dois. Divides setenta e dois pela taxa de inflação, e obténs, em anos, o tempo que demora a que o dinheiro perca metade do poder de compra. Com quatro por cento, são dezoito anos. É uma aproximação, mas dá-te a ordem de grandeza. E a ordem de grandeza é o que precisas para decidir bem. Quando ouvires alguém dizer que a inflação já não é nada, volta a esta conta. Um número pequeno, repetido durante anos, é uma força enorme."
+            },
+            {
+              "cena": 5,
+              "visual": "Caso ilustrativo: a Inês, vinte e nove anos, enfermeira em Coimbra, com um retrato simples e um cartão de identificação desenhado, sentada à secretária com três mil euros numa conta à ordem.",
+              "narracao": "Vamos ser honestos. A inflação não é um plano de ninguém para te prejudicar. É um fenómeno que resulta de muitas decisões, de procura, de custos, de políticas monetárias. Mas o efeito chega sempre igual. A Inês tinha três mil euros numa conta à ordem a render praticamente nada. Não queria arriscar tudo, e também não queria ficar a ver o dinheiro encolher. A primeira coisa que fez foi perceber o problema, e não escolher um produto. Esse é o passo que quero que tu também dês. Antes de qualquer decisão, sabe quanto dinheiro tens, quanto tempo o podes deixar parado, e qual é o efeito da inflação nesse caso concreto."
+            },
+            {
+              "cena": 6,
+              "visual": "Ruben com uma calculadora no ecrã. Surge uma lista de quatro preços do dia a dia: pão, gasolina, passe, renda parcial.",
+              "narracao": "Isto é importante para o resto do bootcamp, porque é a primeira razão pela qual as pessoas procuram alternativas. Não é porque querem enriquecer depressa. É porque querem que a poupança não derreta em silêncio. Por isso, ao longo deste bootcamp, sempre que falarmos de rendimento, vais fazer uma pergunta simples: é um ganho acima da inflação, ou é apenas um número bonito no ecrã? Mas atenção: procurar uma alternativa não quer dizer que qualquer alternativa sirva. Há ativos que sobem muito e descem ainda mais depressa. Nas próximas aulas vemos como distinguir uns dos outros."
+            }
+          ],
+          "palavras": 570,
+          "minutos": 3.7
+        },
+        {
+          "id": "1.3",
+          "titulo": "Aula 1.3 — 2008: porque nasceu o Bitcoin",
+          "gancho": "Em outubro de 2008, apareceu um documento curto que mudou a conversa sobre dinheiro. Vamos ver o contexto.",
+          "cenas": [
+            {
+              "cena": 1,
+              "visual": "Imagem de arquivo estilizada, a tons de cinzento e dourado: um horizonte de cidade com as luzes a apagarem-se, uma a uma.",
+              "narracao": "Em 2008, o mundo financeiro estava em crise. Bancos grandes tinham emprestado dinheiro a quem não o conseguia pagar, e o problema espalhou-se por todo o sistema. Governos e bancos centrais correram a salvar instituições. Muita gente perdeu casa, emprego ou poupança. Foi neste contexto que muita gente começou a perguntar-se se o sistema financeiro tradicional era o único caminho possível."
+            },
+            {
+              "cena": 2,
+              "visual": "Ecrã com o título do documento a escrever-se devagar: «Bitcoin: um sistema de dinheiro eletrónico ponto a ponto». Por baixo, a data: 31 de outubro de 2008.",
+              "narracao": "A 31 de outubro de 2008, apareceu na internet um documento com esse título. Quem o assinava chamava-se Satoshi Nakamoto. Até hoje, ninguém sabe ao certo quem é essa pessoa, ou se é um grupo. Essa é a primeira coisa estranha, e vale a pena ter isso presente, porque nos obriga a avaliar a ideia e não a pessoa."
+            },
+            {
+              "cena": 3,
+              "visual": "Um pequeno diagrama: duas pessoas a trocar uma moeda. Entre elas, um balcão de banco que vai desaparecendo, com um traço a riscá-lo.",
+              "narracao": "A ideia central era simples de dizer e difícil de fazer. Dinheiro que pudesse ser enviado de uma pessoa para outra sem passar por um banco, sem um intermediário a aprovar cada transferência. Em vez de depender da confiança numa instituição, dependia de uma regra escrita em código, que toda a rede conferia. Essa é a diferença que tens de guardar: confiança numa pessoa contra confiança num processo."
+            },
+            {
+              "cena": 4,
+              "visual": "Linha do tempo com duas datas destacadas: «3 de janeiro de 2009» e, por baixo, um bloco quadrado a dourado com o rótulo «bloco génese».",
+              "narracao": "A 3 de janeiro de 2009, a rede criou o primeiro bloco, chamado bloco génese. Dentro desse bloco, o autor deixou uma mensagem: uma manchete de um jornal britânico sobre resgates a bancos. Não é preciso interpretar muito. Quem escreveu quis deixar claro em que contexto a ideia nasceu, e isso diz-te algo sobre a desconfiança que a animava na altura. Não é uma verdade absoluta sobre as intenções de ninguém, mas é um dado histórico que explica muito do discurso que ouves hoje."
+            },
+            {
+              "cena": 5,
+              "visual": "Ruben sentado num banco de jardim, a olhar para a câmara. Texto no canto: «Contar a história não é prever o preço.»",
+              "narracao": "Vamos ser claros sobre o que estou a fazer aqui. Estou a contar uma história. Se queres contexto, pensa assim: nessa altura, para a maioria das pessoas, dinheiro era sinónimo de banco. Quem quisesse transferir valor para o outro lado do mundo dependia de bancos, de prazos e de taxas. A proposta era cortar esse intermediário, e não muito mais do que isso."
+            },
+            {
+              "cena": 6,
+              "visual": "Três ícones animados lado a lado: uma seta de pagamento, um cofre e um gráfico de linha. Cada um acende-se por sua vez.",
+              "narracao": "O problema que o documento tenta resolver tem nome: o gasto duplo. Num ficheiro digital, copiar não custa nada. Se envias uma fotografia a alguém, continuas a tê-la. Com dinheiro digital, a pergunta é outra: como garantir que a mesma unidade não é gasta duas vezes, sem um banco a confirmar cada operação? Essa pergunta é mais antiga do que o Bitcoin, e é a chave para perceber tudo o resto."
+            },
+            {
+              "cena": 7,
+              "visual": "Exercício no ecrã, com uma folha pautada e uma caneta a escrever.",
+              "narracao": "Exercício de reflexão: escreve numa linha o que achas que um intermediário faz quando aprova uma transferência. Depois escreve o que perdes se ele não existir. Não há resposta certa. O objetivo é perceberes o que o Bitcoin tenta substituir, e o que essa substituição custa."
+            }
+          ],
+          "palavras": 470,
+          "minutos": 3
+        },
+        {
+          "id": "1.4",
+          "titulo": "Aula 1.4 — O caderno que ninguém apaga",
+          "gancho": "Imagina um caderno que toda a aldeia tem, e que ninguém consegue rasgar sem que toda a gente dê por isso.",
+          "cenas": [
+            {
+              "cena": 1,
+              "visual": "Uma aldeia desenhada de forma simples, com uma praça e várias casas. Em cada casa, um caderno aberto com a mesma letra.",
+              "narracao": "Imagina uma aldeia onde toda a gente tem um caderno de contas. Cada vez que alguém deve dinheiro a outra pessoa, escreve-se uma linha: quem pagou, a quem, quanto, e a data. Só que aqui há uma regra. Não existe um caderno único guardado pelo presidente da junta. Toda a gente tem uma cópia, e as cópias são atualizadas juntas. Isto é, de forma muito simples, um blockchain: uma cadeia de blocos, em que cada bloco é uma página com várias linhas."
+            },
+            {
+              "cena": 2,
+              "visual": "Gráfico animado `blockchain-caderno`: uma linha, uma página, uma cadeia de páginas ligadas por elos. Cada linha de texto aparece dentro de uma página.",
+              "narracao": "Vamos por partes. Primeiro, as linhas. Uma transação diz: esta carteira enviou tantas unidades desta moeda para aquela carteira. Segundo, as páginas. Um bloco junta várias transações e fecha-se quando está cheio, ou quando passa um certo tempo. Terceiro, a ligação entre páginas. Cada página tem uma espécie de selo que resulta do conteúdo da página anterior. Tecnicamente chama-se função de hash, mas pensa nele como uma impressão digital do conteúdo: se o conteúdo muda, a impressão muda. Se alguém alterar uma linha antiga, o selo deixa de bater certo, e todas as páginas seguintes ficam inválidas."
+            },
+            {
+              "cena": 3,
+              "visual": "Animação: alguém tenta apagar uma linha de uma página antiga. A página fica vermelha, e as páginas seguintes ficam cinzentas, uma a uma, como dominós.",
+              "narracao": "É isto que torna o caderno difícil de apagar. Não é que seja impossível alterar nada. É que alterar exige refazer o caminho todo, e tem de ser aceite pela maioria da rede. E essa maioria tem cópias do caderno. Quem tenta mexer numa página antiga tem de convencer toda a aldeia de que a história é outra. Na prática, isso não acontece."
+            },
+            {
+              "cena": 4,
+              "visual": "Dois ecrãs lado a lado. À esquerda, um computador a resolver um puzzle. À direita, um conjunto de moedas bloqueadas como garantia. Por baixo, os rótulos «prova de trabalho» e «prova de participação».",
+              "narracao": "Mas então, quem escreve a página nova? Aqui entra a parte que muita gente acha confusa, e que vou simplificar. Há dois grandes métodos. O primeiro chama-se prova de trabalho, ou mineração. Os computadores competem para resolver um problema matemático difícil. Quem o resolve primeiro escreve a página seguinte e recebe uma recompensa. Consome muita energia, e é o método do Bitcoin. O segundo chama-se prova de participação. Em vez de competir com cálculo, os participantes bloqueiam moedas como garantia, e o sistema escolhe quem escreve a página. Se essa pessoa tentar fraudar, perde a garantia. Foi este o método que a rede Ethereum adotou em setembro de 2022, numa transição que se chamou The Merge."
+            },
+            {
+              "cena": 5,
+              "visual": "Balança animada: num prato, «energia», no outro, «garantia». Ambos os pratos ficam em equilíbrio, com uma seta a dizer «ninguém escreve sem pagar».",
+              "narracao": "Repara no que os dois têm em comum. Ninguém escreve no caderno sem pagar um custo, seja energia, seja garantia. E ninguém fica sozinho a decidir o que é verdade. Isso é a grande ideia por trás de um blockchain: um registo partilhado sem uma autoridade central a dizer a última palavra."
+            },
+            {
+              "cena": 6,
+              "visual": "Aviso em destaque, a dourado sobre carvão, com um ponto de exclamação discreto: «Tecnologia sólida não é o mesmo que projeto bom.»",
+              "narracao": "Agora um aviso importante. Um blockchain resolve um problema específico: manter um registo partilhado sem uma entidade central. Não quer dizer que o projeto seja seguro, nem que a moeda seja boa, nem que o preço suba. Uma tecnologia sólida pode estar ligada a um produto mal pensado. Vamos separar estas coisas ao longo do curso, e a partir do módulo 2 vais ter ferramentas para isso."
+            },
+            {
+              "cena": 7,
+              "visual": "Caso ilustrativo: a Inês a explicar a folha de quatro páginas ao marido, que trabalha em logística, com as páginas a ligarem-se por setas.",
+              "narracao": "Caso ilustrativo, para fechar. A Inês quis perceber isto com o marido, que trabalha em logística, e que lhe perguntou porque é que ninguém conseguia apagar o caderno. Ela respondeu-lhe com um exercício simples em três passos: desenhar quatro páginas, com duas linhas cada uma, escrever em cada selo uma palavra que resumisse a página anterior, e depois mudar uma linha da primeira página para ver o que acontecia às outras. Ele percebeu em dois minutos. Tu vais precisar de um pouco mais, e está tudo bem. Não precisas de perceber a matemática para perceber a lógica. Basta perceberes porque é que alterar o passado é tão caro."
+            }
+          ],
+          "palavras": 606,
+          "minutos": 3.9
+        }
+      ]
+    },
+    {
+      "ficheiro": "modulo-2.md",
+      "titulo": "Módulo 2 — O mapa das criptomoedas (≈17 min)",
+      "aulas": [
+        {
+          "id": "2.1",
+          "titulo": "Aula 2.1 — Bitcoin: 21 milhões e o halving",
+          "gancho": "Há uma moeda que só vai existir em 21 milhões de unidades. Parece uma boa notícia. Mas há um detalhe: como é que essas unidades aparecem?",
+          "cenas": [
+            {
+              "cena": 1,
+              "visual": "Um cofre digital dourado sobre fundo carvão. Um contador no canto mostra 0 e, devagar, vai subindo até um limite que fica marcado a vermelho: «21 000 000».",
+              "narracao": "O Bitcoin tem um limite programado: vinte e um milhões de unidades, no máximo. Esse número não foi escolhido por acaso, e não muda por decisão de uma pessoa ou de uma empresa. Está escrito no protocolo, e quem usa a rede aceita essa regra quando a usa. Parece simples, mas tem uma consequência importante: a quantidade de moedas nunca cresce sem limite, e isso é diferente de quase todas as moedas que conheces."
+            },
+            {
+              "cena": 2,
+              "visual": "Relógio animado com a legenda «210 000 blocos ≈ 4 anos». Cada vez que o relógio dá a volta, a recompensa corta-se ao meio, com um pequeno estalido.",
+              "narracao": "Aqui entra o halving, que quer dizer, em português, redução para metade. A cada duzentos e dez mil blocos, a recompensa é cortada para metade. Como os blocos saem, em média, a cada dez minutos, isto acontece aproximadamente de quatro em quatro anos. Não é exato, porque o ritmo varia um pouco, mas é a ordem de grandeza certa para perceberes o padrão."
+            },
+            {
+              "cena": 3,
+              "visual": "Gráfico animado `halving`: uma escada descendente. Cada degrau tem a data e a recompensa por bloco. O último degrau pisca.",
+              "narracao": "Vamos à sequência, que é o que interessa. Cinquenta unidades por bloco até 2012. Depois, vinte e cinco. Em 2016, doze vírgula cinco. Em 2020, seis vírgula vinte e cinco. Em 2024, três vírgula cento e vinte e cinco. Repara no padrão. Cada corte reduz o ritmo de criação de novas unidades. Quanto mais o tempo passa, menos moedas novas entram. É por isso que quem defende o Bitcoin como reserva de valor usa este argumento: é uma oferta que diminui com o tempo, ao contrário de moedas que os bancos centrais podem emitir sem limite técnico."
+            },
+            {
+              "cena": 4,
+              "visual": "Animação de uma balança: num prato, «menos oferta nova»; no outro, «procura, notícias, humor, regulação». A balança oscila, sem se fixar.",
+              "narracao": "Agora o contraponto, porque também tem de existir. Menos oferta nova não garante preço alto. O preço depende de quanta gente quer comprar, de quanta gente quer vender, de notícias, de humor, de regulação, de tudo o resto. Pensa numa edição limitada de um livro: a tiragem é fixa, mas ninguém garante que os leitores vão aparecer. Um corte na recompensa é um fator entre muitos. A história mostra que o efeito no preço não é automático nem previsível, e quem te vender uma certeza nesse ponto está a vender-te uma fantasia."
+            },
+            {
+              "cena": 5,
+              "visual": "Conta no ecrã, passo a passo: «50 + 25 + 12,5 + 6,25 + …» e, por baixo, «× 210 000 = 21 000 000».",
+              "narracao": "Vamos fazer a conta, para perceberes que o número é real. Se somares cinquenta, vinte e cinco, doze vírgula cinco e assim por diante, cada período dura duzentos e dez mil blocos. Se multiplicares a soma das recompensas por esse número de blocos, obténs cerca de vinte e um milhões. Por isso o limite é esse. Não é um número arredondado para ficar bonito; é o resultado de uma série que vai encolhendo. Se fizeres a conta com a calculadora do telemóvel, vais ver que o resultado se aproxima de vinte e um milhões e nunca passa dele."
+            },
+            {
+              "cena": 6,
+              "visual": "Exemplo ilustrativo: um bolo com cem fatias. Cada pessoa que ajuda a cozer recebe dez fatias, depois cinco, depois duas e meia. As fatias restantes ficam marcadas a cinzento.",
+              "narracao": "Exemplo ilustrativo, com valores redondos e inventados. Imagina um bolo que só tem cem fatias. Nos primeiros dias, cada pessoa que ajuda a cozer recebe dez fatias. Depois, recebe cinco. Depois, duas e meia. O bolo nunca passa de cem fatias, e as fatias novas ficam cada vez mais raras. Mas isto não diz nada sobre se o bolo é bom, nem sobre se vale a pena comê-lo. A escassez é uma propriedade, não é uma tese de investimento."
+            },
+            {
+              "cena": 7,
+              "visual": "Caso ilustrativo: o Tiago, vinte e oito anos, programador em Braga, a fazer anotações num caderno ao lado do portátil.",
+              "narracao": "Caso ilustrativo: o Tiago, vinte e oito anos, programador em Braga, percebeu este argumento e achou-o razoável. Só que não parou aí. Perguntou-se quem estava a comprar, porquê, e o que aconteceria se essas pessoas deixassem de comprar. É esta a pergunta que quero que tenhas em mente durante todo o módulo. Escassez explica uma parte da história. A procura explica a outra."
+            }
+          ],
+          "palavras": 592,
+          "minutos": 3.8
+        },
+        {
+          "id": "2.2",
+          "titulo": "Aula 2.2 — Ethereum: a aldeia com regras que se cumprem sozinhas",
+          "gancho": "O Bitcoin é um caderno de contas. O Ethereum tenta ser uma aldeia inteira, com regras que se cumprem sozinhas.",
+          "cenas": [
+            {
+              "cena": 1,
+              "visual": "Dois cadernos lado a lado. O primeiro tem uma única coluna, «quem tem o quê». O segundo tem colunas, funções e pequenos blocos de código.",
+              "narracao": "O Bitcoin foi pensado, sobretudo, para registar quem tem o quê. O Ethereum foi lançado em 2015 com outra ambição: deixar que qualquer pessoa escreva regras no caderno, e que essas regras se executem sozinhas, sem intermediário. Não é só um registo de saldos. É uma espécie de computador partilhado, onde várias pessoas correm programas ao mesmo tempo, e todas confirmam o resultado."
+            },
+            {
+              "cena": 2,
+              "visual": "Máquina de vending animada. Uma moeda entra, a seleção acende-se, o produto cai. Por cima, a legenda: «se isto, então aquilo».",
+              "narracao": "Essas regras chamam-se smart contracts, ou contratos inteligentes. O nome engana um pouco. Não são contratos no sentido jurídico, e não são inteligentes no sentido de pensar. São programas que correm na rede. Uma analogia que ajuda é a máquina de vending. Metes uma moeda, escolhes uma opção, e a máquina entrega o produto. Não precisas de um funcionário a confirmar. A regra está lá dentro, e cumpre-se igual para toda a gente. Um smart contract funciona assim: se acontecer isto, então isto. Quando a condição se cumpre, a ação executa. Cada um destes programas tem o mesmo esqueleto: uma regra, uma condição e uma execução automática. A diferença está no que se executa e em quem fica responsável se algo correr mal."
+            },
+            {
+              "cena": 3,
+              "visual": "Quatro pequenos ícones: um empréstimo, um mercado de troca, um jogo, uma coleção digital. Cada um tem um ponto de interrogação por baixo.",
+              "narracao": "Isto abre muitas portas. Podes ter empréstimos automáticos, mercados de troca entre pessoas, jogos, coleções digitais. Não te vou dizer quais destas coisas vão funcionar. Nem todas funcionam, e algumas nunca deveriam ter existido. O facto de algo ser possível tecnicamente não quer dizer que seja boa ideia usá-lo, nem que tenha utilidade real para ti."
+            },
+            {
+              "cena": 4,
+              "visual": "Um contrato escrito num ecrã, com uma linha a vermelho e um aviso a piscar: «erro no código».",
+              "narracao": "E aqui vem o aviso que vale ouro: o código também falha. Um contrato escrito à pressa pode ter um erro, e os erros em blockchain são difíceis de corrigir, porque o caderno não se rasga. Em 2016, um projeto chamado The DAO perdeu uma quantidade enorme de ether por causa de uma falha no código, e isso levou a uma divisão da própria rede. Não te quero assustar com números. Quero que percebas uma coisa: código não é garantia de nada por si só."
+            },
+            {
+              "cena": 5,
+              "visual": "Linha do tempo: 2015 com a etiqueta «lançamento», setembro de 2022 com a etiqueta «The Merge», e entre as duas uma seta a mudar de cor, de vermelho para dourado.",
+              "narracao": "Vamos falar agora da grande mudança de 2022. Até setembro desse ano, o Ethereum usava prova de trabalho, como o Bitcoin. Depois, passou para prova de participação. Essa transição chama-se The Merge. A rede deixou de depender de computadores a competir por cálculo e passou a depender de participantes que bloqueiam moedas como garantia. A mudança alterou a forma como a rede consome energia e como as moedas novas são emitidas. Mas não alterou a necessidade de perceber o que estás a comprar. Uma tecnologia melhor não resolve um projeto mal desenhado."
+            },
+            {
+              "cena": 6,
+              "visual": "Ecrã de uma carteira com um campo de taxa a piscar em amarelo. Ao lado, uma etiqueta: «vinte euros de envio, taxa parecida».",
+              "narracao": "Vale a pena perceber, também, como o Ethereum cobra as operações. Cada ação na rede tem um custo, chamado taxa, e essa taxa varia conforme a procura. Em momentos de muita atividade, pode ficar cara. Se alguma vez enviares um valor pequeno e ficares surpreendido com o custo, agora já sabes porquê. Exemplo ilustrativo: a Inês quis enviar vinte euros de uma carteira para outra, e a taxa acabou por ser quase tão alta como o próprio envio. Não foi uma tragédia. Foi uma lição. Pensa também que, quando a rede está muito cheia, cada operação compete com as outras por espaço, e quem paga mais passa à frente. Por isso, o mesmo envio pode custar pouco numa manhã calma e muito numa tarde de pico. Antes de qualquer operação, vê sempre quanto te vai custar."
+            },
+            {
+              "cena": 7,
+              "visual": "Duas colunas num quadro: «Bitcoin» e «Ethereum». Ruben a escrever, à mão, uma pergunta no fundo: «preciso de um caderno ou de um programa?»",
+              "narracao": "Pensa nisto como duas ferramentas diferentes. Um caderno simples serve para registar quem deve o quê. Um programa a correr na rede serve para executar regras complicadas sem intermediário. As duas coisas são úteis, e as duas têm riscos próprios. O erro comum é achar que a complexidade é sinónimo de qualidade. Muitas vezes é só mais superfície para correr mal."
+            }
+          ],
+          "palavras": 636,
+          "minutos": 4.1
+        },
+        {
+          "id": "2.3",
+          "titulo": "Aula 2.3 — Stablecoins: o dólar digital e o risco de quem o emite",
+          "gancho": "Existe uma cripto que devia valer sempre um dólar. Parece um cofre seguro. Pergunta-te: quem guarda o cofre?",
+          "cenas": [
+            {
+              "cena": 1,
+              "visual": "Uma moeda digital com o símbolo de dólar, a deslizar sobre uma linha que deveria ser perfeitamente reta. A linha treme ligeiramente.",
+              "narracao": "Uma stablecoin é uma moeda digital que tenta manter um valor fixo, normalmente um dólar. Os exemplos mais conhecidos são o USDC e o USDT. Parece o cenário ideal: um dólar digital que se move na rede em segundos. Mas repara na palavra tenta. A stablecoin não tem uma garantia mágica. Pelo contrário, o seu valor depende de uma promessa concreta, e essa promessa tem de ser cumprida por alguém."
+            },
+            {
+              "cena": 2,
+              "visual": "Ilustração de uma ficha de casino: um valor escrito na face, e por trás uma pequena mão a segurar a promessa.",
+              "narracao": "O que a stablecoin promete é uma coisa específica: que, por cada unidade emitida, existe uma reserva equivalente, em dinheiro ou em ativos de baixo risco, e que o emissor a resgata ao valor certo. Pensa numa ficha de casino, ou num vale de um supermercado. A ficha vale o que está escrito porque o casino a honra. Se deixar de a honrar, a ficha perde valor. A stablecoin funciona assim: o seu valor depende de quem a emite. Um exemplo do quotidiano: o cartão de refeições da empresa só vale o que o restaurante aceita, e o restaurante só aceita enquanto o sistema lhe pagar. A confiança desce por camadas, e uma camada fraca arrasta as outras."
+            },
+            {
+              "cena": 3,
+              "visual": "Diagrama com três caixas ligadas: «reservas», «emissor», «resgate». Uma seta de pânico, vinda de muitas pessoas, aponta para «resgate».",
+              "narracao": "Por isso existe um termo que devias conhecer: risco do emissor. Quem emite tem de ter reservas verificáveis, tem de cumprir regras, e tem de conseguir resgatar moedas quando as pessoas pedem. Se houver dúvidas sobre as reservas, ou se muita gente tentar resgatar ao mesmo tempo, o valor pode descolar do dólar. Não é uma possibilidade teórica. É exatamente o cenário que se testa quando o mercado entra em pânico."
+            },
+            {
+              "cena": 4,
+              "visual": "Gráfico de linha que sobe a direita e, num dia, cai abruptamente. A legenda diz «perda da paridade».",
+              "narracao": "Isto já aconteceu. Em 2022, uma stablecoin algorítmica, de um ecossistema que chegou a ser enorme, perdeu a paridade com o dólar e arrastou consigo muito valor à volta. Não era uma moeda com reservas em dólares. Era um mecanismo de equilíbrio entre duas moedas digitais. Quando esse equilíbrio partiu, o valor colapsou. Esta história é o melhor argumento para não confiares no nome estável."
+            },
+            {
+              "cena": 5,
+              "visual": "Logótipo genérico de um selo de regulação, com a sigla «MiCA» e uma data: 30 de dezembro de 2024.",
+              "narracao": "Na União Europeia, existe agora um quadro legal chamado MiCA, que se aplica às prestadoras de serviços de criptoativos desde trinta de dezembro de 2024. Isto dá mais regras, mais transparência e mais supervisão. É um avanço real. Mas regras não são garantias de preço, e convém não confundir as duas coisas. Uma stablecoin pode cumprir a regulação e, mesmo assim, ter riscos que dependem das reservas, da liquidez e da confiança de quem a usa. Repara numa diferença prática: um regulamento obriga as empresas a cumprir deveres. Não obriga a moeda a manter um preço certo. São planos diferentes, e não se substituem."
+            },
+            {
+              "cena": 6,
+              "visual": "Exemplo ilustrativo: cem unidades de uma stablecoin, com o valor a descer de um dólar para noventa cêntimos.",
+              "narracao": "Vamos a um exemplo ilustrativo, com valores redondos e inventados. Imagina que tens cem unidades de uma stablecoin que vale um dólar. Se a moeda descolar e passar a valer noventa cêntimos, o teu saldo passa a valer noventa dólares. Nada de dramático à primeira vista. Mas se estavas a usar isto como refúgio, perdeste dez por cento precisamente no momento em que procuravas segurança. Foi isso que tornou o exemplo incómodo."
+            },
+            {
+              "cena": 7,
+              "visual": "Caso ilustrativo: o Rui, quarenta e um anos, professor em Leiria, à secretária com um bloco de notas e três perguntas escritas.",
+              "narracao": "Porque é que as pessoas usam stablecoins? Para sair rapidamente de posições voláteis, para enviar valor entre países, para ter um dólar digital durante um período. São usos legítimos. Só que nenhum deles elimina o risco. Caso ilustrativo: o Rui, quarenta e um anos, professor em Leiria, tinha guardado parte das poupanças numa stablecoin, convencido de que era dinheiro parado sem risco. Quando perguntou onde estavam as reservas e quem as auditava, percebeu que tinha assumido uma coisa sem a verificar. Não perdeu tudo, mas aprendeu a fazer perguntas. Se tiveres dúvidas sobre o comportamento de um valor, a primeira pergunta é sempre a mesma: quem tem a obrigação de o resgatar, e em que condições?"
+            }
+          ],
+          "palavras": 634,
+          "minutos": 4.1
+        },
+        {
+          "id": "2.4",
+          "titulo": "Aula 2.4 — Altcoins, memecoins e as sete perguntas",
+          "gancho": "Há milhares de moedas, e a maioria vai desaparecer. Como é que distingues um projeto sério de uma piada com logótipo?",
+          "cenas": [
+            {
+              "cena": 1,
+              "visual": "Um ecrã cheio de logótipos de moedas a aparecer e a desaparecer, como folhas ao vento.",
+              "narracao": "Chamamos altcoins a todas as criptomoedas que não são Bitcoin. Há muitas, com objetivos muito diferentes. Algumas tentam ser melhores pagamentos, outras querem ligar cadeias de dados, outras querem ser plataformas para aplicações. E depois há as memecoins, que merecem uma secção à parte. Lembro-te: isto é conteúdo educativo, e não é aconselhamento financeiro. O risco de perda é real, e em cripto é frequentemente total."
+            },
+            {
+              "cena": 2,
+              "visual": "Uma moeda desenhada com um rosto sorridente e a legenda «nasceu de uma piada». Por baixo, uma barra de atenção que sobe e desce depressa.",
+              "narracao": "Uma memecoin nasce, muitas vezes, de uma piada, de uma imagem ou de uma tendência nas redes sociais. Não tem, em regra, um problema concreto que resolva. O seu valor depende quase só da atenção que recebe. Quando a atenção muda, o preço muda. Isto pode acontecer em horas, às vezes em minutos. Pensa numa bolha de sabão numa festa de aniversário: é bonita, toda a gente aponta para ela, e rebenta sem avisar. E repara numa palavra que se repete: atenção. Se o valor vem da atenção, quem vende cedo ganha e quem compra tarde perde."
+            },
+            {
+              "cena": 3,
+              "visual": "Ecrã dividido: à esquerda, um anúncio com estrelas e a frase «lucro garantido». À direita, a mesma frase riscada a vermelho.",
+              "narracao": "Não estou a dizer que todas são fraude. Estou a dizer que o risco é altíssimo e que, muitas vezes, o marketing é o único produto. Quando alguém te vende uma moeda com lucro garantido, a resposta correta é desconfiar. Nenhum projeto honesto consegue garantir um retorno, e quem diz que consegue está a tentar que deixes de fazer perguntas."
+            },
+            {
+              "cena": 4,
+              "visual": "Um painel com sete números, de um a sete, em fila. Cada número acende-se quando Ruben fala dele.",
+              "narracao": "Para não ficares dependente de instinto, vou dar-te uma ferramenta: são sete perguntas. Não são uma fórmula, são um filtro. Se não sabes responder a uma delas, ainda não estás preparado para comprar. Primeira: que problema resolve este projeto? Se a resposta for só vai subir, é um mau sinal. Segunda: quem está por trás, e é público? Uma equipa anónima não é necessariamente fraude, mas aumenta o risco, e tens de saber disso antes de decidir. Um projeto com responsáveis identificados, que assumem publicamente o que fazem, tem outro tipo de risco. Nenhum dos dois está livre de risco."
+            },
+            {
+              "cena": 5,
+              "visual": "Gráfico de tarte: uma fatia enorme, a cinzento escuro, marcada «uma carteira», e fatias pequenas para o resto.",
+              "narracao": "Terceira: qual é a oferta total, e quem a detém? Se uma pequena carteira tem a maior parte das moedas, o preço pode ser manipulado com facilidade. Quarta: há utilidade real, ou só especulação? Pergunta quem usa o projeto para algo que não seja comprar e vender. Quinta: quem controla o código, e pode alterá-lo? Se uma pessoa pode mudar as regras sem aviso, precisas de saber disso antes de entrares. Uma pergunta complementar que vale a pena fazer: quem decide as atualizações, e como é que essas decisões são comunicadas?"
+            },
+            {
+              "cena": 6,
+              "visual": "Uma porta de saída com a legenda «liquidez». A porta é estreita, e à frente dela há muita gente a empurrar ao mesmo tempo.",
+              "narracao": "Sexta: onde se negoceia, e há liquidez suficiente para vender? Um ativo sem compradores é um ativo que não consegues vender ao preço que vês no ecrã. Sétima, e talvez a mais útil: o que acontece se o projeto desaparecer amanhã? Se a resposta é nada, perco tudo, já sabes quanto podes arriscar. Se não tens forma de vender, o gráfico do ecrã é apenas uma opinião. Estas sete perguntas não te dão certezas. Dão-te perguntas melhores do que as que a publicidade te faz."
+            },
+            {
+              "cena": 7,
+              "visual": "Exemplo ilustrativo: uma ficha com quatro linhas marcadas a vermelho e um carimbo final: «não entrar».",
+              "narracao": "Exemplo ilustrativo, com valores inventados. Imagina uma moeda que promete rendimento alto, tem um fundador sem rosto, tem noventa por cento da oferta numa só carteira e não tem nenhum uso fora da própria moeda. Respondeste mal a quase todas. Não é preciso mais nada para decidires não entrar. E se, pelo contrário, as respostas fossem boas, ainda assim não te obrigavam a comprar. Uma boa resposta só te diz que vale a pena estudar mais, nunca que o preço vai subir. Atenção também aos pedidos: se alguém te pede para enviar cripto para desbloquear um valor, ou te pressiona a decidir hoje, isso não é análise. É pressão. Vamos falar de burlas com mais detalhe no módulo 5. Repara que não te pedi para acertar. Pedi-te para não te deixares levar pela pressa, e para perceberes o que ainda não sabes."
+            }
+          ],
+          "palavras": 662,
+          "minutos": 4.3
+        }
+      ]
+    },
+    {
+      "ficheiro": "modulo-3.md",
+      "titulo": "Módulo 3 — Comprar pela primeira vez (≈17 min)",
+      "aulas": [
+        {
+          "id": "3.1",
+          "titulo": "Aula 3.1 — Plataforma autorizada e KYC",
+          "gancho": "A primeira compra de cripto pode pedir-te o cartão de cidadão, uma selfie e o NIF. Estranho? Não é. Está lá por uma razão.",
+          "cenas": [
+            {
+              "cena": 1,
+              "visual": "Ecrã de um telemóvel com um botão a dourado a dizer «comprar». Por cima, um aviso a vermelho: «Confirma antes de avançar.»",
+              "narracao": "Antes de comprares qualquer coisa, precisas de uma plataforma. Chama-se a isto uma exchange, ou plataforma de troca. É o sítio onde trocas euros por criptomoedas e vice-versa. E, neste passo, a escolha é a decisão mais importante que vais tomar em todo o bootcamp. Mais importante do que o preço, do que a moeda, do que o momento. Porque é que digo isto? Porque a maioria das perdas graves que as pessoas sofrem não começa com o mercado. Começa com a plataforma."
+            },
+            {
+              "cena": 2,
+              "visual": "Ilustração de um cofre de banco com uma porta entreaberta, e um pequeno sinal de aviso ao lado.",
+              "narracao": "Uma plataforma que não está autorizada pode desaparecer com o teu dinheiro, bloquear-te a conta, ou mentir sobre onde estão os fundos. Não precisa de ser uma fraude sofisticada. Basta não ter ninguém a supervisionar o que faz. Pensa numa analogia: um restaurante com licença da câmara e outro sem licença podem servir a mesma comida. Só um deles tem alguém a responder perante a lei se algo correr mal. Por isso, o primeiro critério é simples: a plataforma tem autorização, e alguém oficial a fiscaliza? Se a resposta é não, a conversa acaba aqui."
+            },
+            {
+              "cena": 3,
+              "visual": "Carta de um regulamento com a sigla «MiCA» em destaque, e ao lado um símbolo de selo oficial com a palavra «registo».",
+              "narracao": "Na União Europeia, existe o regulamento MiCA, que já falámos. As plataformas que prestam serviços de criptoativos precisam de autorização e são supervisionadas. Em Portugal, a entidade que supervisiona os mercados de valores mobiliários é a CMVM. Vai ao site oficial dessa entidade, ou da autoridade do país onde a plataforma diz estar sediada, e confirma se ela consta do registo de prestadoras autorizadas. Se não estiver lá, não importa o quão bonito seja o site."
+            },
+            {
+              "cena": 4,
+              "visual": "Três fontes de informação lado a lado: um anúncio com estrelas, um vídeo de um influenciador, uma página oficial de registo. A primeira e a segunda ficam esbatidas; a terceira fica nítida.",
+              "narracao": "Não confies só num logótipo, numa publicidade, nem num influenciador que recebe para falar de uma plataforma. Confia no registo oficial. Escreve o nome exato da plataforma, procura no registo, e compara o nome e o domínio do site com o que lá aparece. Parece trabalho a mais, e é exatamente o trabalho que as burlas esperam que não faças. Um minuto de verificação vale mais do que qualquer promoção que te chegue por mensagem."
+            },
+            {
+              "cena": 5,
+              "visual": "Ecrã de formulário com campos a preencher: nome, data de nascimento, NIF, e um botão para carregar uma fotografia do documento.",
+              "narracao": "Agora, o KYC. A sigla quer dizer know your customer, conhece o teu cliente, e é o processo de verificação de identidade. Vais precisar de fornecer um documento de identificação, muitas vezes uma selfie com o documento, e o teu número de contribuinte. Pode parecer incómodo. Mas é exatamente o que a lei exige para combater branqueamento de capitais e fraude. É também a diferença entre uma plataforma séria e uma que quer apenas o teu dinheiro sem perguntas. Quem te pede documentos está a cumprir um dever. Quem não te pede nada merece uma segunda leitura. Repara que isto não é uma desconfiança contra ti. Os bancos fazem o mesmo quando abres uma conta, e ninguém acha isso estranho. Em cripto, ainda há muita gente a pensar que o anonimato é um produto. Quase sempre é um sinal de risco."
+            },
+            {
+              "cena": 6,
+              "visual": "Um telemóvel a receber uma mensagem com uma ligação. Por baixo, um ícone de alarme e a frase: «Depositar agora para desbloquear a conta».",
+              "narracao": "Vale a pena reparar num sinal de alarme. Se uma plataforma te deixa depositar sem verificar identidade, desconfia. Se te pede dinheiro por fora, ou para desbloquear uma conta, ou para pagar uma taxa que nunca tinhas visto, põe isso de lado. O KYC não é um obstáculo. É um sinal de que alguém está a fazer o trabalho de casa. E uma mensagem que te apressa a depositar é quase sempre uma mensagem de quem quer o teu dinheiro antes de tu pensares."
+            },
+            {
+              "cena": 7,
+              "visual": "Caso ilustrativo: o Gonçalo, trinta e dois anos, técnico de manutenção em Setúbal, a olhar para um portátil com o registo oficial aberto.",
+              "narracao": "Caso ilustrativo: o Gonçalo, trinta e dois anos, técnico de manutenção em Setúbal, estava quase a depositar numa plataforma que lhe tinha chegado por uma mensagem. Parecia bem feita, tinha até um apoio com nome. Antes de avançar, foi ao registo oficial e não encontrou a plataforma. Não comprou nada. Ficou a saber que a mensagem era uma armadilha. Parecia pouco, mas foi a decisão mais valiosa desse mês."
+            }
+          ],
+          "palavras": 647,
+          "minutos": 4.2
+        },
+        {
+          "id": "3.2",
+          "titulo": "Aula 3.2 — O custo real de comprar",
+          "gancho": "Compras cem euros de uma cripto e, um minuto depois, vales menos do que cem euros. O preço ainda nem se mexeu. Então o que aconteceu?",
+          "cenas": [
+            {
+              "cena": 1,
+              "visual": "Um recibo de compra animado. Cada linha aparece por ordem: «valor», «taxa», «spread», «total». O total fica sublinhado.",
+              "narracao": "Quando compras cripto, pagas mais do que o preço que vês no ecrã. Não é batota. São custos, e convém conhecê-los antes de comprares, e não depois. Imagina que vais comprar uma peça de roupa numa loja e, à hora de pagar, aparece um valor extra que não estava na etiqueta. Não te sentes enganado se já sabias que esse valor existe. Sentes-te enganado quando ninguém te avisou. Há três custos que quase toda a gente encontra. O primeiro é a taxa da plataforma. É uma percentagem sobre o valor da operação, e pode variar consoante o método de pagamento e o tipo de conta. Lê sempre a tabela de taxas completa, e não só o resumo que aparece na página de entrada."
+            },
+            {
+              "cena": 2,
+              "visual": "Uma barra de dois preços: à esquerda, «preço de compra», um pouco mais alto; à direita, «preço de venda», um pouco mais baixo. Um espaço entre as duas barras, marcado a dourado.",
+              "narracao": "O segundo custo é o spread. É a diferença entre o preço a que compras e o preço a que vendes, no mesmo momento. Se o preço de compra é um pouco mais alto do que o de venda, essa diferença é o spread, e fica com a plataforma ou com quem faz o mercado. Parece um detalhe, mas é algo que sentes em cada operação, mesmo quando não reparas."
+            },
+            {
+              "cena": 3,
+              "visual": "Ícone de uma carteira a receber uma seta, com a legenda «taxa de rede». A seta muda de tamanho conforme a procura.",
+              "narracao": "O terceiro custo, para quem transfere para uma carteira própria, é a taxa de rede. Cada transferência na blockchain tem um custo, que varia com a procura da rede. Já vimos isto no Ethereum. Não é a plataforma que a cobra, é a própria rede. E quem não sabe disto fica surpreendido quando o valor que chega é menor do que o que enviou."
+            },
+            {
+              "cena": 4,
+              "visual": "Exemplo ilustrativo: uma conta de papel com números redondos. «100 € de compra», «− 1 € de taxa», «− 0,50 € de spread», «= 98,50 € de valor real».",
+              "narracao": "Vamos fazer a conta com valores redondos e hipotéticos. Exemplo ilustrativo. Compras cem euros. A plataforma cobra uma taxa de um por cento. O spread, nessa altura, é de meio por cento. Estás a pagar cerca de um euro e meio de custos. Ficam uns noventa e oito euros e meio a valer, em termos de mercado. Parece pouco. Mas olha para o outro lado da conta. Um custo de um euro e meio, numa compra de cem, parece um arredondamento. Só que o custo não fica quieto: fica a trabalhar contra ti desde o primeiro segundo."
+            },
+            {
+              "cena": 5,
+              "visual": "Uma seta a descer dois por cento sobre a posição de 98,50 euros. O saldo passa a 96,53, e uma segunda seta, a subir, tenta regressar ao ponto de partida.",
+              "narracao": "Se o preço cair dois por cento logo a seguir, o teu saldo desce para cerca de noventa e seis euros e meio. Precisas de subir mais do que dois por cento só para voltares ao ponto de partida. Os custos empurram-te para trás antes de o mercado te dar qualquer ganho. E quanto mais frequentes forem as compras e as vendas, mais os custos comem o resultado. Cada operação tem um pequeno imposto invisível, e ele acumula. Não é uma regra de quem vende. É matemática. Quem entra e sai muitas vezes tem de ganhar mais só para ficar onde estava. Esta conta não tem nada de especial: é a mesma para qualquer pessoa que compre o mesmo valor, com as mesmas taxas."
+            },
+            {
+              "cena": 6,
+              "visual": "Ruben com uma calculadora na mão, a rodar a câmara para mostrar o ecrã.",
+              "narracao": "Esta é a parte que muita gente não faz. Pensa no custo total de entrar e de sair. Se compras e vendes, pagas duas vezes. Se só guardas, paga-se uma vez, mas o tempo de espera também custa, em risco e em oportunidade. Não estou a dizer que comprar é mau. Estou a dizer que o custo tem de estar na conta antes do primeiro clique. Se só pensas no preço, estás a ver metade da fatura. E há um detalhe que vale ouro: o custo de comprar com cartão costuma ser diferente do custo de transferir por banco. Pergunta sempre qual o método mais barato para o teu caso, e compara com a tabela oficial, e não com a memória."
+            },
+            {
+              "cena": 7,
+              "visual": "Caso ilustrativo: a Inês a comparar uma aplicação com um caderno, com um lápis a riscar uma linha.",
+              "narracao": "Caso ilustrativo: a Inês fez uma compra pequena e reparou que a aplicação mostrava um valor ligeiramente inferior ao que tinha pago. Pensou que a app estava errada. Não estava. Eram as taxas e o spread. Depois de fazer a conta com papel e lápis, percebeu tudo, e passou a olhar para o custo antes de cada operação. Foi a melhor forma de aprender, porque o erro custou-lhe muito pouco."
+            }
+          ],
+          "palavras": 695,
+          "minutos": 4.5
+        },
+        {
+          "id": "3.3",
+          "titulo": "Aula 3.3 — Ordem de mercado ou ordem limite",
+          "gancho": "Carregas no botão de comprar, e o preço que aparece no ecrã não é o preço que pagas. Vamos perceber porquê.",
+          "cenas": [
+            {
+              "cena": 1,
+              "visual": "Dois botões lado a lado: «mercado» e «limite». Por baixo de cada um, um pequeno texto a explicar a diferença.",
+              "narracao": "Quando colocas uma ordem numa plataforma, tens de escolher um tipo de ordem. Os dois mais comuns são a ordem de mercado e a ordem limite. Parecem termos técnicos, mas decidem o que acontece ao teu dinheiro. Vamos por partes, com calma, porque é um dos pontos onde mais gente se engana logo na primeira compra."
+            },
+            {
+              "cena": 2,
+              "visual": "Animação de uma seta a subir a toda a velocidade, com uma ordem de mercado a ser executada um pouco acima do preço que se via no ecrã.",
+              "narracao": "A ordem de mercado diz à plataforma: compra agora, ao preço que houver. É rápida, e garante que a compra se faz. O risco é que o preço possa mexer entre o momento em que carregas e o momento em que a ordem é executada. Em mercados rápidos, isso chama-se derrapagem, ou slippage, e pode ser significativa. Tens certeza de comprar, mas não tens certeza do preço. Pensa numa banca de feira: pagas o preço escrito na tabuleta. Numa plataforma com muito movimento, o preço pode mudar entre o momento em que carregas e o momento em que a ordem chega. É a mesma ideia, só que a velocidade é outra."
+            },
+            {
+              "cena": 3,
+              "visual": "Uma linha horizontal marcada «100 €». Uma ordem limite aparece abaixo dela, com a legenda «compro só até aqui». A seta do preço desce e toca essa linha, e a ordem executa-se.",
+              "narracao": "A ordem limite diz: compra só se o preço for igual ou inferior a este valor que eu escolho. Tens controlo sobre o preço máximo que pagas. O risco é que a ordem não seja executada, se o preço nunca chegar lá. Ficas sem compra, e nada acontece. Parece fraco, mas é uma proteção. Na prática, uma ordem limite não compra por ti no pior momento. Pode também ser executada só em parte, se houver pouca liquidez a esse preço. Lê as condições da plataforma sobre este ponto, porque variam de sítio para sítio."
+            },
+            {
+              "cena": 4,
+              "visual": "Exemplo ilustrativo: um ativo a cem euros. Dois cenários em paralelo: um sobe para cento e dois, o outro fica parado à espera.",
+              "narracao": "Vamos com um exemplo ilustrativo e valores inventados. Imagina um ativo que está a cem euros, e queres comprar cem euros de exposição. Com ordem de mercado, compras já, e pode ser que o preço suba para cento e dois no segundo que demora a executar. Com ordem limite a noventa e oito, só compras se o preço descer até lá. Se não descer, não compras. Nenhuma das duas é a resposta universal. Cada uma escolhe um risco diferente."
+            },
+            {
+              "cena": 5,
+              "visual": "Uma balança com dois pratos: num, «certeza de execução»; no outro, «certeza de preço». A balança oscila, e o ponteiro fica no meio.",
+              "narracao": "Repara no que isto significa. A ordem de mercado troca certeza de preço por certeza de execução. A ordem limite troca certeza de execução por certeza de preço. Não há uma melhor em todas as situações. Quem diz que há uma ordem sempre superior à outra está a simplificar demais, e a simplificação, em mercados, costuma sair cara. Há uma adequada ao que estás a fazer, ao tempo que tens e ao quanto a variação te incomoda. Pensa também no tempo: se a ordem fica aberta durante dias, o mercado pode mudar completamente, e a ordem que escreveste ontem já não representa o que queres hoje."
+            },
+            {
+              "cena": 6,
+              "visual": "Um quadro com duas colunas: «uso mercado quando» e «uso limite quando». Ruben a apontar para as colunas.",
+              "narracao": "Para quem está a começar, a regra prática é esta. Usa ordem limite quando não tens pressa e queres controlar o preço. Usa ordem de mercado quando precisas de entrar agora e aceitas a variação. Mas nunca uses ordem de mercado num momento de pânico, porque é aí que o preço mais se mexe. Se o ecrã está vermelho e tu sentes vontade de entrar já, essa vontade é o sinal para parares e leres as tuas notas. E atenção a um erro comum: colocar um limite demasiado perto do preço atual, achando que é uma pechincha, e depois ficar a olhar para uma ordem que nunca executa. Um limite tem de ser uma decisão, e não um palpite."
+            },
+            {
+              "cena": 7,
+              "visual": "Caso ilustrativo: o Gonçalo, o técnico de Setúbal, a olhar para um histórico de operações com uma ordem de mercado a destacar-se.",
+              "narracao": "Caso ilustrativo: o Gonçalo colocou uma ordem de mercado num dia de notícias rápidas, e pagou mais do que tinha previsto. Não foi uma catástrofe, mas aprendeu que a ordem é uma decisão, e não um clique automático. Desde então, escreve sempre o preço máximo que está disposto a pagar antes de carregar em qualquer botão."
+            }
+          ],
+          "palavras": 642,
+          "minutos": 4.2
+        },
+        {
+          "id": "3.4",
+          "titulo": "Aula 3.4 — O teu primeiro euro",
+          "gancho": "A primeira compra deve ser a mais pequena de todas. Não é timidez. É método.",
+          "cenas": [
+            {
+              "cena": 1,
+              "visual": "Ruben a escrever um número numa folha, e depois a sublinhá-lo duas vezes. Aparece a legenda: «limite de perda».",
+              "narracao": "Chegámos ao momento de comprar. Antes disso, quero que ponhas um limite. Não um limite de lucro, um limite de perda. Um valor que, se desaparecer, não te muda a vida. Escolhe-o com calma, sem pressa. Pergunta-te: quanto dinheiro posso perder sem prejudicar a renda, a alimentação, as contas da casa, o fundo de emergência? Esse valor, ou uma fração pequena dele, é o teu primeiro euro. Se não encontras um valor assim, não compres. Não há pressa, e nenhuma moeda vai desaparecer por esperares uma semana. Um limite de perda não é uma previsão. É uma regra que tu escreves para ti próprio, antes de o mercado começar a falar."
+            },
+            {
+              "cena": 2,
+              "visual": "Lista animada de passos, cada um com um visto a aparecer: «2FA», «endereço verificado», «teste pequeno», «decisão tomada», «registo feito».",
+              "narracao": "Vamos aos passos práticos, para não improvisares. Um: ativa a autenticação de dois fatores na plataforma. É o código que chega ao telemóvel quando entras. Sem isso, qualquer pessoa que descubra a tua palavra-passe pode entrar na conta. Dois: confirma o endereço de tudo o que vais usar. O site, a aplicação, o nome da plataforma. Escreve o endereço à mão ou guarda-o nos favoritos, e nunca cliques em ligações que te chegam por mensagem."
+            },
+            {
+              "cena": 3,
+              "visual": "Um depósito pequeno animado, com um valor simbólico a entrar na conta e um visto a aparecer ao lado.",
+              "narracao": "Três: faz primeiro uma operação de teste. Um depósito pequeno, uma compra pequena, e, se for o caso, uma transferência pequena para verificar que o caminho funciona. Só depois aumentas. A primeira operação serve para aprender o processo, e não para ganhar dinheiro. Se algo não bater certo, descobres-o com pouco em jogo. E uma regra de ouro: não faças o teste com o valor que tencionas usar na compra grande. O teste serve para aprender o caminho, e não para testar a sorte."
+            },
+            {
+              "cena": 4,
+              "visual": "Ecrã de um mercado a piscar verde, e, por baixo, um botão de compra com um pequeno cadeado a mostrar que ainda não está carregado.",
+              "narracao": "Quatro: compra só depois de teres tomado a decisão, e não durante o movimento do preço. Quando o ecrã está a piscar verde, a tentação é entrar já. Essa vontade é o primeiro sinal para parar. As decisões tomadas sob pressão de um gráfico raramente são as melhores, porque o gráfico não sabe nada sobre a tua vida. Um truque útil: escreve a decisão numa nota antes de abrires a aplicação, com o valor e o motivo. Se a vontade de comprar passar, a nota continua lá, e decides com a cabeça fria."
+            },
+            {
+              "cena": 5,
+              "visual": "Um caderno aberto com uma tabela desenhada: «data», «valor», «preço», «taxa», «tipo de ordem», «motivo».",
+              "narracao": "Cinco: regista tudo. Data, valor, preço, taxa, tipo de ordem, motivo. Parece burocrático, mas é aí que aprendes. Daqui a três meses vais olhar para este registo e perceber melhor do que hoje o que funcionou e o que não funcionou. Quem não regista tende a lembrar-se só do que correu bem, e isso engana qualquer um. Se, ao rever o registo, reparares que compras sempre que o preço sobe e fazes asneira quando desce, já tens uma informação preciosa sobre ti próprio. Isso vale mais do que qualquer análise técnica."
+            },
+            {
+              "cena": 6,
+              "visual": "Caso ilustrativo: a Inês com a checklist impressa numa mesa de café, cada linha marcada à caneta.",
+              "narracao": "Caso ilustrativo: a Inês fez exatamente isto. Escolheu um valor que não lhe fazia falta, ativou a autenticação, testou com um depósito pequeno e escreveu cada passo num caderno. Não ficou rica nem pobre no primeiro mês, e nem era esse o objetivo. Ficou com um processo, e isso é o que queremos que tenhas. O processo é o que te protege quando as emoções se intrometem. E se algum dia a checklist te disser que não, isso não é um fracasso. É o processo a funcionar."
+            },
+            {
+              "cena": 7,
+              "visual": "Ruben de pé, em plano médio, a fechar o caderno. Texto no ecrã: «Conteúdo educativo, não é aconselhamento financeiro. O risco de perda é real.»",
+              "narracao": "Exercício: cria uma checklist de cinco linhas, com os passos que acabei de dizer, e marca cada um à medida que o fazes. Não avances para a compra enquanto não tiveres as cinco. Se achares que uma linha não se aplica, escreve porquê, e fala com alguém de confiança antes de a riscares. Relembro o essencial deste módulo: conteúdo educativo, não é aconselhamento financeiro, e o risco de perda é real. Se o valor que escolheste não te deixa dormir descansado, é porque é demasiado alto."
+            }
+          ],
+          "palavras": 642,
+          "minutos": 4.2
+        }
+      ]
+    },
+    {
+      "ficheiro": "modulo-4.md",
+      "titulo": "Módulo 4 — A tua chave: carteiras e seed phrase (≈17 min)",
+      "aulas": [
+        {
+          "id": "4.1",
+          "titulo": "Aula 4.1 — Carteiras quentes e frias",
+          "gancho": "A carteira não guarda moedas. Nunca guardou. Guarda chaves. E quem tem a chave tem o dinheiro.",
+          "cenas": [
+            {
+              "cena": 1,
+              "visual": "Animação de uma carteira aberta, de onde sai uma chave dourada. Por trás, a blockchain aparece como uma grelha de páginas, e a chave aponta para uma delas.",
+              "narracao": "Vamos fazer uma correção logo à partida, porque é a confusão mais comum. Uma carteira de criptomoedas não é um cofre com moedas dentro. As moedas vivem na blockchain, no caderno partilhado de que falámos no módulo 1. A carteira guarda as chaves que permitem assinar operações, e são essas chaves que dão acesso ao valor. Quem percebe isto muda a forma como pensa sobre segurança, porque deixa de procurar o sítio onde estão as moedas e passa a procurar o sítio onde estão as chaves. Pensa numa analogia do quotidiano: o número do cartão do banco não te dá dinheiro, mas quem o tiver e souber o código pode gastar. Com cripto, a chave faz esse papel, só que sem balcão nem serviço de reclamações."
+            },
+            {
+              "cena": 2,
+              "visual": "Uma chave dourada em destaque sobre fundo carvão. A frase aparece devagar: «Em cripto, quem tem a chave tem o dinheiro.»",
+              "narracao": "É por isso que a metáfora deste bootcamp é a chave. Em cripto, quem tem a chave tem o dinheiro. Não há um gerente a quem pedir reposição, nem um balcão onde explicar que perdeste o cartão. Se a chave se perde, o acesso perde-se. Se a chave é roubada, o valor também. Isto pode parecer duro, mas é exatamente o que dá sentido à expressão ser dono do teu dinheiro. Ser dono também quer dizer ser responsável."
+            },
+            {
+              "cena": 3,
+              "visual": "Um ecrã de telemóvel com uma aplicação aberta, e um cadeado pequeno a piscar no canto. Legenda: «carteira quente».",
+              "narracao": "Existem dois grandes tipos de carteira. O primeiro é a carteira quente. É uma aplicação ou um programa ligado à internet. É cómoda, rápida, e serve para operações do dia a dia. O risco é que, por estar ligada, está mais exposta: a um telemóvel infetado, a um site falso, a uma aplicação copiada que parece igual à original. A comodidade e a exposição andam sempre juntas. Uma aplicação bem feita não é por isso insegura, mas exige que confirmes sempre de onde a descarregaste."
+            },
+            {
+              "cena": 4,
+              "visual": "Um dispositivo físico, pequeno, a ser ligado a um computador com um cabo. Ao lado, um ecrã no próprio aparelho pede confirmação. Legenda: «carteira fria».",
+              "narracao": "O segundo é a carteira fria. É um dispositivo físico, muitas vezes do tamanho de uma pen, que guarda as chaves offline. Para assinar uma operação, tens de a ligar e confirmar no próprio aparelho. Um exemplo comercial conhecido é a Ledger, que existe na loja MTM. A vantagem é que a chave não sai do dispositivo. A desvantagem é que é menos prática, e se a perderes sem cópia de segurança, o problema continua. Já lá vamos."
+            },
+            {
+              "cena": 5,
+              "visual": "Gráfico animado `tipos-carteira`: duas colunas comparadas em barras. «Comodidade», «exposição», «uso diário», «guarda de longo prazo». Cada barra cresce até ao seu lugar.",
+              "narracao": "Vamos com uma comparação simples. A carteira quente é como ter dinheiro na carteira de bolso: está à mão, serve para o café. A carteira fria é como ter um cofre em casa, com uma chave que só tu usas, para as poupanças. Nenhuma das duas é a resposta universal. Depende de quanto tens, com que frequência mexes, e quanto risco estás disposto a assumir. O gráfico mostra o trade-off: quanto mais comodidade, mais exposição. Não é uma tabela de qualidade. Uma carteira fria não é melhor em todas as situações; é melhor para certas situações."
+            },
+            {
+              "cena": 6,
+              "visual": "Ruben a apontar para uma regra escrita numa placa: «valor pequeno, uso frequente → quente. Valor parado → fria.»",
+              "narracao": "Há uma regra prática que deves guardar. Valores pequenos e de uso frequente podem viver numa carteira quente. Valores que não mexes durante meses merecem uma fria. E nenhuma carteira te protege de um erro teu, como enviar para o endereço errado, ou assinar algo que não compreendeste. A segurança técnica não substitui a atenção. Antes de confirmares qualquer operação, lê o que estás a confirmar. Repara também que uma carteira fria não te livra de burlas. Se alguém te convencer a assinar uma operação maliciosa no próprio aparelho, a tecnologia está lá, mas quem decide és tu."
+            },
+            {
+              "cena": 7,
+              "visual": "Caso ilustrativo: o Tiago, o programador de Braga, a olhar para o telemóvel com uma mensagem de «conta recuperada» no ecrã.",
+              "narracao": "Atenção: o endereço da carteira é público, como um número de conta. Pode ser partilhado para receber. Mas a chave privada e a frase de recuperação nunca. Caso ilustrativo: o Tiago tinha quase tudo numa aplicação de telemóvel. Um dia perdeu o aparelho. Conseguiu recuperar a conta porque tinha a frase de recuperação guardada, mas passou um fim de semana inteiro a tratar disso. Ficou a saber que a comodidade tem um preço, e que o preço se paga em tempo, em stress e em atenção."
+            }
+          ],
+          "palavras": 664,
+          "minutos": 4.3
+        },
+        {
+          "id": "4.2",
+          "titulo": "Aula 4.2 — A seed phrase: as palavras que valem tudo",
+          "gancho": "Doze ou vinte e quatro palavras, por uma ordem certa. Quem as tiver, tem o dinheiro. Ninguém mais precisa de ti para nada.",
+          "cenas": [
+            {
+              "cena": 1,
+              "visual": "Uma grelha de doze caixas numeradas, a preencher-se palavra a palavra, com a legenda «seed phrase».",
+              "narracao": "Quando crias uma carteira, a aplicação ou o dispositivo gera uma frase de recuperação. Chama-se seed phrase, ou frase semente. Normalmente tem doze ou vinte e quatro palavras, em ordem específica. Essa frase é, na prática, a chave-mestra da tua carteira. Não é uma senha que podes mudar quando quiseres. É a própria origem das chaves, e quem a tem consegue recriar a carteira em qualquer lado. Pensa nela como a combinação de um cofre e não como a porta: quem a sabe abre o cofre de qualquer sítio, a qualquer hora, e não deixa um rasto que alguém consiga seguir a tempo. Repara também que a frase é gerada uma vez, no momento da criação. Por isso, é o momento em que tens de estar mais atento."
+            },
+            {
+              "cena": 2,
+              "visual": "Um telemóvel perdido numa mesa, e ao lado uma folha de papel com as palavras escritas à mão. Uma seta mostra que a carteira reaparece num computador novo.",
+              "narracao": "Porque é que é tão importante? Porque, se perderes o telemóvel, se a aplicação falhar, se o dispositivo avariar, podes recriar a carteira noutro sítio só com essas palavras. Sem elas, não há recuperação. E com elas, quem as tiver consegue fazer tudo o que tu fazes. Não precisa da tua palavra-passe, nem do teu código, nem de ti. Esta é a diferença que mais gente não percebe."
+            },
+            {
+              "cena": 3,
+              "visual": "Um ecrã com quatro regras numeradas a aparecer uma a uma, com um ícone de proibido ao lado de cada uma.",
+              "narracao": "Por isso, há regras que se cumprem sempre. Não há exceções. Primeira regra: nunca introduzas a seed phrase num site. Nem para verificar, nem para recuperar, nem para desbloquear. Nenhuma plataforma séria, nenhum suporte legítimo, nenhuma aplicação oficial te vai pedir essas palavras. Segunda regra: nunca a envies a ninguém, por mensagem, email, chamada ou fotografia. Se alguém se apresentar como suporte e pedir a frase, é burla. Ponto final."
+            },
+            {
+              "cena": 4,
+              "visual": "Ecrã de um telemóvel com uma chamada a aparecer, e um nome genérico: «Suporte». Por baixo, a frase: «Confirme as palavras para validar a sua conta.»",
+              "narracao": "Terceira regra: nunca a fotografes, nem a guardes no telemóvel, no computador, no email, num bloco de notas, ou numa nuvem. Qualquer cópia digital é uma cópia que pode ser roubada, e muitas vezes sem que dês por isso. Quarta regra: escreve à mão, em papel, com caneta. E nunca no mesmo sítio onde guardas o cartão do banco ou as tuas palavras-passe."
+            },
+            {
+              "cena": 5,
+              "visual": "Exemplo ilustrativo: a Inês ao telefone, com uma folha de notas em cima da mesa e um ponto de interrogação a crescer no ecrã.",
+              "narracao": "Parece exagero? Pensa nisto. A maioria das pessoas que perdem cripto não perdem por causa do mercado. Perdem porque deram as palavras a alguém que lhes ligou a dizer que era do suporte. Exemplo ilustrativo: a Inês recebeu uma chamada de um número que dizia pertencer a uma plataforma. A pessoa do outro lado era simpática, tinha um tom profissional e pediu-lhe as palavras para confirmar a identidade. Ela desligou. Depois percebeu que tinha estado a um passo de perder tudo, e que a pressa fazia parte do esquema."
+            },
+            {
+              "cena": 6,
+              "visual": "Três palavras-chave em destaque, uma a uma: «urgência», «autoridade», «pedido de palavras». Por baixo, a legenda: «sempre o mesmo guião».",
+              "narracao": "Repara no padrão. Urgência, autoridade, pedido de palavras. É sempre o mesmo guião, e muda apenas o nome da plataforma e o tom da voz. Quando sentires a pressão a subir, para. Ninguém legítimo precisa de ti com essa pressa. Nenhuma mensagem, nenhum vídeo e nenhuma chamada que comece com urgência é uma boa razão para desbloquear fosse o que fosse. A pressa é a ferramenta preferida de quem quer o teu dinheiro antes de tu pensares. E se a chamada te obriga a decidir já, a resposta é desligar e ligar tu para o número oficial. Vamos ver todos os padrões de burla no módulo 5."
+            },
+            {
+              "cena": 7,
+              "visual": "Ruben com uma folha limpa à frente, a escrever as palavras uma a uma, com o número ao lado de cada uma, e depois a conferir com o dedo.",
+              "narracao": "Vamos ao procedimento correto para guardar. Abre uma folha limpa, escreve as palavras uma a uma, com o número ao lado, e confirma duas vezes. Depois guarda a folha num sítio seco e seguro. Não a dobres demasiado, porque papel e humidade não se dão bem. Se alguma vez escreveres uma palavra errada, não tentes adivinhar a correção no ecrã de ninguém. Recomeça a folha com calma, em casa, sem ninguém a apressar-te. E não a mostres nem a fotografes, nem sequer para te lembrares de uma palavra. Se algum dia precisares de recuperar, usas só a aplicação oficial, descarregada das lojas oficiais, e nunca um link que te enviaram."
+            }
+          ],
+          "palavras": 658,
+          "minutos": 4.3
+        },
+        {
+          "id": "4.3",
+          "titulo": "Aula 4.3 — Not your keys, not your coins",
+          "gancho": "Deixar cripto numa plataforma é parecido com deixar dinheiro num banco. É cómodo. Mas quem tem a chave?",
+          "cenas": [
+            {
+              "cena": 1,
+              "visual": "Frase em destaque, a dourado sobre carvão: «not your keys, not your coins». Por baixo, a tradução: «se não tens as chaves, não tens as moedas».",
+              "narracao": "Há uma frase que os veteranos repetem: not your keys, not your coins. Em português, quer dizer: se não tens as chaves, não tens as moedas. Vamos perceber o que isso significa, sem dramatizar, porque a frase não quer dizer que deixar cripto numa plataforma seja automaticamente um erro. Quer dizer que tens de saber o que estás a aceitar quando o fazes."
+            },
+            {
+              "cena": 2,
+              "visual": "Ilustração de uma plataforma como um grande cofre com muitas gavetas. Cada gaveta tem um nome de utilizador. Uma delas está marcada: «o teu saldo».",
+              "narracao": "Quando compras cripto numa plataforma e a deixas lá, a plataforma guarda as chaves por ti. Chama-se a isto custódia de terceiros. É a forma mais cómoda. Recuperas a palavra-passe se a esqueceres, vês o saldo no ecrã, e podes vender com um clique. Para muita gente, esta comodidade é exatamente o que procura, e não há mal nisso, desde que a escolha seja consciente."
+            },
+            {
+              "cena": 3,
+              "visual": "Uma linha entre duas caixas: «plataforma» e «tu». A linha fica fina e tremeluzente, com um ícone de alerta.",
+              "narracao": "O preço dessa comodidade é que passas a depender da plataforma. Se a plataforma tiver um problema técnico, se for atacada, se for mal gerida, ou se deixar de operar, o teu acesso pode ficar bloqueado. Em alguns casos, o dinheiro pode não voltar. Não é o cenário mais comum, mas é exatamente o que a palavra custódia significa: alguém guarda aquilo que é teu, e tens de confiar nessa guarda. Pensa num banco tradicional: o dinheiro está em teu nome, mas é o banco que tem os sistemas, e confias que os mantém seguros. Com cripto é parecido, só que a regulação e os direitos de recuperação variam muito de caso para caso."
+            },
+            {
+              "cena": 4,
+              "visual": "Ecrã dividido: à esquerda, uma carteira própria com uma chave na mão de quem a usa. À direita, um cofre de plataforma com um cadeado que não é o teu.",
+              "narracao": "E também há o contrário. Uma carteira própria, sem custódia, dá-te controlo total. Mas se perdes a chave, perdes tudo, e não há ninguém a quem pedir ajuda. O risco passa de quem te guarda para ti próprio. Repara que a palavra recuperar pode ter dois sentidos: recuperar a conta, quando esqueceste a palavra-passe, e recuperar o dinheiro, quando algo corre mal. O primeiro é normal. O segundo depende de quem guarda e das regras que aceitaste ao registar-te. Não existe, em abstrato, uma escolha certa. Existe a escolha certa para o teu caso, para o teu valor, para a tua forma de lidar com a tecnologia."
+            },
+            {
+              "cena": 5,
+              "visual": "Gráfico simples: uma barra grande, marcada «operações», sobre uma barra pequena, marcada «poupança parada». Uma seta indica a divisão.",
+              "narracao": "Muita gente faz uma solução híbrida. Deixa na plataforma o valor que usa para negociar, e leva para uma carteira fria o valor que quer guardar durante meses. Não é a única forma de fazer, mas é uma forma razoável de separar o que mexe do que descansa. E separar é, muitas vezes, a melhor proteção que existe. Não te esqueças do essencial: separar não é fugir. Quem separa tem um plano para cada parte, e isso é o que distingue a gestão da improvisação."
+            },
+            {
+              "cena": 6,
+              "visual": "Uma regra escrita num quadro: «quanto mais valor e menos uso → mais controlo próprio. Quanto menos valor e mais uso → plataforma regulada, com suporte.»",
+              "narracao": "Vamos a uma regra prática. Quanto mais valor tens, menos tempo de espera aceitas, e maior é a necessidade de controlo próprio. Quanto menos valor e mais uso, mais faz sentido estar numa plataforma regulada, com suporte e com recuperação de conta. Ninguém te obriga a escolher um extremo. Podes andar pelo meio, desde que saibas em que ponto estás. Antes de deixares valor em qualquer sítio, lê os termos de custódia, procura quem é responsável e como se recupera uma conta. Se não encontras essa informação, é mais uma pergunta que deves fazer antes de avançar."
+            },
+            {
+              "cena": 7,
+              "visual": "Caso ilustrativo: o Rui, o professor de Leiria, a olhar para um caderno onde escreveu uma lista de passos, com um visto a cada um.",
+              "narracao": "Caso ilustrativo: o Rui, o professor de Leiria, tinha tudo numa plataforma e nunca tinha pensado nisso. Quando percebeu a diferença, não mudou tudo de um dia para o outro. Não se trata de ser melhor ou pior. Trata-se de saber onde estão as tuas responsabilidades. Começou por passar a parte que não mexia para uma carteira fria, e manteve o resto onde estava para as operações. Fez a mudança com calma, e registou cada passo. Demorou algumas semanas, e disse que foi o melhor investimento de tempo que fez em cripto."
+            }
+          ],
+          "palavras": 641,
+          "minutos": 4.1
+        },
+        {
+          "id": "4.4",
+          "titulo": "Aula 4.4 — O plano de guarda: cópias que sobrevivem",
+          "gancho": "Um papel molhado não lê. Uma foto roubada não protege. Como é que se guarda uma chave durante vinte anos?",
+          "cenas": [
+            {
+              "cena": 1,
+              "visual": "Três ícones animados em fila: uma chama, uma gota de água, um relógio com a legenda «anos». Cada um atravessa a cópia de segurança sem a destruir.",
+              "narracao": "Chegámos à última aula do módulo, e ao plano que vais montar. A ideia central é esta: a cópia de segurança tem de sobreviver a três coisas. Fogo, água e o teu próprio esquecimento. Parece uma lista exagerada, mas é a lista de problemas que mais gente reporta quando perde o acesso. Um bom plano pensa nestes três riscos desde o início, e não quando já é tarde."
+            },
+            {
+              "cena": 2,
+              "visual": "Uma placa de metal a rodar lentamente, com as palavras gravadas. Legenda: «Cryptotag Zeus, existe na loja MTM».",
+              "narracao": "Papel é barato e serve para começar. Mas papel degrada-se, com humidade, com o tempo, com um café derramado. Por isso, muitas pessoas usam placas de metal, com as palavras gravadas ou estampadas. Um produto que existe na loja MTM é o Cryptotag Zeus, uma placa de metal para registar a seed. Não é o único método, e não é obrigatório. É uma forma de ter uma cópia que não se estraga com facilidade, e isso já é muito."
+            },
+            {
+              "cena": 3,
+              "visual": "Um plano de quatro passos a aparecer num quadro: «1. quantas cópias», «2. onde», «3. quem sabe», «4. testar».",
+              "narracao": "Vamos construir o plano em quatro passos. Primeiro, decide quantas cópias queres. Duas é o mínimo razoável. Uma cópia só significa que, se se perder, perdes tudo. E se a cópia de papel e a de metal estiverem no mesmo sítio, não estás a fazer duas cópias. Estás a fazer uma, duas vezes. Mais do que três complica a gestão e aumenta a exposição. Duas cópias bem guardadas são, para a maioria das pessoas, o equilíbrio certo entre segurança e simplicidade."
+            },
+            {
+              "cena": 4,
+              "visual": "Mapa simples de uma casa e de um local exterior, com duas cópias marcadas em sítios diferentes. Uma seta pontilhada liga os dois sítios.",
+              "narracao": "Segundo, escolhe locais diferentes. Se as duas cópias estão na mesma gaveta, um incêndio ou um assalto leva as duas. Pensa em casa, e num sítio de confiança fora dela, com acesso seguro e discreto. O objetivo não é esconder, é dispersar o risco. Uma cópia que sobrevive a um problema em casa é uma cópia que te salva."
+            },
+            {
+              "cena": 5,
+              "visual": "Duas pessoas num ecrã com um cadeado entre elas. A do lado esquerdo tem um envelope fechado. A do lado direito não tem nada na mão.",
+              "narracao": "Terceiro, decide quem sabe o quê. Ninguém precisa de saber a frase. Basta que alguém de confiança saiba que existe um plano, e onde estão as cópias, para o caso de algo te acontecer. Essa pessoa não precisa de ter as palavras. Se tiver, passa a ser mais um ponto de falha, e mais um sítio onde a frase pode ser copiada sem que tu saibas."
+            },
+            {
+              "cena": 6,
+              "visual": "Um ecrã de teste: uma carteira vazia, uma frase a ser introduzida, e um visto verde a aparecer quando a carteira recupera com sucesso.",
+              "narracao": "Quarto, testa a recuperação. Esta é a parte que quase ninguém faz, e é a mais importante. Com um valor zero ou irrelevante, numa aplicação oficial, tenta recriar a carteira só com a frase escrita. Se conseguires, a cópia funciona. Se não conseguires, descobriste o problema agora, e não quando precisares de verdade. Um teste falhado hoje é uma lição barata. Um teste que se descobre falhado daqui a dez anos é uma perda. Repete o teste sempre que mudares de carteira ou de aplicação, e pelo menos uma vez por ano, porque as aplicações mudam e a memória também."
+            },
+            {
+              "cena": 7,
+              "visual": "Caso ilustrativo: a Inês com uma placa de metal numa mão e uma folha de papel dobrada na outra, numa mesa de madeira.",
+              "narracao": "Caso ilustrativo: a Inês gravou a frase numa placa de metal, guardou uma segunda cópia em papel num cofre de um familiar, e fez o teste de recuperação com um valor simbólico numa carteira de teste. Demorou uma tarde. Para ela, foi a tarde mais útil do ano em matéria de cripto. Não porque tenha ganho alguma coisa, mas porque deixou de depender da sorte. Repara que o plano não exige nada de técnico. Exige método e disciplina. A Inês não teve de ser especialista. Teve de ter um plano e de o cumprir."
+            },
+            {
+              "cena": 8,
+              "visual": "Ruben a fechar um caderno, com a frase «a chave tem de funcionar antes de a usares a sério» a aparecer no canto.",
+              "narracao": "A ideia que quero que leves daqui é que os quatro passos têm um objetivo comum: que a tua chave continue a existir quando tu já não estiveres atento a ela. Uma chave que só funciona na tua cabeça não é uma chave. É uma esperança. E a esperança não é um plano de segurança. Pensa nisto como um seguro: não gostas de pagar, mas nunca o vês como desperdício no dia em que precisas dele."
+            }
+          ],
+          "palavras": 643,
+          "minutos": 4.2
+        }
+      ]
+    },
+    {
+      "ficheiro": "modulo-5.md",
+      "titulo": "Módulo 5 — Escudo anti-burla (≈17 min)",
+      "aulas": [
+        {
+          "id": "5.1",
+          "titulo": "Aula 5.1 — Falsos suportes e pedidos de chave",
+          "gancho": "Imagina que recebes uma mensagem do suporte de uma plataforma a dizer que a tua conta foi bloqueada e que tens de agir já. Se isso te deixa nervoso, esta aula é para ti.",
+          "cenas": [
+            {
+              "cena": 1,
+              "visual": "Ecrã de telemóvel com uma notificação de mensagem privada. O logótipo é quase igual ao original, mas a letra está ligeiramente diferente. Um relógio no canto conta para trás.",
+              "narracao": "Vamos começar pela burla mais comum e também a mais fácil de travar. Alguém escreve-te numa rede social ou num grupo de mensagens e apresenta-se como suporte de uma plataforma. Diz que a tua conta foi bloqueada, que há uma verificação urgente e que precisam de confirmar uma coisa. A mensagem parece real. Tem o logótipo certo, a linguagem certa e até um número de referência. Mas é mentira, e a urgência é a primeira pista. Quem te quer apanhar precisa que cometas um erro rápido, sem pensar duas vezes. Por isso, o relógio a contar para trás não é um detalhe. É a arma principal deles."
+            },
+            {
+              "cena": 2,
+              "visual": "Três cadeados animados a fecharem-se, com as legendas: palavra-passe, código de dois fatores, seed phrase.",
+              "narracao": "Aqui está a regra que nunca se quebra. Nenhum suporte legítimo te pede a seed phrase. Não te pede a palavra-passe, nem o código que chega por SMS ou pela aplicação. E não te escreve primeiro a dizer que tens um problema. A seed phrase, aquelas doze ou vinte e quatro palavras que guardas para recuperar a tua carteira, é a chave de tudo o que tens lá dentro. Quem a tem, tem o dinheiro. Não há exceção, nem para o suporte, nem para um técnico que te ligue, nem para ninguém que diga trabalhar com a plataforma. Se a mensagem te pede que confirmes algo que nem sequer procuraste, a resposta é não."
+            },
+            {
+              "cena": 3,
+              "visual": "Caso ilustrativo. Um café em Coimbra, a Inês sentada junto à janela com o telemóvel na mão. Legenda discreta: «caso ilustrativo».",
+              "narracao": "Vou contar-te um caso ilustrativo. A Inês, 29 anos, enfermeira em Coimbra, recebeu uma mensagem assim numa tarde de folga, enquanto tomava um café. O nome do suporte parecia oficial, e pediam-lhe que validasse a conta através de um site. Ela desconfiou por uma razão simples: a mensagem chegou sem ela ter pedido ajuda a ninguém. Em vez de clicar, fechou a conversa, abriu a aplicação que já tinha instalada e procurou lá. Não havia bloqueio nenhum. Havia uma armadilha à espera de um toque."
+            },
+            {
+              "cena": 4,
+              "visual": "Ecrã dividido. À esquerda, um link comprido e estranho. À direita, a aplicação oficial, com o endereço escrito à mão no navegador.",
+              "narracao": "Foi exatamente isto que a Inês fez, e é o que deves fazer tu. Se achas que há um problema com uma conta, não uses o link que recebeste. Abre a aplicação oficial ou escreve o endereço do site à mão no navegador. Procura lá a informação. Se o problema for real, vais encontrá-lo no sítio certo, na área de segurança ou nas notificações. Se não aparecer nada, a mensagem era falsa, e travaste-a sem perder nada. Este hábito parece pequeno, mas é ele que separa quem perde dinheiro de quem não perde. Guarda também o endereço oficial nos marcadores, para o usares da próxima vez sem depender de ninguém."
+            },
+            {
+              "cena": 5,
+              "visual": "Texto grande no ecrã: «Se alguém pede a chave, é burla.» A palavra «suporte» fica riscada a vermelho.",
+              "narracao": "Guarda esta frase: se alguém pede a chave, é burla, mesmo que pareça o suporte. Não respondas por educação, não mandes uma mensagem de teste e não cliques para resolver depressa. Bloqueia o contacto, denuncia-o na plataforma onde apareceu e avisa quem possa estar na mesma situação, sobretudo familiares mais velhos, que são alvo preferido destas mensagens. Os burlões compram listas de contas e de números ao acaso, e enviam milhares de mensagens iguais. Não é um ataque pessoal, é um negócio de volume, e por isso a melhor resposta é não dar nenhuma. Se por acaso já deste a seed phrase, considera a carteira comprometida. Cria uma carteira nova, num dispositivo limpo, e move o que conseguires o mais depressa possível. Depois contacta a plataforma. Cada minuto conta, porque quem te burlou também está com pressa."
+            },
+            {
+              "cena": 6,
+              "visual": "O relógio da cena 1 para em zero. Uma seta aponta para a aula 5.2.",
+              "narracao": "Resumindo: ninguém legítimo te pede a chave, a urgência é sempre uma pista, e o link de uma mensagem nunca é o caminho certo. Na próxima aula vamos ver a burla das promessas de dobrar o dinheiro. Parece muito diferente, mas é a mesma história com outra roupa, e a matemática por trás dela é ainda mais reveladora."
+            }
+          ],
+          "palavras": 645,
+          "minutos": 4.2
+        },
+        {
+          "id": "5.2",
+          "titulo": "Aula 5.2 — Duplicar, pirâmides e promessas",
+          "gancho": "Se alguém te garantir que o teu dinheiro vai dobrar em poucos dias, a primeira coisa que deves sentir é desconfiança, e não entusiasmo.",
+          "cenas": [
+            {
+              "cena": 1,
+              "visual": "Anúncio no ecrã: «Envia 500 e recebe 1.000 em 7 dias». Por baixo, uma etiqueta: «dobro garantido».",
+              "narracao": "Esta é a promessa mais antiga do mundo com roupa nova. Envias cripto para um endereço, ou entras num grupo, e dizem-te que vais receber o dobro em pouco tempo. Às vezes aparece como sorteio, outras vezes como bónus de adesão, outras ainda como um programa de recompensas que sobe de nível. O formato muda, mas a estrutura é quase sempre a mesma. Antes de qualquer coisa, pergunta-te uma coisa muito simples: de onde vem o dinheiro desse dobro? Se a resposta não existir, a conversa acaba aí."
+            },
+            {
+              "cena": 2,
+              "visual": "Diagrama animado: pessoas a entrarem por baixo, dinheiro a subir para quem está em cima, e cada vez mais pequenos círculos a juntar-se.",
+              "narracao": "Num esquema em pirâmide, o dinheiro dos primeiros participantes não vem de nenhum produto ou atividade real. Vem da entrada de quem chega depois. Para pagar a quem entrou cedo, é preciso que entrem cada vez mais pessoas. E aqui está a matemática que costuma ficar escondida. Imagina que cada pessoa tem de trazer duas novas para subir de nível. Ao décimo nível, só essa etapa precisa de mil e vinte e quatro pessoas novas. Ao vigésimo, são mais de um milhão. Nenhum mercado aguenta esta conta durante muito tempo, e quem entra tarde é quem fica a pagar."
+            },
+            {
+              "cena": 3,
+              "visual": "Lista animada com quatro sinais, um a um: «retorno fixo e alto», «só hoje», «traz amigos para subir», «taxas para levantar».",
+              "narracao": "Há sinais que se repetem. Prometem um retorno fixo e alto, sem risco explicado. Criam pressão de tempo, com frases como só hoje ou última vaga. Pagam bónus por trazeres amigos, e não por usares um produto ou um serviço. E, quando pedes para tirar dinheiro, aparecem taxas, prazos ou exigências novas, como se fosse preciso pagar para sair. Se vês dois ou mais destes sinais ao mesmo tempo, não é o momento de estudar a proposta com calma. É o momento de sair."
+            },
+            {
+              "cena": 4,
+              "visual": "Caso ilustrativo. Um escritório pequeno em Leiria, o Tiago, 34 anos, técnico de frio, a olhar para o telemóvel. Legenda: «caso ilustrativo».",
+              "narracao": "Vou contar-te um caso ilustrativo. O Tiago, 34 anos, técnico de frio em Leiria, entrou num grupo porque um amigo lhe disse que tinha recebido de volta o dobro. Ao início, tudo parecia funcionar, e até lhe pagaram um valor pequeno para ganhar confiança. Depois pediram-lhe mais duzentos euros para subir de nível. Quando tentou levantar o que tinha, o pedido ficou em análise durante semanas. Percebeu tarde que os pagamentos que recebia vinham do dinheiro dos que entravam depois dele. Como é um caso ilustrativo, os números não são de ninguém, mas o padrão repete-se em muitas histórias."
+            },
+            {
+              "cena": 5,
+              "visual": "Ecrã em branco com uma pergunta grande: «Quem paga o teu lucro?»",
+              "narracao": "A pergunta que deves fazer sempre é esta: quem paga o lucro? Num investimento a sério, o retorno vem de algo real, como uma atividade, uma empresa ou um mercado com oferta e procura verdadeiras. Pode subir ou descer, e pode perder-se tudo, mas há uma origem visível. Se a resposta for os próximos que entrarem, estás perante uma pirâmide, por muito bem embalada que esteja. E presta atenção à pressão para convidares outras pessoas, porque é aí que o esquema cresce. Quando o teu sucesso depende de trazeres gente, o produto é a própria entrada."
+            },
+            {
+              "cena": 6,
+              "visual": "Ecrã dividido: à esquerda, um gráfico que sobe sempre; à direita, o mesmo gráfico com uma linha de aviso a dizer «retirar bloqueado».",
+              "narracao": "Repara num detalhe que engana muita gente. Os primeiros pagamentos costumam ser reais. Servem exatamente para te dar confiança. O problema aparece quando queres tirar um valor grande, e aí a porta fecha-se devagar. Por isso, nunca avalies uma proposta pelo que já recebeste. Avalia-a pela forma como te deixam sair. Se não conseguir sair com facilidade, não é um investimento, é uma armadilha com um recibo bonito. Então, o que fazes quando alguém te promete o dobro? Não entras, não envias nada para testar e não pedes mais detalhes ao contacto que te escreveu. Pesquisa o nome do projeto com a palavra burla e lê o que outras pessoas disseram. E, antes de qualquer decisão de dinheiro, aplica a regra das vinte e quatro horas, que vamos ver melhor na checklist. Quem é honesto aguenta essa espera sem problema."
+            }
+          ],
+          "palavras": 630,
+          "minutos": 4.1
+        },
+        {
+          "id": "5.3",
+          "titulo": "Aula 5.3 — Phishing, airdrops e aprovações",
+          "gancho": "Às vezes, uma única letra trocada no endereço de um site basta para te levar a perder a carteira inteira. Vamos ver como isso acontece.",
+          "cenas": [
+            {
+              "cena": 1,
+              "visual": "Dois endereços quase iguais, lado a lado. Uma letra do segundo está destacada a vermelho.",
+              "narracao": "Vamos ao phishing. É uma cópia. Criam um site que parece igual ao original, com o mesmo logótipo, as mesmas cores e os mesmos botões. Muitas vezes só muda uma letra no endereço, ou usam um domínio parecido com um pequeno traço a mais. Quando chegas lá, escreves a palavra-passe ou ligas a carteira, e quem preparou o site fica com aquilo que lhe deste. O site parece certo, mas o endereço é outro. E é no endereço que está a diferença que te salva. Estes sites são feitos em minutos e costumam durar pouco, porque são denunciados depressa. Por isso, não confies na aparência nem na velocidade com que a página carrega."
+            },
+            {
+              "cena": 2,
+              "visual": "Ecrã de um motor de pesquisa com o primeiro resultado marcado como «Anúncio».",
+              "narracao": "Há um cuidado extra. Os anúncios patrocinados no topo dos motores de pesquisa também podem levar a sites falsos. Não confies só porque aparece em primeiro lugar. Procura o site oficial, confirma o endereço e, se possível, guarda-o nos marcadores do navegador. Repara que o site original raramente te pede algo urgente logo na página inicial. Se a página te pressiona para inserires dados, desconfia da própria página."
+            },
+            {
+              "cena": 3,
+              "visual": "Mensagem no ecrã: «Recebeste 5.000 tokens grátis! Liga a carteira para reclamar». Um contador vermelho a descer.",
+              "narracao": "Os airdrops são distribuições gratuitas de tokens. Existem de facto, mas são raros, e quase nunca chegam por mensagem privada de um desconhecido. Quando alguém te oferece tokens grátis e pede para ligares a carteira a um site, estás a dar uma permissão. E essa permissão pode permitir que alguém mova os teus fundos. O contador vermelho é a mesma pressão de sempre, em formato de jogo. Se algo é de graça e te pede para ligares a carteira, desconfia primeiro e pesquisa depois. Se alguém te pedir para partilhares o ecrã enquanto reclamas o prémio, é ainda mais grave, porque estão a ver tudo o que fazes."
+            },
+            {
+              "cena": 4,
+              "visual": "Janela de aprovação simulada no ecrã. A palavra «ilimitado» está destacada, com uma seta a apontar para o botão «Aprovar».",
+              "narracao": "Aqui está o detalhe técnico que a maioria das pessoas não lê. Ao usar algumas aplicações descentralizadas, a carteira pede uma aprovação. É uma autorização para um contrato mexer em certos tokens que tens. Muitas vezes, a aprovação vem com o valor ilimitado já escolhido por defeito. Se aprovares um contrato malicioso com permissão ilimitada, ele pode retirar esses tokens quando quiser, sem te voltar a pedir nada. Por isso, lê sempre o que estás a autorizar. E revoga as aprovações que já não usas, com as ferramentas oficiais de revogação de permissões."
+            },
+            {
+              "cena": 5,
+              "visual": "Caso ilustrativo. Um quarto de estudante em Braga, o Gonçalo, 26 anos, a ver o contador de um airdrop no portátil. Legenda: «caso ilustrativo».",
+              "narracao": "Vou contar-te um caso ilustrativo. O Gonçalo, 26 anos, estudante em Braga, recebeu um link para reclamar um airdrop. A página era bonita, tinha contador, tinha até uma lista de vencedores a atualizar-se. Ligou a carteira, aprovou uma coisa que não percebeu e foi dormir. Dias depois, reparou que faltavam tokens. Ninguém lhe tinha pedido a seed phrase, mas ele tinha dado permissão a quem a queria. O erro não foi técnico. Foi de pressa, e a pressa é exatamente o que estes sites querem provocar."
+            },
+            {
+              "cena": 6,
+              "visual": "Ecrã com três perguntas em fila: «Quem pede? Porquê agora? O que é que eu autorizo?»",
+              "narracao": "Antes de qualquer ligação ou aprovação, faz três perguntas. Quem está a pedir? Não tens uma resposta clara, é sinal de alarme. Porque é que isto acontece agora? Se a justificação é uma urgência ou um prémio que expira hoje, desconfia. E o que é que estou a autorizar, exatamente? Se não consegues responder com precisão, não assinas. Cada assinatura é uma decisão, e não é um clique de cortesia. Podes ouvir uma regra simples, que vale a pena repetir: se não percebes, não assinas. Não há prémio que compense perder a carteira. E, se já assinaste algo suspeito, revoga essa permissão o quanto antes e verifica os teus saldos. Não quer dizer que tudo está perdido, mas quer dizer que tens de agir agora, e não amanhã. Na última aula deste módulo vamos ver a parte mais difícil de todas: a burla que é mesmo uma conversa simpática."
+            }
+          ],
+          "palavras": 642,
+          "minutos": 4.2
+        },
+        {
+          "id": "5.4",
+          "titulo": "Aula 5.4 — Romance, pressão e a checklist de 10 pontos",
+          "gancho": "A burla mais difícil de travar não começa com um site. Começa com uma conversa simpática, que vai ficando cada vez mais próxima.",
+          "cenas": [
+            {
+              "cena": 1,
+              "visual": "Ecrã de uma aplicação de encontros, com uma foto sorridente e a frase: «Conheci-te por acaso, parecias tão simpática».",
+              "narracao": "Há uma burla que começa devagar. Alguém conhece-te numa aplicação de encontros, ou num grupo de conversa, e a relação vai-se tornando próxima ao longo de semanas. Partilham rotinas, fotografias, piadas e confidências. Quando surge o assunto dinheiro, a pessoa fala de um investimento em cripto que lhe está a correr bem e oferece-te entrar também. Mostra prints de lucros e uma plataforma com um painel bonito. Quanto mais a relação cresce, mais difícil é desconfiar. Vem disfarçada de amizade, e isso é o que a torna tão perigosa. Repara no painel. Esses números são desenhados para parecerem reais, e quem os mostra controla tudo o que vês. Não é prova de nada. Uma plataforma que só existe dentro de um ecrã que outra pessoa te mostra não prova lucro, prova apenas que alguém sabe fazer um gráfico. Se não consegues levantar o dinheiro sem pagar mais taxas, ou sem esperar semanas por uma verificação nova, o problema está aí, e não na tua falta de sorte."
+            },
+            {
+              "cena": 2,
+              "visual": "Checklist animada, com os pontos a aparecerem um a um, cada um com um visto.",
+              "narracao": "Vamos então à checklist de dez pontos, que podes imprimir e guardar. Um: ninguém te pede seed phrase, palavra-passe ou código, nunca. Dois: escreves o endereço à mão ou usas um marcador verificado, e nunca clicas num link que te chegou por mensagem. Três: a plataforma tem autorização ao abrigo do MiCA, o regulamento europeu para prestadores de serviços de criptoativos, e podes confirmar isso no registo da autoridade do país onde opera. Quatro: ativas a autenticação de dois fatores com uma aplicação, e não com SMS. Cinco: usas uma palavra-passe única, guardada num gestor de palavras-passe. Seis: desconfias de qualquer retorno garantido ou de qualquer dobro. Sete: a pressão de tempo é um alarme, e não um incentivo."
+            },
+            {
+              "cena": 3,
+              "visual": "Continuação da checklist, com os pontos oito a dez a aparecerem no ecrã.",
+              "narracao": "Oito: nunca aprovas um contrato que não percebes. Nove: nunca instalas programas de acesso remoto a pedido de um desconhecido, porque quem controla o teu ecrã controla tudo o que fazes. Dez: antes de mexer em dinheiro, esperas vinte e quatro horas e falas com alguém de confiança. Essa última regra salva mais gente do que qualquer software. A pressa é o combustível de todas as burlas, e a espera é o antídoto mais barato que existe."
+            },
+            {
+              "cena": 4,
+              "visual": "Animação de cinco anéis concêntricos, cada um com uma legenda curta. Gráfico ID: camadas-seguranca.",
+              "narracao": "Nenhuma defesa sozinha chega, por isso pensa em camadas. A primeira camada é a conta de email, com palavra-passe forte e única. A segunda é a autenticação por aplicação nas plataformas que usas. A terceira é o endereço verificado, sempre o mesmo, guardado nos marcadores. A quarta são os limites de levantamento e a lista de endereços permitidos, quando a plataforma oferece essa opção. E a quinta, a mais importante para valores grandes, é guardar a maior parte numa carteira fria, fora de qualquer ecrã ligado à internet. Se uma camada falhar, a seguinte ainda te protege."
+            },
+            {
+              "cena": 5,
+              "visual": "Ecrã com um relógio grande e a frase: «A pessoa não te deixa pensar? Já tens a resposta».",
+              "narracao": "Quando alguém te pressiona para decidir hoje, não estás a falar com um amigo que te quer ajudar. Estás a falar com alguém que precisa que não penses. Um investimento a sério aguenta uma semana de reflexão, e um projeto honesto não se zanga quando lhe pedes tempo. Se a pessoa se irrita, desaparece ou te faz sentir culpado por hesitares, já tens a tua resposta. A tua calma é a melhor defesa que tens, e não custa nada."
+            },
+            {
+              "cena": 6,
+              "visual": "Ecrã com o título «Missão do módulo» e um quadrado para marcar.",
+              "narracao": "A missão do módulo é simples e concreta. Esta semana, imprime a checklist de dez pontos e põe-na ao pé do teu computador. Confirma se as tuas plataformas têm autenticação por aplicação. Revê as aprovações ativas nas carteiras que usas e revoga as que não reconheces. E escreve a tua seed phrase num papel, à mão, num sítio seguro, sem a fotografar nem a enviar a ninguém. Quando tiveres feito tudo isto, marca a palavra feito. Esta é a primeira chave do teu escudo, e é a que mais vale."
+            }
+          ],
+          "palavras": 652,
+          "minutos": 4.2
+        }
+      ]
+    },
+    {
+      "ficheiro": "modulo-6.md",
+      "titulo": "Módulo 6 — DCA, ciclos e halving (≈17 min)",
+      "aulas": [
+        {
+          "id": "6.1",
+          "titulo": "Aula 6.1 — DCA, o método aborrecido que tira a adivinhação",
+          "gancho": "Há uma forma de investir que quase ninguém quer ouvir, porque é aborrecida. É exatamente por isso que tira a adivinhação da equação.",
+          "cenas": [
+            {
+              "cena": 1,
+              "visual": "Calendário animado com um dia assinalado em cada mês e uma moeda a cair sobre cada dia marcado.",
+              "narracao": "DCA quer dizer compra regular, ou em inglês dollar cost averaging. A ideia é simples. Em vez de investires tudo de uma vez, compras um valor fixo em intervalos regulares. Pode ser cem euros por mês, ou vinte euros por semana. Compras quando o preço está alto e compras quando está baixo, sem tentar escolher o momento certo. O objetivo não é acertar no topo nem no fundo do mercado. É manter a disciplina durante muito tempo, sem depender de um palpite que te faça parar ou acelerar. Esta é a parte que parece pouco excitante, e é também a que mais pessoas abandonam. Pensa nele como a poupança mensal que pões de lado, só que em vez de a deixares parada, a aplicas num ativo."
+            },
+            {
+              "cena": 2,
+              "visual": "Tabela animada com o exemplo ilustrativo: três compras de cem euros, a preços de cinquenta, vinte e cinco e cinquenta. Legenda: «exemplo ilustrativo, valores inventados».",
+              "narracao": "Vamos a um exemplo ilustrativo, com preços inventados e redondos, só para perceber a mecânica. Imagina que compras cem euros por mês, durante três meses, num ativo hipotético. No primeiro mês custa cinquenta euros, e compras duas unidades. No segundo mês o preço desce para vinte e cinco, e com os mesmos cem euros compras quatro unidades. No terceiro mês volta a cinquenta, e compras mais duas. Ao todo tens oito unidades e gastaste trezentos euros. O teu preço médio por unidade é de trinta e sete euros e cinquenta cêntimos. Repara que esse valor fica abaixo da média simples dos três preços, porque compraste mais quando estava barato."
+            },
+            {
+              "cena": 3,
+              "visual": "Ecrã dividido. À esquerda, a entrada única: trezentos euros a cinquenta, seis unidades. À direita, o DCA: oito unidades. Os totais mudam ao longo de três marcos.",
+              "narracao": "Agora a comparação. Se tivesses investido os trezentos euros todos no primeiro mês, a cinquenta euros, terias seis unidades. No fim do exemplo, com o preço de volta a cinquenta, as oito unidades do DCA valem quatrocentos euros, e as seis da entrada única valem trezentos. Mas olha para o meio do caminho. Depois do segundo mês, com o preço a vinte e cinco, o DCA tem seis unidades, que valem cento e cinquenta euros sobre duzentos investidos. A entrada única também tem seis unidades e vale cento e cinquenta, mas sobre trezentos investidos. Em percentagem, a entrada única está a perder cinquenta por cento e o DCA a perder vinte e cinco."
+            },
+            {
+              "cena": 4,
+              "visual": "Alerta no ecrã, a vermelho: «Não é garantia de lucro». Por baixo, o gráfico de um preço que sobe logo no início e nunca mais desce.",
+              "narracao": "Agora repara no que este exemplo não diz. Não diz que o DCA é sempre melhor. Se o preço tivesse subido logo no primeiro mês e nunca mais descesse, a entrada única teria rendido muito mais. O DCA troca uma parte dessa oportunidade por menos stress e menos risco de comprar tudo no topo. Não é uma garantia de lucro, e um ativo pode descer durante anos sem recuperar. Por isso, o valor que usas em cada compra tem de ser um valor que podes perder, sem que isso afete a tua renda, as tuas contas ou o teu sono."
+            },
+            {
+              "cena": 5,
+              "visual": "Calendário com marcas de visto em cada mês, e ao lado uma folha com as regras escritas.",
+              "narracao": "O DCA funciona como um hábito. O maior inimigo não é o mercado. É a tua mão a carregar no botão quando o preço cai e vem o medo, ou quando sobe e vem a ganância. Por isso, escreve as regras antes de começares. Quanto compras, em que dia, em que plataforma, e o que fazes se um mês faltar dinheiro. Depois cumpre. Uma regra escrita numa folha vale mais do que dez decisões tomadas à pressa, a meio da noite, com o telemóvel na mão. Quando a regra está escrita, a emoção do dia já não manda."
+            },
+            {
+              "cena": 6,
+              "visual": "Seta a apontar para a aula 6.2. Texto ao lado: «O que muda de facto?».",
+              "narracao": "Na próxima aula vamos ver um dos temas mais falados do mundo cripto, o halving, e porque é que tanta gente fala dele com tanta emoção. Vais perceber o que muda de facto na rede, e o que é só ruído à volta da data. Fica com a ideia central desta aula: o DCA não adivinha nada. Organiza a tua compra, e deixa o mercado fazer o que quiser. Faz a conta tu próprio, com outros preços inventados, e vais perceber a lógica em dez minutos."
+            }
+          ],
+          "palavras": 655,
+          "minutos": 4.2
+        },
+        {
+          "id": "6.2",
+          "titulo": "Aula 6.2 — Halving: o relógio da oferta",
+          "gancho": "De quatro em quatro anos, mais ou menos, a criação de bitcoins novos abranda para metade. Sabes porquê, e sabes o que isso significa de facto?",
+          "cenas": [
+            {
+              "cena": 1,
+              "visual": "Animação de uma barra de recompensa a encolher em cinco passos, com as datas por baixo: cinquenta, vinte e cinco, doze vírgula cinco, seis vírgula vinte e cinco, três vírgula cento e vinte e cinco. Gráfico ID: halving.",
+              "narracao": "Os bitcoins novos são criados pelos mineiros, como recompensa por validarem blocos de transações. Essa recompensa não é fixa. Está definida no próprio protocolo: a cada 210.000 blocos, que dá em média quatro anos, a recompensa por bloco é cortada para metade. A isso chama-se halving. Quando a rede arrancou, em 2009, a recompensa era de cinquenta bitcoins por bloco. Em 2012 desceu para vinte e cinco. Em 2016 foi para doze vírgula cinco, em 2020 para seis vírgula vinte e cinco, e em 2024 para três vírgula cento e vinte e cinco. Cada passo corta a emissão nova ao meio. Repara que a regra não depende de ninguém em particular: está escrita no código e aplica-se da mesma forma a todos."
+            },
+            {
+              "cena": 2,
+              "visual": "Ecrã com a frase «21 milhões» e uma barra a encher-se, quase até ao topo.",
+              "narracao": "Com esta regra, a emissão total converge para o limite de vinte e um milhões de bitcoins. A maior parte já foi emitida, e o que falta sai em fatias cada vez mais pequenas, quase sem se notar. Isto é um facto sobre a oferta nova, e é isso que torna o tema interessante. Menos bitcoins novos por dia significa, em teoria, menos oferta a entrar no mercado. Os mineiros também pagam energia e equipamento, por isso a descida da recompensa mexe muito nas contas deles. Mas teoria e preço são coisas diferentes, e é aqui que muita gente se engana. A oferta é uma peça do puzzle. A procura, o contexto e o humor de todos os participantes são as outras peças."
+            },
+            {
+              "cena": 3,
+              "visual": "Gráfico de linha com o preço e marcas verticais nos anos dos halvings. Por cima, uma caixa a dizer «o que aconteceu antes».",
+              "narracao": "É tentador olhar para os halvings passados e concluir que o preço vai subir sempre depois de cada um. Essa conclusão é perigosa. São poucos casos para tirar uma regra, o contexto mudou muito de um ciclo para o outro, e o mercado pode ter antecipado o evento meses antes. Cada halving é um facto da oferta, não uma data marcada para subir. Usa-o como informação para perceber o mercado, nunca como certeza sobre o que vai acontecer."
+            },
+            {
+              "cena": 4,
+              "visual": "Caso ilustrativo. Um quarto em Aveiro, a Marta, 38 anos, professora, com o portátil aberto à noite. Legenda: «caso ilustrativo».",
+              "narracao": "Vou contar-te um caso ilustrativo. A Marta, 38 anos, professora em Aveiro, viu um vídeo sobre o halving e ficou convencida de que a subida era certa. Comprou tudo de uma vez, numa noite, com dinheiro que tinha reservado para o carro. Nas semanas seguintes, o preço caiu e ela ficou a olhar para o ecrã sem saber o que fazer. Não vendeu no pânico, mas também não tinha plano nenhum. O erro não foi o halving, que é um facto real. O erro foi tratar uma data como uma garantia, e usar dinheiro que não devia ter sido usado. Se a compra tivesse sido feita em parcelas, com um plano escrito, teria tido tempo de rever as decisões a cada passo."
+            },
+            {
+              "cena": 5,
+              "visual": "Ecrã dividido: à esquerda, o logótipo de uma rede com prova de trabalho; à direita, o de uma rede com prova de participação. Texto: «Nem todas as redes têm halving».",
+              "narracao": "Uma nota técnica, porque é fácil confundir. Nem todas as redes funcionam assim. O bitcoin usa prova de trabalho, com mineiros a competir com energia e equipamento. O Ethereum passou para prova de participação em setembro de 2022, no evento conhecido como The Merge, e deixou de ter mineração e de ter halvings. Cada rede tem a sua própria regra de emissão. Antes de dizeres que algo vai subir porque tem um halving, pergunta-te primeiro se essa rede tem halving, e de que tipo."
+            },
+            {
+              "cena": 6,
+              "visual": "Ecrã com uma pergunta grande: «Facto, notícia ou promessa?». Três caixas por baixo.",
+              "narracao": "Então, o que é que o halving te ensina de útil? Ensina a pensar em ciclos longos e em oferta, e não em notícias do dia. Ensina também a desconfiar de quem vende o halving como uma máquina de dinheiro. Há muito conteúdo que transforma uma data num espetáculo, com contagens decrescentes e música dramática. Tu não precisas disso. Precisas de perceber a regra, de guardar o facto, e de decidir o que fazes com o teu dinheiro com base num plano, e não numa contagem decrescente. Isso leva-nos ao tema da próxima aula: como ler o mercado sem adivinhar."
+            }
+          ],
+          "palavras": 655,
+          "minutos": 4.2
+        },
+        {
+          "id": "6.3",
+          "titulo": "Aula 6.3 — Ciclos, volatilidade e dominância: ler sem adivinhar",
+          "gancho": "O mercado de cripto sobe e desce com uma força que assusta quem não está preparado. A pergunta não é como acertar. É como ler sem adivinhar.",
+          "cenas": [
+            {
+              "cena": 1,
+              "visual": "Gráfico com uma linha de volatilidade e a legenda: «quedas superiores a 70% em anos diferentes».",
+              "narracao": "Começamos pela volatilidade, que é a amplitude dos movimentos de preço. Em cripto é muito alta. O bitcoin já caiu mais de setenta por cento desde o topo, em mais do que uma ocasião, e muitas outras moedas caíram ainda mais. Antes de comprares, faz uma pergunta honesta: se o meu saldo caísse para metade, eu conseguia continuar sem vender em pânico? Se a resposta for não, a tua exposição está grande de mais, independentemente do que dizem os vídeos. Esta pergunta vale mais do que qualquer previsão."
+            },
+            {
+              "cena": 2,
+              "visual": "Curva de ciclo desenhada no ecrã, com quatro fases marcadas: acumulação, subida, euforia, descida.",
+              "narracao": "Muitos falam de ciclos: uma fase de acumulação, uma subida forte, uma euforia em que todos parecem ricos, depois uma descida longa e um período de cansaço. Os ciclos são uma leitura útil do passado, porque ajudam a reconhecer padrões de comportamento humano. Mas não são um calendário. Na euforia parece que o mundo inteiro enriqueceu, e na descida parece que nunca mais vai recuperar. Ninguém sabe exatamente quando a fase muda. Há uma frase perigosa que ouves em todos os ciclos: desta vez é diferente. Às vezes há mudanças reais, mas a vontade de que seja diferente é sempre a mesma emoção de sempre. Quem jura que sabe está, quase sempre, a tentar vender-te alguma coisa. Não é preciso decorar nada disto."
+            },
+            {
+              "cena": 3,
+              "visual": "Gráfico de círculo com a fatia do bitcoin a destacar-se, e uma seta a subir e a descer.",
+              "narracao": "Outro indicador é a dominância do bitcoin, que é a percentagem do valor total do mercado que pertence ao bitcoin. Quando a dominância sobe, o dinheiro tende a concentrar-se no bitcoin, que é visto como o ativo mais estabelecido. Quando desce, pode haver mais apetite por altcoins, que são moedas mais arriscadas e mais voláteis. Não é uma regra mágica, e pode enganar-te se a leres sozinha. Mas é uma forma de perceber para onde está a ir o dinheiro, e isso já é informação útil para o teu plano. Repara que a dominância também sobe quando o mercado recua, porque as moedas mais pequenas costumam cair com mais força."
+            },
+            {
+              "cena": 4,
+              "visual": "Ecrã com três manchetes em fila: «Vai explodir!», «Acabou tudo!», «Notícia oficial: nova regra publicada». A última fica destacada.",
+              "narracao": "Aprende a separar notícias de ruído. Uma notícia é um facto verificável: uma lei aprovada, uma falha técnica confirmada, uma mudança concreta na oferta ou na regulação. O ruído é a opinião repetida mil vezes, o título alarmista e o vídeo com música épica e setas vermelhas. Antes de reagires, pergunta: isto mudou alguma coisa no projeto, ou só mudou o humor das pessoas? Se for só humor, normalmente não precisas de agir hoje. Uma boa prática é guardar as notícias numa lista e rever a lista uma semana depois. Se já ninguém fala delas, provavelmente eram ruído."
+            },
+            {
+              "cena": 5,
+              "visual": "Um ecrã com um calendário semanal e a frase «Plano antes do palpite». Um relógio com o ponteiro parado.",
+              "narracao": "Ler o mercado sem adivinhar é aceitar que não sabes o que vem amanhã, e organizar-te para isso. Define o teu plano antes de as coisas acontecerem. Escreve o que te faria mudar de ideias, e confia mais nesse papel do que no ruído do momento. Vê o teu saldo uma vez por semana, e não a cada minuto, porque olhar sem parar aumenta a emoção e diminui a clareza. Quem não tem plano acaba a reagir a tudo, e reagir a tudo costuma ser caro, porque se decide com medo ou com euforia. O mercado não te deve nada, e isso não é um problema. O problema é ficares sem plano."
+            },
+            {
+              "cena": 6,
+              "visual": "Ecrã final com a frase: «Ler sem adivinhar = plano escrito + informação verificada».",
+              "narracao": "Resumindo esta aula: a volatilidade mostra-te quanto podes sofrer, os ciclos mostram-te padrões que não são calendário, a dominância mostra-te para onde vai o dinheiro, e as notícias verificáveis separam-se do ruído. Nenhuma destas peças te dá a resposta certa para amanhã. Juntas, dão-te algo melhor, que é um critério para decidires com calma. Se alguma destas ideias te parecer complicada, não faz mal. Basta começares por uma delas e escreveres o que observaste. Na última aula deste módulo vamos transformar tudo isto num plano de compra concreto."
+            }
+          ],
+          "palavras": 646,
+          "minutos": 4.2
+        },
+        {
+          "id": "6.4",
+          "titulo": "Aula 6.4 — Missão do módulo: o teu plano de DCA",
+          "gancho": "Passar do conceito à prática é o passo que a maioria salta. Hoje não o vamos saltar. Vamos fazê-lo com papel e caneta.",
+          "cenas": [
+            {
+              "cena": 1,
+              "visual": "Folha com cinco campos a preencher: valor mensal, dia fixo, plataforma, regra de exceção, data de revisão.",
+              "narracao": "Vamos montar um plano de DCA, passo a passo. Primeiro, escolhe um valor mensal que possas perder sem que isso te estrague a vida. Não é o que sobra no fim do mês por acaso. É o que sobra depois das contas fixas, de uma poupança de emergência e dos impostos que já tens de pagar. Segundo, escolhe um dia fixo, por exemplo o dia a seguir ao ordenado. Terceiro, escolhe a plataforma regulada onde vais comprar, e confirma que a verificação e a autenticação estão em ordem. Quarto, escreve a regra de exceção: o que fazes num mês em que não dá. Quinto, marca quando vais rever o plano, por exemplo de três em três meses. Lembra-te: o plano não é um contrato com o mercado. É um contrato contigo."
+            },
+            {
+              "cena": 2,
+              "visual": "Aviso grande no ecrã: «Nunca o dinheiro da renda, do passe ou da água».",
+              "narracao": "Uma regra que não se negocia: nunca uses dinheiro que precises para a renda, o passe, a água, a luz ou o IRS. Se um mês correr mal, não queres ser obrigado a vender para pagar a casa, e é exatamente aí que as decisões ficam más. Começa pequeno. Dez ou vinte euros por semana já chegam para aprenderes o processo, perceberes as taxas e veres como te sentes quando o preço cai. Essa sensação é a parte mais valiosa do treino. Se tiveres dúvidas sobre a plataforma, pergunta antes de comprar, nunca depois."
+            },
+            {
+              "cena": 3,
+              "visual": "Ecrã com o logótipo MTM e o texto «Salas DCA com MTM», com uma sala de grupo em pequenos quadrados.",
+              "narracao": "Se quiseres praticar com acompanhamento, há as Salas DCA com MTM, onde se trabalha este método em grupo, com exemplos e perguntas em direto. Não te vou prometer resultados nem rendimentos, porque não os controlo nem os consigo garantir a ninguém. O que posso dizer é que aprender com outras pessoas, a discutir planos, erros e dúvidas, ajuda a não decidires sozinho e à pressa. E há a comunidade MoreThanMoney, onde podes fazer perguntas simples sem vergonha. Se decidires entrar, lembra-te de que o grupo serve para aprender, e não para te dizer o que comprar. Se fizer sentido para ti, passa por lá, sem pressa e sem pressão. A decisão é tua."
+            },
+            {
+              "cena": 4,
+              "visual": "Lista de verificação com quadrados a marcar: plano escrito, data, plataforma verificada, autenticação ativa, espera de 24 horas.",
+              "narracao": "Depois de escreveres o plano, assina-o com a data e guarda-o num sítio seguro, separado da tua seed phrase. Antes da primeira compra, confirma que a plataforma está verificada, que a autenticação de dois fatores está ativa e que tens os endereços guardados nos marcadores. E deixa passar vinte e quatro horas antes de executares a primeira compra. Essa espera é o teste final: se, no dia seguinte, continuas a querer, o plano é teu. Se já não queres, ainda bem que esperaste. Não te precipites só porque o mercado parece estar bem disposto naquele dia. Escreve também o que farás se o preço descer para metade, para que a regra esteja clara antes do susto, e não durante ele."
+            },
+            {
+              "cena": 5,
+              "visual": "Ecrã com o título «Missão do módulo» e um quadrado para marcar. Por baixo, a frase de aviso em letras pequenas.",
+              "narracao": "A missão do módulo é esta: escreve o teu plano de DCA num papel, com os cinco pontos que vimos, e assina-o. Não compres nada ainda se não tiveres a plataforma verificada e a autenticação de dois fatores ativa. Lembra-te sempre: isto é conteúdo educativo, não é aconselhamento financeiro, e o risco de perda é real. Podes perder o que lá puseres. Por isso, o plano é a tua proteção, e a pressa é o inimigo. Guarda este papel e relê-o antes de cada revisão."
+            },
+            {
+              "cena": 6,
+              "visual": "Ecrã de fecho com o número 7 e a frase: «Próximo módulo: o teu DCA com as ferramentas MTM».",
+              "narracao": "Com esta aula fechas o Módulo 6. Já sabes o que é o DCA, sabes ler o halving sem cair no espetáculo, e sabes separar volatilidade, ciclos, dominância e ruído. No próximo módulo pegamos nesse plano e pomo-lo a trabalhar com as ferramentas da MTM: o DCA Inteligente, a app MTM System, os Portefólios e dois scanners que ajudam a escolher o tamanho de cada reforço. Até lá, escreve o teu plano e cumpre-o. Obrigado por teres chegado até aqui, a sério."
+            }
+          ],
+          "palavras": 648,
+          "minutos": 4.2
+        }
+      ]
+    },
+    {
+      "ficheiro": "modulo-7.md",
+      "titulo": "Módulo 7 — O teu DCA com as ferramentas MTM (≈16 min)",
+      "aulas": [
+        {
+          "id": "7.1",
+          "titulo": "Aula 7.1 — O DCA que não é burro",
+          "gancho": "O DCA tem uma fama: é o método de quem não pensa. Compras sempre o mesmo, no mesmo dia, aconteça o que acontecer. E se eu te disser que dá para pensar um bocadinho, sem estragar o que o DCA tem de bom?",
+          "cenas": [
+            {
+              "cena": 1,
+              "visual": "Ruben em plano médio, fundo quase preto, pormenores a ouro. Texto no ecrã: «Conteúdo educativo. O risco de perda é real.»",
+              "narracao": "No módulo anterior escreveste o teu plano: um valor, um dia fixo, uma plataforma. Esse plano é a coisa mais importante deste bootcamp, e não lhe vamos tocar. O que vamos fazer nesta aula é dar-lhe um pequeno volante. O DCA clássico compra sempre igual. O DCA inteligente compra sempre, mas deixa-te ajustar o tamanho de cada compra conforme o mercado está mais caro ou mais barato do que o costume. Repara na palavra sempre. O DCA inteligente nunca pára de comprar por causa de uma opinião. Só mexe no tamanho."
+            },
+            {
+              "cena": 2,
+              "visual": "Animação: uma linha de preço com pequenos círculos dourados em cada sexta-feira. Primeiro todos iguais; depois, nos dias de queda, os círculos ficam maiores; nos dias de euforia, mais pequenos.",
+              "narracao": "A ideia é antiga e é de bom senso. Quando o preço caiu muito num dia, o teu dinheiro compra mais unidades. Quando o preço disparou, compra menos. Se reforçares um pouco mais nos dias de queda e um pouco menos nos dias de euforia, o teu preço médio tende a ficar mais equilibrado. Tende. Não te garanto nada, e ninguém te pode garantir. Mas é um raciocínio que se percebe e se pode verificar com papel e lápis."
+            },
+            {
+              "cena": 3,
+              "visual": "Ecrã da app MTM System, separador Portefólios, painel «Análise DCA». Zoom suave nas etiquetas: Forte Compra, Compra, Aguardar, Não Reforçar.",
+              "narracao": "Na MoreThanMoney isto tem nome: DCA Inteligente. Todos os dias o sistema olha para os ativos dos portefólios, cripto e ETF, compara o preço de hoje com o comportamento recente e dá a cada um uma de quatro etiquetas. Forte Compra, quando houve uma queda forte. Compra, quando houve uma queda relevante. Aguardar, quando está tudo calmo. E Não Reforçar, quando o preço subiu muito num só dia e o melhor é não ir atrás dele."
+            },
+            {
+              "cena": 4,
+              "visual": "Tabela animada, dourado sobre carvão: «Forte Compra → até 2× a base · Compra → 1,5× · Aguardar → metade · Não Reforçar → zero nesse ativo».",
+              "narracao": "Cada etiqueta vem com uma sugestão de tamanho, sempre em relação ao teu valor base. Na cripto, por exemplo, uma queda diária de oito por cento ou mais dá Forte Compra e sugere até o dobro da base. Uma queda de quatro por cento ou mais dá Compra, e sugere uma vez e meia. Nos ETF os limites são mais baixos, porque mexem menos. Lembra-te: são sugestões de um sistema, para educação. A decisão é tua."
+            },
+            {
+              "cena": 5,
+              "visual": "Ruben de volta, com um caderno. No ecrã aparece a frase: «O teto manda mais do que a etiqueta.»",
+              "narracao": "E agora a regra que torna isto seguro. O teu teto mensal não muda. Se o teu plano é cem euros por mês, são cem euros por mês, haja Forte Compra ou não. Como é que isso funciona? Com um pote de reserva. Nas semanas em que a etiqueta diz Aguardar ou Não Reforçar, a parte que não gastas vai para o pote. Nas semanas de Forte Compra, o reforço extra sai do pote. Se o pote estiver vazio, compras a base e pronto. Nunca vais buscar dinheiro fora do plano."
+            },
+            {
+              "cena": 6,
+              "visual": "Folha de exercício com quatro sextas-feiras, uma coluna «etiqueta», outra «compra» e outra «pote».",
+              "narracao": "Exercício de dois minutos. Imagina uma base de vinte e cinco euros por semana. Na primeira sexta a etiqueta é Aguardar: compras doze e cinquenta, e doze e cinquenta vão para o pote. Na segunda, Não Reforçar: zero nesse ativo, vinte e cinco para o pote. Na terceira, Forte Compra: compras cinquenta, vinte e cinco da base e vinte e cinco do pote. Na quarta, Compra. Faz tu a conta. Exemplo ilustrativo, claro."
+            }
+          ],
+          "palavras": 529,
+          "minutos": 3.4
+        },
+        {
+          "id": "7.2",
+          "titulo": "Aula 7.2 — A app MTM System no bolso",
+          "gancho": "Se tens de te lembrar de ir ver o mercado, vais esquecer-te. O truque é o mercado vir ter contigo, à hora certa, e só com o que interessa.",
+          "cenas": [
+            {
+              "cena": 1,
+              "visual": "Gravação de ecrã do telemóvel: abrir a app MTM System, entrar com a conta, menu principal.",
+              "narracao": "Vamos à app. Tudo o que vês nesta aula está na app MTM System, no telemóvel ou no computador. Não te vou mostrar saldos, porque não interessam. Vou mostrar-te três sítios: onde aparece a análise do dia, onde estão os portefólios e onde ligas os alertas."
+            },
+            {
+              "cena": 2,
+              "visual": "Ecrã do canal de análise DCA no chat da app: o post diário com o resumo e as oportunidades por etiqueta.",
+              "narracao": "Primeiro sítio: o canal da Análise DCA Inteligente. Todos os dias o sistema publica lá um resumo, separado em cripto e em ETF e ações, com os ativos que estão em Forte Compra ou Compra e uma leitura curta do dia. Não precisas de ler isto todos os dias. Precisas de o ler no teu dia de DCA. Se o teu dia é sexta, abres o post de sexta."
+            },
+            {
+              "cena": 3,
+              "visual": "Ecrã Portefólios → Análise DCA, com a lista de ativos, o preço, a variação e a etiqueta de cada um.",
+              "narracao": "Segundo sítio: dentro de Portefólios, o painel Análise DCA. Aqui vês ativo a ativo: o preço, a variação, a etiqueta e uma explicação de uma linha. É neste ecrã que fazes a tua escolha da semana. Procura só os ativos que estão no teu plano. Os outros podem estar em Forte Compra à vontade. Não estão no teu plano, não são contigo."
+            },
+            {
+              "cena": 4,
+              "visual": "Ecrã de definições com o interruptor dos alertas DCA a ser ligado. Notificação a cair no ecrã bloqueado.",
+              "narracao": "Terceiro sítio: os alertas. Liga os alertas DCA nas definições da app. Assim, quando um ativo entra numa zona de reforço, recebes um aviso. Atenção, isto não é uma ordem para comprar fora do teu dia. É uma informação. A disciplina do dia fixo continua a valer. O alerta serve para chegares à sexta-feira já a saber o que te espera."
+            },
+            {
+              "cena": 5,
+              "visual": "Ruben, plano próximo, a falar diretamente para a câmara.",
+              "narracao": "Uma nota honesta. A app é uma ferramenta de acompanhamento e de educação. Não compra por ti, não guarda o teu dinheiro e não sabe o que vai acontecer amanhã. A compra fazes tu, na tua plataforma autorizada, como aprendeste no módulo três. A app ajuda-te a decidir com calma e com informação, que já é muito."
+            },
+            {
+              "cena": 6,
+              "visual": "Lista de verificação no ecrã com três quadrados: «canal DCA aberto», «painel Análise DCA visto», «alertas ligados».",
+              "narracao": "Missão desta aula: abre a app, encontra os três sítios e marca cada um. Demora cinco minutos. Na próxima aula vamos ver os portefólios, que são a melhor forma que conheço de aprender a fazer DCA a ver alguém a fazê-lo."
+            }
+          ],
+          "palavras": 365,
+          "minutos": 2.4
+        },
+        {
+          "id": "7.3",
+          "titulo": "Aula 7.3 — Os Portefólios: aprender a ver alguém fazer",
+          "gancho": "A melhor maneira de aprender a cozinhar não é ler receitas. É estar na cozinha ao lado de alguém. Com o DCA é igual.",
+          "cenas": [
+            {
+              "cena": 1,
+              "visual": "Ecrã Portefólios com as duas carteiras da casa lado a lado: «Cripto» e «ETF», com a curva de evolução.",
+              "narracao": "Na app há duas carteiras da casa: uma de cripto e uma de ETF. São reforçadas todas as sextas-feiras, com valores fixos por ativo, e ficam registadas na app, compra a compra. Podes ver o que foi comprado, quando e a que preço. É um diário aberto de DCA."
+            },
+            {
+              "cena": 2,
+              "visual": "Zoom na lista de movimentos da carteira: datas de sexta-feira, ativo, valor, motivo «DCA semanal».",
+              "narracao": "Repara nas datas. Sexta, sexta, sexta. Semanas de mercado bom, semanas de mercado mau, e a compra está lá. É isto que quero que vejas: a parte difícil do DCA não é a matemática. É continuar a comprar quando toda a gente à tua volta diz que é parvoíce, e não comprar a mais quando toda a gente diz que é agora ou nunca."
+            },
+            {
+              "cena": 3,
+              "visual": "Animação: a carteira dividida em fatias de cores, com legendas «um ativo maior, alguns médios, alguns pequenos».",
+              "narracao": "Olha também para a forma como a carteira está dividida. Há um peso maior em poucos ativos e pesos mais pequenos noutros. Não te estou a dizer para copiares estes ativos. Estou a dizer para copiares a ideia: uma carteira tem uma estrutura, escrita antes, e essa estrutura não muda todas as semanas por causa de uma notícia."
+            },
+            {
+              "cena": 4,
+              "visual": "Ruben a mostrar o caderno com uma tabela: «ativo · peso · valor por semana».",
+              "narracao": "Agora faz o teu. Escreve os ativos do teu plano, o peso de cada um e o valor por semana. Se estás a começar, menos é mais. Um ou dois ativos chegam perfeitamente. Lembra-te das sete perguntas do módulo dois antes de pôr qualquer nome nesta lista."
+            },
+            {
+              "cena": 5,
+              "visual": "Ecrã a dividir em dois: à esquerda a carteira da casa, à direita a tabela do aluno.",
+              "narracao": "Usa as carteiras da casa como espelho, não como molde. Quando tiveres dúvidas, por exemplo compro esta semana, com o mercado a cair assim?, vai ver o que aconteceu nas carteiras da casa em semanas parecidas. Vais ver que a resposta, quase sempre, foi comprar a base e seguir em frente."
+            },
+            {
+              "cena": 6,
+              "visual": "Texto final no ecrã com o aviso: «Carteiras de demonstração e educação. Resultados passados não garantem resultados futuros.»",
+              "narracao": "As carteiras da casa servem para aprender. O que elas fizeram no passado não diz nada sobre o que vão fazer no futuro, nem sobre o que a tua vai fazer. Na próxima aula vamos subir um degrau e olhar para o gráfico, com uma ferramenta que já conheces de nome: o Momentum."
+            }
+          ],
+          "palavras": 346,
+          "minutos": 2.2
+        },
+        {
+          "id": "7.4",
+          "titulo": "Aula 7.4 — Momentum no gráfico grande: escolher o tamanho, não o dia",
+          "gancho": "O Momentum é um scanner de trading. Então o que é que ele está a fazer num módulo de DCA? Está a fazer de semáforo.",
+          "cenas": [
+            {
+              "cena": 1,
+              "visual": "Gravação de ecrã do TradingView: gráfico diário do Bitcoin com o scanner Momentum. Nuvem, média exponencial, painel de volume e RSI.",
+              "narracao": "Já ouviste falar do Momentum, o scanner da MTM que funciona por cores. Verde para compra, vermelho para venda. Os traders usam-no em gráficos de quinze minutos ou de uma hora. Nós vamos usá-lo de outra forma: no gráfico diário e no semanal, os gráficos grandes, que mostram a direção de fundo e não o ruído do dia."
+            },
+            {
+              "cena": 2,
+              "visual": "Animação com cinco quadrados que se acendem um a um: nuvem, posição da nuvem, média exponencial, volume, RSI.",
+              "narracao": "O Momentum tem cinco confirmações, e cada uma vale um ponto. A nuvem está presente e com a cor certa? A nuvem está do lado certo das velas? A média exponencial concorda? O volume tem a cor da direção? E o RSI está a cruzar na zona certa? Cinco em cinco é o sinal mais completo. Quatro em cinco ainda é bom. Com menos, o Momentum está a dizer-te que não tem uma opinião forte."
+            },
+            {
+              "cena": 3,
+              "visual": "Três gráficos diários lado a lado, com legendas: «verde e a favor», «vermelho forte», «caixas lilás».",
+              "narracao": "Agora, como é que isto entra no DCA? Com três leituras simples, no teu dia de reforço. Primeira: gráfico diário a verde, com quatro ou cinco confirmações de compra. A tendência de fundo está a favor. Fazes o reforço que o DCA Inteligente sugere. Segunda: gráfico diário a vermelho forte, cinco em cinco de venda. A queda está em curso. Compras a base, mas não esvazias o pote ainda. Esperas que a pressão de venda abrande. Terceira: caixas lilás em cima das velas, mercado lateral. Para um trader, é sítio onde não se entra. Para quem faz DCA, é um dia normal. Compras a base."
+            },
+            {
+              "cena": 4,
+              "visual": "Gráfico semanal do mesmo ativo, com zoom out lento.",
+              "narracao": "E o semanal? Usa-o uma vez por mês, para veres o quadro todo. Se o semanal virou para compra depois de uma descida longa, é um bom momento para rever o teu plano e confirmar que o pote está pronto para as semanas de Forte Compra. Se o semanal está em venda forte, não mudas nada. O DCA foi feito exatamente para essas fases."
+            },
+            {
+              "cena": 5,
+              "visual": "Ruben, plano próximo, com a frase no ecrã: «O semáforo não desliga o carro.»",
+              "narracao": "A regra de ouro: o Momentum não pára o teu DCA. Nunca. Ele ajuda-te a decidir se usas o pote ou não, e quanto. Se alguma vez te apanhares a dizer esta semana não compro porque está vermelho, volta a esta aula. Vermelho no gráfico diário, para quem faz DCA, quer dizer base, não quer dizer zero."
+            },
+            {
+              "cena": 6,
+              "visual": "Folha de exercício com três gráficos e três caixas por preencher: «leitura», «pontos», «o que faço».",
+              "narracao": "Exercício: abre o gráfico diário de um ativo do teu plano com o Momentum. Conta as confirmações. Escreve a leitura, os pontos e o que farias na próxima sexta: base, base mais pote, ou base sem pote. Faz isto em três sextas seguidas, sem comprar nada a mais, só a registar. Vais aprender mais com isto do que com qualquer vídeo."
+            }
+          ],
+          "palavras": 445,
+          "minutos": 2.9
+        },
+        {
+          "id": "7.5",
+          "titulo": "Aula 7.5 — DEFY: quando o preço estica demais",
+          "gancho": "Há dias em que o preço cai tanto que parece um elástico esticado até ao limite. O DEFY foi feito para te mostrar esses dias.",
+          "cenas": [
+            {
+              "cena": 1,
+              "visual": "Gráfico diário com o DEFY: bandas de exaustão interior, média e exterior à volta de uma média suave, com a projeção tracejada.",
+              "narracao": "O DEFY é outro scanner da MTM. Desenha bandas de exaustão à volta de uma média suave: uma interior, uma média e uma exterior. Quando o preço estica até à banda exterior e vira com uma vela forte, o DEFY marca uma ideia. Para o trader, é um ponto de entrada possível. Para nós, que fazemos DCA, é outra coisa: é um sinal de que o preço está esticado para baixo, longe do seu normal."
+            },
+            {
+              "cena": 2,
+              "visual": "Zoom numa ideia de compra do DEFY, com as estrelas por cima da vela.",
+              "narracao": "O DEFY também soma confirmações. O preço está num nível onde já reagiu antes? A nuvem de tendência está do mesmo lado? Há uma quebra de volume? Com três confirmações aparece uma estrela. Com mais, duas ou três. E quando tudo se alinha, a vela fica dourada. As estrelas medem quantas confirmações há. Não medem a certeza do resultado, que essa não existe."
+            },
+            {
+              "cena": 3,
+              "visual": "Tabela animada: «DCA Inteligente em Forte Compra + DEFY com ideia de compra no diário → usar o pote».",
+              "narracao": "Como é que se usa no DCA? Como segunda opinião. Se no teu dia de reforço o DCA Inteligente diz Forte Compra, e o DEFY tem uma ideia de compra no gráfico diário, com estrelas, as duas leituras concordam: o preço está esticado e houve uma queda forte. É o tipo de semana em que faz sentido usar o pote de reserva. Se só uma delas concorda, compras a base e mais um pouco do pote, se quiseres. Se nenhuma concorda, base."
+            },
+            {
+              "cena": 4,
+              "visual": "Ruben a desenhar no caderno uma pequena tabela de decisão de três linhas.",
+              "narracao": "Vamos pôr isto num quadro simples, para colares ao lado do ecrã. Duas leituras a favor: base mais pote. Uma leitura a favor: base mais metade do pote, no máximo. Nenhuma: só base. E por cima de tudo, o teto mensal, que não se fura. Escolhe uma ferramenta, Momentum ou DEFY. As duas ao mesmo tempo, no início, é ruído a mais."
+            },
+            {
+              "cena": 5,
+              "visual": "Aviso no ecrã, letras grandes: «Os sinais do DEFY são para trading. No DCA, só mexem no tamanho.»",
+              "narracao": "Cuidado com uma tentação. O DEFY desenha entrada, stop e alvos, porque foi feito para trading. Não é por usares o DEFY que o teu DCA passa a ter stop e alvos. O teu DCA é de longo prazo e continua a ser. Se um dia quiseres fazer trading com o DEFY, isso é outro curso, outra conta e outro risco."
+            },
+            {
+              "cena": 6,
+              "visual": "Ecrã de resumo com a tabela de decisão completa.",
+              "narracao": "Resumo da aula: o DEFY mostra-te quando o preço esticou demais. No DCA, serve só para decidir se usas o pote. Na próxima aula juntamos tudo num ritual de sexta-feira que cabe em quinze minutos."
+            }
+          ],
+          "palavras": 403,
+          "minutos": 2.6
+        },
+        {
+          "id": "7.6",
+          "titulo": "Aula 7.6 — O ritual de sexta em 15 minutos",
+          "gancho": "Quinze minutos por semana. É tudo o que o teu DCA precisa de ti. O resto da semana é para viveres.",
+          "cenas": [
+            {
+              "cena": 1,
+              "visual": "Relógio animado com quinze minutos divididos em cinco fatias, cada uma com um ícone.",
+              "narracao": "Vamos juntar tudo. O ritual tem cinco passos e cabe em quinze minutos. Faz sempre no mesmo dia e à mesma hora. Eu sugiro sexta à tarde ou ao fim do dia, mas escolhe o que funcionar para ti."
+            },
+            {
+              "cena": 2,
+              "visual": "Passo 1 no ecrã: «Plano à frente (1 min)». Ruben abre o caderno na página do plano.",
+              "narracao": "Passo um, um minuto: abre o teu plano escrito. Valor base, ativos, teto mensal e quanto tens no pote. Sem isto à frente, não se faz mais nada."
+            },
+            {
+              "cena": 3,
+              "visual": "Passo 2: «DCA Inteligente (3 min)». Ecrã Portefólios → Análise DCA.",
+              "narracao": "Passo dois, três minutos: abre o painel Análise DCA na app e escreve a etiqueta de cada ativo do teu plano. Forte Compra, Compra, Aguardar ou Não Reforçar."
+            },
+            {
+              "cena": 4,
+              "visual": "Passo 3: «Gráfico diário (4 min)». TradingView com Momentum ou DEFY.",
+              "narracao": "Passo três, quatro minutos: abre o gráfico diário de cada ativo com a tua ferramenta, Momentum ou DEFY. Escreve a leitura: a favor, contra ou neutra."
+            },
+            {
+              "cena": 5,
+              "visual": "Passo 4 e 5: «Decidir e comprar (5 min)» e «Registar (2 min)». Folha de registo com colunas: data, ativo, etiqueta, leitura, compra, pote.",
+              "narracao": "Passo quatro, cinco minutos: aplica o quadro de decisão. Base, base mais meio pote, ou base mais pote, sempre dentro do teto. Faz a compra na tua plataforma autorizada. Passo cinco, dois minutos: regista tudo numa linha da folha. Data, ativo, etiqueta, leitura, quanto compraste e quanto ficou no pote. Esta folha vai servir-te para os impostos, que vês no próximo módulo, e para aprenderes contigo mesmo."
+            },
+            {
+              "cena": 6,
+              "visual": "Ruben a fechar o caderno. Texto final: «Missão do módulo 7: três sextas seguidas, ritual completo, registado.» Por baixo, o aviso educativo.",
+              "narracao": "Missão do módulo: faz o ritual em três sextas seguidas e regista as três linhas. Se ainda não compras, faz o ritual na mesma e regista o que terias feito. É assim que se treina. E fica com isto: as ferramentas da MTM ajudam-te a decidir com mais calma e mais informação. Não decidem por ti, não garantem nada, e o risco de perda é sempre teu. Conteúdo educativo, não é aconselhamento financeiro. Vemo-nos no último módulo."
+            }
+          ],
+          "palavras": 286,
+          "minutos": 1.9
+        }
+      ]
+    },
+    {
+      "ficheiro": "modulo-8.md",
+      "titulo": "Módulo 8 — Impostos, perpétuos e o teu plano de 30 dias (≈17 min)",
+      "aulas": [
+        {
+          "id": "8.1",
+          "titulo": "Aula 8.1 — Impostos em Portugal: a regra dos 365 dias",
+          "gancho": "Em cripto, o imposto não se paga no dia em que compras. Pode aparecer, porém, no dia em que vendes, se não estiveres preparado.",
+          "cenas": [
+            {
+              "cena": 1,
+              "visual": "Calendário animado com 365 dias a encherem-se, e um marcador a assinalar o dia 365.",
+              "narracao": "Vou falar de impostos em termos gerais, porque as regras mudam e quem decide a tua situação é um contabilista certificado. Dito isto, há um princípio base que deves conhecer. Desde 2023, em Portugal, as mais-valias de cripto detidas durante menos de 365 dias são tributadas à taxa de 28 por cento. Se as detiveres 365 dias ou mais, ficam, em regra, isentas. Uma mais-valia é a diferença positiva entre o valor de venda e o valor de compra. Se vendes por menos do que compraste, não há mais-valia para tributar. O princípio é simples. Os detalhes é que mudam a conta, e são eles que te apanham desprevenido. Por exemplo, a data de compra e a data de venda contam dias, e um dia de diferença pode mudar tudo."
+            },
+            {
+              "cena": 2,
+              "visual": "Exemplo ilustrativo com as contas no ecrã: mil euros de compra, mil e trezentos de venda, trezentos de ganho, oitenta e quatro de imposto. Legenda: «valores redondos, sem taxas».",
+              "narracao": "Vamos a um exemplo ilustrativo, com valores redondos e sem taxas. Compras mil euros de cripto e, três meses depois, vendes por mil e trezentos. A mais-valia é de trezentos euros. Sobre esses trezentos aplicas os vinte e oito por cento, e dá oitenta e quatro euros. Repara bem: o imposto não incide sobre o valor total de mil e trezentos, mas só sobre o ganho. Se o mesmo investimento tivesse sido mantido durante 365 dias ou mais, a regra geral seria outra, e a conta ficaria, em regra, isenta. Tudo isto pode mudar, por isso confirma sempre a versão atual antes de tirares conclusões. Pensa também que as taxas pagas na compra e na venda podem reduzir o ganho, e por isso entram no registo."
+            },
+            {
+              "cena": 3,
+              "visual": "Ecrã com uma folha de cálculo: colunas Data, Ativo, Quantidade, Valor em euros, Taxas, Tipo de operação.",
+              "narracao": "Por isso, regista tudo. Cada compra, cada venda e cada troca, com a data, o ativo, a quantidade, o valor em euros no momento e as taxas pagas. Acrescenta uma coluna para o tipo de operação, para saberes de imediato o que foi compra, venda ou troca. Não te fies em memórias nem em prints soltos, porque daqui a um ano já não vais lembrar-te de tudo. Uma folha de cálculo simples chega para começar. Quando chegar a altura de declarar, vais agradecer a ti próprio, e o contabilista também. Se fizeres uma troca de uma moeda por outra, regista as duas pontas da operação, porque ambas contam."
+            },
+            {
+              "cena": 4,
+              "visual": "Aviso grande no ecrã: «Confirma com um contabilista certificado». Por baixo, três casos em lista: troca de cripto por cripto, staking, airdrops.",
+              "narracao": "Agora o aviso mais importante da aula. Trocas de cripto por cripto, rendimentos de staking, airdrops e outros casos podem ter tratamento diferente, e não quero adivinhar isso num vídeo. Existe também a opção de englobamento, em que o ganho entra no teu rendimento anual. Pode ser mais vantajosa ou menos, conforme o teu escalão, e essa comparação precisa de alguém que veja os teus números completos. Não tomes decisões fiscais com base num vídeo de dois minutos, nem com base no que alguém disse num grupo de mensagens. Leva para a reunião com o contabilista a tua folha de registo, e as perguntas que escreveste antes."
+            },
+            {
+              "cena": 5,
+              "visual": "Caso ilustrativo. Um escritório em Lisboa, o Pedro, 31 anos, designer, a folhear extratos antigos num portátil. Legenda: «caso ilustrativo».",
+              "narracao": "Caso ilustrativo: o Pedro, 31 anos, designer em Lisboa, fez várias compras e vendas ao longo do ano, sem registar nada. Quando chegou a altura de declarar, não sabia as datas exatas, nem o valor que tinha pago em cada operação. Passou semanas a pesquisar em extratos e em conversas antigas. O imposto em si nem era o pior. O pior foi o stress de reconstruir um ano inteiro de memória. Um registo de dez minutos por mês teria evitado tudo isso, e teria poupado horas de dúvidas."
+            },
+            {
+              "cena": 6,
+              "visual": "Três ícones em fila: um calendário, uma percentagem, uma folha. Seta para a aula 7.2.",
+              "narracao": "Resumindo: menos de 365 dias pode significar 28 por cento sobre o ganho, 365 dias ou mais é, em regra, isenção, e o registo é o teu melhor aliado. Na próxima aula vamos falar de perpétuos e alavancagem, o terreno onde os números podem perder-se em minutos, e onde o imposto é a menor das tuas preocupações."
+            }
+          ],
+          "palavras": 640,
+          "minutos": 4.1
+        },
+        {
+          "id": "8.2",
+          "titulo": "Aula 8.2 — Perpétuos e alavancagem: porque não começar aqui",
+          "gancho": "Imagina uma aposta em que, se o preço mexer um por cento contra ti, perdes tudo o que lá puseste. Parece exagero. Com alavancagem muito alta, em perpétuos, pode acontecer em segundos.",
+          "cenas": [
+            {
+              "cena": 1,
+              "visual": "Um contrato no ecrã, sem data de validade, com um símbolo de infinito a girar.",
+              "narracao": "Um perpétuo é um contrato derivado sem data de validade. Em vez de comprares o ativo, apostas que o preço vai subir ou descer. Podes ficar comprado, se achas que sobe, ou vendido, se achas que desce. Existe muitas vezes uma taxa de financiamento, paga periodicamente entre quem está comprado e quem está vendido, conforme a diferença de preço entre o contrato e o mercado à vista. A alavancagem permite abrir uma posição muito maior do que o dinheiro que tens depositado. E é aqui que o risco se multiplica, porque o que ganhas e o que perdes são calculados sobre a posição inteira, e não sobre o teu depósito. Isto quer dizer que um movimento pequeno do preço pode representar uma fatia enorme do teu dinheiro."
+            },
+            {
+              "cena": 2,
+              "visual": "Tabela animada no ecrã, com duas colunas: alavancagem e queda aproximada que liquida a posição.",
+              "narracao": "Vamos aos números aproximados, sem contar taxas. Com dois vezes, uma queda de cerca de cinquenta por cento liquida a posição. Com cinco vezes, cerca de vinte por cento. Com dez vezes, cerca de dez. Com vinte vezes, cerca de cinco. Com cinquenta vezes, cerca de dois por cento. E com cem vezes, cerca de um por cento. Um por cento. Num mercado como o cripto, que pode mexer um por cento sem grande esforço numa só tarde, isto não é alavancagem. É uma roleta com o teu dinheiro. Repara que, quanto maior a alavancagem, mais curto o caminho até à liquidação, e não há margem para errar. E atenção: as taxas e a margem de manutenção fazem a liquidação acontecer ainda mais cedo do que a tabela sugere."
+            },
+            {
+              "cena": 3,
+              "visual": "Caso ilustrativo. Um quarto em Lisboa, o Hugo, 27 anos, programador, com um portátil onde um gráfico fica vermelho. Legenda: «caso ilustrativo».",
+              "narracao": "Caso ilustrativo: o Hugo, 27 anos, programador em Lisboa, abriu uma posição com cinquenta vezes de alavancagem, porque, nas palavras dele, só precisava de acertar uma vez. O preço fez um movimento pequeno contra ele, de pouco mais de dois por cento, e a posição foi liquidada em minutos. Perdeu a margem toda, incluindo dinheiro que tinha poupado para outras coisas. Ele não perdeu por ser um mau programador. Perdeu porque a estrutura do produto amplifica cada erro, e ele não tinha um limite escrito antes de entrar. Quando a alavancagem é alta, cada movimento pequeno pesa como um grande."
+            },
+            {
+              "cena": 4,
+              "visual": "Três cartões no ecrã: «Ainda não lês o mercado com segurança», «Ainda não tens regras testadas», «Ainda não sabes lidar com uma posição a perder».",
+              "narracao": "Por isso, a minha recomendação é clara: não comeces por aqui. Um iniciante ainda não tem uma leitura sólida do mercado, ainda não tem regras de risco testadas e ainda não sabe lidar com a emoção de estar numa posição a perder. Os perpétuos amplificam tudo, os acertos e os erros, e a amplificação dos erros costuma chegar primeiro. Se a tua primeira experiência for um perpétuo, a primeira lição pode sair cara. Primeiro aprende a comprar, a guardar e a registar. Só depois, se quiseres, estudas derivados, sempre com dinheiro que aceitas perder por completo."
+            },
+            {
+              "cena": 5,
+              "visual": "Um telemóvel com a notificação «Sinal recebido: entrar já!» e, por baixo, a pergunta: «Quem decide?».",
+              "narracao": "Mesmo quando há um sinal, um scanner ou uma ferramenta a apontar uma entrada, a decisão e o risco continuam a ser teus. Um sinal não te dá o tamanho da posição, não te dá o limite de perda, e não te diz o que fazer quando o preço vai contra ti. Se entras só porque chegou uma notificação com urgência, estás a delegar algo que não podes delegar. Pergunta-te sempre: se esta ferramenta falhar, eu sei o que faço? Se a resposta for não, não entres. E se a resposta for sim, pensa ainda no tamanho da posição antes de avançar."
+            },
+            {
+              "cena": 6,
+              "visual": "Ecrã final com a frase: «A alavancagem não cria dinheiro. Só amplifica o que já acontece».",
+              "narracao": "Guarda esta ideia: a alavancagem não cria dinheiro. Só amplifica o que já acontece no mercado, para os dois lados. Se não consegues explicar a liquidação com as tuas próprias palavras, ainda não estás pronto para lhe tocar. Escreve a explicação num papel, sem olhar para as notas, e compara depois. Na próxima aula vamos juntar tudo o que vimos num plano de trinta dias, que é a parte prática deste bootcamp."
+            }
+          ],
+          "palavras": 658,
+          "minutos": 4.3
+        },
+        {
+          "id": "8.3",
+          "titulo": "Aula 8.3 — O teu plano de 30 dias",
+          "gancho": "Em trinta dias não vais dominar o cripto. Mas podes sair com uma base sólida, e isso já é muito mais do que a maioria de quem começa com pressa.",
+          "cenas": [
+            {
+              "cena": 1,
+              "visual": "Tabela no ecrã com quatro colunas, uma por semana: segurança, escolher e comprar, DCA e registo, revisão.",
+              "narracao": "Vamos desenhar um plano de trinta dias, dividido em quatro semanas. Semana um: segurança. Ativas a autenticação por aplicação, crias o gestor de palavras-passe, escreves a seed phrase em papel e confirmas as plataformas que vais usar. Semana dois: escolhes uma plataforma regulada, fazes a verificação de identidade, percebes as taxas e aprendes a diferença entre ordem de mercado e ordem limite. Semana três: começas o DCA com um valor pequeno e registas tudo. Semana quatro: revês os números, as regras e o que sentiste. Cada semana tem uma tarefa principal e uma secundária, para não ficares preso ao detalhe. E uma semana por fase, sem saltar nenhuma. Se uma semana correr mal, repete-a antes de avançares. Não há prémio por pressa."
+            },
+            {
+              "cena": 2,
+              "visual": "Checklist de segurança imprimível, com quadrados para marcar.",
+              "narracao": "Na primeira semana, o teu checklist mínimo é este. Palavra-passe única e forte, guardada num gestor. Autenticação de dois fatores por aplicação, e não por SMS. Seed phrase escrita à mão, em dois sítios separados, nunca fotografada, nunca enviada, nunca guardada num email ou numa nota do telemóvel. Endereços verificados, guardados nos marcadores. Nenhum link de mensagem, nunca. E desliga as notificações de preço que te fazem olhar para o ecrã a cada minuto. Não é preciso ser perfeito. É preciso ser consistente. Se te lembrares disto de cor, já estás à frente de muita gente que começa com dinheiro e sem esta base."
+            },
+            {
+              "cena": 3,
+              "visual": "Lista de termos no ecrã: seed phrase, DCA, halving, liquidação, dominância, airdrop, mais-valia.",
+              "narracao": "Para não te perderes nas palavras, vai ao glossário do e-book, que tem trinta termos explicados em linguagem simples. Seed phrase, DCA, halving, liquidação, dominância, airdrop, mais-valia, e por aí fora. Por exemplo, mais-valia, liquidação e custódia são termos que vais encontrar em quase todas as conversas. Escreve no teu caderno as palavras que não percebes e procura-as antes de decidires. Um termo que não entendes é sempre um sinal para parar. O que seria perigoso era decidir sem perceber o que estás a fazer. Se encontrares um termo novo numa aula, pára o vídeo, procura-o e só depois continuas."
+            },
+            {
+              "cena": 4,
+              "visual": "Diário de revisão no ecrã, com perguntas numeradas, e uma caneta a sublinhar a última.",
+              "narracao": "Ao fim de trinta dias, faz uma revisão honesta. Quantas vezes cumpriste o plano, e quantas vezes te desviaste? O que te fez querer mudar de rota? Quanto investiste no total, e quanto vale hoje o que compraste? Não respondas com o que gostavas que tivesse acontecido. Responde com o que aconteceu, mesmo que não seja bonito. Se quiseres, partilha essa revisão com alguém de confiança, porque ajuda a ser honesto. Esse registo vale mais do que qualquer conselho que eu te possa dar, porque é a tua própria experiência, escrita com números verdadeiros. Relê-o no fim de cada semana, e não só no fim do mês."
+            },
+            {
+              "cena": 5,
+              "visual": "Aviso grande no ecrã: «Este plano não garante nada».",
+              "narracao": "Antes de avançares, um aviso que não é opcional. Este plano não garante lucros nem resultados. Serve para aprenderes com segurança e com dinheiro que podes perder. Se algum dia alguém te prometer que um plano como este te vai dar um rendimento certo, desconfia logo, e volta às aulas 5.1 e 5.2. A promessa de certeza é quase sempre a primeira pista de uma burla. E se o plano correr mal, não é sinal de que és incompetente. É sinal de que aprendeste algo caro, e isso também conta."
+            },
+            {
+              "cena": 6,
+              "visual": "Ecrã com a semana um destacada, e a frase: «Segurança primeiro».",
+              "narracao": "O primeiro passo deste plano é o mais aborrecido, e é o mais importante: segurança. Antes de comprares o que quer que seja, a tua chave tem de estar guardada e a tua conta tem de estar protegida. Se fizeres a tua primeira semana já hoje, estás à frente de quem ainda nem começou. Na última aula deste bootcamp vou fechar com um aviso final e com um convite. Até lá, escreve a tua semana um. E guarda a checklist de segurança à vista, porque a tua memória, na pressa, não é fiável."
+            }
+          ],
+          "palavras": 646,
+          "minutos": 4.2
+        },
+        {
+          "id": "8.4",
+          "titulo": "Aula 8.4 — Fecho: aviso final, convite e missão do módulo",
+          "gancho": "Chegámos ao fim do bootcamp. Antes de qualquer outra coisa, preciso de te dizer uma coisa com clareza, em voz alta.",
+          "cenas": [
+            {
+              "cena": 1,
+              "visual": "Ecrã com texto grande e sóbrio: «Conteúdo educativo, não é aconselhamento financeiro. O risco de perda é real».",
+              "narracao": "Este bootcamp é conteúdo educativo. Não é aconselhamento financeiro. Não é uma recomendação de compra ou venda de nenhum ativo, e não sabe nada sobre a tua situação, o teu rendimento, as tuas dívidas ou os teus objetivos. Cripto é um mercado de alto risco. O risco de perda é real, e podes perder parte ou a totalidade do que lá puseres. Nunca invistas o que não podes perder. E não tomes decisões fiscais ou de investimento sem falar com um profissional habilitado, que veja os teus números completos e te explique o que se aplica ao teu caso. Se tiveres dúvidas sobre impostos, leva-as escritas, e pede uma resposta por escrito."
+            },
+            {
+              "cena": 2,
+              "visual": "Três cartões em fila, cada um com uma frase curta, a aparecerem um de cada vez.",
+              "narracao": "Se levares só três coisas destas semanas, que sejam estas. A primeira: a chave é tua, e ninguém legítimo ta pede. Nem o suporte, nem um técnico, nem alguém que te conhece há meses numa conversa simpática. A segunda: os números de exemplo são sempre ilustrativos, e a regra mais antiga continua a ser a melhor. Desconfia de quem promete dobrar e de quem te apressa. A terceira: um plano escrito e uma espera de vinte e quatro horas valem mais do que qualquer palpite, por mais confiante que pareça. Não é preciso decorar nada. É preciso voltar a estas regras quando a pressa aparecer. Estas três regras cabem num post-it, e isso é uma virtude, não um defeito."
+            },
+            {
+              "cena": 3,
+              "visual": "Dois cartões no ecrã: «Salas DCA com MTM» e «Comunidade MoreThanMoney».",
+              "narracao": "Se quiseres continuar a praticar com outras pessoas, há as Salas DCA com MTM, onde se trabalha o método com acompanhamento e perguntas em direto. Há também a comunidade MoreThanMoney, onde partilhas dúvidas e aprendes com quem também está a começar. Não te prometo resultados, porque não os controlo nem os garanto a ninguém, e desconfia de quem te prometer o contrário. O que te ofereço é um sítio para perguntar sem vergonha, com pessoas que também estão a aprender, e com as regras de segurança à frente de tudo. Se entrares, entra para aprender, e não para ter a certeza de nada."
+            },
+            {
+              "cena": 4,
+              "visual": "Três botões no ecrã: «Rever o plano», «Fazer a checklist», «Decidir, sem pressa».",
+              "narracao": "Os próximos passos são simples. Revê o plano de trinta dias. Faz a checklist de segurança, ponto por ponto. E decide, sem pressa, se queres entrar nas Salas ou na comunidade. A decisão é tua, e pode ser não. Escolhe um passo de cada vez, e não os três ao mesmo tempo. Se alguém te disser que tens de decidir hoje, ou que vais perder uma oportunidade única, já sabes o que fazer: fechas a conversa, respiras e voltas a este plano. Quem ganha com a tua pressa não é quem te quer bem. Em caso de dúvida, o silêncio também é uma resposta válida."
+            },
+            {
+              "cena": 5,
+              "visual": "Ecrã de missão, com um quadrado para marcar e a frase «Missão do módulo 8».",
+              "narracao": "A missão do módulo sete, e do bootcamp, é uma só. Até ao fim desta semana, escreve o teu plano de trinta dias numa folha, com a data de hoje, e assina-o. Guarda-o num sítio seguro, separado da tua seed phrase, sem misturar as duas coisas. Depois, marca a palavra feito na checklist que imprimiste. Obrigado por teres dado a estas aulas o tempo que pedem. Nem todos se sentam a estudar isto com calma, e isso já diz muito sobre ti."
+            },
+            {
+              "cena": 6,
+              "visual": "Ecrã final com o logótipo MoreThanMoney e a frase: «Cuida da tua chave».",
+              "narracao": "Antes de fechar, deixo-te uma última ideia. Em cripto, o mercado vai estar sempre aí, amanhã, na semana que vem e daqui a um ano. Não precisas de entrar hoje para não perder uma oportunidade, porque as oportunidades repetem-se, e a tua segurança não se repete. Se algum dia tiveres dúvidas, volta a estas aulas, faz a checklist e escreve o que observas. Até à próxima. Se quiseres voltar a estas aulas, estão cá. Lembra-te: conteúdo educativo, não é aconselhamento financeiro, e o risco de perda é real. Cuida da tua chave."
+            }
+          ],
+          "palavras": 634,
+          "minutos": 4.1
+        }
+      ]
+    }
+  ]
+}

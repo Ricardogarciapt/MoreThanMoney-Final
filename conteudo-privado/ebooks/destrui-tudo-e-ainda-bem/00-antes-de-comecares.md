@@ -12,7 +12,7 @@ Este é diferente por um motivo prático: tem tarefas. Pequenas, chatas às veze
 
 ## O que vais encontrar
 
-São dez capítulos, um por semana. A ordem importa. Começamos pela tua semana e pelas tuas contas, porque não vale a pena falar de mercados a quem não sabe quanto gasta por mês. Só depois entramos em gráficos, risco e rotina.
+São dez capítulos, um por semana, mais um mapa do método e um plano de 30 dias no fim. A ordem importa. Começamos pela tua semana e pelas tuas contas, porque não vale a pena falar de mercados a quem não sabe quanto gasta por mês. Só depois entramos em gráficos, risco e rotina.
 
 Ao longo do livro vais encontrar uns blocos com cara própria:
 

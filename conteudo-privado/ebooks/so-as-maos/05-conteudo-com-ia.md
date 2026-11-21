@@ -4,7 +4,7 @@
 Há quem ache que a IA vai fazer tudo sozinha e que basta carregar num botão. Há quem tenha medo de qualquer ferramenta nova e recuse experimentar. As duas posições são pouco úteis para quem quer vender sem aparecer.
 
 :::post @maria.vendersemaparecer
-foto: maria-reel-studio.jpg
+imagem: Do PDF ao post em 2 minutos.
 legenda: Um rascunho com ajuda da IA, revisto à mão e gravado na mesa de sempre. A ferramenta encurtou o caminho. O resto foi trabalho meu.
 :::
 
@@ -69,6 +69,8 @@ eu: Fui eu que o escrevi, com ajuda de uma ferramenta. Revi tudo e mudei o que n
 Marta: Obrigada por dizeres. É mais honesto.
 eu: Prefiro assim. Se alguma vez houver dúvida sobre um número ou uma frase, digo-te.
 :::
+
+[[foto: maria-tel-portatil.jpg | A IA escreve o rascunho. As tuas mãos e a tua cabeça escrevem o resto. | lado]]
 
 ## Revisão antes de publicar
 

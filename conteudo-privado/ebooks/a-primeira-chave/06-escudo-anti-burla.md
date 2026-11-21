@@ -75,6 +75,12 @@ Escreve esta lista num papel e cola-a perto do ecrã. Antes de qualquer operaç�
 
 Se a resposta às primeiras cinco perguntas for preocupante, não avanças. Se a resposta às últimas cinco for insegura, também não avanças.
 
+:::curso Aula 5.4 · A checklist dos dez pontos
+Nenhuma empresa séria te pede a seed phrase. Nenhum suporte te escreve primeiro. E ninguém que te prometa duplicar dinheiro está a falar a sério.
+
+no curso: treinas com mensagens reais de burla, já sem nomes, e aprendes a reconhecê-las em segundos.
+:::
+
 ## Camadas de segurança
 
 A proteção funciona por camadas. Nenhuma medida sozinha resolve tudo, mas juntas tornam o teu dinheiro bem mais difícil de roubar.

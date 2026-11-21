@@ -28,6 +28,13 @@ Uma coisa que a disciplina ensina muito bem é a cumprir. Cumprir horários, cum
 
 [[foto: rg-farda.jpg | Catorze anos de farda. A disciplina ficou, a farda não. | polaroid]]
 
+:::galeria Antes de tudo isto, a farda
+rg-paraquedistas.jpg | Paraquedistas. O primeiro grupo a sério.
+rg-fuzileiros.jpg | Escola de Fuzileiros. Formatura, sol e silêncio.
+rg-exercito.jpg | Em exercício. Horas de espera para minutos de ação.
+rg-cavalo.jpg | Na tropa, até a cavalo. Ninguém me tinha avisado.
+:::
+
 ## O emprego que deixou de servir
 
 Larguei o meu emprego de sonho. Parece contraditório, e é. Mas o emprego, por muito que o amasse, deixou de me dar o que eu precisava. E o que eu precisava naquela altura era de tempo, de cabeça e de estar perto da família.

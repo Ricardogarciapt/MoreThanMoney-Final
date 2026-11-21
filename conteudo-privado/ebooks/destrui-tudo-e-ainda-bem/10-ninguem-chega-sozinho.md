@@ -45,6 +45,12 @@ foto: rg-palco.jpg
 legenda: Ninguém chega sozinho. Eu não cheguei. Conhecimento, ferramentas e uma equipa ao lado poupam anos de erros caros. Não há resultados garantidos.
 :::
 
+:::galeria Comunidade é isto: caras, não nomes de utilizador
+rg-evento.jpg | Num evento, no fim. As melhores conversas são sempre as do corredor.
+rg-painel3.jpg | Num painel, com outros traders.
+rg-palco3.jpg | Em palco. Antes dos gráficos, falo sempre de disciplina.
+:::
+
 ## Como escolher pela tua fase
 
 Sugiro três fases. Em cada uma, o passo seguinte é diferente:
@@ -87,6 +93,19 @@ eu: Pelo capítulo 3. Faz a conta das 168 horas e manda-me o teu número.
 eu: A partir daí vemos juntos o passo seguinte.
 :::
 [[foto: rg-palco2.jpg | Do outro lado do microfone, mas do mesmo lado da conversa. | larga]]
+
+:::curso Aula 204 · A plataforma da casa
+Na MoreThanMoney construímos a nossa própria forma de ver o mercado: o MTM Scanner, que junta gráficos, ferramentas de leitura e gestão de risco no mesmo sítio, e liga quem aprende ao trabalho dos educadores.
+
+A ideia é simples: menos janelas abertas, menos ruído, mais tempo para pensar no plano.
+
+no curso: configuras o teu espaço de trabalho uma vez, com os teus pares, os teus gráficos e as tuas regras à vista.
+:::
+
+:::post @ricardogarciapt
+foto: rg-post-paciencia.jpg
+legenda: A paciência não chega ao almoço. E a tua, chega? Esta é a pergunta que faço a quem quer resultados na primeira semana.
+:::
 
 ## Eu estou do outro lado
 

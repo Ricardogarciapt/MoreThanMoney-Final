@@ -133,6 +133,8 @@ Hoje, antes de qualquer coisa: escreve a data em que começaste este plano. Daqu
 29. **Stablecoin:** moeda que procura manter valor estável, normalmente indexado ao dólar.
 30. **Volatilidade:** o quanto um preço oscila num determinado período.
 
+[[foto: ruben-capa-foto.jpg | Trinta dias. Simplificar o complexo. Mais do que dinheiro, é um plano. | polaroid]]
+
 ## Aviso final
 
 Este livro foi escrito para te dar base, não para te dar certezas. Não há método que garanta lucro, nem plataforma, nem sala, nem influenciador que o possa fazer. O que é real é o risco de perda, e pode ser total. Investe apenas o que podes perder, guarda as chaves com cuidado, desconfia da pressa e pede sempre confirmação a quem percebe de impostos e de finanças pessoais.

@@ -73,3 +73,4 @@ graphify-out/
 
 # motor de vídeo único: renders locais quando não há disco externo nem pasta do projeto
 video/saida/
+conteudo-privado/ebooks/*/*-grafica.pdf
