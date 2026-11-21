@@ -493,6 +493,11 @@ html:not(.com-gsap) .fp { opacity: 1; }
 .form-rg .armadilha { position: absolute; left: -9999px; width: 1px; height: 1px; overflow: hidden; }
 .form-rg .estado { grid-column: 1 / -1; margin: 0; font-size: 15px; min-height: 1.4em; }
 .form-rg .estado.ok { color: #3ecf8e; } .form-rg .estado.erro { color: #f87171; }
+.form-iman { margin: 18px 0 14px; border-color: rgba(210,166,60,.35); box-shadow: 0 0 0 1px rgba(210,166,60,.08), 0 18px 40px rgba(0,0,0,.35); }
+.form-iman .iman-tit { margin: 0; } .form-iman .iman-tit b { display: block; font-family: Oswald, sans-serif; font-size: 20px; letter-spacing: .6px; color: var(--ouro-claro); text-transform: uppercase; } .form-iman .iman-tit span { color: #c9ced8; font-size: 15px; }
+.form-iman .tel-linha { display: flex; gap: 8px; margin: 0; } .form-iman .tel-linha select { width: 112px; flex: none; } .form-iman .consent input { accent-color: var(--ouro); }
+.form-iman .iman-nota { margin: 0; font-size: 13px; color: #8f97a8; } .form-iman .iman-nota a { color: var(--ouro-claro); }
+.form-iman input:focus, .form-iman select:focus { border-color: var(--ouro); box-shadow: 0 0 0 3px rgba(210,166,60,.18); }
 .app-convite { display: flex; gap: 14px; align-items: center; flex-wrap: wrap; margin-top: 16px; padding: 14px 16px; border-radius: 16px; border: 1px dashed rgba(233,196,106,.5); color: #d6d6d6; font-size: 15px; }
 @media (max-width: 760px) {
   .atalhos { padding: 50px 0 24px; }
@@ -752,7 +757,20 @@ html:not(.com-gsap) .fp { opacity: 1; }
           <h2 class="titulo palavras" data-palavras>A minha app: <span class="ouro">Missão</span></h2>
           <p class="lead">Três missões por dia, pensadas por mim: treino sem pesos, mindset e digital com IA. Sobe de patente, ganha insígnias e troca moedas por recompensas reais.</p>
           <ul class="app-lista"><li>🔥 Treinos de 7 a 10 minutos, em casa</li><li>🧠 Cápsulas de mindset com reflexão</li><li>⚡ Micro-lições de IA e marca pessoal</li><li>🎖️ Patentes, insígnias e esquadrão</li></ul>
-          <div class="app-btns"><a class="btn btn-ouro" href="/ricardogarcia/app?utm_source=ricardogarcia&amp;utm_medium=landing" data-rg="cta-app">Começar a missão</a><a class="btn btn-linha" href="/ricardogarcia/app?entrar=1" data-rg="cta-app-entrar">Já tenho conta</a><a class="btn btn-linha" href="/missao?utm_source=ricardogarcia" data-rg="cta-app-saber">Saber mais</a></div>
+          <form class="form-rg form-iman" id="formIman" novalidate>
+            <p class="iman-tit larga"><b>Recebe o teu acesso grátis</b><span>Diz-me quem és e o que queres mudar. Entras logo a seguir.</span></p>
+            <label><span>Nome</span><input name="nome" autocomplete="given-name" maxlength="80" required></label>
+            <label><span>Email</span><input name="email" type="email" autocomplete="email" maxlength="160" inputmode="email" required></label>
+            <label class="larga"><span>WhatsApp</span><span class="tel-linha"><select name="indicativo" aria-label="Indicativo"><option value="+351">🇵🇹 +351</option><option value="+55">🇧🇷 +55</option><option value="+34">🇪🇸 +34</option><option value="+33">🇫🇷 +33</option><option value="+41">🇨🇭 +41</option><option value="+44">🇬🇧 +44</option><option value="+352">🇱🇺 +352</option><option value="+971">🇦🇪 +971</option><option value="+1">🇺🇸 +1</option></select><input name="telefone" type="tel" autocomplete="tel-national" maxlength="20" inputmode="tel" placeholder="912 345 678" required></span></label>
+            <label class="larga"><span>O que queres mudar primeiro?</span><select name="objectivo" required><option value="">Escolhe uma opção</option><option value="corpo">Ganhar forma e energia</option><option value="mente">Cabeça mais forte e calma</option><option value="digital">Aprender IA e negócio digital</option><option value="disciplina">Ganhar disciplina e rotina</option></select></label>
+            <label class="armadilha" aria-hidden="true">Site<input name="site" tabindex="-1" autocomplete="off"></label>
+            <label class="consent larga"><input type="checkbox" name="c_whatsapp"><span>Aceito que a MoreThanMoney me envie mensagens por WhatsApp para o número indicado. Saio quando quiser, respondendo SAIR.</span></label>
+            <label class="consent larga"><input type="checkbox" name="c_email"><span>Aceito receber emails da MoreThanMoney sobre a app e novidades relacionadas. Saio quando quiser, pela ligação em cada email.</span></label>
+            <p class="iman-nota larga">Quem te contacta é a MoreThanMoney (morethanmoney.pt). Marca pelo menos uma das caixas. <a href="/privacidade" target="_blank" rel="noopener">Política de privacidade</a>.</p>
+            <div class="larga"><button class="btn btn-ouro" type="submit" style="width:100%" data-rg="cta-app">Quero o meu acesso</button></div>
+            <p class="estado" id="estadoIman" role="status" aria-live="polite"></p>
+          </form>
+          <div class="app-btns"><a class="btn btn-linha" href="/ricardogarcia/app?entrar=1" data-rg="cta-app-entrar">Já tenho conta</a><a class="btn btn-linha" href="/missao?utm_source=ricardogarcia" data-rg="cta-app-saber">Saber mais</a></div>
         </div>
         <div class="app-tel" aria-hidden="true">
           <div class="tel"><div class="tel-topo"><span>🔥 7</span><span><i class="moeda"></i> 42</span></div><div class="tel-pat"><b>SOLDADO</b><small>180 XP para Cabo</small><i><em></em></i></div><div class="tel-m t">🔥 Circuito de arranque <b>+30</b></div><div class="tel-m m">🧠 O que controlas hoje <b>+20</b></div><div class="tel-m d">⚡ O teu primeiro prompt <b>+25</b></div><small class="tel-ex">Exemplo ilustrativo</small></div>
@@ -876,7 +894,7 @@ html:not(.com-gsap) .fp { opacity: 1; }
   </div>
 </footer>
 
-<script src="/ricardogarcia/i18n.js?v=4"></script>
+<script src="/ricardogarcia/i18n.js?v=5"></script>
 <script>
 (function () {
   var reduz = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -1179,6 +1197,34 @@ html:not(.com-gsap) .fp { opacity: 1; }
 })();
 </script>
 
+<script>
+(function () {
+  var f = document.getElementById('formIman'); if (!f) return;
+  var est = document.getElementById('estadoIman'), bt = f.querySelector('button[type=submit]');
+  function diz(t, ok) { est.textContent = t; est.className = 'estado ' + (ok ? 'ok' : 'erro'); }
+  f.addEventListener('submit', function (e) {
+    e.preventDefault();
+    var d = { nome: f.nome.value.trim(), email: f.email.value.trim(), indicativo: f.indicativo.value, telefone: f.telefone.value.trim(), objectivo: f.objectivo.value, site: f.site.value,
+      consentimentos: { whatsapp: f.c_whatsapp.checked === true, email: f.c_email.checked === true } };
+    if (d.nome.length < 2) return diz('Escreve o teu nome.');
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(d.email)) return diz('O email não parece válido.');
+    if (d.telefone.replace(/\D/g, '').length < 7) return diz('Confirma o teu número de WhatsApp.');
+    if (!d.objectivo) return diz('Escolhe o que queres mudar primeiro.');
+    if (!d.consentimentos.whatsapp && !d.consentimentos.email) return diz('Marca pelo menos uma das caixas para te podermos enviar o acesso.');
+    bt.disabled = true; diz('A preparar o teu acesso…', true);
+    fetch('/api/ricardogarcia/app/iman', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(d) })
+      .then(function (r) { return r.json().catch(function () { return {}; }); })
+      .then(function (j) {
+        if (!j || !j.ok) { bt.disabled = false; var er = j && j.erros ? Object.keys(j.erros).map(function (k) { return j.erros[k]; })[0] : (j && j.erro); return diz(er || 'Não foi possível guardar. Tenta outra vez.'); }
+        try { sessionStorage.setItem('missaoPre', JSON.stringify({ nome: d.nome, email: d.email, telefone: d.indicativo + ' ' + d.telefone })); } catch (_) {}
+        try { if (window.gtag) gtag('event', 'generate_lead', { lead_source: 'iman-app' }); if (window.fbq) fbq('track', 'Lead', { content_name: 'app-missao' }); } catch (_) {}
+        diz('Feito. A abrir a tua app…', true);
+        location.href = '/ricardogarcia/app?o=iman&utm_source=ricardogarcia&utm_medium=iman';
+      })
+      .catch(function () { bt.disabled = false; diz('Sem ligação. Tenta outra vez.'); });
+  });
+})();
+</script>
 <script src="/ricardogarcia/js/gsap.min.js" defer></script>
 <script src="/ricardogarcia/js/ScrollTrigger.min.js" defer></script>
 <script src="/ricardogarcia/js/lenis.min.js" defer></script>
