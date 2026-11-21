@@ -3,6 +3,8 @@
 // blocos :::destaque|exercicio|alerta|historia (título opcional) … :::,
 // [[grafico:id]], [[citacao: texto | autor]], linhas de ____ (espaço para escrever), ---.
 import { grafico } from './graficos.mjs'
+import { UI, traduzirSvg } from './i18n.mjs'
+const U = (ctx) => UI[ctx?.lingua || 'pt'] || UI.pt
 
 const esc = (s) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
 
@@ -41,7 +43,7 @@ export function mdParaHtml(md, ctx = {}) {
       i++
       while (i < linhas.length && linhas[i].trim() !== ':::') { corpo.push(linhas[i]); i++ }
       i++
-      out.push(`<aside class="bloco bloco-${tipo}"><div class="bloco-rotulo">${ROTULOS[tipo] || tipo}${titulo ? ` · <span>${inline(titulo)}</span>` : ''}</div>${mdParaHtml(corpo.join('\n'), ctx)}</aside>`)
+      out.push(`<aside class="bloco bloco-${tipo}"><div class="bloco-rotulo">${U(ctx).rotulos[tipo] || tipo}${titulo ? ` · <span>${inline(titulo)}</span>` : ''}</div>${mdParaHtml(corpo.join('\n'), ctx)}</aside>`)
       continue
     }
     // blocos ilustrados (ver tools/ebooks/ESCRITA.md)
@@ -63,7 +65,7 @@ export function mdParaHtml(md, ctx = {}) {
     if (fm) { fecharPara(); out.push(foto(fm[1], fm[2] || '', (fm[3] || 'polaroid').toLowerCase(), ctx)); i++; continue }
 
     const gm = t.match(/^\[\[grafico:\s*([\w-]+)\s*\]\]$/)
-    if (gm) { fecharPara(); out.push(grafico(gm[1], ctx)); i++; continue }
+    if (gm) { fecharPara(); out.push(traduzirSvg(grafico(gm[1], ctx), ctx.lingua)); i++; continue }
     const cm = t.match(/^\[\[citacao:\s*(.+?)\s*(?:\|\s*(.+?))?\s*\]\]$/)
     if (cm) { fecharPara(); out.push(`<blockquote class="citacao-grande"><p>${inline(cm[1])}</p>${cm[2] ? `<cite>${inline(cm[2])}</cite>` : ''}</blockquote>`); i++; continue }
 
@@ -174,7 +176,7 @@ function ilustrado(tipo, arg, corpo, ctx) {
       const ops = c.sticker.split('|').map((x) => x.trim()).filter(Boolean)
       st = ops.length > 1
         ? `<div class="st-poll">${ops.map((o) => `<span>${inline(o)}</span>`).join('')}</div>`
-        : `<div class="st-q"><small>Pergunta</small>${inline(ops[0])}</div>`
+        : `<div class="st-q"><small>${U(ctx).pergunta}</small>${inline(ops[0])}</div>`
     }
     return `<figure class="story"><div class="st-barras"><i></i><i></i><i></i></div><div class="st-txt">${c.texto.map((x) => `<p>${inline(x)}</p>`).join('')}</div>${st}</figure><!--story-->`
   }
@@ -182,13 +184,13 @@ function ilustrado(tipo, arg, corpo, ctx) {
     const bolhas = corpo.filter((l) => l.trim()).map((l) => {
       const m = l.trim().match(/^([^:]{1,24}):\s*(.*)$/)
       if (!m) return `<p class="bl bl-info">${inline(l.trim())}</p>`
-      const meu = /^(eu|tu)$/i.test(m[1].trim())
+      const meu = /^(eu|tu|me|you|yo)$/i.test(m[1].trim())
       return `<p class="bl ${meu ? 'bl-eu' : 'bl-ele'}">${meu ? '' : `<small>${esc(m[1].trim())}</small>`}${inline(m[2])}</p>`
     }).join('')
-    return `<figure class="conversa"><div class="cv-topo"><span class="av av-ini">${esc((arg.split('·').pop() || 'C').trim().slice(0, 1).toUpperCase())}</span>${inline(arg || 'Mensagens')}</div><div class="cv-corpo">${bolhas}</div></figure>`
+    return `<figure class="conversa"><div class="cv-topo"><span class="av av-ini">${esc((arg.split('·').pop() || 'C').trim().slice(0, 1).toUpperCase())}</span>${inline(arg || U(ctx).mensagens)}</div><div class="cv-corpo">${bolhas}</div></figure>`
   }
   if (tipo === 'cartao') {
-    return `<figure class="cartao"><span class="tesoura">✂</span><div class="ct-rot">Recorta e guarda</div>${arg ? `<h4>${inline(arg)}</h4>` : ''}${mdParaHtml(corpo.join('\n'), ctx)}</figure>`
+    return `<figure class="cartao"><span class="tesoura">✂</span><div class="ct-rot">${U(ctx).recorta}</div>${arg ? `<h4>${inline(arg)}</h4>` : ''}${mdParaHtml(corpo.join('\n'), ctx)}</figure>`
   }
   if (tipo === 'nota') {
     return `<figure class="postit" style="--r:${inclina()}deg">${arg ? `<b>${inline(arg)}</b>` : ''}${corpo.filter((l) => l.trim()).map((l) => `<p>${inline(l.trim().replace(/^[-*]\s+/, '• '))}</p>`).join('')}</figure>`
@@ -198,7 +200,7 @@ function ilustrado(tipo, arg, corpo, ctx) {
     const pe = corpo.find((l) => /^no curso:/i.test(l.trim()))
     const resto = corpo.filter((l) => l !== pe)
     const [aula, ...tit] = arg.split('·')
-    return `<figure class="curso"><div class="cu-topo"><span class="cu-marca">Espreitadela do curso · ${esc(ctx?.academia || "MTM Forex Academy")}</span><span class="cu-aula">${inline(aula.trim())}</span></div>${tit.length ? `<h4>${inline(tit.join('·').trim())}</h4>` : ''}<div class="cu-corpo">${mdParaHtml(resto.join('\n'), ctx)}</div>${pe ? `<div class="cu-pe"><b>No curso</b> ${inline(pe.trim().replace(/^no curso:\s*/i, ''))}</div>` : ''}<div class="cu-rot">Espreitadela do curso</div></figure>`
+    return `<figure class="curso"><div class="cu-topo"><span class="cu-marca">${U(ctx).espreitadela} · ${esc(ctx?.academia || "MTM Forex Academy")}</span><span class="cu-aula">${inline(aula.trim())}</span></div>${tit.length ? `<h4>${inline(tit.join('·').trim())}</h4>` : ''}<div class="cu-corpo">${mdParaHtml(resto.join('\n'), ctx)}</div>${pe ? `<div class="cu-pe"><b>No curso</b> ${inline(pe.trim().replace(/^no curso:\s*/i, ''))}</div>` : ''}<div class="cu-rot">Espreitadela do curso</div></figure>`
   }
   if (tipo === 'scanner') {
     const ficha = [], texto = []
@@ -206,11 +208,11 @@ function ilustrado(tipo, arg, corpo, ctx) {
     for (const l of corpo) {
       const m = l.trim().match(/^(estilo|ativos|tempo|foto):\s*(.*)$/i)
       if (m && m[1].toLowerCase() === 'foto') fotoS = m[2].trim()
-      else if (m) ficha.push(`<div><span>${{ estilo: 'Estilo', ativos: 'Ativos', tempo: 'Gráfico' }[m[1].toLowerCase()]}</span><b>${inline(m[2])}</b></div>`)
+      else if (m) ficha.push(`<div><span>${U(ctx).ficha[m[1].toLowerCase()]}</span><b>${inline(m[2])}</b></div>`)
       else texto.push(l)
     }
     const src = fotoS && ctx?.img ? ctx.img(fotoS) : ''
-    return `<figure class="scanner">${src ? `<img src="${src}" alt="">` : ''}<div class="sc-in"><div class="sc-rot">Ferramenta MTM</div><h4>${inline(arg)}</h4><div class="sc-ficha">${ficha.join('')}</div>${mdParaHtml(texto.join('\n'), ctx)}</div></figure>`
+    return `<figure class="scanner">${src ? `<img src="${src}" alt="">` : ''}<div class="sc-in"><div class="sc-rot">${U(ctx).ferramenta}</div><h4>${inline(arg)}</h4><div class="sc-ficha">${ficha.join('')}</div>${mdParaHtml(texto.join('\n'), ctx)}</div></figure>`
   }
   if (tipo === 'galeria') {
     const itens = corpo.filter((l) => l.trim()).map((l) => {

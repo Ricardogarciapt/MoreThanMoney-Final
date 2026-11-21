@@ -166,7 +166,7 @@ export async function entregarCompraDoMarketplace(session: Stripe.Checkout.Sessi
 
     // «O Método Frio» a 5 € inclui 7 dias de acompanhamento com o Ricardo (decisão 21/11/2026):
     // cada compra abre uma tarefa no CRM para marcar a conversa. Best-effort: a compra já está gravada.
-    if (produto.slug === 'o-metodo-frio') {
+    if (/^o-metodo-frio(-en|-es)?$/.test(produto.slug)) {
       const email = session.customer_details?.email ?? null
       const nome = session.customer_details?.name ?? null
       await db.from('aios_tasks').insert({
@@ -176,7 +176,7 @@ export async function entregarCompraDoMarketplace(session: Stripe.Checkout.Sessi
         status: 'pendente',
         priority: 'alta',
         chave: `acompanhamento-ebook:${session.id}`,
-        payload: { origem: 'ebook:o-metodo-frio', comprador_id: compradorId, email, nome, sessao: session.id },
+        payload: { origem: `ebook:${produto.slug}`, comprador_id: compradorId, email, nome, sessao: session.id },
         created_by: 'maquina',
       }).then(({ error }) => { if (error) console.warn('[marketplace] tarefa de acompanhamento não gravou:', error.message) })
     }

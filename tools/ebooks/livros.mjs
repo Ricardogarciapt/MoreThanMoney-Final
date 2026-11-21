@@ -69,3 +69,13 @@ export const LIVROS = {
     aviso: 'Conteúdo educativo. Os resultados dependem do trabalho, do mercado e das decisões de cada pessoa; não há rendimentos garantidos. Respeita sempre as regras das plataformas e o RGPD.',
   },
 }
+
+// Versões EN/ES: herdam tudo do livro PT e trocam só os textos (tools/ebooks/i18n.mjs).
+import { LIVROS_TRAD, LINGUAS } from './i18n.mjs'
+for (const [base, tr] of Object.entries(LIVROS_TRAD)) {
+  for (const l of LINGUAS) {
+    if (!tr[l] || !LIVROS[base]) continue
+    const pt = LIVROS[base]
+    LIVROS[`${base}-${l}`] = { ...pt, ...tr[l], lingua: l, base, marca: pt.marca || tr[l].marca ? { ...(pt.marca || {}), ...(tr[l].marca || {}) } : undefined }
+  }
+}
