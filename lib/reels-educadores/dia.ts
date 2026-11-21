@@ -1,7 +1,7 @@
 import { getSupabaseAdmin } from '@/lib/supabase-admin-client'
 import { tokenForAccount } from '@/lib/instagram/publish'
 import { ESTILO_POR_OMISSAO } from '@/lib/videocliper/estilos'
-import { AVISO, EDUCADORES, HORA_CORTE, HORAS_ANIMADOS, LINHAS_REELS, SLOTS_MTM, educador, type EducadorReel } from './config'
+import { AVISO, EDUCADORES, HORA_CORTE, HORAS_ANIMADOS, LINHAS_REELS, ROTACAO_CORTES, SLOTS_CORTE_AB, SLOTS_MTM, educador, educadorDosCortes, linhaDoSlot, type EducadorReel } from './config'
 import { gerarRoteiro, textoDoGancho, type Historico, type Roteiro } from './roteiro'
 import { listarAulas } from './aulas'
 
@@ -66,7 +66,7 @@ const ehLinha = (slug: string) => LINHAS_REELS.some((l) => l.slug === slug)
 async function pararEducadores(db: Db, dia: string, notas: string[]): Promise<void> {
   const slugs = EDUCADORES.map((e) => e.slug)
   const { data: comPost } = await db.from('reels_auto').select('post_id')
-    .in('educador', slugs).gte('dia', new Date(Date.now() - 86_400_000).toISOString().slice(0, 10)).not('post_id', 'is', null)
+    .in('educador', slugs).eq('tipo', 'animado').gte('dia', new Date(Date.now() - 86_400_000).toISOString().slice(0, 10)).not('post_id', 'is', null)
   const ids = (comPost ?? []).map((r) => String(r.post_id))
   if (ids.length) {
     const { data: parados } = await db.from('social_scheduled_posts').update({ status: 'draft', approved_by: null, approved_at: null })
@@ -140,17 +140,27 @@ export async function planearDia(dia: string): Promise<{ dia: string; renders: P
   const { data: existentes } = await db.from('reels_auto').select('slot, educador').eq('dia', dia)
   const usados = new Set((existentes ?? []).map((r) => Number(r.slot)))
 
-  // ── linhas da marca: 6 reels (3 funis, 2 seguidores, 1 CTA); educadores fora do ciclo ──
+  // ── linhas da marca: 4 animados (+ o cinemático = 5 reels) e 2 cortes A/B das aulas ──
   if ((await modo(db)) === 'mtm') {
     await pararEducadores(db, dia, notas)
+    // Slots que deixaram de existir (eram 6 até 21/11): roteiros por desenhar saem, posts futuros ficam rascunho.
+    await db.from('reels_auto').delete().gte('dia', dia).eq('tipo', 'animado').gt('slot', SLOTS_MTM.length).lt('slot', 8).is('post_id', null)
+    const { data: aMais } = await db.from('reels_auto').select('post_id').gte('dia', dia).eq('tipo', 'animado')
+      .gt('slot', SLOTS_MTM.length).lt('slot', 8).not('post_id', 'is', null)
+    const idsAMais = (aMais ?? []).map((r) => String(r.post_id))
+    if (idsAMais.length) {
+      await db.from('social_scheduled_posts').update({ status: 'draft', approved_by: null, approved_at: null })
+        .in('id', idsAMais).eq('status', 'approved').gt('scheduled_at', new Date().toISOString())
+    }
     const { data: ocupados } = await db.from('reels_auto').select('slot').eq('dia', dia)
     const livres = new Set((ocupados ?? []).map((r) => Number(r.slot)))
     for (let i = 0; i < SLOTS_MTM.length; i++) {
       const slot = i + 1
-      const ed = educador(SLOTS_MTM[i].linha)
+      const ed = educador(linhaDoSlot(i, dia) ?? SLOTS_MTM[i].linha)
       if (!ed || livres.has(slot)) continue
       await novoRoteiro(db, dia, slot, ed, orc)
     }
+    await garantirCortes(db, dia, pub, notas, true).catch((e) => notas.push(`cortes: ${e instanceof Error ? e.message : e}`))
     return { dia, renders: await porDesenhar(db, dia), notas, completo: !orc.parado }
   }
 
@@ -244,11 +254,14 @@ export async function entregar(id: string, videoUrl: string, capaUrl: string | n
  *
  * Educadores por publicar (Rodrigo, Luis) têm cortes na mesma, como RASCUNHO e noutro slot.
  */
-async function garantirCortes(db: Db, dia: string, pub: Set<string>, notas: string[]): Promise<void> {
+async function garantirCortes(db: Db, dia: string, pub: Set<string>, notas: string[], ab = false): Promise<void> {
   const agora = new Date().toISOString()
+  // Modo A/B: só rodam os educadores que têm aulas nas playlists (a Maria entra quando tiver).
+  const rot = ab ? await rotacaoComAulas() : ROTACAO_CORTES
+  if (ab && rot.length < ROTACAO_CORTES.length) notas.push(`cortes: sem aulas nas playlists → fora da rotação: ${ROTACAO_CORTES.filter((x) => !rot.includes(x)).join(', ')}`)
 
   // 1. clips cortados → fila (aprovados ou rascunho, conforme o educador)
-  const { data: prontos } = await db.from('reels_auto').select('id, dia, clip_id, educador').eq('tipo', 'corte').eq('estado', 'a_render')
+  const { data: prontos } = await db.from('reels_auto').select('id, dia, slot, clip_id, educador').eq('tipo', 'corte').eq('estado', 'a_render')
   for (const r of prontos ?? []) {
     const { data: c } = await db.from('videocliper_clips').select('estado, video_url, thumbnail_url, caption, titulo, hook, erro').eq('id', r.clip_id as string).maybeSingle()
     if (!c) continue
@@ -256,13 +269,16 @@ async function garantirCortes(db: Db, dia: string, pub: Set<string>, notas: stri
     if (c.estado !== 'renderizado' || !c.video_url) continue
     const ed = educador(String(r.educador))
     const vai = pub.has(String(r.educador))
+    const ab_ = SLOTS_CORTE_AB.find((x) => x.slot === Number(r.slot))
     let caption = String(c.caption ?? c.titulo ?? '').trim()
     if (ed && !caption.includes(ed.nome)) caption = `${ed.nome} · ${ed.area}\n\n${caption}`
+    // Modo A/B: o corte também afunila para o «começar» (automação COMEÇAR activa).
+    if (ab && !/comenta/i.test(caption)) caption += '\n\nQueres começar com método? Comenta «COMEÇAR» e recebes o link para entrar.'
     if (!caption.includes('não constitui consultoria')) caption += `\n\n${AVISO}`
     if (ed && !caption.includes('#morethanmoney')) caption += `\n\n${ed.hashtags}`
     const { data: post, error } = await db.from('social_scheduled_posts').insert({
       ...IG, pillar: 'reels-educadores', media_type: 'REELS', media_urls: [c.video_url], caption,
-      scheduled_at: quando(String(r.dia), HORA_CORTE).toISOString(),
+      scheduled_at: quando(String(r.dia), ab && ab_ ? ab_.hora : HORA_CORTE).toISOString(),
       status: vai ? 'approved' : 'draft', approved_by: vai ? 'reels-auto' : null, approved_at: vai ? agora : null,
       created_by: 'reels-auto', agente_codigo: 'AG-SOCIAL',
     }).select('id').single()
@@ -278,6 +294,7 @@ async function garantirCortes(db: Db, dia: string, pub: Set<string>, notas: stri
     if (j.estado !== 'pronto') continue
     const slug = String(j.reels_educador ?? 'mtm')
     const slot = slotDoCorte(slug, pub)
+    const daRotacao = ab && rot.includes(slug)
     const { data: clips } = await db.from('videocliper_clips').select('id, score, inicio_seg, fim_seg, estado')
       .eq('job_id', j.id).eq('estado', 'proposto').order('score', { ascending: false })
     const escolhidos: Array<{ id: string; i: number; f: number }> = []
@@ -288,8 +305,8 @@ async function garantirCortes(db: Db, dia: string, pub: Set<string>, notas: stri
       escolhidos.push({ id: c.id as string, i, f })
     }
     for (const c of escolhidos) {
-      const d = await proximoDiaDeCorte(db, dia, slot)
-      const { error } = await db.from('reels_auto').insert({ dia: d, slot, tipo: 'corte', educador: slug, estado: 'a_render', clip_id: c.id })
+      const lugar = daRotacao ? await proximoLugarAB(db, dia, slug, rot) : { d: await proximoDiaDeCorte(db, dia, slot), slot }
+      const { error } = await db.from('reels_auto').insert({ dia: lugar.d, slot: lugar.slot, tipo: 'corte', educador: slug, estado: 'a_render', clip_id: c.id })
       if (error) break
       await db.from('videocliper_clips').update({ estado: 'aprovado', updated_at: agora }).eq('id', c.id)
     }
@@ -316,7 +333,10 @@ async function garantirCortes(db: Db, dia: string, pub: Set<string>, notas: stri
   const { count: futurosPub } = await db.from('reels_auto').select('id', { count: 'exact', head: true })
     .eq('tipo', 'corte').eq('slot', SLOT_CORTE).gte('dia', dia).in('estado', ['a_render', 'agendado'])
   const precisam: string[] = []
-  if ((futurosPub ?? 0) < RESERVA_PUBLICAVEIS) precisam.push(...EDUCADORES.filter((e) => pub.has(e.slug) && e.cortes !== false).map((e) => e.slug))
+  if (ab) {
+    // Cada educador da rotação precisa dos cortes dos seus próximos 2 dias (4 cortes A/B) em reserva.
+    for (const slug of rot) if ((await reserva(slug)) < 4) precisam.push(slug)
+  } else if ((futurosPub ?? 0) < RESERVA_PUBLICAVEIS) precisam.push(...EDUCADORES.filter((e) => pub.has(e.slug) && e.cortes !== false).map((e) => e.slug))
   for (const e of EDUCADORES.filter((x) => !pub.has(x.slug) && x.cortes !== false)) if ((await reserva(e.slug)) < RESERVA_RASCUNHOS) precisam.push(e.slug)
   if (!precisam.length) return
 
@@ -329,6 +349,27 @@ async function garantirCortes(db: Db, dia: string, pub: Set<string>, notas: stri
     estilo: ESTILO_POR_OMISSAO,
   })
   notas.push(`cortes: pedida a aula «${aula.titulo}» (${aula.educador}, ${aula.playlist})`)
+}
+
+async function rotacaoComAulas(): Promise<string[]> {
+  const aulas = await listarAulas().catch(() => [])
+  const com = new Set(aulas.map((a) => a.educador))
+  return ROTACAO_CORTES.filter((x) => com.has(x))
+}
+
+/** Modo A/B: o próximo dia desse educador na rotação com um dos 2 slots A/B livre. */
+async function proximoLugarAB(db: Db, desde: string, slug: string, rot: string[]): Promise<{ d: string; slot: number }> {
+  const slots = SLOTS_CORTE_AB.map((x) => x.slot)
+  const { data } = await db.from('reels_auto').select('dia, slot').eq('tipo', 'corte').in('slot', slots).gte('dia', desde)
+  const ocupados = new Set((data ?? []).map((r) => `${r.dia}:${r.slot}`))
+  const d = new Date(`${desde}T12:00:00Z`)
+  for (let k = 0; k < 120; k++, d.setUTCDate(d.getUTCDate() + 1)) {
+    const dia = d.toISOString().slice(0, 10)
+    if (educadorDosCortes(dia, rot) !== slug) continue
+    const livre = slots.find((s) => !ocupados.has(`${dia}:${s}`))
+    if (livre != null) return { d: dia, slot: livre }
+  }
+  return { d: d.toISOString().slice(0, 10), slot: slots[1] }
 }
 
 async function proximoDiaDeCorte(db: Db, desde: string, slot: number): Promise<string> {

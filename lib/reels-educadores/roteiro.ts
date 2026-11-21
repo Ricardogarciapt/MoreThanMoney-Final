@@ -120,6 +120,22 @@ export function validarRoteiro(bruto: unknown, ed: EducadorReel, estrito = true)
   return { educador: ed.slug, tema: String(o.tema ?? '').slice(0, 120), aviso: AVISO, cenas: semCta, legenda }
 }
 
+/**
+ * 21/11/2026 (Ricardo): guiões diferentes dos que se usavam e que afunilem o lead até «começar».
+ * Cada reel recebe um FORMATO (roda pelo id) e uma ESCADA: gancho → problema → virada → passo
+ * simples → convite ao próximo degrau (o CTA). Os ganchos dos últimos reels são proibidos.
+ */
+const FORMATOS = [
+  'MITO vs VERDADE: abre com o mito que toda a gente repete, desmonta-o em 2 cenas e mostra o que fazer em vez disso',
+  'O ERRO DE QUEM COMEÇA: nomeia o erro numa frase que doa, mostra porque acontece e a correção em 1 passo',
+  'POV: «POV: decidiste aprender trading a sério» — 3 momentos curtos dessa pessoa, do caos ao método (sem resultados)',
+  'PERGUNTA QUE TE FAZEM: abre com uma pergunta real de seguidor e responde em 3 pontos diretos',
+  'CHECKLIST DE 3 PASSOS: o que fazer HOJE para começar, cada passo uma cena, o 3.º passo é falar connosco',
+  'ANTES vs DEPOIS DO MÉTODO: rotina sem plano vs rotina com plano (hábitos e processo, nunca dinheiro ou percentagens)',
+  'CONTRA-INTUITIVO: uma ideia que parece errada mas é verdade sobre aprender a investir, provada com uma conta simples marcada como exemplo',
+]
+const formatoDe = (id: string) => FORMATOS[[...id].reduce((h, c) => (h * 31 + c.charCodeAt(0)) >>> 0, 7) % FORMATOS.length]
+
 export async function gerarRoteiro(ed: EducadorReel, historico: Historico[], id: string): Promise<Roteiro> {
   const comNota = historico.filter((h) => h.nota != null).sort((a, b) => (b.nota ?? 0) - (a.nota ?? 0))
   const melhores = comNota.slice(0, 4).map((h) => `· «${h.gancho}» (${h.tema ?? '—'}) nota ${h.nota?.toFixed(1)}`).join('\n')
@@ -135,6 +151,9 @@ export async function gerarRoteiro(ed: EducadorReel, historico: Historico[], id:
     `Temas já usados nos últimos dias (não repitas o mesmo ângulo): ${recentes || 'nenhum'}.\n` +
     (melhores ? `\nOs reels que MELHOR resultaram (faz mais disto — o tipo de gancho, não a frase):\n${melhores}\n` : '') +
     (piores && comNota.length > 4 ? `\nOs que PIOR resultaram (evita este estilo):\n${piores}\n` : '') +
+    `\nFORMATO OBRIGATÓRIO deste reel: ${formatoDe(id)}.\n` +
+    `ESCADA DO LEAD: gancho (dor ou curiosidade) → problema → virada → um passo simples que a pessoa pode dar já → o próximo degrau é comentar a palavra. A última cena antes do CTA tem de fazer a pessoa sentir que pode COMEÇAR hoje, com método e em comunidade.\n` +
+    (historico.length ? `Ganchos já usados (proibido repetir ou parafrasear): ${historico.slice(0, 15).map((h) => `«${h.gancho}»`).join(', ')}.\n` : '') +
     `\nPalavra do CTA: ${ed.palavra}. Frase do CTA: «${ed.depois}».\n` +
     `Aviso legal exacto: ${AVISO}\nHashtags: ${ed.hashtags}`
 

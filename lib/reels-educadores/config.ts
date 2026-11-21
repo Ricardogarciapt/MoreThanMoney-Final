@@ -201,14 +201,41 @@ export const LINHAS_REELS: EducadorReel[] = [
  * Os 6 slots do dia da marca: linha + hora (UTC; Lisboa = UTC no inverno). O de seguidores sai
  * duas vezes, de manhã e ao fim da tarde.
  */
-export const SLOTS_MTM: Array<{ linha: string; hora: string }> = [
+/**
+ * Os reels animados do dia nas linhas da marca. 21/11/2026 (Ricardo): 5 reels por dia = estes 4 +
+ * o reel cinemático das 20:30. O slot 3 alterna Corretora / Funded (dia par / ímpar).
+ */
+export const SLOTS_MTM: Array<{ linha: string; hora: string; alterna?: string }> = [
   { linha: 'mtm-funil-educacao', hora: '08:30' },
-  { linha: 'mtm-seguidores', hora: '10:30' },
-  { linha: 'mtm-funil-corretora', hora: '13:30' },
-  { linha: 'mtm-seguidores', hora: '17:00' },
-  { linha: 'mtm-funil-funded', hora: '19:00' },
+  { linha: 'mtm-seguidores', hora: '12:30' },
+  { linha: 'mtm-funil-corretora', hora: '17:00', alterna: 'mtm-funil-funded' },
   { linha: 'mtm-cta', hora: '21:30' },
 ]
+
+/** A linha de um slot nesse dia (com a alternância). */
+export function linhaDoSlot(i: number, dia: string): string | undefined {
+  const s = SLOTS_MTM[i]
+  if (!s) return undefined
+  const n = Math.floor(new Date(`${dia}T00:00:00Z`).getTime() / 86_400_000)
+  return s.alterna && n % 2 ? s.alterna : s.linha
+}
+
+/**
+ * 21/11/2026 (Ricardo): 2 cortes A/B por dia das aulas, o educador do dia roda Ricardo → Ruben → Maria.
+ * Os dois cortes do dia são dois momentos diferentes da mesma aula (ganchos diferentes): a nota de cada
+ * um (atualizarMetricas) diz qual formato funciona melhor.
+ */
+export const ROTACAO_CORTES = ['ricardo-garcia', 'ruben-pereira', 'maria-costa']
+export const SLOTS_CORTE_AB: Array<{ slot: number; hora: string; variante: 'A' | 'B' }> = [
+  { slot: 8, hora: '10:30', variante: 'A' },
+  { slot: 9, hora: '15:00', variante: 'B' },
+]
+/** O educador dos cortes nesse dia. `rot` = os da rotação que têm aulas (quem não tem fica de fora até ter). */
+export function educadorDosCortes(dia: string, rot: string[] = ROTACAO_CORTES): string {
+  const lista = rot.length ? rot : ROTACAO_CORTES
+  const n = Math.floor(new Date(`${dia}T00:00:00Z`).getTime() / 86_400_000)
+  return lista[((n % lista.length) + lista.length) % lista.length]
+}
 
 /** As demonstrações genéricas que qualquer educador pode usar, preenchidas pelo roteiro. */
 export const DEMOS_GENERICAS = ['barras', 'contador', 'lista', 'versus'] as const

@@ -139,6 +139,9 @@ export const LINHAS_POSTS: LinhaPost[] = [
   },
 ]
 
+/** A linha que sai hoje (roda pelas 5, uma por dia). */
+export const linhaDoDia = (agora = new Date()): LinhaPost => LINHAS_POSTS[((diaN(agora) % LINHAS_POSTS.length) + LINHAS_POSTS.length) % LINHAS_POSTS.length]
+
 export const criadoPorLinha = (l: Linha) => `carrossel-diario:mtm:${l}`
 
 export interface ResultadoLinha {
@@ -237,7 +240,10 @@ export async function garantirLinhasDoDia(agora = new Date()): Promise<Resultado
   if (error) return []
   const feitos = new Set((data ?? []).map((r) => String(r.created_by)))
   const dia = agora.toISOString().slice(0, 10)
-  for (const def of LINHAS_POSTS) {
+  // 21/11/2026 (Ricardo): «1 publicação por dia» no @morethanmoney.pt. Sai UMA linha por dia, a rodar
+  // pelos funis, seguidores e CTA; o carrossel de valor das 12:30 da MTM deixa de sair (route do cron).
+  if ((data ?? []).length) return []
+  for (const def of [linhaDoDia(agora)]) {
     if (feitos.has(criadoPorLinha(def.linha))) continue
     const chave = `${dia}:${def.linha}`
     if ((falhasHoje.get(chave) ?? 0) >= 3) continue
