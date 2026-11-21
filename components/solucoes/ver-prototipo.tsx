@@ -89,7 +89,7 @@ export function VerPrototipo({ spec, estado, agendar }: { spec: PrototipoSpec; e
               <Telemovel m={m} marca={spec.empresa} principal={spec.cor} />
             </div>
           </div>
-          <div className="mt-4 grid grid-cols-2 gap-2">
+          <div className="mt-4 grid gap-2">
             <button type="button" onClick={() => setRa(true)} className="inline-flex min-h-[48px] items-center justify-center gap-2 rounded-full border border-[#D2A63C]/50 bg-[#D2A63C]/10 text-sm font-semibold text-[#E9C46A]">
               <Move3d className="h-4 w-4" aria-hidden="true" /> {t("Ver em 3D e no meu espaço")}
             </button>
