@@ -2,9 +2,10 @@
 
 import { useEffect, useRef, useState } from "react"
 import { createPortal } from "react-dom"
-import { Camera, CameraOff, Download, Move3d, X } from "lucide-react"
+import { Camera, CameraOff, Download, Film, ImageDown, Move3d, X } from "lucide-react"
 import type { ModeloSector } from "@/lib/site-solucoes/showroom"
 import { useT } from "@/components/solucoes/idioma"
+import { ECRAS_KIT, claro, cortar, redondo, type DadosEcra, type Tr } from "@/components/solucoes/ra-ecras"
 
 /**
  * «Ver no meu espaço»: a app do negócio em 3D e em realidade aumentada, no browser.
@@ -20,21 +21,45 @@ import { useT } from "@/components/solucoes/idioma"
  *  · Fotografar: junta a imagem da câmara com o 3D e partilha ou descarrega.
  *
  * Carrega o three só quando abre; pára tudo (câmara incluída) ao fechar.
+ *
+ * Com `opcao` (21/11/2026, «renderização e CGI da opção que será usada»): o telemóvel passa a
+ * mostrar a SOLUÇÃO ESCOLHIDA, ecrã a ecrã (agenda, assistente, orçamento, clientes, faturas,
+ * publicações, loja), com os passos dessa solução nos cartões holográficos. Abre em modo cinema
+ * (câmara em órbita, luz de recorte na cor da marca, ecrãs a passar sozinhos) e faz um render em
+ * alta resolução para guardar ou mandar ao sócio.
  */
 
 type T3 = typeof import("three")
 
-export function RaTelemovel({ m, marca, principal, onFechar }: { m: ModeloSector; marca: string; principal: string; onFechar: () => void }) {
+export interface OpcaoRA {
+  solucoes: { kit: string; nome: string; passos: string[] }[]
+  boasVindas?: string
+  faq?: { p: string; r: string }[]
+}
+
+interface Api {
+  foto: (hd?: boolean) => HTMLCanvasElement | null
+  modoRA: (on: boolean) => void
+  mostrar: (i: number) => void
+  cinema: (on: boolean) => void
+}
+
+export function RaTelemovel({ m, marca, principal, onFechar, opcao, real = false }: { m: ModeloSector; marca: string; principal: string; onFechar: () => void; opcao?: OpcaoRA; real?: boolean }) {
   const { t } = useT()
   const palco = useRef<HTMLDivElement>(null)
   const video = useRef<HTMLVideoElement>(null)
-  const api = useRef<{ foto: () => HTMLCanvasElement | null; modoRA: (on: boolean, alpha?: number) => void } | null>(null)
+  const api = useRef<Api | null>(null)
   const [montado, setMontado] = useState(false)
   const [ra, setRa] = useState(false)
   const [erro, setErro] = useState("")
   const [foto, setFoto] = useState<string | null>(null)
+  const temOpcao = Boolean(opcao?.solucoes.length)
+  const [ecra, setEcra] = useState(0)
+  const [cinema, setCinema] = useState(temOpcao)
+  const [aRenderizar, setARenderizar] = useState(false)
   const fechar = useRef(onFechar)
   fechar.current = onFechar
+  const avisos = useRef({ ecra: (i: number) => setEcra(i), cinema: (on: boolean) => setCinema(on) })
 
   // textos do ecrã pintado (traduzidos uma vez)
   const textos = {
@@ -45,8 +70,16 @@ export function RaTelemovel({ m, marca, principal, onFechar }: { m: ModeloSector
     slogan: t(m.slogan),
     servicosTitulo: t("Serviços"),
     cartoes: [t("Marcação confirmada"), t("Lembrete enviado"), t("Nova avaliação")],
+    boasVindas: opcao?.boasVindas || t("Olá! Como te posso ajudar hoje?"),
+    faq: opcao?.faq ?? [],
   }
   const textosRef = useRef(textos)
+  textosRef.current = textos
+  const opcaoRef = useRef(opcao)
+  opcaoRef.current = opcao
+  const tRef = useRef<Tr>(t)
+  tRef.current = t
+  const chaveOpcao = JSON.stringify(opcao ?? null)
 
   useEffect(() => {
     setMontado(true)
@@ -67,7 +100,7 @@ export function RaTelemovel({ m, marca, principal, onFechar }: { m: ModeloSector
     import("three").then(async (THREE) => {
       const { RoomEnvironment } = await import("three/examples/jsm/environments/RoomEnvironment.js")
       if (!vivo || !palco.current) return
-      const r = montar(THREE, RoomEnvironment, palco.current, { m, marca, principal, textos: textosRef.current })
+      const r = montar(THREE, RoomEnvironment, palco.current, { m, marca, principal, textos: textosRef.current, opcao: opcaoRef.current, t: tRef.current }, avisos.current)
       api.current = r
       parar = r.parar
     })
@@ -76,7 +109,7 @@ export function RaTelemovel({ m, marca, principal, onFechar }: { m: ModeloSector
       parar()
       api.current = null
     }
-  }, [montado, m, marca, principal])
+  }, [montado, m, marca, principal, chaveOpcao])
 
   // câmara
   useEffect(() => {
@@ -121,8 +154,21 @@ export function RaTelemovel({ m, marca, principal, onFechar }: { m: ModeloSector
         /* segue sem giroscópio */
       }
     }
+    api.current?.cinema(false)
+    setCinema(false)
     api.current?.modoRA(true)
     setRa(true)
+  }
+
+  function escolherEcra(i: number) {
+    setEcra(i)
+    api.current?.mostrar(i)
+  }
+
+  function alternarCinema() {
+    const on = !cinema
+    setCinema(on)
+    api.current?.cinema(on)
   }
 
   function desligarRA() {
@@ -130,8 +176,8 @@ export function RaTelemovel({ m, marca, principal, onFechar }: { m: ModeloSector
     setRa(false)
   }
 
-  function fotografar() {
-    const c3 = api.current?.foto()
+  function fotografar(hd = false) {
+    const c3 = api.current?.foto(hd)
     if (!c3) return
     const v = video.current
     const W = c3.width
@@ -148,20 +194,34 @@ export function RaTelemovel({ m, marca, principal, onFechar }: { m: ModeloSector
       g.drawImage(v, (W - w) / 2, (H - h) / 2, w, h)
     } else {
       const grad = g.createRadialGradient(W / 2, H * 0.45, 10, W / 2, H * 0.45, Math.max(W, H) * 0.7)
-      grad.addColorStop(0, "#2a2210")
-      grad.addColorStop(1, "#060608")
+      grad.addColorStop(0, hd ? `${principal}55` : "#2a2210")
+      grad.addColorStop(hd ? 0.45 : 1, hd ? "#141210" : "#060608")
+      if (hd) grad.addColorStop(1, "#050507")
       g.fillStyle = grad
       g.fillRect(0, 0, W, H)
     }
     g.drawImage(c3, 0, 0)
-    const k = W / 400
-    g.fillStyle = "rgba(0,0,0,0.45)"
+    const k = Math.min(W, H * 1.2) / (hd ? 720 : 400)
+    const kit = temOpcao ? opcao!.solucoes[ecra]?.nome : ""
+    g.fillStyle = "rgba(0,0,0,0.5)"
     g.fillRect(0, H - 34 * k, W, 34 * k)
     g.fillStyle = "#E9C46A"
     g.font = `600 ${13 * k}px system-ui, sans-serif`
     g.textBaseline = "middle"
-    g.fillText(`${marca} · morethanmoney.pt/demos`, 14 * k, H - 17 * k)
-    setFoto(c.toDataURL("image/jpeg", 0.9))
+    g.fillText(cortar(g, `${marca}${kit ? ` · ${kit}` : ""} · morethanmoney.pt/solucoes`, W - 28 * k), 14 * k, H - 17 * k)
+    setFoto(c.toDataURL("image/jpeg", hd ? 0.94 : 0.9))
+  }
+
+  function renderHD() {
+    setARenderizar(true)
+    // deixa o React pintar o aviso antes do render pesado
+    window.setTimeout(() => {
+      try {
+        fotografar(true)
+      } finally {
+        setARenderizar(false)
+      }
+    }, 60)
   }
 
   async function partilhar() {
@@ -196,11 +256,16 @@ export function RaTelemovel({ m, marca, principal, onFechar }: { m: ModeloSector
       <video ref={video} playsInline muted className={`absolute inset-0 h-full w-full object-cover transition-opacity duration-500 ${ra ? "opacity-100" : "opacity-0"}`} aria-hidden="true" />
       <div ref={palco} className="absolute inset-0 touch-none" />
 
+      {/* barras de cinema */}
+      <div className={`pointer-events-none absolute inset-x-0 top-0 h-[9vh] bg-black transition-transform duration-700 ${cinema && !ra ? "translate-y-0" : "-translate-y-full"}`} aria-hidden="true" />
+      <div className={`pointer-events-none absolute inset-x-0 bottom-0 h-[9vh] bg-black transition-transform duration-700 ${cinema && !ra ? "translate-y-0" : "translate-y-full"}`} aria-hidden="true" />
+
       {/* barra de cima */}
       <div className="absolute inset-x-0 top-0 flex items-start justify-between gap-3 bg-gradient-to-b from-black/70 to-transparent p-4">
         <div>
-          <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-[#D2A63C]">{ra ? t("Realidade aumentada") : t("Modelo 3D")}</p>
+          <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-[#D2A63C]">{ra ? t("Realidade aumentada") : cinema ? t("Modo cinema") : t("Modelo 3D")}</p>
           <p className="text-lg font-bold">{marca}</p>
+          {temOpcao && <p className="text-xs text-zinc-300">{opcao!.solucoes[ecra]?.nome}</p>}
         </div>
         <button type="button" onClick={() => fechar.current()} aria-label={t("Fechar")} className="flex h-11 w-11 items-center justify-center rounded-full bg-black/50 backdrop-blur hover:bg-black/70">
           <X className="h-5 w-5" />
@@ -210,9 +275,25 @@ export function RaTelemovel({ m, marca, principal, onFechar }: { m: ModeloSector
       {/* comandos */}
       <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/80 to-transparent px-4 pb-[max(1rem,env(safe-area-inset-bottom))] pt-10">
         {erro && <p className="mx-auto mb-3 max-w-md rounded-xl bg-red-500/15 px-3 py-2 text-center text-sm text-red-200">{erro}</p>}
+        {temOpcao && opcao!.solucoes.length > 1 && (
+          <div className="mx-auto mb-3 flex max-w-xl gap-2 overflow-x-auto pb-1 [scrollbar-width:none]" role="tablist" aria-label={t("Ecrãs da tua solução")}>
+            {opcao!.solucoes.map((s, i) => (
+              <button
+                key={s.kit}
+                type="button"
+                role="tab"
+                aria-selected={ecra === i}
+                onClick={() => escolherEcra(i)}
+                className={`min-h-[40px] shrink-0 rounded-full border px-4 text-xs font-semibold backdrop-blur transition ${ecra === i ? "border-[#D2A63C] bg-[#D2A63C] text-black" : "border-white/20 bg-black/40 text-zinc-200"}`}
+              >
+                {s.nome}
+              </button>
+            ))}
+          </div>
+        )}
         <p className="mb-3 flex items-center justify-center gap-2 text-center text-xs text-zinc-300">
           <Move3d className="h-4 w-4 text-[#E9C46A]" aria-hidden="true" />
-          {ra ? t("Mexe o telefone à volta: a app fica pousada no teu espaço.") : t("Arrasta para rodar · aperta para aproximar")}
+          {ra ? t("Mexe o telefone à volta: a app fica pousada no teu espaço.") : cinema ? t("Toca no ecrã para assumires o comando.") : t("Arrasta para rodar · aperta para aproximar")}
         </p>
         <div className="mx-auto flex max-w-md flex-wrap items-center justify-center gap-2">
           {ra ? (
@@ -224,11 +305,22 @@ export function RaTelemovel({ m, marca, principal, onFechar }: { m: ModeloSector
               <Camera className="h-4 w-4" aria-hidden="true" /> {t("Ver no meu espaço")}
             </button>
           )}
-          <button type="button" onClick={fotografar} className="inline-flex min-h-[48px] items-center gap-2 rounded-full border border-[#D2A63C]/60 bg-black/40 px-5 text-sm font-semibold text-[#E9C46A] backdrop-blur">
-            <span className="h-3 w-3 rounded-full border-2 border-current" aria-hidden="true" /> {t("Fotografar")}
-          </button>
+          {ra ? (
+            <button type="button" onClick={() => fotografar()} className="inline-flex min-h-[48px] items-center gap-2 rounded-full border border-[#D2A63C]/60 bg-black/40 px-5 text-sm font-semibold text-[#E9C46A] backdrop-blur">
+              <span className="h-3 w-3 rounded-full border-2 border-current" aria-hidden="true" /> {t("Fotografar")}
+            </button>
+          ) : (
+            <>
+              <button type="button" onClick={alternarCinema} aria-pressed={cinema} className={`inline-flex min-h-[48px] items-center gap-2 rounded-full border px-5 text-sm font-semibold backdrop-blur ${cinema ? "border-[#D2A63C] bg-[#D2A63C]/15 text-[#E9C46A]" : "border-white/25 bg-black/40 text-zinc-200"}`}>
+                <Film className="h-4 w-4" aria-hidden="true" /> {t("Cinema")}
+              </button>
+              <button type="button" onClick={renderHD} disabled={aRenderizar} className="inline-flex min-h-[48px] items-center gap-2 rounded-full border border-[#D2A63C]/60 bg-black/40 px-5 text-sm font-semibold text-[#E9C46A] backdrop-blur disabled:opacity-60">
+                <ImageDown className="h-4 w-4" aria-hidden="true" /> {aRenderizar ? t("A renderizar…") : t("Render HD")}
+              </button>
+            </>
+          )}
         </div>
-        {marca === m.marca && <p className="mt-3 text-center text-[11px] text-zinc-500">{t("Negócio fictício, só para mostrar o modelo.")}</p>}
+        {!real && marca === m.marca && <p className="mt-3 text-center text-[11px] text-zinc-500">{t("Negócio fictício, só para mostrar o modelo.")}</p>}
       </div>
 
       {foto && (
@@ -264,33 +356,35 @@ interface Dados {
     slogan: string
     servicosTitulo: string
     cartoes: string[]
+    boasVindas: string
+    faq: { p: string; r: string }[]
   }
+  opcao?: OpcaoRA
+  t: Tr
 }
 
-function claro(hex: string): boolean {
-  const h = hex.replace("#", "")
-  const [r, g, b] = [0, 2, 4].map((i) => parseInt(h.slice(i, i + 2), 16))
-  return (r * 299 + g * 587 + b * 114) / 1000 > 150
+/** Os ecrãs a mostrar: um por solução escolhida; sem opção, o ecrã da app do sector. */
+function ecrasDaOpcao(d: Dados): { canvas: HTMLCanvasElement; passos: string[] }[] {
+  const sol = d.opcao?.solucoes ?? []
+  if (!sol.length) return [{ canvas: pintarEcra(d), passos: d.textos.cartoes }]
+  const de: DadosEcra = {
+    marca: d.marca,
+    principal: d.principal,
+    corFundo: d.m.corFundo,
+    corTexto: d.m.corTexto,
+    fonte: FONTES[d.m.letra],
+    slogan: d.textos.slogan,
+    servicos: d.textos.servicos,
+    boasVindas: d.textos.boasVindas,
+    faq: d.textos.faq,
+  }
+  return sol.map((s) => {
+    const pintor = ECRAS_KIT[s.kit]
+    return { canvas: pintor ? pintor(de, d.t) : pintarEcra(d), passos: s.passos.length ? s.passos : d.textos.cartoes }
+  })
 }
 
 const FONTES = { serif: "Georgia, 'Times New Roman', serif", condensada: "'Arial Narrow', 'Roboto Condensed', Impact, sans-serif", sans: "system-ui, -apple-system, 'Segoe UI', sans-serif" }
-
-function redondo(g: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, r: number) {
-  g.beginPath()
-  g.moveTo(x + r, y)
-  g.arcTo(x + w, y, x + w, y + h, r)
-  g.arcTo(x + w, y + h, x, y + h, r)
-  g.arcTo(x, y + h, x, y, r)
-  g.arcTo(x, y, x + w, y, r)
-  g.closePath()
-}
-
-function cortar(g: CanvasRenderingContext2D, s: string, max: number): string {
-  if (g.measureText(s).width <= max) return s
-  let x = s
-  while (x.length > 1 && g.measureText(`${x}…`).width > max) x = x.slice(0, -1)
-  return `${x}…`
-}
 
 /** Pinta o ecrã da app: o mesmo desenho do telemóvel do showroom, em 600×1300. */
 function pintarEcra(d: Dados): HTMLCanvasElement {
@@ -475,7 +569,8 @@ function montar(
   RoomEnvironment: new () => import("three").Scene,
   el: HTMLElement,
   d: Dados,
-): { parar: () => void; foto: () => HTMLCanvasElement | null; modoRA: (on: boolean) => void } {
+  avisos: { ecra: (i: number) => void; cinema: (on: boolean) => void },
+): Api & { parar: () => void } {
   const reduzido = window.matchMedia("(prefers-reduced-motion: reduce)").matches
   const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true, preserveDrawingBuffer: true })
   renderer.setPixelRatio(Math.min(2, window.devicePixelRatio || 1))
@@ -522,10 +617,12 @@ function montar(
   flutua.add(corpo)
 
   // ecrã pintado
-  const ecraTex = new THREE.CanvasTexture(pintarEcra(d))
+  const ecras = ecrasDaOpcao(d)
+  const ecraTex = new THREE.CanvasTexture(ecras[0].canvas)
   ecraTex.colorSpace = THREE.SRGBColorSpace
   ecraTex.anisotropy = renderer.capabilities.getMaxAnisotropy()
-  const ecra = new THREE.Mesh(new THREE.PlaneGeometry(w - 0.05, h - 0.05), new THREE.MeshBasicMaterial({ map: ecraTex, transparent: true, toneMapped: false }))
+  const ecraMat = new THREE.MeshBasicMaterial({ map: ecraTex, transparent: true, toneMapped: false })
+  const ecra = new THREE.Mesh(new THREE.PlaneGeometry(w - 0.05, h - 0.05), ecraMat)
   ecra.position.z = prof / 2 + 0.017
   flutua.add(ecra)
   // reflexo diagonal no vidro
@@ -549,16 +646,30 @@ function montar(
   lente.position.set(-w / 2 + 0.16, h / 2 - 0.16, -prof / 2 - 0.02)
   flutua.add(lente)
 
-  // cartões holográficos
-  const icones = ["✓", "🔔", "★"]
-  const cartoes = d.textos.cartoes.map((x, i) => {
+  // cartões holográficos: sem opção, o que a app faz; com opção, os passos da solução no ecrã
+  const comOpcao = Boolean(d.opcao?.solucoes.length)
+  const icones = comOpcao ? ["1", "2", "3"] : ["✓", "🔔", "★"]
+  const texCartao = (x: string, i: number) => {
     const tex = new THREE.CanvasTexture(pintarCartao(x, icones[i] ?? "✓"))
     tex.colorSpace = THREE.SRGBColorSpace
-    const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: tex, transparent: true, depthWrite: false, toneMapped: false }))
+    return tex
+  }
+  const cartoes = [0, 1, 2].map((i) => {
+    const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: texCartao(ecras[0].passos[i] ?? "", i), transparent: true, depthWrite: false, toneMapped: false }))
+    s.visible = Boolean(ecras[0].passos[i])
     s.scale.set(0.78, 0.183, 1)
     produto.add(s)
     return s
   })
+  function pintarCartoes(passos: string[]) {
+    cartoes.forEach((s, i) => {
+      const mt = s.material as import("three").SpriteMaterial
+      mt.map?.dispose()
+      mt.map = texCartao(passos[i] ?? "", i)
+      mt.needsUpdate = true
+      s.visible = Boolean(passos[i])
+    })
+  }
 
   // anel de partículas douradas e sombra
   const N = reduzido ? 300 : 900
@@ -591,6 +702,38 @@ function montar(
   const luz = new THREE.DirectionalLight(0xfff1d6, 1.2)
   luz.position.set(2, 3, 4)
   scene.add(luz, new THREE.AmbientLight(0xffffff, 0.25))
+  // luz de recorte na cor da marca (acende no modo cinema)
+  const recorte = new THREE.PointLight(new THREE.Color(d.principal), 0, 8, 1.5)
+  recorte.position.set(-1.6, 1.2, -1.4)
+  scene.add(recorte)
+  const recorte2 = new THREE.PointLight(0xe9c46a, 0, 8, 1.5)
+  recorte2.position.set(1.8, -0.6, -1.2)
+  scene.add(recorte2)
+
+  const relogio = new THREE.Clock()
+
+  // troca de ecrã com desvanecer
+  let atual = 0
+  let pedido = -1
+  let fase = 0 // 0 parado · 1 a apagar · 2 a acender
+  function mostrar(i: number) {
+    if (i < 0 || i >= ecras.length || (i === atual && fase === 0)) return
+    pedido = i
+    fase = 1
+  }
+
+  // modo cinema
+  let cinema = comOpcao && !reduzido
+  let tCinema = 0
+  let ultimaTroca = 0
+  function ligarCinema(on: boolean) {
+    cinema = on && !emRA
+    if (!cinema) {
+      camera.position.set(0, 0, 4.2)
+      camera.quaternion.identity()
+    }
+    ultimaTroca = relogio.getElapsedTime()
+  }
 
   // interação: rodar, aproximar
   let yaw = -0.35
@@ -605,6 +748,10 @@ function montar(
   let escalaInicial = 1
   const cv = renderer.domElement
   const down = (e: PointerEvent) => {
+    if (cinema) {
+      ligarCinema(false)
+      avisos.cinema(false)
+    }
     cv.setPointerCapture(e.pointerId)
     ponteiros.set(e.pointerId, { x: e.clientX, y: e.clientY })
     if (ponteiros.size === 2) {
@@ -672,6 +819,7 @@ function montar(
     alphaZero = null
     orientacao = null
     if (on) {
+      cinema = false
       window.addEventListener("deviceorientation", onOri)
       camera.fov = 62
       camera.position.set(0, 0, 0)
@@ -705,12 +853,43 @@ function montar(
   ajustar()
   window.addEventListener("resize", ajustar)
 
-  const relogio = new THREE.Clock()
   let raf = 0
   const tick = () => {
     raf = requestAnimationFrame(tick)
     const tt = relogio.getElapsedTime()
-    if (!reduzido && ponteiros.size === 0 && !emRA) alvoYaw += 0.0025
+    // troca de ecrã
+    if (fase === 1) {
+      ecraMat.opacity = Math.max(0, ecraMat.opacity - 0.12)
+      if (ecraMat.opacity === 0) {
+        atual = pedido
+        ecraTex.image = ecras[atual].canvas
+        ecraTex.needsUpdate = true
+        pintarCartoes(ecras[atual].passos)
+        fase = 2
+      }
+    } else if (fase === 2) {
+      ecraMat.opacity = Math.min(1, ecraMat.opacity + 0.1)
+      if (ecraMat.opacity === 1) fase = 0
+    }
+    // cinema: câmara em órbita lenta, aproximações suaves, luz da marca; os ecrãs passam sozinhos
+    const alvoLuz = cinema ? 2.2 : 0
+    recorte.intensity += (alvoLuz - recorte.intensity) * 0.05
+    recorte2.intensity += (alvoLuz * 0.6 - recorte2.intensity) * 0.05
+    if (cinema) {
+      tCinema += 1 / 60
+      const a = Math.sin(tCinema * 0.22) * 0.75
+      const dist = 4.2 - Math.sin(tCinema * 0.31) * 0.9
+      camera.position.set(Math.sin(a) * dist, 0.25 + Math.sin(tCinema * 0.4) * 0.35, Math.cos(a) * dist)
+      camera.lookAt(0, produto.position.y, 0)
+      alvoYaw += (-0.12 - alvoYaw) * 0.02
+      alvoPitch += (0.02 - alvoPitch) * 0.02
+      if (ecras.length > 1 && tt - ultimaTroca > 5.5) {
+        ultimaTroca = tt
+        const prox = (atual + 1) % ecras.length
+        mostrar(prox)
+        avisos.ecra(prox)
+      }
+    } else if (!reduzido && ponteiros.size === 0 && !emRA) alvoYaw += 0.0025
     yaw += (alvoYaw - yaw) * 0.08
     pitch += (alvoPitch - pitch) * 0.08
     escala += (alvoEscala - escala) * 0.1
@@ -728,6 +907,7 @@ function montar(
     renderer.render(scene, camera)
   }
   tick()
+  avisos.cinema(cinema)
 
   return {
     parar: () => {
@@ -753,10 +933,31 @@ function montar(
       renderer.dispose()
       cv.remove()
     },
-    foto: () => {
+    foto: (hd = false) => {
+      if (!hd) {
+        renderer.render(scene, camera)
+        return cv
+      }
+      // render em alta: sobe a densidade de píxeis, desenha, copia e volta ao normal
+      const antes = renderer.getPixelRatio()
+      const W = el.clientWidth
+      const H = el.clientHeight
+      const alvo = Math.min(4, Math.max(2.5, antes * 1.6), 4096 / Math.max(W, H))
+      renderer.setPixelRatio(alvo)
+      renderer.setSize(W, H, false)
       renderer.render(scene, camera)
-      return cv
+      const copia = document.createElement("canvas")
+      copia.width = cv.width
+      copia.height = cv.height
+      copia.getContext("2d")!.drawImage(cv, 0, 0)
+      renderer.setPixelRatio(antes)
+      renderer.setSize(W, H, false)
+      cv.style.width = `${W}px`
+      cv.style.height = `${H}px`
+      return copia
     },
     modoRA,
+    mostrar,
+    cinema: ligarCinema,
   }
 }
