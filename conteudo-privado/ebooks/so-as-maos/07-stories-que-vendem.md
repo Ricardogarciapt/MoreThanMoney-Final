@@ -54,7 +54,7 @@ A story 3 não diz «vendi tanto» nem «ganhei tanto». Mostra um processo verd
 Nunca uses contagens regressivas falsas, nem «últimas vagas» quando não é verdade. A urgência inventada cansa quem te segue e pode ser considerada prática comercial desleal.
 :::
 
-:::curso Aula 5.1 · A sequência de cinco stories
+:::curso A sequência de cinco stories
 Gancho, problema, prova, solução, convite. Cinco stories, por esta ordem. A prova é sempre verdadeira e sem números inventados.
 
 no curso: montas a tua primeira sequência com modelos prontos e publicas no próprio dia.

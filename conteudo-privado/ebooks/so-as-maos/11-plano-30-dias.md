@@ -133,9 +133,17 @@ Os termos abaixo aparecem ao longo do livro. Se algum te for estranho, volta aqu
 
 Escrevi este livro para quem quer vender sem aparecer, mas sobretudo para quem quer começar com as mãos. As minhas mãos aparecem em muitos dos meus conteúdos, e as tuas vão aparecer nos teus. Peço-te que comeces por algo pequeno, que o faças com cuidado e que o mostres com honestidade.
 
-Se quiseres ir mais fundo, a She Is Faceless Academy tem 13 módulos, uma comunidade e encontros ao vivo. Não é preciso para usares este livro, e não é garantia de nada. É um espaço para quem quer acompanhamento e prática continuada.
+Se quiseres pôr isto em prática com acompanhamento, este é o caminho que tenho na She Is, do mais leve ao mais completo:
 
-Também tens à disposição duas apps da She Is. A She Is Studio é o estúdio de design com IA para criares peças visuais alinhadas com a tua identidade. A She Is Daily é o planner para organizares a semana. Ambas têm 7 dias grátis, sem cartão.
+:::cartao O próximo passo, na She Is
+- **She Is Daily** · o planner para organizares a semana · 7 dias grátis · sheis.pt/daily
+- **She Is Studio** · o estúdio de design com IA para a tua identidade visual · 7 dias grátis · sheis.pt/studio
+- **Consultoria 1:1** · uma sessão para olhares para o teu caso comigo · sheis.pt/consultoria
+- **Mentoria 1:1** · acompanhamento próximo enquanto lanças · sheis.pt/mentoria
+- **She Is Faceless Academy** · 13 módulos, comunidade e encontros ao vivo · sheis.pt/academia
+:::
+
+Nada disto é preciso para usares este livro, e nada disto é garantia de resultados. É para quem quer prática continuada e alguém ao lado.
 
 [[citacao: Aprende a estratégia. Constrói o ativo. Cria rendimento. | Maria Costa]]
 

@@ -21,13 +21,18 @@ const PUB = path.join(RAIZ, 'public/marketplace/ebooks')
 const b64 = (p) => fs.readFileSync(p).toString('base64')
 const fonte = (familia, ficheiro, peso = 400, estilo = 'normal') =>
   `@font-face{font-family:'${familia}';src:url(data:font/ttf;base64,${b64(path.join(AQUI, 'fontes', ficheiro))}) format('truetype');font-weight:${peso};font-style:${estilo};font-display:swap}`
-const img = (f) => (f ? `data:image/${f.endsWith('png') ? 'png' : 'jpeg'};base64,${b64(path.join(AQUI, 'img', f))}` : '')
+const img = (f) => (f ? `data:image/${f.endsWith('png') ? 'png' : f.endsWith('svg') ? 'svg+xml' : 'jpeg'};base64,${b64(path.join(AQUI, 'img', f))}` : '')
 
 const CACHE_IMG = {}
 const imgSeguro = (f) => {
   if (!fs.existsSync(path.join(AQUI, 'img', f))) return ''
   return (CACHE_IMG[f] ??= img(f))
 }
+
+// ── marca da coleção (MTM por omissão; o livro da Maria sai com a marca She Is) ──
+const MARCA_MTM = { logo: 'mtm.png', nome: 'MoreThanMoney', url: 'morethanmoney.pt', colecao: 'Coleção MTM', copyright: 'MoreThanMoney',
+  fecho: 'Continua o caminho com a comunidade MoreThanMoney: aulas ao vivo, ferramentas e pessoas que estão a fazer o mesmo percurso.' }
+const marcaDe = (livro) => ({ ...MARCA_MTM, ...(livro.marca || {}) })
 
 // ── temas ───────────────────────────────────────────────────────────────────────
 const TEMAS = {
@@ -41,7 +46,7 @@ const TEMAS = {
   },
   faceless: {
     fontes: () => fonte('Kalam', 'Kalam.ttf') + fonte('Cormorant', 'Cormorant-1.ttf', 600) + fonte('Cormorant', 'Cormorant-2.ttf', 500, 'italic') + fonte('DMSans', 'DMSans-1.ttf', 400) + fonte('DMSans', 'DMSans-2.ttf', 700),
-    vars: `--fundo:#1b1714;--papel:#f7f3ee;--tinta:#2a2420;--a:#a8876a;--a2:#dcc6a8;--a3:#6c5440;--mut:#8a7d72;--lin:#e7ddd2;--titulo:'Cormorant',serif;--sub:'DMSans',sans-serif;--mao:'Cormorant',serif;--corpo:'DMSans',sans-serif;--escuro:#221d19;--claro-sobre-escuro:#f5ede4`,
+    vars: `--fundo:#33271E;--papel:#FAF6EF;--tinta:#33271E;--a:#a8876a;--a2:#EFE2C8;--a3:#5d4e43;--mut:#8a7d72;--lin:#EDE5D6;--titulo:'Cormorant',serif;--sub:'DMSans',sans-serif;--mao:'Cormorant',serif;--corpo:'DMSans',sans-serif;--escuro:#221d19;--claro-sobre-escuro:#f5ede4`,
   },
 }
 
@@ -148,7 +153,7 @@ function montarHtml(slug, livro, capitulos) {
         <h1 class="capa-titulo"><span>${livro.titulo}</span><em>${livro.titulo2}</em></h1>
         <p class="capa-sub">${livro.subtitulo}</p>
       </div>
-      <div class="capa-rodape"><img src="${img('mtm.png')}" alt=""><span>MoreThanMoney</span><i></i><span>Coleção MTM · 1.ª edição</span></div>
+      <div class="capa-rodape"><img src="${img(marcaDe(livro).logo)}" alt=""><span>${marcaDe(livro).nome}</span><i></i><span>${marcaDe(livro).colecao} · 1.ª edição</span></div>
     </div></div>
   </section>`
 
@@ -158,15 +163,15 @@ function montarHtml(slug, livro, capitulos) {
       <div class="rosto-autor">${livro.autor}</div>
       <h1>${livro.titulo} <em>${livro.titulo2}</em></h1>
       <p class="rosto-sub">${livro.subtitulo}</p>
-      <div class="rosto-fim"><img src="${img('mtm.png')}" alt="MoreThanMoney"><span>MoreThanMoney · morethanmoney.pt</span></div>
+      <div class="rosto-fim"><img src="${img(marcaDe(livro).logo)}" alt="${marcaDe(livro).nome}"><span>${marcaDe(livro).nome} · ${marcaDe(livro).url}</span></div>
     </div>
   </section>
   <section class="pagina ficha">
     <div class="ficha-in">
       <p><strong>${livro.titulo} ${livro.titulo2}</strong><br>${livro.subtitulo}</p>
-      <p>© 2026 ${livro.autor} e MoreThanMoney. Todos os direitos reservados. Esta cópia é pessoal e intransmissível: não a partilhes nem a revendas.</p>
+      <p>© 2026 ${livro.autor} e ${marcaDe(livro).copyright}. Todos os direitos reservados. Esta cópia é pessoal e intransmissível: não a partilhes nem a revendas.</p>
       <p>${livro.edicao}</p>
-      <p class="ficha-ed"><strong>Edição produzida por MoreThanMoney.pt</strong> · Coleção MTM · www.morethanmoney.pt</p>
+      <p class="ficha-ed"><strong>Edição produzida por MoreThanMoney.pt</strong> · ${marcaDe(livro).colecao} · www.${marcaDe(livro).url}</p>
       <p class="ficha-aviso"><strong>Aviso importante.</strong> ${livro.aviso}</p>
       ${livro.fotoInterior ? `<img class="ficha-foto" src="${img(livro.fotoInterior)}" alt="">` : ''}
       <p class="ficha-bio"><strong>Sobre o autor.</strong> ${livro.autorBio}</p>
@@ -193,8 +198,8 @@ function montarHtml(slug, livro, capitulos) {
   <section class="pagina fecho">
     <div class="fecho-in">
       <p class="fecho-mao">Obrigado por leres até aqui.</p>
-      <p>Continua o caminho com a comunidade MoreThanMoney: aulas ao vivo, ferramentas e pessoas que estão a fazer o mesmo percurso.</p>
-      <p class="fecho-url">morethanmoney.pt</p>
+      <p>${marcaDe(livro).fecho}</p>
+      <p class="fecho-url">${marcaDe(livro).url}</p>
       <p class="ficha-aviso">${livro.aviso}</p>
     </div>
   </section>`

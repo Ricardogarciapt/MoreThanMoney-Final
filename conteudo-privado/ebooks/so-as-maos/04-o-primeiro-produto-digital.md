@@ -65,7 +65,7 @@ Não cries um curso de dez módulos antes de saber se alguém quer o primeiro. Q
 
 [[foto: maria-tel-secretaria.jpg | A secretária de quem vende sem aparecer: um caderno, um portátil e um telemóvel. Chega. | polaroid]]
 
-:::curso Aula 3.2 · Validar antes de criar
+:::curso Validar antes de criar
 Antes de passares três semanas a fazer um produto, pergunta. Uma story com enquete, três DMs, uma lista de espera. Se ninguém levanta a mão, ainda bem que soubeste antes.
 
 no curso: fazes a validação em 48 horas, com o guião da story e da DM já escrito.

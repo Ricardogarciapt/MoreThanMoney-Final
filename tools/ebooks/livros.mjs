@@ -59,7 +59,10 @@ export const LIVROS = {
     selo: 'mtm.png',
     tema: 'faceless',
     foto: 'maria-telemoveis.jpg',
-    academia: 'Bootcamp Só as Mãos',
+    academia: 'She Is Faceless Academy',
+    // 21/11 (Ricardo): o livro da Maria sai com a marca She Is e serve de porta para os produtos dela.
+    marca: { logo: 'sheis.svg', nome: 'She Is', url: 'sheis.pt', colecao: 'Coleção She Is', copyright: 'She Is',
+      fecho: 'Queres ajuda para pôr isto em prática? Na She Is tens o planner She Is Daily, o estúdio de design She Is Studio, consultoria e mentoria 1:1 e a She Is Faceless Academy. Começa em sheis.pt.' },
     fotoInterior: 'maria-maos.jpg',
     aberturas: [],
     edicao: '1.ª edição · novembro de 2026',
