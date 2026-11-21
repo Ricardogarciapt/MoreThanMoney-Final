@@ -52,6 +52,15 @@ Para quem começa, a ordem limite costuma dar mais controlo. Não é obrigatóri
 Na primeira compra, o mais importante não é o preço perfeito. É saberes exatamente o que estás a comprar, quanto pagas em taxas e onde é que a cripto vai ficar.
 :::
 
+:::curso Aula 3.2 · O custo real de comprar
+O preço que vês não é o preço que pagas. Entre a taxa da plataforma, o spread e a taxa de levantamento, uma compra pequena pode custar mais do que parece.
+
+- Faz sempre a conta antes: quanto entra, quanto chega, quanto fica pelo caminho.
+- Numa compra pequena, uma taxa fixa pesa muito mais.
+
+no curso: comparas o custo de três formas de comprar o mesmo valor, com os números à frente.
+:::
+
 ## O primeiro euro
 
 Aqui tens um caminho simples para a primeira compra, com um valor pequeno e controlado.

@@ -6,6 +6,7 @@
 // Entradas: conteudo-privado/ebooks/<slug>/NN-*.md
 // Saídas:   conteudo-privado/ebooks/<slug>/<slug>.html e <slug>.pdf
 //           public/marketplace/ebooks/<slug>-capa.jpg e <slug>-3d.png
+import { ilustracao } from './ilustracoes.mjs'
 import fs from 'node:fs'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -86,6 +87,30 @@ function arteCapa(livro) {
   </svg>`
 }
 
+// ── capa: decoração e carimbo circular ─────────────────────────────────────────────
+function decoCapa(livro) {
+  if (livro.tema === 'rg') {
+    // fratura a ouro que atravessa o título: o «destruí» desenhado
+    return `<svg class="capa-deco" viewBox="0 0 600 300" preserveAspectRatio="none" aria-hidden="true"><defs><linearGradient id="fr" x1="0" x2="1"><stop offset="0" stop-color="#E9C46A" stop-opacity="0"/><stop offset=".18" stop-color="#E9C46A"/><stop offset=".6" stop-color="#D2A63C"/><stop offset="1" stop-color="#8a6a1f" stop-opacity="0"/></linearGradient></defs>
+      <path d="M0,190 L70,176 L105,198 L160,150 L205,168 L250,120 L290,140 L330,96 L372,118 L420,70 L455,92 L505,48 L540,64 L600,30" fill="none" stroke="url(#fr)" stroke-width="3.2" stroke-linejoin="bevel"/>
+      <path d="M160,150 L150,120 M250,120 L262,92 M420,70 L404,46 M330,96 L318,130" stroke="#E9C46A" stroke-width="1.4" opacity=".7"/></svg>`
+  }
+  if (livro.tema === 'cripto') {
+    // chave em traço dourado, com os dentes em blocos
+    return `<svg class="capa-deco" viewBox="0 0 300 120" aria-hidden="true" fill="none" stroke="#F3CF73" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"><circle cx="48" cy="60" r="34"/><circle cx="48" cy="60" r="13" stroke-width="3"/><path d="M82,60 H280"/><path d="M228,60 v26 h14 v-26 M254,60 v18 h14 v-18" stroke-width="4"/></svg>`
+  }
+  return ''
+}
+function carimbo(livro) {
+  const t = { rg: ['Disciplina · Dinheiro · Mercados ·', '10', 'semanas'], cripto: ['Cripto para iniciantes · Sem hype ·', '1.º', 'euro'], faceless: ['Vender sem mostrar a cara · Só as mãos ·', '30', 'dias'] }[livro.tema]
+  const cor = { rg: '#E9C46A', cripto: '#F3CF73', faceless: '#E6D3B5' }[livro.tema]
+  return `<svg class="capa-carimbo" viewBox="0 0 120 120" aria-hidden="true"><defs><path id="circ-${livro.tema}" d="M60,60 m-47,0 a47,47 0 1,1 94,0 a47,47 0 1,1 -94,0"/></defs>
+    <circle cx="60" cy="60" r="58" fill="rgba(10,9,8,.55)" stroke="${cor}" stroke-width="1"/><circle cx="60" cy="60" r="36" fill="none" stroke="${cor}" stroke-width=".6" opacity=".6"/>
+    <text fill="${cor}"><textPath href="#circ-${livro.tema}" textLength="288" lengthAdjust="spacing">${t[0]}</textPath></text>
+    <text x="60" y="62" text-anchor="middle" fill="#fff" style="font-family:var(--titulo);font-size:26px;letter-spacing:0">${t[1]}</text>
+    <text x="60" y="78" text-anchor="middle" fill="${cor}" style="font-size:8px;letter-spacing:.3em">${t[2]}</text></svg>`
+}
+
 // ── HTML ─────────────────────────────────────────────────────────────────────────
 function montarHtml(slug, livro, capitulos) {
   const tema = TEMAS[livro.tema]
@@ -99,7 +124,7 @@ function montarHtml(slug, livro, capitulos) {
     const k = resto.findIndex((l) => l.trim())
     if (k >= 0 && resto[k].trim().startsWith('>')) { epigrafe = resto[k].trim().replace(/^>\s?/, ''); resto.splice(k, 1) }
     const num = path.basename(c).slice(0, 2)
-    return { id: `cap-${num}`, num, titulo: t, epigrafe, html: mdParaHtml(resto.join('\n'), { avisos, img: imgSeguro }) }
+    return { id: `cap-${num}`, num, titulo: t, epigrafe, html: mdParaHtml(resto.join('\n'), { avisos, img: imgSeguro, academia: livro.academia }) }
   })
   if (avisos.length) console.warn(slug, avisos)
 
@@ -109,13 +134,14 @@ function montarHtml(slug, livro, capitulos) {
     <div class="capa-3d"><div class="capa-face">
       ${livro.foto ? `<img class="capa-foto" src="${img(livro.foto)}" alt="">` : ''}
       <div class="capa-veu"></div>
-      ${arteCapa(livro)}
-      <div class="capa-txt">
-        <div class="capa-autor">${livro.autor}${livro.funcao ? ` · ${livro.funcao}` : ''}</div>
+      ${decoCapa(livro)}
+      <div class="capa-topo"><span class="capa-autor">${livro.autor}</span><i class="capa-regua"></i>${livro.funcao ? `<span class="capa-funcao">${livro.funcao}</span>` : ''}</div>
+      ${carimbo(livro)}
+      <div class="capa-bloco">
         <h1 class="capa-titulo"><span>${livro.titulo}</span><em>${livro.titulo2}</em></h1>
         <p class="capa-sub">${livro.subtitulo}</p>
       </div>
-      <img class="capa-selo" src="${img(livro.selo)}" alt="">
+      <div class="capa-rodape"><img src="${img('mtm.png')}" alt=""><span>MoreThanMoney</span><i></i><span>Coleção MTM · 1.ª edição</span></div>
     </div></div>
   </section>`
 
@@ -133,6 +159,7 @@ function montarHtml(slug, livro, capitulos) {
       <p><strong>${livro.titulo} ${livro.titulo2}</strong><br>${livro.subtitulo}</p>
       <p>© 2026 ${livro.autor} e MoreThanMoney. Todos os direitos reservados. Esta cópia é pessoal e intransmissível: não a partilhes nem a revendas.</p>
       <p>${livro.edicao}</p>
+      <p class="ficha-ed"><strong>Edição produzida por MoreThanMoney.pt</strong> · Coleção MTM · www.morethanmoney.pt</p>
       <p class="ficha-aviso"><strong>Aviso importante.</strong> ${livro.aviso}</p>
       ${livro.fotoInterior ? `<img class="ficha-foto" src="${img(livro.fotoInterior)}" alt="">` : ''}
       <p class="ficha-bio"><strong>Sobre o autor.</strong> ${livro.autorBio}</p>
@@ -146,7 +173,8 @@ function montarHtml(slug, livro, capitulos) {
   </section>`
 
   const corpo = caps.map((c) => `
-  <section class="abertura pagina" id="${c.id}">
+  <section class="abertura pagina${livro.aberturas?.[Number(c.num)] ? ' com-foto' : ilustracao(livro.tema, Number(c.num)) ? ' com-ilustra' : ''}" id="${c.id}">
+    ${livro.aberturas?.[Number(c.num)] ? `<img class="ab-foto" src="${imgSeguro(livro.aberturas[Number(c.num)])}" alt="">` : `<div class="ab-ilustra">${ilustracao(livro.tema, Number(c.num))}</div>`}
     <div class="ab-num">${numero(c.num)}</div>
     <h2 class="ab-titulo">${inline(c.titulo)}</h2>
     ${c.epigrafe ? `<p class="ab-epigrafe">${inline(c.epigrafe)}</p>` : ''}
@@ -213,22 +241,39 @@ body{margin:0;background:var(--fundo);color:var(--tinta);font-family:var(--corpo
 .capa-3d{width:min(440px,86vw);margin:0 auto;transform-style:preserve-3d;transition:transform .25s ease-out}
 .capa-face{position:relative;aspect-ratio:2/3;border-radius:6px 14px 14px 6px;overflow:hidden;background:var(--escuro);color:var(--claro-sobre-escuro);box-shadow:-14px 26px 60px rgba(0,0,0,.55),inset 6px 0 10px rgba(255,255,255,.08)}
 .capa-face::before{content:'';position:absolute;inset:0 auto 0 0;width:14px;background:linear-gradient(90deg,rgba(0,0,0,.45),rgba(255,255,255,.08),transparent);z-index:5}
-.capa-foto{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:50% 12%;filter:grayscale(1) contrast(1.15) brightness(.82)}
-.capa-veu{position:absolute;inset:0;background:linear-gradient(180deg,transparent 30%,rgba(8,8,8,.75) 58%,#0b0b0c 82%)}
-.capa .arte{position:absolute;left:0;right:0;bottom:22%;width:100%;opacity:.95}
-.capa-txt{position:absolute;left:8%;right:8%;bottom:7%;z-index:3}
-.capa-autor{font-family:var(--sub);letter-spacing:.28em;text-transform:uppercase;font-size:12px;color:var(--a2)}
-.capa-titulo{margin:.2em 0 .25em;line-height:.9}.capa-titulo span{display:block;font-family:var(--titulo);font-size:clamp(46px,10vw,74px);text-transform:uppercase;letter-spacing:.01em}
-.capa-titulo em{display:block;font-style:normal;font-family:var(--mao);color:var(--a);font-size:clamp(34px,7vw,52px);transform:rotate(-3deg);margin-top:.12em}
-.capa-sub{font-size:13px;line-height:1.45;opacity:.85;max-width:30ch;margin:0}
-.capa-selo{position:absolute;top:5%;right:6%;width:44px;opacity:.9;z-index:3}
-.tema-cripto .capa-face{background:#0a0806}.tema-cripto .capa-foto{filter:none;object-position:50% 0}.tema-cripto .capa-veu{background:linear-gradient(180deg,transparent 38%,rgba(10,8,6,.8) 60%,#0a0806 78%)}.tema-cripto .capa-autor{letter-spacing:.42em;color:var(--a2)}
-.tema-cripto .capa .arte{top:9%;bottom:auto}.tema-cripto .capa-titulo span{font-family:'Anton',sans-serif;text-transform:uppercase;color:#fff;font-size:clamp(48px,10vw,78px);letter-spacing:0}
-.tema-cripto .capa-titulo em{font-family:'Anton',sans-serif;text-transform:uppercase;transform:none;font-size:clamp(62px,13vw,100px);background:linear-gradient(180deg,#fbe7a6,#D9A93A 55%,#9a6f17);-webkit-background-clip:text;color:transparent;line-height:.95}.tema-cripto .capa-sub{letter-spacing:.06em}
-.tema-faceless .capa-face{background:linear-gradient(160deg,#2b2520,#1b1714 60%)}.tema-faceless .capa-foto{filter:sepia(.25) contrast(1.05) brightness(.92);object-position:50% 20%}.tema-faceless .capa-veu{background:linear-gradient(180deg,transparent 35%,rgba(27,23,20,.78) 58%,#1b1714 80%)}
-.tema-faceless .capa .arte{top:6%;bottom:auto;width:92%;left:4%}
-.tema-faceless .capa-titulo span{font-family:var(--titulo);text-transform:none;font-weight:600;font-size:clamp(44px,9vw,64px)}
-.tema-faceless .capa-titulo em{font-family:var(--titulo);font-style:italic;font-weight:500;color:var(--a2);transform:none;font-size:clamp(76px,16vw,120px);line-height:.85}
+.capa-face{container-type:inline-size}
+.capa-foto{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:50% 12%}
+.capa-veu{position:absolute;inset:0}
+.capa-topo{position:absolute;top:6cqw;left:7cqw;right:7cqw;z-index:3;display:flex;align-items:center;gap:3cqw}
+.capa-autor{font-family:var(--sub);font-size:3.6cqw;letter-spacing:.34em;text-transform:uppercase;color:#fff;white-space:nowrap;font-weight:600}
+.capa-regua{flex:1;height:1px;background:linear-gradient(90deg,var(--a),transparent)}
+.capa-funcao{font-family:var(--sub);font-size:2.5cqw;letter-spacing:.22em;text-transform:uppercase;color:var(--a2);white-space:nowrap}
+.capa-bloco{position:absolute;left:7cqw;right:7cqw;bottom:15cqw;z-index:3}
+.capa-titulo{margin:0;line-height:.84}.capa-titulo span,.capa-titulo em{display:block;font-style:normal}
+.capa-sub{margin:4cqw 0 0;font-size:3.3cqw;line-height:1.4;color:rgba(255,255,255,.86);max-width:70cqw}
+.capa-rodape{position:absolute;left:7cqw;right:7cqw;bottom:5.5cqw;z-index:3;display:flex;align-items:center;gap:2.2cqw;font-family:var(--sub);font-size:2.3cqw;letter-spacing:.24em;text-transform:uppercase;color:rgba(255,255,255,.72)}
+.capa-rodape img{width:6cqw;height:auto}.capa-rodape i{flex:1;height:1px;background:rgba(255,255,255,.22)}
+.capa-carimbo{position:absolute;z-index:4;width:24cqw;height:24cqw}
+.capa-carimbo text{font-family:var(--sub);font-size:8.6px;letter-spacing:0;text-transform:uppercase;font-weight:600}
+.capa-deco{position:absolute;z-index:2;pointer-events:none}
+.tema-rg .capa-foto{filter:grayscale(1) contrast(1.18) brightness(.86);object-position:50% 8%}
+.tema-rg .capa-veu{background:linear-gradient(180deg,rgba(8,8,9,.55) 0,transparent 18%,transparent 34%,rgba(8,8,9,.7) 56%,#09090a 76%)}
+.tema-rg .capa-titulo span{font-family:'Anton',sans-serif;text-transform:uppercase;color:#fff;font-size:23.5cqw;letter-spacing:-.005em;line-height:.98}
+.tema-rg .capa-titulo em{font-family:'Kalam',cursive;color:var(--a2);font-size:14cqw;transform:rotate(-5deg);margin:1cqw 0 0 24cqw;text-shadow:0 .5cqw 2cqw rgba(0,0,0,.6);line-height:1}
+.tema-rg .capa-deco{left:0;right:0;bottom:37cqw;height:30cqw}
+.tema-rg .capa-carimbo{top:14cqw;right:6cqw}
+.tema-cripto .capa-face{background:#0a0806}.tema-cripto .capa-foto{object-position:50% 0;height:74%}
+.tema-cripto .capa-veu{background:linear-gradient(180deg,rgba(10,8,6,.55) 0,transparent 16%,transparent 40%,rgba(10,8,6,.85) 62%,#0a0806 72%)}
+.tema-cripto .capa-titulo span{font-family:'Anton',sans-serif;text-transform:uppercase;color:#fff;font-size:15.5cqw;letter-spacing:.01em;line-height:1}
+.tema-cripto .capa-titulo em{font-family:'Anton',sans-serif;text-transform:uppercase;font-size:33cqw;line-height:.96;background:linear-gradient(180deg,#fff1c2 0,#F3CF73 30%,#D9A93A 62%,#8c6512 100%);-webkit-background-clip:text;background-clip:text;color:transparent;letter-spacing:-.01em}
+.tema-cripto .capa-deco{right:6cqw;bottom:47cqw;width:30cqw}
+.tema-cripto .capa-carimbo{top:19cqw;left:6cqw}
+.tema-faceless .capa-face{background:#1b1714}.tema-faceless .capa-foto{filter:sepia(.12) contrast(1.05);inset:auto;top:15cqw;left:0;height:auto;object-fit:contain}
+.tema-faceless .capa-veu{background:linear-gradient(180deg,#1b1714 0,#1b1714 10.6%,rgba(27,23,20,0) 15%,rgba(27,23,20,0) 33%,rgba(27,23,20,.92) 44%,#1b1714 48%)}
+.tema-faceless .capa-titulo span{font-family:var(--titulo);font-style:italic;font-weight:500;color:var(--a2);font-size:15cqw;line-height:1;margin-left:1cqw}
+.tema-faceless .capa-titulo em{font-family:var(--titulo);font-weight:600;color:#fbf6ef;font-size:40cqw;line-height:.78;letter-spacing:-.02em}
+.tema-faceless .capa-carimbo{top:58cqw;right:6cqw}
+.tema-faceless .capa-autor{letter-spacing:.4em}
 /* rosto e ficha */
 .rosto,.ficha,.indice,.fecho{padding:56px clamp(22px,7vw,70px)}
 .rosto-in{min-height:520px;display:flex;flex-direction:column}.rosto-autor{font-family:var(--sub);letter-spacing:.25em;text-transform:uppercase;color:var(--a3);font-size:13px}
@@ -250,6 +295,15 @@ body{margin:0;background:var(--fundo);color:var(--tinta);font-family:var(--corpo
 .ab-arte svg{width:100%;margin-top:20px}.ab-el{fill:color-mix(in srgb,var(--a) 70%,transparent)}.tema-cripto .ab-el rect{fill:none;stroke:var(--a);stroke-width:2}.tema-cripto .ab-el text{fill:var(--a2);font-family:var(--mao);font-size:14px}
 .tema-faceless .ab-el{fill:color-mix(in srgb,var(--a) 30%,transparent)}
 .ab-linha{fill:none;stroke:var(--a2);stroke-width:3;stroke-linecap:round}
+.abertura.com-foto{min-height:560px;display:flex;flex-direction:column;justify-content:flex-end}
+.ab-foto{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:50% 25%;z-index:0}
+.abertura.com-foto::before{content:'';position:absolute;inset:0;z-index:1;background:linear-gradient(180deg,rgba(10,9,8,.15) 0,rgba(10,9,8,.35) 35%,rgba(10,9,8,.92) 72%,var(--escuro) 100%)}
+.abertura.com-foto>*:not(.ab-foto){position:relative;z-index:2}.abertura.com-foto .ab-arte{display:none}
+.tema-rg .ab-foto{filter:grayscale(1) contrast(1.12) brightness(.9)}.tema-faceless .ab-foto{filter:sepia(.25) brightness(.9)}
+.ab-ilustra{position:absolute;z-index:0;top:4%;right:-4%;width:74%;pointer-events:none}.ab-ilustra:empty{display:none}
+.abertura.com-ilustra{display:flex;flex-direction:column;justify-content:flex-end;min-height:560px}.abertura.com-ilustra>*:not(.ab-ilustra){position:relative;z-index:2}.abertura.com-ilustra .ab-arte{display:none}
+.il{stroke:var(--a);stroke-width:2.6}.il .f{fill:color-mix(in srgb,var(--a) 14%,transparent)}.il .a2{stroke:var(--a2)}.il .f.a2{fill:color-mix(in srgb,var(--a2) 26%,transparent)}.il .fino{stroke-width:1.4;opacity:.75}.il .grosso{stroke-width:4.5}.il .tracejado{stroke-dasharray:4 7;stroke-width:1.6}.il .tx{fill:var(--a2);stroke:none;font-family:var(--sub);font-weight:700}
+.abertura.com-foto .ab-num{-webkit-text-stroke:0;color:var(--a);opacity:1;text-shadow:0 6px 30px rgba(0,0,0,.5)}
 /* texto */
 .capitulo h2{font-family:var(--titulo);font-size:28px;line-height:1.1;margin:1.6em 0 .5em;color:var(--tinta)}.tema-rg .capitulo h2{text-transform:uppercase;letter-spacing:.01em}
 .capitulo h3{font-family:var(--sub);font-size:19px;margin:1.4em 0 .4em;color:var(--a3)}
@@ -323,6 +377,29 @@ figure{margin:0}
 .ec-tit{font:700 15px var(--sub);color:var(--a2);margin:2px 0 10px}
 .ec-l{display:flex;justify-content:space-between;gap:12px;padding:9px 2px;border-bottom:1px solid rgba(255,255,255,.08);font-size:13px}.ec-l span{opacity:.7}.ec-l b{font-weight:600;text-align:right}
 .ec-p{font-size:12.5px;opacity:.85;padding:8px 2px;line-height:1.4}
+.curso{margin:2.2em 0;background:radial-gradient(120% 90% at 100% 0,#2a2213 0,#0f0d0a 55%);color:#efe7d6;border-radius:14px;padding:22px 24px 18px;position:relative;box-shadow:0 22px 40px -24px rgba(0,0,0,.7);border:1px solid rgba(210,166,60,.35);break-inside:avoid;page-break-inside:avoid;overflow:hidden}
+.curso::after{content:'';position:absolute;right:-40px;top:-40px;width:160px;height:160px;border-radius:50%;border:1px solid rgba(233,196,106,.25);box-shadow:0 0 0 18px rgba(233,196,106,.05)}
+.cu-topo{display:flex;justify-content:space-between;align-items:center;font-family:var(--sub);font-size:11px;letter-spacing:.2em;text-transform:uppercase;color:#E9C46A}
+.cu-aula{background:#D2A63C;color:#111;padding:3px 9px;border-radius:99px;letter-spacing:.08em;font-weight:700}
+.curso h4{font-family:var(--titulo);font-size:24px;line-height:1.05;margin:.55em 0 .4em;color:#fff;text-transform:uppercase;letter-spacing:.01em}
+.cu-corpo p,.cu-corpo li{color:#e6dccb;font-size:15px}.cu-corpo strong{color:#fff}.cu-corpo em{color:#E9C46A}.cu-corpo li::marker{color:#D2A63C}
+.cu-pe{margin-top:12px;padding-top:10px;border-top:1px dashed rgba(233,196,106,.4);font-size:14px;color:#f3e6c4}.cu-pe b{font-family:var(--sub);letter-spacing:.14em;text-transform:uppercase;font-size:11px;color:#D2A63C;margin-right:6px}
+.cu-rot{display:none}
+.scanner{margin:2em 0;display:block;background:var(--papel);border:1px solid var(--lin);border-radius:14px;overflow:hidden;break-inside:avoid;page-break-inside:avoid;box-shadow:0 16px 30px -22px rgba(0,0,0,.45)}
+.scanner img{width:100%;aspect-ratio:16/6.5;object-fit:cover;object-position:70% 50%;display:block;border-bottom:1px solid var(--lin)}
+.sc-in{padding:18px 20px}.sc-rot{font-family:var(--sub);font-size:10.5px;letter-spacing:.22em;text-transform:uppercase;color:var(--a3)}
+.scanner h4{font-family:var(--titulo);font-size:26px;margin:.2em 0 .5em;text-transform:uppercase;line-height:1}
+.sc-ficha{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:10px}.sc-ficha div{background:#fff;border:1px solid var(--lin);border-radius:9px;padding:6px 8px}
+.sc-ficha span{display:block;font-size:9.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--mut)}.sc-ficha b{font-size:12.5px;line-height:1.25;display:block}
+.sc-in p{font-size:14.5px;margin:0 0 .6em}
+.galeria{margin:2.2em -2% 2.4em;break-inside:avoid;page-break-inside:avoid}.ga-tit{font-family:var(--mao);font-size:22px;color:var(--a3);text-align:center;margin-bottom:10px}
+.ga-grelha{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
+.ga-grelha figure{margin:0;background:#fff;padding:7px 7px 10px;box-shadow:0 12px 22px -14px rgba(0,0,0,.5);transform:rotate(var(--r,0deg))}
+.ga-grelha img{width:100%;aspect-ratio:4/5;object-fit:cover;display:block}
+.ga-grelha figcaption{font-family:'Kalam',cursive;font-size:13.5px;line-height:1.2;color:#3b352a;margin-top:6px;text-align:center}
+.ga-grelha:has(figure:nth-child(4):last-child){grid-template-columns:repeat(2,1fr)}
+.ga-grelha:has(figure:nth-child(2):last-child){grid-template-columns:repeat(2,1fr)}
+@media print{.curso,.scanner,.galeria,.ga-grelha figure,.sc-ficha div{-webkit-print-color-adjust:exact;print-color-adjust:exact}.curso h4{font-size:17pt}.cu-corpo p,.cu-corpo li{font-size:10pt}.ga-grelha figcaption{font-size:9.5pt}.scanner h4{font-size:17pt}.sc-in p{font-size:9.8pt}}
 @media print{.foto,.ig,.stories,.conversa,.cartao,.postit,.ecra,.story,.ig-texto,.cv-topo,.bl,.av-ini{-webkit-print-color-adjust:exact;print-color-adjust:exact}.ig,.conversa{width:70%}.story{min-width:0;width:30%}.st-txt p{font-size:12pt}.postit{font-size:14pt}.foto figcaption{font-size:12pt}.foto-polaroid{width:58%}}
 /* gráficos */
 .grafico{margin:1.8em 0;padding:18px 16px 12px;border-radius:16px;background:var(--escuro);color:var(--claro-sobre-escuro);page-break-inside:avoid;break-inside:avoid}
@@ -367,10 +444,13 @@ path.g-linha.g-c0,path.g-linha.g-c1,path.g-linha.g-c2,path.g-linha.g-c3{fill:non
  .capitulo{padding:0}
  .pagina{break-after:page;page-break-after:always}
  .capa{padding:0;margin:0;height:240mm;width:170mm;perspective:none;break-after:page}.capa-3d{width:170mm;margin:0;transform:none!important}.capa-face{border-radius:0;height:240mm;width:170mm;aspect-ratio:auto;box-shadow:none}.capa-face::before{display:none}
- .tema-cripto .capa-titulo em{background:none!important;-webkit-background-clip:border-box!important;color:#E2B54A!important;text-shadow:0 2px 0 #7a5512}
- .capa-titulo span{font-size:60pt}.capa-titulo em{font-size:42pt}.tema-cripto .capa-titulo em{font-size:72pt}.tema-faceless .capa-titulo em{font-size:96pt}
+ .tema-cripto .capa-titulo em{background:none!important;-webkit-background-clip:border-box!important;background-clip:border-box!important;color:#E6B94E!important;text-shadow:0 .6cqw 0 #6e4d10}
  .abertura{background:var(--escuro)!important;min-height:200mm;margin:0;break-before:page;-webkit-print-color-adjust:exact;print-color-adjust:exact;border-radius:12px;padding:20mm 12mm 10mm}
  .capitulo{break-before:page}
+ @page ab{margin:0}
+ .abertura{page:ab;box-sizing:border-box;width:var(--pw,170mm);height:var(--ph,240mm);min-height:0!important;border-radius:0!important;padding:26mm 16mm 18mm!important;overflow:hidden}
+ .abertura.com-foto,.abertura.com-ilustra{padding:0 16mm 20mm!important;justify-content:flex-end}
+ .ab-ilustra{top:8mm;right:-4mm;width:150mm}
  .grafico,.bloco-destaque,.fecho,.capa-face,th{-webkit-print-color-adjust:exact;print-color-adjust:exact}
  .fecho{break-before:page;page-break-before:always;background:var(--escuro)!important;min-height:170mm;border-radius:12px;padding:30mm 12mm}
  .rosto-in{min-height:195mm}
@@ -421,6 +501,22 @@ async function construir(slug, { pdf = true } = {}) {
   const { execFileSync } = await import('node:child_process')
   execFileSync('pdfunite', [tmpCapa, tmpCorpo, pdfFinal])
   fs.rmSync(tmpCapa); fs.rmSync(tmpCorpo)
+  // edição para gráfica: 176×246 mm (sangria de 3 mm a toda a volta, corte final 170×240), TrimBox/BleedBox marcadas
+  await page.addStyleTag({ content: `@media print{:root{--pw:176mm;--ph:246mm}
+    @page{size:176mm 246mm;margin:20mm 19mm 22mm}@page :first{margin:0}@page ab{margin:0}
+    .capa{height:246mm!important;width:176mm!important}.capa-3d{width:176mm!important}.capa-face{height:246mm!important;width:176mm!important}
+    .capa-topo{padding-top:3mm}.capa-rodape{margin-bottom:3mm}
+    .abertura{padding:29mm 19mm 21mm!important}.abertura.com-foto,.abertura.com-ilustra{padding:0 19mm 23mm!important}}` })
+  const gCapa = path.join(dir, '.gcapa.pdf'), gCorpo = path.join(dir, '.gcorpo.pdf'), gTmp = path.join(dir, '.grafica.pdf')
+  await page.pdf({ path: gCapa, preferCSSPageSize: true, printBackground: true, pageRanges: '1' })
+  await page.pdf({
+    path: gCorpo, preferCSSPageSize: true, printBackground: true, displayHeaderFooter: true, pageRanges: '2-',
+    headerTemplate: '<span></span>',
+    footerTemplate: `<div style="width:100%;font-size:7pt;color:#999;font-family:sans-serif;padding:0 19mm 3mm;display:flex;justify-content:space-between"><span>${livro.titulo} ${livro.titulo2} · ${livro.autor}</span><span class="pageNumber"></span></div>`,
+  })
+  execFileSync('pdfunite', [gCapa, gCorpo, gTmp])
+  execFileSync('python3', [path.join(AQUI, 'caixas-grafica.py'), gTmp, path.join(dir, `${slug}-grafica.pdf`), `${livro.titulo} ${livro.titulo2}`])
+  for (const f of [gCapa, gCorpo, gTmp]) fs.rmSync(f)
   // capa plana + mockup 3D para o marketplace
   fs.mkdirSync(PUB, { recursive: true })
   await page.emulateMedia({ media: 'screen' })

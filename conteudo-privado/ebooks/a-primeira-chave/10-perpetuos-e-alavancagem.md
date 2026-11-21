@@ -5,7 +5,7 @@
 Este é o capítulo que deixei para perto do fim de propósito. Os perpétuos são muito diferentes de comprar uma moeda e guardá-la. Quando os explico a alguém que acabou de começar, a minha preocupação número um é que a pessoa perceba os riscos antes de sentir a tentação de os usar. Se estás a ler isto no início do livro, está tudo bem: podes saltar para o último capítulo e voltar aqui mais tarde.
 
 :::post @ruben.cripto
-foto: ruben-reel-alavancagem.jpg
+imagem: A alavancagem não perdoa.
 legenda: Antes de falar de alavancagem, faz a conta da liquidação. Se não consegues dizer em que preço perdes tudo, ainda não estás pronto. Conteúdo educativo, não constitui aconselhamento financeiro.
 :::
 
@@ -37,6 +37,12 @@ Alavancagem: 10×
 Valor controlado: 1.000 €
 Liquidação aproximada: descida de cerca de 10%, sem taxas
 Estado: aberta
+:::
+
+:::curso Aula 8.2 · Perpétuos e alavancagem
+Com alavancagem de 10×, uma queda de 10% contra ti pode apagar a margem inteira dessa posição. Não é teoria, é aritmética.
+
+no curso: fazes a conta da liquidação em três exemplos e percebes porque é que este é o último módulo, e não o primeiro.
 :::
 
 ## Porque não começar por aqui

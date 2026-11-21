@@ -14,6 +14,18 @@ Agora imagina que, no mês seguinte, a casa sobe o preço para 1,50 €, e fica 
 
 [[foto: rg-tablet.jpg | Um gráfico é uma conversa entre quem compra e quem vende. Não é uma bola de cristal. | larga]]
 
+:::curso Aula 301 · O que é uma vela
+Cada vela resume o que o preço fez num período: um minuto, uma hora, um dia. Tem quatro pontos.
+
+- **Abertura e fecho:** o corpo da vela.
+- **Máximo e mínimo:** os pavios, para cima e para baixo.
+- Fechou acima de onde abriu? É de alta. Abaixo? É de baixa.
+
+Uma vela sozinha diz pouco. Dez velas seguidas já contam uma história: quem estava a mandar, e se começou a cansar-se.
+
+no curso: lês velas reais do ouro, uma a uma, antes de veres qualquer indicador.
+:::
+
 ## A linha média
 
 Uma regressão linear é uma forma matemática de encontrar a reta que melhor se ajusta a uma série de pontos. Num gráfico de preços, essa reta mostra a direção geral do movimento e funciona como um «centro» à volta do qual o preço oscila.
@@ -46,6 +58,8 @@ Exemplo ilustrativo: dez valores de um produto, em euros, ao longo de dez dias.
 Dia em que o valor foi mais longe da média: ____________
 Quanto estava afastado: ____________
 :::
+
+[[foto: rg-ecras.jpg | Ao ecrã, a rever gráficos antigos. O trabalho mais aborrecido é o que mais ensina. | polaroid]]
 
 ## O elástico
 
@@ -83,6 +97,18 @@ Um scanner que assinala muito não é melhor por assinalar muito. Se o sinal apa
 :::post @morethanmoney.pt
 imagem: Um scanner não decide por ti. Mostra-te onde olhar.
 legenda: Ferramentas como o Scanner GoldKiller ajudam a filtrar o ruído. A decisão, o risco e a responsabilidade continuam a ser teus. Conteúdo educativo.
+:::
+
+:::curso Aula 409 · Temporalidades
+O mesmo mercado parece outro conforme o gráfico que abres. No de 5 minutos parece um caos. No diário parece uma linha calma.
+
+- **Gráfico maior** (diário ou 4 horas): diz-te a direção.
+- **Gráfico médio** (1 hora): mostra-te a estrutura.
+- **Gráfico menor** (15 minutos): é onde escolhes o momento de entrar.
+
+A regra que mais repito: **o gráfico maior decide a direção, o menor decide o momento.** Quem entra a vender no de 5 minutos contra uma subida no diário está a nadar contra a corrente, e cansa-se primeiro.
+
+no curso: fazes a mesma análise em três gráficos ao mesmo tempo, com a regressão do início deste capítulo.
 :::
 
 ## Ler sem te enganares

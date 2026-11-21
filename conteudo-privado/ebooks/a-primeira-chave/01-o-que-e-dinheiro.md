@@ -48,6 +48,12 @@ Juros da conta (exemplo): 0,00 €
 
 Foi este problema que levou muita gente a procurar alternativas. É aqui que entra o Bitcoin.
 
+:::curso Aula 1.1 · O que é dinheiro, afinal
+Uma nota de cinquenta euros é papel. Vale porque o padeiro aceita, o senhorio aceita e o Estado aceita. **O valor está na confiança**, não no material. E tudo o que depende de confiança pode ser cumprido ou quebrado, devagar e sem barulho.
+
+no curso: começas com um exercício de dois minutos que muda a forma como olhas para o teu saldo.
+:::
+
 ## Porque nasceu o Bitcoin
 
 Em 31 de outubro de 2008, alguém com o nome de Satoshi Nakamoto publicou um documento chamado whitepaper. Propunha um sistema de dinheiro eletrónico que não precisasse de um banco central nem de um intermediário para validar as transações. Em janeiro de 2009, o primeiro bloco da rede, chamado bloco génese, foi criado a 3 de janeiro desse ano. Ninguém sabe ao certo quem é, e isso também faz parte da história.

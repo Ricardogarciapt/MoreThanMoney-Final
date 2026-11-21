@@ -41,6 +41,12 @@ Quantas receitas tens guardadas e nunca fizeste?
 sticker: Mais de dez | Perdi a conta
 :::
 
+:::curso Aula 2.1 · Dor, desejo e linguagem
+Ninguém compra um e-book. Compra a noite de sono que vem depois de resolver o problema. **A oferta nasce da dor do cliente, não do teu gosto.**
+
+no curso: preenches o mapa de empatia com frases reais, copiadas de comentários, e não com palpites.
+:::
+
 ## Onde está a linguagem do teu cliente
 
 A linguagem real não se inventa. Procura-a nos sítios onde as pessoas já falam do problema que resolves:
@@ -61,6 +67,8 @@ Guarda as frases que mais se repetem numa lista. Vais usá-las como título de p
 :::alerta
 Não copies textos nem frases de outras pessoas com a sua identidade. Usa o padrão da linguagem (o tipo de palavra, a dúvida, a emoção) e escreve a tua versão. Nunca cites um comentário alheio sem autorização e sem o anonimizar.
 :::
+
+[[foto: maria-tel-teclado.jpg | A linguagem do teu cliente está escrita nos comentários. Lê-os como quem lê um diário. | lado]]
 
 ## O mapa de empatia
 

@@ -94,9 +94,9 @@
 **[CENA 5]** Ecrã com o título «Missão do módulo» e um quadrado para marcar. Por baixo, a frase de aviso em letras pequenas.
 **NARRAÇÃO:** A missão do módulo é esta: escreve o teu plano de DCA num papel, com os cinco pontos que vimos, e assina-o. Não compres nada ainda se não tiveres a plataforma verificada e a autenticação de dois fatores ativa. Lembra-te sempre: isto é conteúdo educativo, não é aconselhamento financeiro, e o risco de perda é real. Podes perder o que lá puseres. Por isso, o plano é a tua proteção, e a pressa é o inimigo. Guarda este papel e relê-o antes de cada revisão.
 
-**[CENA 6]** Ecrã de fecho com o número 7 e a frase: «Próximo módulo: impostos, perpétuos e o teu plano de 30 dias».
-**NARRAÇÃO:** Com esta aula fechas o Módulo 6. Já sabes o que é o DCA, sabes ler o halving sem cair no espetáculo, e sabes separar volatilidade, ciclos, dominância e ruído. No próximo módulo juntamos tudo isto a uma parte que mexe muito com o bolso: os impostos em Portugal, os perpétuos e um plano concreto de trinta dias. Até lá, escreve o teu plano e cumpre-o. Obrigado por teres chegado até aqui, a sério.
+**[CENA 6]** Ecrã de fecho com o número 7 e a frase: «Próximo módulo: o teu DCA com as ferramentas MTM».
+**NARRAÇÃO:** Com esta aula fechas o Módulo 6. Já sabes o que é o DCA, sabes ler o halving sem cair no espetáculo, e sabes separar volatilidade, ciclos, dominância e ruído. No próximo módulo pegamos nesse plano e pomo-lo a trabalhar com as ferramentas da MTM: o DCA Inteligente, a app MTM System, os Portefólios e dois scanners que ajudam a escolher o tamanho de cada reforço. Até lá, escreve o teu plano e cumpre-o. Obrigado por teres chegado até aqui, a sério.
 
 **Texto no ecrã:** plano escrito antes da compra · nunca o dinheiro da renda · vinte e quatro horas de espera · missão: assina o teu plano
 **Pergunta de verificação:** Porque é que o plano deve ser escrito antes da primeira compra? Resposta: porque a decisão tomada antes protege-te da emoção do momento.
-**Fecho / CTA da aula:** Fim do Módulo 6. Próximo módulo: 7, Impostos, perpétuos e o teu plano de 30 dias. Botão no ecrã: «Continuar para o Módulo 7».
+**Fecho / CTA da aula:** Fim do Módulo 6. Próximo módulo: 7, O teu DCA com as ferramentas MTM. Botão no ecrã: «Continuar para o Módulo 7».

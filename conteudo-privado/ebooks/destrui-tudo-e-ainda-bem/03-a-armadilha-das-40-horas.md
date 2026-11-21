@@ -90,6 +90,8 @@ Valor por hora no papel: 6,07 €
 Valor por hora real: 4,64 €
 :::
 
+[[foto: rg-viagem.jpg | Entre um sítio e outro. As horas que não aparecem no contrato também são tuas. | lado]]
+
 ## Horas de qualidade e horas de sobra
 
 Nem todas as horas valem o mesmo. Uma hora de conversa com a família ao jantar não tem a mesma qualidade que uma hora de ecrã sem propósito, e nenhuma das duas se mede em dinheiro. Por isso, além de contar horas, vale a pena distinguir três tipos:
@@ -109,6 +111,19 @@ Quando a tabela das 168 horas é bem feita, percebes quase sempre que as horas d
 Blocos protegidos: ______________________________________________
 
 Blocos cumpridos: ______ de 3
+:::
+
+:::curso Aula 410 · Sessões de negociação
+O mercado de moedas não dorme, mas também não está sempre igual. Tem quatro sessões: Sydney, Tóquio, Londres e Nova Iorque. Em hora de Lisboa, no inverno, fica mais ou menos assim:
+
+- **Tóquio:** da meia-noite às 9h. Mais calma. É a chamada faixa asiática.
+- **Londres:** das 8h às 17h.
+- **Nova Iorque:** das 13h às 22h.
+- **Londres e Nova Iorque ao mesmo tempo:** das 13h às 17h. É quando há mais volume e mais movimento.
+
+A conclusão é simples e muda a forma como olhas para o teu tempo: não precisas do dia inteiro. Precisas de saber quando olhar.
+
+no curso: vês que moedas se mexem em cada sessão e montas o teu horário a partir das horas livres que encontraste neste capítulo.
 :::
 
 ## O que fazer com a conta

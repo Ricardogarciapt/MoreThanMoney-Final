@@ -70,6 +70,12 @@ Desconhecido: Mas a conta vai ficar bloqueada.
 eu: Então fica. Vou pelo site oficial e não por aqui.
 :::
 
+:::curso Aula 4.4 · O plano de guarda
+A seed phrase é a chave de tudo. Escreve-se à mão, em papel, e guarda-se em dois sítios diferentes, longe de fotografias, da nuvem e do email.
+
+no curso: montas o teu plano de guarda e testas a recuperação com uma carteira vazia, antes de lá pores um cêntimo.
+:::
+
 ## Exercício com o teu plano de guarda
 
 :::exercicio O plano de guarda da seed

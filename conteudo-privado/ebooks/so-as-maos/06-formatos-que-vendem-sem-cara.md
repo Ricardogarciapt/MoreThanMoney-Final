@@ -19,6 +19,8 @@ Quando alguém me pergunta «que tipo de vídeo devo fazer?», a resposta honest
 
 **6. ASMR de processo.** Sons naturais do trabalho: o lápis a riscar, o papel a virar, a água a cair. Cria atmosfera e foco. Exagerar soa a anúncio, por isso usa com moderação.
 
+[[foto: maria-telemoveis.jpg | Quatro ecrãs, nenhuma cara. Mãos a escrever, uma secretária, uma cidade à noite: tudo isto vende. | larga]]
+
 ## Matriz formato e objetivo
 
 Lê a matriz na horizontal e escolhe o formato que se encaixa na intenção do dia.
@@ -46,6 +48,12 @@ Uma sessão de uma hora em que montas um produto com as mãos pode dar-te um Ree
 
 :::destaque
 Filma uma vez e publica em vários formatos. O mesmo produto aparece de ângulos diferentes sem que tenhas de começar do zero todas as semanas.
+:::
+
+:::curso Aula 4.3 · Do roteiro às cenas de mãos
+Um Reel de mãos tem três planos que se repetem: as mãos a fazer, o ecrã a mostrar, o objeto a contar a história. Grava-se tudo de uma vez e monta-se depois.
+
+no curso: filmas um Reel completo em vinte minutos, com o telemóvel e a luz de uma janela.
 :::
 
 ## Filmar com um telemóvel

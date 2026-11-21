@@ -31,7 +31,7 @@ export const VENDAS: Record<SlugEbook, PaginaVenda> = {
     sub: 'O sistema de disciplina, dinheiro e mercados que o Ricardo Garcia construiu depois de recomeçar do zero — num livro para ler como um plano de 10 semanas.',
     autor: 'Ricardo Garcia', autorFoto: '/ricardogarcia/foto-ricardo-estudio.jpg',
     autorBio: 'Adotado aos 17 meses, cresceu no Porto. Catorze anos de serviço (Exército, Fuzileiros, GNR) antes de largar o «emprego de sonho» numa das fases mais duras da vida da família. Fundou a MoreThanMoney para que ninguém tenha de pagar o preço de aprender sozinho.',
-    numeros: [{ v: '122', r: 'páginas' }, { v: '10', r: 'gráficos animados' }, { v: '11', r: 'exercícios' }, { v: '30', r: 'dias de plano' }],
+    numeros: [{ v: '148', r: 'páginas' }, { v: '10', r: 'gráficos animados' }, { v: '11', r: 'exercícios' }, { v: '30', r: 'dias de plano' }],
     capitulos: [
       { t: 'O dia em que deixei de fingir', d: 'A história, sem filtros, e a casa que se demole para fazer fundações.' },
       { t: 'Disciplina quando ninguém pergunta', d: 'O padrão mínimo diário que se transfere do serviço para a vida civil.' },
@@ -61,7 +61,7 @@ export const VENDAS: Record<SlugEbook, PaginaVenda> = {
     sub: 'Do «não percebo nada» à tua primeira carteira segura e a um plano de 30 dias. Sem hype, sem medo e sem promessas.',
     autor: 'Ruben Pereira', autorFoto: '/educadores/ruben/retrato.jpg',
     autorBio: 'Educador de cripto na MoreThanMoney. «Simplificar o complexo. Mais do que dinheiro, é um plano.» Conduz as Salas DCA com MTM, o Império Cripto e o Live Trading Cripto.',
-    numeros: [{ v: '104', r: 'páginas' }, { v: '6', r: 'gráficos animados' }, { v: '11', r: 'exercícios' }, { v: '10', r: 'pontos anti-burla' }],
+    numeros: [{ v: '111', r: 'páginas' }, { v: '6', r: 'gráficos animados' }, { v: '11', r: 'exercícios' }, { v: '10', r: 'pontos anti-burla' }],
     capitulos: [
       { t: 'O que é dinheiro', d: 'Da troca ao euro, a inflação e porque nasceu o Bitcoin em 2008.' },
       { t: 'O caderno que ninguém apaga', d: 'A blockchain explicada sem jargão.' },
@@ -89,7 +89,7 @@ export const VENDAS: Record<SlugEbook, PaginaVenda> = {
     sub: 'Vender nas redes sem mostrar a cara: do cliente ideal ao teu primeiro produto digital, com guiões de stories e mensagens prontos a adaptar.',
     autor: 'Maria Costa', autorFoto: '/educadores/mafalda/retrato.jpg',
     autorBio: 'Especialista em infoprodutos e fundadora da She Is Faceless Academy. No marketing desde 2013, ensina homens e mulheres em Portugal a vender sem aparecer.',
-    numeros: [{ v: '118', r: 'páginas' }, { v: '6', r: 'gráficos animados' }, { v: '12', r: 'exercícios' }, { v: '5', r: 'stories-modelo' }],
+    numeros: [{ v: '122', r: 'páginas' }, { v: '6', r: 'gráficos animados' }, { v: '12', r: 'exercícios' }, { v: '5', r: 'stories-modelo' }],
     capitulos: [
       { t: 'Porque a cara não é o produto', d: 'Mitos, vantagens e a mentalidade faceless.' },
       { t: 'O cliente que te procura', d: 'Dor, desejo e linguagem, com mapa de empatia.' },

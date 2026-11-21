@@ -12,6 +12,11 @@ Isso é valioso. Só que tem um limite que quase ninguém te explica: a discipli
 
 [[foto: rg-pb.jpg | A disciplina não se vê na foto. Vê-se no que fazes quando ninguém está a ver. | larga]]
 
+:::galeria
+rg-medalha.jpg | A boina e a medalha ficaram numa gaveta. O hábito de cumprir veio comigo.
+rg-gnr-cao.jpg | Serviço é muitas vezes isto: ninguém está a ver e faz-se na mesma.
+:::
+
 ## Disciplina não é ser duro
 
 Há uma ideia errada muito comum: disciplina é aguentar tudo sem reclamar, levantar cedo, ignorar o cansaço. Não é. Isso é teimosia, e a teimosia esgota-se rapidamente.

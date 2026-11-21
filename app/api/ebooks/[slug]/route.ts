@@ -7,6 +7,8 @@
  */
 import { NextResponse, type NextRequest } from 'next/server'
 import fs from 'node:fs/promises'
+import { createReadStream } from 'node:fs'
+import { Readable } from 'node:stream'
 import path from 'node:path'
 import { ehEbook, verificarEbook } from '@/lib/ebooks/acesso'
 import { temAcessoAoProduto } from '@/lib/marketplace/regras'
@@ -15,6 +17,18 @@ import { sessaoDoMembro } from '@/lib/marketplace/sessao'
 import { getSupabaseAdmin } from '@/lib/supabase-admin-client'
 
 export const dynamic = 'force-dynamic'
+
+// Nome do ficheiro descarregado: título e autor, em vez do slug.
+const NOMES: Record<string, string> = {
+  'destrui-tudo-e-ainda-bem': 'Destruí Tudo. E Ainda Bem. - Ricardo Garcia',
+  'a-primeira-chave': 'A Primeira Chave - Ruben Pereira',
+  'so-as-maos': 'Só as Mãos - Maria Costa',
+}
+const disposicao = (slug: string) => {
+  const nome = NOMES[slug] ?? slug
+  const ascii = nome.normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^\w .-]/g, '').replace(/\s+/g, ' ').trim()
+  return `attachment; filename="${ascii}.pdf"; filename*=UTF-8''${encodeURIComponent(nome)}.pdf`
+}
 export const runtime = 'nodejs'
 
 async function podeAbrir(req: NextRequest, slug: string): Promise<boolean> {
@@ -39,11 +53,14 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ slug
   const pdf = req.nextUrl.searchParams.get('f') === 'pdf'
   const ficheiro = path.join(process.cwd(), 'conteudo-privado', 'ebooks', slug, `${slug}.${pdf ? 'pdf' : 'html'}`)
   try {
-    const corpo = await fs.readFile(ficheiro)
-    return new NextResponse(new Uint8Array(corpo), {
+    // em stream: os PDFs ilustrados passam os 4,5 MB de resposta de uma função quando vão de uma só vez
+    const { size } = await fs.stat(ficheiro)
+    const corpo = Readable.toWeb(createReadStream(ficheiro)) as ReadableStream<Uint8Array>
+    return new NextResponse(corpo, {
       headers: {
+        'Content-Length': String(size),
         'Content-Type': pdf ? 'application/pdf' : 'text/html; charset=utf-8',
-        'Content-Disposition': pdf ? `attachment; filename="${slug}.pdf"` : 'inline',
+        'Content-Disposition': pdf ? disposicao(slug) : 'inline',
         'Cache-Control': 'private, no-store',
         'X-Robots-Tag': 'noindex, nofollow',
       },

@@ -7,7 +7,7 @@ DCA quer dizer dollar cost averaging, ou média do custo ao longo do tempo. Em p
 A ideia central é simples. Quando o preço está alto, compras menos unidades. Quando está baixo, compras mais. Com o tempo, o preço médio que pagas tende a suavizar-se, em vez de depender de um único dia.
 
 :::post @ruben.cripto
-foto: ruben-reel-dca.jpg
+imagem: Para de adivinhar o fundo.
 legenda: O DCA não te diz quando comprar. Diz-te que compras, sempre no mesmo dia, sempre o mesmo valor. Conteúdo educativo, não constitui aconselhamento financeiro.
 :::
 
@@ -62,6 +62,62 @@ Na MoreThanMoney temos as Salas DCA com MTM, onde se trabalha este método em co
 
 :::alerta
 Um plano DCA só funciona se o valor for sustentável. Se tiveres de vender para continuar, o plano está mal dimensionado. Reduz o valor, não aumentes o risco.
+:::
+
+## O DCA inteligente da MTM
+
+Há uma versão do DCA que eu uso e ensino, e que não estraga o que o DCA tem de bom. Continuas a comprar sempre, no mesmo dia. A única coisa que muda é o tamanho de cada compra, conforme o mercado está mais esticado para cima ou para baixo do que o costume.
+
+Na app MTM System, em Portefólios, há um painel chamado Análise DCA. Todos os dias o sistema olha para os ativos dos portefólios, cripto e ETF, e dá a cada um uma de quatro etiquetas:
+
+| Etiqueta | Quando aparece (cripto) | O que sugere |
+|---|---|---|
+| Forte Compra | Queda diária de 8% ou mais | Até o dobro do teu valor base |
+| Compra | Queda diária de 4% ou mais | Uma vez e meia a base |
+| Aguardar | Dia calmo | Metade da base |
+| Não Reforçar | Subida forte num só dia | Zero nesse ativo, não vás atrás do preço |
+
+Nos ETF os limites são mais baixos, porque mexem menos. E lê bem a terceira coluna: são sugestões de um sistema, para te ajudar a pensar. A decisão é tua.
+
+:::destaque
+O DCA inteligente nunca pára de comprar por causa de uma opinião. Só mexe no tamanho. E o teu teto mensal não muda, haja etiqueta ou não.
+:::
+
+### O pote de reserva
+
+É aqui que a coisa fica segura. Se o teu plano é 100 € por mês, continua a ser 100 € por mês. Nas semanas de Aguardar ou de Não Reforçar, a parte que não gastas vai para um pote. Nas semanas de Forte Compra, o reforço extra sai desse pote. Se o pote estiver vazio, compras a base e pronto. Nunca vais buscar dinheiro fora do plano.
+
+:::ecra Exemplo ilustrativo · base de 25 € por semana
+Semana 1: Aguardar · compra 12,50 € · pote 12,50 €
+Semana 2: Não Reforçar · compra 0 € · pote 37,50 €
+Semana 3: Forte Compra · compra 50 € · pote 12,50 €
+Semana 4: Compra · compra 37,50 € · pote 0 €
+Total do mês: 100 € · teto respeitado ✓
+:::
+
+### Uma segunda opinião no gráfico grande
+
+Quem quer ir um pouco mais longe pode confirmar o dia do reforço num gráfico diário ou semanal, com um dos scanners da MTM. Não para decidir se compra, mas para decidir se usa o pote.
+
+- **Momentum:** soma cinco confirmações (nuvem, posição da nuvem, média exponencial, volume e RSI). Diário verde, com quatro ou cinco a favor: fazes o reforço sugerido. Vermelho forte: só a base, o pote espera. Caixas lilás, mercado lateral: só a base.
+- **DEFY:** desenha bandas de exaustão à volta de uma média. Quando o preço estica até à banda exterior e vira com uma vela forte, com estrelas de confirmação, é sinal de que está muito longe do normal.
+
+:::cartao A minha regra de sexta
+- Duas leituras a favor (etiqueta e gráfico): base + pote.
+- Uma leitura a favor: base + metade do pote, no máximo.
+- Nenhuma: só a base.
+- O teto mensal manda mais do que qualquer ferramenta.
+:::
+
+:::curso Módulo 7 · O teu DCA com as ferramentas MTM
+No bootcamp há um módulo inteiro só para isto, com a app aberta e os gráficos ao vivo:
+
+- O DCA Inteligente e o pote de reserva, com contas feitas.
+- Onde está tudo na app MTM System, e como ligar os alertas DCA.
+- Os Portefólios da casa, reforçados todas as sextas, como espelho do método.
+- Momentum e DEFY em gráfico diário e semanal.
+
+no curso: sais com o ritual de sexta em 15 minutos montado e três semanas de treino registadas.
 :::
 
 ## Exercício: desenha o teu plano

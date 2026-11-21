@@ -1,0 +1,84 @@
+// Ilustrações vetoriais das aberturas de capítulo (sem fotos: nítidas a qualquer resolução).
+// Traço a ouro (var(--a)), destaques em var(--a2), preenchimentos suaves com a classe «f».
+// Só geometria e objetos: sem rostos nem mãos, para não haver erros de desenho.
+
+const S = (inner) => `<svg viewBox="0 0 400 400" fill="none" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+  <defs><radialGradient id="ilg" cx="50%" cy="50%" r="50%"><stop offset="0" stop-color="var(--a)" stop-opacity=".22"/><stop offset="1" stop-color="var(--a)" stop-opacity="0"/></radialGradient></defs>
+  <circle cx="200" cy="200" r="196" fill="url(#ilg)" stroke="none"/>
+  <g class="il">${inner}</g></svg>`
+
+// moeda reutilizável
+const moeda = (x, y, r = 26, t = '') =>
+  `<circle class="f" cx="${x}" cy="${y}" r="${r}"/><circle cx="${x}" cy="${y}" r="${r * 0.72}" class="fino"/>${t ? `<text x="${x}" y="${y + r * 0.28}" text-anchor="middle" class="tx" style="font-size:${r * 0.8}px">${t}</text>` : ''}`
+
+const cadeado = (x, y) => `<rect class="f" x="${x - 34}" y="${y}" width="68" height="56" rx="8"/><path d="M${x - 22},${y} v-16 a22,22 0 0 1 44,0 v16"/><circle cx="${x}" cy="${y + 24}" r="6" class="a2"/><path d="M${x},${y + 30} v12" class="a2"/>`
+
+const calendario = (x, y, cols, rows, marcados, cel = 34) => {
+  let s = `<rect class="f" x="${x}" y="${y - 40}" width="${cols * cel + 16}" height="${rows * cel + 56}" rx="12"/><path d="M${x},${y - 6} h${cols * cel + 16}"/><path d="M${x + 30},${y - 52} v22 M${x + cols * cel - 14},${y - 52} v22"/>`
+  for (let r = 0; r < rows; r++) for (let c = 0; c < cols; c++) {
+    const k = r * cols + c, cx = x + 8 + c * cel, cy = y + 6 + r * cel
+    s += `<rect x="${cx + 3}" y="${cy + 3}" width="${cel - 6}" height="${cel - 6}" rx="5" class="fino"/>`
+    if (marcados(k)) s += `<path d="M${cx + 9},${cy + cel / 2} l6,6 l11,-12" class="a2 grosso"/>`
+  }
+  return s
+}
+
+const CRIPTO = [
+  // 0 antes de começares: a chave
+  `<circle cx="140" cy="200" r="70" class="f"/><circle cx="140" cy="200" r="28"/><path d="M210,200 H350"/><path d="M300,200 v40 h22 v-40 M330,200 v28 h18 v-28" class="grosso"/><path d="M120,120 l-14,-26 M160,118 l12,-28 M90,150 l-26,-12" class="a2"/>`,
+  // 1 o que é dinheiro: notas, moedas, tempo
+  `<rect class="f" x="70" y="120" width="190" height="104" rx="10" transform="rotate(-8 165 172)"/><rect class="f" x="90" y="140" width="190" height="104" rx="10"/><circle cx="185" cy="192" r="26"/><text x="185" y="202" text-anchor="middle" class="tx" style="font-size:28px">€</text>${moeda(300, 280, 30, '₿')}${moeda(250, 312, 22)}<circle cx="300" cy="120" r="40" class="fino"/><path d="M300,95 v25 l16,10" class="a2"/>`,
+  // 2 o caderno que ninguém apaga: livro-razão em blocos ligados
+  `<rect class="f" x="60" y="90" width="130" height="170" rx="8"/><path d="M80,125 h90 M80,150 h90 M80,175 h70 M80,200 h90 M80,225 h50" class="fino"/>${[0, 1, 2].map((k) => `<rect class="f" x="${215 + k * 0}" y="${80 + k * 90}" width="110" height="64" rx="10"/><text x="${270}" y="${118 + k * 90}" text-anchor="middle" class="tx" style="font-size:18px">#${(41 + k * 7).toString(16)}</text>`).join('')}<path d="M270,144 v26 M270,234 v26" class="a2 grosso"/><path d="M190,175 h25" class="a2"/>`,
+  // 3 o mapa das moedas: globo com marcadores
+  `<circle cx="200" cy="200" r="120" class="f"/><ellipse cx="200" cy="200" rx="50" ry="120" class="fino"/><ellipse cx="200" cy="200" rx="95" ry="120" class="fino"/><path d="M80,200 h240 M95,140 h210 M95,260 h210" class="fino"/>${[[150, 150, '₿'], [262, 182, 'Ξ'], [190, 268, '$']].map(([x, y, t]) => `<path d="M${x},${y + 22} c-22,-26 -22,-48 0,-50 c22,2 22,24 0,50z" class="f a2"/><text x="${x}" y="${y - 6}" text-anchor="middle" class="tx" style="font-size:16px">${t}</text>`).join('')}`,
+  // 4 comprar pela primeira vez: telemóvel com botão comprar
+  `<rect class="f" x="130" y="60" width="140" height="280" rx="24"/><path d="M180,78 h40" class="fino"/><path d="M152,210 l30,-30 l26,18 l40,-50" class="a2 grosso"/><rect x="150" y="260" width="100" height="40" rx="20" class="f a2"/><text x="200" y="286" text-anchor="middle" class="tx" style="font-size:17px">Comprar</text>${moeda(300, 120, 24, '€')}`,
+  // 5 a tua chave: cadeado + 12 palavras
+  `${cadeado(200, 120)}${Array.from({ length: 12 }, (_, k) => `<rect x="${78 + (k % 4) * 64}" y="${215 + Math.floor(k / 4) * 40}" width="52" height="28" rx="6" class="fino"/><text x="${104 + (k % 4) * 64}" y="${234 + Math.floor(k / 4) * 40}" text-anchor="middle" class="tx" style="font-size:12px">${k + 1}</text>`).join('')}`,
+  // 6 escudo anti-burla
+  `<path d="M200,60 L310,100 V200 C310,270 260,315 200,340 C140,315 90,270 90,200 V100 Z" class="f"/><path d="M200,90 L285,120 V200 C285,255 248,290 200,310" class="fino"/><path d="M150,200 l35,35 l70,-75" class="a2 grosso"/><path d="M60,320 l24,-10 M340,320 l-24,-10 M70,80 l22,14" class="fino"/>`,
+  // 7 DCA: calendário com moedas a cair todas as semanas
+  `${calendario(80, 170, 7, 4, (k) => k % 7 === 4, 32)}${[0, 1, 2].map((k) => moeda(150 + k * 60, 70 + (k % 2) * 20, 16, '€')).join('')}<path d="M150,92 v40 M210,112 v20 M270,92 v40" class="a2 tracejado"/>`,
+  // 8 ler o mercado: velas + lupa
+  `${[[90, 200, 60, 0], [125, 170, 70, 1], [160, 190, 50, 0], [195, 140, 80, 1], [230, 120, 60, 1], [265, 150, 50, 0]].map(([x, y, h, up]) => `<path d="M${x + 10},${y - 18} v${h + 36}" class="fino"/><rect x="${x}" y="${y}" width="20" height="${h}" rx="3" class="${up ? 'f a2' : 'f'}"/>`).join('')}<circle cx="270" cy="250" r="54" class="f"/><circle cx="270" cy="250" r="40" class="fino"/><path d="M308,288 l46,46" class="grosso"/>`,
+  // 9 impostos em Portugal: declaração com €, %, carimbo
+  `<rect class="f" x="100" y="60" width="180" height="250" rx="10"/><path d="M125,100 h130 M125,130 h100 M125,160 h120 M125,190 h80" class="fino"/><text x="190" y="262" text-anchor="middle" class="tx" style="font-size:48px">%</text><circle cx="290" cy="290" r="44" class="f a2"/><text x="290" y="300" text-anchor="middle" class="tx" style="font-size:24px">IRS</text>`,
+  // 10 perpétuos e alavancagem: alavanca + aviso
+  `<path d="M60,280 L340,180" class="grosso"/><path d="M190,236 l-30,64 h60 z" class="f"/>${moeda(90, 240, 26)}<rect x="290" y="118" width="60" height="60" rx="8" class="f"/><path d="M110,90 l40,-70 l40,70 z" class="f a2"/><path d="M150,46 v20 M150,76 v2" class="grosso"/>`,
+  // 11 plano de 30 dias
+  `${calendario(90, 140, 6, 5, (k) => k < 17, 34)}<path d="M300,330 l20,-20 l20,20" class="a2"/>`,
+]
+
+const FACELESS = [
+  // 0 antes de começares: telemóvel e brilho
+  `<rect class="f" x="135" y="60" width="130" height="270" rx="26"/><circle cx="200" cy="300" r="8" class="fino"/><path d="M200,140 l10,30 l30,10 l-30,10 l-10,30 l-10,-30 l-30,-10 l30,-10 z" class="f a2"/><path d="M290,110 l5,14 l14,5 l-14,5 l-5,14 l-5,-14 l-14,-5 l14,-5 z" class="a2"/>`,
+  // 1 a cara não é o produto: câmara desligada, produto em destaque
+  `<rect class="f" x="70" y="120" width="150" height="110" rx="16"/><circle cx="145" cy="175" r="32" class="fino"/><path d="M60,250 L240,100" class="a2 grosso"/><rect class="f" x="240" y="170" width="100" height="130" rx="10"/><path d="M260,200 h60 M260,225 h45" class="fino"/><path d="M270,270 l12,12 l26,-26" class="a2 grosso"/>`,
+  // 2 o cliente que te procura: íman e mensagens
+  `<path d="M90,110 v90 a70,70 0 0 0 140,0 v-90 h-40 v90 a30,30 0 0 1 -60,0 v-90 z" class="f"/><path d="M90,110 h40 M190,110 h40" class="a2 grosso"/>${[[290, 120], [320, 210], [280, 290]].map(([x, y]) => `<path d="M${x - 34},${y - 20} h68 a10,10 0 0 1 10,10 v26 a10,10 0 0 1 -10,10 h-44 l-14,12 v-12 h-10 a10,10 0 0 1 -10,-10 v-26 a10,10 0 0 1 10,-10z" class="f"/>`).join('')}<path d="M245,140 h-10 M260,215 h-20 M245,285 h-12" class="tracejado"/>`,
+  // 3 marca sem rosto: paleta e logótipo
+  `${[0, 1, 2, 3].map((k) => `<rect x="${70 + k * 70}" y="90" width="56" height="80" rx="8" class="${k % 2 ? 'f a2' : 'f'}"/>`).join('')}<circle cx="200" cy="270" r="64" class="f"/><text x="200" y="288" text-anchor="middle" class="tx" style="font-size:52px;font-style:italic">M</text><path d="M110,330 h180" class="fino"/>`,
+  // 4 primeiro produto digital: e-book com etiqueta de preço
+  `<path d="M110,80 h140 a10,10 0 0 1 10,10 v220 a10,10 0 0 1 -10,10 h-140 z" class="f"/><path d="M130,80 v240" class="fino"/><path d="M150,130 h85 M150,155 h70" class="fino"/><path d="M250,230 l60,-30 l40,40 l-60,60 z" class="f a2"/><circle cx="312" cy="226" r="6"/>`,
+  // 5 conteúdo com IA: pena + faíscas
+  `<rect class="f" x="70" y="230" width="260" height="90" rx="12"/><path d="M95,262 h150 M95,290 h110" class="fino"/><path d="M300,70 c-60,20 -100,80 -110,150 l20,-10 c20,-60 50,-100 90,-140z" class="f"/><path d="M190,220 l-14,30" class="grosso"/>${[[110, 110, 18], [160, 70, 10], [90, 180, 8]].map(([x, y, r]) => `<path d="M${x},${y - r} l${r * 0.3},${r * 0.7} l${r * 0.7},${r * 0.3} l-${r * 0.7},${r * 0.3} l-${r * 0.3},${r * 0.7} l-${r * 0.3},-${r * 0.7} l-${r * 0.7},-${r * 0.3} l${r * 0.7},-${r * 0.3} z" class="f a2"/>`).join('')}`,
+  // 6 formatos sem cara: carrossel + play
+  `<rect x="60" y="110" width="150" height="190" rx="12" class="fino" transform="rotate(-6 135 205)"/><rect x="190" y="110" width="150" height="190" rx="12" class="fino" transform="rotate(6 265 205)"/><rect class="f" x="125" y="95" width="150" height="200" rx="12"/><path d="M185,160 v70 l55,-35 z" class="f a2"/>${[0, 1, 2].map((k) => `<circle cx="${185 + k * 15}" cy="320" r="4" class="${k ? 'fino' : 'a2'}"/>`).join('')}`,
+  // 7 stories que vendem: anéis + sondagem
+  `${[0, 1, 2].map((k) => `<circle cx="${110 + k * 90}" cy="110" r="34" class="${k === 0 ? 'a2 grosso' : 'fino'}"/><circle cx="${110 + k * 90}" cy="110" r="25" class="f"/>`).join('')}<rect class="f" x="110" y="180" width="180" height="150" rx="14"/><rect x="130" y="210" width="140" height="30" rx="15" class="fino"/><rect x="130" y="210" width="96" height="30" rx="15" class="f a2"/><rect x="130" y="260" width="140" height="30" rx="15" class="fino"/><rect x="130" y="260" width="44" height="30" rx="15" class="f"/>`,
+  // 8 a DM que não parece venda: conversa com coração
+  `<path d="M70,90 h170 a14,14 0 0 1 14,14 v60 a14,14 0 0 1 -14,14 h-120 l-26,22 v-22 h-24 a14,14 0 0 1 -14,-14 v-60 a14,14 0 0 1 14,-14z" class="f"/><path d="M100,125 h110 M100,150 h70" class="fino"/><path d="M330,210 h-150 a14,14 0 0 0 -14,14 v54 a14,14 0 0 0 14,14 h104 l26,22 v-22 h20 a14,14 0 0 0 14,-14 v-54 a14,14 0 0 0 -14,-14z" class="f"/><path d="M250,240 c-12,-14 -34,-4 -26,14 l26,22 l26,-22 c8,-18 -14,-28 -26,-14z" class="f a2"/>`,
+  // 9 mais fontes de rendimento: ramos para moedas
+  `<path d="M80,300 C150,300 150,200 220,200 M80,300 C160,300 170,300 240,300 M80,300 C150,300 150,110 230,110" class="grosso"/><circle cx="80" cy="300" r="14" class="f a2"/>${moeda(270, 110, 28, '€')}${moeda(260, 200, 28, '€')}${moeda(280, 300, 28, '€')}`,
+  // 10 o negócio que cabe na tua vida: portátil, café, relógio
+  `<rect class="f" x="80" y="140" width="190" height="120" rx="10"/><path d="M60,268 h230 l-14,22 h-202 z" class="f"/><path d="M110,220 l30,-30 l25,18 l50,-45" class="a2"/><path d="M300,220 h50 v40 a25,25 0 0 1 -50,0z" class="f"/><path d="M350,232 h10 a10,10 0 0 1 0,20 h-10" class="fino"/><path d="M315,205 c-6,-10 6,-14 0,-24 M335,205 c-6,-10 6,-14 0,-24" class="fino"/><circle cx="300" cy="100" r="40" class="f"/><path d="M300,75 v25 l18,12" class="a2"/>`,
+  // 11 plano de 30 dias
+  `${calendario(90, 140, 6, 5, (k) => k < 17, 34)}<path d="M300,330 l20,-20 l20,20" class="a2"/>`,
+]
+
+export function ilustracao(tema, n) {
+  const lista = tema === 'cripto' ? CRIPTO : tema === 'faceless' ? FACELESS : null
+  const inner = lista?.[n]
+  return inner ? S(inner) : ''
+}

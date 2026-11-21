@@ -18,6 +18,16 @@ Exemplo ilustrativo, com valores redondos e conta em dólares para simplificar: 
 
 [[foto: rg-cerebro.jpg | O risco gere-se aqui, antes de chegar ao botão de comprar. | polaroid]]
 
+:::curso Aula 306 · O que é um stop loss
+O stop loss é a ordem que fecha a posição automaticamente se o preço for contra ti até um ponto que escolheste antes de entrar.
+
+- Define-se **antes** de entrar, nunca depois.
+- Põe-se onde a tua ideia deixa de fazer sentido, não onde «dói menos».
+- Não se afasta quando o preço se aproxima. Esse é o erro mais caro que conheço.
+
+no curso: marcas stops em vinte gráficos antigos e comparas com os de um colega. A diferença entre os dois ensina mais do que qualquer slide.
+:::
+
 ## A fórmula do tamanho da posição
 
 O tamanho da posição liga três coisas: o risco que aceitas, a distância do stop e o valor de cada pip. A fórmula é esta:
@@ -76,6 +86,16 @@ A leitura da tabela é esta: com 1:2, precisas de acertar em cerca de um terço 
 [[grafico:winrate-rr]]
 
 Repara que estes números não são uma previsão de ninguém. São uma conta de equilíbrio. Dizem-te o mínimo que precisas para não perder, e mais nada.
+
+:::curso Aula 407 · Risco e recompensa
+Não precisas de acertar sempre. Precisas que, quando acertas, ganhes mais do que perdes quando falhas.
+
+Exemplo ilustrativo, sem custos: dez operações com risco de 1 e alvo de 2. Acertas quatro (+8) e falhas seis (−6). Erraste mais do que acertaste e, mesmo assim, a conta fechou em +2.
+
+Isto não é uma promessa de que vais acertar quatro em dez. É só matemática, e é por isso que se escolhe o alvo antes de entrar.
+
+no curso: fazes esta conta com o teu próprio diário de demo, e não com números de exemplo.
+:::
 
 ## Sequências de perdas são normais
 

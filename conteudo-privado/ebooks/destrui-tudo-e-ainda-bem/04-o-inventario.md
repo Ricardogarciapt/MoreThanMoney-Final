@@ -81,6 +81,8 @@ Coisas que demoli primeiro:
 • O «depois vejo isso» nas contas
 :::
 
+[[foto: rg-sofa.jpg | Sentar e olhar para a própria vida como para uma folha de contas. Custa, mas é por aí. | polaroid]]
+
 ## A demolição não é um ataque
 
 Quando falo de demolir, não estou a sugerir que deixes tudo de um dia para o outro. Uma demolição bem feita é controlada: sabes o que sai, em que ordem, e o que fica no lugar. Um operário não derruba uma parede de suporte sem colocar primeiro uma escora.

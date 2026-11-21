@@ -52,6 +52,12 @@ A story 3 não diz «vendi tanto» nem «ganhei tanto». Mostra um processo verd
 Nunca uses contagens regressivas falsas, nem «últimas vagas» quando não é verdade. A urgência inventada cansa quem te segue e pode ser considerada prática comercial desleal.
 :::
 
+:::curso Aula 5.1 · A sequência de cinco stories
+Gancho, problema, prova, solução, convite. Cinco stories, por esta ordem. A prova é sempre verdadeira e sem números inventados.
+
+no curso: montas a tua primeira sequência com modelos prontos e publicas no próprio dia.
+:::
+
 ## Stickers de pergunta e de enquete
 
 Um sticker de pergunta pede à pessoa que escreva a sua maior dúvida sobre o tema. Uma enquete de duas opções diz-te, em segundos, qual é a dor mais comum. Usa estas respostas como matéria-prima. São a linguagem real de que falei no capítulo 02, e servem de base para a próxima publicação ou para o próximo produto.
