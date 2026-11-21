@@ -92,7 +92,7 @@ const ecraDemo = (paginas) => ({ tipo: 'app', src: `stock/auto/${ficheiroDemo(pa
 // corta em 2 planos (aberto → aproximado no rosto). Máx. 2 por reel, nunca seguidas; pelo menos 1 em cada reel.
 const FOTOS = [
   { re: /\b(disciplin|rotina|regras|militar|gnr|farda|tropa|servic|ordem|compromisso|plano)/, k: 'farda' },
-  { re: /\b(preso|presa|armadilha|40 ?h|horas|patrao|emprego|salario|prisao|preso|sair d|medo)/, k: 'grade' },
+  // 'grade' fora desde 21/11 (Ricardo: a animação não ficou boa). Volta se houver um clip melhor.
   { re: /\b(origem|porto|infancia|crianc|pobre|adotad|comec|historia|pais\b|nada\b)/, k: 'origem' },
   { re: /\b(palco|ensin|partilh|evento|comunidade|mentor|alunos|aprend|formac|metodo)/, k: 'palco' },
   { re: /\b(liberdade|lisboa|viaj|tempo livre|vida|sonho|recome|resultado|futuro|escolh|paciencia)/, k: 'recomeco' },
