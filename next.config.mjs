@@ -4,6 +4,10 @@ import { withOpinlyConfig } from '@opinly/next'
 const nextConfig = {
   // Os vídeos de public/ são servidos estáticos pela CDN; nenhuma função os lê. Sem isto o
   // rastreio de ficheiros mete-os nas funções que tocam em process.cwd() e passam os 250 MB.
+  // Os e-books vivem fora de public/ e só saem pela rota com acesso: têm de ir no bundle dela.
+  outputFileTracingIncludes: {
+    '/api/ebooks/[slug]': ['./conteudo-privado/ebooks/*/*.html', './conteudo-privado/ebooks/*/*.pdf'],
+  },
   outputFileTracingExcludes: {
     '*': ['public/videos/**', 'public/**/*.mp4', 'public/**/*.mov'],
   },

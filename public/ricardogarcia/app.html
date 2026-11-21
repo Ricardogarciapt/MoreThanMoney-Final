@@ -725,7 +725,7 @@ html, body { overflow-x: hidden; }
     }).join('') || '<p class="mono">Sem recompensas activas.</p>';
     var nomeRec = {}; e.recompensas.forEach(function (r) { nomeRec[r.id] = r.titulo; });
     var EST = { pendente: '⏳ À espera do Ricardo', aprovado: '✅ Aprovado', recusado: '↩︎ Recusado (moedas devolvidas)', entregue: '🎁 Entregue' };
-    $('gPed').innerHTML = e.resgates.length ? e.resgates.map(function (p) { return '<div class="pedido"><span>' + esc(nomeRec[p.recompensa_id] || 'Recompensa') + '</span><span>' + EST[p.estado] + '</span></div>'; }).join('') : '<span class="mono">Ainda não pediste nada.</span>';
+    $('gPed').innerHTML = e.resgates.length ? e.resgates.map(function (p) { return '<div class="pedido"><span>' + esc(nomeRec[p.recompensa_id] || 'Recompensa') + '</span><span>' + (p.link && p.estado !== 'recusado' ? '<a href="' + esc(p.link) + '" target="_blank" rel="noopener" style="color:var(--ouro,#D2A63C);font-weight:700">Abrir e-book</a>' : EST[p.estado]) + '</span></div>'; }).join('') : '<span class="mono">Ainda não pediste nada.</span>';
     $('gEsq').innerHTML = e.esquadrao.map(function (x, i) { return '<li data-i="' + i + '" class="' + (x.eu ? 'eu' : '') + '"><span class="pos">#' + (i + 1) + '</span><span>' + esc(x.nome) + (x.eu ? ' (tu)' : '') + '<br><small class="mono">' + esc(x.patente) + '</small></span><b class="anton">' + x.xp + '</b></li>'; }).join('');
   }
 

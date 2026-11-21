@@ -82,7 +82,7 @@ async function estado(m: any) {
     db().from('rg_app_registos').select('missao_id, iniciado, concluido, xp').eq('membro_id', m.id).eq('dia', dia),
     db().from('rg_app_conquistas').select('insignia, criado').eq('membro_id', m.id),
     db().from('rg_app_recompensas').select('*').eq('activo', true).order('ordem'),
-    db().from('rg_app_resgates').select('id, recompensa_id, custo, estado, criado').eq('membro_id', m.id).order('criado', { ascending: false }).limit(20),
+    db().from('rg_app_resgates').select('id, recompensa_id, custo, estado, criado, link').eq('membro_id', m.id).order('criado', { ascending: false }).limit(20),
     esquadrao(),
     db().from('rg_app_registos').select('missao_id, dia, xp, concluido, resposta').eq('membro_id', m.id).gte('dia', desde).not('concluido', 'is', null).order('dia', { ascending: false }).limit(200),
     economia(),
