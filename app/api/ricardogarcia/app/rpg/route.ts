@@ -9,6 +9,7 @@ import {
   RPG, ATRS, capitulo, cicloAtual, codigoMesa, d, lerFicha, mod, atributos, bonusKits, progresso, respostaCerta,
   salaActiva, salasActivas, testar, verFicha, verSala, verificarFoto, xpEscape, type Atr,
 } from '@/lib/ricardogarcia/rpg'
+import { INIMIGOS, inimigo, inimigoDaSemana, jogarTurno, novoEstado, semanaAtual, verConfronto } from '@/lib/ricardogarcia/confrontos'
 
 export const dynamic = 'force-dynamic'
 export const maxDuration = 60
@@ -54,6 +55,20 @@ async function listarMesas(m: any) {
   })).sort((a, b) => (+b.dentro - +a.dentro))
 }
 
+function listaConfrontos(f: any) {
+  const semana = semanaAtual(), daSemana = inimigoDaSemana().id
+  const trofeus: string[] = f?.trofeus || []
+  return {
+    semana, da_semana: daSemana,
+    lista: INIMIGOS.map(b => ({
+      id: b.id, nome: b.nome, titulo: b.titulo, emoji: b.emoji, retrato: b.retrato, cor: b.cor, final: !!b.final,
+      da_semana: b.id === daSemana, vencido: trofeus.includes(b.id),
+      aberto: b.final ? (f?.capitulos_feitos || []).includes(6) : (b.id === daSemana || trofeus.includes(b.id)),
+    })),
+  }
+}
+const podeEnfrentar = (f: any, b: any) => b.final ? (f.capitulos_feitos || []).includes(6) : (b.id === inimigoDaSemana().id || (f.trofeus || []).includes(b.id))
+
 async function estadoRpg(m: any) {
   const nivel = (m.patente || 0) + 1
   const [f, p] = await Promise.all([lerFicha(m.id), progresso(m.id)])
@@ -70,7 +85,7 @@ async function estadoRpg(m: any) {
       capitulos: RPG.capitulos.map((c: any) => ({ n: c.n, titulo: c.titulo, resumo: c.resumo })),
     },
     ficha: f ? verFicha(f, nivel, p) : null,
-    progresso: p, salas, mesas: f ? await listarMesas(m) : [],
+    progresso: p, salas, mesas: f ? await listarMesas(m) : [], confrontos: listaConfrontos(f),
   }
 }
 
@@ -186,6 +201,48 @@ export async function POST(req: NextRequest) {
     let xp = await darXp(m.id, 'app_rpg_cena', 5, `RPG: ${cena.titulo}`)
     if (novo) xp += await darXp(m.id, 'app_rpg_capitulo', 40, `RPG: capítulo ${cap.n} concluído`, true)
     return NextResponse.json({ ...(await estadoRpg(m)), resultado: { teste: r, nota, sucesso, talento: usar, fim: acabou ? cap.titulo : null }, ganho: { xp } })
+  }
+
+  // ── Confrontos (bosses por turnos) ────────────────────────────────────────
+  if (accao.startsWith('confronto_')) {
+    const bo = inimigo(t(b?.boss, 30))
+    if (!bo) return erro('Inimigo desconhecido.')
+    if (!podeEnfrentar(f, bo)) return erro(bo.final ? 'A Rotina só aparece depois do capítulo 6.' : 'Este inimigo ainda não está ao teu alcance. Vence o da semana.')
+    const semana = semanaAtual()
+    const chave = { membro_id: m.id, boss_id: bo.id, semana }
+    const { data: reg } = await db().from('rg_app_rpg_confrontos').select('*').match(chave).maybeSingle()
+    const p = await progresso(m.id)
+    if (accao === 'confronto_abrir') return NextResponse.json({ ok: true, confronto: verConfronto(bo, f, reg?.estado || null, reg) })
+    if (accao === 'confronto_comecar') {
+      if (reg?.estado && !reg.estado.fim) return NextResponse.json({ ok: true, confronto: verConfronto(bo, f, reg.estado, reg) })
+      if ((reg?.tentativas || 0) >= 15) return erro('Já tentaste muitas vezes esta semana. O inimigo também precisa de descansar.')
+      const e = novoEstado(bo, f, nivel, p)
+      const linha = { ...chave, estado: e, tentativas: (reg?.tentativas || 0) + 1, vitorias: reg?.vitorias || 0, xp: reg?.xp || 0, atualizado: new Date().toISOString() }
+      const { error } = await db().from('rg_app_rpg_confrontos').upsert(linha)
+      if (error) return erro('Não consegui começar o confronto.')
+      return NextResponse.json({ ok: true, confronto: verConfronto(bo, f, e, linha) })
+    }
+    if (accao === 'confronto_turno') {
+      if (!reg?.estado || reg.estado.fim) return erro('Começa primeiro o confronto.')
+      const r = jogarTurno(bo, f, nivel, p, reg.estado, t(b?.accao_id, 20))
+      if (r.erro) return erro(r.erro)
+      const up: any = { estado: r.e, atualizado: new Date().toISOString() }
+      let xp = 0
+      if (r.e.fim === 'vitoria') {
+        up.vitorias = (reg.vitorias || 0) + 1
+        if (!(f.trofeus || []).includes(bo.id)) await db().from('rg_app_rpg_fichas').update({ trofeus: [...(f.trofeus || []), bo.id] }).eq('membro_id', m.id)
+        const conta = bo.final || bo.id === inimigoDaSemana().id
+        if (conta && !reg.xp) {
+          xp = await darXp(m.id, 'app_rpg_boss', bo.final ? 120 : 60, bo.final ? 'RPG: venceu A Rotina' : `RPG: venceu ${bo.nome} ${semana}`, true)
+          up.xp = xp
+        }
+      }
+      await db().from('rg_app_rpg_confrontos').update(up).match(chave)
+      const novo = { ...reg, ...up }
+      return NextResponse.json({ ok: true, linhas: r.linhas, ganho: { xp }, confronto: verConfronto(bo, { ...f, trofeus: [...new Set([...(f.trofeus || []), ...(r.e.fim === 'vitoria' ? [bo.id] : [])])] }, r.e, novo),
+        confrontos: listaConfrontos({ ...f, trofeus: [...new Set([...(f.trofeus || []), ...(r.e.fim === 'vitoria' ? [bo.id] : [])])] }) })
+    }
+    return erro('Acção desconhecida.')
   }
 
   // ── Escape rooms ──────────────────────────────────────────────────────────

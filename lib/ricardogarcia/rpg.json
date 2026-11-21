@@ -789,7 +789,345 @@
           "titulo": "Mais do que dinheiro",
           "fim": true,
           "texto": "Olhas para trás e vês um caminho: mais energia, mais disciplina, pessoas melhores à volta. O dinheiro é uma parte. O resto é quem te tornas pelo caminho.",
-          "licao": "Liberdade é ter tempo, saúde e pessoas. Novos capítulos entram com as próximas missões."
+          "licao": "Liberdade é ter tempo, saúde e pessoas. O capítulo 4 já está aberto."
+        }
+      }
+    },
+    {
+      "n": 4,
+      "titulo": "A casa que ainda não é tua",
+      "resumo": "Renda, crédito, poupança e paciência. Comprar casa é uma maratona, não um sprint.",
+      "inicio": "c4-1",
+      "cenas": {
+        "c4-1": {
+          "titulo": "A renda subiu outra vez",
+          "texto": "Chega a carta do senhorio: mais 80 € por mês a partir de janeiro. Fazes contas no guardanapo do café e o guardanapo não chega.",
+          "opcoes": [
+            {
+              "t": "Abrir uma folha e ver para onde vai cada euro do mês",
+              "ok": "c4-2",
+              "teste": {
+                "atr": "con",
+                "cd": 11
+              },
+              "ko": "c4-2",
+              "nota_ok": "Descobres 140 € por mês em subscrições e jantares por impulso.",
+              "nota_ko": "A folha ficou a meio, mas já vês dois buracos claros."
+            },
+            {
+              "t": "Resolver com um cartão de crédito «só por agora»",
+              "ok": "c4-1x"
+            }
+          ]
+        },
+        "c4-1x": {
+          "titulo": "O «só por agora»",
+          "texto": "Três meses depois, o cartão tem juros que nem sabias que existiam.",
+          "licao": "Dívida cara para pagar despesas do mês é areia movediça. Primeiro o orçamento, depois o resto.",
+          "opcoes": [
+            {
+              "t": "Cortar o cartão e fazer o orçamento a sério",
+              "ok": "c4-2",
+              "teste": {
+                "atr": "dis",
+                "cd": 12
+              },
+              "ko": "c4-2",
+              "nota_ok": "Doeu, mas o buraco parou de crescer.",
+              "nota_ko": "Ainda escorregas, mas já não o usas todos os dias."
+            }
+          ]
+        },
+        "c4-2": {
+          "titulo": "O banco",
+          "texto": "Vais a um banco perguntar pelo crédito habitação. O gestor fala em taxa de esforço, entrada, spread. Tu acenas com a cabeça.",
+          "opcoes": [
+            {
+              "t": "Pedir que te explique cada termo e tomar notas",
+              "ok": "c4-3",
+              "teste": {
+                "atr": "cor",
+                "cd": 12
+              },
+              "ko": "c4-3",
+              "nota_ok": "Sais com uma folha cheia e a perceber que precisas de uns 20% de entrada mais impostos.",
+              "nota_ko": "Ficaste com metade das respostas. Já é mais do que tinhas."
+            },
+            {
+              "t": "Assinar a simulação mais rápida para «não perder a oportunidade»",
+              "ok": "c4-2x"
+            }
+          ]
+        },
+        "c4-2x": {
+          "titulo": "A pressa do vendedor",
+          "texto": "Em casa lês as letras pequenas. A prestação come quase metade do teu salário.",
+          "licao": "Quem tem pressa paga mais. Uma prestação acima de um terço do rendimento aperta a vida toda.",
+          "opcoes": [
+            {
+              "t": "Voltar atrás e comparar três propostas",
+              "ok": "c4-3",
+              "teste": {
+                "atr": "foc",
+                "cd": 12
+              },
+              "ko": "c4-3",
+              "nota_ok": "Três propostas lado a lado. A diferença dá para um mês de férias por ano.",
+              "nota_ko": "Comparaste duas. A segunda já era melhor."
+            }
+          ]
+        },
+        "c4-3": {
+          "titulo": "A visita",
+          "texto": "Visitas um T2 com «muita luz» no anúncio. Lá dentro cheira a humidade e o vendedor fala muito depressa.",
+          "opcoes": [
+            {
+              "t": "Ver as paredes, perguntar pelo condomínio e pela certidão energética",
+              "ok": "c4-4",
+              "teste": {
+                "atr": "con",
+                "cd": 13
+              },
+              "ko": "c4-4",
+              "nota_ok": "Encontras infiltrações e um condomínio com obras por pagar. Poupaste milhares.",
+              "nota_ko": "Deixaste escapar o condomínio, mas viste a humidade."
+            },
+            {
+              "t": "Fechar logo porque a vista é bonita",
+              "ok": "c4-4",
+              "teste": {
+                "atr": "ene",
+                "cd": 14
+              },
+              "ko": "c4-4",
+              "nota_ok": "Tiveste sorte: a casa estava boa. Desta vez.",
+              "nota_ko": "A vista continua bonita. As obras também."
+            }
+          ]
+        },
+        "c4-4": {
+          "titulo": "Um plano de 3 anos",
+          "fim": true,
+          "texto": "Não compraste nada este mês. Mas tens um orçamento, uma meta de entrada e sabes ler um anúncio. A casa vem a seguir.",
+          "licao": "Imobiliário é paciência e números: orçamento, entrada, taxa de esforço e muitas visitas. Conteúdo educativo, não é aconselhamento financeiro."
+        }
+      }
+    },
+    {
+      "n": 5,
+      "titulo": "O algoritmo",
+      "resumo": "Conteúdo, IA e atenção. Na internet, ou tens um plano, ou és o plano de alguém.",
+      "inicio": "c5-1",
+      "cenas": {
+        "c5-1": {
+          "titulo": "30 dias de vídeos",
+          "texto": "Decides partilhar o que estás a aprender. Primeiro vídeo: 43 visualizações, 3 delas da tua mãe.",
+          "opcoes": [
+            {
+              "t": "Publicar todos os dias durante 30 dias, sem olhar para os números",
+              "ok": "c5-2",
+              "teste": {
+                "atr": "dis",
+                "cd": 13
+              },
+              "ko": "c5-2",
+              "nota_ok": "Ao dia 19 um vídeo passa as 5 mil. Não foi sorte: foi o 19.º.",
+              "nota_ko": "Falhaste quatro dias, mas chegaste ao fim do mês."
+            },
+            {
+              "t": "Apagar o vídeo e esperar pelo «momento certo»",
+              "ok": "c5-1x"
+            }
+          ]
+        },
+        "c5-1x": {
+          "titulo": "O momento certo",
+          "texto": "Passam dois meses. O momento certo não chegou.",
+          "licao": "Os primeiros 30 vídeos são para aprender a fazer vídeos. Ninguém começa bom.",
+          "opcoes": [
+            {
+              "t": "Gravar o pior vídeo da tua vida e publicar na mesma",
+              "ok": "c5-2",
+              "teste": {
+                "atr": "cor",
+                "cd": 11
+              },
+              "ko": "c5-2",
+              "nota_ok": "Estava mesmo mau. Mas estava publicado.",
+              "nota_ko": "Hesitaste uma hora. Depois publicaste."
+            }
+          ]
+        },
+        "c5-2": {
+          "titulo": "A IA faz tudo?",
+          "texto": "Um amigo diz que a IA escreve, grava e publica por ti. Basta carregar num botão.",
+          "opcoes": [
+            {
+              "t": "Usar a IA para o rascunho e pôr a tua experiência por cima",
+              "ok": "c5-3",
+              "teste": {
+                "atr": "con",
+                "cd": 12
+              },
+              "ko": "c5-3",
+              "nota_ok": "Os vídeos ficam mais rápidos de fazer e continuam a soar a ti.",
+              "nota_ko": "Ficou um bocado robótico. Ao segundo já acertas no tom."
+            },
+            {
+              "t": "Deixar a IA fazer tudo sozinha",
+              "ok": "c5-2x"
+            }
+          ]
+        },
+        "c5-2x": {
+          "titulo": "Ninguém se lembra",
+          "texto": "Publicas o dobro. As pessoas passam à frente: parece tudo igual ao resto.",
+          "licao": "A IA acelera o trabalho. A confiança vem da tua história, da tua cara e da tua voz.",
+          "opcoes": [
+            {
+              "t": "Voltar a gravar com a tua cara e as tuas histórias",
+              "ok": "c5-3",
+              "teste": {
+                "atr": "red",
+                "cd": 11
+              },
+              "ko": "c5-3",
+              "nota_ok": "Os comentários voltam. Gente real a responder a gente real.",
+              "nota_ko": "Custa mais, mas é teu."
+            }
+          ]
+        },
+        "c5-3": {
+          "titulo": "A proposta brilhante",
+          "texto": "Uma mensagem privada: «Ganha 5 000 € por mês a partir do telemóvel, só tens de recrutar 3 amigos.»",
+          "opcoes": [
+            {
+              "t": "Perguntar o que se vende, a quem, e quem regula aquilo",
+              "ok": "c5-4",
+              "teste": {
+                "atr": "con",
+                "cd": 12
+              },
+              "ko": "c5-4",
+              "nota_ok": "Não há produto. Há só recrutamento. Bloqueias e segues.",
+              "nota_ko": "As respostas são vagas. Isso já é uma resposta."
+            },
+            {
+              "t": "Entrar já para não ficar de fora",
+              "ok": "c5-4",
+              "teste": {
+                "atr": "foc",
+                "cd": 15
+              },
+              "ko": "c5-4",
+              "nota_ok": "No último segundo percebes o esquema e sais antes de pagar.",
+              "nota_ko": "Perdeste a inscrição. Aprendeste a lição mais cara do capítulo."
+            }
+          ]
+        },
+        "c5-4": {
+          "titulo": "Atenção é moeda",
+          "fim": true,
+          "texto": "Tens uma audiência pequena que confia em ti, usas a IA como ferramenta e sabes dizer que não a promessas fáceis.",
+          "licao": "Promessas de ganhos garantidos são sinal de alarme. Constrói valor real e a atenção vem atrás."
+        }
+      }
+    },
+    {
+      "n": 6,
+      "titulo": "Segunda-feira, outra vez",
+      "resumo": "O ciclo fecha onde começou. Desta vez, quem decide és tu.",
+      "inicio": "c6-1",
+      "cenas": {
+        "c6-1": {
+          "titulo": "7h12",
+          "texto": "O alarme toca. É segunda-feira outra vez, mas desta vez acordas antes dele. Lá fora, a mesma cidade. Cá dentro, alguém diferente.",
+          "opcoes": [
+            {
+              "t": "Fazer a rotina da manhã que desenhaste: treino, água, 3 tarefas",
+              "ok": "c6-2",
+              "teste": {
+                "atr": "dis",
+                "cd": 12
+              },
+              "ko": "c6-2",
+              "nota_ok": "Às 8h já ganhaste o dia.",
+              "nota_ko": "Fizeste duas das três coisas. Antes não fazias nenhuma."
+            },
+            {
+              "t": "Voltar ao telemóvel «só cinco minutos»",
+              "ok": "c6-1x"
+            }
+          ]
+        },
+        "c6-1x": {
+          "titulo": "A voz antiga",
+          "texto": "Cinco minutos. Dez. A voz antiga diz que tudo isto foi uma fase.",
+          "licao": "As recaídas fazem parte. O que conta é o tempo que levas a voltar.",
+          "opcoes": [
+            {
+              "t": "Pousar o telemóvel e começar pelo mais pequeno: um copo de água",
+              "ok": "c6-2",
+              "teste": {
+                "atr": "foc",
+                "cd": 11
+              },
+              "ko": "c6-2",
+              "nota_ok": "Um copo de água. Depois o treino. O dia volta para as tuas mãos.",
+              "nota_ko": "Demoraste, mas voltaste."
+            }
+          ]
+        },
+        "c6-2": {
+          "titulo": "O teu primeiro aluno",
+          "texto": "Alguém do grupo de estudo pede-te ajuda: está onde tu estavas há meses. Perdido, cansado, cheio de dúvidas.",
+          "opcoes": [
+            {
+              "t": "Dar-lhe uma hora do teu tempo e um plano simples",
+              "ok": "c6-3",
+              "teste": {
+                "atr": "red",
+                "cd": 12
+              },
+              "ko": "c6-3",
+              "nota_ok": "Sai da conversa com um plano. Tu sais com a certeza de que mudaste.",
+              "nota_ko": "A conversa foi desarrumada, mas ele voltou a escrever no dia seguinte."
+            },
+            {
+              "t": "Dizer que agora não tens tempo",
+              "ok": "c6-3",
+              "teste": {
+                "atr": "cor",
+                "cd": 15
+              },
+              "ko": "c6-3",
+              "nota_ok": "Arrependes-te e ligas-lhe à noite.",
+              "nota_ko": "Ficou por fazer. Fica a promessa de que da próxima vez dizes que sim."
+            }
+          ]
+        },
+        "c6-3": {
+          "titulo": "O espelho da porta",
+          "texto": "Antes de saíres, olhas para o espelho da porta. Por trás do teu reflexo, uma sombra conhecida: todas as semanas iguais, todos os «amanhã começo».",
+          "opcoes": [
+            {
+              "t": "Encarar a sombra",
+              "ok": "c6-4",
+              "teste": {
+                "atr": "cor",
+                "cd": 13
+              },
+              "ko": "c6-4",
+              "nota_ok": "A sombra ganha forma. Tem um nome: a Rotina.",
+              "nota_ko": "Tremeste, mas não desviaste o olhar."
+            }
+          ]
+        },
+        "c6-4": {
+          "titulo": "A Rotina espera-te",
+          "fim": true,
+          "texto": "A sombra sai do espelho e diz: «Conheço-te há anos.» O último confronto da Operação Liberdade está aberto no separador Bosses.",
+          "licao": "Agora podes enfrentar A Rotina, o inimigo final. Vencer não é fugir dela: é desenhá-la a teu favor."
         }
       }
     }
@@ -1421,6 +1759,499 @@
           "pista": "Roda devagar, o telemóvel na vertical."
         }
       ]
+    }
+  ],
+  "inimigos": [
+    {
+      "id": "adiador",
+      "nome": "O Adiador",
+      "titulo": "Senhor do «amanhã começo»",
+      "emoji": "🕰️",
+      "retrato": "/ricardogarcia/rpg/adiador.svg",
+      "cor": "#9B7BFF",
+      "vida": 28,
+      "defesa": 10,
+      "fraqueza": "dis",
+      "entrada": "Para quê hoje, se há amanhã? Senta-te. Só mais um bocadinho.",
+      "fase2": "Estás mesmo a fazer isto? Então vou buscar o domingo à noite.",
+      "derrota": "Fizeste hoje. Eu não sei viver com quem faz hoje.",
+      "vitoria_dele": "Amanhã tentas outra vez. Ou depois de amanhã.",
+      "licao": "Começar mal é melhor do que não começar. Dois minutos chegam para partir a inércia.",
+      "padrao": [
+        {
+          "tipo": "ataque",
+          "valor": 4,
+          "texto": "«Só mais um episódio.»"
+        },
+        {
+          "tipo": "escudo",
+          "valor": 3,
+          "texto": "«Amanhã começo, prometo.»"
+        },
+        {
+          "tipo": "ataque",
+          "valor": 5,
+          "texto": "«Ainda não estás pronto.»"
+        },
+        {
+          "tipo": "forte",
+          "valor": 7,
+          "texto": "«Já é tarde para hoje.»"
+        }
+      ],
+      "padrao2": [
+        {
+          "tipo": "forte",
+          "valor": 7,
+          "texto": "«Domingo à noite, outra vez.»"
+        },
+        {
+          "tipo": "ataque",
+          "valor": 5,
+          "texto": "«Vê só mais um vídeo.»"
+        },
+        {
+          "tipo": "cura",
+          "valor": 4,
+          "texto": "«Mereces descansar.»"
+        },
+        {
+          "tipo": "forte",
+          "valor": 8,
+          "texto": "«Segunda-feira é que é.»"
+        }
+      ]
+    },
+    {
+      "id": "sombra",
+      "nome": "A Sombra do Medo",
+      "titulo": "Guardiã do «e se correr mal?»",
+      "emoji": "🌫️",
+      "retrato": "/ricardogarcia/rpg/sombra.svg",
+      "cor": "#6FA8DC",
+      "vida": 28,
+      "defesa": 10,
+      "fraqueza": "cor",
+      "entrada": "E se te rires de ti? E se falhares à frente de todos? Fica onde estás seguro.",
+      "fase2": "Estás a tremer. Ótimo. Vou mostrar-te tudo o que pode correr mal.",
+      "derrota": "Tremeste e avançaste na mesma. Contra isso não tenho nada.",
+      "vitoria_dele": "Viste? Era melhor não teres tentado.",
+      "licao": "Coragem não é não ter medo. É ter medo e dar o passo pequeno na mesma.",
+      "padrao": [
+        {
+          "tipo": "ataque",
+          "valor": 4,
+          "texto": "«E se gozarem contigo?»"
+        },
+        {
+          "tipo": "ataque",
+          "valor": 5,
+          "texto": "«Quem és tu para isso?»"
+        },
+        {
+          "tipo": "escudo",
+          "valor": 3,
+          "texto": "«Espera pela altura certa.»"
+        },
+        {
+          "tipo": "forte",
+          "valor": 7,
+          "texto": "«Lembras-te da última vez?»"
+        }
+      ],
+      "padrao2": [
+        {
+          "tipo": "forte",
+          "valor": 8,
+          "texto": "«Vais perder tudo.»"
+        },
+        {
+          "tipo": "escudo",
+          "valor": 3,
+          "texto": "«Ainda não.»"
+        },
+        {
+          "tipo": "forte",
+          "valor": 7,
+          "texto": "«Toda a gente vai ver.»"
+        },
+        {
+          "tipo": "cura",
+          "valor": 4,
+          "texto": "«Fica na zona segura.»"
+        }
+      ]
+    },
+    {
+      "id": "ganancia",
+      "nome": "A Ganância",
+      "titulo": "A voz do «dobra para recuperar»",
+      "emoji": "💰",
+      "retrato": "/ricardogarcia/rpg/ganancia.svg",
+      "cor": "#E9C46A",
+      "vida": 30,
+      "defesa": 11,
+      "fraqueza": "foc",
+      "entrada": "Perdeste? Dobra o lote. Ganhaste? Dobra outra vez. Quem tem paciência é pobre.",
+      "fase2": "Sem stop. Sem plano. Agora é que vais ver o que é emoção.",
+      "derrota": "Seguiste o plano e fechaste o ecrã. Não há nada que eu possa fazer com isso.",
+      "vitoria_dele": "Mais uma operação. Só mais uma.",
+      "licao": "O risco decide-se antes de entrar. Depois de entrar, só se cumpre o plano.",
+      "nota": "Conteúdo educativo. Trading tem risco de perda de capital.",
+      "padrao": [
+        {
+          "tipo": "ataque",
+          "valor": 5,
+          "texto": "«Mete mais um bocadinho.»"
+        },
+        {
+          "tipo": "forte",
+          "valor": 7,
+          "texto": "«Tira o stop, vai voltar.»"
+        },
+        {
+          "tipo": "cura",
+          "valor": 4,
+          "texto": "«Foi só azar.»"
+        },
+        {
+          "tipo": "ataque",
+          "valor": 5,
+          "texto": "«Recupera já.»"
+        }
+      ],
+      "padrao2": [
+        {
+          "tipo": "forte",
+          "valor": 9,
+          "texto": "«Tudo numa operação.»"
+        },
+        {
+          "tipo": "ataque",
+          "valor": 6,
+          "texto": "«Viste aquele que ganhou 10×?»"
+        },
+        {
+          "tipo": "escudo",
+          "valor": 3,
+          "texto": "«Não podes parar agora.»"
+        },
+        {
+          "tipo": "forte",
+          "valor": 8,
+          "texto": "«Dobra.»"
+        }
+      ]
+    },
+    {
+      "id": "espelho",
+      "nome": "O Espelho",
+      "titulo": "Mestre da comparação",
+      "emoji": "🪞",
+      "retrato": "/ricardogarcia/rpg/espelho.svg",
+      "cor": "#C0C7D2",
+      "vida": 28,
+      "defesa": 10,
+      "fraqueza": "con",
+      "entrada": "Olha para eles: carros, viagens, vidas perfeitas. E tu, aí.",
+      "fase2": "Mais um scroll. Vê como todos estão à tua frente.",
+      "derrota": "Viste os bastidores. Já não acreditas no meu reflexo.",
+      "vitoria_dele": "Eles estão sempre um passo à frente. Sempre.",
+      "licao": "Comparas os teus bastidores com o palco dos outros. Compara-te contigo de há 30 dias.",
+      "padrao": [
+        {
+          "tipo": "ataque",
+          "valor": 4,
+          "texto": "«Ele já tem casa própria.»"
+        },
+        {
+          "tipo": "escudo",
+          "valor": 3,
+          "texto": "«Olha os números dela.»"
+        },
+        {
+          "tipo": "ataque",
+          "valor": 5,
+          "texto": "«Tu nunca vais chegar lá.»"
+        },
+        {
+          "tipo": "forte",
+          "valor": 7,
+          "texto": "«Vê as fotos da viagem.»"
+        }
+      ],
+      "padrao2": [
+        {
+          "tipo": "forte",
+          "valor": 8,
+          "texto": "«Toda a gente consegue menos tu.»"
+        },
+        {
+          "tipo": "cura",
+          "valor": 4,
+          "texto": "«Só mais um scroll.»"
+        },
+        {
+          "tipo": "forte",
+          "valor": 7,
+          "texto": "«És o último.»"
+        },
+        {
+          "tipo": "ataque",
+          "valor": 6,
+          "texto": "«Desiste.»"
+        }
+      ]
+    },
+    {
+      "id": "peso",
+      "nome": "O Peso",
+      "titulo": "O cansaço que não passa",
+      "emoji": "🪨",
+      "retrato": "/ricardogarcia/rpg/peso.svg",
+      "cor": "#A47148",
+      "vida": 30,
+      "defesa": 10,
+      "fraqueza": "ene",
+      "entrada": "Dormiste cinco horas, comeste à pressa e não te mexes há dias. Senta-te. Eu pesei por ti.",
+      "fase2": "Café, açúcar e ecrã até às duas. Vamos ver quanto aguentas.",
+      "derrota": "Dormiste, bebeste água e mexeste-te. Fiquei leve demais para te prender.",
+      "vitoria_dele": "Amanhã estás ainda mais cansado.",
+      "licao": "Energia treina-se: sono, água, movimento. É a base de tudo o resto.",
+      "padrao": [
+        {
+          "tipo": "ataque",
+          "valor": 5,
+          "texto": "«Mais um café.»"
+        },
+        {
+          "tipo": "cura",
+          "valor": 5,
+          "texto": "«Hoje não há treino.»"
+        },
+        {
+          "tipo": "ataque",
+          "valor": 5,
+          "texto": "«Fica no sofá.»"
+        },
+        {
+          "tipo": "forte",
+          "valor": 7,
+          "texto": "«Deita-te às duas.»"
+        }
+      ],
+      "padrao2": [
+        {
+          "tipo": "forte",
+          "valor": 8,
+          "texto": "«Sem dormir.»"
+        },
+        {
+          "tipo": "ataque",
+          "valor": 6,
+          "texto": "«Come qualquer coisa.»"
+        },
+        {
+          "tipo": "escudo",
+          "valor": 3,
+          "texto": "«Não tens tempo para ti.»"
+        },
+        {
+          "tipo": "forte",
+          "valor": 8,
+          "texto": "«Arrasta-te.»"
+        }
+      ]
+    },
+    {
+      "id": "ruido",
+      "nome": "O Ruído",
+      "titulo": "Rei das notificações",
+      "emoji": "📳",
+      "retrato": "/ricardogarcia/rpg/ruido.svg",
+      "cor": "#1EAAE6",
+      "vida": 27,
+      "defesa": 11,
+      "fraqueza": "red",
+      "entrada": "Plim. Plim. Plim. Não precisas de ninguém, tens-me a mim no bolso.",
+      "fase2": "Mais alto! Mais rápido! Responde a tudo, não fales com ninguém.",
+      "derrota": "Desligaste-me e foste ter com pessoas reais. Fiquei a falar sozinho.",
+      "vitoria_dele": "Plim. Tens 99+ por ler.",
+      "licao": "As pessoas certas valem mais do que mil notificações. Liga a alguém hoje.",
+      "padrao": [
+        {
+          "tipo": "ataque",
+          "valor": 4,
+          "texto": "«Tens 12 mensagens.»"
+        },
+        {
+          "tipo": "ataque",
+          "valor": 5,
+          "texto": "«Vê só isto.»"
+        },
+        {
+          "tipo": "escudo",
+          "valor": 4,
+          "texto": "«Modo infinito.»"
+        },
+        {
+          "tipo": "forte",
+          "valor": 7,
+          "texto": "«Já passou uma hora?»"
+        }
+      ],
+      "padrao2": [
+        {
+          "tipo": "forte",
+          "valor": 8,
+          "texto": "«99+»"
+        },
+        {
+          "tipo": "cura",
+          "valor": 4,
+          "texto": "«Mais um vídeo curto.»"
+        },
+        {
+          "tipo": "forte",
+          "valor": 8,
+          "texto": "«Ninguém te liga.»"
+        },
+        {
+          "tipo": "ataque",
+          "valor": 6,
+          "texto": "«Plim.»"
+        }
+      ]
+    },
+    {
+      "id": "rotina",
+      "nome": "A Rotina",
+      "titulo": "O último inimigo da Operação Liberdade",
+      "emoji": "🔁",
+      "retrato": "/ricardogarcia/rpg/rotina.svg",
+      "cor": "#D2A63C",
+      "vida": 42,
+      "defesa": 11,
+      "fraqueza": null,
+      "final": true,
+      "entrada": "Conheço-te há anos. Acordar, trabalhar, cansar, repetir. Eu sou a tua casa.",
+      "fase2": "Usei o Adiador, o Medo, a Ganância, o Espelho, o Peso e o Ruído. Agora sou todos ao mesmo tempo.",
+      "derrota": "Não me destruíste. Mudaste-me. Agora a rotina trabalha para ti.",
+      "vitoria_dele": "Amanhã é igual a hoje. Como sempre.",
+      "licao": "Não precisas de fugir da rotina. Precisas de desenhar uma que te leve para onde queres.",
+      "padrao": [
+        {
+          "tipo": "ataque",
+          "valor": 5,
+          "texto": "«Acorda, trabalha, repete.»"
+        },
+        {
+          "tipo": "escudo",
+          "valor": 3,
+          "texto": "«Isto é a vida normal.»"
+        },
+        {
+          "tipo": "forte",
+          "valor": 8,
+          "texto": "«As 40 horas são para sempre.»"
+        },
+        {
+          "tipo": "ataque",
+          "valor": 6,
+          "texto": "«Sonhar é para outros.»"
+        },
+        {
+          "tipo": "cura",
+          "valor": 5,
+          "texto": "«Fica confortável.»"
+        }
+      ],
+      "padrao2": [
+        {
+          "tipo": "forte",
+          "valor": 9,
+          "texto": "«Todos os teus inimigos de uma vez.»"
+        },
+        {
+          "tipo": "ataque",
+          "valor": 7,
+          "texto": "«Segunda-feira, 7h12.»"
+        },
+        {
+          "tipo": "forte",
+          "valor": 9,
+          "texto": "«Desiste, é mais fácil.»"
+        },
+        {
+          "tipo": "escudo",
+          "valor": 4,
+          "texto": "«Sempre foi assim.»"
+        },
+        {
+          "tipo": "ataque",
+          "valor": 7,
+          "texto": "«Mais um ano igual.»"
+        }
+      ]
+    }
+  ],
+  "accoes_confronto": [
+    {
+      "id": "agir",
+      "atr": "dis",
+      "nome": "Agir já",
+      "emoji": "⚡",
+      "custo": 0,
+      "dano": 5,
+      "texto": "Fazes a coisa difícil primeiro."
+    },
+    {
+      "id": "respirar",
+      "atr": "foc",
+      "nome": "Respirar",
+      "emoji": "🫁",
+      "custo": 0,
+      "cura": 5,
+      "texto": "Recuperas Determinação e ganhas 1 de Foco extra.",
+      "sem_dado": true
+    },
+    {
+      "id": "planear",
+      "atr": "con",
+      "nome": "Plano",
+      "emoji": "🧭",
+      "custo": 1,
+      "dano": 4,
+      "guarda": 3,
+      "texto": "Danos menores, mas o próximo golpe dele perde força."
+    },
+    {
+      "id": "enfrentar",
+      "atr": "cor",
+      "nome": "Enfrentar",
+      "emoji": "🦁",
+      "custo": 1,
+      "dano": 7,
+      "texto": "Um golpe de coragem, forte mas arriscado."
+    },
+    {
+      "id": "treinar",
+      "atr": "ene",
+      "nome": "Energia",
+      "emoji": "🔥",
+      "custo": 1,
+      "dano": 6,
+      "texto": "Corpo em movimento, cabeça limpa."
+    },
+    {
+      "id": "apoio",
+      "atr": "red",
+      "nome": "Pedir apoio",
+      "emoji": "🤝",
+      "custo": 2,
+      "dano": 5,
+      "texto": "Alguém da tua rede entra na luta. Nunca falha.",
+      "sem_dado": true
     }
   ]
 }
