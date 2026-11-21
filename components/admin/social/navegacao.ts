@@ -14,6 +14,7 @@ export type Secao =
   | "leads"
   | "prospecao"
   | "funil"
+  | "vendas"
   | "mapa"
   | "mensagens"
   | "automacoes"
@@ -61,6 +62,7 @@ export const GRUPOS_SOCIAL: readonly GrupoSocial[] = [
     nome: "Converter",
     resumo: "Do lead ao membro: funis, mensagens e automações.",
     secoes: [
+      { id: "vendas", nome: "Funil de vendas", nota: "7 fases, do primeiro contacto ao onboarding, e quem trabalha cada uma." },
       { id: "funil", nome: "Funil", nota: "Quantas pessoas em cada degrau." },
       { id: "mapa", nome: "Mapa dos funis", nota: "Os caminhos desenhados, passo a passo." },
       { id: "mensagens", nome: "Mensagens", nota: "Os textos que o funil envia." },

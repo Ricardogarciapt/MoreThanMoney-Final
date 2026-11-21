@@ -274,6 +274,9 @@ export interface ResultadoExecutor {
   erros: string[]
   /** Reencontro no WhatsApp (`lib/whatsapp/reencontro.ts`), com interruptor próprio. */
   reencontro?: unknown
+  /** Motor das 7 fases (`lib/vendas/funil-motor.ts`). */
+  fases?: unknown
+  fasesMarcadas?: number
 }
 
 export async function correrExecutor(db: Db): Promise<ResultadoExecutor> {
@@ -293,6 +296,11 @@ export async function correrExecutor(db: Db): Promise<ResultadoExecutor> {
     r.rascunhosEmail = await rascunharEmails(db, cfg.limite)
   } catch (e) { r.erros.push(`email: ${e instanceof Error ? e.message : String(e)}`) }
   try {
+    // 7 fases (21/11): classifica funil, marca recrutas e rascunha Edificação/Onboarding/Recrutador.
+    const { correrFases } = await import('@/lib/vendas/funil-motor')
+    r.fases = await correrFases(db, cfg.limite)
+  } catch (e) { r.erros.push(`fases: ${e instanceof Error ? e.message : String(e)}`) }
+  try {
     const { autoAprovarFilaSite } = await import('@/lib/envios-auto-aprovar')
     const a = await autoAprovarFilaSite(db, { quem: 'executor-pipeline', limite: cfg.limite })
     r.enviados = a.enviados
@@ -303,5 +311,9 @@ export async function correrExecutor(db: Db): Promise<ResultadoExecutor> {
   try {
     r.contactados = await sincronizarEstados(db)
   } catch (e) { r.erros.push(`estados: ${e instanceof Error ? e.message : String(e)}`) }
+  try {
+    const { marcarFasesEnviadas } = await import('@/lib/vendas/funil-motor')
+    r.fasesMarcadas = await marcarFasesEnviadas(db)
+  } catch (e) { r.erros.push(`fases-marcar: ${e instanceof Error ? e.message : String(e)}`) }
   return r
 }
