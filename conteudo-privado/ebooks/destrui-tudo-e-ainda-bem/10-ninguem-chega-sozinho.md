@@ -10,7 +10,7 @@ Este capítulo fala do ecossistema que construímos. Vou descrevê-lo como ele �
 Antes de escolheres qualquer nível, pergunta-te o que sabes fazer hoje, e não o que esperas que aconteça amanhã.
 :::
 
-[[foto: rg-painel.jpg | Num painel com outros traders. Aprende-se mais a ouvir do que a falar. | polaroid]]
+[[foto: rg-painel-close.jpg | Num painel com outros traders. Aprende-se mais a ouvir do que a falar. | polaroid]]
 
 ## O que existe, em linguagem simples
 
@@ -41,14 +41,13 @@ Não é uma prop firm. Ninguém te dá capital para operar com o dinheiro deles,
 :::
 
 :::post @morethanmoney.pt
-foto: rg-palco.jpg
+foto: rg-palco-alto.jpg
 legenda: Ninguém chega sozinho. Eu não cheguei. Conhecimento, ferramentas e uma equipa ao lado poupam anos de erros caros. Não há resultados garantidos.
 :::
 
 :::galeria Comunidade é isto: caras, não nomes de utilizador
 rg-evento.jpg | Num evento, no fim. As melhores conversas são sempre as do corredor.
 rg-painel3.jpg | Num painel, com outros traders.
-rg-palco3.jpg | Em palco. Antes dos gráficos, falo sempre de disciplina.
 :::
 
 ## Como escolher pela tua fase
@@ -92,7 +91,6 @@ Leitor: Acabei o livro. Por onde começo?
 eu: Pelo capítulo 3. Faz a conta das 168 horas e manda-me o teu número.
 eu: A partir daí vemos juntos o passo seguinte.
 :::
-[[foto: rg-palco2.jpg | Do outro lado do microfone, mas do mesmo lado da conversa. | larga]]
 
 :::curso Aula 204 · A plataforma da casa
 Na MoreThanMoney construímos a nossa própria forma de ver o mercado: o MTM Scanner, que junta gráficos, ferramentas de leitura e gestão de risco no mesmo sítio, e liga quem aprende ao trabalho dos educadores.

@@ -12,7 +12,6 @@ O dinheiro sai sem fazer barulho. Uma subscrição de quinze euros, um café por
 
 O problema é que o dinheiro não guarda registo do que aconteceu. Se perguntares no fim do mês «para onde foi?», quase ninguém sabe responder com exatidão. Por isso a primeira regra é simples: o dinheiro precisa de um destino antes de chegar à conta. Não depois.
 
-[[foto: rg-tablet.jpg | Dinheiro organizado vê-se num ecrã. Mas começa num papel. | polaroid]]
 
 ## Orçamento em potes
 

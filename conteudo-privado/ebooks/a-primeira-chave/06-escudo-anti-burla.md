@@ -8,7 +8,7 @@ Os golpes em cripto mudam de nome e de cara, mas repetem-se. As transações sã
 
 :::post @morethanmoney.pt
 imagem: Ninguém sério te pede pressa.
-legenda: Se uma mensagem sobre a tua conta te pede um código em quinze minutos, já sabes o que é. Para, respira e confirma pelo site que tu próprio escolheste. Conteúdo educativo, não constitui aconselhamento financeiro.
+legenda: Quinze minutos para «proteger a tua conta»? Isso não é suporte, é um relógio a trabalhar para o burlão. Fecha a mensagem e entra tu pelo site que escolheste.
 :::
 
 ## Os cinco padrões que mais se repetem

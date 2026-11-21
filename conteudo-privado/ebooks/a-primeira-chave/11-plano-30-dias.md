@@ -6,7 +6,7 @@ Chegaste ao fim. Ou melhor, chegaste ao início do resto. Este último capítulo
 
 :::post @morethanmoney.pt
 imagem: Trinta dias. Um passo por dia.
-legenda: O plano não é uma corrida. Se um dia correr mal, passa ao seguinte. Conteúdo educativo, não constitui aconselhamento financeiro.
+legenda: Não é uma corrida. É um hábito. Se um dia falhar, não recomeças: continuas no dia seguinte.
 :::
 
 ## Como usar o plano
@@ -134,6 +134,20 @@ Hoje, antes de qualquer coisa: escreve a data em que começaste este plano. Daqu
 30. **Volatilidade:** o quanto um preço oscila num determinado período.
 
 [[foto: ruben-capa-foto.jpg | Trinta dias. Simplificar o complexo. Mais do que dinheiro, é um plano. | polaroid]]
+
+## Para ires mais longe
+
+Quando acabares o plano, lê outros autores. Não para encontrares o atalho, mas para ouvires a mesma verdade dita de maneiras diferentes. Estes são bons pontos de partida:
+
+- **«Bitcoin», de António Vilaça Pacheco.** Um português a explicar o Bitcoin desde a raiz, com contexto histórico.
+- **«The Bitcoin Standard», de Saifedean Ammous.** A história do dinheiro contada para chegar ao Bitcoin. Tem opiniões fortes: lê com espírito crítico.
+- **«Mastering Bitcoin», de Andreas M. Antonopoulos.** Para quando quiseres perceber a parte técnica a sério.
+- **O whitepaper original do Bitcoin, de Satoshi Nakamoto.** São nove páginas. Lê-o pelo menos uma vez, mesmo que não percebas tudo.
+
+:::nota
+Desconfia de qualquer livro, vídeo ou curso que acabe com «compra já».
+Incluindo os meus.
+:::
 
 ## Aviso final
 

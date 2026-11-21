@@ -16,7 +16,6 @@ A regra que defendo nesta casa é simples: não arriscar mais de 1% do capital n
 
 Exemplo ilustrativo, com valores redondos e conta em dólares para simplificar: uma conta de 2 000 $. Um 1% são 20 $. Isso significa que, se a operação correr mal e atingir o stop-loss, perdes 20 $ e nada mais. Não 200 $, não «o que faltava para recuperar».
 
-[[foto: rg-cerebro.jpg | O risco gere-se aqui, antes de chegar ao botão de comprar. | polaroid]]
 
 :::curso Aula 306 · O que é um stop loss
 O stop loss é a ordem que fecha a posição automaticamente se o preço for contra ti até um ponto que escolheste antes de entrar.
@@ -113,6 +112,16 @@ Imagina uma conta de 1 000 € que perde dez operações seguidas. O que acontec
 Exemplo ilustrativo, hipotético. A tabela mostra o que a regra faz: com 1%, uma série muito má tira-te cerca de 10% do capital. Com 10%, tira-te dois terços. A mesma sequência, com dois comportamentos completamente diferentes.
 
 [[grafico:risco-sequencias]]
+
+### Pensar em probabilidades
+
+Há um livro que li mais vezes do que gostaria de admitir: «Trading in the Zone», do Mark Douglas. A ideia central cabe numa linha. Cada operação é um acontecimento único, e o resultado de uma não te diz nada sobre a seguinte. O que tens a teu favor não é acertar nesta. É repetir um processo com vantagem muitas vezes, sem que uma perda te tire do jogo.
+
+Quando li isto pela primeira vez, percebi porque é que eu ficava furioso depois de um stop. Eu queria que cada operação me desse razão. O mercado não funciona assim, e o colete serve precisamente para aguentares a parte em que ele não te dá razão.
+
+:::destaque
+Não precisas de saber o que vai acontecer a seguir para ganhar dinheiro a prazo. Precisas de saber quanto perdes se estiveres errado, e de aceitar essa perda antes de clicar.
+:::
 
 Agora uma pergunta que costumo fazer a quem começa: quantas sequências de perdas são prováveis? Pensa numa moeda ao ar, com 50% de hipóteses para cada lado. Se lançares a moeda 100 vezes, a probabilidade de aparecer pelo menos uma sequência de cinco ou mais «perdas» (caras, no exemplo) é de cerca de 81%. Não é um azar raro. É o esperado.
 

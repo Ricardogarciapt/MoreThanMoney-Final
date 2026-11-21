@@ -10,7 +10,6 @@ Quando estás numa organização com regras claras, a disciplina vem de fora. H�
 
 Isso é valioso. Só que tem um limite que quase ninguém te explica: a disciplina que vem de fora desaparece quando a porta se fecha. Na vida civil, ninguém confere se bebeste água, se pagaste a conta da luz ou se fizeste a tarefa que ficou por fazer na semana passada. Se a disciplina não passar a vir de dentro, desaparece.
 
-[[foto: rg-pb.jpg | A disciplina não se vê na foto. Vê-se no que fazes quando ninguém está a ver. | larga]]
 
 :::galeria
 rg-medalha.jpg | A boina e a medalha ficaram numa gaveta. O hábito de cumprir veio comigo.

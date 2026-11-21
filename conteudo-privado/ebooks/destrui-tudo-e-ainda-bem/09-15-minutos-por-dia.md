@@ -12,7 +12,6 @@ O tempo limitado não torna ninguém mais esperto. Torna-o menos vulnerável ao 
 
 [[grafico:rotina-15min]]
 
-[[foto: rg-lisboa.jpg | Quinze minutos por dia cabem em qualquer sítio. Até numa esplanada. | larga]]
 
 ## A estrutura dos 15 minutos
 
