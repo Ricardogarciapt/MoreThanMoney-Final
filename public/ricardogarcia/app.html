@@ -937,10 +937,13 @@ html, body { overflow-x: hidden; }
       b.disabled = true; b.textContent = 'A procurar…';
       navigator.geolocation.getCurrentPosition(function (g) {
         var pos = { lat: g.coords.latitude, lon: g.coords.longitude, prec: g.coords.accuracy }; ultimaPos = pos;
+        if (M3) { M3.eu(pos); } else if (window.MissaoMapa && MissaoMapa.suporta()) { abrirMapa3D(); }
         api({ accao: 'rota_pontos', lat: pos.lat, lon: pos.lon }).then(function (r) {
           b.disabled = false; b.textContent = 'Procurar outra vez';
           if (!r.ok) { $('rErro').textContent = r.erro; return; }
-          if (r.isolada || !r.pontos.length) { $('rErro').textContent = 'Não encontrei pontos seguros suficientes perto de ti. Por segurança, aqui não há rota: faz o treino do dia em casa.'; PONTOS = []; pintaPontos(); return; }
+          // A tua posição vai sempre para o mapa, haja ou não pontos à volta.
+          if (r.falhou) { $('rErro').textContent = 'O serviço de mapas não respondeu a tempo. Já tenho a tua localização: carrega em «Procurar outra vez» daqui a uns segundos.'; PONTOS = []; pintaPontos(); pintaMapa(pos); seguir(); return; }
+          if (r.isolada || !r.pontos.length) { $('rErro').textContent = 'Não encontrei pontos seguros suficientes perto de ti. Por segurança, aqui não há rota: faz o treino do dia em casa.'; PONTOS = []; pintaPontos(); pintaMapa(pos); seguir(); return; }
           PONTOS = r.pontos; pintaPontos(); pintaMapa(pos); seguir();
         });
       }, function () { b.disabled = false; b.textContent = 'Encontrar pontos seguros perto de mim'; $('rErro').textContent = 'Preciso da tua localização para encontrar os pontos. Ativa-a nas definições do browser.'; }, { enableHighAccuracy: true, timeout: 15000 });
