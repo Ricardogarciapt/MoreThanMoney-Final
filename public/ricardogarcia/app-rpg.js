@@ -33,7 +33,7 @@
   css.textContent = [
     '.rpg-topo{display:flex;align-items:center;gap:10px;margin:2px 0 12px}.rpg-topo button.voltar{background:var(--placa2);border:1px solid var(--linha);color:var(--texto);border-radius:12px;width:42px;height:42px;font-size:22px}',
     '.rpg-topo h3{margin:0;font-family:Anton;letter-spacing:.5px;font-size:24px;line-height:1}.rpg-topo small{display:block;color:var(--cinza);font-size:12px;letter-spacing:1.5px;text-transform:uppercase}',
-    '.rpg-abas{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-bottom:14px}.rpg-abas button{min-height:44px;border-radius:12px;border:1px solid var(--linha);background:var(--placa2);color:var(--cinza);font-size:11px;font-weight:700;letter-spacing:.8px;text-transform:uppercase;padding:4px}',
+    '.rpg-abas{display:grid;grid-template-columns:repeat(5,1fr);gap:5px;margin-bottom:14px}.rpg-abas button{min-height:44px;border-radius:12px;border:1px solid var(--linha);background:var(--placa2);color:var(--cinza);font-size:11px;font-weight:700;letter-spacing:.8px;text-transform:uppercase;padding:4px}',
     '.rpg-abas button span{display:block;font-size:18px;margin-bottom:2px}.rpg-abas button.on{color:#111;background:linear-gradient(135deg,var(--ouro2),var(--ouro));border-color:transparent}',
     '.heroi{display:grid;grid-template-columns:84px 1fr;gap:14px;align-items:center}.heroi .em{width:84px;height:84px;border-radius:22px;display:grid;place-items:center;font-size:44px;background:radial-gradient(circle at 30% 25%,rgba(255,255,255,.12),transparent 60%),#0a0d13;border:2px solid var(--c,#E9C46A);box-shadow:0 0 30px -8px var(--c,#E9C46A)}',
     '.heroi h4{margin:0 0 2px;font-family:Anton;font-size:26px;letter-spacing:.3px}.heroi .sub{color:var(--cinza);font-size:13px}.heroi .nv{display:inline-block;margin-top:6px;padding:3px 10px;border-radius:999px;background:rgba(210,166,60,.15);color:var(--ouro2);font-size:12px;letter-spacing:1px;text-transform:uppercase}',
@@ -58,6 +58,30 @@
     '.jogs{display:flex;gap:6px;overflow-x:auto;padding-bottom:4px}.jog{flex:0 0 auto;background:#0a0d13;border:1px solid var(--linha);border-radius:12px;padding:6px 10px;font-size:13px;color:var(--texto);font:inherit}.jog .e{margin-right:4px}.jog small{color:var(--cinza)}',
     '.dados{display:flex;gap:6px;flex-wrap:wrap;margin:6px 0}.dados button{border:1px solid var(--linha);background:var(--placa2);color:var(--texto);border-radius:10px;padding:8px 12px;font-weight:700}.dados select{width:auto;padding:8px;font-size:14px!important;border-radius:10px;background:#0a0d13;color:var(--texto);border:1px solid var(--linha)}',
     '.compor-m{display:flex;gap:8px}.compor-m textarea{min-height:44px;max-height:120px;resize:none;padding:10px 12px}.compor-m .btn{width:auto}',
+    '.conf-intro{margin-bottom:12px}.conf-grelha{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px}.conf-grelha .conf-card{flex-direction:column;text-align:center;align-items:center}.conf-grelha .conf-info{align-items:center}.conf-grelha .conf-ret{width:84px;height:84px;border-radius:50%}.conf-grelha .conf-tag{align-self:center}',
+    '.conf-card{display:flex;gap:10px;align-items:center;width:100%;text-align:left;padding:10px;border-radius:16px;border:1px solid var(--linha);background:radial-gradient(120% 140% at 0 0,color-mix(in srgb,var(--c) 18%,transparent),var(--placa2) 60%);color:inherit;transition:transform .2s,border-color .2s}.conf-card:active{transform:scale(.98)}',
+    '.conf-card.grande{padding:14px;margin-bottom:6px;border-color:color-mix(in srgb,var(--c) 55%,transparent);box-shadow:0 10px 40px -18px var(--c)}.conf-card.grande .conf-ret{width:96px;height:96px}.conf-card.grande b{font-family:Anton;font-size:24px;letter-spacing:.5px}',
+    '.conf-ret{flex:none;width:56px;height:56px;border-radius:14px;overflow:hidden;background:#0b0b0d}.conf-ret img{width:100%;height:100%;object-fit:cover;display:block}.conf-info{display:flex;flex-direction:column;gap:2px;min-width:0}.conf-info b{font-size:15px}.conf-info small{font-size:12px;color:var(--cinza)}',
+    '.conf-card.fechado{opacity:.55}.conf-card.fechado img{filter:grayscale(1) brightness(.5)}.conf-lock{color:var(--cinza)}',
+    '.conf-tag{display:inline-block;align-self:flex-start;font-size:11px;font-weight:700;padding:2px 8px;border-radius:6px;background:rgba(255,255,255,.08);color:var(--texto);margin-top:3px;vertical-align:middle}.conf-tag.ok{background:rgba(60,207,142,.18);color:var(--verde)}.conf-tag.sem{background:linear-gradient(135deg,var(--ouro2),var(--ouro));color:#111}.conf-tag.fin{background:rgba(232,72,72,.2);color:#ff8a8a}',
+    '.conf-palco{position:relative;text-align:center;padding:14px 12px 12px;margin-bottom:10px;border-radius:20px;border:1px solid color-mix(in srgb,var(--c) 40%,transparent);background:radial-gradient(90% 70% at 50% 30%,color-mix(in srgb,var(--c) 26%,transparent),#08080a 75%);overflow:hidden}',
+    '.conf-palco.f2{border-color:#e84848;background:radial-gradient(90% 70% at 50% 30%,rgba(232,72,72,.32),#0a0606 75%)}.conf-palco.flash::after{content:"";position:absolute;inset:0;background:#fff;animation:cFlash .7s ease-out forwards;pointer-events:none}',
+    '.conf-boss{position:relative;width:min(40vw,160px);aspect-ratio:1;margin:0 auto;animation:cFlut 3.2s ease-in-out infinite}.conf-boss img{width:100%;height:100%;object-fit:cover;border-radius:50%;-webkit-mask-image:radial-gradient(circle,#000 58%,transparent 71%);mask-image:radial-gradient(circle,#000 58%,transparent 71%)}.conf-boss::before{content:"";position:absolute;inset:8%;border-radius:50%;box-shadow:0 0 60px 6px var(--c);opacity:.55}.conf-palco.f2 .conf-boss img{filter:saturate(1.4) hue-rotate(-12deg)}.conf-palco.f2 .conf-boss::before{box-shadow:0 0 70px 10px #e84848}',
+    '.conf-nome{font-family:Anton;font-size:24px;letter-spacing:.5px;margin:2px 0 6px}.conf-ult{min-height:40px;margin-top:8px;font-size:13px;text-align:left}.conf-ult p{margin:0 0 3px;animation:cEntra .35s ease-out}.conf-ult p.ele{color:#ff9d9d}.conf-ult p.sistema{color:var(--ouro2);font-weight:700}.conf-ult em{display:none}',
+    '.conf-barra{position:relative;height:26px;border-radius:9px;background:rgba(255,255,255,.07);overflow:hidden;margin:6px 0}.conf-barra i{position:absolute;inset:0 auto 0 0;background:linear-gradient(90deg,#b8322f,#e84848);transition:width .45s cubic-bezier(.2,.8,.2,1)}.conf-barra.eu i{background:linear-gradient(90deg,var(--ouro),var(--ouro2))}',
+    '.conf-barra span{position:relative;display:block;line-height:26px;font-size:13px;font-variant-numeric:tabular-nums;text-shadow:0 1px 2px #000}.conf-barra.eu span{color:#111;text-shadow:none;font-weight:600}',
+    '.conf-int{display:flex;gap:10px;align-items:center;text-align:left;margin-top:10px;padding:10px 12px;border-radius:14px;background:rgba(0,0,0,.45);border:1px dashed rgba(255,255,255,.18);font-size:14px;animation:cPulsa 1.6s ease-in-out infinite}.conf-int span{font-size:24px}.conf-int small{display:block;font-size:11px;letter-spacing:1px;text-transform:uppercase;color:var(--cinza)}.conf-int.forte{border-color:#e84848}.conf-int.forte small{color:#ff8a8a}',
+    '.conf-eu{margin-bottom:10px}.conf-foco{display:flex;align-items:center;gap:6px;flex-wrap:wrap}.conf-foco small{font-size:12px;color:var(--cinza)}.conf-foco i{width:14px;height:14px;transform:rotate(45deg);border-radius:3px;background:rgba(255,255,255,.1);transition:background .3s}.conf-foco i.on{background:var(--ciano);box-shadow:0 0 10px var(--ciano)}.conf-turno{margin-left:auto;font-size:12px;color:var(--cinza);font-variant-numeric:tabular-nums}',
+    '.conf-acc{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-bottom:10px}.conf-acc button{min-height:74px;padding:8px 4px;border-radius:14px;border:1px solid var(--linha);background:var(--placa2);color:inherit;display:flex;flex-direction:column;align-items:center;gap:2px;transition:transform .15s,background .2s}.conf-acc button:active{transform:scale(.96)}',
+    '.conf-acc button .e{font-size:22px}.conf-acc button b{font-size:13px}.conf-acc button small{font-size:11px;color:var(--ciano)}.conf-acc button.fraco{border-color:var(--ouro);box-shadow:inset 0 0 0 1px var(--ouro)}.conf-acc button.tec{grid-column:span 3;flex-direction:row;justify-content:center;gap:8px;min-height:52px;background:linear-gradient(135deg,rgba(210,166,60,.22),rgba(30,170,230,.14))}.conf-acc button:disabled{opacity:.35}',
+    '.conf-log{max-height:220px;overflow:auto;padding:10px 12px;border-radius:14px;background:rgba(0,0,0,.35);font-size:13px}.conf-log p{margin:0 0 6px;animation:cEntra .35s ease-out}.conf-log p.ele{color:#ff9d9d}.conf-log p.sistema{color:var(--ouro2);font-weight:700}.conf-log p.crit{font-weight:700}.conf-log em{display:block;font-style:normal;font-size:11px;color:var(--cinza)}',
+    '.conf-fala{font-family:Kalam,cursive;font-size:19px;line-height:1.35;margin:0;color:var(--texto)}',
+    '.conf-num{position:absolute;top:30%;font-family:Anton;font-size:34px;color:#fff;text-shadow:0 2px 0 #b8322f,0 0 18px #e84848;pointer-events:none;animation:cNum 1.1s ease-out forwards}.conf-num.crit{font-size:52px;color:var(--ouro2)}.conf-num.fraco{color:var(--ouro2)}.conf-num.cura{color:#7dffb8;text-shadow:0 0 14px #1d8a55}.conf-num.falha{font-size:22px;color:var(--cinza);text-shadow:none}',
+    '.treme{animation:cTreme .35s}.treme2{animation:cTreme2 .5s}',
+    '@keyframes cFlut{0%,100%{transform:translateY(0)}50%{transform:translateY(-8px)}}@keyframes cNum{0%{transform:translateY(0) scale(.6);opacity:0}15%{transform:translateY(-6px) scale(1.15);opacity:1}100%{transform:translateY(-70px) scale(1);opacity:0}}',
+    '@keyframes cTreme{0%,100%{transform:translateX(0)}20%{transform:translateX(-7px)}40%{transform:translateX(6px)}60%{transform:translateX(-4px)}80%{transform:translateX(3px)}}@keyframes cTreme2{0%,100%{transform:translate(0)}15%{transform:translate(-12px,4px) rotate(-1.5deg)}30%{transform:translate(10px,-5px) rotate(1deg)}50%{transform:translate(-8px,3px)}70%{transform:translate(6px,-2px)}85%{transform:translate(-3px,1px)}}',
+    '@keyframes cFlash{0%{opacity:.45}100%{opacity:0}}@keyframes cPulsa{0%,100%{box-shadow:0 0 0 0 rgba(232,72,72,0)}50%{box-shadow:0 0 0 4px rgba(232,72,72,.12)}}@keyframes cEntra{from{opacity:0;transform:translateY(-4px)}}',
+    '@media (prefers-reduced-motion:reduce){.conf-boss,.conf-int{animation:none}.treme,.treme2{animation:none}.conf-num{animation-duration:.6s}}',
     '#ra{position:fixed;inset:0;z-index:300;background:#000;display:none}#ra.on{display:block}#ra video,#ra canvas{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}#ra .hud{position:absolute;left:0;right:0;bottom:0;padding:16px 16px calc(16px + env(safe-area-inset-bottom));background:linear-gradient(transparent,rgba(0,0,0,.85));color:#fff;text-align:center}',
     '#ra .x{position:absolute;top:calc(12px + env(safe-area-inset-top));right:12px;width:44px;height:44px;border-radius:50%;border:0;background:rgba(0,0,0,.5);color:#fff;font-size:24px;z-index:2}#ra .cod{font-family:Anton;font-size:44px;color:var(--ouro2);letter-spacing:4px}'
   ].join('\n');
@@ -76,9 +100,10 @@
     if (!R.ficha) return criar();
     if (salaAberta) return desenharSala();
     if (mesaAberta) return desenharMesa();
-    var A = [['ficha', '🛡️', 'Personagem'], ['campanha', '📜', 'Campanha'], ['escape', '🗝️', 'Escape'], ['mesas', '🎲', 'Mesas']];
+    if (confAberto) return desenharConfronto();
+    var A = [['ficha', '🛡️', 'Personagem'], ['campanha', '📜', 'Campanha'], ['escape', '🗝️', 'Escape'], ['confronto', '⚔️', 'Bosses'], ['mesas', '🎲', 'Mesas']];
     var h = topo('Nível ' + R.nivel + ' · ' + classeDe(R.ficha.classe).nome) + '<div class="rpg-abas">' + A.map(function (a) { return '<button type="button" data-aba="' + a[0] + '" class="' + (aba === a[0] ? 'on' : '') + '"><span>' + a[1] + '</span>' + a[2] + '</button>'; }).join('') + '</div>';
-    h += { ficha: vFicha, campanha: vCampanha, escape: vEscape, mesas: vMesas }[aba]();
+    h += { ficha: vFicha, campanha: vCampanha, escape: vEscape, confronto: vConfronto, mesas: vMesas }[aba]();
     raiz.innerHTML = h + '<p class="texto-m" style="font-size:12px;color:var(--cinza);text-align:center;margin-top:14px">Ficção educativa. Nada aqui é aconselhamento financeiro nem promessa de resultados.</p>';
   }
 
@@ -330,6 +355,120 @@
     RA.loop = requestAnimationFrame(frame);
   }
 
+  // ── Confrontos: combate por turnos contra os inimigos interiores ─────────
+  // O inimigo mostra o que vai fazer a seguir; tu escolhes a resposta. Os dados lançam-se no servidor
+  // e o ecrã só encena as linhas que voltam, por ordem (números a flutuar, tremor, mudança de fase).
+  var confAberto = null, confOcupado = false;
+  var INT = { ataque: ['⚔️', 'Vai atacar'], forte: ['💥', 'Golpe forte'], escudo: ['🛡️', 'Vai defender-se'], cura: ['💚', 'Vai recuperar'] };
+  function vConfronto() {
+    var C = R.confrontos || { lista: [] };
+    var sem = C.lista.filter(function (b) { return b.da_semana; })[0];
+    var h = '<div class="placa conf-intro"><div class="mono">Confrontos · semana ' + esc((C.semana || '').split('-W')[1] || '') + '</div><p class="texto-m" style="font-size:15px;margin:6px 0 0">Os inimigos não estão lá fora: são o adiamento, o medo, a pressa. Cada semana aparece um. Ele mostra-te sempre o próximo golpe; tu escolhes a resposta com os atributos da tua ficha.</p></div>';
+    if (sem) h += cartaoBoss(sem, true);
+    h += '<div class="sub-tit">Galeria</div><div class="conf-grelha">' + C.lista.filter(function (b) { return !b.da_semana; }).map(function (b) { return cartaoBoss(b, false); }).join('') + '</div>';
+    h += '<p class="texto-m" style="font-size:12px;color:var(--cinza)">A primeira vitória contra o inimigo da semana dá 60 XP. A Rotina dá 120 e só aparece depois do capítulo 6. Os já vencidos podem ser repetidos sem XP.</p>';
+    return h;
+  }
+  function cartaoBoss(b, grande) {
+    var estado = b.vencido ? '<span class="conf-tag ok">Vencido</span>' : b.da_semana ? '<span class="conf-tag sem">Da semana</span>' : b.final ? '<span class="conf-tag fin">Final</span>' : '';
+    return '<button type="button" class="conf-card' + (grande ? ' grande' : '') + (b.aberto ? '' : ' fechado') + '" style="--c:' + esc(b.cor) + '" data-boss="' + esc(b.id) + '">' +
+      '<span class="conf-ret"><img src="' + esc(b.retrato) + '" alt="" loading="lazy"></span><span class="conf-info"><b>' + esc(b.nome) + '</b><small>' + esc(b.titulo) + '</small>' + estado +
+      (b.aberto ? '' : '<small class="conf-lock">🔒 ' + (b.final ? 'Depois do capítulo 6' : 'Ainda por aparecer') + '</small>') + '</span></button>';
+  }
+  function abrirConfronto(id) {
+    var b = (R.confrontos.lista || []).filter(function (x) { return x.id === id; })[0];
+    if (!b) return;
+    if (!b.aberto) { toast('🔒 ' + (b.final ? 'A Rotina só aparece depois do capítulo 6.' : 'Este inimigo ainda não apareceu. Vence o da semana.')); return; }
+    pedir({ accao: 'confronto_abrir', boss: id }).then(function (r) { if (!r.ok) { toast(esc(r.erro)); return; } confAberto = r.confronto; desenhar(); window.scrollTo(0, 0); });
+  }
+  function barra(cls, v, max, rot) {
+    return '<div class="conf-barra ' + cls + '"><i style="width:' + Math.max(0, Math.min(100, v / max * 100)) + '%"></i><span>' + rot + ' <b>' + v + '</b>/' + max + '</span></div>';
+  }
+  function desenharConfronto() {
+    var c = confAberto, b = c.inimigo, e = c.estado;
+    var h = topo(b.titulo);
+    h += '<div class="conf-palco' + (e && e.fase === 2 ? ' f2' : '') + '" id="cPalco" style="--c:' + esc(b.cor) + '">';
+    h += '<div class="conf-boss" id="cBoss"><img src="' + esc(b.retrato) + '" alt="' + esc(b.nome) + '"></div><div class="conf-nome">' + esc(b.nome) + (e && e.fase === 2 ? ' <span class="conf-tag fin">Fase 2</span>' : '') + '</div>';
+    if (e) h += barra('boss', e.bossVida, e.bossMax, b.emoji);
+    if (c.intencao) { var it = INT[c.intencao.tipo] || ['❔', '']; h += '<div class="conf-int ' + c.intencao.tipo + '"><span>' + it[0] + '</span><div><small>Próximo golpe · ' + it[1] + (c.intencao.tipo === 'ataque' || c.intencao.tipo === 'forte' ? ' ' + (c.intencao.valor + (e.fase === 2 ? 1 : 0)) : '') + '</small>' + esc(c.intencao.texto) + '</div></div>'; }
+    if (e && !e.fim) h += '<div class="conf-ult" id="cUlt">' + e.log.slice(-2).map(linhaLog).join('') + '</div>';
+    h += '</div>';
+    if (!e || e.fim) {
+      h += '<div class="placa"><p class="conf-fala">«' + esc(b.entrada) + '»</p>';
+      if (e && e.fim) h += '<p class="texto-m" style="font-size:14px;margin:8px 0 0;color:' + (e.fim === 'vitoria' ? 'var(--verde)' : 'var(--cinza)') + '">' + (e.fim === 'vitoria' ? 'Venceste este confronto.' : 'Perdeste este confronto. Recupera e volta com outro plano.') + '</p>';
+      h += '<p class="texto-m" style="font-size:13px;color:var(--cinza);margin:10px 0 12px">Ponto fraco: ' + (b.fraqueza ? '<b style="color:var(--ouro2)">' + NOMES[b.fraqueza] + '</b> (acções desse atributo tiram +3)' : 'nenhum. Precisas de tudo o que aprendeste.') + ' · Vitórias: ' + c.vitorias + ' · Tentativas esta semana: ' + c.tentativas + '/15</p>';
+      h += '<button class="btn" type="button" data-r="conf-comecar">' + (e ? 'Novo confronto' : 'Enfrentar') + '</button></div>';
+      raiz.innerHTML = h; return;
+    }
+    h += '<div class="conf-eu">' + barra('eu', e.vida, e.vidaMax, '💛 ' + esc(R.ficha.nome || 'Tu')) +
+      '<div class="conf-foco" aria-label="Foco ' + e.foco + ' de 5"><small>Foco</small>' + [0, 1, 2, 3, 4].map(function (i) { return '<i class="' + (i < e.foco ? 'on' : '') + '"></i>'; }).join('') +
+      (e.guarda ? '<span class="conf-tag">🛡️ Guarda ' + e.guarda + '</span>' : '') + '<span class="conf-turno">Turno ' + (e.turno + 1) + '/20</span></div></div>';
+    h += '<div class="conf-acc">' + c.accoes.map(function (a) {
+      var fraco = b.fraqueza && a.atr === b.fraqueza;
+      return '<button type="button" class="' + (a.id === 'tecnica' ? 'tec ' : '') + (fraco ? 'fraco' : '') + '" data-cacc="' + esc(a.id) + '"' + (a.pode && !confOcupado ? '' : ' disabled') + ' title="' + esc(a.texto) + '">' +
+        '<span class="e">' + a.emoji + '</span><b>' + esc(a.nome) + '</b><small>' + CURTO[a.atr] + (a.custo ? ' · ' + new Array(a.custo + 1).join('◆') : ' · grátis') + (fraco ? ' · fraco!' : '') + '</small></button>';
+    }).join('') + '</div>';
+    h += '<div class="conf-log" id="cLog">' + e.log.slice().reverse().map(linhaLog).join('') + '</div>';
+    raiz.innerHTML = h;
+  }
+  function linhaLog(l) {
+    var dado = l.d20 != null ? '<em>🎲 ' + l.d20 + (l.total !== l.d20 ? ' → ' + l.total : '') + ' vs ' + l.cd + '</em>' : '';
+    return '<p class="' + l.quem + (l.critico ? ' crit' : '') + '">' + esc(l.texto) + dado + '</p>';
+  }
+  function flutua(alvo, txt, cls) {
+    var el = document.getElementById(alvo); if (!el) return;
+    var n = document.createElement('span'); n.className = 'conf-num ' + (cls || ''); n.textContent = txt;
+    n.style.left = (35 + Math.random() * 30) + '%';
+    el.appendChild(n); setTimeout(function () { n.remove(); }, 1200);
+  }
+  function treme(id, forte) {
+    var el = document.getElementById(id); if (!el) return;
+    el.classList.remove('treme', 'treme2'); void el.offsetWidth; el.classList.add(forte ? 'treme2' : 'treme');
+  }
+  function acertaBarra(sel, v, max) {
+    var b = raiz.querySelector('.conf-barra.' + sel); if (!b) return;
+    b.querySelector('i').style.width = Math.max(0, Math.min(100, v / max * 100)) + '%'; b.querySelector('b').textContent = v;
+  }
+  function jogar(id) {
+    if (confOcupado || !confAberto) return;
+    confOcupado = true; raiz.querySelectorAll('[data-cacc]').forEach(function (x) { x.disabled = true; });
+    var b0 = confAberto.estado.bossVida, v0 = confAberto.estado.vida, bm = confAberto.estado.bossMax, vm = confAberto.estado.vidaMax;
+    pedir({ accao: 'confronto_turno', boss: confAberto.inimigo.id, accao_id: id }).then(function (r) {
+      if (!r.ok) { confOcupado = false; toast(esc(r.erro || 'Não deu.')); desenharConfronto(); return; }
+      var log = document.getElementById('cLog'), i = 0;
+      (function passo() {
+        if (i >= r.linhas.length) {
+          setTimeout(function () {
+            confOcupado = false; confAberto = r.confronto; if (r.confrontos) R.confrontos = r.confrontos;
+            desenharConfronto();
+            if (r.confronto.estado.fim) fimConfronto(r);
+          }, 380);
+          return;
+        }
+        var l = r.linhas[i++];
+        if (log) log.insertAdjacentHTML('afterbegin', linhaLog(l));
+        var ult = document.getElementById('cUlt'); if (ult) { ult.insertAdjacentHTML('beforeend', linhaLog(l)); while (ult.children.length > 2) ult.removeChild(ult.firstChild); }
+        if (l.quem === 'eu' && l.dano) { b0 = Math.max(0, b0 - l.dano); acertaBarra('boss', b0, bm); flutua('cBoss', '−' + l.dano, (l.critico ? 'crit' : '') + (l.fraco ? ' fraco' : '')); treme('cBoss', l.critico); M.som('plim'); }
+        else if (l.quem === 'eu' && l.dano === 0) flutua('cBoss', 'falhou', 'falha');
+        if (l.quem === 'eu' && l.cura) { v0 = Math.min(vm, v0 + l.cura); acertaBarra('eu', v0, vm); }
+        if (l.quem === 'ele' && l.dano) { v0 = Math.max(0, v0 - l.dano); acertaBarra('eu', v0, vm); treme('cPalco', l.critico); try { navigator.vibrate && navigator.vibrate(l.critico ? [60, 40, 90] : 50); } catch (_) {} }
+        if (l.quem === 'ele' && l.cura) { b0 = Math.min(bm, b0 + l.cura); acertaBarra('boss', b0, bm); flutua('cBoss', '+' + l.cura, 'cura'); }
+        if (l.quem === 'sistema' && l.texto === 'Fase 2') { var p = document.getElementById('cPalco'); if (p) { p.classList.add('f2', 'flash'); setTimeout(function () { p.classList.remove('flash'); }, 700); } }
+        setTimeout(passo, reduz ? 200 : 620);
+      })();
+    });
+  }
+  var reduz = false; try { reduz = matchMedia('(prefers-reduced-motion: reduce)').matches; } catch (_) {}
+  function fimConfronto(r) {
+    var b = r.confronto.inimigo, v = r.confronto.estado.fim === 'vitoria', xp = r.ganho && r.ganho.xp;
+    if (v) { M.confete(xp ? 240 : 140); M.som('militar'); }
+    modal('<div class="mono">' + (v ? 'Vitória' : 'Ainda não') + '</div><h2>' + (v ? esc(b.nome) + ' caiu' : esc(b.nome) + ' ganhou esta') + '</h2>' +
+      '<p class="conf-fala" style="margin:8px 0 12px">«' + esc(v ? r.linhas.filter(function (l) { return l.quem === 'ele'; }).slice(-1).map(function (l) { return l.texto; })[0] || '' : r.linhas.slice(-1)[0].texto) + '»</p>' +
+      '<div class="placa" style="margin-bottom:12px"><div class="mono">A lição</div><p class="texto-m" style="font-size:15px;margin:6px 0 0">' + esc(b.licao) + '</p>' + (b.nota ? '<p class="texto-m" style="font-size:12px;color:var(--cinza);margin:8px 0 0">' + esc(b.nota) + '</p>' : '') + '</div>' +
+      (xp ? '<p class="texto-m" style="font-size:16px;color:var(--ouro2);margin:0 0 12px"><b>+' + xp + ' XP</b></p>' : '') +
+      '<button class="btn" type="button" data-x="ok">' + (v ? 'Continuar' : 'Recuar e preparar') + '</button>', function (bb) { if (bb.getAttribute('data-x') === 'ok') fechar(); });
+  }
+
   // ── Mesas de jogo ───────────────────────────────────────────────────────
   function vMesas() {
     var L = R.mesas || [], minhas = L.filter(function (m) { return m.dentro; }), outras = L.filter(function (m) { return !m.dentro; });
@@ -461,7 +600,7 @@
     var a;
     if ((a = b.getAttribute('data-aba'))) { aba = a; desenhar(); return; }
     if ((a = b.getAttribute('data-r'))) {
-      if (a === 'voltar') { if (salaAberta) { salaAberta = null; clearInterval(relogio); pedir().then(function (x) { if (x.ok) R = x; desenhar(); }); } else if (mesaAberta) { mesaAberta = null; pararMesa(); pedir().then(function (x) { if (x.ok) R = x; desenhar(); }); } else if (raiz.__editar) { raiz.__editar = false; desenhar(); } else { pararMesa(); M.voltar(); } return; }
+      if (a === 'voltar') { if (confAberto && !confOcupado) { confAberto = null; desenhar(); } else if (salaAberta) { salaAberta = null; clearInterval(relogio); pedir().then(function (x) { if (x.ok) R = x; desenhar(); }); } else if (mesaAberta) { mesaAberta = null; pararMesa(); pedir().then(function (x) { if (x.ok) R = x; desenhar(); }); } else if (raiz.__editar) { raiz.__editar = false; desenhar(); } else { pararMesa(); M.voltar(); } return; }
       if (a === 'criar') {
         novo.nome = document.getElementById('rNome').value;
         if (!novo.classe || !novo.origem) { toast('Escolhe a classe e a origem.'); return; }
@@ -469,6 +608,7 @@
         accao({ accao: R.ficha ? 'ficha_editar' : 'ficha_criar', nome: novo.nome, classe: novo.classe, origem: novo.origem }, function () { raiz.__editar = false; aba = ed ? 'ficha' : 'campanha'; desenhar(); if (!ed) { toast('<b>Personagem criada.</b><br>Começa o capítulo 1.'); M.som('militar'); } }).then(function () { b.disabled = false; });
         return;
       }
+      if (a === 'conf-comecar') { b.disabled = true; M.som('intro'); pedir({ accao: 'confronto_comecar', boss: confAberto.inimigo.id }).then(function (r) { if (!r.ok) { toast(esc(r.erro)); b.disabled = false; return; } confAberto = r.confronto; desenharConfronto(); }); return; }
       if (a === 'editar') { criar(true); return; }
       if (a === 'imprimir') { imprimirFicha(); return; }
       if (a === 'kitprint') { imprimirKit(); return; }
@@ -516,6 +656,8 @@
     if ((a = b.getAttribute('data-mesa'))) { if (b.getAttribute('data-dentro') === '1') abrirMesa(a); else accao({ accao: 'mesa_entrar', id: a }, function (r) { abrirMesa(r.mesa); }); return; }
     if ((a = b.getAttribute('data-dado'))) { var s = document.getElementById('rAtr'); accao({ accao: 'mesa_dado', id: mesaAberta.id, dado: a, atr: s ? s.value : '' }, function () { puxarMesa(false); }); return; }
     if ((a = b.getAttribute('data-jog'))) { verJogador(a); return; }
+    if ((a = b.getAttribute('data-boss'))) { abrirConfronto(a); return; }
+    if ((a = b.getAttribute('data-cacc'))) { jogar(a); return; }
   });
   raiz.addEventListener('keydown', function (ev) {
     if (ev.key !== 'Enter' || ev.shiftKey) return;
