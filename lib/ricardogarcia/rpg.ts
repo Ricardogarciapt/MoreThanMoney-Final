@@ -5,6 +5,7 @@
 import { randomInt, createHash } from 'crypto'
 import dados from './rpg.json'
 import { db } from '@/lib/ricardogarcia/app'
+import { chamarIA, chamarIAGratis, type ImagemIA } from '@/lib/ia/chamar'
 
 export const RPG: any = dados
 export type Atr = 'dis' | 'foc' | 'ene' | 'con' | 'cor' | 'red'
@@ -115,12 +116,12 @@ export function testar(f: any, nivel: number, p: Progresso, teste: { atr: Atr; c
   return { d20: rolo, repetiu, mod: mod(at[teste.atr].v), kit: bk[teste.atr], talento: t4 + extra, total: tot, cd: teste.cd, atr: teste.atr, ok, critico: rolo === 20, falhanco: rolo === 1 }
 }
 
-// ── Escape rooms rotativos: 3 salas activas; todos os meses entra uma nova e sai a mais antiga. ──
+// ── Escape rooms rotativos: 4 salas activas; todos os meses entra uma nova e sai a mais antiga. ──
 export function cicloAtual(agora = new Date()) { return agora.toISOString().slice(0, 7) }
 export function salasActivas(agora = new Date()) {
   const k = (agora.getUTCFullYear() * 12 + agora.getUTCMonth()) - (2026 * 12 + 10)
   const n = RPG.salas.length
-  return [0, 1, 2].map(i => ({ sala: RPG.salas[(((k + i) % n) + n) % n], nova: i === 2, sai: i === 0 }))
+  return [0, 1, 2, 3].map(i => ({ sala: RPG.salas[(((k + i) % n) + n) % n], nova: i === 3, sai: i === 0 }))
 }
 export const salaActiva = (id: string) => salasActivas().find(s => s.sala.id === id)?.sala || null
 /** Direção (graus) onde está o objeto dourado da fechadura RA, diferente para cada pessoa e mês. */
@@ -131,7 +132,7 @@ export function verSala(s: any, reg: any, membroId: string, ciclo: string) {
   return {
     id: s.id, titulo: s.titulo, area: s.area, emoji: s.emoji, historia: s.historia, minutos: s.minutos,
     enigmas: s.enigmas.map((e: any, i: number) => ({
-      tipo: e.tipo, pergunta: e.pergunta, opcoes: e.opcoes || null,
+      tipo: e.tipo, pergunta: e.pergunta, opcoes: e.opcoes || null, imagem: e.imagem || null, legenda: e.legenda || null,
       resolvido: (reg?.resolvidos || []).includes(i), pista: (reg?.pistas || []).includes(i) ? e.pista : null,
       ...(e.tipo === 'ra' ? { alvo: alvoRA(membroId, s.id, ciclo), codigo: s.codigo_ra } : {}),
     })),
@@ -140,10 +141,37 @@ export function verSala(s: any, reg: any, membroId: string, ciclo: string) {
 }
 export function respostaCerta(s: any, i: number, resposta: unknown) {
   const e = s.enigmas[i]
-  if (!e) return false
+  if (!e || e.tipo === 'foto') return false
   if (e.tipo === 'ra') return norm(resposta) === norm(s.codigo_ra)
   return (e.respostas || []).some((r: string) => norm(r) === norm(resposta))
 }
+/**
+ * Fechadura de foto: a pessoa fotografa algo do mundo real (um gráfico, a fachada de um prédio, uma montra…)
+ * e a IA com visão confirma se a foto cumpre o critério. Grátis primeiro; sem fornecedor com visão, diz para
+ * tentar mais tarde em vez de abrir a fechadura às cegas.
+ */
+export async function verificarFoto(e: any, dataUrl: unknown): Promise<{ ok: boolean; motivo: string; indisponivel?: boolean }> {
+  const m = /^data:(image\/(?:jpeg|png|webp));base64,([A-Za-z0-9+/=]+)$/.exec(String(dataUrl || ''))
+  if (!m) return { ok: false, motivo: 'Não recebi a foto. Tira-a outra vez.' }
+  if (m[2].length > 2_800_000) return { ok: false, motivo: 'A foto é grande demais. Tenta outra vez.' }
+  const imagens: ImagemIA[] = [{ mediaType: m[1] as ImagemIA['mediaType'], dataBase64: m[2] }]
+  const pedido = {
+    tarefa: 'missao-escape-foto', prioridade: 'interativo' as const, json: true, maxTokens: 200, temperatura: 0, timeoutMs: 20_000, imagens,
+    sistema: 'És o guardião de um escape room educativo numa app portuguesa. Verificas se a foto enviada cumpre um critério. '
+      + 'Sê justo e tolerante com fotos tiradas ao telemóvel (tortas, com reflexos, de ecrãs), mas recusa fotos que não mostram o que se pede, '
+      + 'imagens em branco, capturas sem relação ou fotos com pessoas em primeiro plano. Responde só JSON: {"ok": true|false, "motivo": "uma frase curta em português de Portugal, a tratar por tu"}.',
+    mensagens: [{ role: 'user' as const, content: `Critério: ${e.criterio}\nA foto cumpre o critério?` }],
+  }
+  let texto = ''
+  try { texto = (await chamarIAGratis(pedido)).texto } catch {
+    try { texto = (await chamarIA(pedido)).texto } catch { return { ok: false, indisponivel: true, motivo: 'O guardião não consegue ver fotos agora. Tenta daqui a uns minutos.' } }
+  }
+  try {
+    const j = JSON.parse(texto)
+    return { ok: j.ok === true, motivo: String(j.motivo || (j.ok ? 'Foto aceite.' : 'Esta foto não mostra o que se pede.')).slice(0, 200) }
+  } catch { return { ok: false, motivo: 'Não percebi a foto. Tenta com mais luz e mais perto.' } }
+}
+
 export function xpEscape(s: any, reg: any, classeId: string, nivel: number) {
   const pistas = (reg.pistas || []).length - (PISTA_GRATIS.has(classeId) && nivel >= 7 && (reg.pistas || []).length ? 1 : 0)
   const seg = Math.round((Date.now() - Date.parse(reg.inicio)) / 1000)

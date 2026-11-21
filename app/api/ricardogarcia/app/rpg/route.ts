@@ -7,11 +7,11 @@ import { eSuperAdmin } from '@/lib/super-admin-regras'
 import { awardXp } from '@/lib/xp-service'
 import {
   RPG, ATRS, capitulo, cicloAtual, codigoMesa, d, lerFicha, mod, atributos, bonusKits, progresso, respostaCerta,
-  salaActiva, salasActivas, testar, verFicha, verSala, xpEscape, type Atr,
+  salaActiva, salasActivas, testar, verFicha, verSala, verificarFoto, xpEscape, type Atr,
 } from '@/lib/ricardogarcia/rpg'
 
 export const dynamic = 'force-dynamic'
-export const maxDuration = 30
+export const maxDuration = 60
 
 const t = (v: unknown, n: number) => String(v ?? '').replace(/[\u0000-\u0009\u000b-\u001f]/g, ' ').trim().slice(0, n)
 const erro = (m: string, s = 400) => NextResponse.json({ ok: false, erro: m }, { status: s })
@@ -210,7 +210,12 @@ export async function POST(req: NextRequest) {
     }
     if (accao === 'escape_responder') {
       if (!checkRateLimit('rg-escape:' + m.id, 30, 60_000).allowed) return erro('Muitas tentativas. Respira e pensa.', 429)
-      if (!respostaCerta(sala, i, b?.resposta)) return NextResponse.json({ ok: true, certo: false, sala: verSala(sala, reg, m.id, ciclo) })
+      if (sala.enigmas[i].tipo === 'foto') {
+        if (!checkRateLimit('rg-escape-foto:' + m.id, 12, 3600_000).allowed) return erro('Já enviaste muitas fotos nesta hora. Volta daqui a pouco.', 429)
+        const v = await verificarFoto(sala.enigmas[i], b?.foto)
+        if (v.indisponivel) return erro(v.motivo, 503)
+        if (!v.ok) return NextResponse.json({ ok: true, certo: false, motivo: v.motivo, sala: verSala(sala, reg, m.id, ciclo) })
+      } else if (!respostaCerta(sala, i, b?.resposta)) return NextResponse.json({ ok: true, certo: false, sala: verSala(sala, reg, m.id, ciclo) })
       const resolvidos = [...new Set([...(reg.resolvidos || []), i])]
       const fim = resolvidos.length >= sala.enigmas.length
       let xp = 0, tempo: any = null

@@ -50,7 +50,7 @@
     '.dado{width:120px;height:120px;margin:10px auto;display:grid;place-items:center;font-family:Anton;font-size:56px;color:#111;background:linear-gradient(135deg,var(--ouro2),var(--ouro));clip-path:polygon(50% 0,100% 25%,100% 75%,50% 100%,0 75%,0 25%)}.dado.rola{animation:rpgrola .55s linear infinite}@keyframes rpgrola{to{transform:rotate(360deg)}}',
     '.res{text-align:center}.res .conta{font-size:15px;color:var(--cinza);margin:4px 0}.res .ok{color:var(--verde);font-family:Anton;font-size:28px}.res .ko{color:var(--verm);font-family:Anton;font-size:28px}',
     '.sala{position:relative}.sala .em{font-size:34px}.sala h4{margin:4px 0 2px;font-size:19px}.sala .tag2{position:absolute;top:12px;right:12px;font-size:10px;letter-spacing:1px;text-transform:uppercase;padding:3px 8px;border-radius:999px;background:rgba(30,170,230,.15);color:var(--ciano)}.sala .tag2.sai{background:rgba(255,122,107,.15);color:var(--verm)}',
-    '.enig{margin-bottom:10px}.enig.feito{border-color:rgba(60,207,142,.5)}.enig .p{font-size:15px;line-height:1.45;margin:6px 0 10px}.enig .linha{display:flex;gap:8px}.enig .linha input{flex:1}.enig .linha .btn{width:auto;min-height:46px}.enig .op{display:block;width:100%;text-align:left;margin-bottom:6px;padding:10px 12px;border-radius:12px;border:1px solid var(--linha);background:#0a0d13;color:var(--texto);font:inherit;font-size:14px}',
+    '.enig{margin-bottom:10px}.enig.feito{border-color:rgba(60,207,142,.5)}.enig .p{font-size:15px;line-height:1.45;margin:6px 0 10px}.enig .linha{display:flex;gap:8px}.enig .linha input{flex:1}.enig .linha .btn{width:auto;min-height:46px}.cadeados{display:flex;justify-content:center;gap:8px;font-size:22px;margin:4px 0 10px}.cadeados span{filter:grayscale(1) brightness(.7);transition:filter .3s}.cadeados span.ab{filter:none}.cadeados span.agora{animation:rpgAbre .7s cubic-bezier(.2,1.6,.4,1)}.enig.abriu{animation:rpgBrilho 1.2s ease-out}@keyframes rpgAbre{0%{transform:scale(.4) rotate(-20deg)}60%{transform:scale(1.35) rotate(8deg)}100%{transform:none}}@keyframes rpgBrilho{0%{box-shadow:0 0 0 0 rgba(233,196,106,.8)}100%{box-shadow:0 0 0 18px rgba(233,196,106,0)}}@media (prefers-reduced-motion:reduce){.cadeados span.agora,.enig.abriu{animation:none}}.enig-img{margin:0 0 10px}.enig-img img{display:block;width:100%;border-radius:12px;border:1px solid var(--linha);background:#0a0d13;cursor:zoom-in}.enig-img figcaption{font-size:11px;color:var(--texto-m);margin-top:4px;letter-spacing:.04em}.foto-btn{display:flex;align-items:center;justify-content:center;cursor:pointer}.enig .op{display:block;width:100%;text-align:left;margin-bottom:6px;padding:10px 12px;border-radius:12px;border:1px solid var(--linha);background:#0a0d13;color:var(--texto);font:inherit;font-size:14px}',
     '.relogio{font-family:Anton;font-size:30px;color:var(--ouro2);text-align:center;margin:4px 0 10px}.relogio.fim{color:var(--verm)}',
     '.rank{list-style:none;padding:0;margin:8px 0 0}.rank li{display:flex;justify-content:space-between;padding:7px 0;border-top:1px solid var(--linha);font-size:14px}',
     '.mesa-log{max-height:46vh;overflow:auto;padding:4px 2px;margin:8px 0;display:flex;flex-direction:column;gap:6px}.lg{font-size:14px;line-height:1.4;padding:8px 10px;border-radius:12px;background:#0a0d13;border:1px solid var(--linha)}.lg b{color:var(--ouro2);font-weight:600}.lg.eu{border-color:rgba(30,170,230,.4)}',
@@ -173,7 +173,7 @@
 
   // ── Escape rooms ────────────────────────────────────────────────────────
   function vEscape() {
-    var h = '<p class="texto-m" style="margin-top:0;font-size:14px;color:var(--cinza)">Três salas em rotação: todos os meses entra uma nova e sai a mais antiga. Quatro fechaduras por sala, a última em realidade aumentada. Quanto menos pistas, mais XP.</p>';
+    var h = '<p class="texto-m" style="margin-top:0;font-size:14px;color:var(--cinza)">Quatro salas em rotação: todos os meses entra uma nova e sai a mais antiga. Em cada sala lês gráficos, plantas e anúncios, cumpres uma missão de foto no mundo real e abres a última fechadura em realidade aumentada. Quanto menos pistas, mais XP.</p>';
     h += R.salas.map(function (s) {
       var m = s.meu, est = m && m.fim ? '🎖️ Saíste em ' + mmss(m.segundos) + (m.xp ? ' · +' + m.xp + ' XP' : '') : m ? 'Em curso · ' + s.enigmas.filter(function (e) { return e.resolvido; }).length + ' de ' + s.enigmas.length : s.minutos + ' minutos · ' + s.enigmas.length + ' fechaduras';
       return '<div class="placa sala" style="margin-bottom:10px">' + (s.nova ? '<span class="tag2">Nova este mês</span>' : s.sai ? '<span class="tag2 sai">Sai no fim do mês</span>' : '') + '<div class="em">' + s.emoji + '</div><h4>' + esc(s.titulo) + '</h4><div class="mono">' + esc(s.area) + '</div><p class="texto-m" style="font-size:14px">' + esc(s.historia) + '</p><div class="mono" style="margin-bottom:10px;color:var(--ciano)">' + est + '</div>' +
@@ -189,19 +189,25 @@
   function desenharSala() {
     var s = salaAberta, m = s.meu || {};
     var h = topo(s.area) + '<div class="placa" style="margin-bottom:10px"><div style="font-size:34px">' + s.emoji + '</div><h4 style="margin:4px 0;font-size:20px">' + esc(s.titulo) + '</h4><p class="texto-m" style="font-size:14px;margin:0">' + esc(s.historia) + '</p></div>';
+    var abertas = s.enigmas.filter(function (e) { return e.resolvido; }).length;
+    h += '<div class="cadeados" aria-label="' + abertas + ' de ' + s.enigmas.length + ' fechaduras abertas">' + s.enigmas.map(function (e, i) { return '<span class="' + (e.resolvido ? 'ab' : '') + (i === acabouAbrir ? ' agora' : '') + '">' + (e.resolvido ? '🔓' : '🔒') + '</span>'; }).join('') + '</div>';
     h += '<div class="relogio" id="rRel"></div>';
     h += s.enigmas.map(function (e, i) {
       var corpo;
       if (e.resolvido) corpo = '<div class="mono" style="color:var(--verde)">✓ Fechadura aberta</div>';
       else if (m.fim) corpo = '';
-      else if (e.tipo === 'escolha') corpo = e.opcoes.map(function (o, k) { return '<button type="button" class="op" data-resp="' + i + '" data-v="' + k + '">' + esc(o) + '</button>'; }).join('');
+      else if (e.tipo === 'foto') corpo = '<label class="btn foto-btn">📸 Tirar ou escolher foto<input type="file" accept="image/*" data-foto="' + i + '" hidden></label><div class="mono" id="rFoto' + i + '" style="margin-top:6px;color:var(--texto-m)"></div>';
+      else if (e.tipo === 'escolha' || (e.tipo === 'imagem' && e.opcoes)) corpo = e.opcoes.map(function (o, k) { return '<button type="button" class="op" data-resp="' + i + '" data-v="' + k + '">' + esc(o) + '</button>'; }).join('');
       else if (e.tipo === 'ra') corpo = '<button class="btn" type="button" data-ra="' + i + '">📷 Abrir a câmara (realidade aumentada)</button><div class="linha" style="margin-top:8px"><input id="rIn' + i + '" placeholder="Código" autocomplete="off" autocapitalize="characters"><button class="btn" type="button" data-envia="' + i + '">Abrir</button></div>';
       else corpo = '<div class="linha"><input id="rIn' + i + '" ' + (e.tipo === 'numero' ? 'inputmode="numeric"' : '') + ' placeholder="A tua resposta" autocomplete="off"><button class="btn" type="button" data-envia="' + i + '">Abrir</button></div>';
-      return '<div class="placa enig' + (e.resolvido ? ' feito' : '') + '"><div class="mono">Fechadura ' + (i + 1) + (e.tipo === 'ra' ? ' · RA' : '') + '</div><div class="p">' + esc(e.pergunta) + '</div>' + corpo +
+      var etq = { ra: ' · RA', foto: ' · Foto', imagem: ' · Lê a imagem' }[e.tipo] || '';
+      var img = e.imagem ? '<figure class="enig-img"><img src="' + esc(e.imagem) + '" alt="' + esc(e.legenda || 'Imagem do enigma') + '" loading="lazy" data-zoom="' + esc(e.imagem) + '"><figcaption>' + esc(e.legenda || 'Imagem ilustrativa') + ' · toca para ampliar</figcaption></figure>' : '';
+      return '<div class="placa enig' + (e.resolvido ? ' feito' : '') + (i === acabouAbrir ? ' abriu' : '') + '" id="rEnig' + i + '"><div class="mono">Fechadura ' + (i + 1) + etq + '</div><div class="p">' + esc(e.pergunta) + '</div>' + img + corpo +
         (e.pista ? '<div class="licao" style="margin:8px 0 0">💡 ' + esc(e.pista) + '</div>' : (!e.resolvido && !m.fim ? '<button type="button" class="btn sec" style="margin-top:8px;min-height:38px;font-size:12px" data-pista="' + i + '">Pedir pista (−10 XP)</button>' : '')) + '</div>';
     }).join('');
     if (m.fim) h += '<div class="placa" style="text-align:center"><div style="font-size:40px">🎖️</div><b>Saíste da sala em ' + mmss(m.segundos) + '</b><p class="texto-m" style="font-size:14px">' + (m.xp ? '+' + m.xp + ' XP. ' : '') + 'Volta no próximo mês: entra uma sala nova.</p></div>';
     raiz.innerHTML = h;
+    if (acabouAbrir != null) { var ab = document.getElementById('rEnig' + acabouAbrir); acabouAbrir = null; if (ab && ab.scrollIntoView) ab.scrollIntoView({ block: 'center', behavior: 'smooth' }); }
     var rel = document.getElementById('rRel');
     function tic() {
       if (!rel) return;
@@ -212,12 +218,21 @@
     }
     tic(); relogio = setInterval(tic, 1000);
   }
+  var acabouAbrir = null;
   function responder(i, v) {
     pedir({ accao: 'escape_responder', sala: salaAberta.id, i: i, resposta: v }).then(function (r) {
       if (!r.ok) { toast(esc(r.erro)); return; }
+      tratarResposta(r);
+    });
+  }
+  function tratarResposta(r) {
+    {
+      var antes = (salaAberta && salaAberta.enigmas || []).map(function (e) { return e.resolvido; });
       salaAberta = r.sala;
-      if (!r.certo) { toast('Não é isso. Tenta outra vez.'); try { navigator.vibrate && navigator.vibrate([40, 40, 40]); } catch (_) {} return; }
+      if (!r.certo) { toast(r.motivo ? esc(r.motivo) : 'Não é isso. Tenta outra vez.'); try { navigator.vibrate && navigator.vibrate([40, 40, 40]); } catch (_) {} return; }
       M.som('plim');
+      for (var k = 0; k < r.sala.enigmas.length; k++) if (r.sala.enigmas[k].resolvido && !(antes[k])) acabouAbrir = k;
+      try { navigator.vibrate && navigator.vibrate([20, 30, 60]); } catch (_) {}
       if (r.fim) {
         M.confete(220); M.som('militar'); M.recarregar();
         modal('<div style="text-align:center"><div style="font-size:54px">🗝️</div><h2>Saíste!</h2><p class="texto-m" style="font-size:16px">' + mmss(r.tempo.seg) + (r.tempo.noTempo ? ' · dentro do tempo' : ' · fora do tempo') + (r.ganho.xp ? '<br><b style="color:var(--ouro2)">+' + r.ganho.xp + ' XP</b>' : '') + '</p>' +
@@ -225,8 +240,38 @@
         pedir().then(function (x) { if (x.ok) R = x; });
       } else toast('<b>Fechadura aberta.</b>');
       desenharSala();
+    }
+  }
+
+  // ── Fechadura de foto: reduz no telemóvel (máx. 1024 px, JPEG) e o guardião (IA) confirma ──
+  function reduzirFoto(file) {
+    return new Promise(function (ok, ko) {
+      var url = URL.createObjectURL(file), im = new Image();
+      im.onload = function () {
+        var k = Math.min(1, 1024 / Math.max(im.naturalWidth, im.naturalHeight)), c = document.createElement('canvas');
+        c.width = Math.round(im.naturalWidth * k); c.height = Math.round(im.naturalHeight * k);
+        c.getContext('2d').drawImage(im, 0, 0, c.width, c.height); URL.revokeObjectURL(url);
+        ok(c.toDataURL('image/jpeg', 0.8));
+      };
+      im.onerror = function () { URL.revokeObjectURL(url); ko(new Error('foto')); };
+      im.src = url;
     });
   }
+  function enviarFoto(i, file) {
+    var st = document.getElementById('rFoto' + i);
+    if (!file) return;
+    if (st) st.textContent = 'A preparar a foto…';
+    reduzirFoto(file).then(function (dataUrl) {
+      if (st) st.innerHTML = '<img src="' + dataUrl + '" alt="" style="max-height:90px;border-radius:8px;vertical-align:middle;margin-right:8px">O guardião está a ver a foto…';
+      return pedir({ accao: 'escape_responder', sala: salaAberta.id, i: i, foto: dataUrl });
+    }).then(function (r) {
+      if (!r) return;
+      if (!r.ok) { if (st) st.textContent = ''; toast(esc(r.erro)); return; }
+      if (!r.certo && st) st.textContent = '✗ ' + (r.motivo || 'Esta foto não serve. Tenta outra.');
+      tratarResposta(r);
+    }).catch(function () { if (st) st.textContent = ''; toast('Não consegui ler essa foto. Tenta outra.'); });
+  }
+  function zoomImagem(src) { modal('<img src="' + esc(src) + '" alt="" style="width:100%;border-radius:12px;background:#0a0d13">'); }
 
   // ── Realidade aumentada: encontra o objeto dourado à tua volta ─────────
   var RA = null;
@@ -402,11 +447,16 @@
   }
   function imprimirKit() {
     imprimir('<h1>Kit de escape · Operação Liberdade</h1><p>Para jogar em grupo, à mesa. Um de vocês é o guardião: tem a app aberta e confirma as respostas. Cortem as cartas e escondam-nas pela sala. Cada carta abre uma fechadura.</p>' +
-      R.salas.map(function (s) { return '<h2>' + esc(s.titulo) + ' · ' + esc(s.area) + '</h2><p><i>' + esc(s.historia) + '</i></p>' + s.enigmas.filter(function (e) { return e.tipo !== 'ra'; }).map(function (e, i) { return '<div class="carta"><small>Fechadura ' + (i + 1) + '</small><p style="font-size:18px">' + esc(e.pergunta) + '</p>' + (e.opcoes ? '<ol type="A">' + e.opcoes.map(function (o) { return '<li>' + esc(o) + '</li>'; }).join('') + '</ol>' : '') + '<p>Resposta: ____________</p></div>'; }).join('') + '<div class="carta"><small>Fechadura final</small><p>Abram a app no telemóvel e encontrem o objeto dourado com a câmara.</p></div>'; }).join(''));
+      R.salas.map(function (s) { return '<h2>' + esc(s.titulo) + ' · ' + esc(s.area) + '</h2><p><i>' + esc(s.historia) + '</i></p>' + s.enigmas.filter(function (e) { return e.tipo !== 'ra'; }).map(function (e, i) { return '<div class="carta"><small>Fechadura ' + (i + 1) + (e.tipo === 'foto' ? ' · missão de foto (o guardião valida na app)' : '') + '</small><p style="font-size:18px">' + esc(e.pergunta) + '</p>' + (e.imagem ? '<img src="' + location.origin + esc(e.imagem) + '" style="width:100%;max-height:260px;object-fit:contain">' : '') + (e.opcoes ? '<ol type="A">' + e.opcoes.map(function (o) { return '<li>' + esc(o) + '</li>'; }).join('') + '</ol>' : '') + '<p>Resposta: ____________</p></div>'; }).join('') + '<div class="carta"><small>Fechadura final</small><p>Abram a app no telemóvel e encontrem o objeto dourado com a câmara.</p></div>'; }).join(''));
   }
 
   // ── Toques ──────────────────────────────────────────────────────────────
+  raiz.addEventListener('change', function (ev) {
+    var a = ev.target.getAttribute && ev.target.getAttribute('data-foto');
+    if (a != null && ev.target.files && ev.target.files[0]) { enviarFoto(+a, ev.target.files[0]); ev.target.value = ''; }
+  });
   raiz.addEventListener('click', function (ev) {
+    var z = ev.target.closest('[data-zoom]'); if (z && raiz.contains(z)) { zoomImagem(z.getAttribute('data-zoom')); return; }
     var b = ev.target.closest('button, .atr'); if (!b || !raiz.contains(b)) return;
     var a;
     if ((a = b.getAttribute('data-aba'))) { aba = a; desenhar(); return; }
