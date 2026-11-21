@@ -2,7 +2,8 @@
  * REELS CINEMÁTICOS DIÁRIOS (20/11/2026, ordem do Ricardo): todo o reel do dia, nas duas marcas,
  * sai no molde AnuncioReel aprovado — gémeo HeyGen por baixo, edição completa por cima.
  *
- * Todos os dias o robô (.github/workflows/reels-cinematicos.yml, 1.ª ronda das 05:20 UTC) chama
+ * Todos os dias o cron da Vercel (05:05 UTC, vercel.json) e o robô (.github/workflows/reels-cinematicos.yml,
+ * cujos horários do GitHub chegam a atrasar horas) chamam
  * `pedirDoDia`: escolhe os próximos guiões ainda não feitos de `conteudo_magnetico_pecas` (os que os
  * agentes escrevem e aparecem no /estudio) e pede o clone à HeyGen. Quando a HeyGen acaba nasce o
  * projecto cinemático, o robô monta-o e o reel fica em RASCUNHO à espera do «Publicar» do Ricardo
