@@ -17,7 +17,22 @@ export const EBOOKS = {
   'a-primeira-chave': { titulo: 'A Primeira Chave', autor: 'Ruben Pereira' },
   'so-as-maos': { titulo: 'Só as Mãos', autor: 'Maria Costa' },
   'o-metodo-frio': { titulo: 'O Método Frio', autor: 'Ricardo Garcia' },
+  // versões traduzidas (mesmo livro, outra língua; conteudo-privado/ebooks/<slug>-en|es/)
+  'destrui-tudo-e-ainda-bem-en': { titulo: "I Destroyed It All. And I'm Glad.", autor: 'Ricardo Garcia' },
+  'destrui-tudo-e-ainda-bem-es': { titulo: 'Lo Destruí Todo. Y Menos Mal.', autor: 'Ricardo Garcia' },
+  'o-metodo-frio-en': { titulo: 'The Cold Method', autor: 'Ricardo Garcia' },
+  'o-metodo-frio-es': { titulo: 'El Método Frío', autor: 'Ricardo Garcia' },
+  'a-primeira-chave-en': { titulo: 'The First Key', autor: 'Ruben Pereira' },
+  'a-primeira-chave-es': { titulo: 'La Primera Llave', autor: 'Ruben Pereira' },
+  'so-as-maos-en': { titulo: 'Just the Hands', autor: 'Maria Costa' },
+  'so-as-maos-es': { titulo: 'Solo las Manos', autor: 'Maria Costa' },
 } as const
+export type LinguaEbook = 'pt' | 'en' | 'es'
+/** 'o-metodo-frio-en' → { base: 'o-metodo-frio', lingua: 'en' } */
+export function partesEbook(slug: string): { base: string; lingua: LinguaEbook } {
+  const m = slug.match(/^(.*)-(en|es)$/)
+  return m ? { base: m[1], lingua: m[2] as LinguaEbook } : { base: slug, lingua: 'pt' }
+}
 export type SlugEbook = keyof typeof EBOOKS
 export const ehEbook = (s: string): s is SlugEbook => Object.prototype.hasOwnProperty.call(EBOOKS, s)
 

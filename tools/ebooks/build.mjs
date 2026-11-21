@@ -12,6 +12,7 @@ import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { mdParaHtml, inline } from './md.mjs'
 import { LIVROS } from './livros.mjs'
+import { UI, traduzirSvg } from './i18n.mjs'
 
 const AQUI = path.dirname(fileURLToPath(import.meta.url))
 const RAIZ = path.resolve(AQUI, '../..')
@@ -32,7 +33,8 @@ const imgSeguro = (f) => {
 // ── marca da coleção (MTM por omissão; o livro da Maria sai com a marca She Is) ──
 const MARCA_MTM = { logo: 'mtm.png', nome: 'MoreThanMoney', url: 'morethanmoney.pt', colecao: 'Coleção MTM', copyright: 'MoreThanMoney',
   fecho: 'Continua o caminho com a comunidade MoreThanMoney: aulas ao vivo, ferramentas e pessoas que estão a fazer o mesmo percurso.' }
-const marcaDe = (livro) => ({ ...MARCA_MTM, ...(livro.marca || {}) })
+const ui = (livro) => UI[livro.lingua || 'pt']
+const marcaDe = (livro) => ({ ...MARCA_MTM, colecao: ui(livro).colecao, fecho: ui(livro).fechoMtm, ...(livro.marca || {}) })
 
 // ── temas ───────────────────────────────────────────────────────────────────────
 const TEMAS = {
@@ -85,7 +87,7 @@ function arteCapa(livro) {
   return `<svg class="arte" viewBox="0 0 640 560" aria-hidden="true" fill="none" stroke="#f7ece6" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round">
     <rect x="250" y="120" width="150" height="290" rx="26" stroke="#d9a5a0" stroke-width="4"/>
     <rect x="266" y="150" width="118" height="44" rx="12" fill="#b5737e" stroke="none" class="notif"/>
-    <text x="325" y="178" fill="#fbf6f1" stroke="none" font-family="DMSans" font-size="15" text-anchor="middle" font-weight="700">Nova venda ♥</text>
+    <text x="325" y="178" fill="#fbf6f1" stroke="none" font-family="DMSans" font-size="15" text-anchor="middle" font-weight="700">${ui(livro).novaVenda}</text>
     <path class="traco" d="M120,520 C150,430 170,380 215,350 C235,336 250,330 262,318 C270,300 262,282 246,286 C230,290 214,316 196,330 M215,350 C230,300 245,260 262,240 C272,228 286,236 280,252 L262,300" />
     <path class="traco" d="M530,520 C500,430 480,384 440,356 C420,342 404,332 392,320 C384,300 394,284 410,290 C428,296 440,318 458,332 M392,250 C404,236 420,240 414,258 L398,300 M398,214 C410,200 428,206 420,226 L400,270" />
     <circle cx="325" cy="380" r="9" stroke="#d9a5a0"/>
@@ -98,7 +100,7 @@ function decoCapa(livro) {
     // escala de termómetro a ouro: o «frio» medido, grau a grau
     let r = ''
     for (let k = 0; k <= 20; k++) r += `<path d="M${k % 5 ? 14 : 0},${10 + k * 14} H30" stroke="#E9C46A" stroke-width="${k % 5 ? 1 : 2}" opacity="${k % 5 ? .55 : .95}"/>`
-    return `<svg class="capa-deco" viewBox="0 0 40 300" aria-hidden="true">${r}<text x="34" y="24" fill="#E9C46A" style="font:600 9px var(--sub);letter-spacing:.1em" transform="rotate(90 34 24)">SEM IMPULSO</text></svg>`
+    return `<svg class="capa-deco" viewBox="0 0 40 300" aria-hidden="true">${r}<text x="34" y="24" fill="#E9C46A" style="font:600 9px var(--sub);letter-spacing:.1em" transform="rotate(90 34 24)">${ui(livro).semImpulso}</text></svg>`
   }
   if (livro.tema === 'rg') {
     // fratura a ouro que atravessa o título: o «destruí» desenhado
@@ -114,7 +116,7 @@ function decoCapa(livro) {
 }
 function carimbo(livro) {
   const chave = livro.variante || livro.tema
-  const t = { rg: ['Disciplina · Dinheiro · Mercados ·', '10', 'semanas'], frio: ['Forex · MetaTrader 5 · Sem impulso ·', '1 %', 'por operação'], cripto: ['Cripto para iniciantes · Sem hype ·', '1.º', 'euro'], faceless: ['Vender sem mostrar a cara · Só as mãos ·', '30', 'dias'] }[chave]
+  const t = ui(livro).carimbo[chave]
   const cor = { rg: '#E9C46A', frio: '#E9C46A', cripto: '#F3CF73', faceless: '#E6D3B5' }[chave]
   return `<svg class="capa-carimbo" viewBox="0 0 120 120" aria-hidden="true"><defs><path id="circ-${livro.tema}" d="M60,60 m-47,0 a47,47 0 1,1 94,0 a47,47 0 1,1 -94,0"/></defs>
     <circle cx="60" cy="60" r="58" fill="rgba(10,9,8,.55)" stroke="${cor}" stroke-width="1"/><circle cx="60" cy="60" r="36" fill="none" stroke="${cor}" stroke-width=".6" opacity=".6"/>
@@ -130,17 +132,17 @@ function montarHtml(slug, livro, capitulos) {
   const caps = capitulos.map((c, i) => {
     const md = fs.readFileSync(c, 'utf8')
     const linhas = md.split('\n')
-    const t = (linhas.find((l) => l.startsWith('# ')) || '# Capítulo').replace(/^#\s+/, '')
+    const t = (linhas.find((l) => l.startsWith('# ')) || '# ' + ui(livro).capitulo).replace(/^#\s+/, '')
     const resto = linhas.slice(linhas.findIndex((l) => l.startsWith('# ')) + 1)
     let epigrafe = ''
     const k = resto.findIndex((l) => l.trim())
     if (k >= 0 && resto[k].trim().startsWith('>')) { epigrafe = resto[k].trim().replace(/^>\s?/, ''); resto.splice(k, 1) }
     const num = path.basename(c).slice(0, 2)
-    return { id: `cap-${num}`, num, titulo: t, epigrafe, html: mdParaHtml(resto.join('\n'), { avisos, img: imgSeguro, academia: livro.academia }) }
+    return { id: `cap-${num}`, num, titulo: t, epigrafe, html: mdParaHtml(resto.join('\n'), { avisos, img: imgSeguro, academia: livro.academia, lingua: livro.lingua || 'pt' }) }
   })
   if (avisos.length) console.warn(slug, avisos)
 
-  const numero = (n) => (n === '00' ? '00' : n === String(capitulos.length - 1).padStart(2, '0') && /plano/i.test(caps.at(-1).titulo) ? 'Anexo' : String(Number(n)))
+  const numero = (n) => (n === '00' ? '00' : n === String(capitulos.length - 1).padStart(2, '0') && /plano/i.test(caps.at(-1).titulo) ? ui(livro).anexo : String(Number(n)))
   const capaHtml = `
   <section class="pagina capa" id="capa">
     <div class="capa-3d"><div class="capa-face">
@@ -150,10 +152,10 @@ function montarHtml(slug, livro, capitulos) {
       <div class="capa-topo"><span class="capa-autor">${livro.autor}</span><i class="capa-regua"></i>${livro.funcao ? `<span class="capa-funcao">${livro.funcao}</span>` : ''}</div>
       ${carimbo(livro)}
       <div class="capa-bloco">
-        <h1 class="capa-titulo"><span>${livro.titulo}</span><em>${livro.titulo2}</em></h1>
+        <h1 class="capa-titulo"><span>${livro.titulo}</span><em${livro.tamTitulo2 ? ` style="font-size:${livro.tamTitulo2}"` : ''}>${livro.titulo2}</em></h1>
         <p class="capa-sub">${livro.subtitulo}</p>
       </div>
-      <div class="capa-rodape"><img src="${img(marcaDe(livro).logo)}" alt=""><span>${marcaDe(livro).nome}</span><i></i><span>${marcaDe(livro).colecao} · 1.ª edição</span></div>
+      <div class="capa-rodape"><img src="${img(marcaDe(livro).logo)}" alt=""><span>${marcaDe(livro).nome}</span><i></i><span>${marcaDe(livro).colecao} · ${ui(livro).edicao1}</span></div>
     </div></div>
   </section>`
 
@@ -169,24 +171,24 @@ function montarHtml(slug, livro, capitulos) {
   <section class="pagina ficha">
     <div class="ficha-in">
       <p><strong>${livro.titulo} ${livro.titulo2}</strong><br>${livro.subtitulo}</p>
-      <p>© 2026 ${livro.autor} e ${marcaDe(livro).copyright}. Todos os direitos reservados. Esta cópia é pessoal e intransmissível: não a partilhes nem a revendas.</p>
+      <p>${ui(livro).direitos(livro.autor, marcaDe(livro).copyright)}</p>
       <p>${livro.edicao}</p>
-      <p class="ficha-ed"><strong>Edição produzida por MoreThanMoney.pt</strong> · ${marcaDe(livro).colecao} · www.${marcaDe(livro).url}</p>
-      <p class="ficha-aviso"><strong>Aviso importante.</strong> ${livro.aviso}</p>
+      <p class="ficha-ed"><strong>${ui(livro).produzida}</strong> · ${marcaDe(livro).colecao} · www.${marcaDe(livro).url}</p>
+      <p class="ficha-aviso"><strong>${ui(livro).aviso}</strong> ${livro.aviso}</p>
       ${livro.fotoInterior ? `<img class="ficha-foto" src="${img(livro.fotoInterior)}" alt="">` : ''}
-      <p class="ficha-bio"><strong>Sobre o autor.</strong> ${livro.autorBio}</p>
+      <p class="ficha-bio"><strong>${ui(livro).sobre}</strong> ${livro.autorBio}</p>
     </div>
   </section>`
 
   const indice = `
   <section class="pagina indice" id="indice">
-    <h2 class="indice-t">Índice</h2>
+    <h2 class="indice-t">${ui(livro).indice}</h2>
     <ol class="indice-l">${caps.map((c) => `<li><a href="#${c.id}"><span class="i-n">${numero(c.num)}</span><span class="i-t">${inline(c.titulo)}</span></a></li>`).join('')}</ol>
   </section>`
 
   const corpo = caps.map((c) => `
-  <section class="abertura pagina${livro.aberturas?.[Number(c.num)] ? ' com-foto' : (livro.semIlustra?.includes(Number(c.num)) ? '' : ilustracao(livro.variante || livro.tema, Number(c.num))) ? ' com-ilustra' : ''}" id="${c.id}">
-    ${livro.aberturas?.[Number(c.num)] ? `<img class="ab-foto" src="${imgSeguro(livro.aberturas[Number(c.num)])}" alt="">` : `<div class="ab-ilustra">${(livro.semIlustra?.includes(Number(c.num)) ? '' : ilustracao(livro.variante || livro.tema, Number(c.num)))}</div>`}
+  <section class="abertura pagina${livro.aberturas?.[Number(c.num)] ? ' com-foto' : (livro.semIlustra?.includes(Number(c.num)) ? '' : traduzirSvg(ilustracao(livro.variante || livro.tema, Number(c.num)), livro.lingua)) ? ' com-ilustra' : ''}" id="${c.id}">
+    ${livro.aberturas?.[Number(c.num)] ? `<img class="ab-foto" src="${imgSeguro(livro.aberturas[Number(c.num)])}" alt="">` : `<div class="ab-ilustra">${(livro.semIlustra?.includes(Number(c.num)) ? '' : traduzirSvg(ilustracao(livro.variante || livro.tema, Number(c.num)), livro.lingua))}</div>`}
     <div class="ab-num">${numero(c.num)}</div>
     <h2 class="ab-titulo">${inline(c.titulo)}</h2>
     ${c.epigrafe ? `<p class="ab-epigrafe">${inline(c.epigrafe)}</p>` : ''}
@@ -197,18 +199,18 @@ function montarHtml(slug, livro, capitulos) {
   const fecho = `
   <section class="pagina fecho">
     <div class="fecho-in">
-      <p class="fecho-mao">Obrigado por leres até aqui.</p>
+      <p class="fecho-mao">${ui(livro).obrigado}</p>
       <p>${marcaDe(livro).fecho}</p>
       <p class="fecho-url">${marcaDe(livro).url}</p>
       <p class="ficha-aviso">${livro.aviso}</p>
     </div>
   </section>`
 
-  return `<!doctype html><html lang="pt-PT"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+  return `<!doctype html><html lang="${ui(livro).html}"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>${livro.titulo} ${livro.titulo2} — ${livro.autor}</title><meta name="robots" content="noindex,nofollow">
 <style>${tema.fontes()}:root{${tema.vars}}${CSS}</style></head>
 <body class="tema-${livro.tema}${livro.variante ? ' variante-' + livro.variante : ''}">
-<header class="barra"><a href="#capa" class="barra-t">${livro.titulo} ${livro.titulo2}</a><span class="barra-a">${livro.autor}</span><a class="barra-b" href="#indice">Índice</a><a class="barra-b barra-pdf" href="?f=pdf">PDF</a><div class="progresso"><i></i></div></header>
+<header class="barra"><a href="#capa" class="barra-t">${livro.titulo} ${livro.titulo2}</a><span class="barra-a">${livro.autor}</span><a class="barra-b" href="#indice">${ui(livro).indice}</a><a class="barra-b barra-pdf" href="?f=pdf">PDF</a><div class="progresso"><i></i></div></header>
 <main class="livro">${capaHtml}${rosto}${indice}${corpo}${fecho}</main>
 <script>${JS}</script></body></html>`
 }

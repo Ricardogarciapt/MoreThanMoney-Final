@@ -1,6 +1,7 @@
 // Textos das páginas de venda dos e-books (/ebooks/<slug>). Sem promessas de lucro nem números
 // de desempenho; os números que aparecem (páginas, gráficos, exercícios) contam o próprio livro.
 import type { SlugEbook } from './acesso'
+import { VENDAS_TRADUCOES } from './vendas-traducoes'
 
 export type PaginaVenda = {
   slug: SlugEbook
@@ -23,7 +24,8 @@ export type PaginaVenda = {
   aviso: string
 }
 
-export const VENDAS: Record<SlugEbook, PaginaVenda> = {
+type SlugBase = 'destrui-tudo-e-ainda-bem' | 'o-metodo-frio' | 'a-primeira-chave' | 'so-as-maos'
+const VENDAS_PT: Record<SlugBase, PaginaVenda> = {
   'destrui-tudo-e-ainda-bem': {
     slug: 'destrui-tudo-e-ainda-bem', cor: '#D2A63C', cor2: '#E9C46A', fundo: '#0b0b0c', fonteTitulo: 'Anton, Oswald, Impact, sans-serif',
     titulo: 'Destruí Tudo.', titulo2: 'E Ainda Bem.',
@@ -141,4 +143,18 @@ export const VENDAS: Record<SlugEbook, PaginaVenda> = {
     ],
     aviso: 'Os resultados dependem do trabalho e das decisões de cada pessoa; não há rendimentos garantidos.',
   },
+}
+
+// Versões EN/ES: mesmas cores, fontes e foto; textos de vendas-traducoes.ts.
+const traduzida = (base: SlugBase, l: 'en' | 'es'): PaginaVenda => ({ ...VENDAS_PT[base], ...VENDAS_TRADUCOES[base][l], slug: `${base}-${l}` as SlugEbook })
+export const VENDAS: Record<SlugEbook, PaginaVenda> = {
+  ...VENDAS_PT,
+  'destrui-tudo-e-ainda-bem-en': traduzida('destrui-tudo-e-ainda-bem', 'en'),
+  'destrui-tudo-e-ainda-bem-es': traduzida('destrui-tudo-e-ainda-bem', 'es'),
+  'o-metodo-frio-en': traduzida('o-metodo-frio', 'en'),
+  'o-metodo-frio-es': traduzida('o-metodo-frio', 'es'),
+  'a-primeira-chave-en': traduzida('a-primeira-chave', 'en'),
+  'a-primeira-chave-es': traduzida('a-primeira-chave', 'es'),
+  'so-as-maos-en': traduzida('so-as-maos', 'en'),
+  'so-as-maos-es': traduzida('so-as-maos', 'es'),
 }
