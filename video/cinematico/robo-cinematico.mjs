@@ -142,6 +142,9 @@ async function montar({ id, marca, video, cin }) {
     marca, legendas, stock: stockPresente(), apoio,
     guiao: { gancho: cin.gancho, palavra_chave: cin.palavra_chave, nicho: cin.nicho, cta_url: cin.cta_url },
   })
+  // Molde de edição (21/11): vem do projecto; sem ele roda pelo dia (cinema → impacto → documental).
+  const MOLDES = ['cinema', 'impacto', 'documental']
+  config.molde = MOLDES.includes(cin.molde) ? cin.molde : arg('molde') && MOLDES.includes(arg('molde')) ? arg('molde') : MOLDES[Math.floor(Date.now() / 86400000) % 3]
   await capturarDemos(config, stockPresente())
   log('peça', JSON.stringify(config))
   const fim = legendas[legendas.length - 1][1]

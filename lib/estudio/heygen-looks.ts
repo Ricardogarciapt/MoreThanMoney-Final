@@ -57,6 +57,20 @@ export function lookDoPlano(plano: string | null | undefined, avatarEnv?: string
   return { ...(look.tipo === 'twin' && avatarEnv ? { ...look, id: avatarEnv } : look), estilo: p.estilo }
 }
 
+/**
+ * Três looks a rodar por dia (21/11/2026, Ricardo: «podes fazer também os três looks do gémeo»).
+ * A API v3 faz um look por vídeo, por isso o reel inteiro vai no look do dia: retrato → podcast →
+ * trader na secretária → retrato… Cenários bem diferentes para o feed não parecer sempre o mesmo.
+ * Quando houver looks novos (gravações de 23/11), troca-se aqui.
+ */
+export const LOOKS_DO_DIA: NomeLook[] = ['retrato', 'podcastV', 'traderV']
+
+export function lookDoDia(d: Date = new Date(), avatarEnv?: string | null): Look & { estilo: 'normal' | 'closeUp' | 'circle' } {
+  const n = Math.floor(d.getTime() / 86_400_000)
+  const look: Look = LOOKS[LOOKS_DO_DIA[n % LOOKS_DO_DIA.length]]
+  return { ...(look.tipo === 'twin' && avatarEnv ? { ...look, id: avatarEnv } : look), estilo: 'normal' }
+}
+
 /** Personagem no formato da API v2 (/v2/video/generate). */
 export function personagem(look: Look & { estilo?: 'normal' | 'closeUp' | 'circle' }) {
   const estilo = look.estilo || 'normal'

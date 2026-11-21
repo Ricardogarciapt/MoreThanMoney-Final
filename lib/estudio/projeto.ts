@@ -126,6 +126,23 @@ export type Cinematico = {
   /** Imagens/vídeos de apoio do guião (https), pela ordem dos segmentos; entram em PiP. */
   apoio: string[]
   cta_url: string
+  /**
+   * Molde de edição (21/11/2026, Ricardo: «deves ter 3 modelos»). O mesmo gémeo reaproveitado
+   * noutra conta sai noutro molde, para não parecer repetido:
+   *  cinema     — gémeo a ecrã inteiro que encolhe para janela sobre as imagens (o aprovado a 20/11)
+   *  impacto    — ecrã dividido: imagens em cima, gémeo em baixo; legendas grandes ao centro
+   *  documental — barras de cinema, imagens a ecrã inteiro em corte (a voz continua), legenda discreta
+   */
+  molde?: MoldeEdicao
+}
+
+export const MOLDES_EDICAO = ['cinema', 'impacto', 'documental'] as const
+export type MoldeEdicao = (typeof MOLDES_EDICAO)[number]
+
+/** Molde do dia: roda pelos três; desvio 1 dá o molde seguinte (versão reaproveitada na outra conta). */
+export function moldeDoDia(d: Date = new Date(), desvio = 0): MoldeEdicao {
+  const n = Math.floor(d.getTime() / 86_400_000) + desvio
+  return MOLDES_EDICAO[((n % 3) + 3) % 3]
 }
 
 export function normalizarCinematico(v: any): Cinematico | null {
@@ -138,6 +155,7 @@ export function normalizarCinematico(v: any): Cinematico | null {
     texto: txt(v.texto, 1500).trim(),
     apoio: (Array.isArray(v.apoio) ? v.apoio : []).filter((u: unknown) => typeof u === 'string' && /^https:\/\//.test(u)).slice(0, 4),
     cta_url: txt(v.cta_url, 80).trim(),
+    ...((MOLDES_EDICAO as readonly string[]).includes(v.molde) ? { molde: v.molde as MoldeEdicao } : {}),
   }
 }
 
