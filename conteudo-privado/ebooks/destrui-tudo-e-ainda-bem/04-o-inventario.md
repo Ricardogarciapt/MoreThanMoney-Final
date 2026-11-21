@@ -12,6 +12,8 @@ Quando uma vida começa a ruir, a tentação é simples: fazer uma lista do que 
 
 A regra é esta: antes de decidir o que demolir, precisas de saber o que existe, o que aguenta peso e o que está a ceder. Um inventário dá-te essa visão. Sem ele, qualquer decisão é um palpite com boa intenção.
 
+[[foto: rg-grade.jpg | Às vezes o inventário faz-se a olhar para fora, antes de olhar para dentro. | larga]]
+
 ## As quatro colunas
 
 Divido a vida em quatro colunas. Não são as únicas possíveis, mas são as que me deram mais clareza, e são as que vou usar no resto do livro:
@@ -50,6 +52,12 @@ Cada coluna tem perguntas próprias. Não as respondas de uma vez. Vai ao longo 
 - De quem dependes para tarefas concretas, e quem depende de ti?
 - Que relação estás a manter por obrigação e não por escolha?
 
+:::cartao Manter · Reparar · Demolir
+- **Manter**: funciona e dá-me mais do que me tira.
+- **Reparar**: serve, mas está a falhar num ponto que consigo corrigir.
+- **Demolir**: tira mais do que dá e não há reparação que chegue.
+:::
+
 ## Manter, reparar ou demolir
 
 Quando terminares o inventário, cada item cai em uma de três categorias. Esta é a parte que dá nome ao capítulo.
@@ -64,6 +72,13 @@ A dificuldade está quase sempre na terceira coluna. É fácil reparar. É difí
 
 :::destaque
 Demolir é a última opção, não a primeira. A maioria das coisas que pedem demolição precisa, afinal, de uma reparação séria e de tempo.
+:::
+
+:::nota
+Coisas que demoli primeiro:
+• Subscrições que já nem abria
+• Uma hora de redes sociais à noite
+• O «depois vejo isso» nas contas
 :::
 
 ## A demolição não é um ataque
@@ -85,19 +100,19 @@ Caso ilustrativo. O Tiago tinha três cartões de crédito, uma relação de ami
 :::exercicio O inventário das quatro colunas
 Faz o exercício em dois ou três dias. Não o despaches numa tarde.
 
-**Passo 1 — Dinheiro.** Responde às quatro perguntas da coluna. Escreve números, mesmo aproximados. Se não sabes, escreve «não sei» e marca isso para descobrir até ao fim da semana.
+**Passo 1. Dinheiro.** Responde às quatro perguntas da coluna. Escreve números, mesmo aproximados. Se não sabes, escreve «não sei» e marca isso para descobrir até ao fim da semana.
 
-**Passo 2 — Energia.** Responde às quatro perguntas. Acrescenta uma linha com a tua média de horas de sono nos últimos sete dias.
+**Passo 2. Energia.** Responde às quatro perguntas. Acrescenta uma linha com a tua média de horas de sono nos últimos sete dias.
 
-**Passo 3 — Tempo.** Responde às três perguntas. Usa a tabela do capítulo anterior como ponto de partida.
+**Passo 3. Tempo.** Responde às três perguntas. Usa a tabela do capítulo anterior como ponto de partida.
 
-**Passo 4 — Relações.** Responde às quatro perguntas. Escreve os nomes das pessoas com quem te cruzas todas as semanas e, ao lado de cada nome, um sinal: + (acrescenta), = (neutro) ou − (desgasta).
+**Passo 4. Relações.** Responde às quatro perguntas. Escreve os nomes das pessoas com quem te cruzas todas as semanas e, ao lado de cada nome, um sinal: + (acrescenta), = (neutro) ou − (desgasta).
 
-**Passo 5 — Classificação.** Para cada item que escreveste nos passos anteriores, escolhe uma categoria: manter, reparar ou demolir. Não podes deixar nenhum sem classificação.
+**Passo 5. Classificação.** Para cada item que escreveste nos passos anteriores, escolhe uma categoria: manter, reparar ou demolir. Não podes deixar nenhum sem classificação.
 
-**Passo 6 — Primeira reparação.** Escolhe o item marcado como «reparar» mais fácil de tratar esta semana. Escreve o que vais fazer, em que dia e a que hora.
+**Passo 6. Primeira reparação.** Escolhe o item marcado como «reparar» mais fácil de tratar esta semana. Escreve o que vais fazer, em que dia e a que hora.
 
-**Passo 7 — Primeira demolição controlada.** Se tens algum item marcado como «demolir», escreve o primeiro passo mínimo para o desmontar sem colapsos. Não o executes ainda. Apenas o escreves.
+**Passo 7. Primeira demolição controlada.** Se tens algum item marcado como «demolir», escreve o primeiro passo mínimo para o desmontar sem colapsos. Não o executes ainda. Apenas o escreves.
 
 Coluna do dinheiro (resumo):
 ______________________________________________________________
@@ -116,6 +131,11 @@ ______________________________________________________________
 
 Primeiro passo mínimo de uma demolição controlada:
 ______________________________________________________________
+:::
+
+:::story
+Se tivesses de demolir uma coisa esta semana, o que seria?
+sticker: Responde aqui
 :::
 
 ## Em resumo

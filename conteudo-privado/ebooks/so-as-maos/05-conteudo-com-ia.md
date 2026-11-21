@@ -1,9 +1,14 @@
 # Conteúdo com IA
 > A IA escreve rascunhos. Quem decide o que é verdade, e o que soa a ti, és tu.
 
-Há dois tipos de pessoas perante a inteligência artificial. Umas acham que vai fazer tudo sozinha e que basta carregar num botão. Outras têm medo de qualquer ferramenta nova e recusam-se a experimentar. As duas posições são pouco úteis para quem quer vender sem aparecer.
+Há quem ache que a IA vai fazer tudo sozinha e que basta carregar num botão. Há quem tenha medo de qualquer ferramenta nova e recuse experimentar. As duas posições são pouco úteis para quem quer vender sem aparecer.
 
-Neste capítulo vou mostrar-te uma forma sensata de usar a IA no conteúdo: como assistente, com um fluxo claro e com revisão humana em cada passo. A IA ajuda-te a pensar mais depressa. Não pensa por ti.
+:::post @maria.vendersemaparecer
+foto: maria-reel-studio.jpg
+legenda: Um rascunho com ajuda da IA, revisto à mão e gravado na mesa de sempre. A ferramenta encurtou o caminho. O resto foi trabalho meu.
+:::
+
+Neste capítulo mostro-te uma forma sensata de usar a IA no conteúdo: como assistente, com um fluxo claro e com revisão humana em cada passo. A IA ajuda-te a pensar mais depressa. Não pensa por ti.
 
 ## A IA como assistente, não como autora
 
@@ -17,7 +22,11 @@ Na prática, isto quer dizer que:
 - Quando a IA te sugere algo que soa a promessa, reescreves a frase para algo verdadeiro e prudente.
 
 :::alerta
-Nunca publiques testemunhos, resultados ou números que a IA inventou. Se não aconteceu, não existe. Isto é a forma mais rápida de perderes a confiança de quem te segue e pode trazer problemas legais, sobretudo em publicidade e em práticas comerciais.
+Nunca publiques testemunhos, resultados ou números que a IA inventou. Se não aconteceu, não existe. É a forma mais rápida de perderes a confiança de quem te segue, e pode trazer problemas legais, sobretudo em publicidade e em práticas comerciais.
+:::
+
+:::nota
+Hoje: escreve numa frase o que a IA não pode fazer por ti neste projeto. Cola o papel ao lado do computador.
 :::
 
 ## O fluxo em quatro passos
@@ -47,11 +56,23 @@ Pede: três ganchos de até dez palavras e um roteiro de 60 segundos
 com texto no ecrã, em cinco blocos curtos.
 ```
 
-Repara no que o prompt não pede: não pede resultados, não pede números e não pede urgência. Se pedires, a ferramenta vai inventar, e tu vais ter de limpar.
+No prompt não pedes resultados, não pedes números e não pedes urgência. Se pedires, a ferramenta inventa, e tu passas o tempo a limpar.
+
+:::story
+Este texto soa a mim?
+sticker: Sim, quase | Ainda não
+:::
+
+:::conversa WhatsApp · Marta (exemplo)
+Marta: Este post foi feito por IA? Parece muito certinho.
+eu: Fui eu que o escrevi, com ajuda de uma ferramenta. Revi tudo e mudei o que não soava a mim.
+Marta: Obrigada por dizeres. É mais honesto.
+eu: Prefiro assim. Se alguma vez houver dúvida sobre um número ou uma frase, digo-te.
+:::
 
 ## Revisão antes de publicar
 
-Antes de carregar no botão, percorre esta lista. Demora dois minutos e evita a maior parte dos erros.
+Antes de carregar no botão, percorre esta tabela. Demora dois minutos e evita a maior parte dos erros.
 
 | Passo | Pergunta de revisão |
 |---|---|
@@ -61,6 +82,13 @@ Antes de carregar no botão, percorre esta lista. Demora dois minutos e evita a 
 | Promessas | Há alguma frase que prometa dinheiro, resultados ou urgência falsa? |
 | Pessoas | Apareceu alguém reconhecível sem autorização? |
 | Legal | Há disclaimer quando o tema o exige? |
+
+:::ecra Notas · Revisão
+Factos: confirmados
+Tom: soa a mim
+Promessas: nenhuma
+Disclaimer: não aplicável neste post
+:::
 
 :::destaque
 A IA encurta o caminho até ao rascunho. A revisão é o que transforma o rascunho em algo que podes assinar.
@@ -89,6 +117,9 @@ ____________________________________________________________
 - Um bom prompt dá contexto, tom e formato, e não pede resultados nem números.
 - Nunca publiques testemunhos, números ou resultados que a IA tenha inventado.
 
-## A tua missão desta semana
+## Para fazer hoje
 
-Faz o exercício «Um conteúdo do início ao fim» e publica apenas a versão que tu escreveste e revisaste, nunca a que saiu diretamente da ferramenta.
+1. Escreve no telemóvel uma dúvida real que tenhas ouvido de alguém, palavra por palavra.
+2. Pede à IA três ganchos com o prompt deste capítulo, mudando só o público e a dúvida.
+3. Escolhe um gancho e reescreve-o com as tuas palavras, à mão, no caderno.
+4. Lê o texto em voz alta antes de o agendar e confirma os factos com uma fonte que possas mostrar.

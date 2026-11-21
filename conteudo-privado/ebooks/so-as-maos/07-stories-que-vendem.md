@@ -1,39 +1,52 @@
 # Stories que vendem
 > Uma story não vende sozinha. Vende quando a pessoa já se sente em casa contigo.
 
-As stories desaparecem ao fim de umas horas, e por isso as pessoas as veem com outra atenção. É um espaço mais íntimo do que o feed. Quem vê uma story está a olhar para o teu dia, para a tua mesa e para as tuas mãos num momento real. Isso é uma oportunidade, mas também uma responsabilidade.
+Pensa no Duarte, 34 anos, que vende cadernos de receitas feitos à mão, em Braga. Publicava stories bonitas, com fotografias das folhas e a música certa, e ninguém respondia. Uma tarde reparou que as stories com mais respostas eram as que acabavam numa pergunta simples. Mudou só o fim de cada sequência, e a conversa começou a aparecer sozinha. Não foi técnica nenhuma. Foi colocar a pergunta no sítio certo.
 
-Neste capítulo vou ensinar-te uma sequência de cinco stories que leva a pessoa do interesse à ação, com guiões concretos que podes adaptar já esta semana.
+As stories desaparecem ao fim de umas horas, e por isso as pessoas as veem com outra atenção. É um espaço mais íntimo do que o feed. Quem vê uma story está a olhar para o teu dia, para a tua mesa e para as tuas mãos num momento real. Isso é uma oportunidade, e também uma responsabilidade.
 
-## Porque é que as stories importam
+## Porque é que a sequência importa
 
-Um post no feed chega a muita gente de uma vez e depois desaparece no meio de outros. Uma story chega a quem já te segue, costuma aparecer no topo da lista, e permite uma resposta direta. Isso faz da story um dos sítios mais úteis para perceber o que as pessoas querem e para as levar a dar o próximo passo.
-
-Além disso, a sequência é mais importante do que uma story isolada. Uma story sozinha pode ser bonita e não dizer nada. Cinco stories com uma lógica clara constroem um pequeno caminho.
+Um post chega a muita gente de uma vez e depois afunda no meio de outros. Uma story chega a quem já te segue, costuma aparecer no topo da lista e permite resposta direta. Mas uma story isolada pode ser bonita e não dizer nada. Cinco stories com uma lógica clara constroem um pequeno caminho, do interesse à ação.
 
 ## A sequência de cinco stories
 
-A sequência tem cinco passos: gancho, problema, prova, oferta e ação. Cada um tem um objetivo claro.
+A sequência tem cinco passos: gancho, problema, prova, oferta e ação. Estes são os exemplos do Duarte. Adapta-os ao teu produto, ao teu número de páginas e à forma como entregas.
 
-| Story | Objetivo | Plano e mãos | Texto no ecrã |
-|---|---|---|---|
-| 1. Gancho | Captar a atenção de quem já te segue | Mãos a pousar uma caneta na mesa | «Ainda a adiar isto?» |
-| 2. Problema | Mostrar que sabes o que a pessoa sente | Mãos a folhear um caderno cheio de listas | «A maioria tenta fazer tudo de uma vez e para ao terceiro dia.» |
-| 3. Prova | Mostrar processo, não resultados inventados | Mãos a montar a primeira versão do guia | «Esta é a versão 1. Já mudei três coisas depois de ouvir dez pessoas.» |
-| 4. Oferta | Apresentar o produto com clareza | Mãos a mostrar o guia aberto no ecrã | «Guia de 12 páginas. Acesso imediato.» |
-| 5. Ação | Pedir uma resposta concreta | Mãos a escrever uma mensagem no telemóvel | «Responde “quero” e envio-te o acesso.» |
+Story 1, o gancho. Mãos a pousar uma caneta na mesa. Serve para captar quem já te segue.
 
-Os textos são exemplos. Substitui o produto, o número de páginas e a forma de acesso pelo que é verdade no teu caso.
+:::story
+Ainda a adiar isto?
+sticker: Sim | Ainda não
+:::
 
-## Guiões em voz e legenda
+Story 2, o problema. Mãos a folhear um caderno cheio de listas. Serve para mostrar que sabes o que a pessoa sente. Se quiseres acrescentar voz-off, algo como «quando tentamos tudo de uma vez, o cansaço chega depressa».
 
-Além do texto no ecrã, cada story pode ter uma pequena voz-off ou legenda. Aqui fica um guião de exemplo para as três primeiras:
+:::story
+A maioria tenta fazer tudo de uma vez e para ao terceiro dia.
+sticker: Qual é a tua maior dúvida?
+:::
 
-- **Story 1 (gancho):** «Se estás a adiar este projeto há semanas, não estás sozinha. Vou mostrar-te uma forma mais pequena de começar.»
-- **Story 2 (problema):** «Quando tentamos tudo de uma vez, o cansaço chega depressa. O problema raramente é a vontade. É o tamanho do passo.»
-- **Story 3 (prova):** «Isto é o rascunho do meu guia. Antes de o publicar, perguntei a dez pessoas o que faltava. Três respostas mudaram o capítulo inteiro.»
+Story 3, a prova. Mãos a montar a primeira versão do guia. Serve para mostrar processo, nunca resultados que não podes mostrar.
 
-Repara que a story 3 não diz «vendi tanto» nem «ganhei tanto». Mostra um processo verdadeiro. Se ainda não tens processo para mostrar, mostra o caminho que estás a fazer, sem inventar.
+:::story
+Esta é a versão 1. Já mudei três coisas depois de ouvir dez pessoas.
+:::
+
+Story 4, a oferta. Mãos a mostrar o guia aberto no ecrã. Serve para apresentar o produto com clareza.
+
+:::story
+Guia de 12 páginas. Acesso imediato.
+:::
+
+Story 5, a ação. Mãos a escrever uma mensagem no telemóvel. Serve para pedir uma resposta concreta, e só uma.
+
+:::story
+Responde «quero» e envio-te o acesso.
+sticker: Quero | Mais tarde
+:::
+
+A story 3 não diz «vendi tanto» nem «ganhei tanto». Mostra um processo verdadeiro. Se ainda não tens processo para mostrar, mostra o caminho que estás a fazer, sem inventar.
 
 :::alerta
 Nunca uses contagens regressivas falsas, nem «últimas vagas» quando não é verdade. A urgência inventada cansa quem te segue e pode ser considerada prática comercial desleal.
@@ -41,56 +54,40 @@ Nunca uses contagens regressivas falsas, nem «últimas vagas» quando não é v
 
 ## Stickers de pergunta e de enquete
 
-As stories têm stickers que te ajudam a perceber o que o teu cliente pensa. Um sticker de pergunta, por exemplo, pede à pessoa que escreva a sua maior dúvida sobre o tema. Uma enquete de duas opções diz-te, em segundos, qual é a dor mais comum.
-
-Usa estas respostas como matéria-prima. Elas são a linguagem real que referi no capítulo 02, e são a base do teu próximo produto ou da tua próxima publicação.
+Um sticker de pergunta pede à pessoa que escreva a sua maior dúvida sobre o tema. Uma enquete de duas opções diz-te, em segundos, qual é a dor mais comum. Usa estas respostas como matéria-prima. São a linguagem real de que falei no capítulo 02, e servem de base para a próxima publicação ou para o próximo produto.
 
 :::destaque
-Os stickers são a forma mais simples de ouvir o teu cliente. Cada resposta é uma pista para o próximo conteúdo ou para o próximo produto.
+Os stickers são a forma mais simples de ouvir o teu cliente. Cada resposta é uma pista para o próximo conteúdo.
 :::
 
-## Guião para quem responde à story
+## Quando alguém responde
 
-Quando alguém responde a uma story, a conversa começa. A regra é simples: agradece, faz uma pergunta e só depois falas do produto.
+Quando alguém responde a uma story, a conversa começa. A regra é simples: agradece, faz uma pergunta e só depois falas do produto. Foi assim que o Duarte ganhou o hábito, e a conversa abaixo mostra o mesmo movimento.
 
-- **Resposta a quem reage com um coração:** «Obrigada por passares por aqui! O que é que te fez parar nesta parte?»
-- **Resposta a quem escreve uma dúvida:** «Boa pergunta. Vou tentar explicar de forma simples. Achas que o problema é mais o tempo ou a forma de começar?»
-- **Resposta a quem pede o produto:** «Claro. Posso enviar-te o guia por mensagem. Queres que te envie agora?»
+:::conversa Instagram · Lúcia
+Lúcia: Ainda não consegui começar. Tenho medo de não ter tempo.
+eu: Obrigada por responderes. O que te trava mais, o tempo ou não saber por onde pegar?
+Lúcia: Acho que não saber por onde pegar.
+eu: Então começa pela primeira página, que é só uma lista. Queres que te envie o guia?
+Lúcia: Queria, sim.
+:::
 
 O capítulo 08 aprofunda estas conversas e mostra como avançar sem parecer venda.
 
 [[citacao: Uma story não é um anúncio. É uma conversa que começa com alguém a olhar para ti. | Maria Costa]]
 
 :::historia
-**Caso ilustrativo: a Teresa.** A Teresa, uma pessoa fictícia, criava templates para planear refeições. Ao início publicava stories bonitas, mas sem pergunta nenhuma no fim, e quase ninguém respondia. Mudou apenas duas coisas: passou a usar um sticker de pergunta em cada sequência e a escrever uma frase de convite concreta na última story. As respostas ficaram mais frequentes e mais úteis, e percebeu, com as palavras das pessoas, quais os temas que deviam ter prioridade no template seguinte.
-:::
-
-## Exercício: escreve as tuas cinco stories
-
-:::exercicio A minha sequência de cinco stories
-1. Escolhe um tema que já tenhas trabalhado nos capítulos anteriores.
-2. Escreve o gancho da story 1 em até dez palavras.
-3. Escreve o problema da story 2 com as palavras de uma pessoa real que ouviste.
-4. Escreve a prova da story 3 sem números nem resultados que não possas mostrar.
-5. Escreve a oferta da story 4 e a ação da story 5, com uma única resposta esperada (por exemplo, responder uma palavra).
-6. Escreve um sticker de pergunta para colocar entre as stories 2 e 3.
-
-Escreve aqui:
-____________________________________________________________
-____________________________________________________________
-____________________________________________________________
-____________________________________________________________
-____________________________________________________________
-____________________________________________________________
+**Caso ilustrativo: a Teresa.** A Teresa, uma pessoa fictícia, criava templates para planear refeições. Ao início publicava stories bonitas, mas sem pergunta nenhuma no fim, e quase ninguém respondia. Mudou duas coisas: passou a usar um sticker de pergunta em cada sequência e a escrever uma frase de convite concreta na última story. As respostas ficaram mais frequentes e mais úteis, e percebeu, com as palavras das pessoas, que temas deviam ter prioridade no template seguinte.
 :::
 
 ## Em resumo
 
-- A story funciona como conversa. A sequência de cinco passos leva a pessoa do interesse à ação.
-- Mostra processo verdadeiro na prova. Nunca inventes resultados nem urgência.
-- Os stickers de pergunta e de enquete são a melhor forma de ouvir o teu cliente.
-- A primeira resposta deve ser uma pergunta, e só depois vem a oferta.
+A story funciona como conversa, e a sequência de cinco passos leva a pessoa do interesse à ação. Mostra processo verdadeiro na prova e nunca inventes resultados nem urgência. Os stickers são a melhor forma de ouvir quem te segue. E a primeira resposta deve ser uma pergunta.
 
-## A tua missão desta semana
+## Para fazer hoje
 
-Publica uma sequência de cinco stories com o exercício que escreveste e responde pessoalmente a todas as respostas que receberes, no mesmo dia.
+1. Escolhe um tema que já tenhas trabalhado nos capítulos anteriores e escreve-o numa frase no telemóvel.
+2. Escreve as cinco frases da sequência: gancho, problema, prova, oferta e ação.
+3. Grava as cinco stories com o telemóvel encostado a uma caixa ou a um livro, cada uma com cinco ou seis segundos de mãos.
+4. Acrescenta um sticker de pergunta à segunda story e um sticker de enquete à última.
+5. Publica as cinco no mesmo dia e responde a todas as respostas nas duas horas seguintes.

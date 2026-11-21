@@ -12,6 +12,8 @@ Imagina que vais todas as manhãs a um café no Porto e que pagas, em média, 1,
 
 Agora imagina que, no mês seguinte, a casa sobe o preço para 1,50 €, e fica aí. Esse novo nível já não é um desvio: é um novo normal. A tua referência tem de mudar. Este exemplo tem as duas ideias que sustentam tudo o resto: existe uma média à volta da qual o preço oscila, e essa média pode mudar.
 
+[[foto: rg-tablet.jpg | Um gráfico é uma conversa entre quem compra e quem vende. Não é uma bola de cristal. | larga]]
+
 ## A linha média
 
 Uma regressão linear é uma forma matemática de encontrar a reta que melhor se ajusta a uma série de pontos. Num gráfico de preços, essa reta mostra a direção geral do movimento e funciona como um «centro» à volta do qual o preço oscila.
@@ -61,6 +63,13 @@ Esta distinção é tudo. Um elástico pode ficar esticado durante muito tempo s
 Caso ilustrativo. Uma pessoa vê o preço afastado da linha e decide que «tem de voltar». Espera, depois espera mais, e a conta cresce contra ela. A linha média não falhou. Quem falhou foi a crença de que a linha é uma promessa.
 :::
 
+:::nota
+Antes de olhar para o gráfico:
+• Tendência de cima: subir, descer ou lado?
+• Estou longe ou perto da linha média?
+• Há notícias fortes hoje?
+:::
+
 ## O que faz um scanner
 
 A ideia de um scanner, como o Scanner GoldKiller que temos no TradingView, é automatizar o trabalho repetitivo: aplicar a mesma regra de leitura a todo o gráfico e assinalar quando o preço entra numa zona que essa regra considera invulgar. Poupa-te a fazer as contas à mão, e poupa-te sobretudo a olhar para o gráfico o dia todo. Os detalhes técnicos de cada indicador estão na documentação do produto, e vale a pena lê-los antes de confiares nele.
@@ -69,6 +78,11 @@ O que o scanner não faz é decidir por ti. Um alerta é informação, não uma 
 
 :::alerta
 Um scanner que assinala muito não é melhor por assinalar muito. Se o sinal aparece sem contexto, lê-lo como garantia é um erro. Nenhuma ferramenta substitui a tua leitura do risco.
+:::
+
+:::post @morethanmoney.pt
+imagem: Um scanner não decide por ti. Mostra-te onde olhar.
+legenda: Ferramentas como o Scanner GoldKiller ajudam a filtrar o ruído. A decisão, o risco e a responsabilidade continuam a ser teus. Conteúdo educativo.
 :::
 
 ## Ler sem te enganares
@@ -85,6 +99,14 @@ O último é o mais traiçoeiro. Se mudas o período de análise até encontrare
 
 :::destaque
 Conteúdo educativo, não é aconselhamento financeiro. Ler gráficos não garante resultados, e o risco de perda é real.
+:::
+
+:::cartao Ler um gráfico em 5 passos
+1. Gráfico de cima: qual é a tendência?
+2. Onde está o preço face à média?
+3. O elástico está esticado ou relaxado?
+4. Onde ficaria o meu stop?
+5. Se não vejo claro, não entro.
 :::
 
 ## Em resumo

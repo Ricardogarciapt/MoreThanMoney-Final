@@ -10,6 +10,8 @@ Sou o Ricardo Garcia. Venho de uma família adotiva, de origem humilde, na cidad
 
 Há uma coisa que quem não cresce com uma base muito firme aprende cedo: a olhar para a frente e a fazer contas ao que tem. Demorei anos a perceber que resistir sozinho é um método caro. E que pode ser substituído por outro, melhor.
 
+[[foto: rg-recomeco.jpg | Hoje. O sorriso veio depois, não antes. | lado]]
+
 ## Os dezasseis anos
 
 Aos dezasseis anos percebi que tinha de ser diferente. Não por ser melhor do que os outros. Porque, desde o início, já o era, e o caminho que se via à minha frente não me servia. Essa percepção não se apagou, e foi ela que me acompanhou durante os anos seguintes.
@@ -24,6 +26,8 @@ Antes de chegar à vida civil, passei por três instituições do Estado. Entrei
 
 Uma coisa que a disciplina ensina muito bem é a cumprir. Cumprir horários, cumprir ordens, cumprir o que se espera de ti. O problema é que cumprir bem uma vida que não escolheste é uma forma sofisticada de ficar preso. Essa é a parte mais difícil de admitir, e é por isso que a deixo escrita aqui.
 
+[[foto: rg-farda.jpg | Catorze anos de farda. A disciplina ficou, a farda não. | polaroid]]
+
 ## O emprego que deixou de servir
 
 Larguei o meu emprego de sonho. Parece contraditório, e é. Mas o emprego, por muito que o amasse, deixou de me dar o que eu precisava. E o que eu precisava naquela altura era de tempo, de cabeça e de estar perto da família.
@@ -34,6 +38,13 @@ A Liliana, a minha mulher, estava a lutar contra um cancro da mama. A Constança
 O que aconteceu na minha vida não se resume a uma escolha profissional. Foi um conjunto de peças a cair ao mesmo tempo, e eu fui o último a perceber que o problema não era uma peça só: era a estrutura inteira.
 :::
 
+:::nota
+3 h de transportes por dia
+= 15 h por semana
+= quase 2 dias de trabalho
+que ninguém me pagava.
+:::
+
 ## Estável não é seguro
 
 Durante muito tempo achei que estabilidade era sinónimo de segurança. Tinha um salário certo ao fim do mês, uma carreira com degraus, um futuro previsível. Se me perguntassem, diria que estava bem.
@@ -41,6 +52,11 @@ Durante muito tempo achei que estabilidade era sinónimo de segurança. Tinha um
 Só que estabilidade é outra coisa. É uma casa que aguenta o vento de hoje, mas não foi feita para a tempestade de amanhã. Quando a tempestade chegou, percebi que a minha casa tinha as paredes bonitas e as fundações fracas. Estava estável porque ainda não tinha caído. Não estava segura.
 
 Esta distinção é a mais importante deste capítulo. Repara como a usas no teu dia a dia: quando dizes «estou bem, tenho emprego», estás a falar de estabilidade. Quando dizes «se faltar o salário, aguento três meses», estás a falar de segurança. São perguntas diferentes e, na maioria das vezes, damos a primeira resposta quando nos fazem a segunda.
+
+:::post @ricardogarciapt
+imagem: Estável não quer dizer seguro. Quer dizer que ainda não caiu.
+legenda: Escrevi isto num caderno muito antes de o publicar. Durante anos achei que ter salário certo era estar seguro. Não era. Tu sabes quantos meses aguentas se o teu rendimento parar amanhã?
+:::
 
 ## Demolir para fundar
 
@@ -86,6 +102,13 @@ Se a resposta à terceira pergunta for a segunda opção, o mais provável é qu
 A decisão certa raramente é a mais rápida. É a que consegues explicar a quem depende de ti, com números na mão.
 :::
 
+:::conversa Mensagens · Eu, há uns anos
+eu: Vou sair da GNR.
+eu: Ainda não sei bem como, mas sei que assim não dá.
+eu: Antes de decidir, quero fazer as contas contigo.
+Nota: Uma decisão destas não se toma sozinho. Conta com quem vive contigo.
+:::
+
 ## Quem fica do outro lado
 
 Quando se muda de rumo, há sempre alguém que sente a mudança antes de a perceber. Um parceiro, um filho, um pai, um amigo que conta connosco. Essas pessoas não precisam de todos os detalhes do plano, mas precisam de saber o que está a acontecer e de sentir que não são espectadoras.
@@ -102,6 +125,12 @@ Pessoa 1: ______________________________________________
 Pessoa 2: ______________________________________________
 
 Conversa marcada para (dia e hora): ______________________
+:::
+
+:::cartao As três perguntas antes de uma decisão grande
+1. Qual é o pior cenário realista e aguento-o seis meses?
+2. Falei com quem depende de mim antes de decidir?
+3. É um medo que consigo descrever ou só pressa?
 :::
 
 ## Em resumo

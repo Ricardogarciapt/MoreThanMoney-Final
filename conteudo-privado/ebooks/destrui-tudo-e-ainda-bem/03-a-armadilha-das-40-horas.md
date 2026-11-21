@@ -24,6 +24,11 @@ Repara no que a tabela mostra. As 104 horas já estão ocupadas antes de começa
 
 [[grafico:horas-semana]]
 
+:::post @morethanmoney.pt
+imagem: A tua semana tem 168 horas. Quantas são tuas?
+legenda: Faz a conta com honestidade: sono, trabalho, transportes, tarefas. O que sobra é o teu tempo de verdade. Comenta o teu número.
+:::
+
 ## Trabalho não é só o que está no contrato
 
 A frase mais enganadora da vida profissional é «é só o horário». O horário é a parte visível. Por baixo há uma camada que quase ninguém conta: o tempo de deslocação, a preparação, o cansaço que fica depois, a hora de jantar que já não é hora de jantar.
@@ -39,6 +44,8 @@ Pensa assim: se alguém te propusesse trocar três horas do teu dia por dinheiro
 :::destaque
 O salário que recebes não é o que ganhas por hora. É o que ganhas por hora de vida entregue, incluindo tudo o que está à volta do trabalho.
 :::
+
+[[foto: rg-telemovel.jpg | Muito do meu tempo «livre» ia para o ecrã. Contar as horas foi o primeiro choque. | polaroid]]
 
 ## O salário por hora real
 
@@ -74,6 +81,15 @@ Não precisas de concluir nada com este número hoje. Precisas de o conhecer. Mu
 Não confundas esta conta com um veredicto sobre o teu emprego. Um trabalho com um valor por hora baixo pode ser o certo durante uma fase, por razões familiares, de saúde ou de aprendizagem. A conta serve para decidires com os olhos abertos, não para te julgares.
 :::
 
+:::ecra Calculadora · Salário por hora real (exemplo)
+Salário líquido: 1.050 €/mês
+Horas contratadas: 173 h/mês
+Transportes: 40 h/mês
+Horas extra não pagas: 12 h/mês
+Valor por hora no papel: 6,07 €
+Valor por hora real: 4,64 €
+:::
+
 ## Horas de qualidade e horas de sobra
 
 Nem todas as horas valem o mesmo. Uma hora de conversa com a família ao jantar não tem a mesma qualidade que uma hora de ecrã sem propósito, e nenhuma das duas se mede em dinheiro. Por isso, além de contar horas, vale a pena distinguir três tipos:
@@ -104,6 +120,13 @@ Depois de fazeres as contas, há três perguntas que te ajudam a avançar sem pr
 - Que parte dos 64 «restantes» está a ser comida por distrações que não escolheste? Ecrã, notificações, reuniões sem propósito.
 
 Não tenhas pressa. A armadilha das 40 horas não se desfaz numa semana. Desfaz-se quando começas a tratar o tempo como o recurso mais caro que tens.
+
+:::cartao A conta das 168 horas
+- Sono: ______ h
+- Trabalho (com transportes): ______ h
+- Casa e família: ______ h
+- O que é mesmo meu: ______ h
+:::
 
 ## Em resumo
 

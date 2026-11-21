@@ -44,7 +44,23 @@ export function mdParaHtml(md, ctx = {}) {
       out.push(`<aside class="bloco bloco-${tipo}"><div class="bloco-rotulo">${ROTULOS[tipo] || tipo}${titulo ? ` · <span>${inline(titulo)}</span>` : ''}</div>${mdParaHtml(corpo.join('\n'), ctx)}</aside>`)
       continue
     }
+    // blocos ilustrados (ver tools/ebooks/ESCRITA.md)
+    const im = t.match(/^:::\s*(post|story|conversa|cartao|cartão|nota|ecra|ecrã)\s*(.*)$/i)
+    if (im) {
+      fecharPara()
+      const tipo = im[1].toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '')
+      const arg = im[2].trim()
+      const corpo = []
+      i++
+      while (i < linhas.length && linhas[i].trim() !== ':::') { corpo.push(linhas[i]); i++ }
+      i++
+      out.push(ilustrado(tipo, arg, corpo, ctx))
+      continue
+    }
     if (t === ':::') { i++; continue }
+
+    const fm = t.match(/^\[\[foto:\s*([^|\]]+?)\s*(?:\|\s*([^|\]]*?)\s*)?(?:\|\s*(\w+)\s*)?\]\]$/)
+    if (fm) { fecharPara(); out.push(foto(fm[1], fm[2] || '', (fm[3] || 'polaroid').toLowerCase(), ctx)); i++; continue }
 
     const gm = t.match(/^\[\[grafico:\s*([\w-]+)\s*\]\]$/)
     if (gm) { fecharPara(); out.push(grafico(gm[1], ctx)); i++; continue }
@@ -103,5 +119,84 @@ export function mdParaHtml(md, ctx = {}) {
     i++
   }
   fecharPara()
-  return out.join('\n')
+  return out.join('\n').replace(/((?:<figure class="story">[\s\S]*?<\/figure><!--story-->\s*)+)/g, (m) => `<div class="stories">${m}</div>`)
+}
+
+// ── blocos ilustrados ────────────────────────────────────────────────────────────
+let rodar = 0
+const inclina = () => [-1.6, 1.2, -0.8, 1.7, -1.2, 0.9][rodar++ % 6]
+const AVATARES = { 'morethanmoney.pt': 'mtm.png', ricardogarciapt: 'rg-pb.jpg', 'ruben.cripto': 'ruben-retrato.jpg', 'maria.vendersemaparecer': 'maria-maos.jpg', mafaldamariac: 'maria-foto.jpg' }
+const ICONES = `<svg viewBox="0 0 24 24"><path d="M12 21s-7.5-4.6-9.3-9.2C1.4 8.4 3.6 5 7 5c2 0 3.4 1.1 5 3 1.6-1.9 3-3 5-3 3.4 0 5.6 3.4 4.3 6.8C19.5 16.4 12 21 12 21z"/></svg><svg viewBox="0 0 24 24"><path d="M21 12a8.5 8.5 0 0 1-12.6 7.4L3 21l1.6-5.2A8.5 8.5 0 1 1 21 12z"/></svg><svg viewBox="0 0 24 24"><path d="M22 3 11 13M22 3l-7 18-4-8-8-4z"/></svg><svg class="guardar" viewBox="0 0 24 24"><path d="M6 3h12v18l-6-4-6 4z"/></svg>`
+
+function campos(corpo) {
+  const c = { texto: [] }
+  for (const l of corpo) {
+    const m = l.trim().match(/^(imagem|foto|legenda|sticker|fundo):\s*(.*)$/i)
+    if (m) c[m[1].toLowerCase()] = m[2]
+    else if (l.trim()) c.texto.push(l.trim())
+  }
+  return c
+}
+
+function avatar(handle, ctx) {
+  const h = handle.replace(/^@/, '')
+  const f = AVATARES[h]
+  if (f && ctx.img) return `<span class="av" style="background-image:url(${ctx.img(f)})"></span>`
+  const ini = h.replace(/[^a-zA-Z]/g, '').slice(0, 2).toUpperCase() || 'MT'
+  return `<span class="av av-ini">${ini}</span>`
+}
+
+function foto(f, legenda, estilo, ctx) {
+  const src = ctx.img ? ctx.img(f.trim()) : ''
+  if (!src) { (ctx.avisos || []).push(`foto em falta: ${f}`); return '' }
+  const r = estilo === 'polaroid' ? ` style="--r:${inclina()}deg"` : ''
+  return `<figure class="foto foto-${estilo}"${r}><img src="${src}" alt="${esc(legenda || '')}">${legenda ? `<figcaption>${inline(legenda)}</figcaption>` : ''}</figure>`
+}
+
+function ilustrado(tipo, arg, corpo, ctx) {
+  if (tipo === 'post') {
+    const c = campos(corpo)
+    const handle = arg || '@morethanmoney.pt'
+    const quadro = c.foto && ctx.img
+      ? `<div class="ig-img"><img src="${ctx.img(c.foto.trim())}" alt=""></div>`
+      : `<div class="ig-img ig-texto"><p>${inline(c.imagem || c.texto.join(' '))}</p></div>`
+    return `<figure class="ig">
+      <div class="ig-topo">${avatar(handle, ctx)}<b>${esc(handle.replace(/^@/, ''))}</b><span class="ig-pts">•••</span></div>
+      ${quadro}
+      <div class="ig-acoes">${ICONES}</div>
+      ${c.legenda ? `<p class="ig-leg"><b>${esc(handle.replace(/^@/, ''))}</b> ${inline(c.legenda)}</p>` : ''}
+    </figure>`
+  }
+  if (tipo === 'story') {
+    const c = campos(corpo)
+    let st = ''
+    if (c.sticker) {
+      const ops = c.sticker.split('|').map((x) => x.trim()).filter(Boolean)
+      st = ops.length > 1
+        ? `<div class="st-poll">${ops.map((o) => `<span>${inline(o)}</span>`).join('')}</div>`
+        : `<div class="st-q"><small>Pergunta</small>${inline(ops[0])}</div>`
+    }
+    return `<figure class="story"><div class="st-barras"><i></i><i></i><i></i></div><div class="st-txt">${c.texto.map((x) => `<p>${inline(x)}</p>`).join('')}</div>${st}</figure><!--story-->`
+  }
+  if (tipo === 'conversa') {
+    const bolhas = corpo.filter((l) => l.trim()).map((l) => {
+      const m = l.trim().match(/^([^:]{1,24}):\s*(.*)$/)
+      if (!m) return `<p class="bl bl-info">${inline(l.trim())}</p>`
+      const meu = /^(eu|tu)$/i.test(m[1].trim())
+      return `<p class="bl ${meu ? 'bl-eu' : 'bl-ele'}">${meu ? '' : `<small>${esc(m[1].trim())}</small>`}${inline(m[2])}</p>`
+    }).join('')
+    return `<figure class="conversa"><div class="cv-topo"><span class="av av-ini">${esc((arg.split('·').pop() || 'C').trim().slice(0, 1).toUpperCase())}</span>${inline(arg || 'Mensagens')}</div><div class="cv-corpo">${bolhas}</div></figure>`
+  }
+  if (tipo === 'cartao') {
+    return `<figure class="cartao"><span class="tesoura">✂</span><div class="ct-rot">Recorta e guarda</div>${arg ? `<h4>${inline(arg)}</h4>` : ''}${mdParaHtml(corpo.join('\n'), ctx)}</figure>`
+  }
+  if (tipo === 'nota') {
+    return `<figure class="postit" style="--r:${inclina()}deg">${arg ? `<b>${inline(arg)}</b>` : ''}${corpo.filter((l) => l.trim()).map((l) => `<p>${inline(l.trim().replace(/^[-*]\s+/, '• '))}</p>`).join('')}</figure>`
+  }
+  // ecra
+  const linhasE = corpo.filter((l) => l.trim()).map((l) => {
+    const m = l.trim().match(/^([^:]{1,40}):\s*(.*)$/)
+    return m ? `<div class="ec-l"><span>${inline(m[1])}</span><b>${inline(m[2])}</b></div>` : `<div class="ec-p">${inline(l.trim())}</div>`
+  }).join('')
+  return `<figure class="ecra"><div class="ec-status"><span>9:41</span><span>▮▮▮ ◔</span></div>${arg ? `<div class="ec-tit">${inline(arg)}</div>` : ''}${linhasE}</figure>`
 }

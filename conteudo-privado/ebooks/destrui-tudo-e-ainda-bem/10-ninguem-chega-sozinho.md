@@ -10,6 +10,8 @@ Este capítulo fala do ecossistema que construímos. Vou descrevê-lo como ele �
 Antes de escolheres qualquer nível, pergunta-te o que sabes fazer hoje, e não o que esperas que aconteça amanhã.
 :::
 
+[[foto: rg-painel.jpg | Num painel com outros traders. Aprende-se mais a ouvir do que a falar. | polaroid]]
+
 ## O que existe, em linguagem simples
 
 O ecossistema tem várias peças. Não precisas de todas. Algumas são para quem está a começar, outras para quem já tem regras escritas e quer ferramentas.
@@ -38,6 +40,11 @@ O Patrocínio de Desempenho é um reconhecimento: se um aluno demonstra discipli
 Não é uma prop firm. Ninguém te dá capital para operar com o dinheiro deles, e não há um «desafio» pago que te promete uma conta real no fim. Se alguém te disser o contrário, afasta-te.
 :::
 
+:::post @morethanmoney.pt
+foto: rg-palco.jpg
+legenda: Ninguém chega sozinho. Eu não cheguei. Conhecimento, ferramentas e uma equipa ao lado poupam anos de erros caros. Não há resultados garantidos.
+:::
+
 ## Como escolher pela tua fase
 
 Sugiro três fases. Em cada uma, o passo seguinte é diferente:
@@ -49,6 +56,13 @@ Sugiro três fases. Em cada uma, o passo seguinte é diferente:
 | Já opero com conta real | Tenho corretora regulada, tamanho de posição calculado e revisão semanal | Rota corretora PU Prime, com a mesma disciplina de sempre |
 
 A tabela tem um aviso escondido: quanto mais cedo estás na fase certa, menos dinheiro e tempo perdes. Mas se não te reconheces em nenhuma fase, o passo seguinte é continuar a aprender, não comprar mais ferramentas.
+
+:::cartao Que passo dou a seguir?
+- Ainda estou a organizar o dinheiro: termina o plano de 30 dias primeiro.
+- Quero aprender com método: comunidade e aulas.
+- Já opero em demo com regras: acompanhamento e contas simuladas.
+- Quero falar com alguém: marca uma conversa em morethanmoney.pt/agendar.
+:::
 
 ## Um sinal de alerta que vale a pena guardar
 
@@ -66,6 +80,13 @@ Desconfia de qualquer plano em que o dinheiro vem de trazeres outras pessoas, e 
 :::destaque
 Conteúdo educativo, não é aconselhamento financeiro. Qualquer produto ou serviço da MoreThanMoney é educativo ou de acompanhamento, e não garante resultados. O risco de perda é real.
 :::
+
+:::conversa Instagram · @ricardogarciapt
+Leitor: Acabei o livro. Por onde começo?
+eu: Pelo capítulo 3. Faz a conta das 168 horas e manda-me o teu número.
+eu: A partir daí vemos juntos o passo seguinte.
+:::
+[[foto: rg-palco2.jpg | Do outro lado do microfone, mas do mesmo lado da conversa. | larga]]
 
 ## Eu estou do outro lado
 

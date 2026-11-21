@@ -31,7 +31,7 @@ export const VENDAS: Record<SlugEbook, PaginaVenda> = {
     sub: 'O sistema de disciplina, dinheiro e mercados que o Ricardo Garcia construiu depois de recomeçar do zero — num livro para ler como um plano de 10 semanas.',
     autor: 'Ricardo Garcia', autorFoto: '/ricardogarcia/foto-ricardo-estudio.jpg',
     autorBio: 'Adotado aos 17 meses, cresceu no Porto. Catorze anos de serviço (Exército, Fuzileiros, GNR) antes de largar o «emprego de sonho» numa das fases mais duras da vida da família. Fundou a MoreThanMoney para que ninguém tenha de pagar o preço de aprender sozinho.',
-    numeros: [{ v: '94', r: 'páginas' }, { v: '10', r: 'gráficos animados' }, { v: '11', r: 'exercícios' }, { v: '30', r: 'dias de plano' }],
+    numeros: [{ v: '122', r: 'páginas' }, { v: '10', r: 'gráficos animados' }, { v: '11', r: 'exercícios' }, { v: '30', r: 'dias de plano' }],
     capitulos: [
       { t: 'O dia em que deixei de fingir', d: 'A história, sem filtros, e a casa que se demole para fazer fundações.' },
       { t: 'Disciplina quando ninguém pergunta', d: 'O padrão mínimo diário que se transfere do serviço para a vida civil.' },
@@ -55,13 +55,13 @@ export const VENDAS: Record<SlugEbook, PaginaVenda> = {
     aviso: 'Conteúdo educativo. Não constitui aconselhamento financeiro. Negociar Forex, ouro ou CFD envolve risco elevado de perda, incluindo a totalidade do capital. Não há resultados garantidos.',
   },
   'a-primeira-chave': {
-    slug: 'a-primeira-chave', cor: '#19d3c5', cor2: '#7c5cff', fundo: '#060a14', fonteTitulo: '"Space Grotesk", system-ui, sans-serif',
+    slug: 'a-primeira-chave', cor: '#D9A93A', cor2: '#F3CF73', fundo: '#0a0806', fonteTitulo: 'Anton, Oswald, Impact, sans-serif',
     titulo: 'A Primeira', titulo2: 'Chave',
     gancho: 'Em cripto, quem tem a chave tem o dinheiro.',
     sub: 'Do «não percebo nada» à tua primeira carteira segura e a um plano de 30 dias. Sem hype, sem medo e sem promessas.',
-    autor: 'Ruben Pereira', autorFoto: '/reels/educadores/fotos/ruben-pereira.jpg',
-    autorBio: 'Educador de criptomoedas e perpétuos na MoreThanMoney. Conduz as Salas DCA com MTM, o Império Cripto e o Live Trading Cripto.',
-    numeros: [{ v: '75', r: 'páginas' }, { v: '6', r: 'gráficos animados' }, { v: '11', r: 'exercícios' }, { v: '10', r: 'pontos anti-burla' }],
+    autor: 'Ruben Pereira', autorFoto: '/educadores/ruben/retrato.jpg',
+    autorBio: 'Educador de cripto na MoreThanMoney. «Simplificar o complexo. Mais do que dinheiro, é um plano.» Conduz as Salas DCA com MTM, o Império Cripto e o Live Trading Cripto.',
+    numeros: [{ v: '104', r: 'páginas' }, { v: '6', r: 'gráficos animados' }, { v: '11', r: 'exercícios' }, { v: '10', r: 'pontos anti-burla' }],
     capitulos: [
       { t: 'O que é dinheiro', d: 'Da troca ao euro, a inflação e porque nasceu o Bitcoin em 2008.' },
       { t: 'O caderno que ninguém apaga', d: 'A blockchain explicada sem jargão.' },
@@ -83,13 +83,13 @@ export const VENDAS: Record<SlugEbook, PaginaVenda> = {
     aviso: 'Conteúdo educativo. Não constitui aconselhamento financeiro nem fiscal. Criptoativos são muito voláteis e podes perder a totalidade do valor investido.',
   },
   'so-as-maos': {
-    slug: 'so-as-maos', cor: '#b5737e', cor2: '#d9a5a0', fundo: '#1a1416', fonteTitulo: '"Cormorant Garamond", Georgia, serif',
+    slug: 'so-as-maos', cor: '#C9A97E', cor2: '#E6D3B5', fundo: '#1b1714', fonteTitulo: '"Cormorant Garamond", Georgia, serif',
     titulo: 'Só as', titulo2: 'Mãos',
     gancho: 'O que vende não é a cara. É o que as tuas mãos constroem.',
     sub: 'Vender nas redes sem mostrar a cara: do cliente ideal ao teu primeiro produto digital, com guiões de stories e mensagens prontos a adaptar.',
-    autor: 'Maria Costa', autorFoto: '',
+    autor: 'Maria Costa', autorFoto: '/educadores/mafalda/retrato.jpg',
     autorBio: 'Especialista em infoprodutos e fundadora da She Is Faceless Academy. No marketing desde 2013, ensina homens e mulheres em Portugal a vender sem aparecer.',
-    numeros: [{ v: '89', r: 'páginas' }, { v: '6', r: 'gráficos animados' }, { v: '12', r: 'exercícios' }, { v: '5', r: 'stories-modelo' }],
+    numeros: [{ v: '118', r: 'páginas' }, { v: '6', r: 'gráficos animados' }, { v: '12', r: 'exercícios' }, { v: '5', r: 'stories-modelo' }],
     capitulos: [
       { t: 'Porque a cara não é o produto', d: 'Mitos, vantagens e a mentalidade faceless.' },
       { t: 'O cliente que te procura', d: 'Dor, desejo e linguagem, com mapa de empatia.' },

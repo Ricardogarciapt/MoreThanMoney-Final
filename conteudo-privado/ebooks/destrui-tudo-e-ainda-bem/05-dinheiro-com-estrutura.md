@@ -12,6 +12,8 @@ O dinheiro sai sem fazer barulho. Uma subscrição de quinze euros, um café por
 
 O problema é que o dinheiro não guarda registo do que aconteceu. Se perguntares no fim do mês «para onde foi?», quase ninguém sabe responder com exatidão. Por isso a primeira regra é simples: o dinheiro precisa de um destino antes de chegar à conta. Não depois.
 
+[[foto: rg-tablet.jpg | Dinheiro organizado vê-se num ecrã. Mas começa num papel. | polaroid]]
+
 ## Orçamento em potes
 
 A forma mais simples que conheço de dar estrutura ao dinheiro chama-se potes. Cada rendimento é dividido, logo que entra, por finalidades diferentes. Pode ser uma conta única com subcontas, ou várias contas. O que importa é que cada pote tenha um nome e um limite.
@@ -34,6 +36,14 @@ Os números são um exemplo. A proporção é a ideia: nenhum pote deve ser zero
 Não copies estas percentagens às cegas. Se a renda consome 60% do teu rendimento sozinha, o modelo tem de ser outro. O orçamento deve descrever a tua vida, não a de outra pessoa.
 :::
 
+:::ecra Banco · Transferência agendada (exemplo)
+De: Conta à ordem
+Para: Poupança · Fundo de emergência
+Montante: 50,00 €
+Repetição: todos os meses, dia 26
+Estado: agendada ✓
+:::
+
 ## O fundo de emergência
 
 Um fundo de emergência é o dinheiro que existe para que um imprevisto não se transforme numa dívida. Costuma recomendar-se que cubra entre três e seis meses de despesas essenciais. Não é uma regra mágica, mas é um ponto de partida sensato.
@@ -53,6 +63,13 @@ O fundo de emergência não rende nada de especial e não é para isso. Serve pa
 
 Onde guardar o fundo? Numa conta separada, de preferência sem cartão associado e sem acesso fácil a partir do telemóvel. Se estiver à vista, é mais fácil usá-lo para coisas que não são emergências.
 
+:::conversa WhatsApp · Amigo
+Amigo: Tens 300 € para me emprestar até ao fim do mês?
+eu: Agora não posso. Esse dinheiro é o fundo de emergência e só sai para emergências.
+Amigo: Mas isto é uma emergência!
+eu: Então diz-me o que aconteceu e vemos juntos outra solução.
+:::
+
 ## Dívidas caras primeiro
 
 Se tens dívidas, o primeiro passo não é investir nem poupar a sério. É tapar o balde furado. Uma dívida com juros altos é como um balde com um buraco: por mais água que deites lá dentro, o nível baixa.
@@ -63,6 +80,13 @@ Há uma exceção a considerar: se pagar a dívida menor primeiro te dá uma mot
 
 :::alerta
 Cuidado com o crédito que parece pequeno. Uma prestação baixa, alargada por muitos meses, pode custar muito mais do que o bem comprado. Antes de assinar, pede o valor total a pagar e a taxa anual (TAEG). Compara sempre.
+:::
+
+:::cartao A ordem certa
+1. Despesas fixas pagas.
+2. Dívidas caras a abater.
+3. Fundo de emergência a crescer.
+4. Só depois, investir. E só o que podes perder.
 :::
 
 ## Não investir dinheiro de que precisas
@@ -95,6 +119,13 @@ Os juros compostos jogam a favor de quem poupa e contra quem deve. A mesma matem
 Não precisas de uma folha de cálculo sofisticada. Precisas de três coisas: um sítio onde registas o que entra e o que sai, uma data fixa para o fazer (por exemplo, o último dia útil do mês) e uma regra simples para o excedente. Se sobrar dinheiro no pote de margem, vai para o fundo. Se o fundo estiver completo, vai para a dívida mais cara. Só depois pensas no resto.
 
 Não te esqueças dos encargos anuais. O IRS, o seguro, a renovação de documentos, as férias. Um pote para o que aparece uma vez por ano evita que estas despesas te apanhem de surpresa.
+
+:::nota
+Dia em que o salário cai:
+1.º os potes.
+2.º a poupança automática.
+3.º o resto vive com o que sobra.
+:::
 
 ## Em resumo
 
