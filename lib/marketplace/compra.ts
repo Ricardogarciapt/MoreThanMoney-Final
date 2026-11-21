@@ -163,6 +163,23 @@ export async function entregarCompraDoMarketplace(session: Stripe.Checkout.Sessi
       produto: { id: produto.id, titulo: produto.titulo as string, slug: (produto.slug as string) ?? '' },
       parteCasaCents: Math.max(0, (session.amount_total ?? 0) - Math.round(((session.amount_total ?? 0) * pct) / 100)),
     })
+
+    // «O Método Frio» a 5 € inclui 7 dias de acompanhamento com o Ricardo (decisão 21/11/2026):
+    // cada compra abre uma tarefa no CRM para marcar a conversa. Best-effort: a compra já está gravada.
+    if (produto.slug === 'o-metodo-frio') {
+      const email = session.customer_details?.email ?? null
+      const nome = session.customer_details?.name ?? null
+      await db.from('aios_tasks').insert({
+        title: `Acompanhamento 7 dias: ${nome || email || 'comprador'} («O Método Frio»)`,
+        details: `Comprou «O Método Frio» (5 €), que inclui 7 dias de acompanhamento direto. Confirmar que marcou em /agendar; se não marcou, contactar. Email: ${email ?? '—'}.`,
+        kind: 'task',
+        status: 'pendente',
+        priority: 'alta',
+        chave: `acompanhamento-ebook:${session.id}`,
+        payload: { origem: 'ebook:o-metodo-frio', comprador_id: compradorId, email, nome, sessao: session.id },
+        created_by: 'maquina',
+      }).then(({ error }) => { if (error) console.warn('[marketplace] tarefa de acompanhamento não gravou:', error.message) })
+    }
   } catch (e) {
     // Rebenta de propósito: se a compra não ficou escrita, o comprador pagou e não tem acesso, e
     // isso tem de aparecer como falha do webhook (que o Stripe volta a tentar) e não como sucesso.

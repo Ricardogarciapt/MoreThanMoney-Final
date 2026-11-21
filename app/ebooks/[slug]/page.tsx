@@ -11,6 +11,8 @@ import Link from 'next/link'
 import { getSupabaseAdmin } from '@/lib/supabase-admin-client'
 import { ehEbook } from '@/lib/ebooks/acesso'
 import { VENDAS } from '@/lib/ebooks/vendas'
+import { EBOOKS_GRATIS } from '@/lib/ebooks/gratis'
+import FormGratis from '@/components/ebooks/form-gratis'
 
 export const revalidate = 300
 
@@ -156,6 +158,28 @@ export default async function PaginaEbook({ params, searchParams }: { params: Pr
           ))}
         </div>
       </section>
+
+      {/* DUAS FORMAS DE O TER (5 € com acompanhamento, ou grátis por contacto) */}
+      {EBOOKS_GRATIS.has(slug) && (
+        <section id="gratis" className="mx-auto grid max-w-6xl gap-6 px-4 pb-16 md:grid-cols-2">
+          <div className="rounded-[2rem] p-8" style={{ background: `linear-gradient(135deg, ${v.cor}2a, transparent)`, border: `1px solid ${v.cor}88` }}>
+            <p className="text-xs font-semibold uppercase tracking-[0.3em]" style={{ color: v.cor2 }}>Com acompanhamento</p>
+            <h3 className="mt-3 text-3xl" style={T}>{preco} · e-book + 7 dias comigo</h3>
+            <ul className="mt-5 space-y-2 text-white/75">
+              <li>✓ PDF e versão interativa, acesso imediato</li>
+              <li>✓ 7 dias de acompanhamento direto: marcas a conversa na agenda</li>
+              <li>✓ Fica na tua Biblioteca</li>
+            </ul>
+            <Link href={comprar} className="mt-8 inline-block rounded-full px-7 py-4 font-bold text-black" style={{ background: `linear-gradient(90deg, ${v.cor}, ${v.cor2})` }}>Comprar por {preco}</Link>
+          </div>
+          <div className="rounded-[2rem] border border-white/12 bg-white/[0.03] p-8">
+            <p className="text-xs font-semibold uppercase tracking-[0.3em] text-white/55">Grátis</p>
+            <h3 className="mt-3 text-3xl" style={T}>Só o e-book</h3>
+            <p className="mt-3 mb-6 text-white/65">Em troca do teu email, WhatsApp e quatro respostas rápidas. Não inclui os 7 dias de acompanhamento.</p>
+            <FormGratis slug={slug} />
+          </div>
+        </section>
+      )}
 
       {/* CTA FINAL */}
       <section className="px-4 pb-20">

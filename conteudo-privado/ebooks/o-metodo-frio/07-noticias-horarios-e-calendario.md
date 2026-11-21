@@ -8,6 +8,9 @@ Nenhuma destas pessoas estava a fazer análise. Estavam a fazer apostas.
 
 ## O calendário económico
 
+[[foto: mt5-calendario-noticias.jpg | O MetaTrader 5 traz notícias e calendário económico dentro da plataforma: separadores «Notícias» e «Calendário», na caixa de ferramentas. Imagem: MetaQuotes (metatrader5.com). | larga]]
+
+
 O calendário económico é a agenda do mercado: lista as publicações de dados e as decisões dos bancos centrais, com a hora e o impacto esperado (normalmente marcado com uma, duas ou três estrelas, ou cores). Há calendários gratuitos em vários sites financeiros e algumas corretoras têm um dentro da plataforma.
 
 Os eventos que mais mexem nos pares principais:

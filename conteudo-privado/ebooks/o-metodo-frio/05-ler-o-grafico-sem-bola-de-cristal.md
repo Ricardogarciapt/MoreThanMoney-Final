@@ -43,6 +43,9 @@ Quando uma resistência é rompida com força, muitas vezes passa a funcionar co
 
 ## Fibonacci, sem misticismo
 
+[[foto: mt5-analise-tecnica.jpg | No MetaTrader 5 as ferramentas de Fibonacci estão no menu «Inserir › Objetos › Fibonacci». Vários gráficos e prazos lado a lado. Imagem: MetaQuotes (metatrader5.com). | larga]]
+
+
 A ferramenta de retração de Fibonacci marca níveis percentuais de uma correção: 38,2 %, 50 % e 61,8 % são os mais usados. A matemática vem da sequência de Fibonacci, mas o motivo pelo qual funciona às vezes é mais simples: muita gente olha para os mesmos níveis.
 
 1. Numa tendência de alta, liga o fundo ao topo do último movimento.

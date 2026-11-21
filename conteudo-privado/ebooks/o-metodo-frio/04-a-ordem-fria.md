@@ -44,16 +44,15 @@ O preço está a dois pips do teu stop e tu arrastas a linha para mais longe, «
 6. Vai a **Negociação** e confirma que a posição aparece com SL e TP preenchidos.
 7. Tira um print. Vai para o diário.
 
-:::ecra MetaTrader 5 · Nova ordem · EUR/USD
-Tipo: Buy Limit
-Volume: 0,02
-Preço: 1,08200
-S/L: 1,07950
-T/P: 1,08700
-Risco: 25 pips · Alvo: 50 pips
-:::
+[[foto: mt5-ios-ordem.jpg | A janela de ordem no MetaTrader 5 para iPhone: volume, Stop Loss e Take Profit preenchidos antes de tocar em «Sell» ou «Buy». Imagem: MetaQuotes (metatrader5.com). | larga]]
 
-Exemplo ilustrativo: uma compra pendente a 1,0820, com stop 25 pips abaixo e alvo 50 pips acima. A relação risco:retorno é 1:2.
+No teu caso, a ordem fria fica assim: tipo Buy Limit, volume 0,02, preço 1,08200, S/L 1,07950, T/P 1,08700. São 25 pips de risco para 50 de alvo (exemplo ilustrativo).
+
+Ou seja, uma relação risco:retorno de 1:2.
+
+No computador é igual: a janela «Nova ordem» tem os mesmos campos, e nenhum deles fica em branco.
+
+[[foto: mt5-desktop-ordem.jpg | MetaTrader 5 no computador: janela «Nova ordem» com Stop Loss e Take Profit, e o histórico em baixo. Imagem: MetaQuotes (metatrader5.com). | larga]]
 
 ## A checklist antes de clicar
 
