@@ -1,9 +1,10 @@
 "use client"
 
 import { useState } from "react"
-import { ArrowRight, Check, Loader2, Printer, Sparkles } from "lucide-react"
+import { ArrowRight, Check, FileText, Loader2, Sparkles } from "lucide-react"
 import { EQUIPAS, type RelatorioAnalise } from "@/lib/site-solucoes/analise"
 import { useT } from "@/components/solucoes/idioma"
+import { PropostaPDF } from "@/components/solucoes/proposta-pdf"
 
 /**
  * «Pedir análise ao meu negócio»: a pessoa conta o negócio, junta as horas do simulador e recebe
@@ -177,10 +178,11 @@ export function PedirAnalise({
 
 function Relatorio({ rel, agendar }: { rel: RelatorioAnalise; agendar: string }) {
   const { t, tf, n: fmt } = useT()
+  const [proposta, setProposta] = useState(false)
   const temHoras = rel.oportunidades.length > 0
   return (
     <article className="analise-relatorio overflow-hidden rounded-3xl border border-[#D2A63C]/40 bg-[#0E1015] animate-in fade-in slide-in-from-bottom-2 duration-500">
-      <style>{`@media print{body *{visibility:hidden}.analise-relatorio,.analise-relatorio *{visibility:visible}.analise-relatorio{position:absolute;left:0;top:0;width:100%}}`}</style>
+      {proposta && <PropostaPDF rel={rel} agendar={agendar} onFechar={() => setProposta(false)} />}
       <header className="border-b border-white/10 bg-gradient-to-r from-[#D2A63C]/15 to-transparent p-6 md:p-8">
         <p className="text-sm font-semibold uppercase tracking-wider text-[#E9C46A]">{t("Análise preliminar")}</p>
         <h3 className="mt-1 text-2xl font-bold md:text-3xl">{rel.empresa}</h3>
@@ -283,10 +285,10 @@ function Relatorio({ rel, agendar }: { rel: RelatorioAnalise; agendar: string })
           </a>
           <button
             type="button"
-            onClick={() => window.print()}
-            className="inline-flex items-center gap-2 rounded-full border border-white/15 px-5 py-3 text-sm font-semibold text-zinc-200 hover:border-[#D2A63C]/50"
+            onClick={() => setProposta(true)}
+            className="inline-flex items-center gap-2 rounded-full border border-[#D2A63C]/50 bg-[#D2A63C]/10 px-5 py-3 text-sm font-semibold text-[#E9C46A] hover:bg-[#D2A63C]/20"
           >
-            <Printer className="h-4 w-4" /> {t("Guardar em PDF")}
+            <FileText className="h-4 w-4" /> {t("Ver a proposta em PDF")}
           </button>
           <p className="text-sm text-zinc-500">{t("Recebemos o teu pedido. A análise completa segue por email depois de olharmos para o teu caso.")}</p>
         </div>

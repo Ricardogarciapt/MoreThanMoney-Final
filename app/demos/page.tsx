@@ -2,7 +2,7 @@ import type { Metadata } from "next"
 import Link from "next/link"
 import {
   ArrowLeft, ArrowRight, ArrowUpRight, BarChart3, Bot, CalendarCheck, Check, ClipboardList, FileText, GraduationCap,
-  LayoutTemplate, LineChart, Megaphone, MessagesSquare, Receipt, ShoppingBag, Smartphone, Sparkles, Users, Wand2,
+  LayoutTemplate, LineChart, Megaphone, MessagesSquare, Move3d, Receipt, ShoppingBag, Smartphone, Sparkles, Users, Wand2,
 } from "lucide-react"
 import { linkAgendar } from "@/lib/agenda/link"
 import { demosPublicadas } from "@/lib/site-solucoes/demos-diarias"
@@ -25,7 +25,7 @@ import { Revelar } from "@/components/solucoes/revelar"
  * Ordem do Ricardo (17/11): nunca mostrar «em montagem»/«em breve» — entregamos todas.
  */
 
-type Props = { searchParams: Promise<{ lang?: string | string[]; modelo?: string | string[] }> }
+type Props = { searchParams: Promise<{ lang?: string | string[]; modelo?: string | string[]; ra?: string | string[] }> }
 
 export async function generateMetadata({ searchParams }: Props): Promise<Metadata> {
   const idioma = await idiomaDoPedido((await searchParams).lang)
@@ -126,6 +126,9 @@ export default async function ShowroomDemos({ searchParams }: Props) {
                   <CalendarCheck className="h-4 w-4" aria-hidden="true" /> {t("Marcar diagnóstico")}
                 </a>
               </div>
+              <Link href={ligar("/demos?ra=1#modelos")} className="mt-4 inline-flex min-h-[44px] items-center gap-2 text-sm font-semibold text-[#E9C46A] hover:text-white">
+                <Move3d className="h-4 w-4" aria-hidden="true" /> {t("Novo: põe a app em realidade aumentada em cima do teu balcão")} <ArrowRight className="h-4 w-4" aria-hidden="true" />
+              </Link>
               <ul className="mt-8 grid gap-2 text-sm text-zinc-300 sm:grid-cols-3">
                 {["Demo com a tua marca", "Preço fechado", "14 soluções entregáveis"].map((x) => (
                   <li key={x} className="flex items-center gap-2">
@@ -149,7 +152,7 @@ export default async function ShowroomDemos({ searchParams }: Props) {
             <h2 className="text-3xl font-bold tracking-tight md:text-5xl">{t("Modelos por sector")}</h2>
             <p className="mt-3 max-w-2xl text-zinc-400">{t("A mesma base, a cara de cada negócio. Escolhe um sector e mexe no telemóvel.")}</p>
             <div className="mt-8">
-              <MontraModelos publicadas={publicadas} agendar={agendar} inicial={modeloInicial} />
+              <MontraModelos publicadas={publicadas} agendar={agendar} inicial={modeloInicial} abrirRA={sp.ra === "1"} />
             </div>
           </section>
 

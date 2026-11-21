@@ -11,6 +11,7 @@ import { DEMOS_DIARIAS } from '../demos-diarias'
 import { EQUIPAS } from '../analise'
 import { sectorGenerico } from '../sector-livre'
 import { KITS, MODELOS, PROTOTIPOS } from '../showroom'
+import { DIA } from '../dia'
 
 /** Campos que não são texto para ler: identificadores, ligações e datas. */
 const NAO_TEXTO = new Set(['id', 'img', 'url', 'slug', 'data', 'segmentos', 'quem', 'area', 'kit', 'demo', 'marca', 'corPrincipal', 'corFundo', 'corTexto', 'estado', 'codigo', 'letra', 'layout']) 
@@ -53,6 +54,9 @@ const FICHEIROS = [
   'components/solucoes/video-apresentacao.tsx',
   'components/solucoes/demo-roteiro.tsx',
   'components/solucoes/pedir-analise.tsx',
+  'components/solucoes/proposta-pdf.tsx',
+  'components/solucoes/ra-telemovel.tsx',
+  'components/solucoes/dia-antes-depois.tsx',
   'lib/site-solucoes/analise.ts',
 ]
 
@@ -67,7 +71,7 @@ export function textosDoCodigo(raiz = process.cwd()): string[] {
 
 export function textosParaTraduzir(raiz = process.cwd()): string[] {
   const out = new Set<string>()
-  recolher({ PERFIS, DEMOS, CASOS: CASOS.filter((c) => c.autorizado), FAQ, PROXIMOS, MENU, AREAS, TAREFAS, SECTORES, CASO_MTM, DEMOS_DIARIAS, EQUIPAS, g: sectorGenerico(''), KITS, MODELOS, PROTOTIPOS }, '', out)
+  recolher({ PERFIS, DEMOS, CASOS: CASOS.filter((c) => c.autorizado), FAQ, PROXIMOS, MENU, AREAS, TAREFAS, SECTORES, CASO_MTM, DEMOS_DIARIAS, EQUIPAS, g: sectorGenerico(''), KITS, MODELOS, PROTOTIPOS, DIA }, '', out)
   for (const x of TEXTOS_SOLTOS) out.add(x)
   for (const x of textosDoCodigo(raiz)) out.add(x)
   return [...out].sort()
