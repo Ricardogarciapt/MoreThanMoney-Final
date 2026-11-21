@@ -1,3 +1,4 @@
+import { IG_ID } from "@/lib/carrossel-diario/tipos"
 /**
  * Cron de publicação nativa no Instagram.
  *
@@ -173,7 +174,11 @@ export async function GET(request: NextRequest) {
       caption: row.caption && parecePortugues(row.caption) ? corrigirPtPt(row.caption).texto : row.caption,
       creation_id: row.creation_id,
       child_creation_ids: row.child_creation_ids,
-      trial: row.created_by === CRIADOR_REELS_PESSOAL && reelsRicardo?.teste ? "SS_PERFORMANCE" : null,
+      // 21/11/2026, Ricardo: «Todos os meus reels devem ser postados como teste» → qualquer REEL do
+      // @ricardogarciapt sai como «reel de teste» do Instagram (primeiro a não seguidores; passa aos
+      // seguidores sozinho se correr bem).
+      trial: row.media_type === "REELS" && (row.ig_account_id === IG_ID.ricardo
+        || (row.created_by === CRIADOR_REELS_PESSOAL && reelsRicardo?.teste)) ? "SS_PERFORMANCE" : null,
     }
 
     try {
