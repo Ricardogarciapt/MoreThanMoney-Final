@@ -144,18 +144,32 @@ export function distanciaM(a: { lat: number; lon: number }, b: { lat: number; lo
 export async function pontosPerto(lat: number, lon: number, raio = 1500) {
   const cfg = await configTipos()
   const tipos = TIPOS_LOCAIS.filter(t => cfg.activos.includes(t.id))
-  const filtros = tipos.flatMap(t => t.osm).map(k => { const [a, v] = k.split('='); return `nwr["${a}"="${v}"]["name"](around:${raio},${lat},${lon});` }).join('')
+  // Uma linha por chave OSM (leisure~park|garden|…) em vez de uma por tipo: a consulta fica leve.
+  const porChave: Record<string, string[]> = {}
+  tipos.flatMap(t => t.osm).forEach(k => { const [a, v] = k.split('='); (porChave[a] ||= []).push(v) })
+  const filtros = Object.entries(porChave).map(([a, vs]) => `nwr["${a}"~"^(${vs.join('|')})$"]["name"](around:${raio},${lat},${lon});`).join('')
   if (!filtros) return { isolada: true, pontos: [] as any[] }
-  const q = `[out:json][timeout:15];(${filtros});out center 80;`
-  let elementos: any[] = []
+  const q = `[out:json][timeout:12];(${filtros});out center 80;`
+  // O servidor principal do Overpass às vezes não responde a tempo: pergunta-se a vários espelhos
+  // ao mesmo tempo e fica a primeira resposta boa. Se todos falharem, usam-se os pontos já guardados.
+  let elementos: any[] = [], falhou = false
   try {
-    const r = await fetch('https://overpass-api.de/api/interpreter', {
-      method: 'POST', body: 'data=' + encodeURIComponent(q),
-      headers: { 'Content-Type': 'application/x-www-form-urlencoded', 'User-Agent': 'MoreThanMoney-app/1.0' },
-      signal: AbortSignal.timeout(15_000),
-    })
-    if (r.ok) elementos = (await r.json()).elements || []
-  } catch (e) { console.error('[app-ricardo] overpass:', e) }
+    elementos = await Promise.any(OVERPASS.map(async url => {
+      const r = await fetch(url, {
+        method: 'POST', body: 'data=' + encodeURIComponent(q),
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded', 'User-Agent': 'MoreThanMoney-app/1.0 (+https://www.morethanmoney.pt)' },
+        signal: AbortSignal.timeout(12_000),
+      })
+      if (!r.ok) throw new Error(`${url} ${r.status}`)
+      const j = await r.json()
+      if (!Array.isArray(j?.elements)) throw new Error(`${url} sem elements`)
+      return j.elements as any[]
+    }))
+  } catch (e) {
+    falhou = true
+    console.error('[app-ricardo] overpass (todos os espelhos):', e instanceof AggregateError ? e.errors.map(x => String(x?.message || x)).join(' | ') : e)
+    elementos = await pontosGuardados(lat, lon, raio)
+  }
   const pontos = elementos.map(e => {
     const la = e.lat ?? e.center?.lat, lo = e.lon ?? e.center?.lon
     const tp = tipos.find(t => t.osm.some(k => { const [a, v] = k.split('='); return e.tags?.[a] === v }))
@@ -170,7 +184,29 @@ export async function pontosPerto(lat: number, lon: number, raio = 1500) {
   if (escolhidos.length) await db().from('rg_app_pontos').upsert(escolhidos.map(({ dist, ...p }) => p), { onConflict: 'id' })
   // Os pontos do Ricardo (escolhidos à mão, com lição) entram sempre que estejam a 5 km ou menos.
   const meus = (await pontosDoRicardo()).map(p => ({ ...p, dist: Math.round(distanciaM({ lat, lon }, p)) })).filter(p => p.dist <= 5000).sort((a, b) => a.dist - b.dist)
+  // Sem resposta do mapa e sem nada guardado não se sabe se a zona é isolada: diz-se isso ao ecrã.
+  if (falhou && !unicos.length && !meus.length) return { isolada: false, falhou: true, pontos: [] as any[] }
   return { isolada: isolada && !meus.length, pontos: [...meus, ...escolhidos] }
+}
+
+const OVERPASS = [
+  'https://overpass-api.de/api/interpreter',
+  'https://overpass.kumi.systems/api/interpreter',
+  'https://overpass.private.coffee/api/interpreter',
+  'https://maps.mail.ru/osm/tools/overpass/api/interpreter',
+]
+
+// Pontos que já vieram do OpenStreetMap noutras procuras (rg_app_pontos), no mesmo formato do Overpass.
+async function pontosGuardados(lat: number, lon: number, raio: number) {
+  const dLat = raio / 111_000, dLon = raio / (111_000 * Math.max(0.2, Math.cos(lat * Math.PI / 180)))
+  const { data } = await db().from('rg_app_pontos').select('id, nome, tipo, lat, lon')
+    .like('id', 'osm:%').gte('lat', lat - dLat).lte('lat', lat + dLat).gte('lon', lon - dLon).lte('lon', lon + dLon).limit(80)
+  return (data || []).map((p: any) => {
+    const tp = TIPOS_LOCAIS.find(t => t.nome === p.tipo)
+    const [a, v] = (tp?.osm[0] || 'leisure=park').split('=')
+    const [type, id] = String(p.id).slice(4).split('/')
+    return { type, id, lat: p.lat, lon: p.lon, tags: { name: p.nome, [a]: v } }
+  })
 }
 
 /** Pontos criados pelo Ricardo no painel. A lição só se revela ao chegar, por isso não vai aqui. */
