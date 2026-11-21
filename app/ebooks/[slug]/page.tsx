@@ -18,7 +18,7 @@ export const revalidate = 300
 
 // textos fixos da página, por língua (o conteúdo do livro vem de VENDAS)
 const TX = {
-  pt: { loc: 'pt-PT', previa: '{t.previa}', quero: 'Quero o e-book', formato: 'PDF + versão interativa · acesso imediato', capaAlt: 'Capa do e-book', dentro: 'O que está lá dentro', paginasAlt: 'Três páginas do interior do e-book', paginasNota: 'Na versão interativa, os gráficos desenham-se à tua frente enquanto lês, no telemóvel ou no computador.', paraTi: 'É para ti se…', naoE: 'O que não é', quem: 'Quem escreve', faq: 'Perguntas frequentes', comprar: 'Comprar', por: 'por', meta: (a: string) => `e-book de ${a}`, lingua: 'Ler noutra língua' },
+  pt: { loc: 'pt-PT', previa: 'Pré-visualização: este e-book ainda não está à venda.', quero: 'Quero o e-book', formato: 'PDF + versão interativa · acesso imediato', capaAlt: 'Capa do e-book', dentro: 'O que está lá dentro', paginasAlt: 'Três páginas do interior do e-book', paginasNota: 'Na versão interativa, os gráficos desenham-se à tua frente enquanto lês, no telemóvel ou no computador.', paraTi: 'É para ti se…', naoE: 'O que não é', quem: 'Quem escreve', faq: 'Perguntas frequentes', comprar: 'Comprar', por: 'por', meta: (a: string) => `e-book de ${a}`, lingua: 'Ler noutra língua' },
   en: { loc: 'en-GB', previa: 'Preview: this e-book is not on sale yet.', quero: 'I want the e-book', formato: 'PDF + interactive version · instant access', capaAlt: 'Cover of the e-book', dentro: "What's inside", paginasAlt: 'Three pages from inside the e-book', paginasNota: 'In the interactive version, the charts draw themselves as you read, on your phone or computer.', paraTi: "It's for you if…", naoE: 'What it is not', quem: 'Who wrote it', faq: 'Frequently asked questions', comprar: 'Buy', por: 'for', meta: (a: string) => `e-book by ${a}`, lingua: 'Read in another language' },
   es: { loc: 'es-ES', previa: 'Vista previa: este e-book aún no está a la venta.', quero: 'Quiero el e-book', formato: 'PDF + versión interactiva · acceso inmediato', capaAlt: 'Portada del e-book', dentro: 'Lo que hay dentro', paginasAlt: 'Tres páginas del interior del e-book', paginasNota: 'En la versión interactiva, los gráficos se dibujan mientras lees, en el móvil o en el ordenador.', paraTi: 'Es para ti si…', naoE: 'Lo que no es', quem: 'Quién lo escribe', faq: 'Preguntas frecuentes', comprar: 'Comprar', por: 'por', meta: (a: string) => `e-book de ${a}`, lingua: 'Leer en otro idioma' },
 } as const satisfies Record<LinguaEbook, unknown>
@@ -48,7 +48,8 @@ export default async function PaginaEbook({ params, searchParams }: { params: Pr
   const { slug } = await params
   const sp = await searchParams
   if (!ehEbook(slug)) notFound()
-  const p = await produto(slug)
+  // Um livro = um produto no marketplace: preço, estado e compra vêm sempre da versão PT.
+  const p = await produto(partesEbook(slug).base)
   const publicado = p?.estado === 'publicado' && p.activo
   if (!publicado && sp.previa !== '1') notFound()
   const v = VENDAS[slug]
@@ -56,7 +57,7 @@ export default async function PaginaEbook({ params, searchParams }: { params: Pr
   const t = TX[lingua]
   const versoes = (['pt', 'en', 'es'] as LinguaEbook[]).map((l) => ({ l, slug: l === 'pt' ? base : `${base}-${l}` })).filter((x) => ehEbook(x.slug))
   const preco = p ? euros(p.preco_cents, t.loc) : ''
-  const comprar = `/marketplace/${slug}`
+  const comprar = `/marketplace/${base}`
   const estilo = { ['--c' as string]: v.cor, ['--c2' as string]: v.cor2, background: v.fundo } as React.CSSProperties
   const T = { fontFamily: v.fonteTitulo }
 

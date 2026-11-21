@@ -1,12 +1,19 @@
 import { withOpinlyConfig } from '@opinly/next'
 
+// E-books entregues por /api/ebooks (PT) e /api/ebooks-traducoes (EN/ES). Livro novo: acrescentar aqui.
+const LIVROS = ['destrui-tudo-e-ainda-bem', 'a-primeira-chave', 'so-as-maos', 'o-metodo-frio']
+const servidos = (slugs) => slugs.flatMap((s) => [`./conteudo-privado/ebooks/${s}/${s}.html`, `./conteudo-privado/ebooks/${s}/${s}.pdf`])
+
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   // Os vídeos de public/ são servidos estáticos pela CDN; nenhuma função os lê. Sem isto o
   // rastreio de ficheiros mete-os nas funções que tocam em process.cwd() e passam os 250 MB.
   // Os e-books vivem fora de public/ e só saem pela rota com acesso: têm de ir no bundle dela.
+  // Só os ficheiros servidos (nunca o -grafica.pdf, que é para a gráfica) e PT/EN/ES em funções
+  // separadas: tudo junto dava 360 MB e a Vercel recusa funções acima de 250 MB.
   outputFileTracingIncludes: {
-    '/api/ebooks/[slug]': ['./conteudo-privado/ebooks/*/*.html', './conteudo-privado/ebooks/*/*.pdf'],
+    '/api/ebooks/[slug]': servidos(LIVROS),
+    '/api/ebooks-traducoes/[slug]': servidos(LIVROS.flatMap((l) => [`${l}-en`, `${l}-es`])),
   },
   outputFileTracingExcludes: {
     '*': ['public/videos/**', 'public/**/*.mp4', 'public/**/*.mov'],
