@@ -448,7 +448,7 @@
         var l = r.linhas[i++];
         if (log) log.insertAdjacentHTML('afterbegin', linhaLog(l));
         var ult = document.getElementById('cUlt'); if (ult) { ult.insertAdjacentHTML('beforeend', linhaLog(l)); while (ult.children.length > 2) ult.removeChild(ult.firstChild); }
-        if (l.quem === 'eu' && l.dano) { b0 = Math.max(0, b0 - l.dano); acertaBarra('boss', b0, bm); flutua('cBoss', '−' + l.dano, (l.critico ? 'crit' : '') + (l.fraco ? ' fraco' : '')); treme('cBoss', l.critico); M.som('plim'); }
+        if (l.quem === 'eu' && l.dano) { b0 = Math.max(0, b0 - l.dano); acertaBarra('boss', b0, bm); flutua('cBoss', '−' + l.dano, (l.critico ? 'crit' : '') + (l.fraco ? ' fraco' : '')); treme('cBoss', l.critico); M.som('plim'); if (window.MissaoFX) MissaoFX.onda(document.getElementById('cBoss'), l.critico ? '#fff3c8' : (l.fraco ? '#E9C46A' : '#ff7a59')); }
         else if (l.quem === 'eu' && l.dano === 0) flutua('cBoss', 'falhou', 'falha');
         if (l.quem === 'eu' && l.cura) { v0 = Math.min(vm, v0 + l.cura); acertaBarra('eu', v0, vm); }
         if (l.quem === 'ele' && l.dano) { v0 = Math.max(0, v0 - l.dano); acertaBarra('eu', v0, vm); treme('cPalco', l.critico); try { navigator.vibrate && navigator.vibrate(l.critico ? [60, 40, 90] : 50); } catch (_) {} }
