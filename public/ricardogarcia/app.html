@@ -228,7 +228,7 @@ label { display: block; font-size: 13px; letter-spacing: 1.5px; text-transform: 
 .seg2 button.on { background: var(--placa2); color: var(--texto); box-shadow: inset 0 0 0 1px var(--linha); }
 .prova-pre { width: 100%; max-height: 220px; object-fit: contain; border-radius: 12px; border: 1px solid var(--linha); margin-top: 10px; background: #0a0d13; }
 .dois { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
-#mapa { height: 300px; border-radius: 16px; border: 1px solid var(--linha); overflow: hidden; margin: 10px 0; background: #0a0d13; }
+#mapa:not(.m3d) { height: 300px; border-radius: 16px; border: 1px solid var(--linha); overflow: hidden; margin: 10px 0; background: #0a0d13; }
 .ponto { display: grid; grid-template-columns: 1fr auto; gap: 10px; align-items: center; padding: 12px; border-radius: 12px; background: #0a0d13; border: 1px solid var(--linha); margin-bottom: 8px; }
 .ponto.feito { border-color: rgba(60,207,142,.45); }
 .ponto.alvo { border-color: var(--ciano); box-shadow: 0 0 0 1px var(--ciano) inset; }
@@ -591,9 +591,9 @@ html, body { overflow-x: hidden; }
       <p class="texto-m" style="margin-top:0;font-size:15px;color:var(--cinza)">Escolhe o que estás a aprender, sai a pé e passa por pontos seguros perto de ti: parques, jardins, praças, bibliotecas e miradouros. Em cada um recebes uma dica-chave e XP.</p>
       <div class="placa cartao"><span class="tag">A tua área</span><div class="chips" id="rAreas" style="margin-top:8px"></div></div>
       <div class="seguro">🛡️ Só propomos lugares públicos, fora da estrada e com nome no mapa. Em zonas isoladas não há rota. Vai de dia, pelo passeio, e nunca olhes para o ecrã a atravessar: a app avisa quando chegares.</div>
+      <div id="mapa" hidden></div>
       <button class="btn" id="bPontos" type="button">Encontrar pontos seguros perto de mim</button>
       <div class="erro" id="rErro" role="alert"></div>
-      <div id="mapa" hidden></div>
       <div id="rLista"></div>
       <div id="rRicardo"></div>
       <div class="sec-tit"><h3>Movimento</h3><span class="mono">Saúde</span></div>
@@ -840,6 +840,7 @@ html, body { overflow-x: hidden; }
         (feito ? '<button class="btn sec" type="button" data-dica="' + esc(p.id) + '">Ver dica</button>' : alvo === p.id ? '<button class="btn" type="button" data-chegar="' + esc(p.id) + '">Cheguei</button>' : '<button class="btn sec" type="button" data-ir="' + esc(p.id) + '">Ir</button>') + '</div>';
     }).join('');
     pintaRicardo();
+    atualizarMapa3D();
   }
   // Os pontos do Ricardo aparecem sempre, mesmo antes de procurar: perto ou longe, dá para abrir no mapa.
   function pintaRicardo() {
@@ -863,7 +864,45 @@ html, body { overflow-x: hidden; }
     var css = document.createElement('link'); css.rel = 'stylesheet'; css.href = 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css'; document.head.appendChild(css);
     var js = document.createElement('script'); js.src = 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js'; js.onload = cb; js.onerror = function () { $('rErro').textContent = 'O mapa não abriu. A lista de pontos continua a funcionar.'; }; document.head.appendChild(js);
   }
+  // Mapa 3D (app-mapa.js). Abre logo ao entrar em Rotas, com os pontos do Ricardo; sem WebGL fica o 2D.
+  var M3 = null, m3Chave = '';
+  function pontosMapa() {
+    var R = (E && E.extra && E.extra.rotas) || {}, ids = {}, L3 = [];
+    PONTOS.concat(R.ricardo || []).forEach(function (p) { if (!ids[p.id]) { ids[p.id] = 1; L3.push(p); } });
+    return L3;
+  }
+  function atualizarMapa3D(forcar) {
+    if (!M3) return;
+    var vis = {}; ((((E && E.extra && E.extra.rotas) || {}).visitados) || []).forEach(function (v) { vis[v.ponto] = 1; });
+    var L3 = pontosMapa(), chave = L3.map(function (p) { return p.id; }).join() + '|' + alvo + '|' + Object.keys(vis).join();
+    if (!forcar && chave === m3Chave) return; m3Chave = chave;
+    M3.pontos(L3, vis, alvo);
+  }
+  function abrirMapa3D() {
+    if (M3 || !window.MissaoMapa || !MissaoMapa.suporta()) return;
+    var R = (E && E.extra && E.extra.rotas) || {}, c = ultimaPos || (R.ricardo && R.ricardo[0]) || null;
+    $('mapa').hidden = false;
+    MissaoMapa.montar($('mapa'), {
+      centro: c,
+      aoTocar: function (p) {
+        var vi = (E.extra.rotas.visitados || []).filter(function (k) { return k.ponto === p.id; })[0];
+        if (vi && vi.dica) { mostrarDica(vi.dica, vi.nome); return; }
+        if (!PONTOS.some(function (k) { return k.id === p.id; })) PONTOS.unshift(p);
+        var irB = document.createElement('button'); irB.setAttribute('data-ir', p.id); irB.type = 'button'; $('rLista').appendChild(irB); irB.click(); irB.remove();
+      },
+      pedirPosicao: function () { $('bPontos').click(); },
+    }).then(function (m) {
+      if (!m) { $('mapa').hidden = true; return; }
+      M3 = m; atualizarMapa3D(true); if (ultimaPos) M3.eu(ultimaPos);
+      // GPS já autorizado: o teu ponto e o trajeto aparecem sem pedir nada.
+      try { navigator.permissions.query({ name: 'geolocation' }).then(function (st) { if (st.state === 'granted') seguir(); }); } catch (_) {}
+    });
+  }
   function pintaMapa(pos) {
+    if (M3 || (window.MissaoMapa && MissaoMapa.suporta())) {
+      if (!M3) { abrirMapa3D(); return; }
+      atualizarMapa3D(true); M3.eu(pos); M3.enquadrar(); return;
+    }
     carregarLeaflet(function () {
       $('mapa').hidden = false;
       if (!mapa) { mapa = L.map('mapa', { zoomControl: false, attributionControl: true }); L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', { maxZoom: 19, attribution: '© OpenStreetMap · © CARTO' }).addTo(mapa); }
@@ -880,6 +919,7 @@ html, body { overflow-x: hidden; }
     vigia = navigator.geolocation.watchPosition(function (g) {
       ultimaPos = { lat: g.coords.latitude, lon: g.coords.longitude, prec: g.coords.accuracy, t: Date.now() };
       if (eu) eu.setLatLng([ultimaPos.lat, ultimaPos.lon]);
+      if (M3) M3.eu(ultimaPos);
       var p = PONTOS.filter(function (k) { return k.id === alvo; })[0];
       if (p && distM(ultimaPos, p) < 80 + Math.min(50, ultimaPos.prec || 50) && !seguir.avisado) { seguir.avisado = p.id; try { navigator.vibrate && navigator.vibrate([60, 80, 60]); } catch (_) {} toast('<b>Chegaste a ' + esc(p.nome) + '</b><br>Pára num sítio seguro e carrega em «Cheguei».', 5000); }
       pintaPontos();
@@ -1075,6 +1115,7 @@ html, body { overflow-x: hidden; }
     window.scrollTo(0, 0);
     abrirComunidade(b.getAttribute('data-v') === 'vEsq');
     if (b.getAttribute('data-v') === 'vDef') pintaDef();
+    if (b.getAttribute('data-v') === 'vRotas') { abrirMapa3D(); if (M3) setTimeout(M3.redimensionar, 60); }
     if (window.MissaoRPG) window.MissaoRPG.parar();
   });
   // Perfil: foto ou avatar montado (emblema + fundo + moldura). O servidor gera o SVG só a partir destas opções.
@@ -1363,7 +1404,7 @@ html, body { overflow-x: hidden; }
         (podeInstalar ? lin('instalar', '📲', 'Instalar a app', pedidoInstalar ? 'Fica no ecrã principal' : 'Partilhar → Adicionar ao ecrã principal') : '') + lin('atualizar', '⟳', 'Procurar atualização', 'Recarrega a versão mais recente') + '</div>' +
       (m.admin ? '<div class="def-grupo"><span class="def-tit mono">Admin</span>' + lin('admin', '🛠️', 'Área de admin', 'Números de hoje e painel') + '</div>' : '') +
       '<div class="def-grupo"><span class="def-tit mono">Ajuda</span>' + lin('ajuda', '❔', 'Como funciona', 'XP, moedas, séries e prémios') + '<a class="def-lin" href="/privacidade" target="_blank" rel="noopener"><span class="ic">🔒</span><span><b>Privacidade</b><small>Como tratamos os teus dados</small></span><span class="seta">›</span></a>' + lin('sair', '⏻', 'Sair da conta', 'Neste telemóvel', ' perigo') + '</div>' +
-      '<p class="def-versao">MISSÃO · VERSÃO 15</p>';
+      '<p class="def-versao">MISSÃO · VERSÃO 16</p>';
     if (window.Missao3D) Missao3D.emblema($('defEmb'), m.patente);
   }
   $('vDef').addEventListener('change', function (ev) {
@@ -1766,6 +1807,7 @@ html, body { overflow-x: hidden; }
 </script>
 <script src="/ricardogarcia/app-fx.js?v=2" defer></script>
 <script src="/ricardogarcia/app-3d.js?v=1" defer></script>
+<script src="/ricardogarcia/app-mapa.js?v=1" defer></script>
 <script src="/ricardogarcia/app-rpg.js?v=5" defer></script>
 </body>
 </html>
