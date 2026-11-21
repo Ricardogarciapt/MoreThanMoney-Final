@@ -79,7 +79,8 @@ export async function rascunhoDoReelDoClone(db: SupabaseClient, projetoId: strin
     const { data: ativo } = await db.from('estudio_ativos').select('peca_id, notas').eq('id', ref).maybeSingle()
     if (!ativo?.peca_id || !String(ativo.notas || '').startsWith('HeyGen')) return null
     const { data: peca } = await db.from('conteudo_magnetico_pecas').select('guiao').eq('id', ativo.peca_id).maybeSingle()
-    const g = (peca?.guiao ?? {}) as Record<string, any>
+    // A versão da outra conta (heygen.ts) leva a palavra do funil dessa conta.
+    const g = { ...((peca?.guiao ?? {}) as Record<string, any>), ...(p.cinematico?.palavra_chave ? { palavra_chave: p.cinematico.palavra_chave } : {}) }
     const video = String(pr.video_url).split('?')[0]
 
     const { data: post } = await db.from('social_scheduled_posts').insert({

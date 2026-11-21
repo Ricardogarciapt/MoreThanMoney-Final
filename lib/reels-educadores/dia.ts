@@ -4,6 +4,7 @@ import { ESTILO_POR_OMISSAO } from '@/lib/videocliper/estilos'
 import { AVISO, EDUCADORES, HORA_CORTE, HORAS_ANIMADOS, LINHAS_REELS, ROTACAO_CORTES, SLOTS_CORTE_AB, SLOTS_MTM, educador, educadorDosCortes, linhaDoSlot, type EducadorReel } from './config'
 import { gerarRoteiro, textoDoGancho, type Historico, type Roteiro } from './roteiro'
 import { listarAulas } from './aulas'
+import { CHAVE_REELS_CINEMATICOS, lerInterruptor } from '@/lib/estudio/reels-cinematicos'
 
 /**
  * O DIA DOS REELS — o que o robô do GitHub pede de manhã e o que entrega no fim.
@@ -83,6 +84,18 @@ function quando(dia: string, hora: string): Date {
   return t.getTime() < Date.now() + 10 * 60_000 ? new Date(Date.now() + 20 * 60_000) : t
 }
 
+/** O 5.º animado dos dias em que o gémeo da MTM não sai. */
+const SLOT_EXTRA = { linha: 'mtm-seguidores', hora: '20:30' }
+
+async function semGemeoMtm(db: Db, dia: string): Promise<boolean> {
+  const { data } = await db.from('site_settings').select('value').eq('key', CHAVE_REELS_CINEMATICOS).maybeSingle()
+  const cfg = lerInterruptor(data?.value)
+  // Com a alternância, o gémeo do dia serve as duas contas (heygen.ts faz as 2 versões): a MTM tem
+  // sempre o cinemático. O 5.º animado só entra se os cinemáticos estiverem desligados.
+  void dia
+  return !cfg.ligado
+}
+
 async function historico(db: Db, slug: string): Promise<Historico[]> {
   const { data } = await db.from('reels_auto')
     .select('tema, gancho, nota').eq('educador', slug).eq('tipo', 'animado')
@@ -144,9 +157,9 @@ export async function planearDia(dia: string): Promise<{ dia: string; renders: P
   if ((await modo(db)) === 'mtm') {
     await pararEducadores(db, dia, notas)
     // Slots que deixaram de existir (eram 6 até 21/11): roteiros por desenhar saem, posts futuros ficam rascunho.
-    await db.from('reels_auto').delete().gte('dia', dia).eq('tipo', 'animado').gt('slot', SLOTS_MTM.length).lt('slot', 8).is('post_id', null)
+    await db.from('reels_auto').delete().gte('dia', dia).eq('tipo', 'animado').gt('slot', SLOTS_MTM.length + 1).lt('slot', 8).is('post_id', null)
     const { data: aMais } = await db.from('reels_auto').select('post_id').gte('dia', dia).eq('tipo', 'animado')
-      .gt('slot', SLOTS_MTM.length).lt('slot', 8).not('post_id', 'is', null)
+      .gt('slot', SLOTS_MTM.length + 1).lt('slot', 8).not('post_id', 'is', null)
     const idsAMais = (aMais ?? []).map((r) => String(r.post_id))
     if (idsAMais.length) {
       await db.from('social_scheduled_posts').update({ status: 'draft', approved_by: null, approved_at: null })
@@ -154,9 +167,11 @@ export async function planearDia(dia: string): Promise<{ dia: string; renders: P
     }
     const { data: ocupados } = await db.from('reels_auto').select('slot').eq('dia', dia)
     const livres = new Set((ocupados ?? []).map((r) => Number(r.slot)))
-    for (let i = 0; i < SLOTS_MTM.length; i++) {
+    // Cinemáticos desligados: um 5.º animado às 20:30 no lugar do cinemático.
+    const extra = (await semGemeoMtm(db, dia)) ? 1 : 0
+    for (let i = 0; i < SLOTS_MTM.length + extra; i++) {
       const slot = i + 1
-      const ed = educador(linhaDoSlot(i, dia) ?? SLOTS_MTM[i].linha)
+      const ed = educador(i < SLOTS_MTM.length ? (linhaDoSlot(i, dia) ?? SLOTS_MTM[i].linha) : SLOT_EXTRA.linha)
       if (!ed || livres.has(slot)) continue
       await novoRoteiro(db, dia, slot, ed, orc)
     }
@@ -222,7 +237,7 @@ export async function entregar(id: string, videoUrl: string, capaUrl: string | n
   const vai = linha || (pub.has(String(r.educador)) && (await modo(db)) === 'educadores')
   const slot = Number(r.slot)
   const hora = linha
-    ? (SLOTS_MTM[slot - 1]?.hora ?? SLOTS_MTM[1].hora)
+    ? (SLOTS_MTM[slot - 1]?.hora ?? (slot === SLOTS_MTM.length + 1 ? SLOT_EXTRA.hora : SLOTS_MTM[1].hora))
     : slot <= HORAS_ANIMADOS.length ? HORAS_ANIMADOS[slot - 1] : HORAS_ANIMADOS[1]
   const agora = new Date().toISOString()
   const { data: post, error } = await db.from('social_scheduled_posts').insert({
