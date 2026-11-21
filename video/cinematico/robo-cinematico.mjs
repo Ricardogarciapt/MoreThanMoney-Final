@@ -83,6 +83,9 @@ async function capturarDemos(config, stock) {
       try {
         const r = await pg.goto(base + p, { waitUntil: 'networkidle', timeout: 45_000 })
         if (!r || r.status() >= 400) throw new Error(`HTTP ${r?.status()}`)
+        // Next com streaming pode servir o «não encontrado» com 200 (demo ainda por publicar): ver o conteúdo
+        const naoHa = await pg.evaluate(() => document.title.startsWith('404') || /could not be found|não (foi )?encontrad|página não existe/i.test(document.body?.innerText || ''))
+        if (naoHa) throw new Error('página de «não encontrado»')
         // fora da foto: avisos de cookies, botões flutuantes de chat
         await pg.addStyleTag({ content: '[id*=cookie],[class*=cookie],[aria-label*=ookie],[class*=chat-flutu],[data-flutuante]{display:none!important}' }).catch(() => {})
         await pg.waitForTimeout(1500)

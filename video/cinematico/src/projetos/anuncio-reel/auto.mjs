@@ -124,6 +124,8 @@ export function anuncioAuto(e) {
   const marca = e.marca === 'ricardo-garcia' ? 'ricardo-garcia' : 'morethanmoney'
   const g = e.guiao || {}
   const fs = frases(e.legendas)
+  // Guião de trading: a montra de negócios (restaurante, barbearia…) não tem nada a ver; só demos de trading ou vida real.
+  const deTrading = /\b(trad|forex|ouro|mercado|risco|grafico|pips|bolsa|invest|dinheiro rapido|sinais?)/.test(sem(fs.map((x) => x.texto).join(' ') + ' ' + (e.guiao?.nicho || '')))
   if (!fs.length) throw new Error('sem legendas')
   const fimVoz = e.legendas[e.legendas.length - 1][1]
   const stock = new Set(e.stock || [])
@@ -168,7 +170,7 @@ export function anuncioAuto(e) {
     if (!img) {
       const tema = TEMAS.find((x) => x.re.test(t) && x.clips.some((c) => stock.has(c) && !usados.has(c)))
       const demo = DEMOS.find((x) => x.re.test(t) && !usados.has(x.p[0]))
-      const montra = !demo && RE_NEGOCIO.test(t) && !usados.has(MONTRA[0])
+      const montra = !demo && !deTrading && RE_NEGOCIO.test(t) && !usados.has(MONTRA[0])
       // alterna: depois de um ecrã de demo, se houver vida real a condizer, vai vida real
       const ultimaApp = imagens.length > 0 && imagens[imagens.length - 1].tipo === 'app'
       if (tema && (!(demo || montra) || ultimaApp)) {
@@ -178,7 +180,7 @@ export function anuncioAuto(e) {
       else {
         const livre = TEMAS.flatMap((x) => x.clips.map((c) => ({ c, g: x.grade }))).find((x) => stock.has(x.c) && !usados.has(x.c))
         if (livre) img = { src: livre.c, tipo: 'video', grade: livre.g }
-        else if (!usados.has(MONTRA[0])) img = ecraDemo(MONTRA)
+        else if (!deTrading && !usados.has(MONTRA[0])) img = ecraDemo(MONTRA)
         else continue
       }
     }
