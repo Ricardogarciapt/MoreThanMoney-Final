@@ -48,6 +48,7 @@ import { ProspecaoTelegram } from "@/components/admin/prospecao-telegram"
 import { ConversasBot } from "@/components/admin/conversas-bot"
 import { EstudioCartoes } from "@/components/admin/estudio-cartoes"
 import SocialLeads from "@/components/admin/social/leads-engagement"
+import { FasesVendas } from "./fases-vendas"
 import { MetaLeadgen } from "@/components/admin/social/meta-leadgen"
 import { VisaoGeral, type ResumoSocial } from "@/components/admin/social/visao-geral"
 import { GRUPOS_SOCIAL, TODAS_SECOES, grupoDa, type Secao } from "@/components/admin/social/navegacao"
@@ -444,6 +445,7 @@ export default function CentroSocial({ embutido = false }: { embutido?: boolean 
 
         {aba === "inicio" && <VisaoGeral r={resumo} dono={dono} irPara={setAba} />}
         {aba === "factos" && <PainelFactos painel={painel} aoEstudio={aoEstudio} />}
+        {aba === "vendas" && <FasesVendas />}
         {aba === "funil" && <PainelFunil painel={painel} />}
         {aba === "mensagens" && <PainelMensagens mensagens={mensagens} aGravar={gravarMensagem} />}
         {aba === "mapa" && <MapaFunis />}

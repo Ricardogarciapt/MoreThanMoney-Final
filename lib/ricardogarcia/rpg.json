@@ -1,0 +1,2257 @@
+{
+  "nome": "Operação Liberdade",
+  "atributos": [
+    {
+      "id": "dis",
+      "nome": "Disciplina",
+      "texto": "Fazer o que tem de ser feito, mesmo sem vontade. Cresce com as missões de melhoria."
+    },
+    {
+      "id": "foc",
+      "nome": "Foco",
+      "texto": "Clareza e calma debaixo de pressão. Cresce com as missões de mente."
+    },
+    {
+      "id": "ene",
+      "nome": "Energia",
+      "texto": "Corpo pronto para o dia. Cresce com os treinos."
+    },
+    {
+      "id": "con",
+      "nome": "Conhecimento",
+      "texto": "Saber antes de agir. Cresce com o quiz, as curiosidades e as rotas."
+    },
+    {
+      "id": "cor",
+      "nome": "Coragem",
+      "texto": "Dar o primeiro passo. Cresce com os desafios e os escape rooms."
+    },
+    {
+      "id": "red",
+      "nome": "Rede",
+      "texto": "Pessoas, confiança e presença. Cresce com as missões de rede."
+    }
+  ],
+  "classes": [
+    {
+      "id": "trader",
+      "nome": "Trader Consciente",
+      "emoji": "📈",
+      "cor": "#E9C46A",
+      "lema": "Primeiro o risco, depois o resto.",
+      "principal": [
+        "foc",
+        "dis"
+      ],
+      "kit": "k-diario-trading",
+      "talentos": [
+        {
+          "nivel": 1,
+          "nome": "Stop mental",
+          "texto": "Uma vez por capítulo, repete um teste falhado."
+        },
+        {
+          "nivel": 4,
+          "nome": "Paciência de sniper",
+          "texto": "+2 em testes de Disciplina."
+        },
+        {
+          "nivel": 7,
+          "nome": "Leitura de contexto",
+          "texto": "Nos escape rooms, a primeira pista é grátis."
+        }
+      ]
+    },
+    {
+      "id": "criador",
+      "nome": "Criador",
+      "emoji": "🎬",
+      "cor": "#ff8a5c",
+      "lema": "Mostra o processo, não só o resultado.",
+      "principal": [
+        "red",
+        "cor"
+      ],
+      "kit": "k-microfone",
+      "talentos": [
+        {
+          "nivel": 1,
+          "nome": "Gancho",
+          "texto": "Uma vez por capítulo, +4 num teste."
+        },
+        {
+          "nivel": 4,
+          "nome": "Câmara ligada",
+          "texto": "+2 em testes de Coragem."
+        },
+        {
+          "nivel": 7,
+          "nome": "Audiência fiel",
+          "texto": "Na mesa, um aliado repete um teste por sessão."
+        }
+      ]
+    },
+    {
+      "id": "arquitecto",
+      "nome": "Arquitecto de IA",
+      "emoji": "🤖",
+      "cor": "#1EAAE6",
+      "lema": "Automatiza o repetido, humaniza o resto.",
+      "principal": [
+        "con",
+        "foc"
+      ],
+      "kit": "k-prompts",
+      "talentos": [
+        {
+          "nivel": 1,
+          "nome": "Prompt certeiro",
+          "texto": "Uma vez por capítulo, repete um teste falhado."
+        },
+        {
+          "nivel": 4,
+          "nome": "Base de conhecimento",
+          "texto": "+2 em testes de Conhecimento."
+        },
+        {
+          "nivel": 7,
+          "nome": "Agente auxiliar",
+          "texto": "Nos escape rooms, a primeira pista é grátis."
+        }
+      ]
+    },
+    {
+      "id": "atleta",
+      "nome": "Atleta",
+      "emoji": "🏃",
+      "cor": "#3ccf8e",
+      "lema": "O corpo leva a cabeça.",
+      "principal": [
+        "ene",
+        "cor"
+      ],
+      "kit": "k-corda",
+      "talentos": [
+        {
+          "nivel": 1,
+          "nome": "Segundo fôlego",
+          "texto": "Uma vez por capítulo, +4 num teste."
+        },
+        {
+          "nivel": 4,
+          "nome": "Treino de base",
+          "texto": "+2 em testes de Energia."
+        },
+        {
+          "nivel": 7,
+          "nome": "Ritmo de equipa",
+          "texto": "Na mesa, um aliado repete um teste por sessão."
+        }
+      ]
+    },
+    {
+      "id": "mentor",
+      "nome": "Mentor",
+      "emoji": "🧭",
+      "cor": "#c9a7ff",
+      "lema": "Quem ensina aprende duas vezes.",
+      "principal": [
+        "red",
+        "ene"
+      ],
+      "kit": "k-agenda",
+      "talentos": [
+        {
+          "nivel": 1,
+          "nome": "Palavra certa",
+          "texto": "Uma vez por capítulo, repete um teste falhado."
+        },
+        {
+          "nivel": 4,
+          "nome": "Presença",
+          "texto": "+2 em testes de Rede."
+        },
+        {
+          "nivel": 7,
+          "nome": "Voz do grupo",
+          "texto": "Na mesa, um aliado repete um teste por sessão."
+        }
+      ]
+    },
+    {
+      "id": "estratega",
+      "nome": "Estratega",
+      "emoji": "♟️",
+      "cor": "#7fb8ff",
+      "lema": "Plano A, plano B e calma.",
+      "principal": [
+        "con",
+        "dis"
+      ],
+      "kit": "k-orcamento",
+      "talentos": [
+        {
+          "nivel": 1,
+          "nome": "Plano B",
+          "texto": "Uma vez por capítulo, +4 num teste."
+        },
+        {
+          "nivel": 4,
+          "nome": "Contas feitas",
+          "texto": "+2 em testes de Conhecimento."
+        },
+        {
+          "nivel": 7,
+          "nome": "Mapa do terreno",
+          "texto": "Nos escape rooms, a primeira pista é grátis."
+        }
+      ]
+    }
+  ],
+  "origens": [
+    {
+      "id": "40h",
+      "nome": "Das 40 horas",
+      "texto": "Trabalhas por conta de outrem e queres mais tempo para ti.",
+      "bonus": "dis"
+    },
+    {
+      "id": "estudante",
+      "nome": "Estudante",
+      "texto": "Estás a aprender e queres começar cedo.",
+      "bonus": "con"
+    },
+    {
+      "id": "recomeco",
+      "nome": "Recomeço",
+      "texto": "A vida deu uma volta e estás a reconstruir.",
+      "bonus": "cor"
+    },
+    {
+      "id": "empreendedor",
+      "nome": "Empreendedor",
+      "texto": "Já tens um negócio ou uma ideia a crescer.",
+      "bonus": "red"
+    },
+    {
+      "id": "desportista",
+      "nome": "Desportista",
+      "texto": "O treino sempre foi a tua âncora.",
+      "bonus": "ene"
+    },
+    {
+      "id": "curioso",
+      "nome": "Curioso",
+      "texto": "Queres perceber como tudo funciona.",
+      "bonus": "foc"
+    }
+  ],
+  "kits": [
+    {
+      "id": "k-diario-trading",
+      "nome": "Diário de trading",
+      "emoji": "📓",
+      "bonus": {
+        "dis": 1
+      },
+      "texto": "Cada operação escrita: o plano, o que sentiste, o que aprendeste.",
+      "classe": "trader"
+    },
+    {
+      "id": "k-microfone",
+      "nome": "Microfone de lapela",
+      "emoji": "🎙️",
+      "bonus": {
+        "red": 1
+      },
+      "texto": "Som limpo, ideia clara.",
+      "classe": "criador"
+    },
+    {
+      "id": "k-prompts",
+      "nome": "Biblioteca de prompts",
+      "emoji": "🗂️",
+      "bonus": {
+        "con": 1
+      },
+      "texto": "Os pedidos que funcionam, guardados e afinados.",
+      "classe": "arquitecto"
+    },
+    {
+      "id": "k-corda",
+      "nome": "Corda de saltar",
+      "emoji": "🪢",
+      "bonus": {
+        "ene": 1
+      },
+      "texto": "Dez minutos e o corpo acorda.",
+      "classe": "atleta"
+    },
+    {
+      "id": "k-agenda",
+      "nome": "Agenda de contactos",
+      "emoji": "📇",
+      "bonus": {
+        "red": 1
+      },
+      "texto": "Quem conheceste, quando, e o que combinaram.",
+      "classe": "mentor"
+    },
+    {
+      "id": "k-orcamento",
+      "nome": "Folha de orçamento",
+      "emoji": "🧮",
+      "bonus": {
+        "con": 1
+      },
+      "texto": "Para onde vai cada euro do mês.",
+      "classe": "estratega"
+    },
+    {
+      "id": "k-despertador",
+      "nome": "Despertador longe da cama",
+      "emoji": "⏰",
+      "bonus": {
+        "dis": 1
+      },
+      "texto": "Para te levantares tens de andar.",
+      "req": {
+        "nivel": 2
+      }
+    },
+    {
+      "id": "k-auscultadores",
+      "nome": "Auscultadores de foco",
+      "emoji": "🎧",
+      "bonus": {
+        "foc": 1
+      },
+      "texto": "O mundo cá fora espera 25 minutos.",
+      "req": {
+        "nivel": 3
+      }
+    },
+    {
+      "id": "k-tenis",
+      "nome": "Ténis de corrida",
+      "emoji": "👟",
+      "bonus": {
+        "ene": 1
+      },
+      "texto": "Já não há desculpa do calçado.",
+      "req": {
+        "treino": 10
+      }
+    },
+    {
+      "id": "k-cartoes",
+      "nome": "Cartões de visita",
+      "emoji": "💳",
+      "bonus": {
+        "red": 1
+      },
+      "texto": "Uma pergunta boa e um cartão na mão.",
+      "req": {
+        "rede": 10
+      }
+    },
+    {
+      "id": "k-livro",
+      "nome": "Livro de cabeceira",
+      "emoji": "📚",
+      "bonus": {
+        "con": 1
+      },
+      "texto": "Dez páginas antes de dormir.",
+      "req": {
+        "saber": 10
+      }
+    },
+    {
+      "id": "k-mochila",
+      "nome": "Mochila de explorador",
+      "emoji": "🎒",
+      "bonus": {
+        "cor": 1
+      },
+      "texto": "Pronta para a próxima sala.",
+      "req": {
+        "escape": 1
+      }
+    },
+    {
+      "id": "k-pomodoro",
+      "nome": "Relógio Pomodoro",
+      "emoji": "🍅",
+      "bonus": {
+        "foc": 2
+      },
+      "texto": "25 minutos de foco, 5 de pausa.",
+      "req": {
+        "melhoria": 15
+      }
+    },
+    {
+      "id": "k-bussola",
+      "nome": "Bússola dourada",
+      "emoji": "🧭",
+      "bonus": {
+        "cor": 2
+      },
+      "texto": "Aponta sempre para o passo seguinte.",
+      "req": {
+        "escape": 3
+      }
+    },
+    {
+      "id": "k-caderno-rg",
+      "nome": "Caderno do Ricardo",
+      "emoji": "📒",
+      "bonus": {
+        "dis": 2
+      },
+      "texto": "As notas de quem já fez o caminho.",
+      "req": {
+        "nivel": 6
+      }
+    },
+    {
+      "id": "k-emblema",
+      "nome": "Emblema MoreThanMoney",
+      "emoji": "🏅",
+      "bonus": {
+        "red": 1,
+        "cor": 1
+      },
+      "texto": "Para quem chegou longe.",
+      "req": {
+        "nivel": 9
+      }
+    }
+  ],
+  "capitulos": [
+    {
+      "n": 1,
+      "titulo": "Segunda-feira, 7h12",
+      "resumo": "Tudo começa numa manhã normal. A diferença está no que escolhes.",
+      "inicio": "c1-1",
+      "cenas": {
+        "c1-1": {
+          "titulo": "O alarme",
+          "texto": "O alarme toca pela terceira vez. O corpo pesa e o telemóvel já está na tua mão. Lá fora começa mais uma semana igual às outras.",
+          "opcoes": [
+            {
+              "t": "Levantar já e fazer 10 minutos de treino",
+              "teste": {
+                "atr": "ene",
+                "cd": 10
+              },
+              "ok": "c1-2",
+              "ko": "c1-2b",
+              "nota_ok": "Água fria na cara, dez minutos de movimento. O dia já começou a teu favor.",
+              "nota_ko": "Levantaste-te, mas o corpo não colaborou. Pelo menos estás de pé."
+            },
+            {
+              "t": "Ficar mais 15 minutos a ver o telemóvel",
+              "ok": "c1-2b",
+              "nota_ok": "Quinze minutos viraram trinta. Sais de casa a correr."
+            }
+          ]
+        },
+        "c1-2b": {
+          "titulo": "Atrasado",
+          "texto": "Chegas atrasado e com a cabeça às voltas. A caixa de email está cheia e toda a gente quer tudo para já.",
+          "opcoes": [
+            {
+              "t": "Respirar fundo e escolher as 3 tarefas que contam hoje",
+              "teste": {
+                "atr": "foc",
+                "cd": 12
+              },
+              "ok": "c1-2",
+              "ko": "c1-2",
+              "nota_ok": "Três tarefas no papel. O resto pode esperar.",
+              "nota_ko": "Tentaste, mas o dia foi aos tropeções. Amanhã há outra oportunidade."
+            },
+            {
+              "t": "Responder a tudo à medida que chega",
+              "ok": "c1-2",
+              "nota_ok": "Respondeste a tudo e não fizeste nada de importante. Conheces a sensação."
+            }
+          ]
+        },
+        "c1-2": {
+          "titulo": "A promessa",
+          "texto": "Na pausa do café, um colega mostra-te um grupo onde prometem «rendimento garantido todos os meses». Diz que já toda a gente lá está.",
+          "opcoes": [
+            {
+              "t": "Perguntar quem regula aquilo e quais são os riscos",
+              "teste": {
+                "atr": "con",
+                "cd": 12
+              },
+              "ok": "c1-3",
+              "ko": "c1-2x",
+              "nota_ok": "Ninguém sabe responder. Não entras e guardas o teu dinheiro.",
+              "nota_ko": "As respostas soaram bem e acabaste por entrar."
+            },
+            {
+              "t": "Entrar já, antes que a oportunidade passe",
+              "ok": "c1-2x"
+            }
+          ]
+        },
+        "c1-2x": {
+          "titulo": "A armadilha",
+          "texto": "Duas semanas depois, o grupo desapareceu e o dinheiro também. Custa, mas é uma lição que muita gente aprende tarde demais: quando garantem lucros, desconfia.",
+          "licao": "Ninguém sério garante rendimentos. Risco existe sempre, e quem o esconde está a vender outra coisa.",
+          "opcoes": [
+            {
+              "t": "Assumir o erro e contar a alguém para não caírem também",
+              "teste": {
+                "atr": "cor",
+                "cd": 10
+              },
+              "ok": "c1-3",
+              "ko": "c1-3",
+              "nota_ok": "Contaste. Dois colegas agradeceram-te.",
+              "nota_ko": "Ficou entre ti e o teu orgulho. Mas aprendeste."
+            }
+          ]
+        },
+        "c1-3": {
+          "titulo": "Uma hora livre",
+          "texto": "À noite sobra-te uma hora. Podes deixá-la fugir para o sofá ou investir em ti.",
+          "opcoes": [
+            {
+              "t": "Estudar o básico da gestão de risco",
+              "teste": {
+                "atr": "con",
+                "cd": 11
+              },
+              "ok": "c1-4",
+              "ko": "c1-4",
+              "nota_ok": "Percebeste porque é que o risco por operação vem antes de tudo.",
+              "nota_ko": "Muita informação de uma vez. Guardaste o que conseguiste."
+            },
+            {
+              "t": "Gravar um vídeo curto sobre o teu dia",
+              "teste": {
+                "atr": "cor",
+                "cd": 12
+              },
+              "ok": "c1-4",
+              "ko": "c1-4",
+              "nota_ok": "Publicaste. Três pessoas responderam a dizer que se identificam.",
+              "nota_ko": "Gravaste, mas ficou no telemóvel. Já é um começo."
+            },
+            {
+              "t": "Ligar a alguém que admiras e fazer-lhe uma pergunta",
+              "teste": {
+                "atr": "red",
+                "cd": 12
+              },
+              "ok": "c1-4",
+              "ko": "c1-4",
+              "nota_ok": "Vinte minutos de conversa que valeram um mês de vídeos.",
+              "nota_ko": "Não atendeu. Deixaste mensagem, e isso conta."
+            }
+          ]
+        },
+        "c1-4": {
+          "titulo": "A primeira decisão",
+          "fim": true,
+          "texto": "Não mudaste de vida num dia. Mas pela primeira vez em muito tempo, o dia foi teu. É assim que começa: pequenas escolhas, repetidas.",
+          "licao": "A liberdade não chega de repente. Constrói-se com o que fazes nas horas que ninguém vê."
+        }
+      }
+    },
+    {
+      "n": 2,
+      "titulo": "O mercado não perdoa pressa",
+      "resumo": "Uma conta demo, um gráfico de ouro e as tuas emoções. Quem ganha: o plano ou o impulso?",
+      "inicio": "c2-1",
+      "cenas": {
+        "c2-1": {
+          "titulo": "A vela verde",
+          "texto": "Abres o gráfico do ouro (XAU/USD) numa conta demo. Uma vela enorme a subir. O coração acelera: «se entrar agora…».",
+          "opcoes": [
+            {
+              "t": "Entrar já com o máximo que a conta deixa",
+              "ok": "c2-2x"
+            },
+            {
+              "t": "Esperar que o teu plano confirme a entrada",
+              "teste": {
+                "atr": "dis",
+                "cd": 12
+              },
+              "ok": "c2-2",
+              "ko": "c2-2x",
+              "nota_ok": "Esperaste. A vela recuou metade e entraste no sítio que tinhas planeado.",
+              "nota_ko": "Aguentaste dois minutos e carregaste no botão."
+            }
+          ]
+        },
+        "c2-2": {
+          "titulo": "Contra ti",
+          "texto": "Entrada, stop e alvo definidos. O preço vira e aproxima-se do teu stop. Uma voz diz: «afasta só um bocadinho, vai voltar».",
+          "opcoes": [
+            {
+              "t": "Respeitar o stop",
+              "teste": {
+                "atr": "dis",
+                "cd": 13
+              },
+              "ok": "c2-3",
+              "ko": "c2-2x",
+              "nota_ok": "O stop foi tocado. Perda pequena, plano cumprido. Isto é que é ganhar.",
+              "nota_ko": "Mexeste no stop. A perda cresceu."
+            },
+            {
+              "t": "Afastar o stop «só desta vez»",
+              "ok": "c2-2x"
+            }
+          ]
+        },
+        "c2-2x": {
+          "titulo": "A lição cara (ainda bem que em demo)",
+          "texto": "A conta demo levou um rombo. Ainda bem que não era dinheiro real. O mercado não te castigou por estares errado: castigou-te por não teres plano.",
+          "licao": "Primeiro defines quanto aceitas perder. Só depois pensas no resto. Trading tem risco, e conteúdo como este é educativo, não aconselhamento financeiro.",
+          "opcoes": [
+            {
+              "t": "Escrever no diário de trading o que sentiste",
+              "teste": {
+                "atr": "foc",
+                "cd": 10
+              },
+              "ok": "c2-3",
+              "ko": "c2-3",
+              "nota_ok": "«Medo de ficar de fora.» Escrito, fica mais fácil de reconhecer na próxima vez.",
+              "nota_ko": "Escreveste pouco, mas escreveste."
+            }
+          ]
+        },
+        "c2-3": {
+          "titulo": "A pergunta",
+          "texto": "Um seguidor pergunta-te: «Quanto ganhas por mês com isso?». Sentes a tentação de impressionar.",
+          "opcoes": [
+            {
+              "t": "Explicar que estás a aprender e que resultados passados não garantem nada",
+              "teste": {
+                "atr": "con",
+                "cd": 11
+              },
+              "ok": "c2-4",
+              "ko": "c2-4",
+              "nota_ok": "Ele respondeu: «Finalmente alguém honesto.» Ficou a seguir-te.",
+              "nota_ko": "Enrolaste-te um pouco, mas foste honesto."
+            },
+            {
+              "t": "Inventar um número bonito",
+              "ok": "c2-3x"
+            }
+          ]
+        },
+        "c2-3x": {
+          "titulo": "Credibilidade",
+          "texto": "No dia seguinte ele pede prints. Não tens. A confiança que levaste meses a construir foi-se num comentário.",
+          "licao": "Nada de números inventados. A confiança demora anos a ganhar e segundos a perder.",
+          "opcoes": [
+            {
+              "t": "Pedir desculpa publicamente e corrigir",
+              "teste": {
+                "atr": "cor",
+                "cd": 11
+              },
+              "ok": "c2-4",
+              "ko": "c2-4",
+              "nota_ok": "Custou, mas muita gente respeitou.",
+              "nota_ko": "Apagaste o comentário. Fica a lição."
+            }
+          ]
+        },
+        "c2-4": {
+          "titulo": "Disciplina acima do palpite",
+          "fim": true,
+          "texto": "Percebeste o que separa quem dura de quem desiste: plano, risco controlado e honestidade. O resto é ruído.",
+          "licao": "No trading consciente, o objetivo não é acertar sempre. É continuar em jogo e aprender com cada operação."
+        }
+      }
+    },
+    {
+      "n": 3,
+      "titulo": "A tua rede é a tua rede de segurança",
+      "resumo": "Pessoas, ideias e inteligência artificial. Onde vais estar daqui a um ano depende de quem está à tua volta.",
+      "inicio": "c3-1",
+      "cenas": {
+        "c3-1": {
+          "titulo": "A sala cheia",
+          "texto": "Vais a um encontro de empreendedores na tua cidade. Não conheces ninguém. Toda a gente parece saber o que está a fazer.",
+          "opcoes": [
+            {
+              "t": "Apresentar-te a três pessoas com uma pergunta genuína",
+              "teste": {
+                "atr": "red",
+                "cd": 12
+              },
+              "ok": "c3-2",
+              "ko": "c3-2",
+              "nota_ok": "Três conversas, um contacto que vai contar.",
+              "nota_ko": "Duas conversas estranhas e uma boa. Já valeu a noite."
+            },
+            {
+              "t": "Ficar num canto com o telemóvel",
+              "ok": "c3-1x"
+            }
+          ]
+        },
+        "c3-1x": {
+          "titulo": "A noite que fugiu",
+          "texto": "Saíste sem falar com ninguém. No caminho para casa pensas no que podia ter sido.",
+          "licao": "O primeiro passo é sempre o mais caro. Depois fica barato.",
+          "opcoes": [
+            {
+              "t": "Mandar amanhã mensagem a quem viste no evento",
+              "teste": {
+                "atr": "cor",
+                "cd": 11
+              },
+              "ok": "c3-2",
+              "ko": "c3-2",
+              "nota_ok": "Responderam e marcaram café.",
+              "nota_ko": "Ainda não responderam. Mas a porta ficou aberta."
+            }
+          ]
+        },
+        "c3-2": {
+          "titulo": "A pastelaria",
+          "texto": "A dona de uma pastelaria conta-te que perde duas horas por dia a responder às mesmas perguntas: horários, encomendas, preços.",
+          "opcoes": [
+            {
+              "t": "Mostrar como a IA pode responder às perguntas repetidas",
+              "teste": {
+                "atr": "con",
+                "cd": 12
+              },
+              "ok": "c3-3",
+              "ko": "c3-3",
+              "nota_ok": "Montaste um exemplo no telemóvel em 10 minutos. Ela ficou de boca aberta.",
+              "nota_ko": "A explicação ficou confusa, mas ela quer saber mais."
+            },
+            {
+              "t": "Prometer resolver tudo amanhã, sem saber bem como",
+              "ok": "c3-2x"
+            }
+          ]
+        },
+        "c3-2x": {
+          "titulo": "Prometer sem saber",
+          "texto": "Amanhã chegou e não tinhas nada para mostrar. Ela ficou desiludida.",
+          "licao": "Promete pouco e entrega mais. É assim que se ganha confiança.",
+          "opcoes": [
+            {
+              "t": "Voltar com uma solução simples e honesta",
+              "teste": {
+                "atr": "dis",
+                "cd": 11
+              },
+              "ok": "c3-3",
+              "ko": "c3-3",
+              "nota_ok": "Uma resposta automática para as 5 perguntas mais comuns. Funcionou.",
+              "nota_ko": "Demoraste mais do que querias, mas entregaste."
+            }
+          ]
+        },
+        "c3-3": {
+          "titulo": "O convite",
+          "texto": "Convidam-te para orientares um grupo de estudo semanal. Pensas: «quem sou eu para ensinar?».",
+          "opcoes": [
+            {
+              "t": "Aceitar e marcar já a primeira sessão",
+              "teste": {
+                "atr": "ene",
+                "cd": 13
+              },
+              "ok": "c3-4",
+              "ko": "c3-4",
+              "nota_ok": "Oito pessoas na primeira sessão. Aprendeste mais do que ensinaste.",
+              "nota_ko": "A primeira sessão foi nervosa. A segunda já correu melhor."
+            },
+            {
+              "t": "Recusar por medo de não estar à altura",
+              "ok": "c3-4",
+              "nota_ok": "Recusaste. Fica a pergunta para a próxima vez: e se tivesses aceitado?"
+            }
+          ]
+        },
+        "c3-4": {
+          "titulo": "Mais do que dinheiro",
+          "fim": true,
+          "texto": "Olhas para trás e vês um caminho: mais energia, mais disciplina, pessoas melhores à volta. O dinheiro é uma parte. O resto é quem te tornas pelo caminho.",
+          "licao": "Liberdade é ter tempo, saúde e pessoas. O capítulo 4 já está aberto."
+        }
+      }
+    },
+    {
+      "n": 4,
+      "titulo": "A casa que ainda não é tua",
+      "resumo": "Renda, crédito, poupança e paciência. Comprar casa é uma maratona, não um sprint.",
+      "inicio": "c4-1",
+      "cenas": {
+        "c4-1": {
+          "titulo": "A renda subiu outra vez",
+          "texto": "Chega a carta do senhorio: mais 80 € por mês a partir de janeiro. Fazes contas no guardanapo do café e o guardanapo não chega.",
+          "opcoes": [
+            {
+              "t": "Abrir uma folha e ver para onde vai cada euro do mês",
+              "ok": "c4-2",
+              "teste": {
+                "atr": "con",
+                "cd": 11
+              },
+              "ko": "c4-2",
+              "nota_ok": "Descobres 140 € por mês em subscrições e jantares por impulso.",
+              "nota_ko": "A folha ficou a meio, mas já vês dois buracos claros."
+            },
+            {
+              "t": "Resolver com um cartão de crédito «só por agora»",
+              "ok": "c4-1x"
+            }
+          ]
+        },
+        "c4-1x": {
+          "titulo": "O «só por agora»",
+          "texto": "Três meses depois, o cartão tem juros que nem sabias que existiam.",
+          "licao": "Dívida cara para pagar despesas do mês é areia movediça. Primeiro o orçamento, depois o resto.",
+          "opcoes": [
+            {
+              "t": "Cortar o cartão e fazer o orçamento a sério",
+              "ok": "c4-2",
+              "teste": {
+                "atr": "dis",
+                "cd": 12
+              },
+              "ko": "c4-2",
+              "nota_ok": "Doeu, mas o buraco parou de crescer.",
+              "nota_ko": "Ainda escorregas, mas já não o usas todos os dias."
+            }
+          ]
+        },
+        "c4-2": {
+          "titulo": "O banco",
+          "texto": "Vais a um banco perguntar pelo crédito habitação. O gestor fala em taxa de esforço, entrada, spread. Tu acenas com a cabeça.",
+          "opcoes": [
+            {
+              "t": "Pedir que te explique cada termo e tomar notas",
+              "ok": "c4-3",
+              "teste": {
+                "atr": "cor",
+                "cd": 12
+              },
+              "ko": "c4-3",
+              "nota_ok": "Sais com uma folha cheia e a perceber que precisas de uns 20% de entrada mais impostos.",
+              "nota_ko": "Ficaste com metade das respostas. Já é mais do que tinhas."
+            },
+            {
+              "t": "Assinar a simulação mais rápida para «não perder a oportunidade»",
+              "ok": "c4-2x"
+            }
+          ]
+        },
+        "c4-2x": {
+          "titulo": "A pressa do vendedor",
+          "texto": "Em casa lês as letras pequenas. A prestação come quase metade do teu salário.",
+          "licao": "Quem tem pressa paga mais. Uma prestação acima de um terço do rendimento aperta a vida toda.",
+          "opcoes": [
+            {
+              "t": "Voltar atrás e comparar três propostas",
+              "ok": "c4-3",
+              "teste": {
+                "atr": "foc",
+                "cd": 12
+              },
+              "ko": "c4-3",
+              "nota_ok": "Três propostas lado a lado. A diferença dá para um mês de férias por ano.",
+              "nota_ko": "Comparaste duas. A segunda já era melhor."
+            }
+          ]
+        },
+        "c4-3": {
+          "titulo": "A visita",
+          "texto": "Visitas um T2 com «muita luz» no anúncio. Lá dentro cheira a humidade e o vendedor fala muito depressa.",
+          "opcoes": [
+            {
+              "t": "Ver as paredes, perguntar pelo condomínio e pela certidão energética",
+              "ok": "c4-4",
+              "teste": {
+                "atr": "con",
+                "cd": 13
+              },
+              "ko": "c4-4",
+              "nota_ok": "Encontras infiltrações e um condomínio com obras por pagar. Poupaste milhares.",
+              "nota_ko": "Deixaste escapar o condomínio, mas viste a humidade."
+            },
+            {
+              "t": "Fechar logo porque a vista é bonita",
+              "ok": "c4-4",
+              "teste": {
+                "atr": "ene",
+                "cd": 14
+              },
+              "ko": "c4-4",
+              "nota_ok": "Tiveste sorte: a casa estava boa. Desta vez.",
+              "nota_ko": "A vista continua bonita. As obras também."
+            }
+          ]
+        },
+        "c4-4": {
+          "titulo": "Um plano de 3 anos",
+          "fim": true,
+          "texto": "Não compraste nada este mês. Mas tens um orçamento, uma meta de entrada e sabes ler um anúncio. A casa vem a seguir.",
+          "licao": "Imobiliário é paciência e números: orçamento, entrada, taxa de esforço e muitas visitas. Conteúdo educativo, não é aconselhamento financeiro."
+        }
+      }
+    },
+    {
+      "n": 5,
+      "titulo": "O algoritmo",
+      "resumo": "Conteúdo, IA e atenção. Na internet, ou tens um plano, ou és o plano de alguém.",
+      "inicio": "c5-1",
+      "cenas": {
+        "c5-1": {
+          "titulo": "30 dias de vídeos",
+          "texto": "Decides partilhar o que estás a aprender. Primeiro vídeo: 43 visualizações, 3 delas da tua mãe.",
+          "opcoes": [
+            {
+              "t": "Publicar todos os dias durante 30 dias, sem olhar para os números",
+              "ok": "c5-2",
+              "teste": {
+                "atr": "dis",
+                "cd": 13
+              },
+              "ko": "c5-2",
+              "nota_ok": "Ao dia 19 um vídeo passa as 5 mil. Não foi sorte: foi o 19.º.",
+              "nota_ko": "Falhaste quatro dias, mas chegaste ao fim do mês."
+            },
+            {
+              "t": "Apagar o vídeo e esperar pelo «momento certo»",
+              "ok": "c5-1x"
+            }
+          ]
+        },
+        "c5-1x": {
+          "titulo": "O momento certo",
+          "texto": "Passam dois meses. O momento certo não chegou.",
+          "licao": "Os primeiros 30 vídeos são para aprender a fazer vídeos. Ninguém começa bom.",
+          "opcoes": [
+            {
+              "t": "Gravar o pior vídeo da tua vida e publicar na mesma",
+              "ok": "c5-2",
+              "teste": {
+                "atr": "cor",
+                "cd": 11
+              },
+              "ko": "c5-2",
+              "nota_ok": "Estava mesmo mau. Mas estava publicado.",
+              "nota_ko": "Hesitaste uma hora. Depois publicaste."
+            }
+          ]
+        },
+        "c5-2": {
+          "titulo": "A IA faz tudo?",
+          "texto": "Um amigo diz que a IA escreve, grava e publica por ti. Basta carregar num botão.",
+          "opcoes": [
+            {
+              "t": "Usar a IA para o rascunho e pôr a tua experiência por cima",
+              "ok": "c5-3",
+              "teste": {
+                "atr": "con",
+                "cd": 12
+              },
+              "ko": "c5-3",
+              "nota_ok": "Os vídeos ficam mais rápidos de fazer e continuam a soar a ti.",
+              "nota_ko": "Ficou um bocado robótico. Ao segundo já acertas no tom."
+            },
+            {
+              "t": "Deixar a IA fazer tudo sozinha",
+              "ok": "c5-2x"
+            }
+          ]
+        },
+        "c5-2x": {
+          "titulo": "Ninguém se lembra",
+          "texto": "Publicas o dobro. As pessoas passam à frente: parece tudo igual ao resto.",
+          "licao": "A IA acelera o trabalho. A confiança vem da tua história, da tua cara e da tua voz.",
+          "opcoes": [
+            {
+              "t": "Voltar a gravar com a tua cara e as tuas histórias",
+              "ok": "c5-3",
+              "teste": {
+                "atr": "red",
+                "cd": 11
+              },
+              "ko": "c5-3",
+              "nota_ok": "Os comentários voltam. Gente real a responder a gente real.",
+              "nota_ko": "Custa mais, mas é teu."
+            }
+          ]
+        },
+        "c5-3": {
+          "titulo": "A proposta brilhante",
+          "texto": "Uma mensagem privada: «Ganha 5 000 € por mês a partir do telemóvel, só tens de recrutar 3 amigos.»",
+          "opcoes": [
+            {
+              "t": "Perguntar o que se vende, a quem, e quem regula aquilo",
+              "ok": "c5-4",
+              "teste": {
+                "atr": "con",
+                "cd": 12
+              },
+              "ko": "c5-4",
+              "nota_ok": "Não há produto. Há só recrutamento. Bloqueias e segues.",
+              "nota_ko": "As respostas são vagas. Isso já é uma resposta."
+            },
+            {
+              "t": "Entrar já para não ficar de fora",
+              "ok": "c5-4",
+              "teste": {
+                "atr": "foc",
+                "cd": 15
+              },
+              "ko": "c5-4",
+              "nota_ok": "No último segundo percebes o esquema e sais antes de pagar.",
+              "nota_ko": "Perdeste a inscrição. Aprendeste a lição mais cara do capítulo."
+            }
+          ]
+        },
+        "c5-4": {
+          "titulo": "Atenção é moeda",
+          "fim": true,
+          "texto": "Tens uma audiência pequena que confia em ti, usas a IA como ferramenta e sabes dizer que não a promessas fáceis.",
+          "licao": "Promessas de ganhos garantidos são sinal de alarme. Constrói valor real e a atenção vem atrás."
+        }
+      }
+    },
+    {
+      "n": 6,
+      "titulo": "Segunda-feira, outra vez",
+      "resumo": "O ciclo fecha onde começou. Desta vez, quem decide és tu.",
+      "inicio": "c6-1",
+      "cenas": {
+        "c6-1": {
+          "titulo": "7h12",
+          "texto": "O alarme toca. É segunda-feira outra vez, mas desta vez acordas antes dele. Lá fora, a mesma cidade. Cá dentro, alguém diferente.",
+          "opcoes": [
+            {
+              "t": "Fazer a rotina da manhã que desenhaste: treino, água, 3 tarefas",
+              "ok": "c6-2",
+              "teste": {
+                "atr": "dis",
+                "cd": 12
+              },
+              "ko": "c6-2",
+              "nota_ok": "Às 8h já ganhaste o dia.",
+              "nota_ko": "Fizeste duas das três coisas. Antes não fazias nenhuma."
+            },
+            {
+              "t": "Voltar ao telemóvel «só cinco minutos»",
+              "ok": "c6-1x"
+            }
+          ]
+        },
+        "c6-1x": {
+          "titulo": "A voz antiga",
+          "texto": "Cinco minutos. Dez. A voz antiga diz que tudo isto foi uma fase.",
+          "licao": "As recaídas fazem parte. O que conta é o tempo que levas a voltar.",
+          "opcoes": [
+            {
+              "t": "Pousar o telemóvel e começar pelo mais pequeno: um copo de água",
+              "ok": "c6-2",
+              "teste": {
+                "atr": "foc",
+                "cd": 11
+              },
+              "ko": "c6-2",
+              "nota_ok": "Um copo de água. Depois o treino. O dia volta para as tuas mãos.",
+              "nota_ko": "Demoraste, mas voltaste."
+            }
+          ]
+        },
+        "c6-2": {
+          "titulo": "O teu primeiro aluno",
+          "texto": "Alguém do grupo de estudo pede-te ajuda: está onde tu estavas há meses. Perdido, cansado, cheio de dúvidas.",
+          "opcoes": [
+            {
+              "t": "Dar-lhe uma hora do teu tempo e um plano simples",
+              "ok": "c6-3",
+              "teste": {
+                "atr": "red",
+                "cd": 12
+              },
+              "ko": "c6-3",
+              "nota_ok": "Sai da conversa com um plano. Tu sais com a certeza de que mudaste.",
+              "nota_ko": "A conversa foi desarrumada, mas ele voltou a escrever no dia seguinte."
+            },
+            {
+              "t": "Dizer que agora não tens tempo",
+              "ok": "c6-3",
+              "teste": {
+                "atr": "cor",
+                "cd": 15
+              },
+              "ko": "c6-3",
+              "nota_ok": "Arrependes-te e ligas-lhe à noite.",
+              "nota_ko": "Ficou por fazer. Fica a promessa de que da próxima vez dizes que sim."
+            }
+          ]
+        },
+        "c6-3": {
+          "titulo": "O espelho da porta",
+          "texto": "Antes de saíres, olhas para o espelho da porta. Por trás do teu reflexo, uma sombra conhecida: todas as semanas iguais, todos os «amanhã começo».",
+          "opcoes": [
+            {
+              "t": "Encarar a sombra",
+              "ok": "c6-4",
+              "teste": {
+                "atr": "cor",
+                "cd": 13
+              },
+              "ko": "c6-4",
+              "nota_ok": "A sombra ganha forma. Tem um nome: a Rotina.",
+              "nota_ko": "Tremeste, mas não desviaste o olhar."
+            }
+          ]
+        },
+        "c6-4": {
+          "titulo": "A Rotina espera-te",
+          "fim": true,
+          "texto": "A sombra sai do espelho e diz: «Conheço-te há anos.» O último confronto da Operação Liberdade está aberto no separador Bosses.",
+          "licao": "Agora podes enfrentar A Rotina, o inimigo final. Vencer não é fugir dela: é desenhá-la a teu favor."
+        }
+      }
+    }
+  ],
+  "salas": [
+    {
+      "id": "sala-graficos",
+      "titulo": "A Sala dos Gráficos",
+      "area": "Leitura de gráficos",
+      "emoji": "📈",
+      "minutos": 25,
+      "codigo_ra": "VELA",
+      "historia": "As paredes estão forradas de gráficos. Cada um esconde uma fechadura. Não precisas de adivinhar o futuro, só de ler o que lá está.",
+      "enigmas": [
+        {
+          "tipo": "imagem",
+          "imagem": "/ricardogarcia/escape/grafico-tendencia.svg",
+          "legenda": "Mercado fictício",
+          "pergunta": "Que tendência mostra o Gráfico A?",
+          "respostas": [
+            "0"
+          ],
+          "pista": "Repara se os fundos e os topos ficam cada vez mais altos ou mais baixos.",
+          "opcoes": [
+            "Tendência de alta",
+            "Tendência de baixa",
+            "Lateral, sem tendência"
+          ]
+        },
+        {
+          "tipo": "imagem",
+          "imagem": "/ricardogarcia/escape/grafico-suporte.svg",
+          "legenda": "Mercado fictício",
+          "pergunta": "Quantas vezes o preço tocou no suporte (linha tracejada) e voltou a subir?",
+          "respostas": [
+            "3",
+            "tres",
+            "três"
+          ],
+          "pista": "Conta só as velas cujo pavio chega à linha."
+        },
+        {
+          "tipo": "imagem",
+          "imagem": "/ricardogarcia/escape/grafico-medias.svg",
+          "legenda": "Mercado fictício",
+          "pergunta": "Em que ponto a média rápida (azul) cruza a média lenta (dourada) para baixo?",
+          "respostas": [
+            "1"
+          ],
+          "pista": "Para baixo quer dizer que, depois do ponto, a azul fica por baixo da dourada.",
+          "opcoes": [
+            "A",
+            "B",
+            "C"
+          ]
+        },
+        {
+          "tipo": "numero",
+          "pergunta": "Tens uma conta de 2 000 € e arriscas 1% por operação. Quantos euros podes perder, no máximo, numa operação?",
+          "respostas": [
+            "20",
+            "20€"
+          ],
+          "pista": "1% de 2 000."
+        },
+        {
+          "tipo": "foto",
+          "pergunta": "Missão de campo: fotografa um gráfico de velas (candlesticks) de qualquer mercado no ecrã do computador, ou envia um print da tua app de cotações.",
+          "criterio": "A foto mostra um gráfico de velas japonesas (candlesticks) num ecrã ou papel.",
+          "respostas": [],
+          "pista": "Abre qualquer app de cotações em modo velas e fotografa o ecrã."
+        },
+        {
+          "tipo": "ra",
+          "pergunta": "A última fechadura só abre com o código que o objeto dourado esconde. Liga a câmara e roda à tua volta até o encontrares.",
+          "respostas": [],
+          "pista": "Roda devagar, o telemóvel na vertical."
+        }
+      ]
+    },
+    {
+      "id": "casa-chaves",
+      "titulo": "A Casa das Chaves",
+      "area": "Imobiliário",
+      "emoji": "🏠",
+      "minutos": 25,
+      "codigo_ra": "CHAVE",
+      "historia": "Um investidor deixou um molho de chaves e um dossiê de um apartamento. Para o abrires, tens de ler a planta e o anúncio como um profissional.",
+      "enigmas": [
+        {
+          "tipo": "imagem",
+          "imagem": "/ricardogarcia/escape/imovel-planta.svg",
+          "legenda": "Planta de exemplo",
+          "pergunta": "Pela planta, que tipologia tem esta casa?",
+          "respostas": [
+            "1"
+          ],
+          "pista": "Em Portugal, o T conta os quartos.",
+          "opcoes": [
+            "T1",
+            "T2",
+            "T3",
+            "T4"
+          ]
+        },
+        {
+          "tipo": "imagem",
+          "imagem": "/ricardogarcia/escape/imovel-planta.svg",
+          "legenda": "Planta de exemplo",
+          "pergunta": "Qual é a área do quarto maior, em m²?",
+          "respostas": [
+            "14",
+            "14m2",
+            "14 m2"
+          ],
+          "pista": "Multiplica o comprimento pela largura."
+        },
+        {
+          "tipo": "imagem",
+          "imagem": "/ricardogarcia/escape/imovel-anuncio.svg",
+          "legenda": "Anúncio de exemplo",
+          "pergunta": "Qual é a rentabilidade bruta anual (yield) deste T1, em %?",
+          "respostas": [
+            "6",
+            "6%"
+          ],
+          "pista": "Renda de um ano a dividir pelo preço, vezes 100."
+        },
+        {
+          "tipo": "escolha",
+          "pergunta": "Ao comprar casa em Portugal, o IMT é…",
+          "opcoes": [
+            "O imposto sobre a compra do imóvel",
+            "A taxa do condomínio",
+            "O seguro obrigatório do crédito",
+            "A comissão da imobiliária"
+          ],
+          "respostas": [
+            "0"
+          ],
+          "pista": "Imposto Municipal sobre as Transmissões."
+        },
+        {
+          "tipo": "foto",
+          "pergunta": "Missão de campo: fotografa da rua a fachada de um prédio ou de uma casa, como se fosses avaliá-la. Sem pessoas em destaque.",
+          "criterio": "A foto mostra a fachada exterior de um edifício de habitação (prédio ou moradia), tirada da rua. Não há pessoas em primeiro plano.",
+          "respostas": [],
+          "pista": "Qualquer prédio do teu bairro serve."
+        },
+        {
+          "tipo": "ra",
+          "pergunta": "A última fechadura só abre com o código que o objeto dourado esconde. Liga a câmara e roda à tua volta até o encontrares.",
+          "respostas": [],
+          "pista": "Roda devagar, o telemóvel na vertical."
+        }
+      ]
+    },
+    {
+      "id": "cofre-ouro",
+      "titulo": "O Cofre do Ouro",
+      "area": "Trading consciente",
+      "emoji": "🪙",
+      "historia": "Um velho cofre de um ourives guarda um caderno com regras de risco. Seis fechaduras e 25 minutos.",
+      "minutos": 25,
+      "codigo_ra": "OURO",
+      "enigmas": [
+        {
+          "tipo": "texto",
+          "pergunta": "Os traders chamam XAU ao ouro. O «AU» vem de que palavra latina?",
+          "respostas": [
+            "aurum"
+          ],
+          "pista": "É o nome do elemento químico em latim."
+        },
+        {
+          "tipo": "numero",
+          "pergunta": "Regra do 72: a uma taxa de 8% ao ano, um valor duplica em cerca de quantos anos?",
+          "respostas": [
+            "9"
+          ],
+          "pista": "Divide 72 pela taxa."
+        },
+        {
+          "tipo": "escolha",
+          "pergunta": "Qual destas frases é sinal de alarme numa proposta de investimento?",
+          "opcoes": [
+            "Retornos garantidos todos os meses",
+            "Existe risco de perder capital",
+            "É supervisionada por uma entidade oficial",
+            "As comissões estão explicadas"
+          ],
+          "respostas": [
+            "0"
+          ],
+          "pista": "Ninguém sério consegue garantir isto."
+        },
+        {
+          "tipo": "imagem",
+          "imagem": "/ricardogarcia/escape/grafico-volatilidade.svg",
+          "legenda": "Dois mercados fictícios",
+          "pergunta": "Os dois mercados subiram o mesmo. Se arriscares os mesmos euros por operação, em qual precisas de um stop mais afastado (e por isso de uma posição mais pequena)?",
+          "respostas": [
+            "1"
+          ],
+          "pista": "Olha para o tamanho das velas.",
+          "opcoes": [
+            "Mercado A",
+            "Mercado B",
+            "Tanto faz"
+          ]
+        },
+        {
+          "tipo": "foto",
+          "pergunta": "Missão de campo: fotografa um gráfico com uma tendência clara, de subida ou de descida. Pode ser no ecrã do computador, numa app, num jornal ou numa revista.",
+          "criterio": "A foto mostra um gráfico (de linhas, barras ou velas) onde se percebe uma tendência de subida ou de descida. Pode ser um ecrã fotografado ou papel.",
+          "respostas": [],
+          "pista": "Abre uma app de cotações ou de meteorologia e fotografa o ecrã."
+        },
+        {
+          "tipo": "ra",
+          "pergunta": "A última fechadura só abre com o código que a moeda dourada esconde. Liga a câmara e roda à tua volta até a encontrares.",
+          "respostas": [],
+          "pista": "Roda devagar, o telemóvel na vertical."
+        }
+      ]
+    },
+    {
+      "id": "montra-digital",
+      "titulo": "A Montra Digital",
+      "area": "Negócio digital",
+      "emoji": "🛍️",
+      "minutos": 25,
+      "codigo_ra": "LOJA",
+      "historia": "Uma loja de bairro quer vender mais sem gastar mais. O dono deixou-te os números de um mês e cinco fechaduras na montra.",
+      "enigmas": [
+        {
+          "tipo": "imagem",
+          "imagem": "/ricardogarcia/escape/negocio-funil.svg",
+          "legenda": "Mês de exemplo",
+          "pergunta": "Que percentagem dos contactos se tornou cliente?",
+          "respostas": [
+            "10",
+            "10%"
+          ],
+          "pista": "Clientes a dividir por contactos, vezes 100."
+        },
+        {
+          "tipo": "numero",
+          "pergunta": "Se cada um desses clientes paga 49 € por mês, quanto factura a loja por mês com eles, em euros?",
+          "respostas": [
+            "490",
+            "490€"
+          ],
+          "pista": "Clientes vezes preço."
+        },
+        {
+          "tipo": "escolha",
+          "pergunta": "O que costuma trazer mais contactos a um negócio local sem gastar em anúncios?",
+          "opcoes": [
+            "Ficha do Google com fotos e respostas às avaliações",
+            "Mudar o logótipo todos os meses",
+            "Publicar só promoções",
+            "Ter um site sem forma de contacto"
+          ],
+          "respostas": [
+            "0"
+          ],
+          "pista": "Onde é que as pessoas procuram «perto de mim»?"
+        },
+        {
+          "tipo": "foto",
+          "pergunta": "Missão de campo: fotografa a montra, o menu ou o balcão de um negócio local que ganhava em ter agenda ou encomendas online.",
+          "criterio": "A foto mostra a montra, a fachada, o menu, a ementa ou o balcão de um estabelecimento comercial (loja, café, restaurante, cabeleireiro, oficina…).",
+          "respostas": [],
+          "pista": "A pastelaria, o barbeiro ou a oficina mais perto."
+        },
+        {
+          "tipo": "ra",
+          "pergunta": "A última fechadura só abre com o código que o objeto dourado esconde. Liga a câmara e roda à tua volta até o encontrares.",
+          "respostas": [],
+          "pista": "Roda devagar, o telemóvel na vertical."
+        }
+      ]
+    },
+    {
+      "id": "bloco-genesis",
+      "titulo": "O Bloco Génesis",
+      "area": "Cripto",
+      "emoji": "⛓️",
+      "historia": "Um servidor antigo guarda a chave de uma carteira esquecida. Cada bloco que desbloqueias aproxima-te da origem.",
+      "minutos": 25,
+      "codigo_ra": "GENESIS",
+      "enigmas": [
+        {
+          "tipo": "numero",
+          "pergunta": "Em que ano foi minerado o primeiro bloco da rede Bitcoin?",
+          "respostas": [
+            "2009"
+          ],
+          "pista": "Foi a 3 de janeiro, logo a seguir à crise financeira."
+        },
+        {
+          "tipo": "texto",
+          "pergunta": "No bloco génesis ficou a manchete de um jornal sobre um segundo resgate a quem? (uma palavra)",
+          "respostas": [
+            "bancos",
+            "banks",
+            "banca",
+            "aos bancos"
+          ],
+          "pista": "Instituições que guardam o teu dinheiro."
+        },
+        {
+          "tipo": "escolha",
+          "pergunta": "O que nunca deves partilhar de uma carteira cripto?",
+          "opcoes": [
+            "A frase de recuperação",
+            "O endereço público",
+            "O nome da rede",
+            "O símbolo da moeda"
+          ],
+          "respostas": [
+            "0"
+          ],
+          "pista": "Quem a tem, tem a carteira."
+        },
+        {
+          "tipo": "imagem",
+          "imagem": "/ricardogarcia/escape/cripto-blocos.svg",
+          "legenda": "Corrente fictícia",
+          "pergunta": "Em que bloco a corrente se parte? (o campo «Anterior» não bate certo com o hash do bloco de trás)",
+          "respostas": [
+            "3",
+            "bloco 3"
+          ],
+          "pista": "Compara o «Anterior» de cada bloco com o «Hash» do bloco à esquerda."
+        },
+        {
+          "tipo": "foto",
+          "pergunta": "Missão de campo: fotografa um código QR do mundo real (num cartaz, num menu, numa embalagem, num bilhete).",
+          "criterio": "A foto mostra claramente pelo menos um código QR num objeto ou superfície real (cartaz, menu, embalagem, ecrã, bilhete).",
+          "respostas": [],
+          "pista": "Os restaurantes e as embalagens de comida costumam ter um."
+        },
+        {
+          "tipo": "ra",
+          "pergunta": "O último bloco está escondido no espaço à tua volta. Liga a câmara e encontra o selo dourado.",
+          "respostas": [],
+          "pista": "Roda devagar, o telemóvel na vertical."
+        }
+      ]
+    },
+    {
+      "id": "sala-foco",
+      "titulo": "A Sala do Foco",
+      "area": "Produtividade",
+      "emoji": "⏳",
+      "historia": "Uma sala sem janelas e um relógio que anda para trás. Só sai quem dominar o próprio tempo.",
+      "minutos": 25,
+      "codigo_ra": "FOCO",
+      "enigmas": [
+        {
+          "tipo": "numero",
+          "pergunta": "A técnica Pomodoro usa blocos de quantos minutos de foco?",
+          "respostas": [
+            "25"
+          ],
+          "pista": "Um quarto de hora mais dez."
+        },
+        {
+          "tipo": "escolha",
+          "pergunta": "Qual é a melhor primeira hora de trabalho?",
+          "opcoes": [
+            "A tarefa mais importante, com o telemóvel longe",
+            "Responder a todas as mensagens",
+            "Ver as redes «só um bocadinho»",
+            "Arrumar a secretária durante uma hora"
+          ],
+          "respostas": [
+            "0"
+          ],
+          "pista": "Come primeiro o sapo."
+        },
+        {
+          "tipo": "numero",
+          "pergunta": "Na missão da app, quantas tarefas mais importantes escolhes por dia?",
+          "respostas": [
+            "3",
+            "tres",
+            "três"
+          ],
+          "pista": "Nem uma, nem dez."
+        },
+        {
+          "tipo": "imagem",
+          "imagem": "/ricardogarcia/escape/foco-semana.svg",
+          "legenda": "Agenda de exemplo",
+          "pergunta": "Quantos blocos de foco profundo (dourados) tem esta semana?",
+          "respostas": [
+            "7"
+          ],
+          "pista": "Conta coluna a coluna, só os dourados."
+        },
+        {
+          "tipo": "foto",
+          "pergunta": "Missão de campo: arruma a tua secretária ou zona de trabalho para um bloco de foco e fotografa-a.",
+          "criterio": "A foto mostra uma secretária, mesa ou zona de trabalho razoavelmente arrumada, pronta para trabalhar (pode ter computador, caderno, candeeiro).",
+          "respostas": [],
+          "pista": "Tira o que não precisas da mesa e fotografa de cima."
+        },
+        {
+          "tipo": "ra",
+          "pergunta": "O relógio dourado está algures à tua volta. Liga a câmara e encontra-o.",
+          "respostas": [],
+          "pista": "Roda devagar, o telemóvel na vertical."
+        }
+      ]
+    },
+    {
+      "id": "lab-ia",
+      "titulo": "O Laboratório da IA",
+      "area": "IA no dia-a-dia",
+      "emoji": "🧪",
+      "historia": "Um laboratório onde um assistente de IA ficou preso num ciclo. Só um bom humano o consegue libertar.",
+      "minutos": 25,
+      "codigo_ra": "PROMPT",
+      "enigmas": [
+        {
+          "tipo": "numero",
+          "pergunta": "Em que ano Alan Turing propôs o teste que ficou com o nome dele?",
+          "respostas": [
+            "1950"
+          ],
+          "pista": "A meio do século XX."
+        },
+        {
+          "tipo": "escolha",
+          "pergunta": "Qual é o melhor pedido a uma IA?",
+          "opcoes": [
+            "Escreve um email de 80 palavras a um cliente, em tom próximo, a confirmar a entrega de sexta",
+            "Escreve um email",
+            "Faz uma coisa boa",
+            "Email cliente"
+          ],
+          "respostas": [
+            "0"
+          ],
+          "pista": "Quanto mais contexto, melhor a resposta."
+        },
+        {
+          "tipo": "escolha",
+          "pergunta": "O que deves fazer sempre com números ou factos que uma IA te dá?",
+          "opcoes": [
+            "Confirmar numa fonte fiável",
+            "Publicar logo",
+            "Acreditar se soar convincente",
+            "Pedir à própria IA que confirme"
+          ],
+          "respostas": [
+            "0"
+          ],
+          "pista": "A IA também se engana com muita confiança."
+        },
+        {
+          "tipo": "imagem",
+          "imagem": "/ricardogarcia/escape/ia-prompts.svg",
+          "legenda": "Dois pedidos à mesma IA",
+          "pergunta": "Qual destes pedidos vai dar uma resposta mais útil à primeira?",
+          "respostas": [
+            "1"
+          ],
+          "pista": "Quem dá contexto, público e formato recebe melhor.",
+          "opcoes": [
+            "Pedido A",
+            "Pedido B",
+            "Dão o mesmo"
+          ]
+        },
+        {
+          "tipo": "foto",
+          "pergunta": "Missão de campo: escreve à mão a lista das 3 tarefas mais importantes de hoje e fotografa-a.",
+          "criterio": "A foto mostra uma lista escrita à mão (papel, caderno, post-it ou quadro) com pelo menos três linhas ou itens.",
+          "respostas": [],
+          "pista": "Papel e caneta servem. Três linhas chegam."
+        },
+        {
+          "tipo": "ra",
+          "pergunta": "O chip dourado que reinicia o assistente está à tua volta. Liga a câmara e encontra-o.",
+          "respostas": [],
+          "pista": "Roda devagar, o telemóvel na vertical."
+        }
+      ]
+    },
+    {
+      "id": "ponte-pessoas",
+      "titulo": "A Ponte das Pessoas",
+      "area": "Rede e networking",
+      "emoji": "🌉",
+      "historia": "Uma ponte levadiça só desce quando provares que sabes ligar pessoas.",
+      "minutos": 25,
+      "codigo_ra": "PONTE",
+      "enigmas": [
+        {
+          "tipo": "numero",
+          "pergunta": "O antropólogo Robin Dunbar estimou que conseguimos manter cerca de quantas relações estáveis?",
+          "respostas": [
+            "150"
+          ],
+          "pista": "Mais de cem, menos de duzentas."
+        },
+        {
+          "tipo": "escolha",
+          "pergunta": "Qual é a melhor primeira mensagem a alguém que admiras?",
+          "opcoes": [
+            "Uma pergunta concreta sobre algo que essa pessoa fez",
+            "«Olá, podes ajudar-me?»",
+            "Pedir logo um favor grande",
+            "Mandar o currículo sem contexto"
+          ],
+          "respostas": [
+            "0"
+          ],
+          "pista": "Mostra que prestaste atenção."
+        },
+        {
+          "tipo": "numero",
+          "pergunta": "Epicteto dizia que temos duas orelhas e quantas bocas, para ouvirmos o dobro do que falamos?",
+          "respostas": [
+            "1",
+            "uma",
+            "um"
+          ],
+          "pista": "Conta as tuas."
+        },
+        {
+          "tipo": "imagem",
+          "imagem": "/ricardogarcia/escape/rede-pontes.svg",
+          "legenda": "Rede fictícia",
+          "pergunta": "Que pessoa faz a ponte entre o grupo dourado e o grupo azul? (é por ela que as duas redes se conhecem)",
+          "respostas": [
+            "2"
+          ],
+          "pista": "Procura quem tem ligações aos dois grupos.",
+          "opcoes": [
+            "A",
+            "C",
+            "D",
+            "F"
+          ]
+        },
+        {
+          "tipo": "foto",
+          "pergunta": "Missão de campo: fotografa um sítio onde marcarias um café de networking (uma esplanada, um café, um cowork, uma biblioteca). Sem pessoas em destaque.",
+          "criterio": "A foto mostra um espaço onde se pode ter uma reunião informal: café, esplanada, cowork, biblioteca, lobby ou sala de reuniões. Não há pessoas em primeiro plano.",
+          "respostas": [],
+          "pista": "Pode ser o café ao pé de casa."
+        },
+        {
+          "tipo": "ra",
+          "pergunta": "A alavanca dourada da ponte está à tua volta. Liga a câmara e encontra-a.",
+          "respostas": [],
+          "pista": "Roda devagar, o telemóvel na vertical."
+        }
+      ]
+    },
+    {
+      "id": "ginasio-mente",
+      "titulo": "O Ginásio da Mente",
+      "area": "Corpo e energia",
+      "emoji": "🏋️",
+      "historia": "Um ginásio fechado à noite. As máquinas só se ligam a quem souber cuidar do corpo e da cabeça.",
+      "minutos": 25,
+      "codigo_ra": "ENERGIA",
+      "enigmas": [
+        {
+          "tipo": "numero",
+          "pergunta": "A OMS recomenda a adultos pelo menos quantos minutos de atividade física moderada por semana?",
+          "respostas": [
+            "150"
+          ],
+          "pista": "Cerca de 20 minutos por dia."
+        },
+        {
+          "tipo": "numero",
+          "pergunta": "Quantas horas de sono por noite se recomendam, no mínimo, a um adulto?",
+          "respostas": [
+            "7",
+            "sete"
+          ],
+          "pista": "Menos de oito, mais de seis."
+        },
+        {
+          "tipo": "escolha",
+          "pergunta": "Falhaste o treino ontem. O que diz a regra da app?",
+          "opcoes": [
+            "Nunca falhar dois dias seguidos",
+            "Desistir da semana",
+            "Treinar o dobro hoje até doer",
+            "Esperar pela próxima segunda-feira"
+          ],
+          "respostas": [
+            "0"
+          ],
+          "pista": "Um dia mau não é uma semana má."
+        },
+        {
+          "tipo": "imagem",
+          "imagem": "/ricardogarcia/escape/corpo-batimentos.svg",
+          "legenda": "Treino de exemplo",
+          "pergunta": "Em que minuto do treino a frequência cardíaca chegou ao pico?",
+          "respostas": [
+            "20",
+            "20 min",
+            "20 minutos"
+          ],
+          "pista": "Procura o ponto mais alto da linha vermelha e desce até ao eixo."
+        },
+        {
+          "tipo": "foto",
+          "pergunta": "Missão de campo: prepara-te para treinar e fotografa a tua garrafa de água ou o teu calçado de treino.",
+          "criterio": "A foto mostra uma garrafa ou copo de água, ou calçado desportivo/de treino.",
+          "respostas": [],
+          "pista": "Antes do treino de hoje, um clique."
+        },
+        {
+          "tipo": "ra",
+          "pergunta": "O haltere dourado que liga as máquinas está à tua volta. Liga a câmara e encontra-o.",
+          "respostas": [],
+          "pista": "Roda devagar, o telemóvel na vertical."
+        }
+      ]
+    }
+  ],
+  "inimigos": [
+    {
+      "id": "adiador",
+      "nome": "O Adiador",
+      "titulo": "Senhor do «amanhã começo»",
+      "emoji": "🕰️",
+      "retrato": "/ricardogarcia/rpg/adiador.svg",
+      "cor": "#9B7BFF",
+      "vida": 28,
+      "defesa": 10,
+      "fraqueza": "dis",
+      "entrada": "Para quê hoje, se há amanhã? Senta-te. Só mais um bocadinho.",
+      "fase2": "Estás mesmo a fazer isto? Então vou buscar o domingo à noite.",
+      "derrota": "Fizeste hoje. Eu não sei viver com quem faz hoje.",
+      "vitoria_dele": "Amanhã tentas outra vez. Ou depois de amanhã.",
+      "licao": "Começar mal é melhor do que não começar. Dois minutos chegam para partir a inércia.",
+      "padrao": [
+        {
+          "tipo": "ataque",
+          "valor": 4,
+          "texto": "«Só mais um episódio.»"
+        },
+        {
+          "tipo": "escudo",
+          "valor": 3,
+          "texto": "«Amanhã começo, prometo.»"
+        },
+        {
+          "tipo": "ataque",
+          "valor": 5,
+          "texto": "«Ainda não estás pronto.»"
+        },
+        {
+          "tipo": "forte",
+          "valor": 7,
+          "texto": "«Já é tarde para hoje.»"
+        }
+      ],
+      "padrao2": [
+        {
+          "tipo": "forte",
+          "valor": 7,
+          "texto": "«Domingo à noite, outra vez.»"
+        },
+        {
+          "tipo": "ataque",
+          "valor": 5,
+          "texto": "«Vê só mais um vídeo.»"
+        },
+        {
+          "tipo": "cura",
+          "valor": 4,
+          "texto": "«Mereces descansar.»"
+        },
+        {
+          "tipo": "forte",
+          "valor": 8,
+          "texto": "«Segunda-feira é que é.»"
+        }
+      ]
+    },
+    {
+      "id": "sombra",
+      "nome": "A Sombra do Medo",
+      "titulo": "Guardiã do «e se correr mal?»",
+      "emoji": "🌫️",
+      "retrato": "/ricardogarcia/rpg/sombra.svg",
+      "cor": "#6FA8DC",
+      "vida": 28,
+      "defesa": 10,
+      "fraqueza": "cor",
+      "entrada": "E se te rires de ti? E se falhares à frente de todos? Fica onde estás seguro.",
+      "fase2": "Estás a tremer. Ótimo. Vou mostrar-te tudo o que pode correr mal.",
+      "derrota": "Tremeste e avançaste na mesma. Contra isso não tenho nada.",
+      "vitoria_dele": "Viste? Era melhor não teres tentado.",
+      "licao": "Coragem não é não ter medo. É ter medo e dar o passo pequeno na mesma.",
+      "padrao": [
+        {
+          "tipo": "ataque",
+          "valor": 4,
+          "texto": "«E se gozarem contigo?»"
+        },
+        {
+          "tipo": "ataque",
+          "valor": 5,
+          "texto": "«Quem és tu para isso?»"
+        },
+        {
+          "tipo": "escudo",
+          "valor": 3,
+          "texto": "«Espera pela altura certa.»"
+        },
+        {
+          "tipo": "forte",
+          "valor": 7,
+          "texto": "«Lembras-te da última vez?»"
+        }
+      ],
+      "padrao2": [
+        {
+          "tipo": "forte",
+          "valor": 8,
+          "texto": "«Vais perder tudo.»"
+        },
+        {
+          "tipo": "escudo",
+          "valor": 3,
+          "texto": "«Ainda não.»"
+        },
+        {
+          "tipo": "forte",
+          "valor": 7,
+          "texto": "«Toda a gente vai ver.»"
+        },
+        {
+          "tipo": "cura",
+          "valor": 4,
+          "texto": "«Fica na zona segura.»"
+        }
+      ]
+    },
+    {
+      "id": "ganancia",
+      "nome": "A Ganância",
+      "titulo": "A voz do «dobra para recuperar»",
+      "emoji": "💰",
+      "retrato": "/ricardogarcia/rpg/ganancia.svg",
+      "cor": "#E9C46A",
+      "vida": 30,
+      "defesa": 11,
+      "fraqueza": "foc",
+      "entrada": "Perdeste? Dobra o lote. Ganhaste? Dobra outra vez. Quem tem paciência é pobre.",
+      "fase2": "Sem stop. Sem plano. Agora é que vais ver o que é emoção.",
+      "derrota": "Seguiste o plano e fechaste o ecrã. Não há nada que eu possa fazer com isso.",
+      "vitoria_dele": "Mais uma operação. Só mais uma.",
+      "licao": "O risco decide-se antes de entrar. Depois de entrar, só se cumpre o plano.",
+      "nota": "Conteúdo educativo. Trading tem risco de perda de capital.",
+      "padrao": [
+        {
+          "tipo": "ataque",
+          "valor": 5,
+          "texto": "«Mete mais um bocadinho.»"
+        },
+        {
+          "tipo": "forte",
+          "valor": 7,
+          "texto": "«Tira o stop, vai voltar.»"
+        },
+        {
+          "tipo": "cura",
+          "valor": 4,
+          "texto": "«Foi só azar.»"
+        },
+        {
+          "tipo": "ataque",
+          "valor": 5,
+          "texto": "«Recupera já.»"
+        }
+      ],
+      "padrao2": [
+        {
+          "tipo": "forte",
+          "valor": 9,
+          "texto": "«Tudo numa operação.»"
+        },
+        {
+          "tipo": "ataque",
+          "valor": 6,
+          "texto": "«Viste aquele que ganhou 10×?»"
+        },
+        {
+          "tipo": "escudo",
+          "valor": 3,
+          "texto": "«Não podes parar agora.»"
+        },
+        {
+          "tipo": "forte",
+          "valor": 8,
+          "texto": "«Dobra.»"
+        }
+      ]
+    },
+    {
+      "id": "espelho",
+      "nome": "O Espelho",
+      "titulo": "Mestre da comparação",
+      "emoji": "🪞",
+      "retrato": "/ricardogarcia/rpg/espelho.svg",
+      "cor": "#C0C7D2",
+      "vida": 28,
+      "defesa": 10,
+      "fraqueza": "con",
+      "entrada": "Olha para eles: carros, viagens, vidas perfeitas. E tu, aí.",
+      "fase2": "Mais um scroll. Vê como todos estão à tua frente.",
+      "derrota": "Viste os bastidores. Já não acreditas no meu reflexo.",
+      "vitoria_dele": "Eles estão sempre um passo à frente. Sempre.",
+      "licao": "Comparas os teus bastidores com o palco dos outros. Compara-te contigo de há 30 dias.",
+      "padrao": [
+        {
+          "tipo": "ataque",
+          "valor": 4,
+          "texto": "«Ele já tem casa própria.»"
+        },
+        {
+          "tipo": "escudo",
+          "valor": 3,
+          "texto": "«Olha os números dela.»"
+        },
+        {
+          "tipo": "ataque",
+          "valor": 5,
+          "texto": "«Tu nunca vais chegar lá.»"
+        },
+        {
+          "tipo": "forte",
+          "valor": 7,
+          "texto": "«Vê as fotos da viagem.»"
+        }
+      ],
+      "padrao2": [
+        {
+          "tipo": "forte",
+          "valor": 8,
+          "texto": "«Toda a gente consegue menos tu.»"
+        },
+        {
+          "tipo": "cura",
+          "valor": 4,
+          "texto": "«Só mais um scroll.»"
+        },
+        {
+          "tipo": "forte",
+          "valor": 7,
+          "texto": "«És o último.»"
+        },
+        {
+          "tipo": "ataque",
+          "valor": 6,
+          "texto": "«Desiste.»"
+        }
+      ]
+    },
+    {
+      "id": "peso",
+      "nome": "O Peso",
+      "titulo": "O cansaço que não passa",
+      "emoji": "🪨",
+      "retrato": "/ricardogarcia/rpg/peso.svg",
+      "cor": "#A47148",
+      "vida": 30,
+      "defesa": 10,
+      "fraqueza": "ene",
+      "entrada": "Dormiste cinco horas, comeste à pressa e não te mexes há dias. Senta-te. Eu pesei por ti.",
+      "fase2": "Café, açúcar e ecrã até às duas. Vamos ver quanto aguentas.",
+      "derrota": "Dormiste, bebeste água e mexeste-te. Fiquei leve demais para te prender.",
+      "vitoria_dele": "Amanhã estás ainda mais cansado.",
+      "licao": "Energia treina-se: sono, água, movimento. É a base de tudo o resto.",
+      "padrao": [
+        {
+          "tipo": "ataque",
+          "valor": 5,
+          "texto": "«Mais um café.»"
+        },
+        {
+          "tipo": "cura",
+          "valor": 5,
+          "texto": "«Hoje não há treino.»"
+        },
+        {
+          "tipo": "ataque",
+          "valor": 5,
+          "texto": "«Fica no sofá.»"
+        },
+        {
+          "tipo": "forte",
+          "valor": 7,
+          "texto": "«Deita-te às duas.»"
+        }
+      ],
+      "padrao2": [
+        {
+          "tipo": "forte",
+          "valor": 8,
+          "texto": "«Sem dormir.»"
+        },
+        {
+          "tipo": "ataque",
+          "valor": 6,
+          "texto": "«Come qualquer coisa.»"
+        },
+        {
+          "tipo": "escudo",
+          "valor": 3,
+          "texto": "«Não tens tempo para ti.»"
+        },
+        {
+          "tipo": "forte",
+          "valor": 8,
+          "texto": "«Arrasta-te.»"
+        }
+      ]
+    },
+    {
+      "id": "ruido",
+      "nome": "O Ruído",
+      "titulo": "Rei das notificações",
+      "emoji": "📳",
+      "retrato": "/ricardogarcia/rpg/ruido.svg",
+      "cor": "#1EAAE6",
+      "vida": 27,
+      "defesa": 11,
+      "fraqueza": "red",
+      "entrada": "Plim. Plim. Plim. Não precisas de ninguém, tens-me a mim no bolso.",
+      "fase2": "Mais alto! Mais rápido! Responde a tudo, não fales com ninguém.",
+      "derrota": "Desligaste-me e foste ter com pessoas reais. Fiquei a falar sozinho.",
+      "vitoria_dele": "Plim. Tens 99+ por ler.",
+      "licao": "As pessoas certas valem mais do que mil notificações. Liga a alguém hoje.",
+      "padrao": [
+        {
+          "tipo": "ataque",
+          "valor": 4,
+          "texto": "«Tens 12 mensagens.»"
+        },
+        {
+          "tipo": "ataque",
+          "valor": 5,
+          "texto": "«Vê só isto.»"
+        },
+        {
+          "tipo": "escudo",
+          "valor": 4,
+          "texto": "«Modo infinito.»"
+        },
+        {
+          "tipo": "forte",
+          "valor": 7,
+          "texto": "«Já passou uma hora?»"
+        }
+      ],
+      "padrao2": [
+        {
+          "tipo": "forte",
+          "valor": 8,
+          "texto": "«99+»"
+        },
+        {
+          "tipo": "cura",
+          "valor": 4,
+          "texto": "«Mais um vídeo curto.»"
+        },
+        {
+          "tipo": "forte",
+          "valor": 8,
+          "texto": "«Ninguém te liga.»"
+        },
+        {
+          "tipo": "ataque",
+          "valor": 6,
+          "texto": "«Plim.»"
+        }
+      ]
+    },
+    {
+      "id": "rotina",
+      "nome": "A Rotina",
+      "titulo": "O último inimigo da Operação Liberdade",
+      "emoji": "🔁",
+      "retrato": "/ricardogarcia/rpg/rotina.svg",
+      "cor": "#D2A63C",
+      "vida": 42,
+      "defesa": 11,
+      "fraqueza": null,
+      "final": true,
+      "entrada": "Conheço-te há anos. Acordar, trabalhar, cansar, repetir. Eu sou a tua casa.",
+      "fase2": "Usei o Adiador, o Medo, a Ganância, o Espelho, o Peso e o Ruído. Agora sou todos ao mesmo tempo.",
+      "derrota": "Não me destruíste. Mudaste-me. Agora a rotina trabalha para ti.",
+      "vitoria_dele": "Amanhã é igual a hoje. Como sempre.",
+      "licao": "Não precisas de fugir da rotina. Precisas de desenhar uma que te leve para onde queres.",
+      "padrao": [
+        {
+          "tipo": "ataque",
+          "valor": 5,
+          "texto": "«Acorda, trabalha, repete.»"
+        },
+        {
+          "tipo": "escudo",
+          "valor": 3,
+          "texto": "«Isto é a vida normal.»"
+        },
+        {
+          "tipo": "forte",
+          "valor": 8,
+          "texto": "«As 40 horas são para sempre.»"
+        },
+        {
+          "tipo": "ataque",
+          "valor": 6,
+          "texto": "«Sonhar é para outros.»"
+        },
+        {
+          "tipo": "cura",
+          "valor": 5,
+          "texto": "«Fica confortável.»"
+        }
+      ],
+      "padrao2": [
+        {
+          "tipo": "forte",
+          "valor": 9,
+          "texto": "«Todos os teus inimigos de uma vez.»"
+        },
+        {
+          "tipo": "ataque",
+          "valor": 7,
+          "texto": "«Segunda-feira, 7h12.»"
+        },
+        {
+          "tipo": "forte",
+          "valor": 9,
+          "texto": "«Desiste, é mais fácil.»"
+        },
+        {
+          "tipo": "escudo",
+          "valor": 4,
+          "texto": "«Sempre foi assim.»"
+        },
+        {
+          "tipo": "ataque",
+          "valor": 7,
+          "texto": "«Mais um ano igual.»"
+        }
+      ]
+    }
+  ],
+  "accoes_confronto": [
+    {
+      "id": "agir",
+      "atr": "dis",
+      "nome": "Agir já",
+      "emoji": "⚡",
+      "custo": 0,
+      "dano": 5,
+      "texto": "Fazes a coisa difícil primeiro."
+    },
+    {
+      "id": "respirar",
+      "atr": "foc",
+      "nome": "Respirar",
+      "emoji": "🫁",
+      "custo": 0,
+      "cura": 5,
+      "texto": "Recuperas Determinação e ganhas 1 de Foco extra.",
+      "sem_dado": true
+    },
+    {
+      "id": "planear",
+      "atr": "con",
+      "nome": "Plano",
+      "emoji": "🧭",
+      "custo": 1,
+      "dano": 4,
+      "guarda": 3,
+      "texto": "Danos menores, mas o próximo golpe dele perde força."
+    },
+    {
+      "id": "enfrentar",
+      "atr": "cor",
+      "nome": "Enfrentar",
+      "emoji": "🦁",
+      "custo": 1,
+      "dano": 7,
+      "texto": "Um golpe de coragem, forte mas arriscado."
+    },
+    {
+      "id": "treinar",
+      "atr": "ene",
+      "nome": "Energia",
+      "emoji": "🔥",
+      "custo": 1,
+      "dano": 6,
+      "texto": "Corpo em movimento, cabeça limpa."
+    },
+    {
+      "id": "apoio",
+      "atr": "red",
+      "nome": "Pedir apoio",
+      "emoji": "🤝",
+      "custo": 2,
+      "dano": 5,
+      "texto": "Alguém da tua rede entra na luta. Nunca falha.",
+      "sem_dado": true
+    }
+  ]
+}

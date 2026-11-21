@@ -420,7 +420,8 @@ export async function POST(req: NextRequest) {
     const raio = p.origem === 'ricardo' ? Math.max(30, Math.min(300, p.raio_m || 80)) : 80
     if (dist > raio + Math.min(50, prec)) return erro(`Ainda estás a ${Math.round(dist)} m de ${p.nome}.`)
     const { count } = await db().from('rg_app_diarios').select('id', { count: 'exact', head: true }).eq('membro_id', m.id).eq('dia', dia).like('item', 'rota:%')
-    const area = t(b?.area, 20)
+    // O tipo do sítio pode ter uma área fixa (escolhida no painel); senão vale a da pessoa.
+    const area = p.area || t(b?.area, 20)
     // Num ponto do Ricardo a dica é a lição dele; o XP extra só conta na primeira visita de sempre.
     const licao = p.origem === 'ricardo' && p.licao_texto ? { titulo: p.licao_titulo || p.nome, texto: p.licao_texto, video: p.video_url || null } : null
     const dica: any = licao || await dicaPara(area, m.id)

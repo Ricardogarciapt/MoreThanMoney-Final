@@ -27,6 +27,11 @@ export const XP_ACTION_DEFAULTS: Record<
   app_diario: { amount: 3, dailyCap: 1, label: 'Página do diário' },
   app_desafio_membro_dia: { amount: 5, dailyCap: 3, label: 'Dia de desafio da comunidade' },
   app_desafio_membro_fim: { amount: 20, dailyCap: 2, label: 'Desafio da comunidade concluído' },
+  app_rpg_cena: { amount: 5, dailyCap: 4, label: 'Cena do RPG' },
+  app_rpg_capitulo: { amount: 40, dailyCap: 1, label: 'Capítulo do RPG' },
+  app_rpg_boss: { amount: 60, dailyCap: 1, label: 'Confronto do RPG vencido' },
+  app_escape: { amount: 60, dailyCap: 2, label: 'Escape room' },
+  app_rpg_mesa: { amount: 10, dailyCap: 2, label: 'Mesa de RPG' },
 }
 
 /**

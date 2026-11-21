@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { requireSuperAdmin } from '@/lib/super-admin'
 import { db, economia, ECONOMIA_BASE, PATENTES, patenteDe, hoje, somarMoedas } from '@/lib/ricardogarcia/app'
-import { AREAS_ROTA, coordenadasDeLink } from '@/lib/ricardogarcia/diario'
+import { AREAS_ROTA, CHAVE_TIPOS, TIPOS_LOCAIS, configTipos, coordenadasDeLink } from '@/lib/ricardogarcia/diario'
 
 export const dynamic = 'force-dynamic'
 const t = (v: unknown, n: number) => String(v ?? '').trim().slice(0, n)
@@ -88,6 +88,7 @@ export async function GET(req: NextRequest) {
     presencas: (pres.data || []).map(p => ({ dia: p.dia, tipo: p.ref, xp: p.xp, nota: (p.dados as any)?.nota || null, nome: nomeMembro.get(p.membro_id)?.nome || 'Membro', prova: p.prova_path ? urlDe.get(p.prova_path) || null : null })),
     comunidade: { stories: (cst.data || []).map(linhaC('story')), mensagens: (cmsg.data || []).map(linhaC('mensagem')) },
     pontos: (pts.data || []).map(p => ({ ...p, visitas: nVis.get(p.id) || 0 })), areas_rota: AREAS_ROTA,
+    tipos_locais: TIPOS_LOCAIS.map(x => ({ id: x.id, nome: x.nome })), tipos_cfg: await configTipos(true),
     convidar: (leads.data || []).filter(l => !l.email || !naApp.has(String(l.email).toLowerCase())).slice(0, 30),
   })
 }
@@ -167,6 +168,12 @@ export async function POST(req: NextRequest) {
       const id = String(p.id || '').startsWith('rg:') ? t(p.id, 60) : 'rg:' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6)
       const { error } = await db().from('rg_app_pontos').upsert({ id, ...linha }, { onConflict: 'id' })
       return error ? falha(error.message, 500) : ok({ id })
+    }
+    case 'tipos_locais': {
+      const activos = (Array.isArray(b.activos) ? b.activos : []).map(String).filter((x: string) => TIPOS_LOCAIS.some(y => y.id === x))
+      const areas = Object.fromEntries(TIPOS_LOCAIS.map(x => [x.id, AREAS_ROTA.some(a => a.id === b.areas?.[x.id]) ? b.areas[x.id] : null]))
+      const { error } = await db().from('site_settings').upsert({ key: CHAVE_TIPOS, value: { activos, areas } }, { onConflict: 'key' })
+      return error ? falha(error.message, 500) : ok()
     }
     case 'ponto_apagar': {
       const id = t(b.id, 60); if (!id.startsWith('rg:')) return falha('Só se apagam pontos teus.')

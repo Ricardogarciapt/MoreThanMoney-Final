@@ -103,9 +103,36 @@ export async function dicaPara(area: string, membroId: string) {
 // Só lugares públicos onde se está fora da estrada: parques, jardins, praças, bibliotecas,
 // miradouros e museus (OpenStreetMap). Sem nome não entra; com poucos pontos à volta, a zona é
 // tratada como isolada e não se propõe rota.
-const TIPOS_OSM: Record<string, string> = {
-  'leisure=park': 'Parque', 'leisure=garden': 'Jardim', 'place=square': 'Praça',
-  'amenity=library': 'Biblioteca', 'tourism=viewpoint': 'Miradouro', 'tourism=museum': 'Museu',
+// O Ricardo escolhe no painel que tipos entram e, se quiser, a área da lição de cada tipo
+// (ex.: ginásio ao ar livre → Corpo e energia). Sem área, vale a área que a pessoa escolheu na app.
+export const TIPOS_LOCAIS: { id: string; osm: string[]; nome: string; activo: boolean; area: string | null }[] = [
+  { id: 'parque', osm: ['leisure=park'], nome: 'Parque', activo: true, area: null },
+  { id: 'jardim', osm: ['leisure=garden'], nome: 'Jardim', activo: true, area: null },
+  { id: 'praca', osm: ['place=square'], nome: 'Praça', activo: true, area: null },
+  { id: 'biblioteca', osm: ['amenity=library'], nome: 'Biblioteca', activo: true, area: null },
+  { id: 'miradouro', osm: ['tourism=viewpoint'], nome: 'Miradouro', activo: true, area: 'mindset' },
+  { id: 'museu', osm: ['tourism=museum'], nome: 'Museu', activo: true, area: null },
+  { id: 'estatua', osm: ['memorial=statue', 'historic=statue'], nome: 'Estátua', activo: true, area: 'mindset' },
+  { id: 'monumento', osm: ['historic=monument', 'historic=memorial'], nome: 'Monumento', activo: true, area: 'mindset' },
+  { id: 'arte', osm: ['tourism=artwork'], nome: 'Arte pública', activo: true, area: 'conteudo' },
+  { id: 'fonte', osm: ['amenity=fountain'], nome: 'Fonte', activo: true, area: null },
+  { id: 'ginasio', osm: ['leisure=fitness_station'], nome: 'Ginásio ao ar livre', activo: true, area: 'corpo' },
+  { id: 'castelo', osm: ['historic=castle'], nome: 'Castelo', activo: true, area: 'mindset' },
+  { id: 'praia', osm: ['natural=beach'], nome: 'Praia', activo: true, area: 'corpo' },
+  { id: 'cowork', osm: ['office=coworking', 'amenity=coworking_space'], nome: 'Cowork', activo: false, area: 'ia' },
+]
+export const CHAVE_TIPOS = 'rg_app_rotas_tipos'
+let cacheTipos: { t: number; v: { activos: string[]; areas: Record<string, string | null> } } | null = null
+export async function configTipos(fresco = false) {
+  if (!fresco && cacheTipos && Date.now() - cacheTipos.t < 60_000) return cacheTipos.v
+  const { data } = await db().from('site_settings').select('value').eq('key', CHAVE_TIPOS).maybeSingle()
+  const v: any = data?.value || {}
+  const cfg = {
+    activos: Array.isArray(v.activos) ? v.activos.filter((x: string) => TIPOS_LOCAIS.some(t => t.id === x)) : TIPOS_LOCAIS.filter(t => t.activo).map(t => t.id),
+    areas: Object.fromEntries(TIPOS_LOCAIS.map(t => [t.id, v.areas && t.id in v.areas ? v.areas[t.id] : t.area])),
+  }
+  cacheTipos = { t: Date.now(), v: cfg }
+  return cfg
 }
 export function distanciaM(a: { lat: number; lon: number }, b: { lat: number; lon: number }) {
   const R = 6_371_000, r = Math.PI / 180
@@ -115,8 +142,11 @@ export function distanciaM(a: { lat: number; lon: number }, b: { lat: number; lo
 }
 
 export async function pontosPerto(lat: number, lon: number, raio = 1500) {
-  const filtros = Object.keys(TIPOS_OSM).map(k => { const [a, v] = k.split('='); return `nwr["${a}"="${v}"]["name"](around:${raio},${lat},${lon});` }).join('')
-  const q = `[out:json][timeout:15];(${filtros});out center 60;`
+  const cfg = await configTipos()
+  const tipos = TIPOS_LOCAIS.filter(t => cfg.activos.includes(t.id))
+  const filtros = tipos.flatMap(t => t.osm).map(k => { const [a, v] = k.split('='); return `nwr["${a}"="${v}"]["name"](around:${raio},${lat},${lon});` }).join('')
+  if (!filtros) return { isolada: true, pontos: [] as any[] }
+  const q = `[out:json][timeout:15];(${filtros});out center 80;`
   let elementos: any[] = []
   try {
     const r = await fetch('https://overpass-api.de/api/interpreter', {
@@ -128,9 +158,9 @@ export async function pontosPerto(lat: number, lon: number, raio = 1500) {
   } catch (e) { console.error('[app-ricardo] overpass:', e) }
   const pontos = elementos.map(e => {
     const la = e.lat ?? e.center?.lat, lo = e.lon ?? e.center?.lon
-    const chave = Object.keys(TIPOS_OSM).find(k => { const [a, v] = k.split('='); return e.tags?.[a] === v })
-    if (la == null || lo == null || !chave || e.tags?.access === 'private') return null
-    return { id: `osm:${e.type}/${e.id}`, nome: String(e.tags.name).slice(0, 80), tipo: TIPOS_OSM[chave], lat: la, lon: lo, dist: Math.round(distanciaM({ lat, lon }, { lat: la, lon: lo })) }
+    const tp = tipos.find(t => t.osm.some(k => { const [a, v] = k.split('='); return e.tags?.[a] === v }))
+    if (la == null || lo == null || !tp || e.tags?.access === 'private') return null
+    return { id: `osm:${e.type}/${e.id}`, nome: String(e.tags.name).slice(0, 80), tipo: tp.nome, area: cfg.areas[tp.id] || null, lat: la, lon: lo, dist: Math.round(distanciaM({ lat, lon }, { lat: la, lon: lo })) }
   }).filter(Boolean) as any[]
   // Um ponto por nome (um parque grande aparece às vezes em vários bocados).
   const vistos = new Set<string>()
