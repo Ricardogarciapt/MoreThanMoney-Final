@@ -180,8 +180,8 @@ function montarHtml(slug, livro, capitulos) {
   </section>`
 
   const corpo = caps.map((c) => `
-  <section class="abertura pagina${livro.aberturas?.[Number(c.num)] ? ' com-foto' : ilustracao(livro.variante || livro.tema, Number(c.num)) ? ' com-ilustra' : ''}" id="${c.id}">
-    ${livro.aberturas?.[Number(c.num)] ? `<img class="ab-foto" src="${imgSeguro(livro.aberturas[Number(c.num)])}" alt="">` : `<div class="ab-ilustra">${ilustracao(livro.variante || livro.tema, Number(c.num))}</div>`}
+  <section class="abertura pagina${livro.aberturas?.[Number(c.num)] ? ' com-foto' : (livro.semIlustra?.includes(Number(c.num)) ? '' : ilustracao(livro.variante || livro.tema, Number(c.num))) ? ' com-ilustra' : ''}" id="${c.id}">
+    ${livro.aberturas?.[Number(c.num)] ? `<img class="ab-foto" src="${imgSeguro(livro.aberturas[Number(c.num)])}" alt="">` : `<div class="ab-ilustra">${(livro.semIlustra?.includes(Number(c.num)) ? '' : ilustracao(livro.variante || livro.tema, Number(c.num)))}</div>`}
     <div class="ab-num">${numero(c.num)}</div>
     <h2 class="ab-titulo">${inline(c.titulo)}</h2>
     ${c.epigrafe ? `<p class="ab-epigrafe">${inline(c.epigrafe)}</p>` : ''}

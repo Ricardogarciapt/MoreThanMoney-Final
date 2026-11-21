@@ -17,15 +17,9 @@ No Forex negoceia-se sempre aos pares. EUR/USD a 1,0850 quer dizer que 1 euro va
 - **Comprar** EUR/USD é apostar que o euro vai valorizar face ao dólar.
 - **Vender** EUR/USD é apostar no contrário. E sim, podes vender sem ter euros: estás a negociar um contrato sobre a diferença de preço (CFD), não a comprar notas.
 
-:::ecra MetaTrader 5 · Cotações
-EUR/USD: 1,08502 / 1,08510
-GBP/USD: 1,26718 / 1,26731
-USD/JPY: 151,412 / 151,426
-XAU/USD: 2.341,15 / 2.341,45
-Spread EUR/USD: 0,8 pips
-:::
+[[foto: mt5-cotacoes-telemovel.jpg | O MetaTrader 5 no telemóvel: à esquerda as cotações, com o preço de venda e o de compra lado a lado. Imagem: MetaQuotes (metatrader5.com). | larga]]
 
-Os dois números de cada linha são o preço de venda (bid) e o de compra (ask). A diferença entre eles é o **spread**, e é a primeira coisa que pagas em cada operação. Valores ilustrativos: os teus vão ser outros.
+Na janela de cotações, cada par mostra dois números: o preço de venda (bid) e o de compra (ask). Por exemplo, EUR/USD a 1,08502 / 1,08510 (valores ilustrativos). A diferença entre eles é o **spread**, e é a primeira coisa que pagas em cada operação: aqui, 0,8 pips.
 
 | Grupo | Exemplos | O que deves saber |
 |---|---|---|

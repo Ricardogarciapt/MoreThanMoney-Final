@@ -32,14 +32,9 @@ A app tem cinco separadores no fundo do ecrã. Aprende-os pela ordem em que os v
 | **Histórico** | Todas as operações fechadas, com resultado. É a matéria-prima do teu diário. |
 | **Mensagens / Definições** | Notificações, contas e preferências. |
 
-:::ecra MetaTrader 5 · Negociação (conta demo)
-Saldo: 500,00 €
-Capital: 500,00 €
-Margem: 0,00 €
-Margem livre: 500,00 €
-Nível de margem: —
-Posições abertas: 0
-:::
+[[foto: mt5-android-negociacao.jpg | O separador de negociação e o histórico no MetaTrader 5 para Android e tablet. É aqui que vês saldo, capital e margem. Imagem: MetaQuotes (metatrader5.com). | larga]]
+
+Numa conta demo acabada de abrir com 500 €, o separador «Negociação» mostra saldo 500,00 €, capital 500,00 €, margem 0,00 € e margem livre 500,00 € (valores ilustrativos).
 
 **Saldo** é o dinheiro sem contar com posições abertas. **Capital** (equity) é o saldo mais ou menos o que as posições abertas estão a ganhar ou a perder. Quando tens uma operação aberta, olha sempre para o capital: é esse o número real.
 
