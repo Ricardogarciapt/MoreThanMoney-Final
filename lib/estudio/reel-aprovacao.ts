@@ -56,7 +56,7 @@ export function proximaJanela(depoisMs: number): Date {
 
 /** Puro: a legenda do reel a partir do guião (CTA da palavra-chave, hashtags, disclaimer). */
 export function legendaDoGuiao(g: Record<string, any>): string {
-  const hashtags = (Array.isArray(g.hashtags) ? g.hashtags : []).slice(0, 8).map((h: string) => (String(h).startsWith('#') ? h : `#${h}`)).join(' ')
+  const hashtags = (Array.isArray(g.hashtags) ? g.hashtags : []).slice(0, 5).map((h: string) => (String(h).startsWith('#') ? h : `#${h}`)).join(' ')
   const cta = g.palavra_chave ? `\n\nComenta «${g.palavra_chave}» e eu envio-te o próximo passo.` : ''
   const corpo = `${g.legenda || g.nicho || ''}${cta}\n\n${DISCLAIMER}${hashtags ? `\n\n${hashtags}` : ''}`.trim()
   return corrigirPtPt(corpo).texto.slice(0, 2200)
