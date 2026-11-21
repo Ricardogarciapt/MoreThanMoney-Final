@@ -1,6 +1,6 @@
 import Image from "next/image"
 import Link from "next/link"
-import { ArrowRight, ArrowUpRight, Bot, Building2, CandlestickChart, Check, GraduationCap, Mic, Server, UserRound } from "lucide-react"
+import { ArrowRight, ArrowUpRight, Bot, Building2, CandlestickChart, Check, GraduationCap, Mic, Move3d, Server, UserRound } from "lucide-react"
 import { linkAgendar } from "@/lib/agenda/link"
 import { IDENTIFICACAO } from "@/lib/legal/identificacao"
 import { CASOS, DEMOS, FAQ, PERFIS, PROXIMOS } from "@/lib/site-solucoes/conteudo"
@@ -11,6 +11,7 @@ import { AreasInterativas } from "@/components/solucoes/areas-interativas"
 import { CasosCiclo } from "@/components/solucoes/casos-ciclo"
 import { VideoApresentacao } from "@/components/solucoes/video-apresentacao"
 import { MenuTrabalhos } from "@/components/solucoes/menu-trabalhos"
+import { DiaAntesDepois } from "@/components/solucoes/dia-antes-depois"
 import { demoDoDia } from "@/lib/site-solucoes/demos-diarias"
 import type { Metadata } from "next"
 import { LOCALE_OG } from "@/lib/site-solucoes/i18n/base"
@@ -139,6 +140,24 @@ export default async function SolucoesPage({ searchParams }: Props) {
           <style>{`@keyframes solucoes-faixa{from{transform:translateX(0)}to{transform:translateX(-50%)}}`}</style>
         </div>
 
+        {/* Factos de relance: o que nos distingue, em números que são nossos */}
+        <section aria-label={t("Em números")} className="mx-auto max-w-6xl px-4 pt-14">
+          <dl className="grid grid-cols-2 gap-px overflow-hidden rounded-3xl border border-white/10 bg-white/10 md:grid-cols-4">
+            {[
+              { v: "24 h", k: t("para teres a demo com a tua marca") },
+              { v: "14", k: t("soluções prontas a entregar") },
+              { v: "5", k: t("línguas no mesmo sistema") },
+              { v: "1", k: t("preço fechado, combinado antes de começarmos") },
+            ].map((x) => (
+              <div key={x.v} className="bg-[#0B0D12] p-5 md:p-7">
+                <dt className="sr-only">{x.k}</dt>
+                <dd className="bg-gradient-to-br from-[#F5DB8B] via-[#E9C46A] to-[#9C7A24] bg-clip-text text-4xl font-black tabular-nums text-transparent md:text-6xl">{x.v}</dd>
+                <dd className="mt-2 text-sm text-zinc-400">{x.k}</dd>
+              </div>
+            ))}
+          </dl>
+        </section>
+
         {/* O que automatizamos: as dores de quem trabalha sem IA */}
         <section id="video" className="mx-auto max-w-5xl px-4 pt-20">
           <VideoApresentacao />
@@ -160,6 +179,9 @@ export default async function SolucoesPage({ searchParams }: Props) {
                 <Link href={ligar("/demos#modelos")} className="mt-8 inline-flex min-h-[52px] items-center justify-center gap-2 rounded-full text-center bg-[#D2A63C] px-7 font-semibold text-black shadow-lg shadow-[#D2A63C]/20 hover:bg-[#E9C46A]">
                   {t("Experimentar com o meu nome")} <ArrowRight className="h-4 w-4" aria-hidden="true" />
                 </Link>
+                <Link href={ligar("/demos?ra=1#modelos")} className="mt-4 flex min-h-[44px] items-center gap-2 text-sm font-semibold text-[#E9C46A] hover:text-white">
+                  <Move3d className="h-4 w-4" aria-hidden="true" /> {t("Ou põe a app em realidade aumentada no teu balcão")}
+                </Link>
               </div>
               <div className="-mx-6 flex gap-4 overflow-x-auto px-6 pb-4 md:mx-0 md:grid md:grid-cols-4 md:gap-3 md:overflow-visible md:px-0">
                 {["restaurante", "barbearia", "ginasio", "imobiliaria"].map((id) => MODELOS.find((x) => x.id === id)!).map((m, i) => (
@@ -170,6 +192,16 @@ export default async function SolucoesPage({ searchParams }: Props) {
                 ))}
               </div>
             </div>
+          </div>
+        </section>
+
+        {/* O mesmo dia, sem e com IA */}
+        <section id="o-teu-dia" className="mx-auto max-w-6xl px-4 pt-24">
+          <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[#D2A63C]">{t("Antes e depois")}</p>
+          <h2 className="mt-3 max-w-[22ch] text-3xl font-bold tracking-tight md:text-5xl">{t("O mesmo dia. Outra hora de fechar a porta.")}</h2>
+          <p className="mt-3 max-w-[62ch] text-zinc-400">{t("Carrega no interruptor e vê o que deixa de ser contigo quando as automações correm por ti.")}</p>
+          <div className="mt-10">
+            <DiaAntesDepois />
           </div>
         </section>
 

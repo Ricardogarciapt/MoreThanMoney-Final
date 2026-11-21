@@ -1,13 +1,16 @@
 "use client"
 
 import { useMemo, useState } from "react"
+import dynamic from "next/dynamic"
 import Link from "next/link"
 import {
   ArrowRight, Bath, BedDouble, CalendarCheck, Camera, Check, ChevronRight, Clock, Home, MapPin, MessageCircle,
-  Phone, Snowflake, Sparkles, UtensilsCrossed,
+  Move3d, Phone, Snowflake, Sparkles, UtensilsCrossed,
 } from "lucide-react"
 import { MODELOS, type ModeloSector } from "@/lib/site-solucoes/showroom"
 import { useT } from "@/components/solucoes/idioma"
+
+const RaTelemovel = dynamic(() => import("@/components/solucoes/ra-telemovel").then((x) => x.RaTelemovel), { ssr: false })
 
 /**
  * Montra dos modelos por sector. Cada sector tem a sua app (ecrã de entrada diferente, letra e
@@ -32,11 +35,12 @@ function claro(hex: string): boolean {
   return 0.299 * r + 0.587 * g + 0.114 * b > 150
 }
 
-export function MontraModelos({ publicadas, agendar, inicial }: { publicadas: string[]; agendar: string; inicial?: string }) {
+export function MontraModelos({ publicadas, agendar, inicial, abrirRA = false }: { publicadas: string[]; agendar: string; inicial?: string; abrirRA?: boolean }) {
   const { t, ligar } = useT()
   const [id, setId] = useState(inicial ?? MODELOS[0].id)
   const [nome, setNome] = useState("")
   const [cor, setCor] = useState<string | null>(null)
+  const [ra, setRa] = useState(abrirRA)
   const m = MODELOS.find((x) => x.id === id) ?? MODELOS[0]
   const marca = nome.trim().slice(0, 32) || m.marca
   const principal = cor ?? m.corPrincipal
@@ -134,6 +138,16 @@ export function MontraModelos({ publicadas, agendar, inicial }: { publicadas: st
         <div className="order-1 md:order-2">
           <Telemovel key={m.id} m={m} marca={marca} principal={principal} />
           <p className="mt-3 text-center text-[11px] text-zinc-500">{t("Demonstração · negócio fictício · toca para experimentar")}</p>
+          <button
+            type="button"
+            onClick={() => setRa(true)}
+            className="group relative mx-auto mt-4 flex min-h-[52px] w-full max-w-[300px] items-center justify-center gap-2 overflow-hidden rounded-full border border-[#D2A63C]/60 bg-gradient-to-r from-[#D2A63C]/20 via-[#D2A63C]/5 to-[#D2A63C]/20 px-5 font-semibold text-[#E9C46A] hover:border-[#E9C46A]"
+          >
+            <span className="pointer-events-none absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-white/15 to-transparent motion-safe:animate-[ra-brilho_2.8s_ease-in-out_infinite]" aria-hidden="true" />
+            <Move3d className="h-5 w-5" aria-hidden="true" /> {t("Ver em 3D e no meu espaço")}
+          </button>
+          <style>{`@keyframes ra-brilho{0%{transform:translateX(-100%)}60%,100%{transform:translateX(100%)}}`}</style>
+          {ra && <RaTelemovel m={m} marca={marca} principal={principal} onFechar={() => setRa(false)} />}
         </div>
       </div>
     </div>
