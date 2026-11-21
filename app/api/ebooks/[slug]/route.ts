@@ -23,6 +23,7 @@ const NOMES: Record<string, string> = {
   'destrui-tudo-e-ainda-bem': 'Destruí Tudo. E Ainda Bem. - Ricardo Garcia',
   'a-primeira-chave': 'A Primeira Chave - Ruben Pereira',
   'so-as-maos': 'Só as Mãos - Maria Costa',
+  'o-metodo-frio': 'O Método Frio - Ricardo Garcia',
 }
 const disposicao = (slug: string) => {
   const nome = NOMES[slug] ?? slug
