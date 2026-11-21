@@ -58,7 +58,7 @@ export default async function PaginaEbook({ params, searchParams }: { params: Pr
           <div>
             <p className="text-xs font-semibold uppercase tracking-[0.3em]" style={{ color: v.cor2 }}>E-book · {v.autor}</p>
             <h1 className="mt-4 text-5xl leading-[0.92] md:text-7xl" style={T}>
-              <span className="block uppercase" style={slug === 'destrui-tudo-e-ainda-bem' ? {} : { textTransform: 'none' }}>{v.titulo}</span>
+              <span className="block uppercase" style={slug === 'destrui-tudo-e-ainda-bem' || slug === 'o-metodo-frio' ? {} : { textTransform: 'none' }}>{v.titulo}</span>
               <span className="block" style={{ color: v.cor, fontStyle: slug === 'so-as-maos' ? 'italic' : 'normal' }}>{v.titulo2}</span>
             </h1>
             <p className="mt-6 text-2xl font-semibold leading-snug text-white md:text-3xl">{v.gancho}</p>

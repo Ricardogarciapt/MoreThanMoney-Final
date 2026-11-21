@@ -107,8 +107,41 @@ const RG = [
   `${calendario(90, 140, 6, 5, (k) => k < 17, 34)}<path d="M300,330 l20,-20 l20,20" class="a2"/>`,
 ]
 
+
+// O MÉTODO FRIO (Ricardo, Forex + MetaTrader 5): termómetro, cristais de gelo e instrumentos de precisão
+const floco = (x, y, r) => `<path d="M${x},${y - r} v${2 * r} M${x - r * 0.87},${y - r / 2} l${r * 1.74},${r} M${x - r * 0.87},${y + r / 2} l${r * 1.74},${-r}" class="a2"/><path d="M${x - 6},${y - r + 8} l6,-8 l6,8 M${x - 6},${y + r - 8} l6,8 l6,-8" class="fino"/>`
+const vela = (x, y, h, up) => `<path d="M${x + 9},${y - 14} v${h + 28}" class="fino"/><rect x="${x}" y="${y}" width="18" height="${h}" rx="3" class="${up ? 'f a2' : 'f'}"/>`
+const FRIO = [
+  // 0 antes de começares: termómetro em baixo + floco
+  `<rect class="f" x="170" y="60" width="44" height="220" rx="22"/><circle cx="192" cy="300" r="40" class="f a2"/><path d="M192,290 v-60" class="a2 grosso"/>${[0, 1, 2, 3, 4].map((k) => `<path d="M214,${90 + k * 36} h18" class="fino"/>`).join('')}${floco(300, 130, 40)}${floco(95, 220, 26)}`,
+  // 1 o mercado não sabe que existes: globo com setas de câmbio € $
+  `<circle cx="200" cy="200" r="110" class="f"/><ellipse cx="200" cy="200" rx="45" ry="110" class="fino"/><path d="M90,200 h220 M105,145 h190 M105,255 h190" class="fino"/>${moeda(110, 100, 28, '€')}${moeda(300, 310, 28, '$')}<path d="M140,96 C230,80 300,150 302,270" class="a2 tracejado"/><path d="M292,262 l10,14 l10,-14" class="a2"/>`,
+  // 2 pips, lotes e o preço de um erro: régua milimétrica sobre vela
+  `${vela(110, 140, 150, 1)}<rect class="f" x="170" y="110" width="60" height="230" rx="6"/>${Array.from({ length: 11 }, (_, k) => `<path d="M170,${125 + k * 20} h${k % 5 === 0 ? 26 : 14}" class="${k % 5 === 0 ? 'a2' : 'fino'}"/>`).join('')}<text x="300" y="190" text-anchor="middle" class="tx" style="font-size:34px">0,0001</text><path d="M250,200 h100" class="fino"/>${[0, 1, 2].map((k) => `<rect x="${262 + k * 30}" y="${230 - k * 18}" width="24" height="${40 + k * 18}" rx="4" class="${k === 0 ? 'f a2' : 'f'}"/>`).join('')}`,
+  // 3 instalar o MetaTrader 5: telemóvel com gráfico e barra de download
+  `<rect class="f" x="130" y="50" width="140" height="290" rx="24"/><path d="M180,68 h40" class="fino"/>${[[150, 200, 40, 1], [175, 180, 50, 0], [200, 160, 45, 1], [225, 140, 50, 1]].map(([x, y, h, u]) => vela(x, y, h, u)).join('')}<rect x="150" y="280" width="100" height="14" rx="7" class="fino"/><rect x="150" y="280" width="64" height="14" rx="7" class="f a2"/><text x="200" y="120" text-anchor="middle" class="tx" style="font-size:22px">MT5</text>`,
+  // 4 a ordem fria: botões vender/comprar + escudo do stop
+  `<rect class="f" x="70" y="130" width="120" height="70" rx="12"/><rect class="f a2" x="210" y="130" width="120" height="70" rx="12"/><text x="130" y="173" text-anchor="middle" class="tx" style="font-size:20px">Vender</text><text x="270" y="173" text-anchor="middle" class="tx" style="font-size:20px">Comprar</text><path d="M120,240 h160" class="tracejado"/><text x="200" y="232" text-anchor="middle" class="tx" style="font-size:15px">SL</text><path d="M200,260 L250,278 V312 C250,338 228,352 200,362 C172,352 150,338 150,312 V278 Z" class="f"/><path d="M180,310 l14,14 l28,-30" class="a2 grosso"/>`,
+  // 5 ler o gráfico: zonas de suporte e resistência e Fibonacci
+  `<rect x="60" y="100" width="290" height="36" class="f" rx="4"/><rect x="60" y="270" width="290" height="36" class="f a2" rx="4"/>${[[80, 250, 40, 1], [115, 215, 50, 1], [150, 160, 60, 1], [185, 120, 40, 0], [220, 150, 50, 0], [255, 185, 40, 1], [290, 140, 50, 1]].map(([x, y, h, u]) => vela(x, y, h, u)).join('')}${[[175, '38,2'], [205, '50'], [235, '61,8']].map(([y, t]) => `<path d="M60,${y} h290" class="fino tracejado"/><text x="356" y="${y + 5}" class="tx" style="font-size:12px">${t}</text>`).join('')}`,
+  // 6 o tamanho certo: balança com 1 % de um lado e lote do outro
+  `<path d="M200,80 v220 M140,320 h120" class="grosso"/><path d="M90,130 h220" class="grosso"/><path d="M90,130 l-36,80 h72 z M310,130 l-36,80 h72 z" class="fino"/><path d="M54,210 a36,14 0 0 0 72,0 M274,210 a36,14 0 0 0 72,0" class="f"/><text x="90" y="200" text-anchor="middle" class="tx" style="font-size:22px">1 %</text><text x="310" y="200" text-anchor="middle" class="tx" style="font-size:18px">0,02</text><circle cx="200" cy="80" r="10" class="f a2"/>`,
+  // 7 notícias e calendário: calendário com relâmpago
+  `${calendario(80, 150, 5, 4, () => false, 40)}<path d="M240,160 l-40,70 h34 l-24,60 l70,-90 h-36 l26,-40 z" class="f a2"/>`,
+  // 8 o plano numa página: folha com checklist presa por clipe
+  `<rect class="f" x="110" y="70" width="180" height="260" rx="10"/><path d="M180,58 h40 v30 h-40 z" class="fino"/>${[0, 1, 2, 3, 4].map((k) => `<rect x="132" y="${110 + k * 42}" width="22" height="22" rx="5" class="fino"/><path d="M136,${121 + k * 42} l6,6 l10,-12" class="a2"/><path d="M168,${121 + k * 42} h${90 - (k % 2) * 20}" class="fino"/>`).join('')}`,
+  // 9 o diário: caderno aberto com moldura de captura de ecrã
+  `<path d="M200,110 C160,90 110,90 70,104 V310 C110,296 160,296 200,316 C240,296 290,296 330,310 V104 C290,90 240,90 200,110 Z" class="f"/><path d="M200,110 V316" class="fino"/><rect x="220" y="140" width="90" height="64" rx="6" class="fino"/>${[[230, 180, 14, 1], [248, 165, 18, 1], [266, 175, 12, 0], [284, 158, 20, 1]].map(([x, y, h, u]) => `<rect x="${x}" y="${y}" width="10" height="${h}" rx="2" class="${u ? 'f a2' : 'f'}"/>`).join('')}<path d="M90,150 h90 M90,180 h70 M90,210 h90 M90,240 h60 M230,240 h70 M230,268 h50" class="fino"/>`,
+  // 10 a cabeça fria: cabeça de perfil feita de geometria com floco dentro
+  `<path d="M150,330 v-50 c-40,-20 -60,-60 -60,-100 c0,-70 50,-110 115,-110 c60,0 105,45 105,105 c0,20 -6,30 -14,44 l22,40 h-26 v40 c0,14 -10,22 -24,22 h-40 v9" class="f"/>${floco(210, 180, 44)}`,
+  // 11 do demo ao real: duas portas, demo e real, com passos
+  `<rect class="f" x="70" y="100" width="110" height="200" rx="8"/><rect class="f a2" x="220" y="100" width="110" height="200" rx="8"/><text x="125" y="90" text-anchor="middle" class="tx" style="font-size:18px">DEMO</text><text x="275" y="90" text-anchor="middle" class="tx" style="font-size:18px">REAL</text><circle cx="160" cy="205" r="5" class="a2"/><circle cx="310" cy="205" r="5"/>${[0, 1, 2, 3].map((k) => `<path d="M${120 + k * 40},${340 - k * 8} h30" class="${k === 3 ? 'a2 grosso' : 'fino'}"/>`).join('')}`,
+  // 12 plano de 30 dias
+  `${calendario(90, 140, 6, 5, (k) => k < 12, 34)}${floco(320, 320, 22)}`,
+]
+
 export function ilustracao(tema, n) {
-  const lista = tema === 'cripto' ? CRIPTO : tema === 'faceless' ? FACELESS : tema === 'rg' ? RG : null
+  const lista = tema === 'cripto' ? CRIPTO : tema === 'faceless' ? FACELESS : tema === 'rg' ? RG : tema === 'frio' ? FRIO : null
   const inner = lista?.[n]
   return inner ? S(inner) : ''
 }

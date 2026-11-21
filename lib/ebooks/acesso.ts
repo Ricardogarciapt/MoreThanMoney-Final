@@ -16,6 +16,7 @@ export const EBOOKS = {
   'destrui-tudo-e-ainda-bem': { titulo: 'Destruí Tudo. E Ainda Bem.', autor: 'Ricardo Garcia' },
   'a-primeira-chave': { titulo: 'A Primeira Chave', autor: 'Ruben Pereira' },
   'so-as-maos': { titulo: 'Só as Mãos', autor: 'Maria Costa' },
+  'o-metodo-frio': { titulo: 'O Método Frio', autor: 'Ricardo Garcia' },
 } as const
 export type SlugEbook = keyof typeof EBOOKS
 export const ehEbook = (s: string): s is SlugEbook => Object.prototype.hasOwnProperty.call(EBOOKS, s)

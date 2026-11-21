@@ -89,6 +89,12 @@ function arteCapa(livro) {
 
 // ── capa: decoração e carimbo circular ─────────────────────────────────────────────
 function decoCapa(livro) {
+  if (livro.variante === 'frio') {
+    // escala de termómetro a ouro: o «frio» medido, grau a grau
+    let r = ''
+    for (let k = 0; k <= 20; k++) r += `<path d="M${k % 5 ? 14 : 0},${10 + k * 14} H30" stroke="#E9C46A" stroke-width="${k % 5 ? 1 : 2}" opacity="${k % 5 ? .55 : .95}"/>`
+    return `<svg class="capa-deco" viewBox="0 0 40 300" aria-hidden="true">${r}<text x="34" y="24" fill="#E9C46A" style="font:600 9px var(--sub);letter-spacing:.1em" transform="rotate(90 34 24)">SEM IMPULSO</text></svg>`
+  }
   if (livro.tema === 'rg') {
     // fratura a ouro que atravessa o título: o «destruí» desenhado
     return `<svg class="capa-deco" viewBox="0 0 600 300" preserveAspectRatio="none" aria-hidden="true"><defs><linearGradient id="fr" x1="0" x2="1"><stop offset="0" stop-color="#E9C46A" stop-opacity="0"/><stop offset=".18" stop-color="#E9C46A"/><stop offset=".6" stop-color="#D2A63C"/><stop offset="1" stop-color="#8a6a1f" stop-opacity="0"/></linearGradient></defs>
@@ -102,8 +108,9 @@ function decoCapa(livro) {
   return ''
 }
 function carimbo(livro) {
-  const t = { rg: ['Disciplina · Dinheiro · Mercados ·', '10', 'semanas'], cripto: ['Cripto para iniciantes · Sem hype ·', '1.º', 'euro'], faceless: ['Vender sem mostrar a cara · Só as mãos ·', '30', 'dias'] }[livro.tema]
-  const cor = { rg: '#E9C46A', cripto: '#F3CF73', faceless: '#E6D3B5' }[livro.tema]
+  const chave = livro.variante || livro.tema
+  const t = { rg: ['Disciplina · Dinheiro · Mercados ·', '10', 'semanas'], frio: ['Forex · MetaTrader 5 · Sem impulso ·', '1 %', 'por operação'], cripto: ['Cripto para iniciantes · Sem hype ·', '1.º', 'euro'], faceless: ['Vender sem mostrar a cara · Só as mãos ·', '30', 'dias'] }[chave]
+  const cor = { rg: '#E9C46A', frio: '#E9C46A', cripto: '#F3CF73', faceless: '#E6D3B5' }[chave]
   return `<svg class="capa-carimbo" viewBox="0 0 120 120" aria-hidden="true"><defs><path id="circ-${livro.tema}" d="M60,60 m-47,0 a47,47 0 1,1 94,0 a47,47 0 1,1 -94,0"/></defs>
     <circle cx="60" cy="60" r="58" fill="rgba(10,9,8,.55)" stroke="${cor}" stroke-width="1"/><circle cx="60" cy="60" r="36" fill="none" stroke="${cor}" stroke-width=".6" opacity=".6"/>
     <text fill="${cor}"><textPath href="#circ-${livro.tema}" textLength="288" lengthAdjust="spacing">${t[0]}</textPath></text>
@@ -173,8 +180,8 @@ function montarHtml(slug, livro, capitulos) {
   </section>`
 
   const corpo = caps.map((c) => `
-  <section class="abertura pagina${livro.aberturas?.[Number(c.num)] ? ' com-foto' : ilustracao(livro.tema, Number(c.num)) ? ' com-ilustra' : ''}" id="${c.id}">
-    ${livro.aberturas?.[Number(c.num)] ? `<img class="ab-foto" src="${imgSeguro(livro.aberturas[Number(c.num)])}" alt="">` : `<div class="ab-ilustra">${ilustracao(livro.tema, Number(c.num))}</div>`}
+  <section class="abertura pagina${livro.aberturas?.[Number(c.num)] ? ' com-foto' : ilustracao(livro.variante || livro.tema, Number(c.num)) ? ' com-ilustra' : ''}" id="${c.id}">
+    ${livro.aberturas?.[Number(c.num)] ? `<img class="ab-foto" src="${imgSeguro(livro.aberturas[Number(c.num)])}" alt="">` : `<div class="ab-ilustra">${ilustracao(livro.variante || livro.tema, Number(c.num))}</div>`}
     <div class="ab-num">${numero(c.num)}</div>
     <h2 class="ab-titulo">${inline(c.titulo)}</h2>
     ${c.epigrafe ? `<p class="ab-epigrafe">${inline(c.epigrafe)}</p>` : ''}
@@ -195,7 +202,7 @@ function montarHtml(slug, livro, capitulos) {
   return `<!doctype html><html lang="pt-PT"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>${livro.titulo} ${livro.titulo2} — ${livro.autor}</title><meta name="robots" content="noindex,nofollow">
 <style>${tema.fontes()}:root{${tema.vars}}${CSS}</style></head>
-<body class="tema-${livro.tema}">
+<body class="tema-${livro.tema}${livro.variante ? ' variante-' + livro.variante : ''}">
 <header class="barra"><a href="#capa" class="barra-t">${livro.titulo} ${livro.titulo2}</a><span class="barra-a">${livro.autor}</span><a class="barra-b" href="#indice">Índice</a><a class="barra-b barra-pdf" href="?f=pdf">PDF</a><div class="progresso"><i></i></div></header>
 <main class="livro">${capaHtml}${rosto}${indice}${corpo}${fecho}</main>
 <script>${JS}</script></body></html>`
@@ -262,6 +269,12 @@ body{margin:0;background:var(--fundo);color:var(--tinta);font-family:var(--corpo
 .tema-rg .capa-titulo em{font-family:'Kalam',cursive;color:var(--a2);font-size:14cqw;transform:rotate(-5deg);margin:1cqw 0 0 24cqw;text-shadow:0 .5cqw 2cqw rgba(0,0,0,.6);line-height:1}
 .tema-rg .capa-deco{left:0;right:0;bottom:37cqw;height:30cqw}
 .tema-rg .capa-carimbo{top:14cqw;right:6cqw}
+.variante-frio .capa-foto{filter:grayscale(1) contrast(1.3) brightness(.62) sepia(.2) hue-rotate(170deg) saturate(.7);object-position:50% 6%}
+.variante-frio .capa-veu{background:linear-gradient(180deg,rgba(6,9,12,.62) 0,transparent 20%,transparent 36%,rgba(6,8,10,.78) 56%,#07080a 74%),radial-gradient(90% 60% at 80% 10%,rgba(160,190,210,.18),transparent 60%)}
+.variante-frio .capa-titulo span{font-family:'Oswald',sans-serif;font-weight:300;text-transform:uppercase;color:#fff;font-size:11cqw;letter-spacing:.32em;line-height:1;margin-left:1cqw}
+.variante-frio .capa-titulo em{font-family:'Anton',sans-serif;text-transform:uppercase;color:#E9C46A;font-size:41cqw;line-height:.92;transform:none;margin:0;letter-spacing:-.01em;text-shadow:0 .5cqw 0 #6b4d10,0 0 6cqw rgba(190,215,235,.18)}
+.variante-frio .capa-deco{left:auto;right:5cqw;bottom:auto;top:34cqw;width:6cqw;height:46cqw}
+.variante-frio .capa-carimbo{top:14cqw;right:auto;left:6cqw}
 .tema-cripto .capa-face{background:#0a0806}.tema-cripto .capa-foto{object-position:50% 0;height:74%}
 .tema-cripto .capa-veu{background:linear-gradient(180deg,rgba(10,8,6,.55) 0,transparent 16%,transparent 40%,rgba(10,8,6,.85) 62%,#0a0806 72%)}
 .tema-cripto .capa-titulo span{font-family:'Anton',sans-serif;text-transform:uppercase;color:#fff;font-size:15.5cqw;letter-spacing:.01em;line-height:1}
