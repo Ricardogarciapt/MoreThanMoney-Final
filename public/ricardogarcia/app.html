@@ -258,7 +258,10 @@ label { display: block; font-size: 13px; letter-spacing: 1.5px; text-transform: 
 .doca button { font-size: 10px; letter-spacing: 0; }
 
 /* ecrã do telemóvel */
-#entrada { padding-top: env(safe-area-inset-top); }
+#entrada { padding-top: calc(env(safe-area-inset-top) + 22px); }
+/* Faixa da ilha/notch do iPhone: nada passa por trás dela ao fazer scroll */
+body::after { content: ""; position: fixed; left: 0; right: 0; top: 0; height: env(safe-area-inset-top); background: var(--fundo); z-index: 60; pointer-events: none; }
+body.mapa-cheio::after { display: none; }
 input, textarea, select { font-size: 16px !important; }
 * { -webkit-tap-highlight-color: transparent; }
 
@@ -1807,7 +1810,7 @@ html, body { overflow-x: hidden; }
 </script>
 <script src="/ricardogarcia/app-fx.js?v=2" defer></script>
 <script src="/ricardogarcia/app-3d.js?v=1" defer></script>
-<script src="/ricardogarcia/app-mapa.js?v=2" defer></script>
+<script src="/ricardogarcia/app-mapa.js?v=3" defer></script>
 <script src="/ricardogarcia/app-rpg.js?v=5" defer></script>
 </body>
 </html>
