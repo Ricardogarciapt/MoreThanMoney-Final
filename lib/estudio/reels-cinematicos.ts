@@ -23,7 +23,15 @@ import { pedirReelDoClone } from './clone-reel'
 export const CHAVE_REELS_CINEMATICOS = 'reels_cinematicos'
 export const MARCAS = ['ricardo-garcia', 'morethanmoney'] as const
 type Marca = (typeof MARCAS)[number]
-export type Interruptor = { ligado: boolean; porDia: Record<Marca, number>; reserva: number; via: 'api' | 'mcp' }
+export type Interruptor = { ligado: boolean; porDia: Record<Marca, number>; reserva: number; via: 'api' | 'mcp'; alternar: boolean }
+
+/**
+ * 21/11/2026 (Ricardo, cartão): os gémeos alternam — um dia cada conta (1 gémeo por dia no total,
+ * para os 78 créditos chegarem a 19/12). Dia par (dias desde 1970) → @ricardogarciapt; ímpar → MTM.
+ */
+export function marcaDoGemeo(d = new Date()): Marca {
+  return MARCAS[Math.floor(d.getTime() / 86_400_000) % 2]
+}
 
 export function lerInterruptor(v: unknown): Interruptor {
   const o = (v && typeof v === 'object' ? v : {}) as Record<string, any>
@@ -33,6 +41,7 @@ export function lerInterruptor(v: unknown): Interruptor {
     ligado: o.ligado !== false,
     porDia: { 'ricardo-garcia': n(pd['ricardo-garcia'], 1), morethanmoney: n(pd.morethanmoney, 1) },
     via: o.via === 'api' ? 'api' : 'mcp',
+    alternar: o.alternar === true,
     reserva: o.reserva !== undefined && Number.isFinite(Number(o.reserva)) ? Math.max(0, Number(o.reserva)) : 30,
   }
 }
@@ -70,6 +79,7 @@ export async function pedirDoDia(db: SupabaseClient): Promise<Record<string, unk
 
   const pedidos: Record<string, unknown>[] = []
   for (const marca of MARCAS) {
+    if (cfg.alternar && marca !== marcaDoGemeo()) continue
     const faltam = cfg.porDia[marca] - (hojePorMarca[marca] ?? 0)
     if (faltam <= 0) continue
     const { data: pecas } = await db.from('conteudo_magnetico_pecas').select('id, user_id, guiao')

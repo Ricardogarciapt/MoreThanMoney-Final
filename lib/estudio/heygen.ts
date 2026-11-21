@@ -184,13 +184,22 @@ async function projetoDoClone(db: SupabaseClient, g: Geracao, v: { ativoId: stri
       },
     })
     const titulo = gu.nicho ? `Reel · ${String(gu.nicho).slice(0, 60)} · cinemático` : 'Reel cinemático do clone'
-    await db.from('estudio_projetos').insert({
-      user_id: g.pedido_por || peca.user_id,
-      titulo: titulo.slice(0, 120),
-      marca,
-      projeto,
-      estado: 'a_render',
+    const linhas = [{ user_id: g.pedido_por || peca.user_id, titulo: titulo.slice(0, 120), marca, projeto, estado: 'a_render' }]
+    // 21/11/2026 (Ricardo: «usa os conteúdos que crias para outros conteúdos»): o mesmo gémeo dá
+    // também o reel da OUTRA conta, montado com a marca dela (cores, @, CTA e palavra do funil dela).
+    // Um gémeo por dia (alternância) chega assim às duas contas sem gastar mais créditos.
+    const outra = marca === 'morethanmoney' ? 'ricardo-garcia' : 'morethanmoney'
+    const projetoOutra = normalizarProjeto({
+      ...projeto,
+      cinematico: {
+        ...(projeto as any).cinematico,
+        marca: outra,
+        palavra_chave: outra === 'morethanmoney' ? 'COMEÇAR' : String(gu.palavra_chave || ''),
+        cta_url: outra === 'morethanmoney' ? 'morethanmoney.pt' : String(gu.cta_url || ''),
+      },
     })
+    linhas.push({ user_id: g.pedido_por || peca.user_id, titulo: `${titulo} · versão ${outra === 'morethanmoney' ? 'MTM' : 'Ricardo'}`.slice(0, 120), marca: outra, projeto: projetoOutra, estado: 'a_render' })
+    await db.from('estudio_projetos').insert(linhas)
   } catch {
     /* o vídeo já está na biblioteca; o projecto monta-se à mão no editor */
   }
