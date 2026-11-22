@@ -45,7 +45,6 @@ Quando uma resistência é rompida com força, muitas vezes passa a funcionar co
 
 [[foto: mt5-analise-tecnica.jpg | No MetaTrader 5 as ferramentas de Fibonacci estão no menu «Inserir › Objetos › Fibonacci». Vários gráficos e prazos lado a lado. Imagem: MetaQuotes (metatrader5.com). | larga]]
 
-[[foto: mt5-video-grafico-velas.png | Gráfico de velas de 1 hora no telemóvel: cada vela é uma hora de preço. Captura real do MetaTrader 5. | lado]]
 
 
 

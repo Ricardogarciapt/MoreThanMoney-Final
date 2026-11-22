@@ -34,13 +34,7 @@ A app tem cinco separadores no fundo do ecrã. Aprende-os pela ordem em que os v
 
 [[foto: mt5-android-negociacao.jpg | O separador de negociação e o histórico no MetaTrader 5 para Android e tablet. É aqui que vês saldo, capital e margem. Imagem: MetaQuotes (metatrader5.com). | larga]]
 
-:::galeria O MetaTrader 5 no telemóvel, por dentro
-mt5-video-conta.png | Configurações: abrir conta nova, notícias, calendário e gráficos.
-mt5-video-cotacoes.png | Cotações: preço de venda e de compra, lado a lado.
-mt5-video-grafico.png | Um gráfico de 1 minuto, com o preço atual à direita.
-:::
-
-*Capturas reais do MetaTrader 5 no telemóvel, com os dados da conta desfocados.*
+*Os ecrãs reais da app, organizados por temas, estão no **Guia visual do MetaTrader 5**, no fim do livro.*
 
 
 Numa conta demo acabada de abrir com 500 €, o separador «Negociação» mostra saldo 500,00 €, capital 500,00 €, margem 0,00 € e margem livre 500,00 € (valores ilustrativos).
