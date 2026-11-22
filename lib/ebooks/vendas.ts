@@ -94,11 +94,11 @@ const VENDAS_PT: Record<SlugBase | 'a-decisao-que-adias', PaginaVenda> = {
     sub: 'Forex sem impulso: regras, risco e MetaTrader 5 para quem começa. Os erros clássicos postos à frente, para não os pagares tu.',
     autor: 'Ricardo Garcia', autorFoto: '/ricardogarcia/foto-ricardo-estudio.jpg',
     autorBio: 'Catorze anos de serviço (Exército, Fuzileiros, GNR) antes de recomeçar do zero. Fundou a MoreThanMoney para que ninguém tenha de pagar o preço de aprender sozinho. Este é o manual técnico que acompanha «Destruí Tudo. E Ainda Bem.».',
-    numeros: [{ v: '102', r: 'páginas' }, { v: '11', r: 'regras frias' }, { v: '11', r: 'erros clássicos' }, { v: '30', r: 'dias de plano' }],
+    numeros: [{ v: '110', r: 'páginas' }, { v: '11', r: 'regras frias' }, { v: '11', r: 'erros clássicos' }, { v: '30', r: 'dias de plano' }],
     capitulos: [
       { t: 'O mercado não sabe que existes', d: 'Pares, spread, sessões em hora de Lisboa e como escolher corretora.' },
       { t: 'Pips, lotes e o preço de um erro', d: 'Valor do pip, spread, swap, alavancagem e margem, com contas.' },
-      { t: 'Instalar o MetaTrader 5 sem tropeçar', d: 'Demo com saldo realista e os cinco separadores que importam.' },
+      { t: 'Instalar o MetaTrader sem tropeçar', d: 'MT4 ou MT5, no telemóvel e no computador: instalar, entrar na demo e ligar os dois.' },
       { t: 'A ordem fria', d: 'Ordens a mercado e pendentes, stop e alvo, e a checklist antes de clicar.' },
       { t: 'Ler o gráfico sem bola de cristal', d: 'Tendência, zonas de suporte e resistência e Fibonacci sem misticismo.' },
       { t: 'O tamanho certo', d: 'A fórmula do lote pelo risco de 1 %, passo a passo.' },

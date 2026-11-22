@@ -1,24 +1,76 @@
-# Installing MetaTrader 5 without tripping up
+# Installing MetaTrader without tripping up
 
 > The platform will not make you a trader. But one button pressed by mistake can cost you the month.
 
 MetaTrader 5 (MT5) is the platform where you will look at charts and place orders. It is free, it exists for phone, computer and browser, and it is used by many brokers around the world. The app is made by MetaQuotes. The account belongs to the broker. This distinction sounds like a detail and it is not: MT5 is just the window. The money, when there is any, sits with the broker.
 
-The first goal of this chapter is simple: have MT5 running on a **demo account** and know where everything is, before you touch real money.
+The first goal of this chapter is simple: have MetaTrader running on a **demo account**, on the phone and on the computer, and know where everything is, before you touch real money.
 
 [[foto: rg-telefone.jpg | A large part of my analysis work starts on the phone. The rule is the same as on the computer: plan first, click afterwards. | lado]]
 
-## Step by step on the phone
+## MT4 or MT5?
 
-1. Install the **MetaTrader 5** app from the App Store or Google Play. Check that the developer is MetaQuotes.
-2. Open the app and choose **Open demo account** (or "Manage accounts" and then the "+").
-3. Search for your broker's server. If you do not have a broker yet, there are demo servers in the list itself.
-4. Fill in the demo account details and choose a **realistic** balance. If in the real world you would start with €500, the demo is also €500. Practising with 100,000 make-believe money teaches you to be careless.
-5. Keep the account number and password somewhere safe.
+You'll hear about both. They come from the same company, MetaQuotes, and do the essentials the same way: charts, orders with stop and target, history.
+
+| | MetaTrader 4 | MetaTrader 5 |
+|---|---|---|
+| Age | The older version, still widely used in Forex | The current version, with more markets |
+| Pending order types | 4 | 6 (adds Buy Stop Limit and Sell Stop Limit) |
+| Chart timeframes | 9 | 21 |
+| Economic calendar in the app | No | Yes |
+
+What really matters: **an account belongs to one platform only.** An MT5 account won't log into MT4, and the other way round. When you open an account, the broker asks which one you want. In this book I use MT5. If your broker only offers MT4, everything here still works; only the place of one button or another changes.
+
+## On the phone: install and log in
+
+1. Open **Google Play** (Android) or the **App Store** (iPhone) and search for "MetaTrader 5" (or "MetaTrader 4").
+2. Check that the developer is **MetaQuotes**. There are copies with similar names. Never install the app from a link someone sends you in a message.
+3. Open the app. The first time, it offers a demo account on a MetaQuotes server. It's fine for a look around, but ideally use your broker's demo, with the same conditions as the real account.
+4. Go to **Settings › New account** (in MT4: **Settings › New account** or **Manage accounts › +**) and type the broker's name.
+5. Choose the server. Those with "Demo" in the name are for practice. Those with "Live" or "Real" are for real money.
+6. Tap **Open a demo account** and fill in the details. Or, if you already have an account, tap **Login to an existing account** and type the account number, password and server exactly as they came in the broker's email.
+7. Choose a **realistic** balance. If in the real world you would start with €500, the demo is also €500.
+8. Keep the account number, password and server name somewhere safe, off the phone.
 
 :::alerta Classic mistake · Practising with a fantasy balance
-Demos often come with 10,000 or 100,000 by default. With that balance, a 0.50 lot looks small and a loss of 300 looks like nothing. Then you move to a real account of €500 with the same habits. A demo only teaches you something if it is the size of your actual life.
+The demo often comes with 10,000 or 100,000 by default. With that balance, a 0.50 lot looks small and a 300 loss looks like nothing. Then you move to a real €500 account with the same habits. The demo only teaches you something if it's the size of your life.
 :::
+
+:::nota If the password won't work
+Nine times out of ten the problem is the server. "Broker-Demo" and "Broker-Live01" are different servers. Copy the server name from the email, letter by letter.
+:::
+
+## On the computer: the terminal
+
+The phone is enough to follow the market and to place an order you've already prepared. To analyse calmly, a big screen helps. The PC terminal is the full version.
+
+1. Download the terminal **from your broker's website** or from the official site **metatrader5.com** (MT4: metatrader4.com). There are versions for Windows and Mac. Never from third-party sites.
+2. Run the installer and accept the default options. At the end, the terminal opens by itself.
+3. If a window opens asking you to open an account, close it. Go to **File › Login to Trade Account** and type the account number, password and server. The same account works on the phone and the PC at the same time.
+4. In the bottom right corner you should see the connection speed (for example "45 ms"). If it says "No connection", the server or the password is wrong.
+
+Menu names change a little with the language you choose in the terminal.
+
+The terminal screen has four areas:
+
+| Area | Where it is | What it's for |
+|---|---|---|
+| **Market Watch** | Top left | The list of pairs with sell and buy, like Quotes on the phone |
+| **Navigator** | Bottom left | Your accounts, indicators and scripts |
+| **Charts** | Centre | One tab per open chart |
+| **Toolbox** | Bottom | Trade, History, Journal and Alerts |
+
+To open an order on the PC, press **F9** (or the **New Order** button). The window is the same as on the phone, with the same fields: type, volume, price, S/L and T/P.
+
+:::cartao Shortcuts that save clicks
+**F9** new order · **Ctrl+M** Market Watch · **Ctrl+T** Toolbox · **+ / −** zoom the chart in or out · **F8** chart properties
+:::
+
+## Phone and PC talking to each other
+
+You can receive on your phone the alerts you set on the PC. In the app, under **Settings › Messages**, you'll find your **MetaQuotes ID**, an eight-character code. In the terminal, go to **Tools › Options › Notifications**, turn on push notifications and paste that code. From then on, a price alert created on the PC reaches your phone, even with the computer far away.
+
+This helps with this book's rule: you leave the order and the alerts ready on the PC and don't sit staring at the screen.
 
 ## The five tabs that matter
 
@@ -77,14 +129,17 @@ The demo is the size of my real life. The same balance, the same lot sizes, the 
 ## In short
 
 - MT5 is the window; the account and the money sit with the broker.
+- An account belongs to one platform only: MT4 or MT5.
+- Install only from the official store, your broker's website or the MetaQuotes website.
 - Open a demo with a balance equal to what you would use in real life.
 - Learn the five tabs: Market Watch, Chart, Trade, History and Settings.
 - When you have open positions, look at equity, not balance.
 - Before a real account, the four questions: regulation, entity, costs, withdrawals.
 
 :::exercicio For today
-1. Install MT5 and open a demo account with a realistic balance: €____________
-2. Add the pair you chose in chapter 1 to Market Watch.
-3. Set the chart to candles, H1, no indicators. Take a screenshot and save it in a folder called "Journal".
-4. On the Trade tab, write down your balance, equity and free margin: ____________
+1. Install MT5 on your phone and computer and open a demo account with a realistic balance: €____________
+2. Log in with the same account on both. Server: ____________
+3. Add the pair you chose in chapter 1 to Market Watch.
+4. Set the chart to candles, H1, no indicators. Take a screenshot and save it in a folder called "Journal".
+5. On the Trade tab, write down your balance, equity and free margin: ____________
 :::
