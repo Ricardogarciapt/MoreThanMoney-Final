@@ -1,7 +1,7 @@
 import { withOpinlyConfig } from '@opinly/next'
 
 // E-books entregues por /api/ebooks (PT) e /api/ebooks-traducoes (EN/ES). Livro novo: acrescentar aqui.
-const LIVROS = ['destrui-tudo-e-ainda-bem', 'a-primeira-chave', 'so-as-maos', 'o-metodo-frio']
+const LIVROS = ['destrui-tudo-e-ainda-bem', 'a-primeira-chave', 'so-as-maos', 'o-metodo-frio', 'a-decisao-que-adias']
 const servidos = (slugs) => slugs.flatMap((s) => [`./conteudo-privado/ebooks/${s}/${s}.html`, `./conteudo-privado/ebooks/${s}/${s}.pdf`])
 
 /** @type {import('next').NextConfig} */

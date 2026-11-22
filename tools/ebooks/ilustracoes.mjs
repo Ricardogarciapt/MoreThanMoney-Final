@@ -140,8 +140,47 @@ const FRIO = [
   `${calendario(90, 140, 6, 5, (k) => k < 12, 34)}${floco(320, 320, 22)}`,
 ]
 
+// A DECISÃO QUE ADIAS (Liliana Salgueiro, desenvolvimento pessoal): geometria de mente, ciclos, portas e ondas
+const seta = (x, y, ang) => `<path d="M${x},${y} l-10,-6 M${x},${y} l-10,6" class="a2" transform="rotate(${ang} ${x} ${y})"/>`
+const ciclo = (cx, cy, r, n, rotulos) => {
+  let o = `<circle cx="${cx}" cy="${cy}" r="${r}" class="fino tracejado"/>`
+  for (let k = 0; k < n; k++) {
+    const a = (k / n) * Math.PI * 2 - Math.PI / 2
+    const x = cx + r * Math.cos(a), y = cy + r * Math.sin(a)
+    o += `<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="16" class="${k === 0 ? 'f a2' : 'f'}"/>`
+    if (rotulos) o += `<text x="${x.toFixed(1)}" y="${(y + 5).toFixed(1)}" text-anchor="middle" class="tx" style="font-size:13px">${k + 1}</text>`
+  }
+  return o
+}
+const MENTE = [
+  // 0 antes de começares: ponto de interrogação feito de ondas
+  `${[40, 70, 100, 130].map((r, k) => `<circle cx="200" cy="200" r="${r}" class="${k === 1 ? 'a2' : 'fino'}${k % 2 ? ' tracejado' : ''}"/>`).join('')}<path d="M172,170 c0,-34 56,-34 56,0 c0,22 -28,24 -28,46 v10" class="a2 grosso"/><circle cx="200" cy="252" r="7" class="f a2"/>`,
+  // 1 quantas vezes soubeste: lâmpada acesa atrás de uma porta fechada
+  `<rect x="120" y="70" width="160" height="270" rx="6" class="f"/><circle cx="252" cy="210" r="7" class="a2"/><path d="M200,120 c-30,0 -46,22 -46,46 c0,20 14,30 20,46 h52 c6,-16 20,-26 20,-46 c0,-24 -16,-46 -46,-46 z" class="fino"/><path d="M180,226 h40 M184,240 h32" class="fino"/><path d="M200,90 v-20 M140,120 l-14,-14 M260,120 l14,-14" class="a2"/>`,
+  // 2 o que é uma crença: cabeça de perfil com uma frase-moldura dentro
+  `<path d="M150,330 v-50 c-40,-20 -60,-60 -60,-100 c0,-70 50,-110 115,-110 c60,0 105,45 105,105 c0,20 -6,30 -14,44 l22,40 h-26 v40 c0,14 -10,22 -24,22 h-40 v9" class="f"/><rect x="140" y="150" width="130" height="50" rx="10" class="f a2"/><path d="M158,170 h94 M158,184 h60" class="fino"/>`,
+  // 3 limitação real ou aprendida: muro sólido vs linha tracejada
+  `${[0, 1, 2, 3].map((r) => [0, 1].map((c) => `<rect x="${70 + c * 50 + (r % 2) * 25}" y="${130 + r * 40}" width="46" height="34" rx="3" class="f"/>`).join('')).join('')}<path d="M260,120 v200" class="a2 tracejado grosso"/><path d="M300,220 h60" class="fino"/>${seta(360, 220, 0)}<text x="110" y="110" text-anchor="middle" class="tx" style="font-size:15px">REAL</text><text x="262" y="110" text-anchor="middle" class="tx" style="font-size:15px">APRENDIDA</text>`,
+  // 4 a frase que virou voz: balão de fala que se transforma em eco dentro da cabeça
+  `<path d="M70,90 h140 a16,16 0 0 1 16,16 v50 a16,16 0 0 1 -16,16 h-90 l-24,22 v-22 h-26 a16,16 0 0 1 -16,-16 v-50 a16,16 0 0 1 16,-16 z" class="f"/><path d="M90,120 h100 M90,140 h70" class="fino"/>${[30, 55, 80].map((r, k) => `<path d="M${280 - r * 0.5},${270 - r} a${r},${r} 0 0 1 0,${r * 2}" class="${k === 0 ? 'a2' : 'fino'}" transform="translate(${k * 4},0)"/>`).join('')}<circle cx="250" cy="270" r="12" class="f a2"/>`,
+  // 5 quem tiveste de ser: escudo partido com uma silhueta a sair
+  `<path d="M200,70 L300,110 V200 C300,268 254,306 200,330 C146,306 100,268 100,200 V110 Z" class="f"/><path d="M200,70 L190,150 L215,190 L196,250 L205,330" class="a2 grosso"/><circle cx="250" cy="180" r="18" class="fino"/><path d="M226,240 c4,-26 44,-26 48,0" class="fino"/>`,
+  // 6 o alívio que te prende: ciclo de seis passos com um elo de corrente
+  `${ciclo(200, 200, 110, 6, true)}<path d="M180,200 a14,14 0 0 1 14,-14 h12 a14,14 0 0 1 0,28 h-6 M220,200 a14,14 0 0 1 -14,14 h-12 a14,14 0 0 1 0,-28 h6" class="a2 grosso"/>`,
+  // 7 o que ganhas em ficar igual: balança entre «agora» e «depois»
+  `<path d="M200,80 v220 M140,320 h120" class="grosso"/><path d="M80,150 l240,-30" class="grosso"/><path d="M80,150 l-30,70 h60 z M320,120 l-30,70 h60 z" class="fino"/><path d="M50,220 a30,12 0 0 0 60,0 M290,190 a30,12 0 0 0 60,0" class="f"/><text x="80" y="210" text-anchor="middle" class="tx" style="font-size:15px">AGORA</text><text x="320" y="180" text-anchor="middle" class="tx" style="font-size:15px">DEPOIS</text><circle cx="200" cy="135" r="10" class="f a2"/>`,
+  // 8 desejar não é construir: estrela sonhada em tracejado e uma escada de blocos reais
+  `<path d="M290,70 l14,30 l32,4 l-24,22 l7,32 l-29,-16 l-29,16 l7,-32 l-24,-22 l32,-4 z" class="a2 tracejado"/>${[0, 1, 2, 3, 4].map((k) => `<rect x="${70 + k * 44}" y="${320 - (k + 1) * 36}" width="44" height="${(k + 1) * 36}" rx="3" class="${k === 4 ? 'f a2' : 'f'}"/>`).join('')}`,
+  // 9 vibração e causa-efeito: diapasão a emitir ondas + dominós
+  `<path d="M120,320 v-70 M100,250 v-150 a20,20 0 0 0 40,0 v150 z" class="f"/>${[30, 55, 80].map((r, k) => `<path d="M${150},${150 - r * 0.6} a${r},${r} 0 0 1 0,${r * 1.2}" class="${k === 0 ? 'a2' : 'fino'}" transform="translate(${r * 0.4},0)"/>`).join('')}${[0, 1, 2, 3].map((k) => `<rect x="${230 + k * 30}" y="${250 - k * 6}" width="18" height="70" rx="3" class="${k === 0 ? 'f a2' : 'f'}" transform="rotate(${-25 + k * 8} ${239 + k * 30} 320)"/>`).join('')}`,
+  // 10 do saber ao fazer: livro aberto de onde sai um passo/pegada
+  `<path d="M200,190 C160,170 110,170 70,184 V320 C110,306 160,306 200,326 C240,306 290,306 330,320 V184 C290,170 240,170 200,190 Z" class="f"/><path d="M200,190 V326" class="fino"/><path d="M200,160 v-70" class="a2 grosso tracejado"/>${seta(200, 82, -90)}<ellipse cx="160" cy="70" rx="14" ry="22" class="f a2"/><ellipse cx="240" cy="110" rx="14" ry="22" class="f"/>`,
+  // 11 plano de 30 dias
+  `${calendario(90, 140, 6, 5, (k) => k < 9, 34)}<circle cx="320" cy="320" r="22" class="a2"/><circle cx="320" cy="320" r="34" class="fino tracejado"/>`,
+]
+
 export function ilustracao(tema, n) {
-  const lista = tema === 'cripto' ? CRIPTO : tema === 'faceless' ? FACELESS : tema === 'rg' ? RG : tema === 'frio' ? FRIO : null
+  const lista = tema === 'cripto' ? CRIPTO : tema === 'faceless' ? FACELESS : tema === 'rg' ? RG : tema === 'frio' ? FRIO : tema === 'mente' ? MENTE : null
   const inner = lista?.[n]
   return inner ? S(inner) : ''
 }

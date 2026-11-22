@@ -32,7 +32,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ slu
   const erros: Record<string, string> = !v.ok ? { ...v.erros } : {}
   if (!String(corpo.email ?? '').trim()) erros.email = 'Escreve o teu email.'
   if (!aceita) { delete erros.consentimentos; erros.aceito = 'Precisas de aceitar para receberes o e-book.' }
-  const r = validarRespostas(corpo.respostas)
+  const r = validarRespostas(corpo.respostas, slug)
   if (!r.ok) Object.assign(erros, r.erros)
   if (Object.keys(erros).length || !v.ok || !r.ok) return NextResponse.json({ ok: false, erros }, { status: 400 })
 

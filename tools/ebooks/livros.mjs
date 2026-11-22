@@ -68,6 +68,23 @@ export const LIVROS = {
     edicao: '1.ª edição · novembro de 2026',
     aviso: 'Conteúdo educativo. Os resultados dependem do trabalho, do mercado e das decisões de cada pessoa; não há rendimentos garantidos. Respeita sempre as regras das plataformas e o RGPD.',
   },
+  'a-decisao-que-adias': {
+    titulo: 'A Decisão',
+    titulo2: 'Que Adias',
+    subtitulo: 'Crenças limitantes, identidade e o ciclo do evitamento. Do saber ao fazer, em 30 dias.',
+    autor: 'Liliana Salgueiro',
+    autorBio: 'Educadora de desenvolvimento pessoal da MoreThanMoney e da She Is Faceless Academy. Criadora do Beyond the Mindset (@beyondthemindset.ls).',
+    selo: 'mtm.png',
+    tema: 'rg',
+    variante: 'mente',
+    foto: 'liliana-retrato.jpg',
+    funcao: 'Beyond the Mindset',
+    academia: 'Academia Mindset MTM',
+    fotoInterior: 'liliana-retrato.jpg',
+    aberturas: [],
+    edicao: '1.ª edição · novembro de 2026 · oferta dos webinars',
+    aviso: 'Conteúdo educativo. Não substitui acompanhamento psicológico, psiquiátrico ou médico. Se estás em sofrimento intenso, procura um profissional de saúde ou liga para o SNS 24 (808 24 24 24); em emergência, 112.',
+  },
 }
 
 // Versões EN/ES: herdam tudo do livro PT e trocam só os textos (tools/ebooks/i18n.mjs).
