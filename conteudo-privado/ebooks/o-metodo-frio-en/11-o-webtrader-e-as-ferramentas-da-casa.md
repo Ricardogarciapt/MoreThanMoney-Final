@@ -56,7 +56,9 @@ WebTrader has two modes, and you switch between them at the top (or with **Alt+M
 | **SIMPLE** | Phone, beginners | The chart full screen, SELL · volume · BUY large at the bottom and a drawer with Positions, Orders, History and More |
 | **PRO** | Computer, people who already analyse | Up to 4 charts, the symbol list, the ticket, the calendar and, at the bottom, Positions · Orders · History · Statistics · Journal · Alerts · Account |
 
-[[foto: wt-pro.png | PRO mode: the chart in the centre, list and ticket on the right, positions and history at the bottom. | larga]]
+[[foto: wt-pro-en.jpg | PRO mode: the chart in the centre, list and ticket on the right, positions and history at the bottom. | larga]]
+
+Three things at the top you will use every day. The timeframe menu (10m, 5m, 15m, 1h, 4h) changes the chart candle without switching off the strategy. The **Tutorial** button opens the room with the WebTrader videos, so you can review a step when you forget it. And the **Log out** icon, in the corner, ends the session; in the apps, the back arrow takes you back to the app.
 
 ## Opening a position, step by step
 
@@ -69,7 +71,7 @@ It's the same method as chapter 6, but with the risk set by you.
 5. Read the summary: direction, entry, stop, target, lot, **risk in money and in percentage**, risk/reward ratio and margin.
 6. Tap **Confirm**.
 
-[[foto: wt-ticket.png | The ticket in Risk volume mode: you move the stop and the lot recalculates by itself. | larga]]
+[[foto: wt-ticket-en.jpg | The ticket in Risk volume mode: you move the stop and the lot recalculates by itself. | larga]]
 
 :::alerta Classic mistake · Turning on one-click trading on day one
 WebTrader has a "one-click" mode, like MetaTrader and TradingView: with it on, tapping BUY sends the order straight away. It's useful for people who already have a trained hand. In your first month, leave it off. The confirmation is your last check before you jump.
@@ -91,7 +93,7 @@ In the **Advanced** block of the ticket you can also split the exit into **TP1, 
 
 What matters is **who executes**. On the MTM Funded and demo accounts, it's the MTM engine, price by price, on a server. On your broker accounts (TradeLocker and MetaTrader), the same buttons, with the same meaning, are saved and executed on MTM's server. The browser never moves a stop on real money: if you close the tab, the management doesn't stop halfway.
 
-[[foto: wt-gestao.png | An open position with Auto BE and Auto Trailing. The stop moves up by itself and never moves down. | larga]]
+[[foto: wt-gestao-en.jpg | An open position with Auto BE and Auto Trailing. The stop moves up by itself and never moves down. | larga]]
 
 [[grafico:auto-be-trailing]]
 
@@ -106,7 +108,7 @@ Marta spent the last week of her demo on WebTrader. She opened a Buy Limit on EU
 - **Multi-chart (PRO):** 1, 2 or 4 charts, each with its own symbol and timeframe. H4 in one, H1 in the other, as in chapter 4.
 - **MTM studies on the chart:** the house scanners draw directly on the WebTrader chart. When a scanner or an MTM idea gives a signal, a sheet opens with all the numbers (entry, stop, target, lot, risk in money and in percentage). From there you only have three doors: confirm, adjust or discard. A signal never gets in on its own.
 
-[[foto: wt-mercado.png | Market status next to the symbol: open, closed and how long until it closes. | larga]]
+[[foto: wt-mercado-en.jpg | Market status next to the symbol: open, closed and how long until it closes. | larga]]
 
 ## Working with the house strategies and their signals
 
@@ -117,7 +119,7 @@ The WebTrader is not just a place to click buy and sell. The house strategies li
 - **Sensei:** the most educational one. It shows a table of confirmations (trend, momentum, structure, volatility) scored from 0 to 20, and a checklist of what is still missing. While it says "waiting for signal", there is no trade.
 - **TrendShot:** trend averages and the entry and target levels on the price scale.
 
-[[foto: wt-estrategia-scanner.png | MTM Scanner switched on alone: entry, stop and two targets with the risk-reward, already drawn. | larga]]
+[[foto: wt-estrategia-scanner-en.jpg | MTM Scanner switched on alone: entry, stop and two targets with the risk-reward, already drawn. | larga]]
 
 The path is always the same:
 
@@ -129,7 +131,7 @@ The path is always the same:
 
 After a month, the journal tells you which strategy works for you. That is why the setup has its own tag ("Sinal GoldKiller", "Sinal Sensei", "Sinal MTM Scanner").
 
-[[foto: wt-estrategia-sensei.png | Sensei: ten confirmations out of twenty and the checklist of what is missing. Not a signal yet. | larga]]
+[[foto: wt-estrategia-sensei-en.jpg | Sensei: ten confirmations out of twenty and the checklist of what is missing. Not a signal yet. | larga]]
 
 ## History, statistics and journal
 
@@ -139,7 +141,7 @@ In the bottom panel are the three pieces from chapter 9, already linked together
 - **Statistics:** the balance and equity curve, drawdown, win rate, average win against average loss, and groupings by symbol, strategy, hour and day of the week. Always in account dollars, never in promises.
 - **Journal:** one note per trade, with the emotion, the setup, the tags and the screenshot. You write the why next to the history itself, not in a notebook that stays at home.
 
-[[foto: wt-historico.png | History and statistics side by side: the Sunday review from chapter 9 in two taps. | larga]]
+[[foto: wt-historico.jpg | History and statistics side by side: the Sunday review from chapter 9 in two taps. | larga]]
 
 ## Calendar and alerts
 
@@ -151,7 +153,7 @@ In the **Account** tab you can generate a **public audit link**. The page shows 
 
 It's useful for showing your work to a mentor, a colleague or yourself six months from now. It's the opposite of a profit screenshot: it shows everything, the good days and the bad.
 
-[[foto: wt-auditoria.png | The audit link: everything in view, no personal data. | larga]]
+[[foto: wt-auditoria-en.jpg | The audit link: everything in view, no personal data. | larga]]
 
 ## TradeLocker and WebTrader, side by side
 

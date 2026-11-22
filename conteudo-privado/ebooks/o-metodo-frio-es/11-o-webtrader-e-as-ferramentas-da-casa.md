@@ -56,7 +56,9 @@ El WebTrader tiene dos modos, y cambias entre ellos arriba (o con **Alt+M** en e
 | **SIMPLE** | Móvil, quien empieza | El gráfico a pantalla completa, SELL · volumen · BUY grandes abajo y un cajón con Posiciones, Órdenes, Historial y Más |
 | **PRO** | Ordenador, quien ya analiza | Hasta 4 gráficos, la lista de símbolos, el ticket, el calendario y, abajo, Posiciones · Órdenes · Historial · Estadísticas · Diario · Alertas · Cuenta |
 
-[[foto: wt-pro.png | El modo PRO: gráfico en el centro, lista y ticket a la derecha, posiciones e historial abajo. | larga]]
+[[foto: wt-pro-es.jpg | El modo PRO: gráfico en el centro, lista y ticket a la derecha, posiciones e historial abajo. | larga]]
+
+Tres cosas arriba que vas a usar todos los días. El menú de temporalidades (10m, 5m, 15m, 1h, 4h) cambia la vela del gráfico sin apagar la estrategia. El botón **Tutorial** abre la sala con los vídeos del WebTrader, para repasar un paso cuando lo olvides. Y el icono de **Salir**, en la esquina, cierra la sesión; en las apps, la flecha de volver te lleva de nuevo a la app.
 
 ## Abrir una posición, paso a paso
 
@@ -69,7 +71,7 @@ Es el mismo método del capítulo 6, pero con la cuenta del riesgo hecha por ti.
 5. Lee el resumen: dirección, entrada, stop, objetivo, lote, **riesgo en dinero y en porcentaje**, relación riesgo/beneficio y margen.
 6. Pulsa **Confirmar**.
 
-[[foto: wt-ticket.png | El ticket con el volumen en modo Riesgo: si mueves el stop, el lote se recalcula solo. | larga]]
+[[foto: wt-ticket-es.jpg | El ticket con el volumen en modo Riesgo: si mueves el stop, el lote se recalcula solo. | larga]]
 
 :::alerta Error clásico · Activar la operación con un clic el primer día
 El WebTrader tiene un modo «de un clic», como MetaTrader y TradingView: con él activado, tocar BUY envía la orden al momento. Es útil para quien ya tiene la mano entrenada. En el primer mes, déjalo desactivado. La confirmación es tu última comprobación antes de saltar.
@@ -91,7 +93,7 @@ En el bloque **Avanzado** del ticket puedes además dividir la salida en **TP1, 
 
 Lo importante es **quién ejecuta**. En las cuentas MTM Funded y de demostración, es el motor de MTM, precio a precio, en un servidor. En tus cuentas del bróker (TradeLocker y MetaTrader), los mismos botones, con el mismo significado, quedan guardados y se ejecutan en el servidor de MTM. El navegador nunca mueve un stop de dinero real: si cierras la pestaña, la gestión no se detiene a mitad.
 
-[[foto: wt-gestao.png | Una posición abierta con Auto BE y Auto Trailing. El stop sube solo, nunca baja. | larga]]
+[[foto: wt-gestao-es.jpg | Una posición abierta con Auto BE y Auto Trailing. El stop sube solo, nunca baja. | larga]]
 
 [[grafico:auto-be-trailing]]
 
@@ -106,7 +108,7 @@ Marta pasó la última semana de la demo al WebTrader. Abrió un Buy Limit en EU
 - **Multigráfico (PRO):** 1, 2 o 4 gráficos, cada uno con su símbolo y su temporalidad. El H4 en uno, el H1 en otro, como en el capítulo 4.
 - **Estudios MTM en el gráfico:** los scanners de la casa se dibujan directamente en el gráfico del WebTrader. Cuando un scanner o una idea MTM da una señal, se abre una hoja con todos los números (entrada, stop, objetivo, lote, riesgo en dinero y en porcentaje). De ahí solo tienes tres puertas: confirmar, ajustar o descartar. Una señal nunca entra sola.
 
-[[foto: wt-mercado.png | El estado del mercado junto al símbolo: abierto, cerrado y cuánto falta para cerrar. | larga]]
+[[foto: wt-mercado-es.jpg | El estado del mercado junto al símbolo: abierto, cerrado y cuánto falta para cerrar. | larga]]
 
 ## Trabajar con las estrategias de la casa y sus señales
 
@@ -117,7 +119,7 @@ El WebTrader no es solo un sitio para pulsar comprar y vender. Las estrategias d
 - **Sensei:** el más didáctico. Muestra una tabla de confirmaciones (tendencia, momento, estructura, volatilidad) con una nota de 0 a 20, y una checklist de lo que aún falta. Mientras diga «esperando señal», no hay operación.
 - **TrendShot:** medias de tendencia y los niveles de entrada y objetivos en la escala de precio.
 
-[[foto: wt-estrategia-scanner.png | El MTM Scanner activado solo: entrada, stop y dos objetivos con el riesgo-beneficio, ya dibujados. | larga]]
+[[foto: wt-estrategia-scanner-es.jpg | El MTM Scanner activado solo: entrada, stop y dos objetivos con el riesgo-beneficio, ya dibujados. | larga]]
 
 El camino es siempre el mismo:
 
@@ -129,7 +131,7 @@ El camino es siempre el mismo:
 
 Al cabo de un mes, el diario te dice qué estrategia funciona contigo. Por eso el setup tiene su propia etiqueta («Sinal GoldKiller», «Sinal Sensei», «Sinal MTM Scanner»).
 
-[[foto: wt-estrategia-sensei.png | El Sensei: diez confirmaciones de veinte y la checklist de lo que falta. Todavía no es señal. | larga]]
+[[foto: wt-estrategia-sensei-es.jpg | El Sensei: diez confirmaciones de veinte y la checklist de lo que falta. Todavía no es señal. | larga]]
 
 ## Historial, estadísticas y diario
 
@@ -139,7 +141,7 @@ En el panel de abajo están las tres piezas del capítulo 9, ya conectadas entre
 - **Estadísticas:** la curva de saldo y de capital, el drawdown, la tasa de acierto, la ganancia media frente a la pérdida media y las agrupaciones por símbolo, estrategia, hora y día de la semana. Siempre en dólares de la cuenta, nunca en promesas.
 - **Diario:** una nota por operación, con la emoción, el setup, las etiquetas y la captura. Escribes el porqué junto al propio historial, y no en una libreta que se queda en casa.
 
-[[foto: wt-historico.png | Historial y estadísticas lado a lado: la revisión del domingo del capítulo 9 en dos toques. | larga]]
+[[foto: wt-historico.jpg | Historial y estadísticas lado a lado: la revisión del domingo del capítulo 9 en dos toques. | larga]]
 
 ## Calendario y alertas
 
@@ -151,7 +153,7 @@ En la pestaña **Cuenta** puedes generar un **enlace público de auditoría**. L
 
 Sirve para enseñar tu trabajo a un mentor, a un compañero o a ti mismo dentro de seis meses. Es lo contrario de una captura de beneficios: lo muestra todo, los días buenos y los malos.
 
-[[foto: wt-auditoria.png | El enlace de auditoría: todo a la vista, nada de datos personales. | larga]]
+[[foto: wt-auditoria-es.jpg | El enlace de auditoría: todo a la vista, nada de datos personales. | larga]]
 
 ## TradeLocker y WebTrader, lado a lado
 
