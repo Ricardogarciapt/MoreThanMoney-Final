@@ -45,6 +45,9 @@ Cuando una resistencia se rompe con fuerza, muchas veces pasa a funcionar como s
 
 [[foto: mt5-analise-tecnica.jpg | En el MetaTrader 5, las herramientas de Fibonacci están en el menú «Insertar › Objetos › Fibonacci». Varios gráficos y plazos lado a lado. Imagen: MetaQuotes (metatrader5.com). | larga]]
 
+[[foto: mt5-video-grafico-velas.png | Gráfico de velas de 1 hora en el móvil: cada vela es una hora de precio. Captura real del MetaTrader 5. | lado]]
+
+
 La herramienta de retroceso de Fibonacci marca niveles porcentuales de una corrección: 38,2 %, 50 % y 61,8 % son los más usados. Las matemáticas vienen de la sucesión de Fibonacci, pero el motivo por el que a veces funciona es más sencillo: mucha gente mira los mismos niveles.
 
 1. En una tendencia alcista, une el mínimo con el máximo del último movimiento.

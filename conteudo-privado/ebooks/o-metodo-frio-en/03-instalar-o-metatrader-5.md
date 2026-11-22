@@ -34,6 +34,15 @@ The app has five tabs along the bottom of the screen. Learn them in the order yo
 
 [[foto: mt5-android-negociacao.jpg | The trade tab and the history in MetaTrader 5 for Android and tablet. This is where you see balance, equity and margin. Image: MetaQuotes (metatrader5.com). | larga]]
 
+:::galeria MetaTrader 5 on your phone, from the inside
+mt5-video-conta.png | Settings: open a new account, news, calendar and charts.
+mt5-video-cotacoes.png | Quotes: bid and ask, side by side.
+mt5-video-grafico.png | A 1-minute chart, with the current price on the right.
+:::
+
+*Real MetaTrader 5 screenshots on a phone, with account details blurred.*
+
+
 On a demo account just opened with €500, the "Trade" tab shows balance €500.00, equity €500.00, margin €0.00 and free margin €500.00 (illustrative values).
 
 **Balance** is the money without counting open positions. **Equity** is the balance plus or minus what your open positions are winning or losing. When you have a trade open, always look at equity: that is the real number.

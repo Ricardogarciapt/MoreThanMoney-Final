@@ -46,6 +46,14 @@ El precio está a dos pips de tu stop y tú arrastras la línea más lejos, «pa
 
 [[foto: mt5-ios-ordem.jpg | La ventana de orden en el MetaTrader 5 para iPhone: volumen, Stop Loss y Take Profit rellenos antes de tocar «Sell» o «Buy». Imagen: MetaQuotes (metatrader5.com). | larga]]
 
+:::galeria Una orden pendiente, de principio a fin
+mt5-video-ordem-mercado.png | 1. Tipo de orden, volumen y precio.
+mt5-video-grafico-sltp.png | 2. El stop aparece en el gráfico, ya con la pérdida en dinero.
+mt5-video-ordem.png | 3. Volumen, precio y S/L rellenos antes de confirmar.
+mt5-video-ordem-executada.png | 4. «Hecho»: la orden entró con su stop.
+:::
+
+
 En tu caso, la orden fría queda así: tipo Buy Limit, volumen 0,02, precio 1,08200, S/L 1,07950, T/P 1,08700. Son 25 pips de riesgo por 50 de objetivo (ejemplo ilustrativo).
 
 Es decir, una relación riesgo:beneficio de 1:2.

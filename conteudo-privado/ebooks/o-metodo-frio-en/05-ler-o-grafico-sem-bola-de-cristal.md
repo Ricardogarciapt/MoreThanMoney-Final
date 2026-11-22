@@ -45,6 +45,9 @@ When a resistance is broken with force, it often starts working as support, and 
 
 [[foto: mt5-analise-tecnica.jpg | In MetaTrader 5 the Fibonacci tools are in the menu "Insert › Objects › Fibonacci". Several charts and timeframes side by side. Image: MetaQuotes (metatrader5.com). | larga]]
 
+[[foto: mt5-video-grafico-velas.png | A 1-hour candlestick chart on the phone: each candle is one hour of price. Real MetaTrader 5 screenshot. | lado]]
+
+
 
 The Fibonacci retracement tool marks percentage levels of a pullback: 38.2%, 50% and 61.8% are the most used. The maths comes from the Fibonacci sequence, but the reason it sometimes works is simpler: a lot of people look at the same levels.
 
