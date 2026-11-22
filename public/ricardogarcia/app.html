@@ -164,16 +164,36 @@ label { display: block; font-size: 13px; letter-spacing: 1.5px; text-transform: 
 .dia .seg i { height: 8px; border-radius: 8px; background: #0a0d13; border: 1px solid var(--linha); position: relative; overflow: hidden; }
 .dia .seg i.ok::after { content: ""; position: absolute; inset: 0; background: linear-gradient(90deg, var(--ciano), var(--ouro2)); animation: enche .6s ease both; }
 @keyframes enche { from { transform: scaleX(0); transform-origin: left; } }
-.cal { padding: 14px; }
-.cal .grade, .cal .dias7 { max-width: 300px; margin-left: auto; margin-right: auto; }
-.cal .grade { display: grid; grid-template-columns: repeat(7, 1fr); gap: 5px; margin-top: 8px; }
-.cal .grade span { aspect-ratio: 1; border-radius: 6px; background: #0b0e15; border: 1px solid #1a2030; }
-.cal .grade span.n1 { background: rgba(30,170,230,.28); border-color: rgba(30,170,230,.45); }
-.cal .grade span.n2 { background: rgba(233,196,106,.45); border-color: rgba(233,196,106,.6); }
-.cal .grade span.n3 { background: linear-gradient(135deg, var(--ouro2), var(--ouro)); border-color: var(--ouro2); box-shadow: 0 0 8px rgba(233,196,106,.35); }
-.cal .grade span.hoje { outline: 2px solid var(--ciano); outline-offset: 1px; }
-.cal .dias7 { display: grid; grid-template-columns: repeat(7, 1fr); gap: 5px; text-align: center; font-size: 10px; color: var(--cinza); letter-spacing: 1px; margin-top: 6px; }
-.cal .leg { display: flex; gap: 6px; align-items: center; justify-content: flex-end; font-size: 11px; color: var(--cinza); margin-top: 8px; }
+.cal { padding: 16px 14px 14px; }
+.cal-stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 14px; }
+.cal-stats div { background: linear-gradient(180deg, rgba(255,255,255,.04), rgba(255,255,255,.01)); border: 1px solid #1d2434; border-radius: 14px; padding: 10px 8px; text-align: center; }
+.cal-stats b { display: block; font-family: Anton, Oswald, sans-serif; font-size: 26px; line-height: 1; color: #fff; letter-spacing: .5px; }
+.cal-stats div.fogo b { background: linear-gradient(180deg, #fff1c2, #E9C46A 55%, #D2A63C); -webkit-background-clip: text; background-clip: text; color: transparent; }
+.cal-stats small { display: block; margin-top: 5px; font-size: 10px; letter-spacing: 1.4px; text-transform: uppercase; color: var(--cinza); }
+.cal-quadro { max-width: 380px; margin: 0 auto; }
+.cal .dias7, .cal .grade { display: grid; grid-template-columns: repeat(7, 1fr) 34px; gap: 6px; }
+.cal .dias7 { text-align: center; font: 600 10px/1 Oswald, sans-serif; color: var(--cinza); letter-spacing: 1.2px; margin-bottom: 6px; }
+.cal .dias7 .xpc, .cal .grade .wxp { color: #6f7889; font-size: 10px; }
+.cal .grade .c { position: relative; aspect-ratio: 1; border-radius: 9px; background: #0b0e15; border: 1px solid #1a2030; display: flex; align-items: flex-start; justify-content: flex-start; padding: 4px 5px; font: 600 10px/1 Oswald, sans-serif; color: #3b4458; cursor: pointer; transition: transform .15s ease, box-shadow .2s ease; -webkit-tap-highlight-color: transparent; }
+.cal .grade .c:active { transform: scale(.94); }
+.cal .grade .c.vazia { visibility: hidden; pointer-events: none; }
+.cal .grade .c.futuro { background: transparent; border-style: dashed; border-color: #161b27; cursor: default; }
+.cal .grade .c.m1 em { position: absolute; left: 5px; bottom: 4px; font-style: normal; font-size: 8px; letter-spacing: 1px; color: var(--ouro2); }
+.cal .grade .c.n1 { background: rgba(30,170,230,.22); border-color: rgba(30,170,230,.5); color: #9fdcff; }
+.cal .grade .c.n2 { background: linear-gradient(135deg, rgba(233,196,106,.38), rgba(210,166,60,.22)); border-color: rgba(233,196,106,.6); color: #ffe8ad; }
+.cal .grade .c.n3 { background: linear-gradient(135deg, #fff1c2, var(--ouro2) 45%, var(--ouro)); border-color: #fff1c2; color: #241a05; box-shadow: 0 0 14px rgba(233,196,106,.45), inset 0 1px 0 rgba(255,255,255,.6); }
+.cal .grade .c.n3::after { content: "✦"; position: absolute; right: 4px; bottom: 2px; font-size: 10px; color: #3a2a06; }
+.cal .grade .c.hoje { border: 2px solid var(--ciano); box-shadow: 0 0 0 3px rgba(30,170,230,.18), 0 0 18px rgba(30,170,230,.35); animation: calPulso 2.4s ease-in-out infinite; }
+.cal .grade .c.sel { outline: 2px solid #fff; outline-offset: 1px; }
+@keyframes calPulso { 50% { box-shadow: 0 0 0 5px rgba(30,170,230,.08), 0 0 22px rgba(30,170,230,.45); } }
+.cal .grade .wxp { display: flex; align-items: center; justify-content: center; font-family: Oswald, sans-serif; }
+.cal .grade .wxp.tem { color: var(--ouro2); }
+.cal-det { min-height: 1.3em; margin: 12px 0 0; text-align: center; font-size: 14px; color: #c9ced8; }
+.cal-det b { color: #fff; }
+.cal .leg { display: flex; gap: 6px; align-items: center; justify-content: center; flex-wrap: wrap; font-size: 11px; color: var(--cinza); margin-top: 10px; }
+.cal .leg .lq { width: 12px; height: 12px; border-radius: 4px; border: 1px solid #1a2030; background: #0b0e15; margin-left: 6px; }
+.cal .leg .lq.n1 { background: rgba(30,170,230,.35); border-color: rgba(30,170,230,.6); } .cal .leg .lq.n2 { background: rgba(233,196,106,.45); border-color: rgba(233,196,106,.6); } .cal .leg .lq.n3 { background: var(--ouro2); border-color: #fff1c2; }
+@media (prefers-reduced-motion: reduce) { .cal .grade .c.hoje { animation: none; } }
 .cal .leg span { width: 12px; height: 12px; border-radius: 3px; display: inline-block; }
 .missao { border-left: 3px solid var(--linha); }
 .missao[data-tipo="treino"] { border-left-color: #ff9a3c; }
@@ -584,7 +604,12 @@ html, body { overflow-x: hidden; }
       <div class="placa cartao" id="cPres"></div>
         </div>
         <div class="pd" id="pdSemanas"><div class="pd-res"><span class="mono" id="cResumo"></span></div>
-      <div class="placa cal"><div class="grade" id="cGrade"></div><div class="dias7"><span>S</span><span>T</span><span>Q</span><span>Q</span><span>S</span><span>S</span><span>D</span></div><div class="leg">menos <span style="background:#0b0e15;border:1px solid #1a2030"></span><span style="background:rgba(30,170,230,.28)"></span><span style="background:rgba(233,196,106,.45)"></span><span style="background:#E9C46A"></span> dia completo</div></div>
+      <div class="placa cal">
+        <div class="cal-stats" id="cStats"></div>
+        <div class="cal-quadro"><div class="dias7"><span>S</span><span>T</span><span>Q</span><span>Q</span><span>S</span><span>S</span><span>D</span><span class="xpc">XP</span></div><div class="grade" id="cGrade"></div></div>
+        <p class="cal-det" id="cDet" aria-live="polite"></p>
+        <div class="leg"><span class="lq z"></span>nada <span class="lq n1"></span>1 <span class="lq n2"></span>2–3 <span class="lq n3"></span>dia completo</div>
+      </div>
         </div>
       </div>
     </div>
@@ -741,13 +766,7 @@ html, body { overflow-x: hidden; }
       $('cPlano').innerHTML = '<div class="lin"><span class="mono">Plano 39' + (PL.ciclo > 1 ? ' · ciclo ' + PL.ciclo : '') + '</span><span class="num">Dia ' + PL.dia + ' <small>/ ' + PL.total + '</small></span></div><div class="fase">Fase ' + PL.fase.n + ' · ' + esc(PL.fase.nome) + '</div><div class="barra39">' + bar + '</div>';
     }
     $('dSeg').innerHTML = diarias.map(function (x) { return '<i class="' + (x.estado === 'feita' ? 'ok' : '') + '" title="' + esc(x.titulo) + '"></i>'; }).join('');
-    var H = e.historico || [], ativos = 0, completos = 0;
-    var pad = H.length ? (new Date(H[0].dia + 'T12:00:00Z').getUTCDay() + 6) % 7 : 0, cel = '';
-    for (var z = 0; z < pad; z++) cel += '<span style="visibility:hidden"></span>';
-    H.forEach(function (d, i) { if (d.feitas) ativos++; if (d.feitas >= 4) completos++;
-      var n = d.feitas >= 4 ? 'n3' : d.feitas >= 2 ? 'n2' : d.feitas === 1 ? 'n1' : '';
-      cel += '<span data-i="' + i + '" class="' + n + (i === H.length - 1 ? ' hoje' : '') + '" title="' + d.dia + ': ' + d.feitas + ' missões, ' + d.xp + ' XP"></span>'; });
-    $('cGrade').innerHTML = cel; $('cResumo').textContent = ativos + ' dias activos · ' + completos + ' completos';
+    pintaCal(e.historico || []);
     renderDiario(e);
     $('listaMissoes').innerHTML = e.missoes.map(function (x) {
       return '<div class="placa missao ' + (x.estado === 'feita' ? 'feita' : '') + '" data-tipo="' + x.tipo + '" data-id="' + esc(x.id) + '" role="button" tabindex="0"' + (x.desafio ? ' style="border-color:var(--ouro);background:linear-gradient(135deg,rgba(210,166,60,.14),transparent)"' : '') + '><div class="ic">' + ICON[x.tipo] + '</div><div>' + (x.desafio ? '<small style="display:block;color:var(--ouro2);font-size:11px;letter-spacing:.08em;text-transform:uppercase">Desafio da semana do Ricardo</small>' : '') + '<b>' + esc(x.titulo) + '</b><span>' + esc(x.resumo || '') + '</span></div><div class="xp">' + (x.estado === 'feita' ? '✓ +' + x.xp_ganho : '+' + x.xp + ' XP') + '</div></div>';
@@ -861,6 +880,40 @@ html, body { overflow-x: hidden; }
     return ios ? '<a class="btn" href="' + a + '" target="_blank" rel="noopener" style="text-decoration:none">Abrir no Mapas (Apple)</a><a class="btn sec" href="' + g + '" target="_blank" rel="noopener" style="text-decoration:none;margin-top:10px">Abrir no Google Maps</a>'
       : '<a class="btn" href="' + g + '" target="_blank" rel="noopener" style="text-decoration:none">Abrir no Google Maps</a>';
   }
+  // Calendário das 6 semanas: sequência, dias activos, completos, XP por semana e detalhe ao tocar.
+  var CAL_H = [];
+  function nivelDia(d) { return d.feitas >= 4 ? 'n3' : d.feitas >= 2 ? 'n2' : d.feitas === 1 ? 'n1' : ''; }
+  function pintaCal(H) {
+    CAL_H = H;
+    var MES = ['jan', 'fev', 'mar', 'abr', 'mai', 'jun', 'jul', 'ago', 'set', 'out', 'nov', 'dez'];
+    var ativos = 0, completos = 0, seq = 0, melhor = 0, corre = 0;
+    H.forEach(function (d) { if (d.feitas) { ativos++; corre++; melhor = Math.max(melhor, corre); } else corre = 0; if (d.feitas >= 4) completos++; });
+    for (var k = H.length - 1; k >= 0; k--) { if (H[k].feitas) seq++; else if (k === H.length - 1) continue; else break; }
+    $('cStats').innerHTML = '<div class="fogo"><b>' + seq + '</b><small>🔥 sequência</small></div><div><b>' + ativos + '</b><small>dias activos</small></div><div><b>' + completos + '</b><small>completos</small></div>';
+    var pad = H.length ? (new Date(H[0].dia + 'T12:00:00Z').getUTCDay() + 6) % 7 : 0, cel = '', col = 0, xpS = 0;
+    function fechaSemana() { cel += '<span class="wxp' + (xpS ? ' tem' : '') + '">' + (xpS ? xpS : '·') + '</span>'; xpS = 0; col = 0; }
+    for (var z = 0; z < pad; z++) { cel += '<span class="c vazia"></span>'; col++; }
+    H.forEach(function (d, i) {
+      var dt = new Date(d.dia + 'T12:00:00Z'), dn = dt.getUTCDate(), hoje = i === H.length - 1;
+      xpS += d.xp || 0;
+      cel += '<button type="button" class="c ' + nivelDia(d) + (hoje ? ' hoje' : '') + (dn === 1 || i === 0 ? ' m1' : '') + '" data-i="' + i + '" aria-label="' + d.dia + ': ' + d.feitas + ' missões, ' + (d.xp || 0) + ' XP">' + dn + (dn === 1 || i === 0 ? '<em>' + MES[dt.getUTCMonth()] + '</em>' : '') + '</button>';
+      if (++col === 7) fechaSemana();
+    });
+    if (col) { while (col < 7) { cel += '<span class="c futuro"></span>'; col++; } fechaSemana(); }
+    $('cGrade').innerHTML = cel;
+    $('cResumo').textContent = 'Melhor sequência: ' + melhor + (melhor === 1 ? ' dia' : ' dias');
+    detalheCal(H.length - 1, true);
+  }
+  function detalheCal(i, inicial) {
+    var d = CAL_H[i], el = $('cDet'); if (!d) { el.textContent = ''; return; }
+    Array.prototype.forEach.call($('cGrade').querySelectorAll('.c.sel'), function (x) { x.classList.remove('sel'); });
+    if (!inicial) { var b = $('cGrade').querySelector('[data-i="' + i + '"]'); if (b) b.classList.add('sel'); }
+    var dt = new Date(d.dia + 'T12:00:00Z'), hoje = i === CAL_H.length - 1;
+    var nome = hoje ? 'Hoje' : dt.toLocaleDateString('pt-PT', { weekday: 'short', day: 'numeric', month: 'short', timeZone: 'UTC' });
+    if (hoje && !d.feitas) { el.innerHTML = '<b>Hoje</b> ainda está apagado. Faz uma missão e acende o quadrado.'; return; }
+    el.innerHTML = '<b>' + esc(nome) + '</b> · ' + d.feitas + (d.feitas === 1 ? ' missão' : ' missões') + ' · ' + (d.xp || 0) + ' XP' + (d.feitas >= 4 ? ' · dia completo ✦' : '');
+  }
+  document.addEventListener('click', function (ev) { var c = ev.target.closest && ev.target.closest('#cGrade .c[data-i]'); if (c) { detalheCal(+c.getAttribute('data-i')); try { navigator.vibrate && navigator.vibrate(8); } catch (_) {} } });
   function distM(a, b) { var R = 6371000, r = Math.PI / 180, dLa = (b.lat - a.lat) * r, dLo = (b.lon - a.lon) * r; var h = Math.pow(Math.sin(dLa / 2), 2) + Math.cos(a.lat * r) * Math.cos(b.lat * r) * Math.pow(Math.sin(dLo / 2), 2); return 2 * R * Math.asin(Math.sqrt(h)); }
   function carregarLeaflet(cb) {
     if (window.L) return cb();
