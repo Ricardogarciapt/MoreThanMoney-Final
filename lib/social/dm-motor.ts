@@ -41,11 +41,32 @@ export function igDaPagina(pageId: string): string | null {
   return PAGINAS.find((p) => p.pagina === pageId)?.ig ?? null
 }
 
-/** Ids que são NOSSOS (páginas e contas IG): mensagem deles = eco, não se responde. */
+/**
+ * Ids que são NOSSOS — páginas, contas IG e os IGSID com que cada conta nossa aparece na caixa da
+ * outra. NUNCA se responde a nenhum, nos dois sentidos: a 22/11 a marca e a pessoal ficaram a
+ * responder uma à outra em loop. Mais contas internas (educadores, testes) em
+ * `site_settings.dm_contas_internas` (lista de ids).
+ */
 export const IDS_NOSSOS = new Set<string>([
   ...PAGINAS.flatMap((p) => [p.pagina, p.ig]),
   '621570614380294',
+  '3964182023892810', // MoreThanMoney visto da caixa do Ricardo
+  '2225784651530753', // Ricardo visto da caixa da MoreThanMoney
 ])
+
+let internasCache: { em: number; ids: Set<string> } | null = null
+export async function contasInternas(): Promise<Set<string>> {
+  if (internasCache && Date.now() - internasCache.em < 60_000) return internasCache.ids
+  const ids = new Set(IDS_NOSSOS)
+  try {
+    const { data } = await getSupabaseAdmin().from('site_settings').select('value').eq('key', 'dm_contas_internas').maybeSingle()
+    const v = data?.value as unknown
+    const lista = Array.isArray(v) ? v : Array.isArray((v as { ids?: unknown })?.ids) ? (v as { ids: unknown[] }).ids : []
+    for (const x of lista) if (x != null) ids.add(String(x))
+  } catch {}
+  internasCache = { em: Date.now(), ids }
+  return ids
+}
 
 async function enviarMessenger(pageId: string, destino: string, texto: string): Promise<{ ok: boolean; error?: string }> {
   await carregarTokensIG()
@@ -88,13 +109,26 @@ export type ResultadoDm = 'respondida' | 'repetida' | 'ignorada' | 'erro'
 
 export async function responderMensagem(m: MensagemRecebida): Promise<{ resultado: ResultadoDm; erro?: string }> {
   const texto = (m.texto ?? '').trim()
-  // Só se ignora a própria conta que recebe (eco). A outra conta nossa conta como pessoa.
-  const propria = m.contaId
-  const igDaConta = m.canal === 'instagram' ? m.contaId : igDaPagina(m.contaId)
-  if (!texto || !m.remetente || m.remetente === propria || m.remetente === igDaConta) return { resultado: 'ignorada' }
-  if (igDaConta === '17841474872672009' && m.remetente === '621570614380294') return { resultado: 'ignorada' }
+  // TRAVÃO 1: contas nossas ou internas nunca recebem resposta automática (nos dois sentidos).
+  if (!texto || !m.remetente || m.remetente === m.contaId) return { resultado: 'ignorada' }
+  if ((await contasInternas()).has(m.remetente)) return { resultado: 'ignorada' }
   const supabase = getSupabaseAdmin()
   await carregarTokensIG()
+
+  // TRAVÃO 2: no máximo 1 resposta automática por mensagem humana. Se já respondemos a esta pessoa
+  // nos últimos 2 minutos, é rajada/loop: não se responde (a próxima volta da caixa apanha a mais
+  // recente, se for mesmo nova).
+  try {
+    const { count } = await supabase
+      .from('ig_dm_log')
+      .select('mid', { count: 'exact', head: true })
+      .eq('sender_id', m.remetente)
+      .eq('status', 'replied')
+      .gte('created_at', new Date(Date.now() - 2 * 60_000).toISOString())
+    if ((count ?? 0) > 0) return { resultado: 'ignorada' }
+  } catch {
+    return { resultado: 'ignorada' }
+  }
 
   // Dedup + auditoria. Conflito no mid único → já tratada (pelo outro caminho).
   try {

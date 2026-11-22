@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getSupabaseAdmin } from '@/lib/supabase-admin-client'
 import { isCronAuthorized } from '@/lib/cron-auth'
 import { carregarTokensIG, candidateTokensForIgAccount, sendInstagramDmResilient } from '@/lib/instagram/dm-closer'
-import { PAGINAS, SEM_TEXTO, responderMensagem, type CanalDm } from '@/lib/social/dm-motor'
+import { PAGINAS, SEM_TEXTO, responderMensagem, contasInternas, type CanalDm } from '@/lib/social/dm-motor'
 import { linkAgendar } from '@/lib/agenda/link'
 
 export const runtime = 'nodejs'
@@ -64,7 +64,7 @@ async function seguimentos(estado: Record<string, unknown>) {
     .lte('created_at', ate)
     .limit(30)
   let enviados = 0
-  const vistos = new Set<string>()
+  const vistos = new Set<string>(await contasInternas())
   for (const l of (data ?? []) as Array<{ sender_id: string; account_id: string; created_at: string }>) {
     if (vistos.has(l.sender_id)) continue
     vistos.add(l.sender_id)
@@ -180,9 +180,8 @@ export async function GET(req: NextRequest) {
         for (const c of pedidos.dados) if (!vistos.has(c.id)) r.dados!.push(c)
         caixa.pedidos = pedidos.dados.length
       }
-      // Os ids desta caixa (a própria página e conta IG). A OUTRA conta nossa conta como pessoa:
-      // o Ricardo a escrever da pessoal para a marca é uma conversa a sério (e é o teste dele).
-      const proprios = new Set<string>([p.pagina, p.ig, ...(p.ig === '17841474872672009' ? ['621570614380294'] : [])])
+      // Todas as contas nossas e internas (nunca se responde entre elas — loop de 22/11).
+      const proprios = await contasInternas()
       // Amostra para diagnóstico: quem escreveu por último e há quantos minutos.
       caixa.amostra = (r.dados ?? []).slice(0, 3).map((c) => {
         const u = c.messages?.data?.[0]
