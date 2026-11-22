@@ -58,6 +58,8 @@ O WebTrader tem dois modos, e trocas entre eles no topo (ou com **Alt+M** no com
 
 [[foto: wt-pro.jpg | O modo PRO: gráfico ao centro, lista e ticket à direita, posições e histórico em baixo. | larga]]
 
+Três coisas no topo que vais usar todos os dias. O menu das temporalidades (10m, 5m, 15m, 1h, 4h) muda a vela do gráfico sem perderes a estratégia ligada. O botão **Tutorial** abre a sala com os vídeos do WebTrader, para reveres um passo quando te esqueceres. E o ícone de **Sair**, no canto, termina a sessão; nas apps, a seta de voltar leva-te de novo à app.
+
 ## Abrir uma posição, passo a passo
 
 É o mesmo método do capítulo 6, mas com a conta do risco feita por ti.
