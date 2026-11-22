@@ -65,6 +65,7 @@ export function verificarEbook(token: string | null | undefined, slug: string, a
 }
 
 export function linkEbook(slug: SlugEbook, token?: string): string {
-  const base = `https://www.morethanmoney.pt/api/ebooks/${slug}`
+  const rota = partesEbook(slug).lingua === 'pt' ? 'ebooks' : 'ebooks-traducoes'
+  const base = `https://www.morethanmoney.pt/api/${rota}/${slug}`
   return token ? `${base}?t=${encodeURIComponent(token)}` : base
 }
