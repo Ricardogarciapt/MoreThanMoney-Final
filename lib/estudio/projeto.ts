@@ -140,6 +140,11 @@ export type Cinematico = {
    * a legenda diz as palavras dele (ou, sem correspondência, a intervalos iguais).
    */
   lista?: { titulo: string; itens: string[]; contagem?: boolean }
+  /**
+   * Reel narrado (22/11/2026, «5 reels por dia» por conta sem gastar HeyGen): sem gémeo; a voz é o
+   * clone Fish do Ricardo (gerada pelo site) e o fundo são as fotos reais animadas + b-roll.
+   */
+  narrado?: boolean
 }
 
 export const MOLDES_EDICAO = ['cinema', 'impacto', 'documental'] as const
@@ -163,6 +168,7 @@ export function normalizarCinematico(v: any): Cinematico | null {
     cta_url: txt(v.cta_url, 80).trim(),
     ...((MOLDES_EDICAO as readonly string[]).includes(v.molde) ? { molde: v.molde as MoldeEdicao } : {}),
     ...normalizarLista(v.lista),
+    ...(v.narrado === true ? { narrado: true } : {}),
   }
 }
 

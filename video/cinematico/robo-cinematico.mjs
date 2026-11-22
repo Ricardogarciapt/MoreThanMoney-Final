@@ -188,6 +188,31 @@ async function montar({ id, marca, video, cin }) {
   return final
 }
 
+/**
+ * Fundo dos reels narrados: planos de ~3 s escolhidos por id (sempre os mesmos para o mesmo reel),
+ * das fotos reais animadas (public/fotos-planos/*-video.mp4) e do stock, recortados a 1080×1920,
+ * com a voz por cima. Sai um mp4 que o resto do robô trata como se fosse o gémeo.
+ */
+function baseNarrada({ id, marca, voz, destino }) {
+  const dur = duracaoVideo(voz) + 0.4
+  const fotos = path.join(AQUI, 'public/fotos-planos')
+  const deFotos = fs.existsSync(fotos) ? fs.readdirSync(fotos).filter((f) => f.endsWith('-video.mp4')).map((f) => path.join(fotos, f)) : []
+  const deStock = stockPresente().filter((n) => !n.startsWith('auto')).map((n) => path.join(STOCK, `${n}.mp4`))
+  // RG: as fotos dele primeiro; MTM: b-roll primeiro, fotos do educador pelo meio.
+  const pool = marca === 'ricardo-garcia' ? [...deFotos, ...deFotos, ...deStock] : [...deStock, ...deFotos]
+  if (!pool.length) throw new Error('narrado: sem fotos nem stock')
+  let h = 0
+  for (const c of String(id)) h = (h * 31 + c.charCodeAt(0)) >>> 0
+  const rnd = () => ((h = (h * 1103515245 + 12345) >>> 0) / 4294967296)
+  const ordem = [...pool].sort(() => rnd() - 0.5)
+  const n = Math.ceil(dur / 3)
+  const planos = Array.from({ length: n }, (_, i) => ordem[i % ordem.length])
+  const ins = planos.flatMap((f) => ['-stream_loop', '-1', '-t', '3.2', '-i', f])
+  const vf = planos.map((_, i) => `[${i}:v]scale=1080:1920:force_original_aspect_ratio=increase,crop=1080:1920,setsar=1,fps=30,trim=duration=3,setpts=PTS-STARTPTS[v${i}]`).join(';')
+  const cat = planos.map((_, i) => `[v${i}]`).join('') + `concat=n=${n}:v=1:a=0[v]`
+  correr('ffmpeg', ['-loglevel', 'error', '-y', ...ins, '-i', voz, '-filter_complex', `${vf};${cat}`, '-map', '[v]', '-map', `${n}:a`, '-t', String(dur), '-c:v', 'libx264', '-crf', '18', '-preset', 'veryfast', '-pix_fmt', 'yuv420p', '-c:a', 'aac', '-b:a', '192k', destino])
+}
+
 const limpar = (id) => { for (const f of fs.existsSync(AUTO) ? fs.readdirSync(AUTO) : []) if (f.startsWith(id)) fs.rmSync(path.join(AUTO, f), { force: true }) }
 
 async function umTrabalho() {
@@ -202,10 +227,17 @@ async function umTrabalho() {
     const cin = t.projeto.cinematico || {}
     const marca = cin.marca === 'morethanmoney' || t.marca === 'morethanmoney' ? 'morethanmoney' : 'ricardo-garcia'
     const url = t.projeto.clips?.[0]?.fonte?.url
-    if (!url) throw new Error('sem vídeo do gémeo')
     fs.mkdirSync(AUTO, { recursive: true })
     const video = path.join(AUTO, `${t.id}.mp4`)
-    await baixar(url, video)
+    if (t.narracao_url) {
+      // Reel narrado (22/11): voz clonada + fotos reais animadas e b-roll por baixo, em vez do gémeo.
+      const voz = path.join(AUTO, `${t.id}-voz.mp3`)
+      await baixar(t.narracao_url, voz)
+      baseNarrada({ id: t.id, marca, voz, destino: video })
+    } else {
+      if (!url) throw new Error('sem vídeo do gémeo')
+      await baixar(url, video)
+    }
     // take filmado com cortes: só o troço escolhido (o gémeo da HeyGen vem inteiro)
     const c0 = t.projeto.clips[0]
     if (c0 && (c0.de > 0.05 || (c0.duracao_fonte && c0.ate < c0.duracao_fonte - 0.05))) {
