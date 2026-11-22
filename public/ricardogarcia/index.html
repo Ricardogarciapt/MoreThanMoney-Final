@@ -1404,7 +1404,7 @@ window.addEventListener('load', function () {
       consentimentos: { chamada: false, whatsapp: f.c_whatsapp.checked === true, email: false }, origem: origem, ag: null, site: f.site.value }) })
       .then(function (r) { return r.json().catch(function () { return {}; }).then(function (j) { return { ok: r.ok && j.ok, j: j }; }); })
       .then(function (x) {
-        if (x.ok) { diz(T('Recebido! Vamos mandar-te mensagem no WhatsApp. Se não quiseres esperar, carrega em «Falar já no WhatsApp».'), true); ev('Lead'); try { if (window.gtag) gtag('event', 'generate_lead', { lead_source: 'ricardogarcia-rapido' }); } catch (_) {} bt.hidden = true; }
+        if (x.ok) { diz(T('Recebido! A abrir o teu acesso grátis (3 dias, sem cartão). Também te mandamos mensagem no WhatsApp.'), true); ev('Lead'); setTimeout(function () { location.href = '/register?plan=premium&utm_source=rg-contacto-rapido'; }, 1800); try { if (window.gtag) gtag('event', 'generate_lead', { lead_source: 'ricardogarcia-rapido' }); } catch (_) {} bt.hidden = true; }
         else { var m = x.j.erro || (x.j.erros && Object.keys(x.j.erros).map(function (k) { return x.j.erros[k]; })[0]) || T('Não consegui enviar. Tenta outra vez.'); diz(m); }
       })
       .catch(function () { diz(T('Sem ligação. Tenta outra vez.')); })

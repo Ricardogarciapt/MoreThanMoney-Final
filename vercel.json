@@ -4,6 +4,7 @@
     "arn1"
   ],
   "crons": [
+    { "path": "/api/cron/dm-caixa", "schedule": "*/5 * * * *" },
     {
       "path": "/api/cron/lead-instantaneo",
       "schedule": "*/5 * * * *"
@@ -391,10 +392,6 @@
     {
       "path": "/api/cron/mentor-populacao",
       "schedule": "*/10 0-6 * * *"
-    },
-    {
-      "path": "/api/cron/instagram-diagnostico?acao=subscrever",
-      "schedule": "17 */6 * * *"
     },
     {
       "path": "/api/cron/missao-push?tipo=missao",

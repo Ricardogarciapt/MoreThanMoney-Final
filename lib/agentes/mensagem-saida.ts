@@ -90,6 +90,8 @@ export const AGENTE_POR_FUNIL: Readonly<Record<string, string>> = Object.freeze(
   'instagram:funil': AG.SOCIAL,
   // A DM a sério, com uma pessoa a responder, é do closer.
   'instagram:dm-closer': AG.CLOSER,
+  // Messenger das Páginas: o mesmo closer (motor único em lib/social/dm-motor.ts).
+  'messenger:dm-closer': AG.CLOSER,
   'whatsapp:funil': AG.CLOSER,
   // Recuperação de checkout por email.
   'email:recuperacao-checkout': AG.EMAIL,
