@@ -108,6 +108,29 @@ Marta spent the last week of her demo on WebTrader. She opened a Buy Limit on EU
 
 [[foto: wt-mercado.png | Market status next to the symbol: open, closed and how long until it closes. | larga]]
 
+## Working with the house strategies and their signals
+
+The WebTrader is not just a place to click buy and sell. The house strategies live inside it: in the bar above the chart you have GoldKiller, MTM Scanner, Sensei, TrendShot and the others. Switch on **one at a time**. Two strategies on the same chart are two opinions shouting at once, and the cold method needs a single voice.
+
+- **GoldKiller:** when there is a signal, a bar appears above the chart with the direction, entry, stop and target, and a **"Usar este sinal"** (use this signal) button. That button only pre-fills the ticket. You are the one who confirms.
+- **MTM Scanner:** draws the market structure (BOS, CHoCH) and, when it signals, marks the entry, the stop and two targets with the risk-reward written on them (1:2 and 1:4).
+- **Sensei:** the most educational one. It shows a table of confirmations (trend, momentum, structure, volatility) scored from 0 to 20, and a checklist of what is still missing. While it says "waiting for signal", there is no trade.
+- **TrendShot:** trend averages and the entry and target levels on the price scale.
+
+[[foto: wt-estrategia-scanner.png | MTM Scanner switched on alone: entry, stop and two targets with the risk-reward, already drawn. | larga]]
+
+The path is always the same:
+
+1. Pick the asset and the timeframe of your plan.
+2. Switch on the strategy you studied, and only that one.
+3. Wait for it to signal. No signal, no trade.
+4. Use the signal (or copy the numbers into the ticket) and set the volume to **Risk %**.
+5. Confirm, switch on Auto BE and Auto Trailing, and write in the journal which strategy you used.
+
+After a month, the journal tells you which strategy works for you. That is why the setup has its own tag ("Sinal GoldKiller", "Sinal Sensei", "Sinal MTM Scanner").
+
+[[foto: wt-estrategia-sensei.png | Sensei: ten confirmations out of twenty and the checklist of what is missing. Not a signal yet. | larga]]
+
 ## History, statistics and journal
 
 In the bottom panel are the three pieces from chapter 9, already linked together:

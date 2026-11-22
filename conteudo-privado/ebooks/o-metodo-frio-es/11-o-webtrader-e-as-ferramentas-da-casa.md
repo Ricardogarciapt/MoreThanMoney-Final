@@ -108,6 +108,29 @@ Marta pasó la última semana de la demo al WebTrader. Abrió un Buy Limit en EU
 
 [[foto: wt-mercado.png | El estado del mercado junto al símbolo: abierto, cerrado y cuánto falta para cerrar. | larga]]
 
+## Trabajar con las estrategias de la casa y sus señales
+
+El WebTrader no es solo un sitio para pulsar comprar y vender. Las estrategias de la casa viven dentro de él: en la barra sobre el gráfico tienes GoldKiller, MTM Scanner, Sensei, TrendShot y las demás. Activa **una cada vez**. Dos estrategias en el mismo gráfico son dos opiniones gritando a la vez, y el método frío necesita una sola voz.
+
+- **GoldKiller:** cuando hay señal, aparece una barra sobre el gráfico con la dirección, la entrada, el stop y el objetivo, y un botón **«Usar este sinal»** (usar esta señal). Ese botón solo rellena el ticket. Quien confirma eres tú.
+- **MTM Scanner:** dibuja la estructura del mercado (BOS, CHoCH) y, cuando da señal, marca en el gráfico la entrada, el stop y dos objetivos con el riesgo-beneficio escrito (1:2 y 1:4).
+- **Sensei:** el más didáctico. Muestra una tabla de confirmaciones (tendencia, momento, estructura, volatilidad) con una nota de 0 a 20, y una checklist de lo que aún falta. Mientras diga «esperando señal», no hay operación.
+- **TrendShot:** medias de tendencia y los niveles de entrada y objetivos en la escala de precio.
+
+[[foto: wt-estrategia-scanner.png | El MTM Scanner activado solo: entrada, stop y dos objetivos con el riesgo-beneficio, ya dibujados. | larga]]
+
+El camino es siempre el mismo:
+
+1. Elige el activo y el marco temporal de tu plan.
+2. Activa la estrategia que estudiaste, y solo esa.
+3. Espera a que dé señal. Sin señal, no hay trade.
+4. Usa la señal (o copia los números al ticket) y pon el volumen en **Riesgo %**.
+5. Confirma, activa el Auto BE y el Auto Trailing, y escribe en el diario qué estrategia usaste.
+
+Al cabo de un mes, el diario te dice qué estrategia funciona contigo. Por eso el setup tiene su propia etiqueta («Sinal GoldKiller», «Sinal Sensei», «Sinal MTM Scanner»).
+
+[[foto: wt-estrategia-sensei.png | El Sensei: diez confirmaciones de veinte y la checklist de lo que falta. Todavía no es señal. | larga]]
+
 ## Historial, estadísticas y diario
 
 En el panel de abajo están las tres piezas del capítulo 9, ya conectadas entre sí:

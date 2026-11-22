@@ -119,7 +119,7 @@ export default function MinhaConta({ t }: { t: Trader }) {
           <CredenciaisConta contaId={t.accountId} login={c.login == null ? null : String(c.login)} servidor={c.servidor == null ? null : String(c.servidor)} podeGerir={dono} />
         </div>
       )}
-      {seccao === "partilhar" && !carteira && <PartilharAuditoria accountId={t.accountId} podeGerir={dono} />}
+      {seccao === "partilhar" && !carteira && <PartilharAuditoria accountId={t.accountId} podeGerir={dono} contaRealCasa={!!c.contaReal} />}
       {seccao === "levantamentos" && funded && dono && <Levantamentos t={t} />}
     </div>
   )

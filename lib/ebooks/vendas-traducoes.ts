@@ -9,7 +9,7 @@ export const VENDAS_TRADUCOES: Record<'destrui-tudo-e-ainda-bem' | 'o-metodo-fri
       sub: 'The system of discipline, money and markets that Ricardo Garcia built after starting from zero, in a book to read like a 10-week plan.',
       autor: 'Ricardo Garcia',
       autorBio: 'Adopted at 17 months, he grew up in Porto. Fourteen years of service (Army, Marines, GNR) before he gave up a “dream job” during one of the hardest phases in his family’s life. He founded MoreThanMoney so that nobody has to pay the price of learning alone.',
-      numeros: [{ v: '146', r: 'pages' }, { v: '10', r: 'animated charts' }, { v: '11', r: 'exercises' }, { v: '30', r: 'days of plan' }],
+      numeros: [{ v: '147', r: 'pages' }, { v: '10', r: 'animated charts' }, { v: '11', r: 'exercises' }, { v: '30', r: 'days of plan' }],
       capitulos: [
         { t: 'The day I stopped pretending', d: 'The story, unfiltered, and the house you knock down to lay the foundations.' },
         { t: 'Discipline when nobody is asking', d: 'The minimum daily standard that carries over from service into civilian life.' },
@@ -38,7 +38,7 @@ export const VENDAS_TRADUCOES: Record<'destrui-tudo-e-ainda-bem' | 'o-metodo-fri
       sub: 'El sistema de disciplina, dinero y mercados que Ricardo Garcia construyó después de empezar de cero, en un libro para leer como un plan de 10 semanas.',
       autor: 'Ricardo Garcia',
       autorBio: 'Adoptado a los 17 meses, creció en Oporto. Catorce años de servicio (Ejército, Infantería de Marina, GNR) antes de dejar un «trabajo de ensueño» en una de las etapas más duras de la vida de su familia. Fundó MoreThanMoney para que nadie tenga que pagar el precio de aprender solo.',
-      numeros: [{ v: '146', r: 'páginas' }, { v: '10', r: 'gráficos animados' }, { v: '11', r: 'ejercicios' }, { v: '30', r: 'días de plan' }],
+      numeros: [{ v: '149', r: 'páginas' }, { v: '10', r: 'gráficos animados' }, { v: '11', r: 'ejercicios' }, { v: '30', r: 'días de plan' }],
       capitulos: [
         { t: 'El día en que dejé de fingir', d: 'La historia, sin filtros, y la casa que se derriba para hacer los cimientos.' },
         { t: 'Disciplina cuando nadie pregunta', d: 'El mínimo diario que se traslada del servicio a la vida civil.' },
@@ -69,7 +69,7 @@ export const VENDAS_TRADUCOES: Record<'destrui-tudo-e-ainda-bem' | 'o-metodo-fri
       sub: 'Forex: how to get started. Rules, risk and method for people starting out. The classic mistakes laid out in front of you, so you don’t have to pay for them yourself.',
       autor: 'Ricardo Garcia',
       autorBio: 'Fourteen years of service (Army, Marines, GNR) before he started again from zero. He founded MoreThanMoney so that nobody has to pay the price of learning alone. This is the technical manual that goes with “I Destroyed It All. And I’m Glad.”',
-      numeros: [{ v: '120', r: 'pages' }, { v: '16', r: 'animated charts' }, { v: '12', r: 'cold rules' }, { v: '30', r: 'days of plan' }],
+      numeros: [{ v: '152', r: 'pages' }, { v: '16', r: 'animated charts' }, { v: '12', r: 'cold rules' }, { v: '30', r: 'days of plan' }],
       capitulos: [
         { t: 'Setting up the workbench', d: 'Install MetaTrader 4 or 5 on phone and computer, open the demo, tidy the chart and connect the two.' },
         { t: 'The market does not know you exist', d: 'Pairs, spreads and sessions in Lisbon time, read on your own Quotes screen.' },
@@ -101,7 +101,7 @@ export const VENDAS_TRADUCOES: Record<'destrui-tudo-e-ainda-bem' | 'o-metodo-fri
       sub: 'Forex: cómo empezar. Reglas, riesgo y método para quien empieza. Los errores clásicos puestos delante, para que no los pagues tú.',
       autor: 'Ricardo Garcia',
       autorBio: 'Catorce años de servicio (Ejército, Infantería de Marina, GNR) antes de volver a empezar de cero. Fundó MoreThanMoney para que nadie tenga que pagar el precio de aprender solo. Es el manual técnico que acompaña a «Lo Destruí Todo. Y Menos Mal.».',
-      numeros: [{ v: '120', r: 'páginas' }, { v: '16', r: 'gráficos animados' }, { v: '12', r: 'reglas frías' }, { v: '30', r: 'días de plan' }],
+      numeros: [{ v: '153', r: 'páginas' }, { v: '16', r: 'gráficos animados' }, { v: '12', r: 'reglas frías' }, { v: '30', r: 'días de plan' }],
       capitulos: [
         { t: 'Montar el banco de trabajo', d: 'Instalar MetaTrader 4 o 5 en el móvil y en el ordenador, abrir la demo, ordenar el gráfico y conectar los dos.' },
         { t: 'El mercado no sabe que existes', d: 'Pares, spread y sesiones en hora de Lisboa, leídos en tus propias Cotizaciones.' },

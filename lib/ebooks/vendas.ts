@@ -64,7 +64,7 @@ const VENDAS_PT: Record<SlugBase | 'a-decisao-que-adias', PaginaVenda> = {
     sub: 'O sistema de disciplina, dinheiro e mercados que o Ricardo Garcia construiu depois de recomeçar do zero — num livro para ler como um plano de 10 semanas.',
     autor: 'Ricardo Garcia', autorFoto: '/ricardogarcia/foto-ricardo-estudio.jpg',
     autorBio: 'Adotado aos 17 meses, cresceu no Porto. Catorze anos de serviço (Exército, Fuzileiros, GNR) antes de largar o «emprego de sonho» numa das fases mais duras da vida da família. Fundou a MoreThanMoney para que ninguém tenha de pagar o preço de aprender sozinho.',
-    numeros: [{ v: '146', r: 'páginas' }, { v: '10', r: 'gráficos animados' }, { v: '11', r: 'exercícios' }, { v: '30', r: 'dias de plano' }],
+    numeros: [{ v: '148', r: 'páginas' }, { v: '10', r: 'gráficos animados' }, { v: '11', r: 'exercícios' }, { v: '30', r: 'dias de plano' }],
     capitulos: [
       { t: 'O dia em que deixei de fingir', d: 'A história, sem filtros, e a casa que se demole para fazer fundações.' },
       { t: 'Disciplina quando ninguém pergunta', d: 'O padrão mínimo diário que se transfere do serviço para a vida civil.' },
@@ -94,7 +94,7 @@ const VENDAS_PT: Record<SlugBase | 'a-decisao-que-adias', PaginaVenda> = {
     sub: 'Forex: como iniciar. Regras, risco e método para quem começa. Os erros clássicos postos à frente, para não os pagares tu.',
     autor: 'Ricardo Garcia', autorFoto: '/ricardogarcia/foto-ricardo-estudio.jpg',
     autorBio: 'Catorze anos de serviço (Exército, Fuzileiros, GNR) antes de recomeçar do zero. Fundou a MoreThanMoney para que ninguém tenha de pagar o preço de aprender sozinho. Este é o manual técnico que acompanha «Destruí Tudo. E Ainda Bem.».',
-    numeros: [{ v: '119', r: 'páginas' }, { v: '16', r: 'gráficos animados' }, { v: '12', r: 'regras frias' }, { v: '30', r: 'dias de plano' }],
+    numeros: [{ v: '151', r: 'páginas' }, { v: '16', r: 'gráficos animados' }, { v: '12', r: 'regras frias' }, { v: '30', r: 'dias de plano' }],
     capitulos: [
       { t: 'Montar a bancada', d: 'Instalar o MetaTrader 4 ou 5 no telemóvel e no computador, abrir a demo, arrumar o gráfico e ligar os dois.' },
       { t: 'O mercado não sabe que existes', d: 'Pares, spread e sessões em hora de Lisboa, lidos nas tuas próprias Cotações.' },

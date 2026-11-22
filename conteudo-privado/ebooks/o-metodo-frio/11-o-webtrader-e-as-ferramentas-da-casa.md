@@ -108,6 +108,29 @@ A Marta passou a última semana da demo para o WebTrader. Abriu um Buy Limit no 
 
 [[foto: wt-mercado.png | O estado do mercado ao lado do símbolo: aberto, fechado e quanto falta para fechar. | larga]]
 
+## Trabalhar com as estratégias da casa e os sinais delas
+
+O WebTrader não é só um sítio para clicar em comprar e vender. As estratégias da casa vivem dentro dele: na barra por cima do gráfico tens o GoldKiller, o MTM Scanner, o Sensei, o TrendShot e as outras. Liga **uma de cada vez**. Duas estratégias no mesmo gráfico são duas opiniões a gritar ao mesmo tempo, e o método frio precisa de uma só voz.
+
+- **GoldKiller:** quando há sinal, aparece uma barra por cima do gráfico com a direção, a entrada, o stop e o alvo, e um botão **«Usar este sinal»**. Esse botão só pré-preenche o ticket. Quem confirma és tu.
+- **MTM Scanner:** desenha a estrutura do mercado (BOS, CHoCH) e, quando dá sinal, marca no gráfico a entrada, o stop e dois alvos com o risco-retorno escrito (1:2 e 1:4).
+- **Sensei:** é o mais didático. Mostra uma tabela de confirmações (tendência, momento, estrutura, volatilidade) com uma nota de 0 a 20, e uma checklist do que ainda falta. Enquanto diz «a aguardar sinal», não há operação.
+- **TrendShot:** médias de tendência e os níveis de entrada e alvos na escala de preço.
+
+[[foto: wt-estrategia-scanner.png | O MTM Scanner ligado sozinho: entrada, stop e dois alvos com o risco-retorno, já desenhados. | larga]]
+
+O caminho é sempre o mesmo:
+
+1. Escolhe o ativo e o tempo do teu plano.
+2. Liga a estratégia que estudaste, e só essa.
+3. Espera que ela dê sinal. Sem sinal, não há trade.
+4. Usa o sinal (ou copia os números para o ticket) e põe o volume em **Risco %**.
+5. Confirma, liga o Auto BE e o Auto Trailing, e escreve no diário que estratégia usaste.
+
+Ao fim de um mês, o diário diz-te que estratégia funciona contigo. É por isso que o setup tem uma etiqueta própria («Sinal GoldKiller», «Sinal Sensei», «Sinal MTM Scanner»).
+
+[[foto: wt-estrategia-sensei.png | O Sensei: dez confirmações em vinte e a checklist do que falta. Ainda não é sinal. | larga]]
+
 ## Histórico, estatísticas e diário
 
 No painel de baixo estão as três peças do capítulo 9, já ligadas entre si:
