@@ -129,6 +129,17 @@ async function montar({ id, marca, video, cin }) {
     } catch (e) { log('apoio falhou', u, e.message) }
   }
 
+  // Referências visuais (22/11, «se falas do GTA VI, mostra o GTA VI»): imagem real do que a voz nomeia
+  const refs = []
+  for (const [i, r] of (Array.isArray(cin.visuais) ? cin.visuais : []).slice(0, 4).entries()) {
+    try {
+      if (!r || !/^https:\/\//.test(r.url || '') || !r.quando) continue
+      const nome = `${id}-ref-${i}.jpg`
+      await baixar(r.url, path.join(AUTO, nome))
+      refs.push({ ...r, src: `stock/auto/${nome}` })
+    } catch (e) { log('referência falhou', r && r.url, e.message) }
+  }
+
   // palavras com tempos
   const pal = path.join(AUTO, `${id}-palavras.json`)
   let palavras = arg('palavras') ? JSON.parse(fs.readFileSync(arg('palavras'), 'utf8')) : []
@@ -173,6 +184,20 @@ async function montar({ id, marca, video, cin }) {
     if (!config.lista) config.lista = { titulo: cin.lista.titulo || '', itens, ...(cin.lista.contagem ? { contagem: true } : {}) }
     config.chips = []
     config.imagens = []
+  }
+  if (refs.length) {
+    const nn = (t) => String(t).toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]/g, '')
+    const fimR = config.cta.de - 0.4
+    config.referencias = []
+    for (const r of refs) {
+      const alvo = nn(String(r.quando).split(/\s+/)[0]).slice(0, 5)
+      const p = palavras.find((w) => w.ini >= config.gancho.ate - 0.3 && w.ini < fimR && alvo && nn(w.w).startsWith(alvo))
+        || palavras.find((w) => w.ini < fimR && alvo && nn(w.w).startsWith(alvo))
+      if (!p) { log('referência sem palavra', r.quando); continue }
+      const em = +Math.max(0.2, p.ini - 0.1).toFixed(2)
+      if (config.referencias.some((x) => Math.abs(x.em - em) < 2)) continue
+      config.referencias.push({ em, ate: +Math.min(fimR, em + (Number(r.dur) || 2.2)).toFixed(2), src: r.src, ...(r.etiqueta ? { t: String(r.etiqueta).slice(0, 24) } : {}), ...(r.fonte ? { fonte: String(r.fonte).slice(0, 40) } : {}) })
+    }
   }
   await capturarDemos(config, stockPresente())
   log('peça', JSON.stringify(config))
@@ -350,7 +375,16 @@ function linhasDaCapa(cin) {
 async function subirCapa(t, marca, cin) {
   if (!t.capa_subir_url) return false
   const saida = path.join(AUTO, `${t.id}-capa.jpg`)
-  correr('python3', [path.join(AQUI, 'capas', 'capa_reel.py'), `--marca=${marca}`, `--semente=${t.id}`, `--linhas=${JSON.stringify(linhasDaCapa(cin))}`, `--saida=${saida}`])
+  // 22/11: a imagem real de que o reel fala (1.ª referência visual, ou cin.capa_ref) entra na capa; logo opcional.
+  const extra = []
+  const ref0 = path.join(AUTO, `${t.id}-ref-0.jpg`)
+  if (cin.capa_ref && /^https:\/\//.test(cin.capa_ref)) await baixar(cin.capa_ref, ref0).catch(() => {})
+  if (fs.existsSync(ref0)) extra.push(`--ref=${ref0}`)
+  if (cin.capa_logo && /^https:\/\//.test(cin.capa_logo)) {
+    const lg = path.join(AUTO, `${t.id}-capa-logo.png`)
+    if (await baixar(cin.capa_logo, lg).then(() => true).catch(() => false)) extra.push(`--ref_logo=${lg}`)
+  }
+  correr('python3', [path.join(AQUI, 'capas', 'capa_reel.py'), `--marca=${marca}`, `--semente=${t.id}`, `--linhas=${JSON.stringify(linhasDaCapa(cin))}`, ...extra, `--saida=${saida}`])
   const r = await fetch(t.capa_subir_url, { method: 'PUT', headers: { 'content-type': 'image/jpeg', 'x-upsert': 'true' }, body: fs.readFileSync(saida) })
   if (!r.ok) throw new Error(`upload capa ${r.status}`)
   return true

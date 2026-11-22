@@ -464,6 +464,28 @@ const FotoPlanos: React.FC<{ k: string; de: number; ate: number }> = ({ k, de, a
   )
 }
 
+/* ── Referências visuais (22/11): a imagem real do que a voz nomeia salta em cartão quando a palavra é dita ── */
+const Referencias: React.FC<{ a: Anuncio }> = ({ a }) => {
+  const fr = useCurrentFrame()
+  const { fps } = useVideoConfig()
+  const r = (a.referencias || []).find((x) => fr >= f(x.em) - 2 && fr <= f(x.ate) + 8)
+  if (!r) return null
+  const A = f(r.em), B = f(r.ate)
+  const s = spring({ frame: fr - A, fps, config: { damping: 12, stiffness: 200 } })
+  const sai = interpolate(fr, [B, B + 8], [1, 0], clamp)
+  const kb = interpolate(fr, [A, B], [1.0, 1.12], clamp)
+  const rot = (A % 2 ? 1 : -1) * 2.5
+  return (
+    <div style={{ position: 'absolute', left: 130, top: a.lista ? 230 : 300, width: 820, height: 980, zIndex: 8, opacity: sai, transform: `translateY(${(1 - s) * 140}px) scale(${0.82 + 0.18 * s}) rotate(${rot * s}deg)` }}>
+      <div style={{ position: 'absolute', inset: 0, borderRadius: 34, overflow: 'hidden', border: `5px solid ${OURO_CLARO}`, boxShadow: `0 40px 110px rgba(0,0,0,.75), 0 0 60px ${OURO}55`, background: '#000' }}>
+        <Img src={staticFile(r.src)} style={{ width: '100%', height: '100%', objectFit: 'cover', transform: `scale(${kb})` }} />
+        {r.fonte ? <div style={{ position: 'absolute', right: 14, bottom: 10, fontFamily: OSW, fontSize: 22, color: 'rgba(255,255,255,.75)', textShadow: '0 2px 6px #000' }}>{r.fonte}</div> : null}
+      </div>
+      {r.t ? <div style={{ position: 'absolute', left: -20, top: -34, padding: '10px 26px', background: OURO_CLARO, color: '#0a0907', fontFamily: ANTON, fontSize: 54, textTransform: 'uppercase', borderRadius: 12, transform: 'rotate(-4deg)', boxShadow: '0 12px 30px rgba(0,0,0,.6)' }}>{r.t}</div> : null}
+    </div>
+  )
+}
+
 export const Video: React.FC = () => {
   const k = chave()
   const a = anuncioDe(k)
@@ -503,6 +525,7 @@ export const Video: React.FC = () => {
       {fr >= fim - 6 && <AbsoluteFill style={{ zIndex: 4, opacity: interpolate(fr, [fim - 6, fim + 10], [0, 0.6], clamp) }}><FundoMarca /></AbsoluteFill>}
       <Gemeo k={k} a={a} />
       <Gancho a={a} />
+      <Referencias a={a} />
       <Legendas k={k} a={a} />
       <Chips a={a} />
       <ListaViva a={a} />

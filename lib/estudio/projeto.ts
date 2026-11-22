@@ -158,6 +158,14 @@ export type Cinematico = {
   audio?: string
   /** Estilo de edição: classico · palavra · nativo · noir (sem ele o robô roda por reel). */
   estilo?: 'classico' | 'palavra' | 'nativo' | 'noir'
+  /**
+   * Referências visuais (22/11): imagem real do que a voz nomeia (GTA VI, Munger, o gráfico…), mostrada quando a
+   * palavra `quando` é dita. url https de fonte livre ou kit de imprensa oficial; fonte = crédito no canto.
+   */
+  visuais?: { quando: string; url: string; etiqueta?: string; fonte?: string; dur?: number }[]
+  /** Capa com referência (22/11): imagem real à direita (omissão: 1.ª de visuais) e logo da marca citada no canto. */
+  capa_ref?: string
+  capa_logo?: string
   /** Funil que o CTA alimenta: Educação · PU Prime IB · Ricardo · B2B. */
   funil?: string
 }
@@ -186,6 +194,9 @@ export function normalizarCinematico(v: any): Cinematico | null {
     ...(v.narrado === true ? { narrado: true } : {}),
     ...normalizarCapa(v.capa),
     ...(typeof v.capa_url === 'string' && /^https:\/\//.test(v.capa_url) ? { capa_url: v.capa_url.slice(0, 400) } : {}),
+    ...(typeof v.capa_ref === 'string' && /^https:\/\//.test(v.capa_ref) ? { capa_ref: v.capa_ref.slice(0, 400) } : {}),
+    ...(typeof v.capa_logo === 'string' && /^https:\/\//.test(v.capa_logo) ? { capa_logo: v.capa_logo.slice(0, 400) } : {}),
+    ...(Array.isArray(v.visuais) ? { visuais: v.visuais.filter((r: any) => r && typeof r.quando === 'string' && typeof r.url === 'string' && /^https:\/\//.test(r.url)).slice(0, 4).map((r: any) => ({ quando: txt(r.quando, 40).trim(), url: r.url.slice(0, 400), ...(r.etiqueta ? { etiqueta: txt(r.etiqueta, 24).trim() } : {}), ...(r.fonte ? { fonte: txt(r.fonte, 40).trim() } : {}), ...(Number(r.dur) > 0 ? { dur: Math.min(4, Number(r.dur)) } : {}) })) } : {}),
     ...(['classico', 'palavra', 'nativo', 'noir'].includes(v.estilo) ? { estilo: v.estilo } : {}),
     ...(v.sem_musica === true ? { sem_musica: true } : {}),
     ...(typeof v.audio === 'string' && v.audio.trim() ? { audio: txt(v.audio, 200).trim() } : {}),
