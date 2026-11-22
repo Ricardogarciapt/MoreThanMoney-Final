@@ -493,6 +493,19 @@ html:not(.com-gsap) .fp { opacity: 1; }
 .form-rg .armadilha { position: absolute; left: -9999px; width: 1px; height: 1px; overflow: hidden; }
 .form-rg .estado { grid-column: 1 / -1; margin: 0; font-size: 15px; min-height: 1.4em; }
 .form-rg .estado.ok { color: #3ecf8e; } .form-rg .estado.erro { color: #f87171; }
+.form-rg.rapido { max-width: 520px; margin-top: 18px; padding: 16px; gap: 10px; grid-template-columns: 7.2rem 1fr; }
+.form-rg.rapido .rapido-tit { margin: 0; color: #fff; font-weight: 600; font-size: 16px; }
+.form-rg.rapido .rapido-sub { margin: -4px 0 2px; font-size: 13px; color: var(--cinza); }
+.form-rg.rapido .consent { font-size: 12.5px; line-height: 1.35; }
+.form-rg.rapido .consent a { color: inherit; }
+.form-rg.rapido .btn { width: 100%; font-size: 15px; padding: 12px 14px; }
+.form-rg .sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
+.btn-wa { background: rgba(37,211,102,.12); border: 1px solid rgba(37,211,102,.55); color: #fff; }
+@media (max-width: 520px) { .form-rg.rapido .btn { grid-column: 1 / -1; } }
+/* Telemóvel: o contacto tem de caber no primeiro ecrã (22/11/2026). Foto pequena, sem o parágrafo longo. */
+@media (max-width: 860px) { .hero { padding-top: 16px !important; } .hero .foto { max-width: 120px !important; } .hero .foto .selo, .hero .logo { display: none; } .hero .sub, .hero .nota, .hero .handle { display: none; } .hero .wrap { gap: 18px; } .form-rg.rapido { margin-top: 14px; } }
+.cookies-rg { position: fixed; left: 0; right: 0; bottom: 0; z-index: 60; display: flex; gap: 10px; align-items: center; justify-content: space-between; padding: 10px 16px; background: rgba(12,15,22,.96); border-top: 1px solid #262d3d; color: #c9ced8; font-size: 12.5px; }
+.cookies-rg a { color: inherit; } .cookies-rg button { font: inherit; font-weight: 600; border-radius: 8px; padding: 8px 12px; cursor: pointer; border: 1px solid #39425a; background: transparent; color: #fff; } .cookies-rg button.sim { background: var(--azul-faixa); border-color: transparent; }
 .form-iman { margin: 18px 0 14px; border-color: rgba(210,166,60,.35); box-shadow: 0 0 0 1px rgba(210,166,60,.08), 0 18px 40px rgba(0,0,0,.35); }
 .form-iman .iman-tit { margin: 0; } .form-iman .iman-tit b { display: block; font-family: Oswald, sans-serif; font-size: 20px; letter-spacing: .6px; color: var(--ouro-claro); text-transform: uppercase; } .form-iman .iman-tit span { color: #c9ced8; font-size: 15px; }
 .form-iman .tel-linha { display: flex; gap: 8px; margin: 0; } .form-iman .tel-linha select { width: 112px; flex: none; } .form-iman .consent input { accent-color: var(--ouro); }
@@ -552,6 +565,19 @@ html:not(.com-gsap) .fp { opacity: 1; }
         <img class="logo aparece" src="/ricardogarcia/logo-ricardo-garcia.png" alt="Ricardo Garcia logo" width="1414" height="420">
         <h1 class="palavras" data-palavras>Destruí a minha vida<br><span class="pincel"><span>para a reconstruir</span></span></h1>
         <p class="sub aparece">Sou o Ricardo Garcia. Vim de uma família adotiva, de origem humilde, no Porto. Catorze anos de farda, Exército, Fuzileiros e GNR. Larguei o emprego de sonho e recomecei do zero. Hoje sou uma pessoa completamente diferente, e é isso que a MoreThanMoney existe para te dar: conhecimento, ferramentas e uma equipa ao teu lado.</p>
+        <!-- Contacto rápido acima da dobra (22/11/2026): nome + WhatsApp → CRM (pedidos_contacto), origem ricardogarcia + anúncio. -->
+        <form class="form-rg rapido aparece" id="formRapido" novalidate>
+          <p class="larga rapido-tit">Começa grátis: 3 dias de acesso, sem cartão</p>
+          <p class="larga rapido-sub">Deixa o nome e o WhatsApp e mando-te o acesso. Ou fala já comigo.</p>
+          <label class="larga"><span class="sr">Nome</span><input name="nome" autocomplete="name" maxlength="120" placeholder="O teu nome"></label>
+          <label class="ind"><span class="sr">Indicativo</span><select name="indicativo" autocomplete="tel-country-code"><option value="+351">+351 PT</option><option value="+55">+55 BR</option><option value="+34">+34 ES</option><option value="+33">+33 FR</option><option value="+41">+41 CH</option><option value="+44">+44 UK</option><option value="+49">+49 DE</option><option value="+352">+352 LU</option><option value="+244">+244 AO</option><option value="+258">+258 MZ</option><option value="+238">+238 CV</option><option value="+1">+1 US/CA</option></select></label>
+          <label class="tel-r"><span class="sr">WhatsApp</span><input name="telefone" type="tel" inputmode="tel" autocomplete="tel-national" maxlength="40" placeholder="O teu WhatsApp"></label>
+          <label class="armadilha" aria-hidden="true">Website<input name="site" tabindex="-1" autocomplete="off"></label>
+          <label class="consent larga"><input type="checkbox" name="c_whatsapp"><span>Aceito que a MoreThanMoney me envie mensagens por WhatsApp para o número indicado. Saio quando quiser, respondendo SAIR. <a href="/privacidade" target="_blank" rel="noopener">Privacidade</a></span></label>
+          <button class="btn btn-azul" type="submit">Quero começar grátis</button>
+          <a class="btn btn-wa" id="rapidoWa" href="https://wa.me/351912666699?text=Ol%C3%A1%20Ricardo%2C%20vim%20da%20tua%20p%C3%A1gina%20e%20quero%20saber%20mais." target="_blank" rel="noopener">Falar já no WhatsApp</a>
+          <p class="estado" id="estadoRapido" role="status" aria-live="polite"></p>
+        </form>
         <div class="handle aparece">@ricardogarciapt · fundador da MoreThanMoney</div>
         <div class="nota kalam aparece">e tu, o que estás disposto a mudar?</div>
         <div class="acoes aparece">
@@ -1262,7 +1288,7 @@ window.addEventListener('load', function () {
   if (hero) {
     var tl = gsap.timeline({ scrollTrigger: { trigger: hero, start: 'top top', end: 'bottom top', scrub: true } });
     tl.to('.hero .foto', { yPercent: -14, scale: 1.06, rotate: -1.5, ease: 'none' }, 0)
-      .to('.hero .wrap > div:first-child', { y: -90, opacity: .15, ease: 'none' }, 0)
+      .to('.hero .wrap > div:first-child > :not(.rapido)', { y: -90, opacity: .15, ease: 'none' }, 0)
       .to('#cgi', { opacity: .25, scale: 1.15, ease: 'none' }, 0)
       .to('.desce', { opacity: 0, ease: 'none' }, 0);
   }
@@ -1329,6 +1355,62 @@ window.addEventListener('load', function () {
 
   ST.refresh();
 });
+</script>
+<script>
+/* Contacto rápido + pixel Meta só com consentimento (22/11/2026). Mesmo consentimento das /f/* (mtm_cookies_medicao). */
+(function () {
+  var CH = 'mtm_cookies_medicao', PIXEL = '255864064922734';
+  function escolha() { try { return localStorage.getItem(CH); } catch (e) { return null; } }
+  function carregar() {
+    if (window.fbq) return;
+    var f = function () { f.callMethod ? f.callMethod.apply(f, arguments) : f.queue.push(arguments); };
+    f.push = f; f.loaded = true; f.version = '2.0'; f.queue = []; window.fbq = f; window._fbq = f;
+    var s = document.createElement('script'); s.async = true; s.src = 'https://connect.facebook.net/en_US/fbevents.js'; document.head.appendChild(s);
+    f('init', PIXEL); f('track', 'PageView'); f('track', 'ViewContent', { content_name: 'ricardogarcia', content_category: 'ricardogarcia' });
+  }
+  function ev(nome) { try { if (escolha() === 'sim' && window.fbq) fbq('track', nome, { content_name: 'ricardogarcia', content_category: 'ricardogarcia' }); } catch (e) {} }
+  var e0 = escolha();
+  if (e0 === 'sim') carregar();
+  else if (e0 !== 'nao') {
+    var b = document.createElement('div'); b.className = 'cookies-rg'; b.setAttribute('role', 'dialog'); b.setAttribute('aria-label', 'Cookies de medição');
+    b.innerHTML = '<span>Cookies de medição da Meta, só para saber que anúncio te trouxe. Só com o teu OK. <a href="/privacidade">Privacidade</a></span><span style="display:flex;gap:8px;flex:none"><button type="button" class="nao">Recusar</button><button type="button" class="sim">Aceitar</button></span>';
+    b.querySelector('.nao').onclick = function () { try { localStorage.setItem(CH, 'nao'); } catch (e) {} b.remove(); };
+    b.querySelector('.sim').onclick = function () { try { localStorage.setItem(CH, 'sim'); } catch (e) {} b.remove(); carregar(); };
+    document.body.appendChild(b);
+  }
+
+  var origem = (function () {
+    try {
+      var q = new URLSearchParams(location.search), so = function (v) { return String(v || '').toLowerCase().replace(/[^\w\-.]/g, '').slice(0, 40); };
+      var p = [], s = so(q.get('utm_source')) || (q.get('fbclid') ? 'meta' : ''), c = so(q.get('utm_campaign')), a = so(q.get('utm_content'));
+      if (s) p.push('s=' + s); if (c) p.push('c=' + c); if (a) p.push('a=' + a);
+      return ('ricardogarcia' + (p.length ? '?' + p.join('&') : '')).slice(0, 120);
+    } catch (e) { return 'ricardogarcia'; }
+  })();
+  var T = window.T || function (s) { return s; };
+  var wa = document.getElementById('rapidoWa'); if (wa) wa.addEventListener('click', function () { ev('Contact'); });
+  var f = document.getElementById('formRapido'); if (!f) return;
+  var est = document.getElementById('estadoRapido'), bt = f.querySelector('button[type=submit]');
+  function diz(t, ok) { est.textContent = t; est.className = 'estado ' + (ok ? 'ok' : 'erro'); }
+  f.addEventListener('submit', function (e) {
+    e.preventDefault();
+    var nome = f.nome.value.trim(), tel = f.telefone.value.trim();
+    if (nome.length < 2) return diz(T('Escreve o teu nome.'));
+    if (tel.replace(/\D/g, '').length < 6) return diz(T('Escreve o teu número de WhatsApp.'));
+    if (!f.c_whatsapp.checked) return diz(T('Marca a caixa para te podermos mandar mensagem.'));
+    bt.disabled = true; diz(T('A enviar…'), true);
+    fetch('/api/pedido-contacto', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({
+      nome: nome, indicativo: f.indicativo.value, telefone: tel, email: null, interesse: 'formacao', melhorHora: 'qualquer',
+      consentimentos: { chamada: false, whatsapp: f.c_whatsapp.checked === true, email: false }, origem: origem, ag: null, site: f.site.value }) })
+      .then(function (r) { return r.json().catch(function () { return {}; }).then(function (j) { return { ok: r.ok && j.ok, j: j }; }); })
+      .then(function (x) {
+        if (x.ok) { diz(T('Recebido! Vamos mandar-te mensagem no WhatsApp. Se não quiseres esperar, carrega em «Falar já no WhatsApp».'), true); ev('Lead'); try { if (window.gtag) gtag('event', 'generate_lead', { lead_source: 'ricardogarcia-rapido' }); } catch (_) {} bt.hidden = true; }
+        else { var m = x.j.erro || (x.j.erros && Object.keys(x.j.erros).map(function (k) { return x.j.erros[k]; })[0]) || T('Não consegui enviar. Tenta outra vez.'); diz(m); }
+      })
+      .catch(function () { diz(T('Sem ligação. Tenta outra vez.')); })
+      .then(function () { bt.disabled = false; });
+  });
+})();
 </script>
 </body>
 </html>
