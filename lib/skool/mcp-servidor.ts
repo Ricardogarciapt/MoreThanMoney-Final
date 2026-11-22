@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { timingSafeEqual } from 'crypto'
 import { FERRAMENTAS_SKOOL, ferramentaSkool } from '@/lib/skool/ferramentas'
+import { getSupabaseAdmin } from '@/lib/supabase-admin-client'
 
 /**
  * Servidor MCP do Skool (JSON-RPC sobre HTTP, "streamable HTTP" sem stream — cada pedido tem uma
@@ -10,7 +11,8 @@ import { FERRAMENTAS_SKOOL, ferramentaSkool } from '@/lib/skool/ferramentas'
  *  · `Authorization: Bearer <chave>` em /api/mcp/skool (Claude Code, AIOS, scripts);
  *  · no próprio URL, /api/mcp/skool/<chave> (conectores personalizados do claude.ai, que só pedem
  *    um URL). O URL passa a ser o segredo: não se partilha.
- * Sem `SKOOL_MCP_TOKEN` definido, o endpoint fica fechado (503).
+ * A chave vem da env `SKOOL_MCP_TOKEN` ou, em falta, de `integracoes_privadas.skool_mcp_token` (só a service role lê),
+ * para se poder ligar/rodar sem mexer na Vercel. Sem nenhuma das duas, o endpoint fica fechado (503).
  */
 
 const VERSOES = ['2025-06-18', '2025-03-26', '2024-11-05']
@@ -21,9 +23,28 @@ function igual(dado: string, esperado: string): boolean {
   return a.length === b.length && timingSafeEqual(a, b)
 }
 
-function verificar(req: NextRequest, chaveNoUrl?: string): NextResponse | null {
-  const esperado = process.env.SKOOL_MCP_TOKEN?.trim()
-  if (!esperado) return NextResponse.json({ error: 'SKOOL_MCP_TOKEN não está definido — endpoint fechado' }, { status: 503 })
+let cacheChave: { v: string; ate: number } | null = null
+
+async function chaveEsperada(): Promise<string> {
+  const env = process.env.SKOOL_MCP_TOKEN?.trim()
+  if (env) return env
+  if (cacheChave && cacheChave.ate > Date.now()) return cacheChave.v
+  let v = ''
+  try {
+    const { data } = await getSupabaseAdmin().from('integracoes_privadas').select('valor').eq('chave', 'skool_mcp_token').maybeSingle()
+    const bruto = data?.valor as unknown
+    v = (typeof bruto === 'string' ? bruto : (bruto as { token?: string } | null)?.token ?? '').trim()
+  } catch {
+    v = ''
+  }
+  cacheChave = { v, ate: Date.now() + 60_000 }
+  return v
+}
+
+async function verificar(req: NextRequest, chaveNoUrl?: string): Promise<NextResponse | null> {
+  const esperado = await chaveEsperada()
+  // Chaves curtas não contam: um valor vazio ou de teste não pode abrir o Skool inteiro.
+  if (esperado.length < 24) return NextResponse.json({ error: 'Chave do conector Skool não definida — endpoint fechado' }, { status: 503 })
   const dado = (chaveNoUrl ?? (req.headers.get('authorization') ?? '').replace(/^Bearer\s+/i, '')).trim()
   if (!dado || !igual(dado, esperado)) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   return null
@@ -75,7 +96,7 @@ async function tratar(p: Pedido): Promise<object | null> {
 }
 
 export async function postMcpSkool(req: NextRequest, chaveNoUrl?: string) {
-  const recusa = verificar(req, chaveNoUrl)
+  const recusa = await verificar(req, chaveNoUrl)
   if (recusa) return recusa
   const corpo = await req.json().catch(() => null)
   if (corpo === null) return NextResponse.json(falha(null, -32700, 'JSON inválido'), { status: 400 })
@@ -89,7 +110,7 @@ export async function postMcpSkool(req: NextRequest, chaveNoUrl?: string) {
 
 /** GET: sem stream SSE (405 para clientes MCP); com JSON, diz se está de pé. */
 export async function getMcpSkool(req: NextRequest, chaveNoUrl?: string) {
-  const recusa = verificar(req, chaveNoUrl)
+  const recusa = await verificar(req, chaveNoUrl)
   if (recusa) return recusa
   if ((req.headers.get('accept') ?? '').includes('text/event-stream')) {
     return new NextResponse(null, { status: 405, headers: { Allow: 'POST' } })

@@ -13,7 +13,7 @@ import { getSupabaseAdmin } from '@/lib/supabase-admin-client'
  *
  * ── A sessão ────────────────────────────────────────────────────────────────────────────────
  * Cookies `auth_token` (dura meses), `client_id` e `aws-waf-token` (~3,5 dias). Vêm de
- * `site_settings.skool_sessao` (renovável pela ferramenta `skool_sessao_guardar`, sem deploy) ou,
+ * `integracoes_privadas.skool_sessao` (tabela sem acesso público — site_settings é legível por todos) (renovável pela ferramenta `skool_sessao_guardar`, sem deploy) ou,
  * em falta, da env `SKOOL_COOKIE`. NUNCA em código nem em commits.
  */
 
@@ -35,8 +35,8 @@ export async function lerSessao(): Promise<SessaoSkool> {
   if (cacheSessao && cacheSessao.ate > Date.now()) return cacheSessao.s
   let s: SessaoSkool | null = null
   try {
-    const { data } = await getSupabaseAdmin().from('site_settings').select('value').eq('key', CHAVE_SESSAO).maybeSingle()
-    const v = data?.value as Partial<SessaoSkool> | undefined
+    const { data } = await getSupabaseAdmin().from('integracoes_privadas').select('valor').eq('chave', CHAVE_SESSAO).maybeSingle()
+    const v = data?.valor as Partial<SessaoSkool> | undefined
     if (v?.cookie) s = { cookie: v.cookie, grupo: v.grupo || grupoPorOmissao(), atualizadaEm: v.atualizadaEm }
   } catch {
     // Sem Supabase neste ambiente: cai para a env.
@@ -68,8 +68,8 @@ export async function guardarSessao(cookieBruto: string, grupo?: string): Promis
   const atual = await lerSessao().catch(() => null)
   const valor: SessaoSkool = { cookie, grupo: grupo || atual?.grupo || grupoPorOmissao(), atualizadaEm: new Date().toISOString() }
   const { error } = await getSupabaseAdmin()
-    .from('site_settings')
-    .upsert({ key: CHAVE_SESSAO, value: valor, is_public: false }, { onConflict: 'key' })
+    .from('integracoes_privadas')
+    .upsert({ chave: CHAVE_SESSAO, valor, atualizado_em: new Date().toISOString() }, { onConflict: 'chave' })
   if (error) throw new Error(`Não consegui guardar a sessão: ${error.message}`)
   cacheSessao = null
   return { cookies: cookie.split(';').map((c) => c.split('=')[0].trim()) }

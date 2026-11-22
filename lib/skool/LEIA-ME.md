@@ -19,9 +19,11 @@ palavra-passe do Skool). Aqui fica tudo em casa e sem custo.
 
 ## Variáveis (Vercel, Production)
 
-- `SKOOL_MCP_TOKEN` — chave do conector (gera com `openssl rand -hex 32`). Sem ela o endpoint responde 503.
+- `SKOOL_MCP_TOKEN` — chave do conector (`openssl rand -hex 32`, mín. 24 caracteres). Em alternativa fica em `integracoes_privadas.skool_mcp_token`. Sem nenhuma, 503.
+
+`integracoes_privadas` (migração 281) tem RLS sem políticas: só o servidor lê. **Não usar `site_settings` para segredos — é legível por qualquer pessoa.**
 - `SKOOL_COOKIE` — opcional: cabeçalho Cookie do browser com `auth_token`, `client_id`, `aws-waf-token`.
-  Em alternativa, a ferramenta `skool_sessao_guardar` grava-o em `site_settings.skool_sessao` (renova sem deploy).
+  Em alternativa, a ferramenta `skool_sessao_guardar` grava-o em `integracoes_privadas.skool_sessao` (renova sem deploy).
 - `SKOOL_GRUPO` — opcional, slug da comunidade (omissão `morethanmoney-1132`).
 
 Nunca pôr cookies nem chaves no código ou em commits.
