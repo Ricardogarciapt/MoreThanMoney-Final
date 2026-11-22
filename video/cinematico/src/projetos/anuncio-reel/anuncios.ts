@@ -24,6 +24,11 @@ export type Anuncio = {
    *  noir     — imagem a preto e branco de alto contraste; só as palavras ditas acendem a ouro
    */
   estilo?: 'classico' | 'palavra' | 'nativo' | 'noir'
+  /**
+   * Referências visuais (22/11, Ricardo: «se falas do GTA VI, mostra o GTA VI»): imagem real do que a voz nomeia,
+   * em cartão que salta por cima do vídeo quando a palavra é dita (em..ate em s), com etiqueta opcional e fonte.
+   */
+  referencias?: { em: number; ate: number; src: string; t?: string; fonte?: string }[]
   /** Lista viva: itens entram em `em` (s). contagem = numeração decrescente (5,4,3…). */
   lista?: { titulo: string; itens: { em: number; t: string }[]; contagem?: boolean }
 }

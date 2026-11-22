@@ -89,8 +89,38 @@ def faixa(img_txt):
     base.alpha_composite(img_txt, (px + 15, py))
     return base.rotate(2.2, resample=Image.BICUBIC, expand=True)
 
+def referencia(im, c, cor):
+    """22/11 (Ricardo, exemplo «O CEO da NVIDIA também falha»): a imagem real de que o reel fala entra na capa,
+    à direita e em cima, a desvanecer para o fundo; o Ricardo fica à esquerda. Logo opcional no canto."""
+    rp = c.get('ref')
+    if rp and os.path.exists(rp):
+        r = Image.open(rp).convert('RGB')
+        rw, rh = 640, 900
+        k = max(rw / r.size[0], rh / r.size[1])
+        r = r.resize((int(r.size[0] * k) + 1, int(r.size[1] * k) + 1), Image.LANCZOS)
+        r = r.crop(((r.size[0] - rw) // 2, (r.size[1] - rh) // 3, (r.size[0] - rw) // 2 + rw, (r.size[1] - rh) // 3 + rh))
+        r = ImageEnhance.Contrast(r).enhance(1.1); r = ImageEnhance.Color(r).enhance(0.8)
+        r = Image.blend(r, Image.new('RGB', r.size, cor), 0.18)
+        m = Image.new('L', (rw, rh), 0); dm = ImageDraw.Draw(m)
+        for y in range(rh):
+            fy = 1.0 if y < rh - 300 else max(0.0, (rh - y) / 300)
+            fy = fy if y > 200 else fy * (y / 200) ** 1.2
+            dm.line([(0, y), (rw, y)], fill=int(255 * fy))
+        lx = Image.new('L', (rw, rh), 0); dl = ImageDraw.Draw(lx)
+        for x in range(rw):
+            dl.line([(x, 0), (x, rh)], fill=int(255 * min(1.0, x / 240) ** 1.3))
+        import numpy as np
+        m = Image.fromarray(np.minimum(np.array(m), np.array(lx)))
+        im.paste(r, (W - rw, 250), m)
+    lp = c.get('ref_logo')
+    if lp and os.path.exists(lp):
+        lg = Image.open(lp).convert('RGBA'); lg.thumbnail((260, 170))
+        im.alpha_composite(lg, (W - lg.size[0] - 60, 80))
+    return im
+
 def capa(c, saida):
-    im = gradientes(foto_916(c['foto'], c.get('cx', 600))).convert('RGBA')
+    im = gradientes(foto_916(c['foto'], c.get('cx', 600) + (230 if c.get('ref') else 0))).convert('RGBA')
+    im = referencia(im, c, PAL['tinta'])
     blocos = []
     for estilo, txt in [l for l in c['linhas'] if l[0] != 'k']:
         maxt = c.get('tam', {}).get(estilo, 190 if estilo != 'box' else 110)
@@ -161,7 +191,7 @@ def _selo(tam):
 def capa_mtm(c, saida):
     fundo = _brilho().convert('RGBA')
     # foto: grade quente e escura, a desvanecer para o carvão nas bordas e em baixo
-    fo = foto_916(c['foto'], c.get('cx', 600))
+    fo = foto_916(c['foto'], c.get('cx', 600) + (230 if c.get('ref') else 0))
     fo = ImageEnhance.Color(fo).enhance(0.55); fo = ImageEnhance.Brightness(fo).enhance(0.82)
     fo = Image.blend(fo, Image.new('RGB', (W, H), (60, 42, 12)), 0.16)
     m = Image.new('L', (W, H), 0); dm = ImageDraw.Draw(m)
@@ -175,7 +205,7 @@ def capa_mtm(c, saida):
     m = Image.fromarray(__import__('numpy').minimum(__import__('numpy').array(m), __import__('numpy').array(lados)))
     fundo.alpha_composite(_velas(c.get('semente', 'x')))
     fundo.paste(fo, (0, 0), m)
-    im = fundo
+    im = referencia(fundo, c, (60, 42, 12))
     d = ImageDraw.Draw(im)
     # cabeçalho como nos carrosséis
     selo = _selo(104); im.alpha_composite(selo, (64, 70))
@@ -222,6 +252,8 @@ if __name__ == '__main__' and any(a.startswith('--') for a in sys.argv[1:]):
     c = {'foto': os.path.join(AQUI, 'fotos', foto), 'cx': int(a.get('cx') or CX.get(foto, 560)), 'linhas': json.loads(a['linhas'])}
     if a.get('nota'): c['nota'] = a['nota']
     if a.get('kicker'): c['kicker'] = a['kicker']
+    if a.get('ref'): c['ref'] = a['ref']
+    if a.get('ref_logo'): c['ref_logo'] = a['ref_logo']
     c['semente'] = a.get('semente', 'x')
     (capa_mtm if a.get('marca') == 'morethanmoney' else capa)(c, a['saida'])
     print(a['saida'], foto)
