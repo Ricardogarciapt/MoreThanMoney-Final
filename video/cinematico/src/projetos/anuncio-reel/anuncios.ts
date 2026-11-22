@@ -161,7 +161,7 @@ export const LEGENDAS = legendas as unknown as Record<string, Seg[]>
  * aqui à mão. O robô (video/cinematico/robo-cinematico.mjs) gera-a com auto.mjs a partir do vídeo do
  * gémeo + Whisper + guião e passa { anuncio: 'auto', auto: { config, legendas, video, musica } }.
  */
-export type Auto = { config: Anuncio; legendas: Seg[]; video: string; musica: string }
+export type Auto = { config: Anuncio; legendas: Seg[]; video: string; musica: string; semMusica?: boolean }
 type Props = { anuncio?: string; auto?: Auto }
 const propsAtuais = (): Props => {
   try { return getInputProps() as Props } catch { return {} }
@@ -170,6 +170,8 @@ const autoDe = (k: string, props?: Props): Auto | null => (k === 'auto' ? (props
 export const anuncioDe = (k: string, props?: Props): Anuncio => autoDe(k, props)?.config ?? ANUNCIOS[k]
 export const segsDe = (k: string, props?: Props): Seg[] => autoDe(k, props)?.legendas ?? LEGENDAS[k]
 export const videoDe = (k: string) => autoDe(k)?.video ?? `stock/anuncios/${k}.mp4`
+// 22/11 (Ricardo): reels «para música trend» saem só com a voz; ele junta o áudio trend na app.
+export const semMusica = (k: string) => !!autoDe(k)?.semMusica
 export const musicaDe = (k: string) => autoDe(k)?.musica ?? `stock/anuncios/${k}-musica.wav`
 export const fimVoz = (k: string, props?: Props) => { const s = segsDe(k, props); return s[s.length - 1][1] }
 export const duracao = (k: string, props?: Props) => fimVoz(k, props) + CAUDA

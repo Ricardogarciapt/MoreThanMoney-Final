@@ -1,6 +1,6 @@
 import React from 'react'
 import { AbsoluteFill, Audio, Freeze, Img, OffthreadVideo, Sequence, getInputProps, interpolate, random, spring, staticFile, useCurrentFrame, useVideoConfig } from 'remotion'
-import { anuncioDe, segsDe, videoDe, musicaDe, fimVoz, type Anuncio, type Imagem } from './anuncios'
+import { anuncioDe, segsDe, videoDe, musicaDe, semMusica, fimVoz, type Anuncio, type Imagem } from './anuncios'
 import { FPS, OURO, OURO_CLARO, FUNDO, MARCA } from '../../motor/marca'
 import { Pelicula, Plano, clamp, ease } from '../../motor/util'
 
@@ -492,7 +492,7 @@ export const Video: React.FC = () => {
       {fr < 10 && <AbsoluteFill style={{ zIndex: 19, background: '#000', opacity: interpolate(fr, [0, 9], [1, 0], clamp), pointerEvents: 'none' }} />}
       <AbsoluteFill style={{ zIndex: 16, pointerEvents: 'none' }}><Pelicula /></AbsoluteFill>
       <Moldura k={k} a={a} total={durationInFrames} />
-      <Audio src={staticFile(musicaDe(k))} volume={volMusica} />
+      {semMusica(k) ? null : <Audio src={staticFile(musicaDe(k))} volume={volMusica} />}
     </AbsoluteFill>
   )
 }

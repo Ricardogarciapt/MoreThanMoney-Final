@@ -175,7 +175,7 @@ async function montar({ id, marca, video, cin }) {
   fs.writeFileSync(path.join(AUTO, `${id}-tempos.json`), JSON.stringify(temposSom(config, fim)))
   correr('python3', ['som/anuncio-reel/sintese.py', path.join(AUTO, `${id}-tempos.json`), path.join(AUTO, `${id}-musica.wav`)])
 
-  const props = { marca, formato: 'reel', anuncio: 'auto', auto: { config, legendas, video: `stock/auto/${path.basename(video)}`, musica: `stock/auto/${id}-musica.wav` } }
+  const props = { marca, formato: 'reel', anuncio: 'auto', auto: { config, legendas, video: `stock/auto/${path.basename(video)}`, musica: `stock/auto/${id}-musica.wav`, ...(cin.sem_musica ? { semMusica: true } : {}) } }
   const fprops = path.join(AUTO, `${id}-props.json`)
   fs.writeFileSync(fprops, JSON.stringify(props))
   fs.mkdirSync(path.join(AQUI, 'out'), { recursive: true })
