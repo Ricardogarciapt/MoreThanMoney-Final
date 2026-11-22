@@ -162,6 +162,52 @@
      "fala": "Olha para este exemplo. A posição abre, o preço anda a favor, e ao chegar ao gatilho o stop passa para a entrada. A partir daí o trailing segue o preço a uma distância fixa. Se o mercado voltar para trás, a saída acontece com parte do movimento protegido. Isto não é garantia de resultado. É disciplina automática."
     },
     {
+     "id": "a05b",
+     "tipo": "comparar",
+     "cap": "Porquê uma plataforma nossa",
+     "kicker": "O problema que resolve",
+     "titulo": "Antes e depois",
+     "cartoes": [
+      {
+       "t": "Antes",
+       "d": "Uma app para o sinal, outra para a corretora, uma folha de cálculo para o risco e nenhuma memória do que fizeste."
+      },
+      {
+       "t": "Com o WebTrader",
+       "d": "O sinal, o gráfico, o lote pelo risco, a gestão automática e o diário no mesmo ecrã."
+      }
+     ],
+     "fala": "Porque é que criámos uma plataforma nossa? Porque a maior parte das pessoas que começa no trading anda a saltar entre aplicações. O sinal chega numa app, a ordem abre-se noutra, o risco faz-se de cabeça ou numa folha de cálculo, e no fim do mês ninguém se lembra porque entrou em cada operação. O WebTrader junta tudo isso num só ecrã, e isso por si só já tira muitos erros do caminho."
+    },
+    {
+     "id": "a05c",
+     "tipo": "ui",
+     "cap": "Histórico",
+     "kicker": "Nada se perde",
+     "titulo": "Cada operação fica registada",
+     "img": "historico.jpg",
+     "focoImg": [
+      0.5,
+      0.7
+     ],
+     "zoom": 1.3,
+     "fala": "Cada operação que fazes fica registada no histórico, com a hora de entrada e de saída, o ativo, a direção, o lote e o resultado. E quando a operação veio de uma estratégia, fica marcada a origem. Isto parece um pormenor, mas é o que te permite, daqui a um mês, perceber o que está a funcionar e o que não está."
+    },
+    {
+     "id": "a05d",
+     "tipo": "pontos",
+     "cap": "Para quem é",
+     "kicker": "Do primeiro dia ao dia a dia",
+     "titulo": "Para quem é o WebTrader",
+     "itens": [
+      "Quem está a começar e quer treinar num desafio",
+      "Quem já tem conta TradeLocker ou MetaTrader",
+      "Quem segue as estratégias MTM",
+      "Quem quer provar o histórico com números reais"
+     ],
+     "fala": "Para quem é o WebTrader? Para quem está a começar e quer treinar num desafio, sem arriscar o seu dinheiro. Para quem já tem uma conta numa corretora e quer uma forma mais clara de a gerir. Para quem segue as nossas estratégias e quer ver os sinais no gráfico. E para quem quer mostrar o seu histórico com números verdadeiros, sem capturas de ecrã recortadas."
+    },
+    {
      "id": "a06",
      "tipo": "checklist",
      "cap": "Neste bootcamp",
@@ -275,6 +321,66 @@
       "?: mostra todos os atalhos"
      ],
      "fala": "No computador há atalhos. Alt mais M troca entre Simple e PRO. F9 abre o ticket. Alt mais um a quatro escolhe quantos gráficos vês. E o ponto de interrogação mostra a lista completa. O botão Simple e PRO também está sempre no canto superior direito."
+    },
+    {
+     "id": "b05b",
+     "tipo": "ui",
+     "cap": "Mudar de modo",
+     "kicker": "Canto superior direito",
+     "titulo": "Simple ↔ PRO num toque",
+     "img": "simple.jpg",
+     "focoImg": [
+      0.92,
+      0.06
+     ],
+     "zoom": 2.0,
+     "fala": "Para mudares de modo, olha para o canto superior direito. O botão Simple e PRO está sempre lá. Quando trocas, as tuas posições, as ordens e a conta ficam exatamente como estavam. Muda só a arrumação do ecrã. Podes trocar a meio de uma operação sem medo nenhum."
+    },
+    {
+     "id": "b05c",
+     "tipo": "pontos",
+     "cap": "No telemóvel",
+     "kicker": "Ecrã pequeno, decisões claras",
+     "titulo": "O Simple no telemóvel",
+     "itens": [
+      "O gráfico ocupa a largura toda",
+      "Vender e Comprar ficam sempre visíveis",
+      "As temporalidades estão num menu",
+      "Os separadores de baixo deslizam"
+     ],
+     "fala": "No telemóvel, o Simple mostra o que realmente precisas. O gráfico ocupa a largura toda, os botões Vender e Comprar ficam sempre visíveis, e as temporalidades estão num menu, para não ocuparem meia barra. Em baixo, os separadores das posições, ordens e histórico deslizam com o dedo. Foi pensado para quem acompanha o mercado entre duas tarefas do dia."
+    },
+    {
+     "id": "b05d",
+     "tipo": "ui",
+     "cap": "PRO",
+     "kicker": "Separador Estatísticas",
+     "titulo": "A análise está no PRO",
+     "img": "estatisticas-pro.jpg",
+     "focoImg": [
+      0.5,
+      0.55
+     ],
+     "zoom": 1.25,
+     "fala": "No PRO, os separadores de baixo são onde está a análise. Aqui está o separador Estatísticas, com a taxa de acerto, o fator de lucro, a maior perda e a evolução da conta. Este é o ecrã que eu abro ao fim do dia, e não durante a operação. Durante a operação, quanto menos números estiveres a olhar, melhor."
+    },
+    {
+     "id": "b05e",
+     "tipo": "comparar",
+     "cap": "Erros comuns",
+     "kicker": "O que evitar",
+     "titulo": "Dois erros com os modos",
+     "cartoes": [
+      {
+       "t": "Simple para tudo",
+       "d": "Analisar no telemóvel, à pressa, sem ver as temporalidades maiores."
+      },
+      {
+       "t": "PRO para tudo",
+       "d": "Quatro gráficos abertos e dez estudos ligados ao mesmo tempo: paralisia."
+      }
+     ],
+     "fala": "Há dois erros comuns. O primeiro é fazer tudo no Simple, incluindo a análise, à pressa e no telemóvel, sem olhar para as temporalidades maiores. O segundo é o contrário: abrir o PRO com quatro gráficos e tentar ver tudo ao mesmo tempo. Foi por isso que o WebTrader só deixa uma estratégia ligada de cada vez. Menos informação, decisões mais claras."
     },
     {
      "id": "b06",
@@ -398,6 +504,42 @@
      ],
      "zoom": 1.8,
      "fala": "Aqui está o GoldKiller no ouro, com a compra, o stop e o alvo na barra amarela, e o botão azul Usar este sinal. Neste momento o mercado estava fechado, e o WebTrader avisa: abre daqui a nove horas."
+    },
+    {
+     "id": "c05b",
+     "tipo": "pontos",
+     "cap": "Pips, preço ou dinheiro",
+     "kicker": "Fala a tua língua",
+     "titulo": "Quatro formas de escrever o stop",
+     "itens": [
+      "Em preço: o nível exato",
+      "Em pips: a distância",
+      "Em dinheiro: quanto perdes se tocar",
+      "Em percentagem do saldo"
+     ],
+     "fala": "Um pormenor que ajuda muito quem está a começar: o stop e o alvo podem escrever-se de quatro formas. Em preço, se já sabes o nível exato. Em pips, se pensas em distância. Em dinheiro, se preferes saber quanto perdes caso o stop seja tocado. Ou em percentagem do saldo. O WebTrader converte tudo e mostra-te sempre as quatro leituras."
+    },
+    {
+     "id": "c05c",
+     "tipo": "ui",
+     "cap": "Depois de abrir",
+     "kicker": "Separador Posições",
+     "titulo": "A posição está aberta. E agora?",
+     "img": "posicao-autobe-trailing.jpg",
+     "focoImg": [
+      0.5,
+      0.78
+     ],
+     "zoom": 1.45,
+     "fala": "Depois de confirmares, a posição aparece no separador Posições, com o preço de entrada, o stop, o alvo e o resultado em tempo real. Daqui podes mexer no stop, fechar parte, ou ligar a gestão automática, com o break-even e o trailing. Vamos ver isso em detalhe no treino dois."
+    },
+    {
+     "id": "c05d",
+     "tipo": "frase",
+     "cap": "Mentalidade",
+     "texto": "O botão é a parte fácil.<br>O plano é o trabalho.",
+     "autor": "Ricardo Garcia",
+     "fala": "Quero deixar-te uma ideia antes de avançarmos. Carregar no botão é a parte fácil. Qualquer pessoa consegue. O trabalho está antes: saber porque estás a entrar, onde estás errado, e quanto aceitas perder se estiveres errado. O WebTrader ajuda-te com os números. A decisão continua a ser tua."
     },
     {
      "id": "c06",
@@ -539,6 +681,38 @@
      "fala": "Quatro regras de ouro. Usa a password investor quando só queres mostrar a conta. Nunca partilhes a password master com ninguém, nem connosco. Quando vires a palavra real a vermelho, lembra-te que cada ordem vai para a tua corretora. E se abriste uma conta por credenciais num computador emprestado, tira-a com o X no seletor, ou usa o botão Sair para terminar a sessão no WebTrader."
     },
     {
+     "id": "d08b",
+     "tipo": "pontos",
+     "cap": "Ligar contas",
+     "kicker": "Se algo correr mal",
+     "titulo": "A ligação falhou?",
+     "itens": [
+      "Confirma o servidor exato da corretora",
+      "Usa a password principal, não a de investidor",
+      "Conta demo e conta real têm servidores diferentes",
+      "Tenta de novo daqui a um minuto"
+     ],
+     "fala": "E se a ligação falhar? Nove em cada dez vezes é uma de três coisas. O servidor não está exatamente como a corretora o escreve. A password é a de investidor, que só deixa ver, em vez da principal, que deixa negociar. Ou estás a usar o servidor da conta real numa conta demo, ou o contrário. Confirma estes três pontos, espera um minuto e tenta outra vez."
+    },
+    {
+     "id": "d08c",
+     "tipo": "comparar",
+     "cap": "Ligar contas",
+     "kicker": "Ver ou negociar",
+     "titulo": "Password principal ou de investidor",
+     "cartoes": [
+      {
+       "t": "Principal",
+       "d": "Deixa abrir, mexer e fechar ordens. É a que usas para negociar no WebTrader."
+      },
+      {
+       "t": "Investidor",
+       "d": "Só deixa ver. Útil para mostrares a conta a alguém sem lhe dares controlo."
+      }
+     ],
+     "fala": "Vale a pena perceber esta diferença. A password principal deixa negociar: abrir, mexer e fechar ordens. A password de investidor só deixa ver. Se quiseres mostrar uma conta a um mentor ou a um amigo, sem lhe dar controlo, é a de investidor que partilhas. Para operares tu, no WebTrader, usas a principal."
+    },
+    {
      "id": "d09",
      "tipo": "capitulo",
      "numero": "03",
@@ -574,6 +748,20 @@
      ],
      "zoom": 2.2,
      "fala": "Ao lado do seletor fica sempre o aviso da conta ativa: em que fase do caminho está, se é desafio, se é real. Esse aviso nunca desaparece. Do outro lado, o interruptor Simple e PRO e o botão para adicionar ao ecrã principal."
+    },
+    {
+     "id": "d11b",
+     "tipo": "ui",
+     "cap": "O seletor de contas",
+     "kicker": "Real ou treino",
+     "titulo": "Saber sempre onde estás",
+     "img": "simple.jpg",
+     "focoImg": [
+      0.18,
+      0.05
+     ],
+     "zoom": 2.0,
+     "fala": "Repara no topo do ecrã. Ao lado do nome da conta há sempre um aviso que diz em que conta estás e em que fase está. Numa conta real aparece uma faixa vermelha a dizer que as ordens são executadas na tua corretora. Habitua-te a olhar para ali antes de cada ordem. É o hábito mais barato que vais ganhar neste bootcamp."
     },
     {
      "id": "d12",
@@ -613,6 +801,47 @@
      "fala": "Na barra do gráfico escolhes a temporalidade no menu, de um minuto a um mês, e tens à mão as mais usadas: cinco minutos, quinze, uma hora e quatro horas. Ao lado, o tipo de gráfico: velas, barras, linha ou área. No menu Camadas ligas as tuas negociações no gráfico, a linha do preço Ask e as notícias do calendário económico. E tens o ecrã inteiro e o botão para esconder o gráfico quando só queres ver as posições."
     },
     {
+     "id": "d14b",
+     "tipo": "pontos",
+     "cap": "Preparar o gráfico",
+     "kicker": "Menu Temporalidade",
+     "titulo": "Escolher a temporalidade",
+     "itens": [
+      "Minutos: M1, M5, M15, M30",
+      "Horas: H1, H4",
+      "Dias: D1 e semanal",
+      "No computador, quatro atalhos rápidos ao lado"
+     ],
+     "fala": "As temporalidades estão agora num menu, organizado em minutos, horas e dias. No computador tens ao lado quatro atalhos rápidos para as que se usam mais: cinco minutos, quinze minutos, uma hora e quatro horas. No telemóvel fica só o menu, para sobrar espaço para o gráfico. A minha sugestão é olhares primeiro para uma temporalidade maior, para perceberes a tendência, e só depois desceres para escolher a entrada."
+    },
+    {
+     "id": "d14c",
+     "tipo": "pontos",
+     "cap": "Preparar o gráfico",
+     "kicker": "Menu Camadas",
+     "titulo": "O que se mostra por cima do gráfico",
+     "itens": [
+      "Negociações: as tuas entradas e saídas marcadas",
+      "Ask: a linha do preço de compra",
+      "Notícias: os eventos do calendário económico"
+     ],
+     "fala": "Por cima do gráfico podes mostrar ou esconder camadas, no menu Camadas. Negociações marca no gráfico onde entraste e onde saíste, o que é ótimo para reveres as tuas operações. Ask mostra a linha do preço de compra, além do preço de venda. E Notícias marca os eventos do calendário económico. Liga o que te ajuda e desliga o resto."
+    },
+    {
+     "id": "d14d",
+     "tipo": "pontos",
+     "cap": "Preparar o gráfico",
+     "kicker": "Uma de cada vez",
+     "titulo": "Escolher a estratégia",
+     "itens": [
+      "GoldKiller, Sensei, MTM Scanner",
+      "TrendShot e RocketNova",
+      "Premium Scanner: só no ouro",
+      "Ligar uma desliga a anterior"
+     ],
+     "fala": "Na barra das estratégias escolhes o estudo que queres ver no gráfico. Ao ligares uma, a anterior desliga-se sozinha. Fizemos isto de propósito: com duas ou três estratégias desenhadas ao mesmo tempo, o gráfico fica cheio de setas e linhas e deixas de perceber o que estás a ver. Atenção: o Premium Scanner só funciona no ouro. Nos outros ativos o botão aparece apagado e explica porquê."
+    },
+    {
      "id": "d15",
      "tipo": "pontos",
      "cap": "Gráfico",
@@ -641,6 +870,20 @@
      "fala": "Em baixo, à direita, está a linha da conta: saldo, equity, flutuante, margem, margem livre e nível de margem. Nas contas de desafio aparecem também os limites: a perda diária restante, a perda máxima restante e o objetivo. Habitua-te a olhar para esta linha antes de cada ordem. É ela que te diz quanto espaço tens para errar."
     },
     {
+     "id": "d16b",
+     "tipo": "pontos",
+     "cap": "Limites da conta",
+     "kicker": "Contas de desafio",
+     "titulo": "Respeitar os limites",
+     "itens": [
+      "Perda máxima diária",
+      "Perda máxima total",
+      "Dias mínimos de negociação",
+      "Objetivo da fase"
+     ],
+     "fala": "Nas contas de desafio há regras, e o WebTrader mostra-as sempre. A perda máxima diária, a perda máxima total, os dias mínimos de negociação e o objetivo da fase. Estas regras não existem para te complicar a vida. Existem para treinares a disciplina de quem gere risco a sério. Se uma regra for quebrada, a conta fica marcada, por isso conhece-as antes de começares."
+    },
+    {
      "id": "d17",
      "tipo": "capitulo",
      "numero": "05",
@@ -662,6 +905,46 @@
       "As tuas contas continuam guardadas na conta MTM"
      ],
      "fala": "No botão Adicionar ao ecrã principal instalas o WebTrader como uma app, com ícone próprio. Se vieste de outra app nossa, a seta leva-te de volta. E o botão Sair termina a sessão no WebTrader neste dispositivo: toca uma vez e confirma. Não apaga nada da tua conta. Da próxima vez que entrares, as contas voltam a aparecer."
+    },
+    {
+     "id": "d18b",
+     "tipo": "fluxo",
+     "cap": "Sair e voltar",
+     "kicker": "Fechar a sessão",
+     "titulo": "Sair só deste dispositivo",
+     "passos": [
+      {
+       "t": "Sair",
+       "d": "Toca no botão Sair, no canto superior direito"
+      },
+      {
+       "t": "Confirmar",
+       "d": "Toca outra vez para confirmar"
+      },
+      {
+       "t": "Limpo",
+       "d": "As sessões das contas saem deste dispositivo"
+      },
+      {
+       "t": "A app continua",
+       "d": "A sessão da MTM Auto não é tocada"
+      }
+     ],
+     "fala": "Para terminares a sessão no WebTrader há um botão Sair no canto superior direito. Tocas uma vez e ele pede confirmação. Tocas outra vez e as sessões das contas saem deste dispositivo. Se entraste a partir da MTM Auto, a sessão da app continua ligada. E se vieste da app, tens também uma seta no canto superior esquerdo para voltares diretamente a ela."
+    },
+    {
+     "id": "d18c",
+     "tipo": "pontos",
+     "cap": "Segurança",
+     "kicker": "Boas práticas",
+     "titulo": "Proteger o acesso",
+     "itens": [
+      "Sai sempre num computador partilhado",
+      "Não partilhes a password principal",
+      "Ativa o bloqueio do ecrã do telemóvel",
+      "Revê de vez em quando as contas ligadas"
+     ],
+     "fala": "Quatro boas práticas de segurança. Num computador partilhado, sai sempre no fim. Nunca partilhes a password principal de uma conta real, com ninguém. Ativa o bloqueio do ecrã do telemóvel, porque o WebTrader instalado fica a um toque. E de vez em quando revê as contas ligadas e remove as que já não usas."
     },
     {
      "id": "d19",
@@ -792,6 +1075,20 @@
      "fala": "Isto muda a forma de negociar. Primeiro decides quanto podes perder nesta ideia. Só depois pensas no ganho. Em contas de desafio, muita gente usa entre meio e um por cento por operação. Encontra o teu número e mantém-no."
     },
     {
+     "id": "e05b",
+     "tipo": "pontos",
+     "cap": "Volume pelo risco",
+     "kicker": "Exemplo com números",
+     "titulo": "Como o lote é calculado",
+     "itens": [
+      "Saldo: 10 000 $",
+      "Risco: 1 % = 100 $",
+      "Stop: 25 pips",
+      "Lote = 100 $ ÷ (25 pips × valor do pip)"
+     ],
+     "fala": "Vamos fazer as contas uma vez, para perceberes o que o WebTrader faz por ti. Imagina um saldo de dez mil dólares e um risco de um por cento. Isso são cem dólares. Se o stop está a vinte e cinco pips, o lote é o que faz com que vinte e cinco pips valham cem dólares. O WebTrader faz esta conta para cada ativo, com o valor do pip certo, e arredonda para o lote permitido pela conta. Os números são só um exemplo."
+    },
+    {
      "id": "e06",
      "tipo": "capitulo",
      "numero": "03",
@@ -843,6 +1140,38 @@
      "fala": "Antes de confirmar, lê o resumo. O risco e o ganho em dólares. Os pips do stop e do alvo. O R R, que é quanto ganhas por cada unidade que arriscas. A margem necessária, o valor do pip e a comissão. Se a margem não chega, o WebTrader diz-to antes de enviares. E lembra-te: numa compra o stop fica abaixo do preço, numa venda fica acima. Se trocares, a ordem não sai."
     },
     {
+     "id": "e09b",
+     "tipo": "comparar",
+     "cap": "Risco recompensa",
+     "kicker": "Antes de enviar",
+     "titulo": "Ler a relação risco recompensa",
+     "cartoes": [
+      {
+       "t": "1 : 1",
+       "d": "Arriscas o mesmo que podes ganhar. Precisas de acertar mais de metade das vezes."
+      },
+      {
+       "t": "1 : 2",
+       "d": "Arriscas um para tentar ganhar dois. Podes errar mais vezes e manter o equilíbrio."
+      }
+     ],
+     "fala": "No resumo antes de enviar aparece a relação risco recompensa. Um para um quer dizer que arriscas o mesmo que tentas ganhar, e por isso precisas de acertar mais de metade das vezes só para ficares igual. Um para dois quer dizer que arriscas um para tentares ganhar dois. Não é melhor nem pior por si só, mas tens de saber qual estás a escolher antes de carregares no botão."
+    },
+    {
+     "id": "e09c",
+     "tipo": "pontos",
+     "cap": "Ordens pendentes",
+     "kicker": "Limite e stop",
+     "titulo": "Quando usar cada uma",
+     "itens": [
+      "Limite de compra: abaixo do preço atual",
+      "Limite de venda: acima do preço atual",
+      "Stop de compra: acima, para apanhar a rutura",
+      "Stop de venda: abaixo, para apanhar a quebra"
+     ],
+     "fala": "As ordens pendentes têm dois sabores. As ordens limite entram num preço melhor do que o atual: comprar mais abaixo, ou vender mais acima, à espera de um recuo. As ordens stop entram num preço pior do que o atual, porque esperas a confirmação de que o preço rompeu um nível. O WebTrader avisa-te se puseres o preço do lado errado."
+    },
+    {
      "id": "e10",
      "tipo": "capitulo",
      "numero": "04",
@@ -865,6 +1194,20 @@
       "OCO: uma cancela a outra"
      ],
      "fala": "Em Avançado tens cinco ferramentas. Take profits parciais, para fechar a posição por partes em vários alvos. Trailing stop, para o stop seguir o preço. Break-even automático, para o stop ir para a entrada a partir de certo ganho. Expira, para uma ordem pendente caducar numa data. E OCO, duas ordens em que uma cancela a outra, por exemplo uma compra acima e uma venda abaixo de uma zona. Expiração e OCO só existem em ordens Limit e Stop."
+    },
+    {
+     "id": "e11b",
+     "tipo": "pontos",
+     "cap": "Parciais",
+     "kicker": "Fechar parte",
+     "titulo": "Realizar uma parte sem sair de tudo",
+     "itens": [
+      "Fechar só uma parte do lote",
+      "O resto continua com o mesmo stop",
+      "Combina bem com o break-even",
+      "Fica tudo registado no histórico"
+     ],
+     "fala": "Uma ferramenta que uso muito é o fecho parcial. Escolhes o lote que queres fechar e o resto continua aberto, com o mesmo stop. O fecho parcial só reduz, nunca inverte a posição. Combinado com o break-even, isto permite tirar parte do movimento e deixar o resto correr com o risco muito reduzido. E cada parcial fica registada no histórico."
     },
     {
      "id": "e12",
@@ -904,6 +1247,24 @@
      "fala": "Quando ligas, o WebTrader confirma com uma mensagem, por exemplo: auto trailing em BTCUSD, arranca a mais trezentos e cinco pontos, segue a cento e oitenta, feito. Os valores por defeito ajustam-se ao ativo: no ouro e no forex em pips, nos índices e na cripto proporcionais ao preço. Podes mudá-los em Gestão automática e guardar os teus."
     },
     {
+     "id": "e14b",
+     "tipo": "comparar",
+     "cap": "Gestão automática",
+     "kicker": "Os dois parâmetros",
+     "titulo": "Gatilho e distância",
+     "cartoes": [
+      {
+       "t": "Gatilho",
+       "d": "Quantos pontos a favor antes de a gestão começar a mexer no stop."
+      },
+      {
+       "t": "Distância",
+       "d": "A que distância o trailing segue o preço depois de arrancar."
+      }
+     ],
+     "fala": "Na gestão automática há dois números a perceber. O gatilho é quantos pontos o preço tem de andar a teu favor antes de o sistema mexer no stop. A distância é a que distância o trailing segue o preço depois de arrancar. Um gatilho muito curto e uma distância muito apertada fazem-te sair em qualquer respiração do mercado. Larga demais, e devolves muito antes de sair."
+    },
+    {
      "id": "e15",
      "tipo": "gestao",
      "cap": "Gestão",
@@ -931,6 +1292,34 @@
      "fala": "Um ponto importante. A gestão automática corre no motor MTM, no servidor, não no teu browser. Podes fechar o telemóvel e ir trabalhar. O estado aparece na posição: break-even armado, que passa a break-even aplicado, e trailing à espera da ativação, que passa a trailing a seguir o preço."
     },
     {
+     "id": "e16b",
+     "tipo": "ui",
+     "cap": "Gestão automática",
+     "kicker": "Aviso no ecrã",
+     "titulo": "O break-even disparou",
+     "img": "auto-be-toast.jpg",
+     "focoImg": [
+      0.8,
+      0.12
+     ],
+     "zoom": 1.8,
+     "fala": "Quando o break-even dispara, o WebTrader mostra um aviso no ecrã e a linha do stop salta para a entrada. Aqui está o aviso real. Se estiveres com o browser fechado, a regra é aplicada à mesma no servidor, e quando voltares vês o stop já no novo lugar e o registo do que aconteceu."
+    },
+    {
+     "id": "e16c",
+     "tipo": "pontos",
+     "cap": "Gestão automática",
+     "kicker": "O que ela não faz",
+     "titulo": "Limites da gestão automática",
+     "itens": [
+      "Não escolhe entradas por ti",
+      "Não garante o preço em gaps de abertura",
+      "Depende da ligação da corretora",
+      "Não substitui o teu plano"
+     ],
+     "fala": "É importante saberes o que a gestão automática não faz. Não escolhe entradas por ti. Não garante o preço em saltos de abertura, por exemplo à segunda de manhã ou depois de uma notícia forte. Depende da ligação à tua corretora estar ativa. E não substitui o teu plano. É uma ferramenta de disciplina, não uma estratégia."
+    },
+    {
      "id": "e17",
      "tipo": "capitulo",
      "numero": "06",
@@ -952,6 +1341,20 @@
       "Nota no diário ao fechar"
      ],
      "fala": "No separador Posições tens o fecho parcial, que só reduz o volume: útil para tirar parte do lucro no primeiro alvo. Podes mover o stop e o alvo na própria linha ou arrastando no gráfico. Em cima tens Fechar todas, Ganhadoras e Perdedoras, para fechar em grupo. E ao fechar, escreve uma nota no diário. No último vídeo vais ver porque é que isto vale ouro."
+    },
+    {
+     "id": "e18b",
+     "tipo": "pontos",
+     "cap": "Fechar posições",
+     "kicker": "Fechar tudo",
+     "titulo": "Fechar várias de uma vez",
+     "itens": [
+      "Fechar todas as posições do ativo",
+      "Fechar só as que estão a ganhar ou a perder",
+      "Cancelar todas as pendentes",
+      "Confirmação antes de cada ação em massa"
+     ],
+     "fala": "Quando tens várias posições, podes fechá-las de uma vez: todas as do ativo, só as que estão a ganhar, ou só as que estão a perder. E podes cancelar todas as ordens pendentes. Cada uma destas ações pede confirmação, porque mexe em várias posições ao mesmo tempo. Usa-as em momentos de exceção, por exemplo antes de uma notícia forte que não queres atravessar."
     },
     {
      "id": "e19",
@@ -1070,6 +1473,34 @@
      "fala": "O TrendShot desenha as médias de vinte, cinquenta e duzentos e trinta e oito, e marca o sinal no cruzamento, dentro do horário das oito às vinte e uma, com entrada, stop e quatro alvos. O Premium Scanner é só para o ouro: desenha as sessões da Ásia, Londres e Nova Iorque, a zona de recuo e os alvos. Noutro ativo o botão fica apagado. E o RocketNova junta as mesmas três médias às estrelas de lançamento e à vela foguete, com o plano completo."
     },
     {
+     "id": "f05b",
+     "tipo": "pontos",
+     "cap": "As estratégias no gráfico",
+     "kicker": "TrendShot e RocketNova",
+     "titulo": "Ler os dois estudos de tendência",
+     "itens": [
+      "TrendShot: médias e níveis do sinal vivo",
+      "RocketNova: estrelas de pivot e velas foguete",
+      "Sinais só dentro do horário de Londres e Nova Iorque",
+      "Os níveis desaparecem quando o sinal termina"
+     ],
+     "fala": "Dois estudos que vale a pena conhecer melhor. O TrendShot desenha médias móveis e, quando há um sinal ativo, os níveis de entrada, stop e alvos. Os alvos que já foram tocados deixam de aparecer. O RocketNova marca estrelas nos pontos de viragem e as velas foguete, as velas de corpo grande. O sinal só aparece quando as médias cruzam dentro do horário principal e há uma estrela do mesmo lado. Quando o sinal termina, as linhas saem do gráfico."
+    },
+    {
+     "id": "f05c",
+     "tipo": "ui",
+     "cap": "As estratégias no gráfico",
+     "kicker": "Premium Scanner",
+     "titulo": "Só no ouro",
+     "img": "pro-xauusd-fechado.jpg",
+     "focoImg": [
+      0.3,
+      0.06
+     ],
+     "zoom": 1.9,
+     "fala": "O Premium Scanner foi desenhado para o ouro e mede tudo em dólares do ouro. Por isso só fica ativo no XAUUSD. Se abrires outro ativo, o botão aparece apagado e, ao passares por cima, explica que só funciona no ouro. Não é um erro, é proteção: um estudo fora do mercado para o qual foi feito dá leituras sem sentido."
+    },
+    {
      "id": "f06",
      "tipo": "capitulo",
      "numero": "02",
@@ -1146,6 +1577,28 @@
      "fala": "No separador Alertas crias alertas de preço nos teus níveis. Quando o preço lá chega, recebes o aviso e o alerta abre o mesmo quadro de confirmação. E no Calendário vês os eventos económicos de impacto médio e alto das moedas do ativo que estás a negociar."
     },
     {
+     "id": "f10b",
+     "tipo": "pontos",
+     "cap": "Sinais das outras estratégias",
+     "kicker": "Fora do gráfico",
+     "titulo": "Sinais que chegam por notificação",
+     "itens": [
+      "Ideias de Forex, DeFi, Aurum Flow e as estratégias MTM",
+      "Chegam com direção, entrada, stop e alvos",
+      "Abres o sinal e revês o ticket",
+      "Confirmas, ou deixas passar"
+     ],
+     "fala": "Além dos estudos no gráfico, há os sinais das outras estratégias da casa, como as Ideias de Forex, a estratégia DeFi ou o Aurum Flow. Chegam por notificação, já com a direção, a entrada, o stop e os alvos. Tocas no sinal, o WebTrader abre o ativo e prepara o ticket. Tu revês o risco e decides se confirmas ou se deixas passar. Deixar passar também é uma decisão válida."
+    },
+    {
+     "id": "f10c",
+     "tipo": "frase",
+     "cap": "Disciplina",
+     "texto": "Um sinal é uma ideia.<br>O risco é a tua decisão.",
+     "autor": "Regra da casa",
+     "fala": "E aqui está a regra que repito em todos os bootcamps. Um sinal é uma ideia de alguém. O risco que aceitas é sempre a tua decisão. Nunca aumentes o lote porque o sinal parece muito bom, e nunca tires o stop porque tens a certeza. A certeza no trading costuma custar caro."
+    },
+    {
      "id": "f11",
      "tipo": "capitulo",
      "numero": "03",
@@ -1181,6 +1634,34 @@
       "Nota do dia: o plano antes da sessão"
      ],
      "fala": "Ao fim de vinte ou trinta notas começas a ver padrões. Que emoção aparece antes das perdas. Que setup te dá mais R. Se costumas fechar cedo demais, como eu nessa nota. E usa a Nota do dia antes de abrires o gráfico: escreve o plano da sessão. Faz parte da minha rotina de pré-trading."
+    },
+    {
+     "id": "f13b",
+     "tipo": "pontos",
+     "cap": "O diário",
+     "kicker": "Perguntas para cada nota",
+     "titulo": "O que escrever",
+     "itens": [
+      "Porque entrei?",
+      "Segui o plano?",
+      "Como me sentia?",
+      "O que faria diferente?"
+     ],
+     "fala": "Se não sabes o que escrever no diário, usa estas quatro perguntas. Porque entrei? Segui o plano? Como me sentia antes de carregar no botão? O que faria diferente? Uma ou duas frases chegam. Ao fim de umas semanas, vais começar a ver padrões que os números sozinhos não mostram, como entrar mais vezes quando estás cansado ou depois de uma perda."
+    },
+    {
+     "id": "f13c",
+     "tipo": "ui",
+     "cap": "O diário",
+     "kicker": "No ecrã",
+     "titulo": "O diário ao lado do histórico",
+     "img": "diario.jpg",
+     "focoImg": [
+      0.5,
+      0.5
+     ],
+     "zoom": 1.3,
+     "fala": "Aqui está o diário no ecrã real. Cada nota fica ligada à operação, com a data e o resultado ao lado, e aparece também no histórico. Assim, quando revês uma semana inteira, lês o que pensaste em cada entrada em poucos minutos. Faço isto ao domingo, antes de preparar a semana seguinte."
     },
     {
      "id": "f14",
@@ -1232,6 +1713,34 @@
      ],
      "zoom": 1.7,
      "fala": "E em A minha conta, no separador Partilhar, crias o link de auditoria. É uma página pública com o histórico verificável da conta: cada operação ligada ao sinal que a abriu, o resultado em R e em pips, o drawdown e o risco de ruína. Não mostra o teu nome, nem o email, nem passwords. Podes copiar a versão em inglês, gerar um endereço novo ou desligar quando quiseres. É prova com origem, não capturas de ecrã."
+    },
+    {
+     "id": "f17b",
+     "tipo": "pontos",
+     "cap": "Números honestos",
+     "kicker": "Ler as estatísticas",
+     "titulo": "Os números que interessam",
+     "itens": [
+      "Número de operações: amostra suficiente?",
+      "Taxa de acerto com o risco recompensa",
+      "Maior perda e maior sequência negativa",
+      "Resultado por estratégia e por ativo"
+     ],
+     "fala": "Nas estatísticas, há quatro leituras que interessam mais do que o lucro do mês. Primeiro, o número de operações: com dez operações ainda não sabes nada. Segundo, a taxa de acerto lida em conjunto com o risco recompensa. Terceiro, a maior perda e a maior sequência de perdas, porque é isso que testa a tua cabeça. E quarto, o resultado separado por estratégia e por ativo, para saberes onde estás realmente a ganhar."
+    },
+    {
+     "id": "f17c",
+     "tipo": "pontos",
+     "cap": "Auditoria",
+     "kicker": "Partilhar com segurança",
+     "titulo": "O link de auditoria",
+     "itens": [
+      "Mostra o histórico sem dar acesso à conta",
+      "Ninguém consegue negociar por esse link",
+      "Podes desligar o link quando quiseres",
+      "Útil para mentoria e para provas honestas"
+     ],
+     "fala": "O link de auditoria mostra o teu histórico a quem quiseres, sem dar acesso à conta. Ninguém consegue abrir ou fechar ordens por esse link. Podes desligá-lo a qualquer momento. É útil para partilhares com um mentor, para entrares num torneio, ou simplesmente para mostrares números honestos em vez de capturas de ecrã escolhidas a dedo."
     },
     {
      "id": "f18",

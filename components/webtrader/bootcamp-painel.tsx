@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react"
 import { GraduationCap, PlayCircle, X } from "lucide-react"
-import { LmsPlaylistSection, extractPlaylistId } from "@/components/live/lms-playlist-section"
+import { extractPlaylistId } from "@/components/live/lms-playlist-section"
 import {
   CANAL_SALA_WEBTRADER,
   EPISODIOS_WEBTRADER,
@@ -13,7 +13,10 @@ import {
 
 const EDUCADOR_MTM = "9739ae1a-884d-4d03-8e4a-6da498e51c63"
 
-/** Lista dos seis vídeos e, quando a sala já tem playlist, o leitor. Usado na sala e no Tutorial. */
+/**
+ * Lista dos seis vídeos e, quando a sala já tem playlist, o leitor DENTRO do WebTrader.
+ * Cada vídeo da lista é clicável e abre esse episódio no leitor (índice da playlist do YouTube).
+ */
 export function BootcampPainel({
   lingua,
   playlistUrl,
@@ -24,28 +27,53 @@ export function BootcampPainel({
   linkSala?: boolean
 }) {
   const t = TEXTO_BOOTCAMP[lingua]
-  const temPlaylist = Boolean(extractPlaylistId(playlistUrl))
+  const lista = extractPlaylistId(playlistUrl)
+  const [atual, setAtual] = useState(1)
   return (
     <div className="space-y-3">
-      {temPlaylist ? (
-        <LmsPlaylistSection defaultOpen playlistUrl={playlistUrl} playlistTitle={`${t.titulo} · ${t.videos}`} canAccess />
+      {lista ? (
+        <div className="overflow-hidden rounded-xl border border-zinc-800 bg-black">
+          <iframe
+            key={`${lista}-${atual}`}
+            src={`https://www.youtube-nocookie.com/embed/videoseries?list=${encodeURIComponent(lista)}&index=${atual - 1}&rel=0&modestbranding=1&playsinline=1${atual > 1 ? "&autoplay=1" : ""}`}
+            title={`${t.titulo} · ${atual}`}
+            className="aspect-video w-full"
+            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; fullscreen"
+            allowFullScreen
+          />
+        </div>
       ) : (
         <p className="flex items-center gap-2 rounded-lg border border-dashed border-zinc-700 px-3 py-2 text-xs text-zinc-400">
           <PlayCircle className="h-4 w-4 shrink-0 text-[#D2A63C]" aria-hidden /> {t.aCaminho}
         </p>
       )}
       <ol className="space-y-1.5">
-        {EPISODIOS_WEBTRADER.map((e) => (
-          <li key={e.n} className="flex gap-3 rounded-lg border border-zinc-800 bg-black/40 px-3 py-2">
-            <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[#D2A63C]/15 text-xs font-bold text-[#E9C46A]">{e.n}</span>
-            <div className="min-w-0">
-              <p className="text-sm font-semibold text-white">
-                {e.titulo[lingua]} <span className="text-[11px] font-normal text-zinc-500">· {e.minutos} {t.min}</span>
-              </p>
-              <p className="text-[12px] leading-snug text-zinc-400">{e.resumo[lingua]}</p>
-            </div>
-          </li>
-        ))}
+        {EPISODIOS_WEBTRADER.map((e) => {
+          const ativo = Boolean(lista) && e.n === atual
+          return (
+            <li key={e.n}>
+              <button
+                type="button"
+                disabled={!lista}
+                onClick={() => setAtual(e.n)}
+                aria-current={ativo ? "true" : undefined}
+                className={`flex w-full gap-3 rounded-lg border px-3 py-2 text-left transition-colors ${
+                  ativo ? "border-[#D2A63C] bg-[#D2A63C]/10" : "border-zinc-800 bg-black/40"
+                } ${lista ? "hover:border-[#D2A63C]/60" : "cursor-default"}`}
+              >
+                <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[#D2A63C]/15 text-xs font-bold text-[#E9C46A]">
+                  {lista ? <PlayCircle className="h-4 w-4" aria-hidden /> : e.n}
+                </span>
+                <span className="min-w-0">
+                  <span className="block text-sm font-semibold text-white">
+                    {e.n}. {e.titulo[lingua]} <span className="text-[11px] font-normal text-zinc-500">· {e.minutos} {t.min}</span>
+                  </span>
+                  <span className="block text-[12px] leading-snug text-zinc-400">{e.resumo[lingua]}</span>
+                </span>
+              </button>
+            </li>
+          )
+        })}
       </ol>
       {linkSala && (
         <a href={CANAL_SALA_WEBTRADER} target="_blank" rel="noopener noreferrer" className="inline-flex text-xs font-semibold text-[#D2A63C] hover:underline">
