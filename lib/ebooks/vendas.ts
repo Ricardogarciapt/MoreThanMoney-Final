@@ -25,7 +25,38 @@ export type PaginaVenda = {
 }
 
 type SlugBase = 'destrui-tudo-e-ainda-bem' | 'o-metodo-frio' | 'a-primeira-chave' | 'so-as-maos'
-const VENDAS_PT: Record<SlugBase, PaginaVenda> = {
+const VENDAS_PT: Record<SlugBase | 'a-decisao-que-adias', PaginaVenda> = {
+  'a-decisao-que-adias': {
+    slug: 'a-decisao-que-adias', cor: '#E9C46A', cor2: '#D2A63C', fundo: '#070b16', fonteTitulo: 'Anton, Oswald, Impact, sans-serif',
+    titulo: 'A Decisão', titulo2: 'Que Adias',
+    gancho: 'Se já sabes o que precisas de mudar, o que é que continuas a adiar?',
+    sub: 'Crenças limitantes, identidade e o ciclo do evitamento, explicados com psicologia e sem frases feitas. Um livro para ler com caneta e um plano de 30 dias para passar do saber ao fazer.',
+    autor: 'Liliana Salgueiro', autorFoto: '/marketplace/ebooks/liliana-retrato.jpg',
+    autorBio: 'Educadora de desenvolvimento pessoal da MoreThanMoney e da She Is Faceless Academy. Criadora do Beyond the Mindset (@beyondthemindset.ls). O objetivo dela não é que penses como ela: é que questiones porque pensas como pensas.',
+    numeros: [{ v: '87', r: 'páginas' }, { v: '12', r: 'capítulos' }, { v: '4', r: 'semanas de plano' }, { v: '30', r: 'dias' }],
+    capitulos: [
+      { t: 'Quantas vezes soubeste e não fizeste', d: 'A distância entre saber e fazer, e porque não é preguiça.' },
+      { t: 'O que é uma crença', d: 'Acreditar não torna verdade. Sentir-se incapaz não é ser incapaz.' },
+      { t: 'Limitação real ou conclusão aprendida', d: 'Separar a barreira que existe da conclusão que nunca testaste.' },
+      { t: 'A frase que virou voz interior', d: 'Crenças nucleares na abordagem cognitiva de Aaron Beck.' },
+      { t: 'Quem tiveste de ser', d: 'Identidade e mecanismos de defesa: o que te protegeu e já não serve.' },
+      { t: 'O alívio que te prende', d: 'O ciclo do evitamento e o reforço negativo, explicados sem jargão.' },
+      { t: 'O que ganhas em ficar igual', d: 'As quatro perguntas que mostram a função de um hábito.' },
+      { t: 'Desejar não é construir', d: 'Alinhamento e a Lei da Atração vista mais a fundo.' },
+      { t: 'Vibração e causa-efeito', d: 'Dois princípios herméticos como filosofia, sem obrigação de positividade.' },
+      { t: 'Do saber ao fazer', d: 'O que estás disposta a construir, e não só o que queres receber.' },
+      { t: 'Plano de 30 dias', d: 'Reconhecer, testar, quebrar o evitamento e decidir, dia a dia.' },
+    ],
+    paraQuem: ['Sabes exatamente o que precisas de mudar e continuas a adiar.', 'Estás a construir um negócio ou uma vida nova e a tua cabeça trava-te.', 'Queres compreender os teus padrões, não só motivação para a semana.'],
+    naoE: ['Uma fórmula para viver a vida perfeita.', 'Um substituto de acompanhamento psicológico.', 'Pensamento positivo à força.'],
+    faq: [
+      { p: 'Quanto custa?', r: 'Nada. É a oferta dos webinars da Liliana: deixas o email, o WhatsApp e quatro respostas e recebes o link logo a seguir.' },
+      { p: 'Em que formato recebo?', r: 'PDF (para ler e imprimir) e versão interativa no navegador. O link dá para abrir durante um ano.' },
+      { p: 'Substitui terapia?', r: 'Não. É um livro educativo. Se estás em sofrimento intenso, procura um psicólogo ou um médico; em Portugal tens o SNS 24 (808 24 24 24).' },
+      { p: 'Onde continuo com a Liliana?', r: 'Nas live sessions e nos webinars dela na MoreThanMoney, e no Instagram @beyondthemindset.ls.' },
+    ],
+    aviso: 'Conteúdo educativo. Não substitui acompanhamento psicológico, psiquiátrico ou médico. Em emergência liga 112.',
+  },
   'destrui-tudo-e-ainda-bem': {
     slug: 'destrui-tudo-e-ainda-bem', cor: '#D2A63C', cor2: '#E9C46A', fundo: '#0b0b0c', fonteTitulo: 'Anton, Oswald, Impact, sans-serif',
     titulo: 'Destruí Tudo.', titulo2: 'E Ainda Bem.',

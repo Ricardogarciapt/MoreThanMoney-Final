@@ -24,6 +24,7 @@ const NOMES: Record<string, string> = {
   'a-primeira-chave': 'A Primeira Chave - Ruben Pereira',
   'so-as-maos': 'Só as Mãos - Maria Costa',
   'o-metodo-frio': 'O Método Frio - Ricardo Garcia',
+  'a-decisao-que-adias': 'A Decisão Que Adias - Liliana Salgueiro',
   'destrui-tudo-e-ainda-bem-en': "I Destroyed It All. And I'm Glad. - Ricardo Garcia",
   'destrui-tudo-e-ainda-bem-es': 'Lo Destruí Todo. Y Menos Mal. - Ricardo Garcia',
   'a-primeira-chave-en': 'The First Key - Ruben Pereira',

@@ -17,6 +17,7 @@ export const EBOOKS = {
   'a-primeira-chave': { titulo: 'A Primeira Chave', autor: 'Ruben Pereira' },
   'so-as-maos': { titulo: 'Só as Mãos', autor: 'Maria Costa' },
   'o-metodo-frio': { titulo: 'O Método Frio', autor: 'Ricardo Garcia' },
+  'a-decisao-que-adias': { titulo: 'A Decisão Que Adias', autor: 'Liliana Salgueiro' },
   // versões traduzidas (mesmo livro, outra língua; conteudo-privado/ebooks/<slug>-en|es/)
   'destrui-tudo-e-ainda-bem-en': { titulo: "I Destroyed It All. And I'm Glad.", autor: 'Ricardo Garcia' },
   'destrui-tudo-e-ainda-bem-es': { titulo: 'Lo Destruí Todo. Y Menos Mal.', autor: 'Ricardo Garcia' },
