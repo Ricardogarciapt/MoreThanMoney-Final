@@ -262,6 +262,43 @@ export const DEMOS_DIARIAS: DemoDiaria[] = [
     pecas: ['Telegram, WhatsApp ou app', 'Leitura de voz e de prints por IA', 'Painel do educador'],
     segmentos: ['licenca_scanners', 'parceria_redes'],
   },
+  {
+    slug: 'oficina-estado-reparacao',
+    data: '2026-11-29',
+    titulo: 'Oficina: o cliente sabe como está o carro sem ligar',
+    para: 'Oficinas, mecânicos, bate-chapas, centros de pneus',
+    dor: 'Passo o dia a atender o telefone para dizer «ainda não está pronto». E quando aparece uma peça extra, fico à espera de que o cliente atenda para aprovar.',
+    promessa: 'Cada passo da reparação chega ao cliente pelo WhatsApp, com fotos, e os extras aprovam-se com um toque.',
+    roteiro: [
+      { quem: 'sistema', texto: 'Viatura entrou: Renault Clio · revisão e travões · cliente Paulo.' },
+      { quem: 'agente', texto: '«Olá Paulo, o teu Clio já está na oficina. Avisamos aqui em cada passo.»' },
+      { quem: 'dono', texto: 'Foto dos discos gastos e nota: «Discos também precisam de troca.»' },
+      { quem: 'agente', texto: '«Paulo, encontrámos os discos dos travões gastos (foto em anexo). A troca fica com o valor indicado. Aprovas?» [Aprovo] [Ligar-me primeiro]' },
+      { quem: 'cliente', texto: 'Aprovo.' },
+      { quem: 'agente', texto: '«O teu Clio está pronto. Podes levantá-lo até às 19h00. A fatura segue por email.»' },
+    ],
+    fica: ['Menos chamadas a perguntar pelo carro', 'Extras aprovados por escrito, com foto', 'Histórico de cada viatura num só sítio'],
+    pecas: ['WhatsApp Cloud API', 'Agente IA com o estado de cada viatura', 'CRM próprio com fichas de viatura'],
+    segmentos: ['negocio_local'],
+  },
+  {
+    slug: 'clientes-que-nao-voltaram',
+    data: '2026-11-30',
+    titulo: 'Clientes que deixaram de vir, chamados de volta com jeito',
+    para: 'Cabeleireiros, barbearias, estética, clínicas e ginásios',
+    dor: 'Tenho uma lista enorme de clientes que vieram uma ou duas vezes e nunca mais apareceram. Não tenho tempo para lhes escrever um a um.',
+    promessa: 'O sistema repara em quem passou do seu ritmo habitual e manda uma mensagem pessoal com um horário livre para voltar.',
+    roteiro: [
+      { quem: 'sistema', texto: 'A Marta costuma vir a cada cinco semanas e já passaram oito. Há vaga quinta às 18h00.' },
+      { quem: 'agente', texto: '«Olá Marta, há algum tempo que não te vemos por cá. Tenho quinta às 18h00 livre para o teu corte. Queres que reserve?»' },
+      { quem: 'cliente', texto: 'Quero, obrigada por lembrares.' },
+      { quem: 'sistema', texto: 'Marcação criada na agenda · lembrete na véspera.' },
+      { quem: 'dono', texto: 'Vejo no painel quem voltou e quem preferiu não receber mais mensagens.' },
+    ],
+    fica: ['Lista de clientes inativos sempre atualizada', 'Mensagens pessoais com vaga real da agenda', 'Respeito por quem pede para não receber mais'],
+    pecas: ['WhatsApp Cloud API', 'Agenda própria', 'CRM próprio com histórico de visitas'],
+    segmentos: ['negocio_local'],
+  },
 ]
 
 /** YYYY-MM-DD em Lisboa. */
