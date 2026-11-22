@@ -3,7 +3,7 @@ import { getSupabaseAdmin } from '@/lib/supabase-admin-client'
 
 /**
  * Canva Connect API (headless) — autofill de um brand template + export → imagem no bucket.
- * Gere o token sozinho: guarda o refresh_token em site_settings.canva_connect (obtido no "Ligar Canva",
+ * Gere o token sozinho: guarda o refresh_token em integracoes_privadas.canva_connect (só service role; site_settings é legível por todos, o valor antigo lá migra sozinho na primeira escrita) (obtido no "Ligar Canva",
  * /api/admin/canva/connect) e troca-o por um access_token fresco a cada uso. Alternativa simples:
  * um token estático em CANVA_CONNECT_TOKEN (expira em horas — só p/ testes).
  *
@@ -38,8 +38,15 @@ interface CanvaStore {
 }
 
 async function readStore(): Promise<CanvaStore> {
+  const db = getSupabaseAdmin()
   try {
-    const { data } = await getSupabaseAdmin().from('site_settings').select('value').eq('key', SETTINGS_KEY).maybeSingle()
+    const { data, error } = await db.from('integracoes_privadas').select('valor').eq('chave', SETTINGS_KEY).maybeSingle()
+    if (!error && data?.valor) return data.valor as CanvaStore
+  } catch {
+    // Tabela nova ainda por criar: cai para o sítio antigo.
+  }
+  try {
+    const { data } = await db.from('site_settings').select('value').eq('key', SETTINGS_KEY).maybeSingle()
     return (data?.value as CanvaStore) || {}
   } catch {
     return {}
@@ -47,8 +54,18 @@ async function readStore(): Promise<CanvaStore> {
 }
 
 async function writeStore(patch: CanvaStore): Promise<void> {
-  const cur = await readStore()
-  await getSupabaseAdmin().from('site_settings').upsert({ key: SETTINGS_KEY, value: { ...cur, ...patch } }, { onConflict: 'key' })
+  const db = getSupabaseAdmin()
+  const valor = { ...(await readStore()), ...patch }
+  const { error } = await db
+    .from('integracoes_privadas')
+    .upsert({ chave: SETTINGS_KEY, valor, atualizado_em: new Date().toISOString() }, { onConflict: 'chave' })
+  if (error) {
+    // Sem a tabela nova, continua a funcionar no sítio antigo.
+    await db.from('site_settings').upsert({ key: SETTINGS_KEY, value: valor }, { onConflict: 'key' })
+    return
+  }
+  // Tokens fora da tabela pública.
+  await db.from('site_settings').delete().eq('key', SETTINGS_KEY)
 }
 
 function basicAuth(): string {
