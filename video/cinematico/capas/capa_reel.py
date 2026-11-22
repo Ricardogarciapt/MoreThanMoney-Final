@@ -122,6 +122,92 @@ def capa(c, saida):
     d.text(((W - (bb[2] - bb[0])) // 2, 1800), s, font=fs, fill=(255, 255, 255, 170))
     im.convert('RGB').save(saida, quality=93)
 
+# ── Molde MTM (22/11, Ricardo: «as capas da MTM devem estar ligadas ao estilo que já existe na MTM»).
+# Copia a linguagem dos carrosséis e flyers do @morethanmoney.pt: fundo quase preto com brilho dourado e velas
+# ténues, cabeçalho com o selo redondo + «More Than Money / @morethanmoney.pt», pequeno título dourado em
+# itálico por cima (kicker), título Anton itálico branco com palavras a ouro, alinhado à esquerda, traço
+# dourado por baixo e rodapé discreto. Linhas: k (kicker), w (branco), c/box (ouro).
+OURO_C = (233, 196, 106); CARVAO = (10, 9, 7)
+
+def _velas(semente):
+    import random
+    r = random.Random(str(semente))
+    lay = Image.new('RGBA', (W, H), (0, 0, 0, 0)); d = ImageDraw.Draw(lay)
+    y = 1050; x = -20
+    while x < W + 40:
+        mv = r.uniform(-70, 75); o, c = y, y - mv
+        hi, lo = min(o, c) - r.uniform(10, 60), max(o, c) + r.uniform(10, 60)
+        a = r.randint(40, 85)
+        d.line([(x + 13, hi), (x + 13, lo)], fill=OURO + (a,), width=3)
+        d.rectangle([x, min(o, c), x + 26, max(o, c) + 4], fill=OURO + (a + 25,) if c < o else (0, 0, 0, 0), outline=OURO + (a + 25,), width=3)
+        y = max(520, min(1200, c - 6)); x += 44
+    return lay.filter(ImageFilter.GaussianBlur(1.2))
+
+def _brilho():
+    g = Image.new('L', (W, H), 0); d = ImageDraw.Draw(g)
+    for i in range(40):
+        rr = 900 - i * 20; d.ellipse([W * 0.62 - rr, 760 - rr, W * 0.62 + rr, 760 + rr], fill=int(i * 2.2))
+    g = g.filter(ImageFilter.GaussianBlur(80))
+    return Image.composite(Image.new('RGB', (W, H), (120, 88, 24)), Image.new('RGB', (W, H), CARVAO), g)
+
+def _selo(tam):
+    s = Image.new('RGBA', (tam, tam), (0, 0, 0, 0)); d = ImageDraw.Draw(s)
+    d.ellipse([2, 2, tam - 3, tam - 3], fill=(18, 16, 12, 255), outline=OURO + (255,), width=max(2, tam // 40))
+    if os.path.exists(LOGO):
+        lg = Image.open(LOGO).convert('RGBA'); lg = lg.crop(lg.getbbox()); lg.thumbnail((int(tam * .72), int(tam * .72)))
+        s.alpha_composite(lg, ((tam - lg.size[0]) // 2, (tam - lg.size[1]) // 2))
+    return s
+
+def capa_mtm(c, saida):
+    fundo = _brilho().convert('RGBA')
+    # foto: grade quente e escura, a desvanecer para o carvão nas bordas e em baixo
+    fo = foto_916(c['foto'], c.get('cx', 600))
+    fo = ImageEnhance.Color(fo).enhance(0.55); fo = ImageEnhance.Brightness(fo).enhance(0.82)
+    fo = Image.blend(fo, Image.new('RGB', (W, H), (60, 42, 12)), 0.16)
+    m = Image.new('L', (W, H), 0); dm = ImageDraw.Draw(m)
+    for y in range(H):
+        a = 255 if y < 820 else int(255 * max(0.0, 1 - (y - 820) / 520) ** 1.4)
+        if y < 220: a = int(a * (0.35 + 0.65 * y / 220))
+        dm.line([(0, y), (W, y)], fill=a)
+    lados = Image.new('L', (W, H), 0); dl = ImageDraw.Draw(lados)
+    for x in range(W):
+        dl.line([(x, 0), (x, H)], fill=int(255 * min(1, min(x, W - x) / 260)))
+    m = Image.fromarray(__import__('numpy').minimum(__import__('numpy').array(m), __import__('numpy').array(lados)))
+    fundo.alpha_composite(_velas(c.get('semente', 'x')))
+    fundo.paste(fo, (0, 0), m)
+    im = fundo
+    d = ImageDraw.Draw(im)
+    # cabeçalho como nos carrosséis
+    selo = _selo(104); im.alpha_composite(selo, (64, 70))
+    d.text((190, 84), 'More Than Money', font=fonte('Oswald.ttf', 40), fill=(255, 255, 255))
+    d.text((190, 134), '@morethanmoney.pt', font=fonte('Oswald.ttf', 30), fill=(200, 192, 176))
+    # bloco de texto alinhado à esquerda
+    kicker = next((t for e, t in c['linhas'] if e == 'k'), c.get('kicker') or 'Método MTM')
+    linhas = [(e, t) for e, t in c['linhas'] if e != 'k']
+    blocos = []
+    for e, t in linhas:
+        f = ajustar(t.upper(), 'Anton.ttf', 930, c.get('tam', {}).get(e, 170))
+        blocos.append(texto_italico(t.upper(), f, (255, 255, 255) if e == 'w' else OURO_C))
+    kb = texto_italico(kicker.upper(), ajustar(kicker.upper(), 'Anton.ttf', 700, 66), OURO, sombra=False)
+    gap = -14
+    total = kb.size[1] + 10 + sum(b.size[1] for b in blocos) + gap * (len(blocos) - 1) + 50
+    y = c.get('fundo', 1690) - total
+    x0 = 64
+    im.alpha_composite(kb, (x0, int(y))); y += kb.size[1] + 10
+    for b in blocos:
+        im.alpha_composite(b, (x0 - 8, int(y))); y += b.size[1] + gap
+    d = ImageDraw.Draw(im)
+    d.rectangle([x0, y + 30, x0 + 150, y + 38], fill=OURO_C)
+    # rodapé: linha fina dourada + chamada, como o «DESLIZA →»
+    d.line([(64, 1790), (W - 64, 1790)], fill=OURO + (90,), width=2)
+    d.rectangle([64, 1787, 300, 1793], fill=OURO_C)
+    fs = fonte('Oswald.ttf', 30); txt = 'VÊ ATÉ AO FIM'; bb = fs.getbbox(txt)
+    xt = W - 64 - 34 - (bb[2] - bb[0])
+    d.text((xt, 1820), txt, font=fs, fill=(220, 212, 196))
+    d.polygon([(W - 86, 1830), (W - 86, 1858), (W - 64, 1844)], fill=OURO_C)
+    d.text((64, 1820), 'morethanmoney.pt', font=fs, fill=(150, 142, 128))
+    im.convert('RGB').save(saida, quality=93)
+
 def foto_da_semente(semente, evitar=()):
     """Foto escolhida pela semente (id do projecto), para capas diferentes entre reels."""
     import hashlib
@@ -135,7 +221,9 @@ if __name__ == '__main__' and any(a.startswith('--') for a in sys.argv[1:]):
     foto = a.get('foto') or foto_da_semente(a.get('semente', 'x'))
     c = {'foto': os.path.join(AQUI, 'fotos', foto), 'cx': int(a.get('cx') or CX.get(foto, 560)), 'linhas': json.loads(a['linhas'])}
     if a.get('nota'): c['nota'] = a['nota']
-    capa(c, a['saida'])
+    if a.get('kicker'): c['kicker'] = a['kicker']
+    c['semente'] = a.get('semente', 'x')
+    (capa_mtm if a.get('marca') == 'morethanmoney' else capa)(c, a['saida'])
     print(a['saida'], foto)
     sys.exit(0)
 
