@@ -189,15 +189,69 @@ async function montar({ id, marca, video, cin }) {
 }
 
 /**
- * Fundo dos reels narrados: planos de ~3 s escolhidos por id (sempre os mesmos para o mesmo reel),
- * das fotos reais animadas (public/fotos-planos/*-video.mp4) e do stock, recortados a 1080×1920,
- * com a voz por cima. Sai um mp4 que o resto do robô trata como se fosse o gémeo.
+ * Fundo dos reels narrados: planos de ~3 s escolhidos por id (sempre os mesmos para o mesmo reel), das fotos
+ * reais do Ricardo e do stock, a 1080×1920, com a voz por cima. Sai um mp4 que o resto do robô trata como o gémeo.
+ *
+ * 22/11 (Ricardo, depois do 1.º lote): (1) os clips HeyGen das fotos mexiam demasiado os lábios («muito robótico»)
+ * → as fotos passam a planos Ken Burns sobre a foto parada: a foto inteira (4:5) sobre o próprio fundo desfocado,
+ * a aproximar devagar para o rosto (FOCO) — melhor enquadramento, sem caras a mexer. (2) o CTA vinha colado às
+ * dicas → 2,5 s de pausa na voz antes da frase do CTA, cobertos pelos planos (outras fotos a animar).
  */
-function baseNarrada({ id, marca, voz, destino }) {
-  const dur = duracaoVideo(voz) + 0.4
-  const fotos = path.join(AQUI, 'public/fotos-planos')
-  const deFotos = fs.existsSync(fotos) ? fs.readdirSync(fotos).filter((f) => f.endsWith('-video.mp4')).map((f) => path.join(fotos, f)) : []
-  const deStock = stockPresente().filter((n) => !n.startsWith('auto')).map((n) => path.join(STOCK, `${n}.mp4`))
+const FOCO_FOTOS = { estudio: [0.33, 0.2], farda: [0.52, 0.3], palco: [0.47, 0.24], recomeco: [0.45, 0.55], retrato: [0.42, 0.3] }
+const PAUSA_CTA = 2.5
+
+/** Mete PAUSA_CTA s de silêncio antes da frase do CTA (a última que manda comentar/seguir). Devolve o ficheiro a usar. */
+function vozComPausa({ id, voz, cin }) {
+  const pal = path.join(AUTO, `${id}-voz-palavras.json`)
+  const w = spawnSync('python3', [path.join(AQUI, 'som/transcrever.py'), voz, pal, cin.texto || ''], { stdio: 'inherit' })
+  if (w.status !== 0 || !fs.existsSync(pal)) { log('pausa CTA: sem Whisper, voz tal como está'); return voz }
+  const ps = JSON.parse(fs.readFileSync(pal, 'utf8'))
+  const n = (t) => String(t).toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-z0-9]/g, '')
+  const chave = n(cin.palavra_chave || '')
+  const re = /^(comenta|escreve|manda|envia|segue|clica)/
+  let i = -1
+  for (let k = ps.length - 1; k > 2; k--) if (re.test(n(ps[k].w)) || (chave && n(ps[k].w) === chave && re.test(n(ps[k - 1]?.w || '')))) { i = re.test(n(ps[k].w)) ? k : k - 1; break }
+  if (i < 3) { log('pausa CTA: frase do CTA não encontrada'); return voz }
+  // recua até ao início da frase (palavra anterior acaba em . ! ? ou :)
+  let j = i
+  while (j > 1 && !/[.!?:…]$/.test(ps[j - 1].w)) j--
+  if (j < 2) j = i
+  const corte = +((ps[j - 1].fim + ps[j].ini) / 2).toFixed(3)
+  const saida = path.join(AUTO, `${id}-voz-pausa.wav`)
+  correr('ffmpeg', ['-loglevel', 'error', '-y', '-i', voz, '-filter_complex',
+    `[0:a]aresample=44100,asplit=2[x][y];[x]atrim=0:${corte},asetpts=PTS-STARTPTS[a1];[y]atrim=start=${corte},asetpts=PTS-STARTPTS[a2];anullsrc=r=44100:cl=mono,atrim=0:${PAUSA_CTA}[s];[a1][s][a2]concat=n=3:v=0:a=1,aformat=channel_layouts=mono[a]`,
+    '-map', '[a]', saida])
+  log('pausa CTA', `${PAUSA_CTA}s aos ${corte}s (antes de «${ps[j].w}»)`)
+  return saida
+}
+
+/** Foto parada → plano de 3 s: foto inteira sobre o fundo desfocado, aproximação lenta para o rosto. */
+function planoFoto(k, i, destino) {
+  const dir = path.join(AQUI, 'public/fotos-planos')
+  const quadro = path.join(AUTO, `quadro-${k}.png`)
+  if (!fs.existsSync(quadro)) {
+    correr('ffmpeg', ['-loglevel', 'error', '-y', '-i', path.join(dir, `${k}-fundo.jpg`), '-i', path.join(dir, `${k}-figura.png`), '-filter_complex',
+      '[1:v][0:v]scale2ref[fg][bg];[bg][fg]overlay=0:0,split=2[a][b];' +
+      '[a]scale=1080:1920:force_original_aspect_ratio=increase,crop=1080:1920,boxblur=28:2,eq=brightness=-0.22:saturation=0.85[fundo];' +
+      '[b]scale=1080:-2[foto];[fundo][foto]overlay=0:(H-h)/2-60,format=rgb24',
+      '-frames:v', '1', quadro])
+  }
+  const [fx, fy] = FOCO_FOTOS[k] || [0.5, 0.35]
+  // posição do rosto no quadro 1080×1920 (foto 4:5 com 1080×1350, centrada e 60 px acima)
+  const qx = fx, qy = (1920 / 2 - 60 - 675 + fy * 1350) / 1920
+  const z = i % 2 === 0 ? 'min(1.0+0.0022*on,1.2)' : 'max(1.2-0.0022*on,1.0)'
+  correr('ffmpeg', ['-loglevel', 'error', '-y', '-loop', '1', '-i', quadro, '-vf',
+    `scale=3240:5760,zoompan=z='${z}':x='iw*${qx}-iw/zoom*${qx}':y='ih*${qy}-ih/zoom*${qy}':d=1:s=1080x1920:fps=30,format=yuv420p`,
+    '-frames:v', '90', '-c:v', 'libx264', '-crf', '18', '-preset', 'veryfast', destino])
+  return destino
+}
+
+function baseNarrada({ id, marca, voz, destino, cin = {} }) {
+  const vozFinal = vozComPausa({ id, voz, cin })
+  const dur = duracaoVideo(vozFinal) + 0.4
+  const dir = path.join(AQUI, 'public/fotos-planos')
+  const deFotos = Object.keys(FOCO_FOTOS).filter((k) => fs.existsSync(path.join(dir, `${k}-fundo.jpg`)) && fs.existsSync(path.join(dir, `${k}-figura.png`))).map((k) => ({ foto: k }))
+  const deStock = stockPresente().filter((n) => !n.startsWith('auto') && !n.startsWith('quadro')).map((n) => ({ video: path.join(STOCK, `${n}.mp4`) }))
   // RG: as fotos dele primeiro; MTM: b-roll primeiro, fotos do educador pelo meio.
   const pool = marca === 'ricardo-garcia' ? [...deFotos, ...deFotos, ...deStock] : [...deStock, ...deFotos]
   if (!pool.length) throw new Error('narrado: sem fotos nem stock')
@@ -206,14 +260,19 @@ function baseNarrada({ id, marca, voz, destino }) {
   const rnd = () => ((h = (h * 1103515245 + 12345) >>> 0) / 4294967296)
   const ordem = [...pool].sort(() => rnd() - 0.5)
   const n = Math.ceil(dur / 3)
-  const planos = Array.from({ length: n }, (_, i) => ordem[i % ordem.length])
+  const planos = Array.from({ length: n }, (_, i) => {
+    let p = ordem[i % ordem.length]
+    // nunca a mesma foto/vídeo duas vezes seguidas
+    if (i > 0) { const ant = ordem[(i - 1) % ordem.length]; if ((p.foto && p.foto === ant.foto) || (p.video && p.video === ant.video)) p = ordem[(i + 1) % ordem.length] }
+    return p.foto ? planoFoto(p.foto, i, path.join(AUTO, `${id}-plano-${i}.mp4`)) : p.video
+  })
   const ins = planos.flatMap((f) => ['-stream_loop', '-1', '-t', '3.2', '-i', f])
   const vf = planos.map((_, i) => `[${i}:v]scale=1080:1920:force_original_aspect_ratio=increase,crop=1080:1920,setsar=1,fps=30,trim=duration=3,setpts=PTS-STARTPTS[v${i}]`).join(';')
   const cat = planos.map((_, i) => `[v${i}]`).join('') + `concat=n=${n}:v=1:a=0[v]`
-  correr('ffmpeg', ['-loglevel', 'error', '-y', ...ins, '-i', voz, '-filter_complex', `${vf};${cat}`, '-map', '[v]', '-map', `${n}:a`, '-t', String(dur), '-c:v', 'libx264', '-crf', '18', '-preset', 'veryfast', '-pix_fmt', 'yuv420p', '-c:a', 'aac', '-b:a', '192k', destino])
+  correr('ffmpeg', ['-loglevel', 'error', '-y', ...ins, '-i', vozFinal, '-filter_complex', `${vf};${cat}`, '-map', '[v]', '-map', `${n}:a`, '-t', String(dur), '-c:v', 'libx264', '-crf', '18', '-preset', 'veryfast', '-pix_fmt', 'yuv420p', '-c:a', 'aac', '-b:a', '192k', destino])
 }
 
-const limpar = (id) => { for (const f of fs.existsSync(AUTO) ? fs.readdirSync(AUTO) : []) if (f.startsWith(id)) fs.rmSync(path.join(AUTO, f), { force: true }) }
+const limpar = (id) => { for (const f of fs.existsSync(AUTO) ? fs.readdirSync(AUTO) : []) if (f.startsWith(id) || f.startsWith('quadro-')) fs.rmSync(path.join(AUTO, f), { force: true }) }
 
 async function umTrabalho() {
   const r = await fetch(`${API}/api/estudio/motor/projeto?moldes=cinematico`, { headers: auth })
@@ -233,7 +292,7 @@ async function umTrabalho() {
       // Reel narrado (22/11): voz clonada + fotos reais animadas e b-roll por baixo, em vez do gémeo.
       const voz = path.join(AUTO, `${t.id}-voz.mp3`)
       await baixar(t.narracao_url, voz)
-      baseNarrada({ id: t.id, marca, voz, destino: video })
+      baseNarrada({ id: t.id, marca, voz, destino: video, cin })
     } else {
       if (!url) throw new Error('sem vídeo do gémeo')
       await baixar(url, video)
