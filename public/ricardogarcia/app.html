@@ -941,6 +941,31 @@ html, body { overflow-x: hidden; }
     if (!forcar && chave === m3Chave) return; m3Chave = chave;
     M3.pontos(L3, vis, alvo);
   }
+  // Rota do dia, gerada à tua volta: até 4 paragens a 2,5 km ou menos, escolhidas ao acaso
+  // (a semente muda com o dia, a área e a zona; o 🎲 tira outra), por ordem do mais perto.
+  var rotaSorte = 0, autoBusca = { a: false, pos: null };
+  function semente(str) { var h = 2166136261; for (var i = 0; i < str.length; i++) { h ^= str.charCodeAt(i); h = Math.imul(h, 16777619); } return function () { h ^= h << 13; h ^= h >>> 17; h ^= h << 5; return ((h >>> 0) % 100000) / 100000; }; }
+  function rotaDoDia(pos) {
+    if (!M3 || !pos) return;
+    var cand = pontosMapa().filter(function (p) { return distM(pos, p) <= 2500; });
+    if (!cand.length) { M3.rota(null); return; }
+    var rnd = semente(new Date().toISOString().slice(0, 10) + '|' + AREA + '|' + pos.lat.toFixed(2) + ',' + pos.lon.toFixed(2) + '|' + rotaSorte);
+    var meus = cand.filter(function (p) { return p.ricardo; }), outros = cand.filter(function (p) { return !p.ricardo; });
+    outros.sort(function () { return rnd() - .5; });
+    var sel = (meus.length ? [meus.sort(function (a, b) { return distM(pos, a) - distM(pos, b); })[0]] : []).concat(outros).slice(0, Math.min(4, cand.length));
+    var ord = [], cur = pos; while (sel.length) { sel.sort(function (a, b) { return distM(cur, a) - distM(cur, b); }); cur = sel.shift(); ord.push(cur); }
+    M3.rota(ord, pos);
+  }
+  function procurarAuto(pos) {
+    if (!pos || autoBusca.a) return;
+    if (autoBusca.pos && distM(autoBusca.pos, pos) < 600) { rotaDoDia(pos); return; }
+    autoBusca.a = true; autoBusca.pos = pos;
+    api({ accao: 'rota_pontos', lat: pos.lat, lon: pos.lon }).then(function (r) {
+      autoBusca.a = false;
+      if (r && r.ok && r.pontos && r.pontos.length) { PONTOS = r.pontos; pintaPontos(); $('rErro').textContent = ''; var bb = $('bPontos'); if (bb) bb.textContent = 'Procurar outra vez'; }
+      atualizarMapa3D(true); rotaDoDia(pos);
+    }, function () { autoBusca.a = false; });
+  }
   function abrirMapa3D() {
     if (M3 || !window.MissaoMapa || !MissaoMapa.suporta()) return;
     var R = (E && E.extra && E.extra.rotas) || {}, c = ultimaPos || (R.ricardo && R.ricardo[0]) || null;
@@ -954,6 +979,7 @@ html, body { overflow-x: hidden; }
         var irB = document.createElement('button'); irB.setAttribute('data-ir', p.id); irB.type = 'button'; $('rLista').appendChild(irB); irB.click(); irB.remove();
       },
       pedirPosicao: function () { $('bPontos').click(); },
+      novaRota: function () { if (!ultimaPos) { $('bPontos').click(); return; } rotaSorte++; rotaDoDia(ultimaPos); try { navigator.vibrate && navigator.vibrate(10); } catch (_) {} },
     }).then(function (m) {
       if (!m) { $('mapa').hidden = true; return; }
       M3 = m; atualizarMapa3D(true); if (ultimaPos) M3.eu(ultimaPos);
@@ -982,7 +1008,7 @@ html, body { overflow-x: hidden; }
     vigia = navigator.geolocation.watchPosition(function (g) {
       ultimaPos = { lat: g.coords.latitude, lon: g.coords.longitude, prec: g.coords.accuracy, t: Date.now() };
       if (eu) eu.setLatLng([ultimaPos.lat, ultimaPos.lon]);
-      if (M3) M3.eu(ultimaPos);
+      if (M3) { M3.eu(ultimaPos); if (!seguir.auto) { seguir.auto = true; procurarAuto(ultimaPos); } }
       var p = PONTOS.filter(function (k) { return k.id === alvo; })[0];
       if (p && distM(ultimaPos, p) < 80 + Math.min(50, ultimaPos.prec || 50) && !seguir.avisado) { seguir.avisado = p.id; try { navigator.vibrate && navigator.vibrate([60, 80, 60]); } catch (_) {} toast('<b>Chegaste a ' + esc(p.nome) + '</b><br>Pára num sítio seguro e carrega em «Cheguei».', 5000); }
       pintaPontos();
@@ -1004,7 +1030,7 @@ html, body { overflow-x: hidden; }
           // A tua posição vai sempre para o mapa, haja ou não pontos à volta.
           if (r.falhou) { $('rErro').textContent = 'O serviço de mapas não respondeu a tempo. Já tenho a tua localização: carrega em «Procurar outra vez» daqui a uns segundos.'; PONTOS = []; pintaPontos(); pintaMapa(pos); seguir(); return; }
           if (r.isolada || !r.pontos.length) { $('rErro').textContent = 'Não encontrei pontos seguros suficientes perto de ti. Por segurança, aqui não há rota: faz o treino do dia em casa.'; PONTOS = []; pintaPontos(); pintaMapa(pos); seguir(); return; }
-          PONTOS = r.pontos; pintaPontos(); pintaMapa(pos); seguir();
+          PONTOS = r.pontos; pintaPontos(); pintaMapa(pos); seguir(); autoBusca.pos = pos; rotaDoDia(pos);
         });
       }, function () { b.disabled = false; b.textContent = 'Encontrar pontos seguros perto de mim'; $('rErro').textContent = 'Preciso da tua localização para encontrar os pontos. Ativa-a nas definições do browser.'; }, { enableHighAccuracy: true, timeout: 15000 });
     }
@@ -1875,7 +1901,7 @@ html, body { overflow-x: hidden; }
 </script>
 <script src="/ricardogarcia/app-fx.js?v=2" defer></script>
 <script src="/ricardogarcia/app-3d.js?v=1" defer></script>
-<script src="/ricardogarcia/app-mapa.js?v=3" defer></script>
+<script src="/ricardogarcia/app-mapa.js?v=4" defer></script>
 <script src="/ricardogarcia/app-rpg.js?v=5" defer></script>
 </body>
 </html>

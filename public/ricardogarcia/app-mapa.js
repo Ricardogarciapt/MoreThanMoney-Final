@@ -28,6 +28,8 @@
     '.m3d .mapa-in{position:absolute;inset:0}',
     '.m3d::before{content:"";position:absolute;left:0;right:0;top:0;height:34%;z-index:2;pointer-events:none;background:linear-gradient(180deg,rgba(40,30,12,.55),rgba(6,8,12,0))}',
     '.m3d::after{content:"";position:absolute;inset:0;z-index:2;pointer-events:none;box-shadow:inset 0 0 80px rgba(0,0,0,.75)}',
+    '.m3d-rota{position:absolute;left:50%;top:44px;transform:translateX(-50%);white-space:nowrap;border-color:rgba(233,196,106,.7)!important;color:#ffe8ad}.m3d-rota[hidden]{display:none}.m3d-rota i{font-style:normal;font-size:11px;opacity:.75;margin-left:4px}',
+    '.m3d-n{width:26px;height:26px;border-radius:50%;display:flex;align-items:center;justify-content:center;font:700 13px/1 Oswald,sans-serif;color:#1a1306;background:radial-gradient(circle at 35% 30%,#fff3c4,#E9C46A 55%,#b8862a);border:2px solid #fff6d8;box-shadow:0 0 0 4px rgba(233,196,106,.25),0 6px 16px rgba(0,0,0,.6);pointer-events:none}',
     '.m3d-hud{position:absolute;left:10px;right:10px;top:10px;z-index:3;display:flex;justify-content:space-between;align-items:flex-start;gap:8px;pointer-events:none}',
     '.m3d-chip{pointer-events:auto;display:inline-flex;align-items:center;gap:6px;padding:7px 11px;border-radius:999px;background:rgba(10,12,18,.78);border:1px solid rgba(233,196,106,.3);backdrop-filter:blur(8px);color:#f3f4f7;font:600 12px/1 Oswald,sans-serif;letter-spacing:.6px;text-transform:uppercase}',
     '.m3d-chip b{color:#E9C46A;font-family:Anton,sans-serif;font-weight:400;font-size:15px;letter-spacing:.4px}',
@@ -106,12 +108,13 @@
     var dentro = document.createElement('div'); dentro.className = 'mapa-in'; el.appendChild(dentro);
     var hud = document.createElement('div'); hud.className = 'm3d-hud';
     hud.innerHTML = '<span class="m3d-chip" data-m="pontos">⌖ <b>0</b> pontos</span><span class="m3d-chip" data-m="km">👣 <b>0,0</b> km hoje</span>';
+    var rchip = document.createElement('span'); rchip.className = 'm3d-chip m3d-rota'; rchip.setAttribute('data-m', 'rota'); rchip.hidden = true; rchip.innerHTML = '🧭 Rota do dia <b>0,0</b> km <i></i>'; hud.appendChild(rchip);
     el.appendChild(hud);
     var gps = document.createElement('button'); gps.type = 'button'; gps.className = 'm3d-gps'; gps.innerHTML = '📍 Usar a minha localização';
     gps.addEventListener('click', function () { gps.textContent = 'A localizar…'; if (op.pedirPosicao) op.pedirPosicao(); setTimeout(function () { if (!est.eu) gps.innerHTML = '📍 Usar a minha localização'; }, 15000); });
     el.appendChild(gps);
     var bts = document.createElement('div'); bts.className = 'm3d-bts';
-    bts.innerHTML = '<button type="button" data-mb="eu" aria-label="Centrar em mim">◎</button><button type="button" data-mb="vista" aria-label="Alternar 2D e 3D">2D</button><button type="button" data-mb="rodar" aria-label="Rodar a câmara">⟳</button><button type="button" data-mb="cheio" aria-label="Ecrã inteiro">⛶</button>';
+    bts.innerHTML = '<button type="button" data-mb="eu" aria-label="Centrar em mim">◎</button><button type="button" data-mb="nova" aria-label="Gerar outra rota">🎲</button><button type="button" data-mb="vista" aria-label="Alternar 2D e 3D">2D</button><button type="button" data-mb="rodar" aria-label="Rodar a câmara">⟳</button><button type="button" data-mb="cheio" aria-label="Ecrã inteiro">⛶</button>';
     el.appendChild(bts);
     var leg = document.createElement('div'); leg.className = 'm3d-leg';
     leg.innerHTML = '<span><i style="background:#E9C46A"></i>Lição do Ricardo</span><span><i style="background:#1EAAE6"></i>Ponto seguro</span><span><i style="background:#3ccf8e"></i>Visitado</span>';
@@ -119,7 +122,7 @@
 
     var c0 = op.centro || { lat: 38.7223, lon: -9.1393 };
     var mapa = new M.Map({ container: dentro, style: estilo(), center: [c0.lon, c0.lat], zoom: op.zoom || 15.6, pitch: 62, bearing: -24, maxPitch: 75, antialias: true, attributionControl: { compact: true }, dragRotate: true, touchPitch: true });
-    var est = { pontos: [], eu: null, alvo: null, vis: {}, marcas: [], euM: null, pronto: false, rodar: false, tr: trajetoLer() };
+    var est = { rota: null, rotaM: [], pontos: [], eu: null, alvo: null, vis: {}, marcas: [], euM: null, pronto: false, rodar: false, tr: trajetoLer() };
 
     function prepara() {
       if (est.pronto || !mapa.isStyleLoaded()) return;
@@ -127,14 +130,17 @@
       mapa.addSource('farois', { type: 'geojson', data: fc([]) });
       mapa.addSource('trajeto', { type: 'geojson', data: fc([]) });
       mapa.addSource('linha', { type: 'geojson', data: fc([]) });
+      mapa.addSource('rota', { type: 'geojson', data: fc([]) });
       mapa.addLayer({ id: 'raio-f', type: 'fill', source: 'raios', paint: { 'fill-color': ['get', 'cor'], 'fill-opacity': .1 } }, 'predios');
       mapa.addLayer({ id: 'raio-l', type: 'line', source: 'raios', paint: { 'line-color': ['get', 'cor'], 'line-width': 1.5, 'line-opacity': .6, 'line-dasharray': [2, 2] } }, 'predios');
       mapa.addLayer({ id: 'traj-brilho', type: 'line', source: 'trajeto', layout: { 'line-cap': 'round', 'line-join': 'round' }, paint: { 'line-color': '#1EAAE6', 'line-width': 12, 'line-blur': 8, 'line-opacity': .55 } });
       mapa.addLayer({ id: 'traj', type: 'line', source: 'trajeto', layout: { 'line-cap': 'round', 'line-join': 'round' }, paint: { 'line-color': '#bff0ff', 'line-width': 3.5 } });
+      mapa.addLayer({ id: 'rota-brilho', type: 'line', source: 'rota', layout: { 'line-cap': 'round', 'line-join': 'round' }, paint: { 'line-color': '#E9C46A', 'line-width': 14, 'line-blur': 10, 'line-opacity': .4 } });
+      mapa.addLayer({ id: 'rota', type: 'line', source: 'rota', layout: { 'line-cap': 'round', 'line-join': 'round' }, paint: { 'line-color': '#ffd978', 'line-width': 4.5, 'line-opacity': .95 } });
       mapa.addLayer({ id: 'linha-brilho', type: 'line', source: 'linha', paint: { 'line-color': '#E9C46A', 'line-width': 9, 'line-blur': 6, 'line-opacity': .45 } });
       mapa.addLayer({ id: 'linha', type: 'line', source: 'linha', layout: { 'line-cap': 'round' }, paint: { 'line-color': '#fff1c2', 'line-width': 3, 'line-dasharray': [1.2, 1.4] } });
       mapa.addLayer({ id: 'farois', type: 'fill-extrusion', source: 'farois', paint: { 'fill-extrusion-color': ['get', 'cor'], 'fill-extrusion-height': ['get', 'h'], 'fill-extrusion-base': ['get', 'b'], 'fill-extrusion-opacity': .85 } });
-      est.pronto = true; pinta(); trajetoPinta();
+      est.pronto = true; pinta(); trajetoPinta(); rotaPinta();
       if (op.aoPronto) op.aoPronto();
     }
     // O estilo é nosso; mesmo que os mosaicos demorem, as camadas do jogo entram logo.
@@ -173,6 +179,29 @@
       var t = est.tr; hud.querySelector('[data-m=km] b').textContent = (t.m / 1000).toFixed(1).replace('.', ',');
       if (est.pronto) mapa.getSource('trajeto').setData(fc(t.pts.length > 1 ? [{ type: 'Feature', properties: {}, geometry: { type: 'LineString', coordinates: t.pts } }] : []));
     }
+    // Rota do dia: tu → paragens → tu. Tenta o caminho a pé real (OSRM público); sem resposta, linha recta.
+    function rotaPinta() {
+      est.rotaM.forEach(function (m) { m.remove(); }); est.rotaM = [];
+      var r = est.rota, chip = hud.querySelector('[data-m=rota]');
+      if (!r) { if (est.pronto) mapa.getSource('rota').setData(fc([])); if (chip) chip.hidden = true; return; }
+      if (est.pronto) mapa.getSource('rota').setData(fc([{ type: 'Feature', properties: {}, geometry: { type: 'LineString', coordinates: r.coords } }]));
+      r.paragens.forEach(function (p, i) { var e = document.createElement('div'); e.className = 'm3d-n'; e.textContent = i + 1; est.rotaM.push(new M.Marker({ element: e, anchor: 'center', offset: [0, 0] }).setLngLat([p.lon, p.lat]).addTo(mapa)); });
+      if (chip) { chip.hidden = false; chip.querySelector('b').textContent = (r.m / 1000).toFixed(1).replace('.', ','); chip.querySelector('i').textContent = r.paragens.length + ' paragens · ' + (r.real ? 'a pé' : 'aprox.'); }
+    }
+    function rotaDefinir(paragens, origem) {
+      if (!paragens || !paragens.length || !origem) { est.rota = null; rotaPinta(); return; }
+      var pts = [[origem.lon, origem.lat]].concat(paragens.map(function (p) { return [p.lon, p.lat]; })).concat([[origem.lon, origem.lat]]);
+      var m = 0; for (var i = 1; i < pts.length; i++) m += distM({ lon: pts[i - 1][0], lat: pts[i - 1][1] }, { lon: pts[i][0], lat: pts[i][1] });
+      var pedido = est.rotaPedido = (est.rotaPedido || 0) + 1;
+      est.rota = { paragens: paragens, coords: pts, m: m, real: false }; rotaPinta();
+      var url = 'https://routing.openstreetmap.de/routed-foot/route/v1/foot/' + pts.map(function (q) { return q[0].toFixed(6) + ',' + q[1].toFixed(6); }).join(';') + '?overview=full&geometries=geojson';
+      var ctl = window.AbortController ? new AbortController() : null; var t = setTimeout(function () { if (ctl) ctl.abort(); }, 8000);
+      fetch(url, ctl ? { signal: ctl.signal } : {}).then(function (r) { return r.json(); }).then(function (j) {
+        clearTimeout(t); if (pedido !== est.rotaPedido) return;
+        var g = j && j.routes && j.routes[0]; if (!g || !g.geometry || !g.geometry.coordinates) return;
+        est.rota = { paragens: paragens, coords: g.geometry.coordinates, m: g.distance || m, real: true }; rotaPinta();
+      }).catch(function () { clearTimeout(t); });
+    }
     function enquadrar(anim) {
       var pts = est.pontos.map(function (p) { return [p.lon, p.lat]; }); if (est.eu) pts.push([est.eu.lon, est.eu.lat]);
       if (!pts.length) return;
@@ -182,6 +211,7 @@
     }
     bts.addEventListener('click', function (ev) {
       var b = ev.target.closest('button'); if (!b) return; var k = b.getAttribute('data-mb');
+      if (k === 'nova') { if (op.novaRota) op.novaRota(); return; }
       if (k === 'eu') { if (est.eu) mapa.flyTo({ center: [est.eu.lon, est.eu.lat], zoom: 17, pitch: 65, duration: 1400 }); else if (op.pedirPosicao) op.pedirPosicao(); }
       else if (k === 'vista') { var em3 = mapa.getPitch() > 10; mapa.easeTo({ pitch: em3 ? 0 : 62, bearing: em3 ? 0 : -24, duration: 900 }); b.textContent = em3 ? '3D' : '2D'; }
       else if (k === 'rodar') { est.rodar = !est.rodar; b.style.color = est.rodar ? '#fff' : ''; if (est.rodar) rodar(); }
@@ -198,6 +228,7 @@
         if (primeiraVez && est.pontos.length) { primeiraVez = false; enquadrar(!reduz); }
       },
       enquadrar: function () { enquadrar(true); },
+      rota: function (paragens, origem) { rotaDefinir(paragens, origem); },
       alvo: function (id) { est.alvo = id; pinta(); },
       eu: function (pos) {
         est.eu = pos; if (!pos) return;
