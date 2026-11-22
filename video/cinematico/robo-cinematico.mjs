@@ -36,7 +36,8 @@ function correr(cmd, args, opts = {}) {
 }
 
 async function baixar(url, destino) {
-  const r = await fetch(url, { signal: AbortSignal.timeout(120_000) })
+  // a Wikimedia recusa pedidos sem User-Agent identificável
+  const r = await fetch(url, { signal: AbortSignal.timeout(120_000), headers: { 'user-agent': 'MTM-reels/1.0 (+https://www.morethanmoney.pt)' } })
   if (!r.ok) throw new Error(`download ${r.status}`)
   fs.writeFileSync(destino, Buffer.from(await r.arrayBuffer()))
   return r.headers.get('content-type') || ''
