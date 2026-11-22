@@ -53,10 +53,16 @@ Valor do pip (1 lote): 10 $
 Lote: 0,02
 :::
 
+E há uma prova que o próprio MetaTrader faz por ti. Na janela de ordem, por baixo do campo do S/L, podes ver o stop em **Preço**, em **Pips** ou em **USD** (ou na moeda da tua conta). Escolhe a vista em dinheiro: se o número que aparece não for o teu risco de 1 %, o lote está errado. No próximo capítulo vês esse ecrã passo a passo.
+
 Duas notas honestas:
 
 - Com conta em **euros**, o valor do pip muda com o câmbio do dia. Confirma no MT5 ou na corretora.
 - No **ouro** e nos índices, o tamanho do contrato e o valor de cada movimento mudam de corretora para corretora. Lê a especificação antes de aplicares a fórmula.
+
+:::historia A Marta, dia 8
+A Marta queria abrir 0,10 lotes, «para valer a pena». Com 500 € de demo e 1 % de risco, só podia perder 5 €. Para caber 0,10, o stop teria de ficar a 5 pips da entrada, dentro do ruído que tinha visto no M1. Fez a conta ao contrário: a zona do H4 pedia um stop de 25 pips, por isso o lote era 0,02. Escreveu os dois números no caderno, lado a lado. «O stop vem do gráfico. O lote vem da conta.» Pela primeira vez, o número pequeno pareceu-lhe o certo.
+:::
 
 ## E quando a conta é pequena?
 
@@ -64,7 +70,7 @@ Com 200 € e 1 % de risco, arriscas 2 € por operação. Com o lote mínimo de
 
 ## A regra fria deste capítulo
 
-:::cartao Regra fria n.º 6
+:::cartao Regra fria n.º 5
 1 % por operação. O stop decide o lote. Depois de perder, o lote não sobe. Faço a prova da conta antes de clicar.
 :::
 

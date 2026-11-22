@@ -16,13 +16,13 @@ Hot is deciding during the trade. Cold is deciding before it, in writing, and in
 
 I made mistakes. Some of them were expensive, in money and in sleepless nights. I do not write them here to make a drama out of them. I write them because each one turned into a rule, and the rules are the part of this business that can actually be taught.
 
-The first version of this e-book was called "Investing Without Emotions". It was a summary of a class: useful, but generic, and with a title that promised one thing (investing) and delivered another (Forex trading). This is the edition rebuilt from scratch. More direct, more practical, with MetaTrader 5 step by step and the classic mistakes put up front, so that you do not have to pay for them yourself.
+The first version of this e-book was called "Investing Without Emotions". It was a summary of a class: useful, but generic, and with a title that promised one thing (investing) and delivered another (Forex trading). This is the edition rebuilt from scratch. More direct, more practical, with MetaTrader 5 step by step through the chapters, real app screens and the classic mistakes put up front, so that you do not have to pay for them yourself.
 
-If you have read my other book, "I Destroyed It All. And I'm Glad.", you know where I come from and why discipline is my obsession. This one is its technical sibling. That one has the story and the mindset. This one is the workbench.
+If you have read my other book, "I Destroyed It All. And I'm Glad.", you know where I come from and why discipline is my obsession. This is its technical sibling. That one has the story and the mindset. This one is the workbench.
 
 :::post @ricardogarciapt
 imagem: The market does not know you exist.
-legenda: And that is great news. It means it is not against you. You just need to stop being against yourself. 🧊
+legenda: And that is great news. It means it is not against you. You only need to stop being against yourself. 🧊
 :::
 
 ## What this book is (and what it is not)
@@ -40,12 +40,18 @@ It is not a shortcut. There is no "never loses" strategy in here, no screenshots
 
 ## How to read this book
 
-Each chapter has four parts, always in the same order:
+This book does not leave the practical part until the end. In chapter 1 you install MetaTrader 5 on a demo account, and from then on each chapter adds a new idea to the app screen where it applies. You learn the spread by looking at your Quotes, the lot size by looking at the "Volume" field, the chart with your finger on the chart. By the time you reach the order in chapter 6, you already know how to use every piece.
+
+[[grafico:percurso-mt5]]
+
+Each chapter has the same parts, always in the same order:
 
 1. **One idea** that changes the way you see the market.
-2. **One classic mistake**, the one almost everybody makes at the start, with an explanation of what it costs.
-3. **One cold rule**, short, for you to stick up near your screen.
-4. **One task for today** in MetaTrader 5 or in a notebook, which takes less than 30 minutes.
+2. **The screen**: where that idea lives in MetaTrader, with real captures of the app.
+3. **One classic mistake**, the one almost everybody makes at the start, with an explanation of what it costs.
+4. **A piece of Marta's story**, an example character who starts from zero in chapter 1 and applies each rule, stumbles included, to the end of the book.
+5. **One cold rule**, short, for you to stick up near your screen.
+6. **One task for today** on your demo or in a notebook, which takes less than 30 minutes.
 
 :::cartao The five cold rules of this book
 - I decide beforehand. In the moment, I only execute.
@@ -55,7 +61,7 @@ Each chapter has four parts, always in the same order:
 - Everything I do goes in the journal.
 :::
 
-Read it with MetaTrader 5 open on a demo account. Read it with a notebook beside you. This book was made to be scribbled on.
+Read it with your phone beside you and, from chapter 1 onwards, with MetaTrader 5 open on a demo account. Read it with a notebook beside you. This book was made to be scribbled on.
 
 :::exercicio Before you turn the page
 1. Write on a sheet of paper why you want to learn Forex. One sentence, no frills: ____________

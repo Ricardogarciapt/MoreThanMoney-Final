@@ -179,8 +179,11 @@ const MENTE = [
   `${calendario(90, 140, 6, 5, (k) => k < 9, 34)}<circle cx="320" cy="320" r="22" class="a2"/><circle cx="320" cy="320" r="34" class="fino tracejado"/>`,
 ]
 
+const ORDEM_FRIO = [0, 3, 1, 2, 5, 6, 4, 7, 8, 9, 10, 11, 12]
+
 export function ilustracao(tema, n) {
   const lista = tema === 'cripto' ? CRIPTO : tema === 'faceless' ? FACELESS : tema === 'rg' ? RG : tema === 'frio' ? FRIO : tema === 'mente' ? MENTE : null
-  const inner = lista?.[n]
+  // 22/11: «O Método Frio» passou a instalar o MT5 no cap. 1; as ilustrações seguem o tema, não o número antigo
+  const inner = lista?.[tema === 'frio' ? (ORDEM_FRIO[n] ?? n) : n]
   return inner ? S(inner) : ''
 }

@@ -29,8 +29,8 @@ export const LIVROS = {
     funcao: 'Forex · MetaTrader 5',
     fotoInterior: 'rg-telefone.jpg',
     aberturas: ['rg-trading-lisboa.jpg'],
-    // 21/11: nada de ecrãs do MetaTrader desenhados; os capítulos 3 e 4 usam capturas reais.
-    semIlustra: [3, 4],
+    // nada de ecrãs do MetaTrader desenhados: os capítulos 1 (instalar) e 6 (ordem) abrem sem ilustração.
+    semIlustra: [1, 6],
     edicao: '1.ª edição · novembro de 2026 · substitui «Investir sem Emoções»',
     aviso: 'Conteúdo educativo. Não constitui aconselhamento financeiro nem recomendação de investimento. Negociar Forex e CFD com alavancagem envolve risco elevado de perda, incluindo a totalidade do capital. A maioria das contas de retalho perde dinheiro com CFD. Resultados passados não garantem resultados futuros.',
   },
