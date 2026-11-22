@@ -7,6 +7,7 @@ import { getSupabaseAdmin } from "@/lib/supabase-admin-client"
 import { juntarMemoria, montarSistema, separarNotas, type ContextoAluno } from "@/lib/mentor/prompt"
 import { contextoDoAluno, salasDaSemana } from "@/lib/mentor/contexto-servidor"
 import { avisoOcupado } from "@/lib/mentor/ocupado"
+import { detetarLingua, limparRaciocinio, respostaNaLingua } from "@/lib/mentor/lingua"
 
 /**
  * MENTOR MTM — o agente pessoal de cada aluno (revisão de 17/11, ver `lib/mentor/prompt.ts`).
@@ -65,21 +66,28 @@ export async function POST(request: NextRequest) {
       contextoDoAluno(userId).catch(() => ({ contexto: {} as ContextoAluno, memoria: "", idiomaPerfil: null })),
       salasDaSemana(),
     ])
-    const sistema = montarSistema({ langApp, ultimaPorBotao: Boolean(porBotao), contexto, salas })
+    const linguaDetetada = porBotao ? null : detetarLingua(ultima.content)
+    const sistema = montarSistema({ langApp, ultimaPorBotao: Boolean(porBotao), contexto, salas, linguaDetetada })
 
     const encoder = new TextEncoder()
     const stream = new ReadableStream({
       async start(controller) {
         try {
-          const r = await chamarIAGratis({
-            tarefa: "mentor",
-            sistema,
-            mensagens: conversa,
-            maxTokens: 900,
-            temperatura: 0.7,
-            preferencia: "qualidade",
-          })
-          const { resposta, notas } = separarNotas(r.texto)
+          const pedir = (s: string) =>
+            chamarIAGratis({ tarefa: "mentor", sistema: s, mensagens: conversa, maxTokens: 900, temperatura: 0.7, preferencia: "qualidade" })
+          let r = await pedir(sistema)
+          let limpo = limparRaciocinio(r.texto)
+          // 22/11: uma segunda tentativa quando a resposta sai noutra língua ou é raciocínio do modelo.
+          const falhaLingua = linguaDetetada && !respostaNaLingua(separarNotas(limpo.texto).resposta, linguaDetetada)
+          if (limpo.pareceRaciocinio || falhaLingua) {
+            const r2 = await pedir(`${sistema}\n\nIMPORTANT: your previous attempt was rejected${falhaLingua ? " because it was not in the student's language" : " because it showed your reasoning"}. Answer again, directly to the student.`).catch(() => null)
+            const l2 = r2 ? limparRaciocinio(r2.texto) : null
+            if (r2 && l2 && !l2.pareceRaciocinio) {
+              r = r2
+              limpo = l2
+            }
+          }
+          const { resposta, notas } = separarNotas(limpo.texto)
           controller.enqueue(encoder.encode(`data: ${JSON.stringify({ type: "text", text: resposta })}\n\n`))
           controller.enqueue(encoder.encode(`data: ${JSON.stringify({ type: "done", fornecedor: r.fornecedor, emReserva: r.emReserva })}\n\n`))
           controller.close()
