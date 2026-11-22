@@ -18,6 +18,18 @@ An honest note before we start: this is not financial advice or a recommendation
 
 [[foto: ruben-retrato.jpg | Making the complicated simple. That is what I am here for. | polaroid]]
 
+## Who is writing to you
+
+My story is simple. I come from an ordinary, humble family, with three siblings. I always worked with my hands, as a drywall installer. Seven years ago I fell for charts, crypto charts above all, and that is still what draws me to this world today.
+
+With training, experience and a lot of personal work, I got to the point of living from this business. Then I lost control. I got involved with the wrong people and had to start again, practically from zero. It may sound like a cliché, but everything changed from that zero.
+
+That was when I met Ricardo, through a mutual friend, when MoreThanMoney was just starting. I accepted the invitation, focused more on crypto and learned to work with a method. Today I make a living from crypto and I am stable. I don't live 100% from it yet, but that is my choice.
+
+:::nota
+I tell you this for one reason: most of the mistakes I will help you avoid in this book are mine. I lost money by trusting the wrong people and by having no rules. That is how I learned that, without a method, the chart is in charge of you.
+:::
+
 ## The risk is real, and it can be total
 
 A cryptocurrency can fall a long way, and fast. It has happened to coins that looked solid, and some have simply stopped having users and stopped being worth anything. When I talk about the risk of loss, I mean losing everything you put in, not just part of it.

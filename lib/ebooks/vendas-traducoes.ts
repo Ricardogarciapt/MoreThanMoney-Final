@@ -135,7 +135,7 @@ export const VENDAS_TRADUCOES: Record<'destrui-tudo-e-ainda-bem' | 'o-metodo-fri
       sub: 'From “I don’t understand any of this” to your first secure wallet and a 30-day plan. No hype, no fear and no promises.',
       autor: 'Ruben Pereira',
       autorBio: 'Crypto educator at MoreThanMoney. “Making the complex simple. More than money, it’s a plan.” He runs the DCA Rooms with MTM, Império Cripto and Live Trading Cripto.',
-      numeros: [{ v: '113', r: 'pages' }, { v: '6', r: 'animated charts' }, { v: '11', r: 'exercises' }, { v: '10', r: 'anti-scam checkpoints' }],
+      numeros: [{ v: '112', r: 'pages' }, { v: '6', r: 'animated charts' }, { v: '11', r: 'exercises' }, { v: '10', r: 'anti-scam checkpoints' }],
       capitulos: [
         { t: 'What money is', d: 'From barter to the euro, inflation and why Bitcoin was born in 2008.' },
         { t: 'The notebook nobody can erase', d: 'Blockchain explained without jargon.' },
@@ -162,7 +162,7 @@ export const VENDAS_TRADUCOES: Record<'destrui-tudo-e-ainda-bem' | 'o-metodo-fri
       sub: 'Del «no entiendo nada» a tu primera cartera segura y a un plan de 30 días. Sin humo, sin miedo y sin promesas.',
       autor: 'Ruben Pereira',
       autorBio: 'Educador de cripto en MoreThanMoney. «Simplificar lo complejo. Más que dinero, es un plan.» Dirige las Salas DCA con MTM, el Império Cripto y el Live Trading Cripto.',
-      numeros: [{ v: '113', r: 'páginas' }, { v: '6', r: 'gráficos animados' }, { v: '11', r: 'ejercicios' }, { v: '10', r: 'puntos antiestafas' }],
+      numeros: [{ v: '115', r: 'páginas' }, { v: '6', r: 'gráficos animados' }, { v: '11', r: 'ejercicios' }, { v: '10', r: 'puntos antiestafas' }],
       capitulos: [
         { t: 'Qué es el dinero', d: 'Del trueque al euro, la inflación y por qué nació Bitcoin en 2008.' },
         { t: 'La libreta que nadie borra', d: 'La blockchain explicada sin jerga.' },
