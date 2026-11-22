@@ -1,6 +1,6 @@
 {
   "slug": "a-primeira-chave",
-  "gerado": "2026-11-21",
+  "gerado": "2026-11-22",
   "velocidade": 1.03,
   "modulos": [
     {
@@ -1326,7 +1326,7 @@
             },
             {
               "cena": 6,
-              "visual": "Três ícones em fila: um calendário, uma percentagem, uma folha. Seta para a aula 7.2.",
+              "visual": "Três ícones em fila: um calendário, uma percentagem, uma folha. Seta para a aula 8.2.",
               "narracao": "Resumindo: menos de 365 dias pode significar 28 por cento sobre o ganho, 365 dias ou mais é, em regra, isenção, e o registo é o teu melhor aliado. Na próxima aula vamos falar de perpétuos e alavancagem, o terreno onde os números podem perder-se em minutos, e onde o imposto é a menor das tuas preocupações."
             }
           ],
@@ -1439,7 +1439,7 @@
             {
               "cena": 5,
               "visual": "Ecrã de missão, com um quadrado para marcar e a frase «Missão do módulo 8».",
-              "narracao": "A missão do módulo sete, e do bootcamp, é uma só. Até ao fim desta semana, escreve o teu plano de trinta dias numa folha, com a data de hoje, e assina-o. Guarda-o num sítio seguro, separado da tua seed phrase, sem misturar as duas coisas. Depois, marca a palavra feito na checklist que imprimiste. Obrigado por teres dado a estas aulas o tempo que pedem. Nem todos se sentam a estudar isto com calma, e isso já diz muito sobre ti."
+              "narracao": "A missão do módulo oito, e do bootcamp, é uma só. Até ao fim desta semana, escreve o teu plano de trinta dias numa folha, com a data de hoje, e assina-o. Guarda-o num sítio seguro, separado da tua seed phrase, sem misturar as duas coisas. Depois, marca a palavra feito na checklist que imprimiste. Obrigado por teres dado a estas aulas o tempo que pedem. Nem todos se sentam a estudar isto com calma, e isso já diz muito sobre ti."
             },
             {
               "cena": 6,

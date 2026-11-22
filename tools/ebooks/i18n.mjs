@@ -6,11 +6,11 @@ import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 const AQUI = path.dirname(fileURLToPath(import.meta.url))
-export const LINGUAS = ['en', 'es']
+export const LINGUAS = ['en', 'es', 'fr']
 
 /** 'o-metodo-frio-en' → { base: 'o-metodo-frio', lingua: 'en' } */
 export function partes(slug) {
-  const m = slug.match(/^(.*)-(en|es)$/)
+  const m = slug.match(/^(.*)-(en|es|fr)$/)
   return m ? { base: m[1], lingua: m[2] } : { base: slug, lingua: 'pt' }
 }
 
@@ -48,6 +48,17 @@ export const UI = {
     carimbo: { rg: ['Disciplina · Dinero · Mercados ·', '10', 'semanas'], frio: ['Forex · Cómo empezar · Sin impulso ·', '1 %', 'por operación'], mente: ['Creencias · Identidad · Decisión ·', '30', 'días'], cripto: ['Cripto para principiantes · Sin hype ·', '1.º', 'euro'], faceless: ['Vender sin mostrar la cara · Solo manos ·', '30', 'días'] },
     colecao: 'Colección MTM',
     fechoMtm: 'Sigue el camino con la comunidad MoreThanMoney: clases en directo, herramientas y personas que están haciendo el mismo recorrido.',
+  },
+  fr: {
+    html: 'fr-FR', indice: 'Sommaire', capitulo: 'Chapitre', anexo: 'Annexe', edicao1: '1re édition',
+    direitos: (autor, marca) => `© 2026 ${autor} et ${marca}. Tous droits réservés. Cet exemplaire est personnel et incessible : ne le partage pas et ne le revends pas.`,
+    produzida: 'Édition produite par MoreThanMoney.pt', aviso: 'Avertissement important.', sobre: "À propos de l'auteur.", obrigado: "Merci d'avoir lu jusqu'ici.",
+    rotulos: { destaque: 'Idée clé', exercicio: 'Exercice', alerta: 'Attention', historia: 'Histoire' },
+    pergunta: 'Question', mensagens: 'Messages', recorta: 'À découper et garder', espreitadela: 'Un aperçu de la formation', ferramenta: 'Outil MTM',
+    ficha: { estilo: 'Style', ativos: 'Actifs', tempo: 'Graphique' }, novaVenda: 'Nouvelle vente ♥', semImpulso: 'SANS IMPULSION',
+    carimbo: { rg: ['Discipline · Argent · Marchés ·', '10', 'semaines'], frio: ['Forex · Débuter · Sans impulsion ·', '1 %', 'par trade'], mente: ['Croyances · Identité · Décision ·', '30', 'jours'], cripto: ['Crypto pour débutants · Sans hype ·', '1er', 'euro'], faceless: ['Vendre sans montrer son visage ·', '30', 'jours'] },
+    colecao: 'Collection MTM',
+    fechoMtm: 'Continue le chemin avec la communauté MoreThanMoney : cours en direct, outils et des personnes qui font le même parcours.',
   },
 }
 
@@ -103,6 +114,14 @@ export const LIVROS_TRAD = {
       funcao: 'Educador de cripto',
       edicao: '1.ª edición · noviembre de 2026',
       aviso: 'Contenido educativo. No constituye asesoramiento financiero ni fiscal. Los criptoactivos son muy volátiles y puedes perder la totalidad del valor invertido. Las reglas fiscales descritas son las de Portugal y cambian: consulta siempre con un asesor fiscal.',
+    },
+    fr: {
+      titulo: 'La Première', titulo2: 'Clé',
+      subtitulo: 'La crypto pour débutants, sans hype et sans peur. Du premier euro au portefeuille sécurisé.',
+      autorBio: 'Éducateur crypto et perpétuels chez MoreThanMoney. Il anime les salles DCA avec MTM, Império Cripto et le Live Trading Crypto.',
+      funcao: 'Éducateur crypto',
+      edicao: '1re édition · novembre 2026',
+      aviso: "Contenu éducatif. Ce n'est pas un conseil financier ni fiscal. Les crypto-actifs sont très volatils et tu peux perdre la totalité de la somme investie. Les règles fiscales décrites sont celles du Portugal et elles changent : si tu vis en France, renseigne-toi auprès de l'administration fiscale (impots.gouv.fr) ou d'un expert-comptable.",
     },
   },
   'so-as-maos': {

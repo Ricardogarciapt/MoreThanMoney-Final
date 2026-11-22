@@ -19,12 +19,12 @@
 **[CENA 5]** Caso ilustrativo. Um escritório em Lisboa, o Pedro, 31 anos, designer, a folhear extratos antigos num portátil. Legenda: «caso ilustrativo».
 **NARRAÇÃO:** Caso ilustrativo: o Pedro, 31 anos, designer em Lisboa, fez várias compras e vendas ao longo do ano, sem registar nada. Quando chegou a altura de declarar, não sabia as datas exatas, nem o valor que tinha pago em cada operação. Passou semanas a pesquisar em extratos e em conversas antigas. O imposto em si nem era o pior. O pior foi o stress de reconstruir um ano inteiro de memória. Um registo de dez minutos por mês teria evitado tudo isso, e teria poupado horas de dúvidas.
 
-**[CENA 6]** Três ícones em fila: um calendário, uma percentagem, uma folha. Seta para a aula 7.2.
+**[CENA 6]** Três ícones em fila: um calendário, uma percentagem, uma folha. Seta para a aula 8.2.
 **NARRAÇÃO:** Resumindo: menos de 365 dias pode significar 28 por cento sobre o ganho, 365 dias ou mais é, em regra, isenção, e o registo é o teu melhor aliado. Na próxima aula vamos falar de perpétuos e alavancagem, o terreno onde os números podem perder-se em minutos, e onde o imposto é a menor das tuas preocupações.
 
 **Texto no ecrã:** 365 dias é a linha · 28% sobre o ganho, não sobre o total · registo mês a mês · confirma com um contabilista
 **Pergunta de verificação:** Compraste há 200 dias e vendes com ganho. Em que regra estás? Resposta: na regra dos menos de 365 dias, com tributação de 28 por cento sobre a mais-valia, salvo outras particularidades do teu caso.
-**Fecho / CTA da aula:** Próxima aula: 7.2, Perpétuos e alavancagem. Botão no ecrã: «Ver aula 7.2».
+**Fecho / CTA da aula:** Próxima aula: 8.2, Perpétuos e alavancagem. Botão no ecrã: «Ver aula 8.2».
 
 ## Aula 8.2 — Perpétuos e alavancagem: porque não começar aqui (≈4–5 min)
 **Gancho (0:00–0:20):** Imagina uma aposta em que, se o preço mexer um por cento contra ti, perdes tudo o que lá puseste. Parece exagero. Com alavancagem muito alta, em perpétuos, pode acontecer em segundos.
@@ -49,7 +49,7 @@
 
 **Texto no ecrã:** perpétuo = sem data de validade · 2x ≈ −50% · 10x ≈ −10% · 100x ≈ −1% · sem taxas · não começar aqui
 **Pergunta de verificação:** Com dez vezes de alavancagem, a que queda aproximada, sem taxas, a posição é liquidada? Resposta: cerca de dez por cento contra a posição.
-**Fecho / CTA da aula:** Próxima aula: 7.3, O teu plano de 30 dias. Botão no ecrã: «Ver aula 7.3».
+**Fecho / CTA da aula:** Próxima aula: 8.3, O teu plano de 30 dias. Botão no ecrã: «Ver aula 8.3».
 
 ## Aula 8.3 — O teu plano de 30 dias (≈4–5 min)
 **Gancho (0:00–0:20):** Em trinta dias não vais dominar o cripto. Mas podes sair com uma base sólida, e isso já é muito mais do que a maioria de quem começa com pressa.
@@ -74,7 +74,7 @@
 
 **Texto no ecrã:** semana 1: segurança · semana 2: escolher e verificar · semana 3: DCA e registo · semana 4: revisão · sem promessas
 **Pergunta de verificação:** Qual é o primeiro passo do plano, antes de comprares o que quer que seja? Resposta: segurança, com a chave guardada e a conta protegida.
-**Fecho / CTA da aula:** Próxima aula: 7.4, Fecho, aviso final e convite. Botão no ecrã: «Ver aula 7.4».
+**Fecho / CTA da aula:** Próxima aula: 8.4, Fecho, aviso final e convite. Botão no ecrã: «Ver aula 8.4».
 
 ## Aula 8.4 — Fecho: aviso final, convite e missão do módulo (≈4–5 min)
 **Gancho (0:00–0:20):** Chegámos ao fim do bootcamp. Antes de qualquer outra coisa, preciso de te dizer uma coisa com clareza, em voz alta.
@@ -92,7 +92,7 @@
 **NARRAÇÃO:** Os próximos passos são simples. Revê o plano de trinta dias. Faz a checklist de segurança, ponto por ponto. E decide, sem pressa, se queres entrar nas Salas ou na comunidade. A decisão é tua, e pode ser não. Escolhe um passo de cada vez, e não os três ao mesmo tempo. Se alguém te disser que tens de decidir hoje, ou que vais perder uma oportunidade única, já sabes o que fazer: fechas a conversa, respiras e voltas a este plano. Quem ganha com a tua pressa não é quem te quer bem. Em caso de dúvida, o silêncio também é uma resposta válida.
 
 **[CENA 5]** Ecrã de missão, com um quadrado para marcar e a frase «Missão do módulo 8».
-**NARRAÇÃO:** A missão do módulo sete, e do bootcamp, é uma só. Até ao fim desta semana, escreve o teu plano de trinta dias numa folha, com a data de hoje, e assina-o. Guarda-o num sítio seguro, separado da tua seed phrase, sem misturar as duas coisas. Depois, marca a palavra «feito» na checklist que imprimiste. Obrigado por teres dado a estas aulas o tempo que pedem. Nem todos se sentam a estudar isto com calma, e isso já diz muito sobre ti.
+**NARRAÇÃO:** A missão do módulo oito, e do bootcamp, é uma só. Até ao fim desta semana, escreve o teu plano de trinta dias numa folha, com a data de hoje, e assina-o. Guarda-o num sítio seguro, separado da tua seed phrase, sem misturar as duas coisas. Depois, marca a palavra «feito» na checklist que imprimiste. Obrigado por teres dado a estas aulas o tempo que pedem. Nem todos se sentam a estudar isto com calma, e isso já diz muito sobre ti.
 
 **[CENA 6]** Ecrã final com o logótipo MoreThanMoney e a frase: «Cuida da tua chave».
 **NARRAÇÃO:** Antes de fechar, deixo-te uma última ideia. Em cripto, o mercado vai estar sempre aí, amanhã, na semana que vem e daqui a um ano. Não precisas de entrar hoje para não perder uma oportunidade, porque as oportunidades repetem-se, e a tua segurança não se repete. Se algum dia tiveres dúvidas, volta a estas aulas, faz a checklist e escreve o que observas. Até à próxima. Se quiseres voltar a estas aulas, estão cá. Lembra-te: conteúdo educativo, não é aconselhamento financeiro, e o risco de perda é real. Cuida da tua chave.

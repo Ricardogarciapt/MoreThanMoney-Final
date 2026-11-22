@@ -1,0 +1,102 @@
+# Módulo 8 — Taxes, perpetuals and your 30-day plan (≈17 min)
+**Objetivo:** understand the basic principle of crypto taxes in Portugal, understand perpetuals and leverage without using them, and leave with a concrete 30-day plan. **No fim, o aluno consegue:** 1) explain the 365-day rule and work through an example; 2) explain liquidation with leverage and why you should not start there; 3) build and review a 30-day plan.
+
+## Aula 8.1 — Taxes in Portugal: the 365-day rule (≈4–5 min)
+**Gancho (0:00–0:20):** In crypto, tax is not paid on the day you buy. It can, however, appear on the day you sell, if you are not prepared.
+
+**[CENA 1]** Animated calendar with 365 days filling up, and a marker showing day 365.
+**NARRAÇÃO:** I am going to talk about taxes in general terms, because the rules change and the person who decides your situation is a certified accountant. That said, there is a basic principle you should know. Since 2023, in Portugal, crypto capital gains on assets held for less than 365 days are taxed at a rate of 28 percent. If you hold them for 365 days or more, they are, as a rule, exempt. A capital gain, mais-valia in Portuguese, is the positive difference between the sale value and the purchase value. If you sell for less than you paid, there is no gain to tax. If you live outside Portugal, the rules where you live are different, so check with your own tax authority or an accountant. The principle is simple. It is the details that change the sum, and they are what catch you off guard. For example, the purchase date and the sale date are counted in days, and a single day's difference can change everything.
+
+**[CENA 2]** Illustrative example with the sums on screen: one thousand euros bought, one thousand three hundred sold, three hundred gain, eighty-four tax. Caption: “round figures, no fees”.
+**NARRAÇÃO:** Let's look at an illustrative example, with round figures and no fees. You buy one thousand euros of crypto and, three months later, you sell for one thousand three hundred. The capital gain is three hundred euros. On those three hundred you apply the twenty-eight percent, which gives eighty-four euros. Notice this carefully: the tax does not apply to the full value of one thousand three hundred, only to the gain. If the same investment had been held for 365 days or more, the general rule would be different, and the sum would, as a rule, be exempt. All of this can change, so always confirm the current version before drawing conclusions. Also remember that the fees paid when buying and selling can reduce the gain, which is why they go into the record.
+
+**[CENA 3]** Screen with a spreadsheet: columns Date, Asset, Quantity, Value in euros, Fees, Type of operation.
+**NARRAÇÃO:** So, record everything. Every purchase, every sale and every swap, with the date, the asset, the quantity, the value in euros at that moment and the fees paid. Add a column for the type of operation, so you can see at a glance what was a purchase, a sale or a swap. Do not rely on memory or loose screenshots, because a year from now you will not remember everything. A simple spreadsheet is enough to start. When the time comes to declare, you will thank yourself, and so will the accountant. If you swap one coin for another, record both sides of the operation, because both count.
+
+**[CENA 4]** Large warning on screen: “Check with a certified accountant”. Underneath, a list of three cases: crypto-to-crypto swaps, staking, airdrops.
+**NARRAÇÃO:** Now the most important warning in this lesson. Crypto-to-crypto swaps, staking income, airdrops and other cases can be treated differently, and I don't want to guess that in a video. There is also the option of joint taxation with your income, which is called englobamento in Portuguese, where the gain is added to your annual income. It can be more advantageous or less, depending on your tax bracket, and that comparison needs someone who sees your full numbers. Do not make tax decisions based on a two-minute video, or on what someone said in a group chat. Take your record sheet and the questions you wrote down beforehand to the meeting with the accountant.
+
+**[CENA 5]** Illustrative case. An office in Lisbon, Pedro, 31, a designer, going through old statements on a laptop. Caption: “illustrative case”.
+**NARRAÇÃO:** Illustrative case: Pedro, 31, a designer in Lisbon, made several purchases and sales over the year without recording anything. When it came time to declare, he did not know the exact dates, nor the amount he had paid in each transaction. He spent weeks searching through statements and old conversations. The tax itself was not even the worst part. The worst part was the stress of rebuilding a whole year from memory. A ten-minute record each month would have prevented all of that, and would have saved hours of doubt.
+
+**[CENA 6]** Three icons in a row: a calendar, a percentage, a sheet of paper. Arrow pointing to lesson 8.2.
+**NARRAÇÃO:** To sum up: less than 365 days can mean 28 percent on the gain, 365 days or more is, as a rule, exemption, and your record is your best ally. In the next lesson we will talk about perpetuals and leverage, the territory where numbers can be lost in minutes, and where tax is the smallest of your worries.
+
+**Texto no ecrã:** 365 days is the line · 28% on the gain, not on the total · month-by-month record · confirm with a certified accountant
+**Check question:** You bought 200 days ago and you sell at a gain. Which rule do you fall under? Answer: the rule for less than 365 days, with 28 percent tax on the capital gain, unless your case has other particularities.
+**Fecho / CTA da aula:** Next lesson: 8.2, Perpetuals and leverage. On-screen button: “See lesson 8.2”.
+
+## Aula 8.2 — Perpetuals and leverage: why not start here (≈4–5 min)
+**Gancho (0:00–0:20):** Imagine a bet where, if the price moves one percent against you, you lose everything you put in. It sounds exaggerated. With very high leverage, in perpetuals, it can happen in seconds.
+
+**[CENA 1]** A contract on screen, with no expiry date, and an infinity symbol spinning.
+**NARRAÇÃO:** A perpetual is a derivative contract with no expiry date. Instead of buying the asset, you bet that the price will go up or down. You can go long, if you think it will rise, or short, if you think it will fall. There is often a funding rate, paid periodically between those who are long and those who are short, depending on the difference between the contract price and the spot market price. Leverage lets you open a position much larger than the money you have deposited. This is where the risk multiplies, because what you gain and what you lose is calculated on the whole position, not on your deposit. That means a small price movement can represent a huge slice of your money.
+
+**[CENA 2]** Animated table on screen, with two columns: leverage and the approximate drop that liquidates the position.
+**NARRAÇÃO:** Here are the approximate numbers, leaving out fees. At two times, a drop of about fifty percent liquidates the position. At five times, about twenty percent. At ten times, about ten. At twenty times, about five. At fifty times, about two percent. And at one hundred times, about one percent. One percent. In a market like crypto, which can move one percent without much effort in a single afternoon, this is not leverage. It is a roulette wheel with your money. Notice that the higher the leverage, the shorter the path to liquidation, and there is no room for error. And be careful: fees and the maintenance margin make liquidation happen even sooner than the table suggests.
+
+**[CENA 3]** Illustrative case. A bedroom in Lisbon, Hugo, 27, a programmer, with a laptop where a chart turns red. Caption: “illustrative case”.
+**NARRAÇÃO:** Illustrative case: Hugo, 27, a programmer in Lisbon, opened a position with fifty times leverage, because, in his own words, he only needed to be right once. The price made a small move against him, just over two percent, and the position was liquidated in minutes. He lost the whole margin, including money he had saved for other things. He did not lose because he was a bad programmer. He lost because the structure of the product amplifies every mistake, and he had no written limit before he went in. When leverage is high, every small move weighs as much as a big one.
+
+**[CENA 4]** Three cards on screen: “You can't yet read the market with confidence”, “You don't yet have tested rules”, “You don't yet know how to handle a losing position”.
+**NARRAÇÃO:** So my recommendation is clear: do not start here. A beginner does not yet have a solid reading of the market, does not yet have tested risk rules, and does not yet know how to handle the emotion of being in a losing position. Perpetuals amplify everything, the right calls and the wrong ones, and the amplification of mistakes usually arrives first. If your first experience is a perpetual, the first lesson can be an expensive one. First learn to buy, to hold and to record. Only after that, if you want, study derivatives, always with money you are prepared to lose in full.
+
+**[CENA 5]** A phone with the notification “Signal received: enter now!” and, underneath, the question: “Who decides?”.
+**NARRAÇÃO:** Even when there is a signal, a scanner or a tool pointing to an entry, the decision and the risk are still yours. A signal does not give you the position size, does not give you the loss limit, and does not tell you what to do when the price goes against you. If you enter just because an urgent notification arrived, you are delegating something you cannot delegate. Always ask yourself: if this tool fails, do I know what I will do? If the answer is no, do not enter. And if the answer is yes, still think about the position size before you go ahead.
+
+**[CENA 6]** Final screen with the phrase: “Leverage does not create money. It only amplifies what already happens”.
+**NARRAÇÃO:** Keep this idea: leverage does not create money. It only amplifies what already happens in the market, in both directions. If you cannot explain liquidation in your own words, you are not ready to touch it. Write the explanation on a piece of paper, without looking at your notes, and compare it afterwards. In the next lesson we will bring together everything we have seen into a thirty-day plan, which is the practical part of this bootcamp.
+
+**Texto no ecrã:** perpetual = no expiry date · 2x ≈ −50% · 10x ≈ −10% · 100x ≈ −1% · no fees included · do not start here
+**Check question:** At ten times leverage, what approximate drop, without fees, liquidates the position? Answer: about ten percent against the position.
+**Fecho / CTA da aula:** Next lesson: 8.3, Your 30-day plan. On-screen button: “See lesson 8.3”.
+
+## Aula 8.3 — Your 30-day plan (≈4–5 min)
+**Gancho (0:00–0:20):** In thirty days you will not master crypto. But you can leave with a solid foundation, and that is already far more than most people who start in a rush.
+
+**[CENA 1]** Table on screen with four columns, one per week: security, choose and buy, DCA and record, review.
+**NARRAÇÃO:** Let's design a thirty-day plan, split into four weeks. Week one: security. You turn on app-based authentication, you create a password manager, you write your seed phrase on paper, and you confirm the platforms you are going to use. Week two: you choose a regulated platform, complete identity verification, understand the fees, and learn the difference between a market order and a limit order. Week three: you start DCA with a small amount and record everything. Week four: you review the numbers, the rules and what you felt. Each week has one main task and one secondary task, so you don't get stuck in the detail. And one week per phase, without skipping any. If a week goes badly, repeat it before you move on. There is no prize for haste.
+
+**[CENA 2]** Printable security checklist, with boxes to tick.
+**NARRAÇÃO:** In the first week, your minimum checklist is this. A single strong password, kept in a password manager. Two-factor authentication through an app, not by SMS. Your seed phrase written by hand, in two separate places, never photographed, never sent, never saved in an email or a note on your phone. Addresses verified and saved in your bookmarks. No links from messages, ever. And turn off the price notifications that make you look at the screen every minute. You don't need to be perfect. You need to be consistent. If you remember this by heart, you are already ahead of many people who start with money and without this foundation.
+
+**[CENA 3]** List of terms on screen: seed phrase, DCA, halving, liquidation, dominance, airdrop, capital gain.
+**NARRAÇÃO:** So that you don't get lost in the words, go to the glossary in the e-book, which has thirty terms explained in plain language. Seed phrase, DCA, halving, liquidation, dominance, airdrop, capital gain, and so on. For example, capital gain, liquidation and custody are terms you will come across in almost every conversation. Write down in your notebook the words you don't understand and look them up before you decide. A term you don't understand is always a signal to stop. What would be dangerous is deciding without understanding what you are doing. If you come across a new term in a lesson, pause the video, look it up, and only then carry on.
+
+**[CENA 4]** Review diary on screen, with numbered questions, and a pen underlining the last one.
+**NARRAÇÃO:** At the end of thirty days, do an honest review. How many times did you keep to the plan, and how many times did you drift away? What made you want to change course? How much did you invest in total, and what is worth today what you bought? Do not answer with what you wished had happened. Answer with what actually happened, even if it is not pretty. If you want, share that review with someone you trust, because it helps you stay honest. That record is worth more than any advice I could give you, because it is your own experience, written with true numbers. Read it at the end of every week, not only at the end of the month.
+
+**[CENA 5]** Large warning on screen: “This plan guarantees nothing”.
+**NARRAÇÃO:** Before you move on, a warning that is not optional. This plan does not guarantee profits or results. It is there so that you can learn safely, with money you can afford to lose. If anyone ever promises you that a plan like this will give you a certain return, be suspicious straight away, and go back to lessons 5.1 and 5.2. A promise of certainty is almost always the first clue of a scam. And if the plan goes badly, it is not a sign that you are incompetent. It is a sign that you learned something expensive, and that also counts.
+
+**[CENA 6]** Screen with week one highlighted, and the phrase: “Security first”.
+**NARRAÇÃO:** The first step of this plan is the most boring, and it is the most important: security. Before you buy anything at all, your key has to be stored safely and your account has to be protected. If you do your first week today, you are ahead of those who have not even started. In the last lesson of this bootcamp I will close with a final warning and an invitation. Until then, write your week one. And keep the security checklist in sight, because your memory, under pressure, is not reliable.
+
+**Texto no ecrã:** week 1: security · week 2: choose and verify · week 3: DCA and record · week 4: review · no promises
+**Check question:** What is the first step of the plan, before you buy anything at all? Answer: security, with your key stored safely and your account protected.
+**Fecho / CTA da aula:** Next lesson: 8.4, Closing, final warning and invitation. On-screen button: “See lesson 8.4”.
+
+## Aula 8.4 — Closing: final warning, invitation and module mission (≈4–5 min)
+**Gancho (0:00–0:20):** We have reached the end of the bootcamp. Before anything else, I need to tell you one thing clearly, out loud.
+
+**[CENA 1]** Screen with large, sober text: “Educational content, not financial advice. The risk of loss is real”.
+**NARRAÇÃO:** This bootcamp is educational content. It is not financial advice. It is not a recommendation to buy or sell any asset, and it knows nothing about your situation, your income, your debts or your goals. Crypto is a high-risk market. The risk of loss is real, and you can lose part or all of what you put in. Never invest what you cannot afford to lose. And do not make tax or investment decisions without speaking to a qualified professional, who will look at your full numbers and explain what applies to your case. If you have questions about tax, bring them in writing, and ask for a written answer.
+
+**[CENA 2]** Three cards in a row, each with a short sentence, appearing one at a time.
+**NARRAÇÃO:** If you take only three things from these weeks, let them be these. The first: the key is yours, and no legitimate person will ever ask you for it. Not support, not a technician, not someone who has been friendly to you for months in a chat. The second: the example numbers are always illustrative, and the oldest rule is still the best one. Be wary of anyone who promises to double your money and of anyone who rushes you. The third: a written plan and a twenty-four hour wait are worth more than any hunch, however confident it sounds. You don't need to memorise anything. You need to come back to these rules when the rush shows up. These three rules fit on a sticky note, and that is a virtue, not a flaw.
+
+**[CENA 3]** Two cards on screen: “DCA group rooms with MTM” and “MoreThanMoney community”.
+**NARRAÇÃO:** If you want to keep practising with other people, there are the Salas DCA com MTM, the DCA group rooms, where the method is worked on with support and live questions. There is also the MoreThanMoney community, where you share doubts and learn from people who are also just starting out. I am not promising you results, because I do not control them and I cannot guarantee them to anyone, and be wary of anyone who promises you the opposite. What I offer you is a place to ask without embarrassment, with people who are also learning, and with the security rules at the front of everything. If you join, join to learn, not to be certain of anything.
+
+**[CENA 4]** Three buttons on screen: “Review the plan”, “Do the checklist”, “Decide, without rushing”.
+**NARRAÇÃO:** The next steps are simple. Review the thirty-day plan. Do the security checklist, point by point. And decide, without rushing, whether you want to join the rooms or the community. The decision is yours, and it can be no. Take one step at a time, not all three at once. If anyone tells you that you have to decide today, or that you will miss a unique opportunity, you already know what to do: you close the chat, you breathe, and you come back to this plan. Whoever profits from your haste is not the person who wishes you well. When in doubt, silence is also a valid answer.
+
+**[CENA 5]** Mission screen, with a box to tick and the phrase “Module 8 mission”.
+**NARRAÇÃO:** The mission of module eight, and of the bootcamp, is just one. By the end of this week, write your thirty-day plan on a sheet of paper, with today's date, and sign it. Keep it somewhere safe, separate from your seed phrase, without mixing the two. Then, mark the word “done” on the checklist you printed. Thank you for giving these lessons the time they ask for. Not everyone sits down to study this calmly, and that already says a lot about you.
+
+**[CENA 6]** Final screen with the MoreThanMoney logo and the phrase: “Look after your key”.
+**NARRAÇÃO:** Before I close, I'll leave you one last idea. In crypto, the market will always be there, tomorrow, next week and a year from now. You do not need to get in today so as not to miss an opportunity, because opportunities come round again, and your security does not come round again. If you ever have doubts, come back to these lessons, do the checklist and write down what you observe. Until next time. If you want to return to these lessons, they are here. Remember: educational content, not financial advice, and the risk of loss is real. Look after your key.
+
+**Texto no ecrã:** educational content, not financial advice · the risk of loss is real · the key is yours · mission: sign your plan
+**Check question:** What is the one thing no legitimate person will ever ask you for? Answer: your seed phrase.
+**Fecho / CTA da aula:** End of the bootcamp “A Primeira Chave”. On-screen button: “Back to the start of the course”.

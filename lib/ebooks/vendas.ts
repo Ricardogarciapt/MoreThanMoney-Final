@@ -1,7 +1,7 @@
 // Textos das páginas de venda dos e-books (/ebooks/<slug>). Sem promessas de lucro nem números
 // de desempenho; os números que aparecem (páginas, gráficos, exercícios) contam o próprio livro.
 import type { SlugEbook } from './acesso'
-import { VENDAS_TRADUCOES } from './vendas-traducoes'
+import { VENDAS_TRADUCOES, type TextosVenda } from './vendas-traducoes'
 
 export type PaginaVenda = {
   slug: SlugEbook
@@ -180,7 +180,7 @@ const VENDAS_PT: Record<SlugBase | 'a-decisao-que-adias', PaginaVenda> = {
 }
 
 // Versões EN/ES: mesmas cores, fontes e foto; textos de vendas-traducoes.ts.
-const traduzida = (base: SlugBase, l: 'en' | 'es'): PaginaVenda => ({ ...VENDAS_PT[base], ...VENDAS_TRADUCOES[base][l], slug: `${base}-${l}` as SlugEbook })
+const traduzida = (base: SlugBase, l: 'en' | 'es' | 'fr'): PaginaVenda => ({ ...VENDAS_PT[base], ...(VENDAS_TRADUCOES[base][l] as TextosVenda), slug: `${base}-${l}` as SlugEbook })
 export const VENDAS: Record<SlugEbook, PaginaVenda> = {
   ...VENDAS_PT,
   'destrui-tudo-e-ainda-bem-en': traduzida('destrui-tudo-e-ainda-bem', 'en'),
@@ -189,6 +189,7 @@ export const VENDAS: Record<SlugEbook, PaginaVenda> = {
   'o-metodo-frio-es': traduzida('o-metodo-frio', 'es'),
   'a-primeira-chave-en': traduzida('a-primeira-chave', 'en'),
   'a-primeira-chave-es': traduzida('a-primeira-chave', 'es'),
+  'a-primeira-chave-fr': traduzida('a-primeira-chave', 'fr'),
   'so-as-maos-en': traduzida('so-as-maos', 'en'),
   'so-as-maos-es': traduzida('so-as-maos', 'es'),
 }

@@ -1,0 +1,13 @@
+Momentum est un scanner de trading. Alors que fait-il dans un module sur le DCA ? Il joue le rôle de feu tricolore.
+
+Tu as déjà entendu parler de Momentum, le scanner de la MTM qui fonctionne par couleurs. Vert pour l'achat, rouge pour la vente. Les traders l'utilisent sur des graphiques de quinze minutes ou d'une heure. Nous, nous allons l'utiliser autrement : sur les graphiques journalier et hebdomadaire, les grands graphiques, qui montrent la direction de fond et non le bruit du jour.
+
+Momentum compte cinq confirmations, et chacune vaut un point. Le nuage est-il présent et de la bonne couleur ? Le nuage est-il du bon côté des bougies ? La moyenne exponentielle est-elle d'accord ? Le volume a-t-il la couleur de la direction ? Et le RSI croise-t-il dans la bonne zone ? Cinq sur cinq est le signal le plus complet. Quatre sur cinq reste bon. Avec moins, Momentum te dit qu'il n'a pas d'avis tranché.
+
+Maintenant, comment cela entre-t-il dans le DCA ? Avec trois lectures simples, le jour de ton renfort. Première : graphique journalier au vert, avec quatre ou cinq confirmations d'achat. La tendance de fond est favorable. Tu fais le renfort que suggère le DCA Inteligente. Deuxième : graphique journalier au rouge fort, cinq sur cinq de vente. La baisse est en cours. Tu achètes la base, mais tu ne vides pas encore la cagnotte. Tu attends que la pression de vente ralentisse. Troisième : des boîtes lilas au-dessus des bougies, marché latéral. Pour un trader, c'est un endroit où l'on n'entre pas. Pour quelqu'un qui fait du DCA, c'est un jour normal. Tu achètes la base.
+
+Et l'hebdomadaire ? Utilise-le une fois par mois, pour voir le tableau complet. Si l'hebdomadaire est repassé à l'achat après une longue baisse, c'est un bon moment pour revoir ton plan et vérifier que la cagnotte est prête pour les semaines de Forte Compra. Si l'hebdomadaire est en vente forte, tu ne changes rien. Le DCA a été conçu exactement pour ces phases.
+
+La règle d'or : Momentum ne met jamais ton DCA à l'arrêt. Jamais. Il t'aide à décider si tu utilises la cagnotte ou non, et combien. Si tu te surprends un jour à dire cette semaine je n'achète pas, parce que c'est rouge , reviens à cette leçon. Rouge sur le graphique journalier, pour quelqu'un qui fait du DCA, cela veut dire la base, cela ne veut pas dire zéro.
+
+Exercice : ouvre le graphique journalier d'un actif de ton plan avec Momentum. Compte les confirmations. Note la lecture, les points et ce que tu ferais le prochain vendredi : la base, la base plus la cagnotte, ou la base sans cagnotte. Fais-le trois vendredis de suite, sans rien acheter de plus, juste en notant. Tu apprendras davantage avec cela qu'avec n'importe quelle vidéo.

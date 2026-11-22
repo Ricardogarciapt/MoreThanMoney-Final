@@ -1,7 +1,7 @@
 // Traduções EN/ES das páginas de venda dos e-books. A versão PT (fonte) está em vendas.ts.
 import type { PaginaVenda } from './vendas'
 export type TextosVenda = Omit<PaginaVenda, 'slug' | 'cor' | 'cor2' | 'fundo' | 'fonteTitulo' | 'autorFoto'>
-export const VENDAS_TRADUCOES: Record<'destrui-tudo-e-ainda-bem' | 'o-metodo-frio' | 'a-primeira-chave' | 'so-as-maos', { en: TextosVenda; es: TextosVenda }> = {
+export const VENDAS_TRADUCOES: Record<'destrui-tudo-e-ainda-bem' | 'o-metodo-frio' | 'a-primeira-chave' | 'so-as-maos', { en: TextosVenda; es: TextosVenda; fr?: TextosVenda }> = {
   'destrui-tudo-e-ainda-bem': {
     en: {
       titulo: 'I Destroyed It All.', titulo2: 'And I’m Glad.',
@@ -182,6 +182,33 @@ export const VENDAS_TRADUCOES: Record<'destrui-tudo-e-ainda-bem' | 'o-metodo-fri
         { p: '¿Habla de impuestos?', r: 'Sí, de las reglas generales en Portugal, con el aviso de que siempre lo confirmes con un asesor fiscal.' },
       ],
       aviso: 'Contenido educativo. No constituye asesoramiento financiero ni fiscal. Los criptoactivos son muy volátiles y puedes perder la totalidad del valor invertido.',
+    },
+    fr: {
+      titulo: 'La Première', titulo2: 'Clé',
+      gancho: 'En crypto, celui qui a la clé a l’argent.',
+      sub: 'Du « je n’y comprends rien » à ton premier portefeuille sécurisé et à un plan de 30 jours. Sans hype, sans peur et sans promesses.',
+      autor: 'Ruben Pereira',
+      autorBio: 'Éducateur crypto chez MoreThanMoney. « Simplifier le complexe. Plus que de l’argent, c’est un plan. » Il anime les salles DCA avec MTM, Império Cripto et le Live Trading Crypto.',
+      numeros: [{ v: '115', r: 'pages' }, { v: '6', r: 'graphiques animés' }, { v: '11', r: 'exercices' }, { v: '10', r: 'points anti-arnaque' }],
+      capitulos: [
+        { t: 'Qu’est-ce que l’argent', d: 'Du troc à l’euro, l’inflation et pourquoi le Bitcoin est né en 2008.' },
+        { t: 'Le cahier que personne n’efface', d: 'La blockchain expliquée sans jargon.' },
+        { t: 'La carte des monnaies', d: 'Bitcoin, Ethereum, stablecoins et 7 questions pour évaluer un projet.' },
+        { t: 'Acheter pour la première fois', d: 'Plateforme régulée, vérification, frais et ton premier euro.' },
+        { t: 'Ta clé', d: 'Portefeuilles chauds et froids, et comment garder ta phrase de récupération.' },
+        { t: 'Bouclier anti-arnaque', d: 'Les schémas des arnaques et une checklist de 10 points.' },
+        { t: 'DCA', d: 'Acheter avec une méthode, avec un exemple illustratif et honnête.' },
+        { t: 'Impôts au Portugal', d: 'La règle des 365 jours et comment noter tes opérations. Si tu vis en France, les règles sont différentes.' },
+        { t: 'Perpétuels et effet de levier', d: 'Ce que c’est et pourquoi ne pas commencer par là.' },
+      ],
+      paraQuem: ['Tu es curieux, mais tu as peur des arnaques.', 'Tu veux acheter et garder de la crypto en sécurité.', 'Tu préfères une méthode aux intuitions.'],
+      naoE: ['Une liste de cryptos pour devenir riche.', 'Un conseil financier ou fiscal.', 'Une formation de trading à effet de levier.'],
+      faq: [
+        { p: 'Sous quel format je le reçois ?', r: 'Un PDF et une version interactive dans ton navigateur, dans ta Bibliothèque du marketplace.' },
+        { p: 'Il faut de l’argent pour commencer ?', r: 'Pas pour lire. Le livre t’apprend à commencer avec de petits montants et seulement avec de l’argent que tu peux te permettre de perdre.' },
+        { p: 'Il parle des impôts ?', r: 'Oui, des règles générales au Portugal. Si tu vis en France, vérifie toujours auprès de impots.gouv.fr ou d’un expert-comptable.' },
+      ],
+      aviso: 'Contenu éducatif. Ce n’est pas un conseil financier ni fiscal. Les crypto-actifs sont très volatils et tu peux perdre la totalité de la somme investie.',
     },
   },
   'so-as-maos': {

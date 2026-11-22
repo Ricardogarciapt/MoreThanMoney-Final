@@ -1,0 +1,13 @@
+Momentum is a trading scanner. So what is it doing in a DCA module? It is acting as a traffic light.
+
+You have already heard of Momentum, the MTM scanner that works with colours. Green for buy, red for sell. Traders use it on fifteen-minute or one-hour charts. We are going to use it differently: on the daily and weekly charts, the big charts, which show the underlying direction and not the noise of the day.
+
+Momentum has five confirmations, and each one is worth one point. Is the cloud present and the right colour? Is the cloud on the correct side of the candles? Does the exponential average agree? Does the volume have the colour of the direction? And is the RSI crossing in the right zone? Five out of five is the most complete signal. Four out of five is still good. With fewer, Momentum is telling you it does not have a strong opinion.
+
+Now, how does this fit into DCA? With three simple readings, on your top-up day. First: a green daily chart, with four or five buy confirmations. The underlying trend is in your favour. You make the top-up that DCA Inteligente suggests. Second: a strong red daily chart, five out of five sell. The decline is under way. You buy the base, but you don't empty the pot yet. You wait for the selling pressure to ease. Third: lilac boxes on top of the candles, a sideways market. For a trader, this is where you don't enter. For someone doing DCA, it is an ordinary day. You buy the base.
+
+And the weekly chart? Use it once a month, to see the whole picture. If the weekly chart has turned to buy after a long decline, it is a good moment to review your plan and confirm that the pot is ready for the Forte Compra weeks. If the weekly chart is in strong sell, you change nothing. DCA was designed for exactly those phases.
+
+The golden rule: Momentum does not stop your DCA. Never. It helps you decide whether you use the pot or not, and how much. If you ever catch yourself saying “I'm not buying this week because it's red”, come back to this lesson. Red on the daily chart, for someone doing DCA, means base, not zero.
+
+Exercise: open the daily chart of an asset in your plan with Momentum. Count the confirmations. Write down the reading, the points, and what you would do next Friday: base, base plus pot, or base without the pot. Do this for three Fridays in a row, without buying anything extra, just recording. You will learn more from this than from any video.

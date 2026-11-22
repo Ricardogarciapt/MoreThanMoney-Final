@@ -25,13 +25,14 @@ export const EBOOKS = {
   'o-metodo-frio-es': { titulo: 'El Método Frío', autor: 'Ricardo Garcia' },
   'a-primeira-chave-en': { titulo: 'The First Key', autor: 'Ruben Pereira' },
   'a-primeira-chave-es': { titulo: 'La Primera Llave', autor: 'Ruben Pereira' },
+  'a-primeira-chave-fr': { titulo: 'La Première Clé', autor: 'Ruben Pereira' },
   'so-as-maos-en': { titulo: 'Just the Hands', autor: 'Maria Costa' },
   'so-as-maos-es': { titulo: 'Solo las Manos', autor: 'Maria Costa' },
 } as const
-export type LinguaEbook = 'pt' | 'en' | 'es'
+export type LinguaEbook = 'pt' | 'en' | 'es' | 'fr'
 /** 'o-metodo-frio-en' → { base: 'o-metodo-frio', lingua: 'en' } */
 export function partesEbook(slug: string): { base: string; lingua: LinguaEbook } {
-  const m = slug.match(/^(.*)-(en|es)$/)
+  const m = slug.match(/^(.*)-(en|es|fr)$/)
   return m ? { base: m[1], lingua: m[2] as LinguaEbook } : { base: slug, lingua: 'pt' }
 }
 export type SlugEbook = keyof typeof EBOOKS
