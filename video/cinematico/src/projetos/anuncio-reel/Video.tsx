@@ -269,6 +269,7 @@ const Chips: React.FC<{ a: Anuncio }> = ({ a }) => {
   const fr = useCurrentFrame()
   const { fps } = useVideoConfig()
   const t = fr / FPS
+  if (refAtiva(a, fr)) return null
   const vis = a.chips.map((c, i) => ({ ...c, i })).filter((c) => t >= c.em - 0.1 && t < c.em + 3.0 && t < a.cta.de)
   return (
     <>
@@ -310,7 +311,7 @@ const Destaque: React.FC<{ a: Anuncio }> = ({ a }) => {
 const Cartoes: React.FC<{ a: Anuncio }> = ({ a }) => {
   const fr = useCurrentFrame()
   const { fps } = useVideoConfig()
-  if (!a.cartoes) return null
+  if (!a.cartoes || refAtiva(a, fr)) return null
   const fim = f(a.imagens[a.imagens.length - 1].ate)
   if (fr > fim + 10) return null
   const o = interpolate(fr, [fim - 4, fim + 10], [1, 0], clamp)
@@ -464,6 +465,9 @@ const FotoPlanos: React.FC<{ k: string; de: number; ate: number }> = ({ k, de, a
     </AbsoluteFill>
   )
 }
+
+/** 23/11: enquanto o cartão de referência está no ecrã, chips e cartões laterais saem (nada por cima de nada). */
+const refAtiva = (a: Anuncio, fr: number) => (a.referencias || []).some((x) => fr >= f(x.em) - 4 && fr <= f(x.ate) + 10)
 
 /* ── Referências visuais (22/11): a imagem real do que a voz nomeia salta em cartão quando a palavra é dita ── */
 const Referencias: React.FC<{ a: Anuncio }> = ({ a }) => {
