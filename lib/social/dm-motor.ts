@@ -24,6 +24,13 @@ import {
 
 export type CanalDm = 'instagram' | 'messenger'
 
+/**
+ * Mensagem sem texto (foto, publicação partilhada, sticker, gosto, áudio). A API não diz o que é,
+ * por isso o closer recebe esta descrição e responde com um quebra-gelo curto que puxa a conversa.
+ */
+export const SEM_TEXTO =
+  '[A pessoa mandou uma mensagem sem texto: foto, publicação partilhada, sticker, gosto ou áudio. Não sabes o conteúdo. Responde com um quebra-gelo curto e simpático (1-2 frases), agradece e faz UMA pergunta leve sobre o que a trouxe até nós. Não finjas que viste ou ouviste o conteúdo.]'
+
 /** Páginas do Facebook ↔ conta IG ligada (confirmado pelo diagnóstico de 22/11). */
 export const PAGINAS = [
   { pagina: '1194330033767059', ig: '17841474872672009', nome: 'MoreThanMoney' },
@@ -191,7 +198,7 @@ type Messaging = {
   sender?: { id?: string }
   recipient?: { id?: string }
   timestamp?: number
-  message?: { mid?: string; text?: string; is_echo?: boolean }
+  message?: { mid?: string; text?: string; is_echo?: boolean; attachments?: unknown[]; sticker_id?: unknown }
 }
 
 /**
@@ -208,13 +215,14 @@ export function mensagensDoWebhook(corpo: unknown): MensagemRecebida[] {
     for (const m of e.messaging ?? []) {
       const msg = m.message
       const remetente = m.sender?.id
-      if (!msg || msg.is_echo || !msg.text?.trim() || !remetente) continue
+      const temAnexo = Array.isArray(msg?.attachments) && msg!.attachments!.length > 0 || msg?.sticker_id != null
+      if (!msg || msg.is_echo || (!msg.text?.trim() && !temAnexo) || !remetente) continue
       out.push({
         canal,
         contaId: e.id || m.recipient?.id || '',
         remetente,
         mid: msg.mid || `${remetente}-${m.timestamp ?? ''}`,
-        texto: msg.text,
+        texto: msg.text?.trim() || SEM_TEXTO,
         origem: 'webhook',
       })
     }
