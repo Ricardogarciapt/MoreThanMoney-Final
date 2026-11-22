@@ -42,7 +42,7 @@ export async function GET(req: NextRequest) {
     const { data: slotRows } = await supabase
       .from("lms_stream_schedules")
       .select(
-        "id, stream_id, weekday, start_time, duration_min, timezone, access_tier, is_active, " +
+        "id, stream_id, weekday, start_time, duration_min, timezone, access_tier, is_active, every_n_weeks, anchor_date, " +
           "stream:lms_streams(id, title, access_tier, educator_id, educator:lms_educators(id, display_name, language))",
       )
       .eq("is_active", true)
@@ -65,6 +65,8 @@ export async function GET(req: NextRequest) {
         duration_min: (r.duration_min as number | null) ?? null,
         timezone: (r.timezone as string | null) ?? null,
         access_tier: (r.access_tier as string | null) ?? null,
+        every_n_weeks: (r.every_n_weeks as number | null) ?? null,
+        anchor_date: (r.anchor_date as string | null) ?? null,
         is_active: r.is_active !== false,
       })
     }
