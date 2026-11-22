@@ -446,7 +446,10 @@ export const Video: React.FC = () => {
   const { durationInFrames } = useVideoConfig()
   const fim = f(fimVoz(k))
   const fr = useCurrentFrame()
-  const volMusica = interpolate(fr, [0, fim - 6, fim + 6], [0.16, 0.16, 0.5], clamp)
+  // 22/11 regras de som dos virais: voz sozinha nos primeiros 2,5 s, depois a música entra como cama a −18 dB
+  // (≈0,126) e só sobe no fim, depois da voz.
+  const entra = Math.min(f(2.5), Math.max(1, fim - 20))
+  const volMusica = interpolate(fr, [0, entra, entra + 12, fim - 6, fim + 6], [0, 0, 0.126, 0.126, 0.5], clamp)
   const molde = moldeDe(a)
   return (
     <AbsoluteFill style={{ background: FUNDO, overflow: 'hidden' }}>
