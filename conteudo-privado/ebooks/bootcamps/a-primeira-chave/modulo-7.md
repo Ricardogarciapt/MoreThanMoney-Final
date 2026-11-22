@@ -151,4 +151,4 @@
 
 **Texto no ecrã:** 1 plano · 2 etiqueta · 3 gráfico diário · 4 decidir e comprar · 5 registar · 15 minutos
 **Pergunta de verificação:** Qual é o único passo que nunca se salta, mesmo numa semana sem compra? Resposta: registar.
-**Fecho / CTA da aula:** Fim do Módulo 7. Próximo módulo: 8, Impostos, perpétuos e o teu plano de 30 dias. Botão no ecrã: «Continuar para o Módulo 8».
+**Fecho / CTA da aula:** Fim do Módulo 7. Próximo módulo: 8, Construir o teu portefólio. Botão no ecrã: «Continuar para o Módulo 8».

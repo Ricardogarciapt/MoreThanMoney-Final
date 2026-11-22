@@ -1,0 +1,95 @@
+// Converte os guiões em markdown de um curso (conteudo-privado/ebooks/bootcamps/<slug>/modulo-N.md)
+// no guião JSON do motor de bootcamps (video/bootcamp/guioes/curso-<base>.<lang>.json): um vídeo por aula.
+// Pedido do Ricardo (22/11/2026): renderizar todas as aulas do curso do Ruben já animadas e sem voz;
+// a narração entra depois (voz.mjs + render.mjs leem o mesmo guião).
+// Uso: node tools/ebooks/curso-para-video.mjs a-primeira-chave[-en|-es|-fr]
+//   → video/bootcamp/guioes/curso-a-primeira-chave.<lang>.json  + …/curso-a-primeira-chave.aulas.json (aula → nº do vídeo)
+// Render de uma aula: node video/bootcamp/render.mjs curso-a-primeira-chave <n> <lang>
+import fs from 'node:fs'
+import path from 'node:path'
+import { fileURLToPath } from 'node:url'
+
+const RAIZ = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..')
+const slug = process.argv[2] || 'a-primeira-chave'
+const lang = (slug.match(/-(en|es|fr)$/) || [])[1] || 'pt'
+const base = slug.replace(/-(en|es|fr)$/, '')
+const dir = path.join(RAIZ, 'conteudo-privado/ebooks/bootcamps', slug)
+
+const TX = {
+  pt: { etiq: 'As quatro etiquetas', curso: 'A Primeira Chave', mod: 'Módulo', aula: 'Aula', termos: 'Para levar desta aula', aviso: 'Conteúdo educativo. Não é aconselhamento financeiro. O risco de perda é real.', resp: 'Resposta', missao: 'Missão do módulo' },
+  en: { etiq: 'The four labels', curso: 'The First Key', mod: 'Module', aula: 'Lesson', termos: 'Take away from this lesson', aviso: 'Educational content. Not financial advice. The risk of loss is real.', resp: 'Answer', missao: 'Module mission' },
+  es: { etiq: 'Las cuatro etiquetas', curso: 'La Primera Llave', mod: 'Módulo', aula: 'Clase', termos: 'Lo que te llevas de esta clase', aviso: 'Contenido educativo. No es asesoramiento financiero. El riesgo de pérdida es real.', resp: 'Respuesta', missao: 'Misión del módulo' },
+  fr: { etiq: 'Les quatre étiquettes', curso: 'La Première Clé', mod: 'Module', aula: 'Leçon', termos: 'À retenir de cette leçon', aviso: 'Contenu éducatif. Pas un conseil financier. Le risque de perte est réel.', resp: 'Réponse', missao: 'Mission du module' },
+}[lang]
+
+const limpar = s => (s || '').replace(/\*\*/g, '').replace(/^["“«\s]+|["”»\s]+$/g, '').replace(/\s+/g, ' ').trim()
+const esc = s => s.replace(/&/g, '&amp;').replace(/</g, '&lt;')
+const frases = t => (t.match(/[^.!?]+[.!?]+/g) || [t]).map(s => s.trim())
+const curta = (t, max = 90) => frases(t).filter(s => s.length >= 18 && s.length <= max)
+const citado = v => { const m = v.match(/«([^»]{18,140})»/) || v.match(/[“"]([^”"]{18,140})[”"]/); return m && m[1].trim().split(/\s+/).length >= 3 && !/educativ|educational|éducatif|risco de perda|risk of loss|risque de perte|riesgo de pérdida/i.test(m[1]) ? m[1].trim() : '' }
+const RE = {
+  ruben: /ruben/i,
+  etiquetas: /forte compra|strong buy|compra fuerte|achat fort/i,
+  grafico: /gráfico|grafico|velas|linha de preço|curva|chart|candle|graph|courbe|bougies|gráfica|precio|price line|prix/i,
+  plano: /stop|alvo|entrada|target|entry|objectif|entrée|objetivo|ATR/i,
+  lista: /lista de verificação|checklist|quadrados|caixas|check|casillas|cases à cocher|liste/i,
+  tabela: /tabela|table|tabla|tableau|comparação|lado a lado|side by side|côte à côte/i,
+}
+
+function cenaDe(id, k, visual, fala, termos, n) {
+  const q = citado(visual), fr = curta(fala)
+  const kicker = termos[n % Math.max(1, termos.length)] || ''
+  if (k === 1 && RE.ruben.test(visual)) return { id, tipo: 'ruben', kicker, texto: esc(q || fr[0] || ''), aviso: /educativ|educational|éducatif/i.test(visual) ? TX.aviso : '', fala }
+  if (RE.etiquetas.test(visual)) return { id, tipo: 'etiquetas', titulo: TX.etiq, fala }
+  if (RE.grafico.test(visual)) return { id, tipo: 'grafico', kicker, titulo: esc(q || fr[0] || ''), cenario: ['tendencia', 'compra', 'venda'][n % 3], seed: 3 + n, base: ['medias'], camadas: RE.plano.test(visual) ? ['dca', 'plano'] : ['dca'], ate: [0.35, 1], fala }
+  if (RE.lista.test(visual)) return { id, tipo: 'checklist', kicker, titulo: esc(q || fr[0] || ''), itens: (fr.slice(1, 5).length ? fr.slice(1, 5) : termos).map(esc), fala }
+  if (RE.tabela.test(visual) && fr.length >= 3) return { id, tipo: 'comparar', kicker, titulo: esc(q || ''), cartoes: fr.slice(0, 3).map((s, i) => ({ t: termos[i] || String(i + 1).padStart(2, '0'), d: esc(s) })), fala }
+  if (q && n % 2 === 0) return { id, tipo: 'frase', cap: '', texto: esc(q), autor: 'Ruben Pereira · MoreThanMoney', fala }
+  if (q && RE.ruben.test(visual)) return { id, tipo: 'ruben', kicker, texto: esc(q), fala }
+  return { id, tipo: 'pontos', kicker, titulo: esc(q || fr[0] || ''), itens: (fr.slice(q ? 0 : 1, (q ? 0 : 1) + 3)).map(esc), fala }
+}
+
+const ficheiros = fs.readdirSync(dir).filter(f => /^modulo-\d+\.md$/.test(f)).sort((a, b) => Number(a.match(/\d+/)) - Number(b.match(/\d+/)))
+const videos = [], indice = []
+for (const f of ficheiros) {
+  const md = fs.readFileSync(path.join(dir, f), 'utf8')
+  const num = Number(f.match(/\d+/)[0])
+  const tituloMod = limpar((md.match(/^# [^—\n]+— (.+?)(?:\s*\(≈[^)]*\))?\s*$/m) || [])[1] || '')
+  const missao = limpar((md.match(/^\*\*[^*\n]*(?:Miss|Misi)[^*\n]*:?\*\*:?\s*(.+)$/mi) || [])[1] || '')
+  const blocos = md.split(/^## /m).slice(1)
+  blocos.forEach((bloco, bi) => {
+    const linha = bloco.split('\n')[0]
+    const aid = (linha.match(/(\d+\.\d+)/) || [])[1]
+    if (!aid) return
+    const titulo = limpar(linha.replace(/^[^—]+— /, '').replace(/\s*\(≈[^)]*\)\s*$/, ''))
+    const gancho = limpar((bloco.match(/\*\*Gancho[^*]*\*\*:?\s*(.+)/) || [])[1])
+    const termos = ((bloco.match(/\*\*Texto no ecrã:\*\*\s*(.+)/) || [])[1] || '').split('·').map(limpar).filter(Boolean)
+    const fecho = limpar((bloco.match(/\*\*Fecho \/ CTA da aula:\*\*\s*(.+)/) || [])[1])
+    const perg = (bloco.match(/\*\*(?:Pergunta de verificação|Check question|Question de vérification|Pregunta de (?:verificación|control))\s*:?\*\*\s*(.+)/) || [])[1] || ''
+    const [pq, pr] = perg.split(/\s*(?:Resposta|Answer|Réponse|Respuesta)\s*:\s*/)
+    const pre = `m${num}-${aid.split('.')[1]}`
+    const cenas = [{ id: `${pre}-00`, tipo: 'abertura', cap: `${TX.mod} ${num} · ${tituloMod}`, kicker: `${TX.curso} · ${TX.mod} ${num} · ${TX.aula} ${aid}`, titulo: esc(titulo), sub: esc(tituloMod), rodape: 'morethanmoney.pt', ...(gancho ? { fala: gancho } : { semVoz: 5 }) }]
+    const re = /\*\*\[CENA (\d+)\]\*\*\s*([^\n]*)\n+\*\*NARRAÇÃO:\*\*\s*([^\n]+)/g
+    let m, n = 0
+    while ((m = re.exec(bloco))) { n++; const c = cenaDe(`${pre}-${String(n).padStart(2, '0')}`, Number(m[1]), m[2], limpar(m[3]), termos, n); c.cap = `${TX.aula} ${aid} · ${titulo}`; cenas.push(c) }
+    if (termos.length) cenas.push({ id: `${pre}-90`, tipo: 'termos', cap: `${TX.aula} ${aid} · ${titulo}`, kicker: `${TX.aula} ${aid}`, titulo: TX.termos, itens: termos.map(esc), semVoz: 6, seed: n })
+    if (pq) cenas.push({ id: `${pre}-91`, tipo: 'pergunta', cap: `${TX.aula} ${aid} · ${titulo}`, titulo: esc(limpar(pq)), texto: esc(limpar(pr || '')), fala: `${limpar(pq)} ${pr ? limpar(pr) : ''}`.trim() })
+    if (missao && bi === blocos.length - 1) cenas.push({ id: `${pre}-92`, tipo: 'missao', cap: TX.missao, titulo: TX.missao, itens: frases(missao).slice(0, 5).map(esc), semVoz: 8 })
+    cenas.push({ id: `${pre}-99`, tipo: 'aviso', cap: '', titulo: esc(fecho || titulo), sub: TX.aviso, ...(fecho ? { fala: fecho } : { semVoz: 4 }) })
+    videos.push({ rotulo: `${TX.curso} · ${TX.aula} ${aid}`, titulo: `${aid} · ${titulo}`, cenas })
+    indice.push({ aula: aid, video: videos.length, titulo })
+  })
+}
+
+const G = {
+  estrategia: TX.curso, motor: 'primeira-chave', marca: 'MoreThanMoney · Ruben Pereira', vel: 1.0, marcaVideo: 'morethanmoney',
+  tituloPlaylist: `${TX.curso} · Ruben Pereira`,
+  pronuncia: [['DCA', 'D C A'], ['BTC', 'B T C'], ['ETH', 'E T H'], ['ETF', 'E T F'], ['ATR', 'A T R'], ['RSI', 'R S I'], ['DEMA', 'D E M A'], ['MTM', 'M T M'], ['DEFY', 'Défi']],
+  videos,
+}
+const out = path.join(RAIZ, 'video/bootcamp/guioes')
+fs.writeFileSync(path.join(out, `curso-${base}.${lang}.json`), JSON.stringify(G, null, 1))
+fs.writeFileSync(path.join(out, `curso-${base}.aulas.json`), JSON.stringify(indice, null, 1))
+const tipos = {}; videos.forEach(v => v.cenas.forEach(c => { tipos[c.tipo] = (tipos[c.tipo] || 0) + 1 }))
+const min = videos.reduce((s, v) => s + v.cenas.reduce((a, c) => a + (c.fala ? c.fala.split(/\s+/).length / 2.5 + 0.7 : c.semVoz || 4), 0.5), 0) / 60
+console.log(`${slug}: ${ficheiros.length} módulos, ${videos.length} aulas, ~${min.toFixed(0)} min estimados ·`, JSON.stringify(tipos))

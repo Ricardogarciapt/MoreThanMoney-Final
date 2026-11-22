@@ -26,10 +26,10 @@ fs.mkdirSync(outSlides, { recursive: true })
 fs.mkdirSync(outCaderno, { recursive: true })
 
 const TX = {
-  pt: { html: 'pt-PT', modulo: 'Módulo', aula: 'Aula', bootcamp: 'Bootcamp A Primeira Chave', educador: 'Educador de cripto', resumo: 'Para levar desta aula', exercicio: 'Para fazer', missao: 'Missão do módulo', objetivo: 'Objetivo', consegue: 'No fim, consegues', caderno: 'Caderno do aluno', notas: 'As minhas notas', termos: 'Palavras-chave', feito: 'Feito', aviso: 'Conteúdo educativo. Não é aconselhamento financeiro. O risco de perda é real e pode ser total.' },
-  en: { html: 'en-GB', modulo: 'Module', aula: 'Lesson', bootcamp: 'The First Key Bootcamp', educador: 'Crypto educator', resumo: 'Take this from the lesson', exercicio: 'To do', missao: 'Module mission', objetivo: 'Goal', consegue: 'By the end, you can', caderno: 'Student workbook', notas: 'My notes', termos: 'Key words', feito: 'Done', aviso: 'Educational content. Not financial advice. The risk of loss is real and can be total.' },
-  es: { html: 'es-ES', modulo: 'Módulo', aula: 'Clase', bootcamp: 'Bootcamp La Primera Llave', educador: 'Educador de cripto', resumo: 'Lo que te llevas de esta clase', exercicio: 'Para hacer', missao: 'Misión del módulo', objetivo: 'Objetivo', consegue: 'Al final, podrás', caderno: 'Cuaderno del alumno', notas: 'Mis notas', termos: 'Palabras clave', feito: 'Hecho', aviso: 'Contenido educativo. No es asesoramiento financiero. El riesgo de pérdida es real y puede ser total.' },
-  fr: { html: 'fr-FR', modulo: 'Module', aula: 'Leçon', bootcamp: 'Bootcamp La Première Clé', educador: 'Éducateur crypto', resumo: 'À retenir de cette leçon', exercicio: 'À faire', missao: 'Mission du module', objetivo: 'Objectif', consegue: 'À la fin, tu sais', caderno: "Cahier de l'élève", notas: 'Mes notes', termos: 'Mots clés', feito: 'Fait', aviso: "Contenu éducatif. Ce n'est pas un conseil financier. Le risque de perte est réel et peut être total." },
+  pt: { html: 'pt-PT', modulo: 'Módulo', aula: 'Aula', bootcamp: 'A Primeira Chave · Programa Completo', educador: 'Educador de cripto', resumo: 'Para levar desta aula', exercicio: 'Para fazer', missao: 'Missão do módulo', objetivo: 'Objetivo', consegue: 'No fim, consegues', caderno: 'Caderno do aluno', notas: 'As minhas notas', termos: 'Palavras-chave', feito: 'Feito', aviso: 'Conteúdo educativo. Não é aconselhamento financeiro. O risco de perda é real e pode ser total.' },
+  en: { html: 'en-GB', modulo: 'Module', aula: 'Lesson', bootcamp: 'The First Key · Complete Programme', educador: 'Crypto educator', resumo: 'Take this from the lesson', exercicio: 'To do', missao: 'Module mission', objetivo: 'Goal', consegue: 'By the end, you can', caderno: 'Student workbook', notas: 'My notes', termos: 'Key words', feito: 'Done', aviso: 'Educational content. Not financial advice. The risk of loss is real and can be total.' },
+  es: { html: 'es-ES', modulo: 'Módulo', aula: 'Clase', bootcamp: 'La Primera Llave · Programa Completo', educador: 'Educador de cripto', resumo: 'Lo que te llevas de esta clase', exercicio: 'Para hacer', missao: 'Misión del módulo', objetivo: 'Objetivo', consegue: 'Al final, podrás', caderno: 'Cuaderno del alumno', notas: 'Mis notas', termos: 'Palabras clave', feito: 'Hecho', aviso: 'Contenido educativo. No es asesoramiento financiero. El riesgo de pérdida es real y puede ser total.' },
+  fr: { html: 'fr-FR', modulo: 'Module', aula: 'Leçon', bootcamp: 'La Première Clé · Programme Complet', educador: 'Éducateur crypto', resumo: 'À retenir de cette leçon', exercicio: 'À faire', missao: 'Mission du module', objetivo: 'Objectif', consegue: 'À la fin, tu sais', caderno: "Cahier de l'élève", notas: 'Mes notes', termos: 'Mots clés', feito: 'Fait', aviso: "Contenu éducatif. Ce n'est pas un conseil financier. Le risque de perte est réel et peut être total." },
 }
 const t = TX[lingua]
 
@@ -53,7 +53,7 @@ function lerModulo(f) {
   const cab = md.match(/^# Módulo \d+ — (.+?)(?:\s*\(≈[^)]*\))?\s*$/m)
   const objetivo = limpar((md.match(/\*\*Objetivo:\*\*\s*(.+?)(?=\s*\*\*No fim|\n)/) || [])[1] || '')
   const consegue = limpar((md.match(/\*\*No fim, o aluno consegue:\*\*\s*(.+)/) || [])[1] || '')
-  const missao = limpar((md.match(/^\*\*[^*\n]*(?:Miss|Misi)[^*\n]*:?\*\*:?\s*(.+)$/m) || [])[1] || '')
+  const missao = limpar((md.match(/^\*\*[^*\n]*(?:Miss|Misi)[^*\n]*:?\*\*:?\s*(.+)$/mi) || [])[1] || '')
   const aulas = []
   for (const bloco of md.split(/^## /m).slice(1)) {
     const linha = bloco.split('\n')[0]

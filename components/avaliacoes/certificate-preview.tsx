@@ -24,6 +24,11 @@ const CFG: Record<CertTemplate, Cfg> = {
     name: { left: 49.87, bottom: 52.39, font: 6.23, color: "#d8a441" },
     grade: { left: 65.98, bottom: 30.98, font: 1.69, color: "#d8a441" },
   },
+  "primeira-chave": {
+    bg: "/certificados/primeira-chave-bg.png",
+    name: { left: 49.96, bottom: 52.64, font: 5.7, color: "#E9C46A" },
+    grade: { left: 49.96, bottom: 30.98, font: 1.6, color: "#E9C46A", prefix: "Classificação final: ", suffix: " valores" },
+  },
   "teste-final": {
     bg: "/certificados/teste-final-bg.png",
     name: { left: 51.2, bottom: 51.13, font: 3.83, color: "#a86a22" },

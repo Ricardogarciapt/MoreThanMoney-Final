@@ -1,0 +1,17 @@
+Un papel mojado no se lee. Una foto robada no protege. ¿Cómo se guarda una llave durante veinte años?
+
+Hemos llegado a la última clase del módulo, y al plan que vas a montar. La idea central es esta: la copia de seguridad tiene que sobrevivir a tres cosas. Al fuego, al agua y a tu propio olvido. Parece una lista exagerada, pero es la lista de problemas que más gente comunica cuando pierde el acceso. Un buen plan piensa en estos tres riesgos desde el principio, y no cuando ya es tarde.
+
+El papel es barato y sirve para empezar. Pero el papel se degrada, con la humedad, con el tiempo, con un café derramado. Por eso, mucha gente usa placas de metal, con las palabras grabadas o estampadas. Un producto que existe en la tienda MTM es el Cryptotag Zeus, una placa de metal para registrar la seed. No es el único método, y no es obligatorio. Es una forma de tener una copia que no se estropea con facilidad, y eso ya es mucho.
+
+Vamos a construir el plan en cuatro pasos. Primero, decide cuántas copias quieres. Dos es el mínimo razonable. Una sola copia significa que, si se pierde, lo pierdes todo. Y si la copia de papel y la de metal están en el mismo sitio, no estás haciendo dos copias. Estás haciendo una, dos veces. Más de tres complica la gestión y aumenta la exposición. Dos copias bien guardadas son, para la mayoría de la gente, el equilibrio correcto entre seguridad y sencillez.
+
+Segundo, elige lugares diferentes. Si las dos copias están en el mismo cajón, un incendio o un robo se lleva las dos. Piensa en casa, y en un sitio de confianza fuera de ella, con acceso seguro y discreto. El objetivo no es esconder, es dispersar el riesgo. Una copia que sobrevive a un problema en casa es una copia que te salva.
+
+Tercero, decide quién sabe qué. Nadie necesita saber la frase. Basta con que alguien de confianza sepa que existe un plan, y dónde están las copias, por si te pasa algo. Esa persona no necesita tener las palabras. Si las tiene, pasa a ser un punto de fallo más, y un sitio más donde la frase puede copiarse sin que tú lo sepas.
+
+Cuarto, prueba la recuperación. Esta es la parte que casi nadie hace, y es la más importante. Con un valor cero o irrelevante, en una aplicación oficial, intenta recrear la cartera solo con la frase escrita. Si lo consigues, la copia funciona. Si no lo consigues, has descubierto el problema ahora, y no cuando de verdad lo necesites. Una prueba fallida hoy es una lección barata. Una prueba que descubres fallida dentro de diez años es una pérdida. Repite la prueba siempre que cambies de cartera o de aplicación, y al menos una vez al año, porque las aplicaciones cambian y la memoria también.
+
+Caso ilustrativo: Inés grabó la frase en una placa de metal, guardó una segunda copia en papel en la caja fuerte de un familiar, e hizo la prueba de recuperación con un valor simbólico en una cartera de prueba. Le llevó una tarde. Para ella, fue la tarde más útil del año en materia de cripto. No porque haya ganado nada, sino porque dejó de depender de la suerte. Fíjate en que el plan no exige nada técnico. Exige método y disciplina. Inés no tuvo que ser especialista. Tuvo que tener un plan y cumplirlo.
+
+La idea que quiero que te lleves es que los cuatro pasos tienen un objetivo común: que tu llave siga existiendo cuando tú ya no estés atento a ella. Una llave que solo funciona en tu cabeza no es una llave. Es una esperanza. Y la esperanza no es un plan de seguridad. Piénsalo como un seguro: no te gusta pagarlo, pero nunca lo ves como un gasto desperdiciado el día en que lo necesitas.

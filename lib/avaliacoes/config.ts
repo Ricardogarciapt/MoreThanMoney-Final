@@ -2,7 +2,7 @@
 
 export type AssessmentKind = "fast_start" | "bootcamp" | "teste_final" | "ib"
 export type GradeDisplay = "none" | "percent" | "valores20"
-export type CertTemplate = "fast-start" | "bootcamp" | "teste-final" | "academia-ib"
+export type CertTemplate = "fast-start" | "bootcamp" | "teste-final" | "academia-ib" | "primeira-chave"
 
 export type Assessment = {
   id: string
@@ -96,6 +96,7 @@ const CODE_PREFIX: Record<CertTemplate, string> = {
   bootcamp: "BC",
   "teste-final": "JT",
   "academia-ib": "IB",
+  "primeira-chave": "PC", // curso «A Primeira Chave · Programa Completo» do Ruben Pereira
 }
 
 const CODE_ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789" // sem I,O,0,1
