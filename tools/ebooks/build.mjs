@@ -431,6 +431,15 @@ figure{margin:0}
 .ga-grelha figure{margin:0;background:#fff;padding:7px 7px 10px;box-shadow:0 12px 22px -14px rgba(0,0,0,.5);transform:rotate(var(--r,0deg))}
 .ga-grelha img{width:100%;aspect-ratio:4/5;object-fit:cover;display:block}
 .galeria.ecras .ga-grelha,.galeria.ecras .ga-grelha:has(figure:nth-child(4):last-child){grid-template-columns:repeat(var(--n,3),1fr);gap:10px}.galeria.ecras figure{transform:none}.galeria.ecras figure{background:#111;padding:6px 6px 10px;border-radius:14px}.galeria.ecras img{aspect-ratio:auto;object-fit:contain;border-radius:9px}.galeria.ecras figcaption{color:#ddd;font-size:12px}@media print{.galeria.ecras figcaption{font-size:8.5pt}}
+.galeria.ecras figure,.galeria.ecras figure:nth-child(n){background:none;padding:0;box-shadow:none;transform:none;position:relative;border-radius:0}
+.galeria.ecras img,.foto-telemovel img{border:7px solid #0d0d10;border-radius:22px;background:#000;box-shadow:0 0 0 1.5px #4a4a52,0 0 0 3px #0d0d10,0 20px 30px -16px rgba(0,0,0,.7)}
+.galeria.ecras figure::before,.foto-telemovel::before{content:'';position:absolute;top:13px;left:50%;width:26%;height:8px;margin-left:-13%;background:#000;border-radius:6px;z-index:2}
+.galeria.ecras figure::after,.foto-telemovel::after{content:'';position:absolute;right:-4px;top:16%;width:3px;height:9%;background:#3a3a42;border-radius:2px}
+.galeria.ecras figcaption{color:var(--ink,#2a2620)!important;font-size:13px;margin-top:10px}
+.galeria.ecras[style*="--n:2"] .ga-grelha{max-width:66%;margin:0 auto}.galeria.ecras[style*="--n:3"] .ga-grelha{max-width:90%;margin:0 auto}
+.foto-telemovel{float:right;width:34%;margin:.3em 0 1em 1.6em;position:relative}
+.foto-telemovel figcaption{font-size:13px;color:var(--mut);margin-top:10px;text-align:left}
+@media print{.foto-telemovel{width:30%}.foto-telemovel figcaption,.galeria.ecras figcaption{font-size:8.5pt}.foto-telemovel img,.galeria.ecras img{-webkit-print-color-adjust:exact;print-color-adjust:exact}}
 .ga-grelha figcaption{font-family:'Kalam',cursive;font-size:13.5px;line-height:1.2;color:#3b352a;margin-top:6px;text-align:center}
 .ga-grelha:has(figure:nth-child(4):last-child){grid-template-columns:repeat(2,1fr)}
 .ga-grelha:has(figure:nth-child(2):last-child){grid-template-columns:repeat(2,1fr)}

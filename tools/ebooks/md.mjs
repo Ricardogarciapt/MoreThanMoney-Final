@@ -151,6 +151,8 @@ function avatar(handle, ctx) {
 function foto(f, legenda, estilo, ctx) {
   const src = ctx.img ? ctx.img(f.trim()) : ''
   if (!src) { (ctx.avisos || []).push(`foto em falta: ${f}`); return '' }
+  // ecrãs reais do MT5 no telemóvel: vão sempre dentro de uma moldura de telemóvel desenhada em CSS
+  if (/^mt5-video-/.test(f.trim())) estilo = 'telemovel'
   const r = estilo === 'polaroid' ? ` style="--r:${inclina()}deg"` : ''
   return `<figure class="foto foto-${estilo}"${r}><img src="${src}" alt="${esc(legenda || '')}">${legenda ? `<figcaption>${inline(legenda)}</figcaption>` : ''}</figure>`
 }

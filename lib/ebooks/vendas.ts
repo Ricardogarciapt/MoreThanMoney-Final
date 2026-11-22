@@ -94,7 +94,7 @@ const VENDAS_PT: Record<SlugBase | 'a-decisao-que-adias', PaginaVenda> = {
     sub: 'Forex sem impulso: regras, risco e MetaTrader 5 para quem começa. Os erros clássicos postos à frente, para não os pagares tu.',
     autor: 'Ricardo Garcia', autorFoto: '/ricardogarcia/foto-ricardo-estudio.jpg',
     autorBio: 'Catorze anos de serviço (Exército, Fuzileiros, GNR) antes de recomeçar do zero. Fundou a MoreThanMoney para que ninguém tenha de pagar o preço de aprender sozinho. Este é o manual técnico que acompanha «Destruí Tudo. E Ainda Bem.».',
-    numeros: [{ v: '90', r: 'páginas' }, { v: '11', r: 'regras frias' }, { v: '11', r: 'erros clássicos' }, { v: '30', r: 'dias de plano' }],
+    numeros: [{ v: '100', r: 'páginas' }, { v: '11', r: 'regras frias' }, { v: '11', r: 'erros clássicos' }, { v: '30', r: 'dias de plano' }],
     capitulos: [
       { t: 'O mercado não sabe que existes', d: 'Pares, spread, sessões em hora de Lisboa e como escolher corretora.' },
       { t: 'Pips, lotes e o preço de um erro', d: 'Valor do pip, spread, swap, alavancagem e margem, com contas.' },
@@ -107,6 +107,8 @@ const VENDAS_PT: Record<SlugBase | 'a-decisao-que-adias', PaginaVenda> = {
       { t: 'O diário', d: 'O que registar, a revisão de domingo e os três números do mês.' },
       { t: 'A cabeça fria', d: 'Medo, ganância, FOMO e vingança, cada um com a sua regra.' },
       { t: 'Do demo ao real', d: 'Seis critérios de passagem e como começar sem pressa.' },
+      { t: 'Plano de 30 dias e glossário', d: 'Quatro semanas em conta demo, 30 a 45 minutos por dia.' },
+      { t: 'Guia visual do MetaTrader 5', d: 'Capturas reais da app no telemóvel, por temas: conta, gráfico, ordem e notícias.' },
     ],
     paraQuem: ['Queres começar no Forex sem te queimares nos primeiros meses.', 'Já abriste o MetaTrader 5 e não sabes por onde pegar.', 'Precisas de regras escritas, não de mais um sinal para copiar.'],
     naoE: ['Uma estratégia que nunca perde.', 'Sinais prontos para copiar.', 'Uma promessa de rendimento.'],
