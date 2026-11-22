@@ -16,6 +16,9 @@ export type LinguaBootcamp = "pt" | "en"
 export const SALA_WEBTRADER_ID = "ec4aa472-1faa-465f-b12d-481145792f68"
 export const CHAVE_SALA_WEBTRADER = "webtrader-mtm"
 /** Canal do educador MTM onde a sala aparece. */
+/** Playlist inglesa (publicada a 22/11/2026). A PT vem da sala (playlist_url). */
+export const PLAYLIST_WEBTRADER_EN = "https://www.youtube.com/playlist?list=PLAXa8zbBvqFM"
+
 export const CANAL_SALA_WEBTRADER = "/live/9739ae1a-884d-4d03-8e4a-6da498e51c63#webtrader-mtm"
 
 export type EpisodioBootcamp = {

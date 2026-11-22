@@ -6,6 +6,7 @@ import { extractPlaylistId } from "@/components/live/lms-playlist-section"
 import {
   CANAL_SALA_WEBTRADER,
   EPISODIOS_WEBTRADER,
+  PLAYLIST_WEBTRADER_EN,
   SALA_WEBTRADER_ID,
   TEXTO_BOOTCAMP,
   type LinguaBootcamp,
@@ -27,7 +28,7 @@ export function BootcampPainel({
   linkSala?: boolean
 }) {
   const t = TEXTO_BOOTCAMP[lingua]
-  const lista = extractPlaylistId(playlistUrl)
+  const lista = extractPlaylistId(lingua === "en" ? PLAYLIST_WEBTRADER_EN : playlistUrl)
   const [atual, setAtual] = useState(1)
   return (
     <div className="space-y-3">
