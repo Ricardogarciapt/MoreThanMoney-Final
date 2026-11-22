@@ -16,6 +16,37 @@ export interface ScheduleSlot {
   timezone?: string | null
   access_tier?: string | null
   is_active?: boolean | null
+  /**
+   * De quantas em quantas semanas. 1 (ou vazio) = todas as semanas; 2 = quinzenal.
+   * Só conta com `anchor_date`: sem âncora não se sabe em que semana calha, e a sala
+   * apareceria todas as semanas — é preferível isso a inventar uma semana.
+   */
+  every_n_weeks?: number | null
+  /** Data local (AAAA-MM-DD) da primeira ocorrência; as seguintes contam-se a partir dela. */
+  anchor_date?: string | null
+}
+
+/** Dias entre duas datas de calendário (sem horas, por isso imune a DST). */
+function diasEntre(a: { year: number; month1: number; day: number }, b: { year: number; month1: number; day: number }): number {
+  return Math.round((Date.UTC(b.year, b.month1 - 1, b.day) - Date.UTC(a.year, a.month1 - 1, a.day)) / 86400000)
+}
+
+/**
+ * Esta data local calha numa semana do ciclo do slot? Para slots semanais é sempre sim.
+ * Para quinzenais (ou mais), conta semanas inteiras desde a âncora; antes dela não há aula.
+ */
+export function calhaNoCiclo(
+  slot: Pick<ScheduleSlot, 'every_n_weeks' | 'anchor_date'>,
+  data: { year: number; month1: number; day: number },
+): boolean {
+  const n = Math.floor(Number(slot.every_n_weeks) || 1)
+  const ancora = String(slot.anchor_date ?? '').trim()
+  const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(ancora)
+  if (!m) return true
+  const d = diasEntre({ year: +m[1], month1: +m[2], day: +m[3] }, data)
+  if (d < 0) return false
+  if (n <= 1) return true
+  return Math.floor(d / 7) % n === 0
 }
 
 export interface ProjectedSession {
@@ -124,6 +155,7 @@ export function projectSchedule(
       const tz = slot.timezone || "Europe/Lisbon"
       const { year, month1, day, isoWeekday } = zonedDateParts(tz, dayInstant)
       if (isoWeekday !== slot.weekday) continue
+      if (!calhaNoCiclo(slot, { year, month1, day })) continue
       const { h, m } = parseHm(slot.start_time)
       const when = zonedWallTimeToUtc(year, month1, day, h, m, tz)
       if (when.getTime() <= from.getTime()) continue
