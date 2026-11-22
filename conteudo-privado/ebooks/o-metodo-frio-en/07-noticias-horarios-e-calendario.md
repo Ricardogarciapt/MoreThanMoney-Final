@@ -76,6 +76,14 @@ One at the entry of the zone, another at the stop. More than that and you are ba
 On Thursday night, Marta opened Tradays and saw three stars on Friday at 1:30 PM: the US jobs report. She was on shift. Instead of carrying her phone in her pocket, vibrating, she did three things on the PC before leaving home: she cancelled the pending order that was near the price, set an alert on the upper zone and another on the lower one, and wrote in her diary: "1:00 PM to 2:00 PM: no new orders." At 1:32 PM EURUSD jumped 50 pips. She only found out at 7:00 PM, when she saw the notification. The lower zone had been touched and the price had already come back. She lost nothing because she was not there. It was the best trade she didn't make.
 :::
 
+## From my life: the window I had
+
+[[foto: rg-comboio.jpg | Three hours of train a day. That's where I studied a large part of what is in this book. | lado]]
+
+When I started learning trading I had no time. I had shifts, a three-year-old daughter and three hours of train a day. My window was the train, the hour before everyone else woke up and half an hour after Constança fell asleep. There was no room for staring at the screen, waiting for the price to move.
+
+That's why I learned early to use the calendar, pending orders and alerts. Not because I was lazy, but because there was no other way. If you have little time, that's not a flaw to hide. It's the reason to choose your window well and leave the rest of your day for your life.
+
 ## The cold rule of this chapter
 
 :::cartao Cold rule no. 7

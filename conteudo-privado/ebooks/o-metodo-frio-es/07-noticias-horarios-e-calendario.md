@@ -76,6 +76,14 @@ Una a la entrada de la zona, otra en el stop. Más que eso y vuelves a vivir peg
 El jueves por la noche, Marta abrió el Tradays y vio tres estrellas el viernes a las 13:30: el informe de empleo de EE. UU. Estaba de turno. En lugar de llevar el móvil en el bolsillo vibrando, hizo tres cosas en el PC antes de salir de casa: canceló la orden pendiente que tenía cerca del precio, dejó una alerta en la zona de arriba y otra en la de abajo, y escribió en la agenda «13:00 a 14:00: nada de órdenes nuevas». A las 13:32 el EURUSD saltó 50 pips. Ella solo lo supo a las 19:00, cuando vio la notificación. La zona de abajo había sido tocada y el precio ya había vuelto. No perdió nada porque no estaba allí. Fue la mejor operación que no hizo.
 :::
 
+## De mi vida: la ventana que tenía
+
+[[foto: rg-comboio.jpg | Tres horas de tren al día. Ahí estudié gran parte de lo que hay en este libro. | lado]]
+
+Cuando empecé a aprender trading no tenía tiempo. Tenía turnos, una hija de tres años y tres horas de tren al día. Mi ventana era el tren, la hora antes de que se despertara todo el mundo y media hora después de que Constança se durmiera. No había espacio para estar mirando la pantalla esperando a que el precio se moviera.
+
+Por eso aprendí pronto a usar el calendario, las órdenes pendientes y las alertas. No por ser vago, sino porque no había otra manera. Si tienes poco tiempo, eso no es un defecto que esconder. Es la razón para elegir bien tu ventana y dejar el resto del día para tu vida.
+
 ## La regla fría de este capítulo
 
 :::cartao Regla fría n.º 7

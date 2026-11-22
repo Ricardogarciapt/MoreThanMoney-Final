@@ -68,6 +68,14 @@ Marta wanted to open 0.10 lots, "to make it worth it". With a €500 demo and 1%
 
 With €200 and 1% risk, you risk €2 per trade. With the minimum lot of 0.01 (about $0.10 per pip on EUR/USD), that gives a stop of around 20 pips. If your idea needs more, there is no smaller lot to drop to. You have two honest ways out: wait for an entry with a shorter stop, or do not enter. "Risking 5% just this once" is not a way out. It is the start of the problem.
 
+## From my life: €1,037 a month
+
+I joined the GNR (Portuguese National Guard) in 2010 and stayed for fourteen years. At the end, my take-home pay was €1,037 a month, with a wife, a small daughter and three hours of train a day to get to and from the Lisbon Territorial Command.
+
+With €1,037 you learn risk management by force. Every euro has a destination before it arrives: rent, food, transport, school. There is no margin for "I'll risk a little more this month". When I started trading, I brought that account with me. It was that account that saved me from doing what I see so many people doing: opening a trade with the money for the mortgage payment.
+
+The formula in this chapter is the same sum I did with my salary. First you decide how much you can lose without your life changing. Only then do you find out how much you can buy.
+
 ## The cold rule of this chapter
 
 :::cartao Cold rule no. 5

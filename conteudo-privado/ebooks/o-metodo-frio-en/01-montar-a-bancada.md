@@ -122,6 +122,14 @@ You can receive on your phone the alerts you set on the PC. In the app, under **
 
 Do this today, even if you do not yet understand what it is for. In chapter 7 you will use these alerts so you can stop staring at the screen waiting for the price to arrive.
 
+## From my life: the grandfather's backyard
+
+My adoptive grandfather was strict. When I did something wrong, the slipper flew. But right after came the other half of him: "Come on, put your shoes on and come with me." We went to the backyard, next to the rubble of a building they had knocked down. Chickens, vegetable patches, the hoe in its place, the watering can in its place. It was his escape, and it was my first school of method.
+
+During the day he worked at the Vilares grocery store in Porto. Dried cod hanging up, chouriços in rows, the smell of salt and smoked meat, customers coming in with "Ó Evaristo, have you got any of this?" like in an old Portuguese film. Nothing was out of place, because in a full grocery store, whoever doesn't put things away can't find anything.
+
+When he died, I held it together at the funeral. I didn't cry. Days later, in a café with a pool table, I stared at the balls sitting on the green cloth and everything came down on me at once: I had lost the person who supported me, who told me off and who gave me a direction. Today, when I tidy my workbench before opening a chart, it is still his voice I hear: everything in its place, and only then do you work.
+
 ## The cold rule of this chapter
 
 :::cartao Cold rule no. 1

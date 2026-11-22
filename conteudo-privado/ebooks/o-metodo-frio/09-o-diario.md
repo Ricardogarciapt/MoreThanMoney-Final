@@ -89,6 +89,12 @@ imagem: O diário não mente. Tu às vezes mentes.
 legenda: A diferença entre quem evolui e quem anda em círculos não está na estratégia. Está em quem escreve o que fez, incluindo o que não queria ver.
 :::
 
+## Da minha vida: eu era um número
+
+Em 2021 a minha mulher, a Liliana, teve um diagnóstico de cancro da mama. Para justificar uma ausência, pediram-me uma «declaração de compromisso de honra» de que a minha mulher tinha cancro. Percebo que os serviços precisem de papéis. Ainda assim, naquele dia senti que era um número numa folha, e não uma pessoa com uma família em casa. Não culpo quem me fez o pedido nem a instituição onde servi com orgulho. Era o sistema a funcionar como funciona.
+
+Foi aí que comecei a escrever tudo. O que sentia, o que decidia, o que aprendia. O meu diário de trading nasceu desse caderno. Um diário é o contrário de ser um número: é o sítio onde a tua decisão tem um porquê, uma emoção e um nome. Quando o relês ao domingo, não te vês como uma estatística. Vês-te como alguém que está a mudar.
+
 ## A regra fria deste capítulo
 
 :::cartao Regra fria n.º 9

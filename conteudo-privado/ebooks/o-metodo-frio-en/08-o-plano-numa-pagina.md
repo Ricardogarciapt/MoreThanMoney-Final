@@ -67,6 +67,18 @@ Changing everything at once is like changing your diet, your gym and your sleep 
 
 This chart helps explain why the minimum target of 1:1.5 is in the plan. At 1:1 you need to win half the time just to break even, before costs. At 1:2, one third is enough. This is not a promise that you will win one third of the time. It is simply the break-even maths.
 
+## From my life: three phrases that held me
+
+For fourteen years in the GNR (Portuguese National Guard) I was guided by three sayings. I never wrote them on paper, but I knew them by heart:
+
+:::cartao The three mottos
+- There is always someone worse off than us.
+- Where one eats, two can eat.
+- Time does not stop.
+:::
+
+The first one took away my self-pity on bad days. The second reminded me that what I have is shared. The third pushed me when I wanted to put things off. A trading plan works the same way: a few sentences, always said the same way, that you decide on when you are calm, so they can hold you when you are not.
+
 ## The cold rule of this chapter
 
 :::cartao Cold rule no. 8

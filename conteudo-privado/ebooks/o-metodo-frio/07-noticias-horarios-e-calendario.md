@@ -77,6 +77,14 @@ Um à entrada da zona, outro ao stop. Mais do que isso e voltas a viver agarrado
 Na quinta à noite, a Marta abriu o Tradays e viu três estrelas na sexta às 13h30: o relatório de emprego dos EUA. Estava de turno. Em vez de levar o telemóvel no bolso a vibrar, fez três coisas no PC antes de sair de casa: cancelou a ordem pendente que tinha perto do preço, deixou um alerta na zona de cima e outro na de baixo, e escreveu na agenda «13h00 às 14h00: nada de ordens novas». Às 13h32 o EURUSD saltou 50 pips. Ela só soube às 19h, quando viu a notificação. A zona de baixo tinha sido tocada e o preço já tinha voltado. Não perdeu nada porque não estava lá. Foi a melhor operação que não fez.
 :::
 
+## Da minha vida: a janela que eu tinha
+
+[[foto: rg-comboio.jpg | Três horas de comboio por dia. Foi aí que estudei grande parte do que está neste livro. | lado]]
+
+Quando comecei a aprender trading não tinha tempo. Tinha turnos, uma filha de três anos e três horas de comboio por dia. A minha janela era o comboio, a hora antes de toda a gente acordar e meia hora depois de a Constança adormecer. Não havia espaço para estar a olhar para o ecrã à espera de que o preço se mexesse.
+
+Foi por isso que aprendi cedo a usar o calendário, as ordens pendentes e os alertas. Não por ser preguiçoso, mas porque não havia outra maneira. Se tens pouco tempo, isso não é um defeito para esconder. É a razão para escolheres bem a tua janela e deixares o resto do dia para a tua vida.
+
 ## A regra fria deste capítulo
 
 :::cartao Regra fria n.º 7

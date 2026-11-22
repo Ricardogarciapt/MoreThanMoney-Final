@@ -10,11 +10,15 @@ Sou o Ricardo Garcia. Venho de uma família adotiva, de origem humilde, na cidad
 
 Há uma coisa que quem não cresce com uma base muito firme aprende cedo: a olhar para a frente e a fazer contas ao que tem. Demorei anos a perceber que resistir sozinho é um método caro. E que pode ser substituído por outro, melhor.
 
+Éramos nove numa casa centenária com quatro ou cinco divisões. Só por volta dos oito anos comecei a dizer mãe, avó e irmã. O meu avô adotivo era rígido, mas era também quem me levava pela mão para o quintal, para as galinhas e para as hortas, e quem trabalhava na mercearia Vilares, no meio do bacalhau e dos chouriços pendurados. Quando ele morreu, perdi a pessoa que me apoiava, me ralhava e me dava um caminho. A minha mãe adotiva, auxiliar de educação numa escola do Porto, nunca recuperou dessa perda e adoeceu.
+
 [[foto: rg-recomeco.jpg | Hoje. O sorriso veio depois, não antes. | lado]]
 
 ## Os dezasseis anos
 
 Aos dezasseis anos percebi que tinha de ser diferente. Não por ser melhor do que os outros. Porque, desde o início, já o era, e o caminho que se via à minha frente não me servia. Essa percepção não se apagou, e foi ela que me acompanhou durante os anos seguintes.
+
+O momento exato tem um preço: 25 €. Pedi-os à minha avó Miquinhas para umas calças largas de hip-hop, daquelas que toda a gente usava no Porto. Ela, que era quem mais amor me dava, respondeu-me: «Oh Ricardo, já não posso, já toda a gente me cravou.» O subsídio que eu recebia por ser adotado estava a alimentar a casa. Nesse dia decidi que não ia morrer pobre. Uma semana depois estava a trabalhar e a estudar, e mudei-me para a casa ao lado, com uma renda de 25 €.
 
 :::destaque
 Quando sentes que nasceste «para outra coisa», a sensação não te diz o que fazer. Diz apenas que o caminho que estás a seguir já não é o teu.
@@ -23,6 +27,8 @@ Quando sentes que nasceste «para outra coisa», a sensação não te diz o que 
 ## Catorze anos de serviço
 
 Antes de chegar à vida civil, passei por três instituições do Estado. Entrei para o Exército em 2003, passei para os Fuzileiros em 2008 e para a GNR em 2010. Ao todo, catorze anos de serviço. Foi aí que construí a disciplina de que falo no capítulo seguinte, e foi aí que percebi que a disciplina, por si só, não é suficiente para mudar de vida.
+
+No Exército escolhi os paraquedistas, com medo das alturas. Entrei à justa nas provas físicas e saí o melhor do curso nessa parte. No segundo salto o joelho direito rebentou na aterragem, a um dia do brevê e da boina. Saí para tratar a saúde. Foi a minha primeira desistência, e disseram-me que não voltaria a correr. Seguiu-se a cavalaria e, depois, a vida civil em restaurantes, armazéns e logística. Desempregado, concorri aos Fuzileiros sem saber nadar. Entrei, treinei três vezes por dia e acabei o curso em 12.º lugar. Na GNR guiei-me por três frases: «Há sempre alguém pior do que nós», «Onde come um, comem dois» e «O tempo não para».
 
 Uma coisa que a disciplina ensina muito bem é a cumprir. Cumprir horários, cumprir ordens, cumprir o que se espera de ti. O problema é que cumprir bem uma vida que não escolheste é uma forma sofisticada de ficar preso. Essa é a parte mais difícil de admitir, e é por isso que a deixo escrita aqui.
 
@@ -39,6 +45,8 @@ rg-curso-gnr.jpg | O meu curso da GNR. A turma toda, de branco.
 Larguei o meu emprego de sonho. Parece contraditório, e é. Mas o emprego, por muito que o amasse, deixou de me dar o que eu precisava. E o que eu precisava naquela altura era de tempo, de cabeça e de estar perto da família.
 
 A Liliana, a minha mulher, estava a lutar contra um cancro da mama. A Constança tinha três anos. Vendemos a casa de que gostávamos, para ficarmos mais perto dos tratamentos. O ordenado do Estado não chegava. Eram três horas de transportes por dia. Não tinha liberdade, nem cabeça. E havia ainda o stress pós-traumático de um passado que andava a carregar sozinho, que me estava a consumir.
+
+Nesse ano já não tinha família adotiva viva: a minha avó, a minha irmã Carla e a minha mãe tinham partido. O meu ordenado líquido era de 1.037 €. A gota de água foi um papel: para justificar uma ausência, pediram-me uma declaração de compromisso de honra de que a minha mulher tinha cancro. Não culpo quem a pediu nem a instituição onde servi. Mas naquele dia senti-me um número. Comecei a estudar desenvolvimento pessoal e trading à noite e no comboio, e cerca de seis meses depois saí. Em «O Método Frio» conto estes anos com mais pormenor, capítulo a capítulo.
 
 :::historia
 O que aconteceu na minha vida não se resume a uma escolha profissional. Foi um conjunto de peças a cair ao mesmo tempo, e eu fui o último a perceber que o problema não era uma peça só: era a estrutura inteira.

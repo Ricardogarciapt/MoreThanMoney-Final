@@ -27,7 +27,7 @@ export const VENDAS_TRADUCOES: Record<'destrui-tudo-e-ainda-bem' | 'o-metodo-fri
       faq: [
         { p: 'What format do I get?', r: 'A PDF (to read and print) and an interactive version in your browser, with charts that draw themselves as you read. They stay in your Library on the marketplace.' },
         { p: 'Do I need to know trading?', r: 'No. The first five chapters are about time, discipline and money. The markets section starts from zero.' },
-        { p: 'Is it the same as “The Cold Method”?', r: 'No. This book is about rebuilding and having a system: it starts with your week and ends with a 15-minute routine with risk management. “The Cold Method” is the technical manual on Forex and MetaTrader 5.' },
+        { p: 'Is it the same as “The Cold Method”?', r: 'No. This book is about rebuilding and having a system: it starts with your week and ends with a 15-minute routine with risk management. “The Cold Method” is the technical manual for getting started in Forex.' },
         { p: 'Can I ask for a refund?', r: 'Get in touch through the support section of the site. Every request is reviewed by the team.' },
       ],
       aviso: 'Educational content. It is not financial advice. Trading Forex, gold or CFDs carries a high risk of loss, including the whole of your capital. There are no guaranteed results.',
@@ -56,7 +56,7 @@ export const VENDAS_TRADUCOES: Record<'destrui-tudo-e-ainda-bem' | 'o-metodo-fri
       faq: [
         { p: '¿En qué formato lo recibo?', r: 'PDF (para leer e imprimir) y versión interactiva en el navegador, con gráficos que se dibujan mientras lees. Quedan en tu Biblioteca del marketplace.' },
         { p: '¿Necesito saber de trading?', r: 'No. Los primeros cinco capítulos tratan de tiempo, disciplina y dinero. La parte de mercados empieza desde cero.' },
-        { p: '¿Es lo mismo que «El Método Frío»?', r: 'No. Este libro trata de reconstrucción y de sistema: empieza en tu semana y termina en una rutina de 15 minutos con gestión de riesgo. «El Método Frío» es el manual técnico de Forex y MetaTrader 5.' },
+        { p: '¿Es lo mismo que «El Método Frío»?', r: 'No. Este libro trata de reconstrucción y de sistema: empieza en tu semana y termina en una rutina de 15 minutos con gestión de riesgo. «El Método Frío» es el manual técnico para empezar en Forex.' },
         { p: '¿Puedo pedir reembolso?', r: 'Escríbenos desde el soporte de la web. Cada solicitud la revisa el equipo.' },
       ],
       aviso: 'Contenido educativo. No constituye asesoramiento financiero. Operar con Forex, oro o CFD conlleva un alto riesgo de pérdida, incluida la totalidad del capital. No hay resultados garantizados.',
@@ -66,10 +66,10 @@ export const VENDAS_TRADUCOES: Record<'destrui-tudo-e-ainda-bem' | 'o-metodo-fri
     en: {
       titulo: 'The Cold', titulo2: 'Method',
       gancho: 'The market does not know you exist.',
-      sub: 'Forex without impulse: rules, risk and MetaTrader 5 for people starting out. The classic mistakes laid out in front of you, so you don’t have to pay for them yourself.',
+      sub: 'Forex: how to get started. Rules, risk and method for people starting out. The classic mistakes laid out in front of you, so you don’t have to pay for them yourself.',
       autor: 'Ricardo Garcia',
       autorBio: 'Fourteen years of service (Army, Marines, GNR) before he started again from zero. He founded MoreThanMoney so that nobody has to pay the price of learning alone. This is the technical manual that goes with “I Destroyed It All. And I’m Glad.”',
-      numeros: [{ v: '120', r: 'pages' }, { v: '13', r: 'animated charts' }, { v: '11', r: 'cold rules' }, { v: '30', r: 'days of plan' }],
+      numeros: [{ v: '120', r: 'pages' }, { v: '16', r: 'animated charts' }, { v: '12', r: 'cold rules' }, { v: '30', r: 'days of plan' }],
       capitulos: [
         { t: 'Setting up the workbench', d: 'Install MetaTrader 4 or 5 on phone and computer, open the demo, tidy the chart and connect the two.' },
         { t: 'The market does not know you exist', d: 'Pairs, spreads and sessions in Lisbon time, read on your own Quotes screen.' },
@@ -81,10 +81,11 @@ export const VENDAS_TRADUCOES: Record<'destrui-tudo-e-ainda-bem' | 'o-metodo-fri
         { t: 'The plan on one page', d: 'Five parts, process goals and when to change.' },
         { t: 'The journal', d: 'From the History tab to your journal, the Sunday review and the three numbers of the month.' },
         { t: 'A cool head', d: 'Fear, greed, FOMO and revenge, each with its own rule.' },
+        { t: 'The WebTrader and the house tools', d: 'The MTM WebTrader step by step: orders by risk, Auto BE and trailing, journal, audit link, TradeLocker. Plus DEFY, Golden Zone, Momentum and Aurum Flow, with playlists and bootcamps.' },
         { t: 'From demo to real money', d: 'Six criteria for moving on and how to start without rushing.' },
         { t: '30-day plan', d: 'Day by day on the demo, with MetaTrader and your notebook, plus a glossary.' },
       ],
-      paraQuem: ['You want to start in Forex without burning yourself in the first months.', 'You have opened MetaTrader 5 and don’t know where to begin.', 'You need written rules, not one more signal to copy.'],
+      paraQuem: ['You want to start in Forex without burning yourself in the first months.', 'You want to learn from the real story of someone who started again from zero, from Porto to the Marines and the GNR.', 'You have opened MetaTrader 5 and don’t know where to begin.', 'You need written rules, not one more signal to copy.'],
       naoE: ['A strategy that never loses.', 'Ready-made signals to copy.', 'A promise of returns.'],
       faq: [
         { p: 'What format do I get?', r: 'A PDF (to read and print) and an interactive version in your browser, with animated charts. They stay in your Library on the marketplace.' },
@@ -97,10 +98,10 @@ export const VENDAS_TRADUCOES: Record<'destrui-tudo-e-ainda-bem' | 'o-metodo-fri
     es: {
       titulo: 'El Método', titulo2: 'Frío',
       gancho: 'El mercado no sabe que existes.',
-      sub: 'Forex sin impulsos: reglas, riesgo y MetaTrader 5 para quien empieza. Los errores clásicos puestos delante, para que no los pagues tú.',
+      sub: 'Forex: cómo empezar. Reglas, riesgo y método para quien empieza. Los errores clásicos puestos delante, para que no los pagues tú.',
       autor: 'Ricardo Garcia',
       autorBio: 'Catorce años de servicio (Ejército, Infantería de Marina, GNR) antes de volver a empezar de cero. Fundó MoreThanMoney para que nadie tenga que pagar el precio de aprender solo. Es el manual técnico que acompaña a «Lo Destruí Todo. Y Menos Mal.».',
-      numeros: [{ v: '120', r: 'páginas' }, { v: '13', r: 'gráficos animados' }, { v: '11', r: 'reglas frías' }, { v: '30', r: 'días de plan' }],
+      numeros: [{ v: '120', r: 'páginas' }, { v: '16', r: 'gráficos animados' }, { v: '12', r: 'reglas frías' }, { v: '30', r: 'días de plan' }],
       capitulos: [
         { t: 'Montar el banco de trabajo', d: 'Instalar MetaTrader 4 o 5 en el móvil y en el ordenador, abrir la demo, ordenar el gráfico y conectar los dos.' },
         { t: 'El mercado no sabe que existes', d: 'Pares, spread y sesiones en hora de Lisboa, leídos en tus propias Cotizaciones.' },
@@ -112,10 +113,11 @@ export const VENDAS_TRADUCOES: Record<'destrui-tudo-e-ainda-bem' | 'o-metodo-fri
         { t: 'El plan en una página', d: 'Cinco partes, metas de proceso y cuándo cambiar.' },
         { t: 'El diario', d: 'De la pestaña Historial al diario, la revisión del domingo y los tres números del mes.' },
         { t: 'La cabeza fría', d: 'Miedo, codicia, FOMO y venganza, cada uno con su regla.' },
+        { t: 'El WebTrader y las herramientas de la casa', d: 'El WebTrader de MTM paso a paso: orden por riesgo, Auto BE y trailing, diario, auditoría, TradeLocker. Y DEFY, Golden Zone, Momentum y Aurum Flow, con playlists y bootcamps.' },
         { t: 'Del demo al dinero real', d: 'Seis criterios para dar el paso y cómo empezar sin prisas.' },
         { t: 'Plan de 30 días', d: 'Día a día en la demo, con MetaTrader y la libreta, y un glosario.' },
       ],
-      paraQuem: ['Quieres empezar en Forex sin quemarte en los primeros meses.', 'Ya abriste MetaTrader 5 y no sabes por dónde empezar.', 'Necesitas reglas escritas, no una señal más para copiar.'],
+      paraQuem: ['Quieres empezar en Forex sin quemarte en los primeros meses.', 'Quieres aprender con la historia real de alguien que empezó de cero, de Oporto a los Fuzileiros y la GNR.', 'Ya abriste MetaTrader 5 y no sabes por dónde empezar.', 'Necesitas reglas escritas, no una señal más para copiar.'],
       naoE: ['Una estrategia que nunca pierde.', 'Señales listas para copiar.', 'Una promesa de rentabilidad.'],
       faq: [
         { p: '¿En qué formato lo recibo?', r: 'PDF (para leer e imprimir) y versión interactiva en el navegador, con gráficos animados. Quedan en tu Biblioteca del marketplace.' },

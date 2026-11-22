@@ -119,6 +119,14 @@ Si quieres probar uno, elige una media móvil simple en el H4, solo para ver la 
 
 En MoreThanMoney usamos scanners que marcan automáticamente zonas, tendencia y posibles entradas. Un scanner no decide por ti: te ahorra tiempo al dibujar y te ayuda a no ver lo que no está. La regla sigue igual: entrada, stop, objetivo y lote salen de tu plan. En «Lo Destruí Todo. Y Menos Mal.» explico con detalle la lectura por regresión de tendencia que uso. Aquí queda lo esencial: una buena herramienta en manos de quien no tiene reglas sigue siendo solo una herramienta.
 
+## De mi vida: leer el terreno, no adivinar
+
+Después de la rodilla, hice unos dos años de contrato en caballería, y luego la vida civil me llevó a restaurantes, almacenes y logística. Hacia 2007 estaba en paro y me presenté a todo lo que pudiera devolverme un uniforme: paracaidistas otra vez, rangers, operaciones especiales, policía aérea y los Fuzileiros (infantería de marina). Entré en los Fuzileiros sin saber nadar.
+
+Nadie me dio una bola de cristal para atravesar aquel curso. Me dieron un mapa: pruebas, horarios, pistas, patrones que se repetían. La pista de barro y la pista de combate tenían siempre los mismos puntos donde la gente se caía. Quien los conocía se preparaba para ellos. Entrené tres veces al día y mi nota de natación pasó de 9 a casi 20. Terminé el curso de nueve meses, a los 27 años, en el 12.º puesto.
+
+Un gráfico es eso. No te dice lo que va a pasar. Te muestra dónde el terreno ya hizo caer o levantarse a la gente, y te deja decidir antes qué harás cuando llegues allí.
+
 ## La regla fría de este capítulo
 
 :::cartao Regla fría n.º 4

@@ -101,6 +101,12 @@ Una orden colocada no es una orden olvidada. El tercer botón de la barra de aba
 El precio está a dos pips de tu stop y modificas la posición para arrastrar el S/L más lejos, «para dar espacio». Acabas de cambiar el plan a mitad, con el corazón, y de aumentar el riesgo que habías aceptado. Un stop solo se mueve en una dirección: a favor de la operación, para proteger. Nunca alejándolo.
 :::
 
+## De mi vida: nadie salta sin revisar
+
+Antes de cada salto en los paracaidistas había una revisión del equipo, siempre en el mismo orden, hecha por ti y por el compañero de al lado. Nadie la saltaba porque «ya lo sabía». En los Fuzileiros (infantería de marina) era igual con el material, con las armas y con la embarcación. La revisión no existe para el que es despistado. Existe porque el momento de la acción es el peor momento para pensar.
+
+Una orden en el mercado es un salto pequeño. Tiene un equipo (volumen, stop, objetivo), una puerta (el botón) y una luz (tu plan). La checklist que viene a continuación es mi revisión antes de saltar. La hago siempre, aunque «sea obvio».
+
 ## La checklist antes de hacer clic
 
 Pega esto cerca de la pantalla. Si una de las respuestas es «no», la orden no sale.

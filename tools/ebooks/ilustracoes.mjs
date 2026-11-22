@@ -179,7 +179,7 @@ const MENTE = [
   `${calendario(90, 140, 6, 5, (k) => k < 9, 34)}<circle cx="320" cy="320" r="22" class="a2"/><circle cx="320" cy="320" r="34" class="fino tracejado"/>`,
 ]
 
-const ORDEM_FRIO = [0, 3, 1, 2, 5, 6, 4, 7, 8, 9, 10, 11, 12]
+const ORDEM_FRIO = [0, 3, 1, 2, 5, 6, 4, 7, 8, 9, 10, 11, 11, 12]
 
 export function ilustracao(tema, n) {
   const lista = tema === 'cripto' ? CRIPTO : tema === 'faceless' ? FACELESS : tema === 'rg' ? RG : tema === 'frio' ? FRIO : tema === 'mente' ? MENTE : null

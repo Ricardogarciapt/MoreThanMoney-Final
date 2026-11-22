@@ -97,12 +97,18 @@ tu: Bloqueado.
 
 Se ainda não te aconteceu, vai acontecer. Ninguém sério garante rendimento no Forex. Ninguém sério te pede o dinheiro para a conta dele.
 
-Quando um dia passares da demo para a conta real (e só passas no capítulo 11), faz à corretora estas quatro perguntas:
+Quando um dia passares da demo para a conta real (e só passas no capítulo 12), faz à corretora estas quatro perguntas:
 
 1. **Quem me regula?** Procura a entidade e o número de licença no site do regulador, não só no site da corretora.
 2. **Que entidade fica com a minha conta?** Muitos grupos têm várias entidades em países diferentes, com regras diferentes.
 3. **Quanto custa?** Spread típico, comissões, swap, custos de levantamento.
 4. **Consigo levantar?** Lê as regras de levantamento antes de depositar.
+
+## Da minha vida: os 25 € que não havia
+
+Lembras-te das calças de 25 € da introdução? A minha avó não me disse que não porque não gostasse de mim. Era a pessoa que mais amor me dava naquela casa. Disse que não porque o dinheiro não chegava, e o dinheiro não quer saber de quem gosta de quem.
+
+O mercado é igual. Não sabe que existes, não sabe que precisas daquele lucro para a renda, não sabe que tiveste um mês difícil. Quando percebi isso aos 16 anos, numa cozinha do Porto, deixei de pedir ao mundo que fosse justo comigo e comecei a perguntar o que é que eu podia controlar. No mercado, a resposta é curta: o par que escolhes, a hora a que entras, quanto arriscas e onde sais. O resto não é contigo.
 
 ## A regra fria deste capítulo
 
