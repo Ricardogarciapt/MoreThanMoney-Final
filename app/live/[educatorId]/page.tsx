@@ -10,6 +10,8 @@ import EducatorRatingsSection from "@/components/live/educator-ratings-section"
 import EducatorCoursesCard, { type CourseItem } from "@/components/live/educator-courses-card"
 import EstrategiasMtmSala from "@/components/live/estrategias-mtm-sala"
 import { SALA_ESTRATEGIAS_ID } from "@/lib/estrategias-mtm"
+import WebtraderMtmSala from "@/components/live/webtrader-mtm-sala"
+import { SALA_WEBTRADER_ID } from "@/lib/webtrader/bootcamp"
 import { useAuth } from "@/contexts/auth-context"
 import { Badge } from "@/components/ui/badge"
 import type { MaterialDaSala } from "@/lib/lms/aulas"
@@ -109,6 +111,8 @@ export default function LiveByEducatorPage() {
   const [roomCourses, setRoomCourses] = useState<CourseItem[]>([])
   // A sala «Estratégias MTM» tem secção própria: fica fora do card de cursos (null = não é deste canal).
   const [salaEstrategiasTier, setSalaEstrategiasTier] = useState<string | null | undefined>(undefined)
+  // Sala «WebTrader MTM» (bootcamp): undefined = este educador não a tem.
+  const [salaWebtraderPlaylist, setSalaWebtraderPlaylist] = useState<string | null | undefined>(undefined)
   const [loading, setLoading] = useState(true)
   const [showPresentation, setShowPresentation] = useState(false)
   const presentation = EDUCATOR_PRESENTATIONS[educatorId]
@@ -139,7 +143,7 @@ export default function LiveByEducatorPage() {
         // Uma sala entra no card se tiver playlist OU materiais (211): os guias de uma estratégia
         // podem chegar antes das aulas gravadas.
         const roomList: CourseItem[] = ((allStreamsRes.data || []) as SalaComCurso[])
-          .filter((s) => s.id !== SALA_ESTRATEGIAS_ID && (s.playlist_url || s.materiais?.length))
+          .filter((s) => s.id !== SALA_ESTRATEGIAS_ID && s.id !== SALA_WEBTRADER_ID && (s.playlist_url || s.materiais?.length))
           .map((s) => ({
             id: `room-${s.id}`,
             title: s.playlist_title || `${s.title ?? "Sala"} · Aulas`,
@@ -151,6 +155,8 @@ export default function LiveByEducatorPage() {
         setRoomCourses(roomList)
         const salaEstrategias = ((allStreamsRes.data || []) as SalaComCurso[]).find((s) => s.id === SALA_ESTRATEGIAS_ID)
         setSalaEstrategiasTier(salaEstrategias ? (salaEstrategias.playlist_access_tier ?? "app_member") : undefined)
+        const salaWebtrader = ((allStreamsRes.data || []) as SalaComCurso[]).find((s) => s.id === SALA_WEBTRADER_ID)
+        setSalaWebtraderPlaylist(salaWebtrader ? (salaWebtrader.playlist_url ?? null) : undefined)
         const first = (streamsRes.data || [])[0]
         if (first?.id) {
           emptyPollsRef.current = 0
@@ -258,6 +264,8 @@ export default function LiveByEducatorPage() {
               memberCategory={(user as { member_category?: string })?.member_category}
             />
           )}
+
+          {!loading && salaWebtraderPlaylist !== undefined && <WebtraderMtmSala playlistUrl={salaWebtraderPlaylist} />}
 
           {/* CARD DE CURSOS: playlists próprias do educador (Studio) + playlists das salas dele. */}
           {!loading && educatorId && (

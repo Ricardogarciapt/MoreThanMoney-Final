@@ -9,6 +9,7 @@ import { candidatosDeTicker } from "@/lib/mtmfunded/simulado/ordens"
 import { type ContaResumo, type SessaoConta, pedir, lerSessoes, guardarSessao, apagarSessao, gravarEtiqueta, lerOrdemContas, gravarOrdemContas, gravarContaFavorita, gravarFiltroContas, gravarContasOcultas, usd, COR_ESTADO, corDoEstado } from "./api"
 import InstalarWebtrader from "./instalar-webtrader"
 import { SairWebtrader, VoltarApp } from "@/components/webtrader/barra-saida"
+import { TutorialWebtrader } from "@/components/webtrader/bootcamp-painel"
 import PopoverAncorado from "./popover-contas"
 import { preaquecerWebtrader } from "./pre-carga"
 import { InterruptorModo, useModoWebtrader } from "./modo-webtrader"
@@ -456,6 +457,7 @@ export default function FundedWebtrader({ contexto = "embutido", onSimbolo }: {
         <div className="ml-auto flex shrink-0 items-center gap-1.5">
           {/* O SIMPLE/PRO já vale para as contas reais: desenham-se com os mesmos layouts. */}
           {emTrader && <InterruptorModo compacto={false} />}
+          <TutorialWebtrader />
           <InstalarWebtrader contexto={contexto} />
           {contexto === "app" && (temSessaoMtm || todas.length > 0) && <SairWebtrader compacto />}
         </div>
