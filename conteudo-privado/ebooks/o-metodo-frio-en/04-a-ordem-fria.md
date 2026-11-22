@@ -46,6 +46,14 @@ The price is two pips from your stop and you drag the line further away "to give
 
 [[foto: mt5-ios-ordem.jpg | The order window in MetaTrader 5 for iPhone: volume, Stop Loss and Take Profit filled in before you tap "Sell" or "Buy". Image: MetaQuotes (metatrader5.com). | larga]]
 
+:::galeria A pending order, from start to finish
+mt5-video-ordem-mercado.png | 1. Order type, volume and price.
+mt5-video-grafico-sltp.png | 2. The stop shows on the chart, with the loss in money.
+mt5-video-ordem.png | 3. Volume, price and S/L filled in before confirming.
+mt5-video-ordem-executada.png | 4. "Done": the order went in with its stop.
+:::
+
+
 In your case, the cold order looks like this: type Buy Limit, volume 0.02, price 1.08200, S/L 1.07950, T/P 1.08700. That is 25 pips of risk for 50 pips of target (illustrative example).
 
 In other words, a risk-to-reward ratio of 1:2.
