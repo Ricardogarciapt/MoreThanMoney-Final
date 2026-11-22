@@ -42,7 +42,8 @@ export interface DefinicaoFunil {
   pontos: PassoFunil[]
   /** O que acontece depois de deixar o contacto. */
   passos: PassoFunil[]
-  formulario: { titulo: string; subtitulo: string }
+  /** `botao`: texto do botão do formulário curto (oferta concreta converte mais do que «falar connosco»). */
+  formulario: { titulo: string; subtitulo: string; botao: string }
   /** Para quem já sabe o que quer e não precisa de falar connosco primeiro. */
   atalho: { texto: string; href: string }
   /** Avisos específicos do funil (além do aviso geral). */
@@ -71,13 +72,14 @@ export const FUNIS: Readonly<Record<FunilPublicidade, DefinicaoFunil>> = {
       { titulo: 'Não ficas sozinho', texto: 'Comunidade e uma chamada de onboarding com uma pessoa da equipa.' },
     ],
     passos: [
-      { titulo: 'Deixas o contacto', texto: 'Escolhes por onde preferes falar: chamada, WhatsApp ou email.' },
+      { titulo: 'Deixas o contacto', texto: 'Só o nome e o WhatsApp. Ou falas connosco já no WhatsApp.' },
       { titulo: 'Falamos contigo', texto: 'Uma conversa curta sobre o teu ponto de partida e o tempo que tens.' },
       { titulo: 'Começas pelo plano certo', texto: `Premium com ${TRIAL_DAYS} dias sem cartão, ou Membro se já tens corretora.` },
     ],
     formulario: {
-      titulo: 'Falamos contigo sobre a formação',
-      subtitulo: 'Deixa o contacto e escolhe como preferes ser contactado. Sem compromisso.',
+      titulo: `Recebe no WhatsApp o acesso grátis de ${TRIAL_DAYS} dias`,
+      subtitulo: 'Deixa o nome e o WhatsApp e mandamos-te o acesso ao Premium. Sem cartão, sem compromisso.',
+      botao: 'Quero o acesso grátis',
     },
     atalho: { texto: `Experimentar ${TRIAL_DAYS} dias`, href: '/register' },
     avisos: [],
@@ -102,13 +104,14 @@ export const FUNIS: Readonly<Record<FunilPublicidade, DefinicaoFunil>> = {
       { titulo: 'O Premium vem junto', texto: `Com a conta validada e o depósito mínimo de ${MIN_DEPOSIT} USD, o Premium fica aberto enquanto se mantiver.` },
     ],
     passos: [
-      { titulo: 'Deixas o contacto', texto: 'Escolhes por onde preferes falar: chamada, WhatsApp ou email.' },
+      { titulo: 'Deixas o contacto', texto: 'Só o nome e o WhatsApp. Ou falas connosco já no WhatsApp.' },
       { titulo: 'Ajudamos na abertura', texto: 'Passo a passo, pelo nosso link, e validamos a conta contigo.' },
       { titulo: 'O Premium abre', texto: 'Formação, scanners e alertas, com a tua conta a decidir o ritmo.' },
     ],
     formulario: {
       titulo: 'Ajudamos-te a abrir a conta',
       subtitulo: 'Deixa o contacto e uma pessoa da equipa acompanha-te na abertura e na validação.',
+      botao: 'Quero ajuda na abertura',
     },
     atalho: { texto: 'Abrir conta já', href: '/l/corretora' },
     avisos: [
@@ -136,13 +139,14 @@ export const FUNIS: Readonly<Record<FunilPublicidade, DefinicaoFunil>> = {
       { titulo: 'Não é prop firm', texto: 'A MoreThanMoney não custodia nem executa capital de clientes. O prémio é um Patrocínio de Desempenho.' },
     ],
     passos: [
-      { titulo: 'Deixas o contacto', texto: 'Escolhes por onde preferes falar: chamada, WhatsApp ou email.' },
+      { titulo: 'Deixas o contacto', texto: 'Só o nome e o WhatsApp. Ou falas connosco já no WhatsApp.' },
       { titulo: 'Escolhes o desafio', texto: 'Explicamos as regras e qual faz sentido para a tua experiência.' },
       { titulo: 'Começas a operar', texto: 'No WebTrader, com a classificação à vista desde o primeiro dia.' },
     ],
     formulario: {
       titulo: 'Falamos contigo sobre o MTM Funded',
       subtitulo: 'Deixa o contacto e explicamos os desafios e as regras antes de começares.',
+      botao: 'Quero saber as regras',
     },
     atalho: { texto: 'Ver desafios', href: '/mtmfunded' },
     avisos: [

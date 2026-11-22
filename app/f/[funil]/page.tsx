@@ -41,26 +41,24 @@ export default async function PaginaFunil({ params }: Props) {
   return (
     <main className="min-h-[100dvh] bg-[#0A0A0B] text-zinc-100">
       {/* Hero: mensagem e ação à esquerda, imagem real à direita; empilha no telemóvel. */}
-      <section className="mx-auto grid max-w-6xl items-center gap-10 px-4 pb-16 pt-10 sm:px-6 md:grid-cols-[1.1fr_1fr] md:pt-16">
+      <section className="mx-auto grid max-w-6xl items-center gap-10 px-4 pb-14 pt-6 sm:px-6 md:grid-cols-[1.1fr_1fr] md:pt-16">
         <div>
-          <h1 className="text-4xl font-semibold leading-[1.08] tracking-tight text-white md:text-5xl">{f.titulo}</h1>
-          <p className="mt-5 max-w-[52ch] text-[17px] leading-relaxed text-zinc-300">{f.subtitulo}</p>
-          <div className="mt-8 flex flex-wrap items-center gap-3">
-            <a
-              href="#contacto"
-              className="rounded-xl bg-[#D2A63C] px-6 py-3 text-[15px] font-semibold text-[#0A0A0B] transition hover:bg-[#E9C46A] active:scale-[0.98]"
-            >
-              Falar connosco
-            </a>
-            <Link
-              href={f.atalho.href}
-              className="rounded-xl border border-white/15 px-6 py-3 text-[15px] font-medium text-zinc-100 transition hover:bg-white/5 active:scale-[0.98]"
-            >
-              {f.atalho.texto}
-            </Link>
+          <h1 className="text-3xl font-semibold leading-[1.08] tracking-tight text-white md:text-5xl">{f.titulo}</h1>
+          <p className="mt-3 hidden max-w-[52ch] text-[16px] leading-relaxed text-zinc-300 sm:block">{f.subtitulo}</p>
+          {/* O contacto logo aqui, acima da dobra no telemóvel (22/11: 110 visitas, 0 contactos com ele no fundo). */}
+          <div id="contacto-topo" className="mt-5 sm:mt-7 max-w-md rounded-2xl border border-white/10 bg-[#111113] p-4 sm:p-5">
+            <p className="text-[15px] font-semibold text-white">{f.formulario.titulo}</p>
+            <p className="mb-3 mt-1 text-[13px] leading-snug text-zinc-400">{f.formulario.subtitulo}</p>
+            <FormularioFunil chave={f.chave} />
           </div>
+          <Link
+            href={f.atalho.href}
+            className="mt-4 inline-block text-[14px] font-medium text-[#E9C46A] underline-offset-4 hover:underline"
+          >
+            Já decidiste? {f.atalho.texto} →
+          </Link>
         </div>
-        <div className="relative aspect-[4/5] w-full overflow-hidden rounded-2xl border border-white/10 md:aspect-[4/5]">
+        <div className="relative hidden aspect-[4/5] w-full overflow-hidden rounded-2xl border border-white/10 md:block">
           <Image src={f.imagem.src} alt={f.imagem.alt} fill priority sizes="(min-width: 768px) 45vw, 100vw" className="object-cover" />
         </div>
       </section>
@@ -97,7 +95,8 @@ export default async function PaginaFunil({ params }: Props) {
               </li>
             ))}
           </ol>
-          <div className="mt-12 rounded-2xl border border-white/10 bg-[#111113] p-5 sm:p-8">
+          <div className="mt-12 max-w-md rounded-2xl border border-white/10 bg-[#111113] p-5 sm:p-6">
+            <p className="mb-3 text-[15px] font-semibold text-white">{f.formulario.titulo}</p>
             <FormularioFunil chave={f.chave} />
           </div>
         </div>
