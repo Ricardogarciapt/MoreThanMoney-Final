@@ -14,6 +14,8 @@ O **pip** é a unidade de medida do movimento. Na maioria dos pares é a quarta 
 - Nos pares com o iene, é a segunda casa: USD/JPY de 151,40 para 151,41 é 1 pip.
 - O MetaTrader 5 mostra mais uma casa (1,08502). Esse último dígito é uma décima de pip, chamada «pipette».
 
+Repara num pormenor do ecrã: nas Cotações, o MT5 mostra o spread em **pontos**, não em pips. Nos pares com cinco casas decimais, 10 pontos são 1 pip. Se vês «8» ao lado da hora, o spread é de 0,8 pips.
+
 No ouro, a convenção varia de corretora para corretora. Antes de operares XAU/USD, confirma na especificação do contrato quanto vale cada movimento.
 
 ## O lote
@@ -32,8 +34,20 @@ E aqui está a ligação que interessa: o valor de cada pip depende do lote.
 
 Numa conta em dólares, no EUR/USD, 1 pip vale cerca de 10 $ com 1 lote, 1 $ com 0,10 e 0,10 $ com 0,01. Se o preço andar 30 pips contra ti, a diferença entre um microlote e um lote standard é a diferença entre perder 3 $ e perder 300 $. O gráfico é o mesmo. A tua vida, não.
 
+## No ecrã: o campo «Volume»
+
+No MT5, o lote chama-se **Volume** e aparece na janela de ordem, logo por baixo do tipo de ordem. Ainda não vais abrir nenhuma (isso fica para o capítulo 6), mas vale a pena veres já onde está o número que mais dinheiro mexe na tua conta.
+
+:::galeria O seletor de lotes
+mt5-tel-ordem-lotes.png | Ao tocar no volume abre-se um seletor com botões de −0,10 a +0,10 e o número grande ao centro. É esse número que decide quanto vale cada pip.
+:::
+
 :::alerta Erro clássico · Escolher o lote «a olho»
-Quem começa abre o MetaTrader 5, vê o campo «Volume» e escreve um número que «parece pouco». 0,50, porque é menos de um. Só que 0,50 lotes no EUR/USD são cerca de 5 $ por pip, e um movimento normal de 40 pips contra ti são 200 $. O volume não se escolhe a olho. Calcula-se, e vais aprender a fazê-lo no capítulo 6.
+Quem começa abre o MetaTrader 5, vê o campo «Volume» e escreve um número que «parece pouco». 0,50, porque é menos de um. Só que 0,50 lotes no EUR/USD são cerca de 5 $ por pip, e um movimento normal de 40 pips contra ti são 200 $. O volume não se escolhe a olho. Calcula-se, e vais aprender a fazê-lo no capítulo 5.
+:::
+
+:::historia A Marta, dia 4
+Curiosa, a Marta abriu a janela de ordem e tocou no volume. O seletor dizia 0,01 e ela carregou três vezes em +0,10: 0,31. «Ainda é menos de metade de um lote.» Antes de fechar, fez a conta deste capítulo num papel: 0,31 lotes no EUR/USD são cerca de 3,10 $ por pip. Com um stop de 25 pips, perderia uns 78 $ numa só operação, perto de 15 % da demo. Fechou a janela sem colocar nada e escreveu no caderno: «O volume não é uma opinião».
 :::
 
 ## O spread e o swap: os custos que não aparecem na fatura
@@ -46,7 +60,7 @@ Com spread de 1 pip e 0,10 lotes no EUR/USD, cada operação custa cerca de 1 $.
 
 Quem faz 200 operações por mês está a pagar 200 $ só para entrar, antes de saber se ganhou ou perdeu. É por isso que o método frio é lento de propósito: menos operações, mais escolhidas.
 
-O **swap** é o juro que pagas (ou, às vezes, recebes) por manteres uma posição aberta de um dia para o outro. Às quartas-feiras, em muitas corretoras, cobra-se a triplicar por causa do fim de semana. Vês o valor na especificação do símbolo no MT5.
+O **swap** é o juro que pagas (ou, às vezes, recebes) por manteres uma posição aberta de um dia para o outro. Às quartas-feiras, em muitas corretoras, cobra-se a triplicar por causa do fim de semana. Vês o valor na especificação do símbolo no MT5: no telemóvel, em **Cotações**, toca no par e escolhe **Especificações**; no PC, botão direito no símbolo e **Especificação**.
 
 :::ecra MetaTrader 5 · Especificação · EUR/USD
 Tamanho do contrato: 100.000
@@ -79,7 +93,7 @@ Este gráfico explica porque é que a proteção vale mais do que o ataque. Depo
 
 ## A regra fria deste capítulo
 
-:::cartao Regra fria n.º 2
+:::cartao Regra fria n.º 3
 Antes de cada operação sei três números: quanto vale 1 pip com o meu lote, quanto pago de spread e quanto perco se o stop for atingido. Se não sei, não entro.
 :::
 
@@ -90,9 +104,10 @@ Antes de cada operação sei três números: quanto vale 1 pip com o meu lote, q
 - O spread paga-se em todas as operações; quem opera muito, paga muito.
 - O swap paga-se por cada noite com a posição aberta.
 - A alavancagem é uma lupa. O risco controla-se com lote e stop.
+- No ecrã: spread em pontos (10 pontos = 1 pip) e o lote no campo «Volume».
 
 :::exercicio Para fazer hoje
-1. No MT5 em demo, abre a especificação do teu par (clica com o botão direito no símbolo, «Especificação»).
+1. Na demo, abre a especificação do teu par (telemóvel: Cotações › par › Especificações; PC: botão direito › Especificação).
 2. Copia para o caderno: tamanho do contrato, volume mínimo, swap de compra e de venda, dia do swap triplo.
 3. Faz a conta: com 0,01 lotes, quanto perdes se o preço andar 25 pips contra ti? ____________
 4. E com 0,10? ____________ E com 1,00? ____________

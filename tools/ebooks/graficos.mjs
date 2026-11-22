@@ -322,6 +322,51 @@ const G = {
   'fluxo-operacao': () => fig('fluxo-operacao', 'O ciclo frio de cada operação',
     passos([{ r: 'Contexto', s: 'calendário\ne sessão' }, { r: 'Plano', s: 'zona, stop\ne alvo' }, { r: 'Cálculo', s: 'lote pelo\nrisco' }, { r: 'Execução', s: 'ordem com\nSL e TP' }, { r: 'Diário', s: 'foto, nota\ne emoção' }], { circular: true })),
 
+  'percurso-mt5': () => fig('percurso-mt5', 'O MetaTrader ao longo do livro: um ecrã novo por capítulo',
+    passos([{ r: 'Instalar', s: 'cap. 1\ndemo' }, { r: 'Cotações', s: 'cap. 2\npreço' }, { r: 'Volume', s: 'cap. 3\npips' }, { r: 'Gráfico', s: 'cap. 4\nmapa' }, { r: 'Lote', s: 'cap. 5\nrisco' }, { r: 'Ordem', s: 'cap. 6\nSL e TP' }, { r: 'Diário', s: 'cap. 9\nhistórico' }]),
+    'Cada capítulo junta uma peça ao que já sabes fazer na app. No fim, o ciclo inteiro está nas tuas mãos.'),
+  'anatomia-vela': () => {
+    const Y = (v) => 300 - v * 2.4
+    const vela = (x, o, c, h, l, k) => {
+      const sobe = c > o, top = Math.max(o, c), bot = Math.min(o, c)
+      return `<line class="g-linha ${sobe ? 'g-c0' : 'g-c3'} traca" pathLength="1" style="--d:${k}s;stroke-width:3" x1="${x}" x2="${x}" y1="${Y(h)}" y2="${Y(l)}"/>` +
+        `<rect class="${sobe ? 'g-c0' : 'g-c3'} cresce" style="--d:${(k + 0.3).toFixed(2)}s" x="${x - 34}" y="${Y(top)}" width="68" height="${Y(bot) - Y(top)}" rx="4"/>`
+    }
+    const rot = (x, y, t, k, anc = 'start') => `<text class="g-eixo surge" style="--d:${k}s" x="${x}" y="${y + 4}" text-anchor="${anc}">${t}</text>`
+    const tra = (x1, x2, y, k) => `<line class="g-grelha surge" style="--d:${k}s" x1="${x1}" x2="${x2}" y1="${y}" y2="${y}"/>`
+    let s = vela(200, 40, 80, 100, 25, 0) + vela(500, 80, 40, 95, 20, 0.4)
+    s += tra(236, 268, Y(100), 1) + rot(274, Y(100), 'máximo', 1) + tra(236, 268, Y(80), 1.1) + rot(274, Y(80), 'fecho', 1.1) + tra(236, 268, Y(40), 1.2) + rot(274, Y(40), 'abertura', 1.2) + tra(236, 268, Y(25), 1.3) + rot(274, Y(25), 'mínimo', 1.3)
+    s += tra(432, 464, Y(80), 1.4) + rot(426, Y(80), 'abertura', 1.4, 'end') + tra(432, 464, Y(40), 1.5) + rot(426, Y(40), 'fecho', 1.5, 'end')
+    s += `<text class="g-rot" x="200" y="336" text-anchor="middle">Vela de subida</text><text class="g-rot" x="500" y="336" text-anchor="middle">Vela de descida</text>`
+    s += tra(160, 194, Y(92), 1.7) + rot(154, Y(92), 'pavio', 1.7, 'end') + tra(140, 164, Y(60), 1.8) + rot(134, Y(60), 'corpo', 1.8, 'end')
+    return fig('anatomia-vela', 'Uma vela, quatro preços', s, 'O corpo vai da abertura ao fecho; os pavios marcam até onde o preço foi. Cada vela é um período: um minuto no M1, uma hora no H1.')
+  },
+  'tempos-grafico': () => {
+    const pts = [50, 54, 49, 56, 60, 57, 63, 58, 61, 67, 64, 70, 66, 72, 69, 75, 71, 68, 74, 78, 73, 79, 76, 80]
+    const Y = (v) => 300 - (v - 40) * 5
+    let s = `<line class="g-grelha" x1="330" x2="330" y1="30" y2="310"/>`
+    pts.forEach((c, j) => {
+      const o = j ? pts[j - 1] : 48, x = 30 + j * 11.5, sobe = c >= o
+      const top = Math.max(o, c), bot = Math.min(o, c)
+      s += `<line class="g-linha ${sobe ? 'g-c0' : 'g-c3'} surge" style="--d:${(j * 0.05).toFixed(2)}s;stroke-width:1.5" x1="${x + 4}" x2="${x + 4}" y1="${Y(top + 2)}" y2="${Y(bot - 2)}"/><rect class="${sobe ? 'g-c0' : 'g-c3'} surge" style="--d:${(j * 0.05).toFixed(2)}s" x="${x}" y="${Y(top)}" width="8" height="${Math.max(2, Y(bot) - Y(top))}" rx="1.5"/>`
+    })
+    s += `<line class="g-linha g-c0 traca" pathLength="1" style="--d:1.4s;stroke-width:4" x1="480" x2="480" y1="${Y(82)}" y2="${Y(46)}"/><rect class="g-c0 cresce" style="--d:1.6s" x="440" y="${Y(80)}" width="80" height="${Y(48) - Y(80)}" rx="5"/>`
+    s += `<text class="g-rot" x="170" y="336" text-anchor="middle">M5: 24 velas</text><text class="g-rot" x="480" y="336" text-anchor="middle">H2: 1 vela</text>`
+    return fig('tempos-grafico', 'O mesmo movimento, dois períodos', s, 'Ilustrativo. No período pequeno cada recuo parece uma inversão; no maior vês só a subida. Decide no tempo maior, afina no menor.')
+  },
+  'limit-stop': () => {
+    const yp = 180
+    let s = `<line class="g-linha g-c2 traca" pathLength="1" style="--d:0s;stroke-width:2" stroke-dasharray="6 6" x1="40" x2="${W - 40}" y1="${yp}" y2="${yp}"/><text class="g-rot" x="${W / 2}" y="${yp + 5}" text-anchor="middle" style="paint-order:stroke;stroke:#111;stroke-width:6px">preço atual</text>`
+    const it = [['Sell Limit', 'vende mais caro', 70, 'g-c3', 150], ['Buy Stop', 'compra no rompimento', 70, 'g-c0', 490], ['Buy Limit', 'compra mais barato', 290, 'g-c0', 150], ['Sell Stop', 'vende no rompimento', 290, 'g-c3', 490]]
+    it.forEach(([n, d, y, c, x], k) => {
+      s += `<g class="surge" style="--d:${(0.4 + k * 0.25).toFixed(2)}s"><line class="g-linha ${c}" style="stroke-width:3" x1="${x - 90}" x2="${x + 90}" y1="${y}" y2="${y}"/><text class="g-rot" x="${x}" y="${y - 12}" text-anchor="middle">${n}</text><text class="g-eixo" x="${x}" y="${y + 22}" text-anchor="middle">${d}</text></g>`
+      s += `<line class="g-seta traca" pathLength="1" style="--d:${(0.6 + k * 0.25).toFixed(2)}s" x1="${x}" x2="${x}" y1="${y < yp ? yp - 14 : yp + 14}" y2="${y < yp ? y + 32 : y - 30}" marker-end="url(#seta2)"/>`
+    })
+    s = `<defs><marker id="seta2" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" class="g-ponta"/></marker></defs>` + s
+    s += `<text class="g-eixo" x="150" y="${H - 6}" text-anchor="middle">Limit: o preço volta até ti</text><text class="g-eixo" x="490" y="${H - 6}" text-anchor="middle">Stop: o preço rompe e segue</text>`
+    return fig('limit-stop', 'Limit ou Stop: onde fica a tua ordem em relação ao preço', s, 'Acima do preço: Sell Limit e Buy Stop. Abaixo: Buy Limit e Sell Stop. Troca-os e entras no sítio errado.')
+  },
+
 }
 
 export function grafico(id, ctx = {}) {

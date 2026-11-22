@@ -8,20 +8,20 @@ Este plano faz-se todo em conta demo, com 30 a 45 minutos por dia. Não salta pa
 
 | Dia | Tarefa |
 |---|---|
-| 1 | Instalar o MT5, abrir demo com saldo realista, escolher o par (capítulos 1 e 3) |
-| 2 | Spreads a três horas diferentes; especificação do símbolo (capítulo 2) |
-| 3 | Gráfico limpo: velas, H1 e H4, sem indicadores. Primeiro print para o diário |
-| 4 | Tendência no H4: escrever alta, baixa ou lateral, com a razão (capítulo 5) |
-| 5 | Desenhar duas zonas de suporte e duas de resistência |
-| 6 | Calendário económico da semana seguinte; definir a tua janela (capítulo 7) |
-| 7 | Descanso. Reler os capítulos 0 a 3 |
+| 1 | Instalar o MT5 no telemóvel e no PC, abrir demo com saldo realista, arrumar o gráfico (capítulo 1) |
+| 2 | Cotações: lista curta, escolher o par, spreads a três horas diferentes (capítulo 2) |
+| 3 | Especificação do símbolo e o campo «Volume»: quanto vale o pip (capítulo 3) |
+| 4 | Gráfico: velas, períodos, tendência no H4 com a razão (capítulo 4) |
+| 5 | Desenhar com os objetos da app duas zonas de suporte e duas de resistência. Primeiro print para o diário |
+| 6 | Calendário (Tradays) da semana seguinte; definir a tua janela; primeiro alerta de preço (capítulo 7) |
+| 7 | Descanso. Reler os capítulos 0 a 4 |
 
 ## Semana 2 · Treinar os dedos
 
 | Dia | Tarefa |
 |---|---|
-| 8 | Abrir e cancelar ordens pendentes com SL e TP (capítulo 4) |
-| 9 | Calcular o lote para três stops diferentes, com prova (capítulo 6) |
+| 8 | Calcular o lote para três stops diferentes, com prova (capítulo 5) |
+| 9 | Abrir, modificar e cancelar ordens pendentes com SL e TP, confirmando na vista em dinheiro (capítulo 6) |
 | 10 | Escrever o plano no cartão de uma página (capítulo 8) |
 | 11 | Criar o diário com todas as colunas (capítulo 9) |
 | 12 | Primeira operação com plano completo e checklist |
@@ -78,6 +78,12 @@ Este plano faz-se todo em conta demo, com 30 a 45 minutos por dia. Não salta pa
 | **Análise técnica** | Ler o preço e o gráfico |
 | **Análise fundamental** | Ler a economia: juros, inflação, emprego |
 | **CFD** | Contrato por diferença: negoceias a variação do preço sem teres o ativo |
+| **Bid / Ask** | No MT5, o preço a que vendes (à esquerda) e o preço a que compras (à direita) |
+| **Pontos** | A unidade que o MT5 usa no spread; nos pares de cinco casas, 10 pontos = 1 pip |
+| **Volume** | O nome do lote na janela de ordem do MT5 |
+| **Ordem pendente** | Ordem que fica à espera de um preço: Buy/Sell Limit e Buy/Sell Stop |
+| **MetaQuotes ID** | O código que liga o terminal do PC à app do telemóvel para receberes alertas push |
+| **Tradays** | O calendário económico que vem dentro do MetaTrader 5 |
 
 ## Para ires mais longe
 

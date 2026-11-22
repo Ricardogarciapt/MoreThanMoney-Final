@@ -49,6 +49,10 @@ Copia, adapta e imprime. Fica ao lado do ecrã.
 - Revisão: domingo, com o diário
 :::
 
+:::historia A Marta, dia 13
+Num domingo de folga, a Marta pegou no caderno e passou o plano para uma página. Par: EURUSD. Janela: das 7h15 às 7h45, só nos dias sem turno da manhã. Setup: tendência no H4, correção a uma zona desenhada ao domingo. Entrada com Buy Limit ou Sell Limit, nunca a mercado. Risco 1 %, lote pela fórmula, volume lido em voz alta. Duas perdas, fecha o dia. Imprimiu, colou na porta do frigorífico e tirou uma foto para o fundo do telemóvel. Assim, sempre que abrisse o MetaTrader, o plano aparecia primeiro.
+:::
+
 ## Quando mudar o plano
 
 O plano muda, mas nunca a meio da sessão e nunca por causa de uma operação. Muda ao domingo, na revisão, com dados:

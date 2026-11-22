@@ -51,10 +51,14 @@ Rui: Fechado. Vou ao ginásio.
 
 O Rui é uma personagem de exemplo, mas a conversa é das mais comuns que existem. Ter alguém a quem dizer em voz alta «vou partir a regra» já trava metade das asneiras.
 
+:::historia A Marta, dia 24
+Duas perdas antes das 8h. As duas com plano, as duas com stop, 5 € cada. A Marta sentiu a vontade conhecida: «a terceira recupera tudo». Olhou para o fundo do telemóvel, onde estava o plano, e leu a linha «Duas perdas, fecha o dia». Em vez de fechar só a app, foi a Configurações e terminou a sessão da conta. Para voltar a entrar teria de procurar a palavra-passe no caderno, e esses trinta segundos de fricção chegaram. Escreveu no diário: estado emocional 2, regra cumprida. Foi a primeira vez que se sentiu orgulhosa de um dia negativo.
+:::
+
 ## Rotinas que arrefecem
 
 - **Antes da sessão**: lê o plano em voz alta, respira fundo três vezes, escreve o estado emocional no diário.
-- **Durante**: uma operação de cada vez; depois de clicar, sai do gráfico. Ficar a olhar para cada tick não muda o resultado, só o teu batimento cardíaco.
+- **Durante**: uma operação de cada vez; depois de clicar, sai do gráfico e deixa os alertas do capítulo 7 avisarem-te. Ficar a olhar para cada tick não muda o resultado, só o teu batimento cardíaco.
 - **Depois**: diário preenchido, MT5 fechado, alarme de fim de janela respeitado.
 
 Há um livro que recomendo a quem quer ir mais fundo nisto: «The Daily Trading Coach», de Brett Steenbarger, um psicólogo que trabalha com traders. Cada capítulo é uma lição curta para aplicar no dia seguinte.

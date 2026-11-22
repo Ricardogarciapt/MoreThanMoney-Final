@@ -32,6 +32,10 @@ Repara que nenhum critério é «ganhei X €». Uma demo com lucro e cumpriment
 - Ganho médio > perda média
 :::
 
+:::historia A Marta, dia 30
+Ao fim de trinta dias a Marta tinha 19 operações, não 40. Cumprimento de 95 % nas últimas dez, zero operações sem stop, diário completo. A demo estava ligeiramente negativa. Pela primeira vez leu esses números sem se zangar: faltavam operações, não disciplina. Decidiu continuar na demo mais um mês com o mesmo plano. Não mudou o par, não mudou a janela, não mudou o lote. O livro acabava ali. O método dela estava só a começar.
+:::
+
 ## Como começar na conta real
 
 1. **Deposita só o que estás disposto a perder** sem mexer na renda, nas contas ou no fundo de emergência. Se ainda não tens fundo de emergência, o «Destruí Tudo» tem um capítulo inteiro sobre isso, e vem antes do trading.
