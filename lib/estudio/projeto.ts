@@ -147,10 +147,10 @@ export type Cinematico = {
   narrado?: boolean
   /**
    * Capa do reel (22/11/2026, Ricardo: todos os reels levam capa, cada uma diferente; RG no estilo
-   * dele, MTM com o branding MTM). Linhas do título: w = branco, c = destaque (ciano/ouro), box = faixa.
+   * dele, MTM com o branding MTM). Linhas do título: w = branco, c = destaque (ciano/ouro), box = faixa, k = kicker dourado por cima (só MTM).
    * Sem linhas, o robô parte o gancho. capa_url é a imagem já desenhada (vai para media_urls[1]).
    */
-  capa?: [('w' | 'c' | 'box'), string][]
+  capa?: [('w' | 'c' | 'box' | 'k'), string][]
   capa_url?: string
 }
 
@@ -184,8 +184,8 @@ export function normalizarCinematico(v: any): Cinematico | null {
 function normalizarCapa(c: any): { capa?: Cinematico['capa'] } {
   if (!Array.isArray(c)) return {}
   const linhas = c
-    .filter((l: any) => Array.isArray(l) && ['w', 'c', 'box'].includes(l[0]) && typeof l[1] === 'string' && l[1].trim())
-    .map((l: any) => [l[0], txt(l[1], 40).trim()] as [('w' | 'c' | 'box'), string])
+    .filter((l: any) => Array.isArray(l) && ['w', 'c', 'box', 'k'].includes(l[0]) && typeof l[1] === 'string' && l[1].trim())
+    .map((l: any) => [l[0], txt(l[1], 40).trim()] as [('w' | 'c' | 'box' | 'k'), string])
     .slice(0, 4)
   return linhas.length ? { capa: linhas } : {}
 }

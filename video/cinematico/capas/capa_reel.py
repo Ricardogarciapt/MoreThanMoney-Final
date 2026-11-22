@@ -92,7 +92,7 @@ def faixa(img_txt):
 def capa(c, saida):
     im = gradientes(foto_916(c['foto'], c.get('cx', 600))).convert('RGBA')
     blocos = []
-    for estilo, txt in c['linhas']:
+    for estilo, txt in [l for l in c['linhas'] if l[0] != 'k']:
         maxt = c.get('tam', {}).get(estilo, 190 if estilo != 'box' else 110)
         if estilo == 'box':
             f = ajustar(txt.upper(), 'Anton.ttf', 860, maxt)
