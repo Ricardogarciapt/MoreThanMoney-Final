@@ -57,6 +57,16 @@ async function modo(db: Db): Promise<'mtm' | 'educadores'> {
   return (data?.value as { modo?: string } | null)?.modo === 'educadores' ? 'educadores' : 'mtm'
 }
 
+/**
+ * Os 4 animados das linhas da marca. Desligados desde 22/11/2026: o Ricardo rejeitou o formato
+ * animado e ficou só o narrado (robo-cinematico). `site_settings.reels_educadores.animados = true`
+ * volta a ligá-los. Os cortes das aulas continuam.
+ */
+async function animadosLigados(db: Db): Promise<boolean> {
+  const { data } = await db.from('site_settings').select('value').eq('key', 'reels_educadores').maybeSingle()
+  return (data?.value as { animados?: boolean } | null)?.animados === true
+}
+
 const ehLinha = (slug: string) => LINHAS_REELS.some((l) => l.slug === slug)
 
 /**
@@ -169,14 +179,16 @@ export async function planearDia(dia: string): Promise<{ dia: string; renders: P
     const livres = new Set((ocupados ?? []).map((r) => Number(r.slot)))
     // Cinemáticos desligados: um 5.º animado às 20:30 no lugar do cinemático.
     const extra = (await semGemeoMtm(db, dia)) ? 1 : 0
-    for (let i = 0; i < SLOTS_MTM.length + extra; i++) {
+    const ligados = await animadosLigados(db)
+    if (!ligados) notas.push('animados desligados (formato rejeitado a 22/11): só cortes das aulas')
+    for (let i = 0; ligados && i < SLOTS_MTM.length + extra; i++) {
       const slot = i + 1
       const ed = educador(i < SLOTS_MTM.length ? (linhaDoSlot(i, dia) ?? SLOTS_MTM[i].linha) : SLOT_EXTRA.linha)
       if (!ed || livres.has(slot)) continue
       await novoRoteiro(db, dia, slot, ed, orc)
     }
     await garantirCortes(db, dia, pub, notas, true).catch((e) => notas.push(`cortes: ${e instanceof Error ? e.message : e}`))
-    return { dia, renders: await porDesenhar(db, dia), notas, completo: !orc.parado }
+    return { dia, renders: ligados ? await porDesenhar(db, dia) : [], notas, completo: !orc.parado }
   }
 
   // ── 3 animados: um por educador publicável, a ordem roda todos os dias ──
