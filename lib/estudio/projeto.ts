@@ -156,6 +156,8 @@ export type Cinematico = {
   sem_musica?: boolean
   /** Áudio trend de referência (nome + link) que ele junta na app. */
   audio?: string
+  /** Estilo de edição: classico · palavra · nativo · noir (sem ele o robô roda por reel). */
+  estilo?: 'classico' | 'palavra' | 'nativo' | 'noir'
   /** Funil que o CTA alimenta: Educação · PU Prime IB · Ricardo · B2B. */
   funil?: string
 }
@@ -184,6 +186,7 @@ export function normalizarCinematico(v: any): Cinematico | null {
     ...(v.narrado === true ? { narrado: true } : {}),
     ...normalizarCapa(v.capa),
     ...(typeof v.capa_url === 'string' && /^https:\/\//.test(v.capa_url) ? { capa_url: v.capa_url.slice(0, 400) } : {}),
+    ...(['classico', 'palavra', 'nativo', 'noir'].includes(v.estilo) ? { estilo: v.estilo } : {}),
     ...(v.sem_musica === true ? { sem_musica: true } : {}),
     ...(typeof v.audio === 'string' && v.audio.trim() ? { audio: txt(v.audio, 200).trim() } : {}),
     ...(typeof v.funil === 'string' && v.funil.trim() ? { funil: txt(v.funil, 30).trim() } : {}),

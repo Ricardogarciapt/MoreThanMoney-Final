@@ -16,6 +16,14 @@ export type Anuncio = {
   aviso?: string
   /** Molde de edição (21/11): cinema (omissão) · impacto (ecrã dividido) · documental (barras de cinema, cortes). */
   molde?: 'cinema' | 'impacto' | 'documental'
+  /**
+   * Estilo de edição (22/11, Ricardo: «usa mais estilos de edição»), independente do molde:
+   *  classico — legendas Anton palavra a palavra com brilho a ouro (o aprovado a 20/11)
+   *  palavra  — uma palavra de cada vez, enorme ao centro, com murro de zoom e barra de progresso (retenção)
+   *  nativo   — legenda em caixas brancas como a do próprio Instagram/TikTok, sem grão nem brilho (parece telemóvel)
+   *  noir     — imagem a preto e branco de alto contraste; só as palavras ditas acendem a ouro
+   */
+  estilo?: 'classico' | 'palavra' | 'nativo' | 'noir'
   /** Lista viva: itens entram em `em` (s). contagem = numeração decrescente (5,4,3…). */
   lista?: { titulo: string; itens: { em: number; t: string }[]; contagem?: boolean }
 }
