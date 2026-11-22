@@ -3,7 +3,8 @@
  * foto real do educador, título grande. Usadas na página do pacote (/educadores/conteudo/<id>),
  * de onde o educador as descarrega para a conta dele.
  *
- * ?e=ruben&t=Título&s=Subtítulo&f=reel|post|story&n=1/6
+ * ?e=ruben&t=Título&s=Subtítulo&f=reel|post|story&n=1/6&fo=nome
+ *  - fo: foto REAL em public/educadores/<e>/fotos/<nome>.jpg (só letras, números e hífen).
  *  - reel/story: 1080×1920 · post (carrossel): 1080×1350 (4:5).
  * Pública de propósito (é só uma imagem com texto), como /api/flyer/weekly.
  */
@@ -30,9 +31,11 @@ export async function GET(req: NextRequest) {
   const n = (q.get('n') ?? '').slice(0, 8)
   const W = 1080
   const H = formato === 'post' ? 1350 : 1920
-  const foto = new URL(ed.foto, req.nextUrl.origin).toString()
+  const fo = (q.get('fo') ?? '').toLowerCase()
+  const slug = q.get('e') && EDUCADORES[q.get('e')!] ? q.get('e')! : 'ruben'
+  const foto = new URL(/^[a-z0-9-]{1,60}$/.test(fo) ? `/educadores/${slug}/fotos/${fo}.jpg` : ed.foto, req.nextUrl.origin).toString()
   const tam = titulo.length > 55 ? 76 : titulo.length > 32 ? 92 : 112
-  const comFoto = !n || n.startsWith('1/')
+  const comFoto = !n || n.startsWith('1/') || !!fo
 
   return new ImageResponse(
     (

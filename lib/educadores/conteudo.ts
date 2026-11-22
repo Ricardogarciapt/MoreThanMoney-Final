@@ -18,11 +18,11 @@
 import crypto from 'node:crypto'
 import { getSupabaseAdmin } from '@/lib/supabase-admin-client'
 
-export type Slide = { titulo: string; texto?: string }
+export type Slide = { titulo: string; texto?: string; foto?: string }
 export type Pacote = {
-  reel?: { gancho: string; guiao: string[]; legenda_ecra?: string[]; duracao_s?: number; legenda: string; hashtags?: string[]; capa?: { titulo: string; subtitulo?: string } }
+  reel?: { gancho: string; guiao: string[]; legenda_ecra?: string[]; duracao_s?: number; legenda: string; hashtags?: string[]; capa?: { titulo: string; subtitulo?: string; foto?: string } }
   carrossel?: { slides: Slide[]; legenda: string; hashtags?: string[] }
-  stories?: { texto: string; sticker?: string }[]
+  stories?: { texto: string; sticker?: string; foto?: string }[]
   cta?: string
   notas?: string
 }
@@ -67,8 +67,8 @@ export function linkPacote(id: string): string {
 }
 
 /** URL da capa gerada ao vivo (next/og) no estilo MTM, com a foto do educador. */
-export function urlCapa(p: { educador: string; titulo: string; subtitulo?: string; formato?: 'reel' | 'post' | 'story'; n?: string }): string {
-  const qs = new URLSearchParams({ e: p.educador, t: p.titulo, ...(p.subtitulo ? { s: p.subtitulo } : {}), f: p.formato ?? 'reel', ...(p.n ? { n: p.n } : {}) })
+export function urlCapa(p: { educador: string; titulo: string; subtitulo?: string; formato?: 'reel' | 'post' | 'story'; n?: string; foto?: string }): string {
+  const qs = new URLSearchParams({ e: p.educador, t: p.titulo, ...(p.subtitulo ? { s: p.subtitulo } : {}), f: p.formato ?? 'reel', ...(p.n ? { n: p.n } : {}), ...(p.foto ? { fo: p.foto } : {}) })
   return `${SITE}/api/educadores/capa?${qs}`
 }
 

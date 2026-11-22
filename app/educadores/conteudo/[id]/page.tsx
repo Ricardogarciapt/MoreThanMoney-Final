@@ -43,11 +43,11 @@ export default async function Page({ params, searchParams }: { params: Promise<{
   const legendaReel = p.reel ? p.reel.legenda + hashtags(p.reel.hashtags) : ''
   const legendaCarrossel = p.carrossel ? p.carrossel.legenda + hashtags(p.carrossel.hashtags) : ''
   const capas: { url: string; nome: string }[] = []
-  if (p.reel?.capa) capas.push({ nome: `${L.reel}`, url: urlCapa({ educador: data.educador, titulo: p.reel.capa.titulo, subtitulo: p.reel.capa.subtitulo, formato: 'reel' }) })
+  if (p.reel?.capa) capas.push({ nome: `${L.reel}`, url: urlCapa({ educador: data.educador, titulo: p.reel.capa.titulo, subtitulo: p.reel.capa.subtitulo, formato: 'reel', foto: p.reel.capa.foto }) })
   p.carrossel?.slides.forEach((s, i) =>
-    capas.push({ nome: `${L.slide} ${i + 1}`, url: urlCapa({ educador: data.educador, titulo: s.titulo, subtitulo: s.texto, formato: 'post', n: `${i + 1}/${p.carrossel!.slides.length}` }) }),
+    capas.push({ nome: `${L.slide} ${i + 1}`, url: urlCapa({ educador: data.educador, titulo: s.titulo, subtitulo: s.texto, formato: 'post', n: `${i + 1}/${p.carrossel!.slides.length}`, foto: s.foto }) }),
   )
-  p.stories?.forEach((s, i) => capas.push({ nome: `Story ${i + 1}`, url: urlCapa({ educador: data.educador, titulo: s.texto, subtitulo: s.sticker, formato: 'story' }) }))
+  p.stories?.forEach((s, i) => capas.push({ nome: `Story ${i + 1}`, url: urlCapa({ educador: data.educador, titulo: s.texto, subtitulo: s.sticker, formato: 'story', foto: s.foto }) }))
 
   return (
     <main className="min-h-screen bg-[#0b0b0d] px-4 py-8 text-neutral-200">
