@@ -29,7 +29,7 @@ import { getSupabaseAdmin } from '@/lib/supabase-admin-client'
 import { prepararMensagem } from '@/lib/agentes/mensagem-saida'
 import { agenteDoPostComentado, registarMensagemDeAgente } from '@/lib/agentes/mensagem-livro'
 import { pensar } from '@/lib/funis-ia'
-import { isAutoPublishBlocked, tokenForAccount } from './publish'
+import { podeConversarSozinha, tokenForAccount } from './publish'
 import { respostaPrivada } from './resposta-privada'
 import { dmExpirada, podeSair } from '@/lib/envios-aprovacao'
 import { ehDaCasa, handlesDaCasa } from './setter-casa'
@@ -234,8 +234,8 @@ export async function tratarComentario(
     return 'encerrado'
   }
 
-  // A conta pessoal do Ricardo nunca escreve sozinha — ver isAutoPublishBlocked em ./publish.
-  const contaEscreve = !isAutoPublishBlocked(c.igAccountId)
+  // Desde 22/11 a pessoal também conversa (comentários e DMs); publicar continua bloqueado. Ver ./publish.
+  const contaEscreve = podeConversarSozinha(c.igAccountId)
   const dm = podeMandarDm({
     horasDesdeComentario: horas,
     jaRespondidoEmPrivado: false,
@@ -445,7 +445,7 @@ export async function reenviarDm(commentId: string): Promise<ResultadoDoReenvio>
 
   const token = await tokenForAccount(String(row.ig_account_id))
   if (!token) return { ok: false, estado: String(row.estado), erro: 'sem token da conta' }
-  if (isAutoPublishBlocked(row.ig_account_id)) return { ok: false, estado: String(row.estado), erro: 'conta não escreve sozinha' }
+  if (!podeConversarSozinha(row.ig_account_id)) return { ok: false, estado: String(row.estado), erro: 'conta não escreve sozinha' }
 
   const d = await respostaPrivada(commentId, String(row.texto_dm), token)
   await registarMensagemDeAgente({

@@ -15,7 +15,7 @@ import { respostaPrivada } from "./resposta-privada"
 import { getSupabaseAdmin } from "@/lib/supabase-admin-client"
 import { prepararMensagem } from "@/lib/agentes/mensagem-saida"
 import { agenteDoPostComentado, registarMensagemDeAgente } from "@/lib/agentes/mensagem-livro"
-import { IG_ACCOUNTS, isAutoPublishBlocked, tokenForAccount } from "./publish"
+import { IG_ACCOUNTS, podeConversarSozinha, tokenForAccount } from "./publish"
 import {
   lerInterruptor, tratarComentario, resumoVazio, contar, chegouAoTecto,
   type ResumoDoSetter,
@@ -328,7 +328,7 @@ async function funnelAccount(acc: (typeof IG_ACCOUNTS)[number], own: Set<string>
         else {
           dm_status = "public_fallback"
           dm_error = String(dm.json?.error?.message ?? dm.status).slice(0, 200)
-          if (isAutoPublishBlocked(acc.id)) {
+          if (!podeConversarSozinha(acc.id)) {
             // Conta pessoal: fica registado como lead para seguir à mão, sem escrever nada lá.
             dm_status = "window_expired"
           } else {
@@ -467,7 +467,7 @@ async function funnelAccount(acc: (typeof IG_ACCOUNTS)[number], own: Set<string>
 export async function runIgFunnel(): Promise<{ ok: boolean; accounts: AcctResult[] }> {
   // O funil lê os comentários das duas contas mas só ESCREVE na da marca: quando a DM falha,
   // a alternativa é uma resposta pública no post — e essa resposta apareceria no Instagram
-  // pessoal do Ricardo, assinada por um cron. Ver isAutoPublishBlocked em ./publish.
+  // pessoal do Ricardo. Desde 22/11 a pessoal também conversa: ver podeConversarSozinha em ./publish.
   const own = new Set(IG_ACCOUNTS.map((a) => a.username.toLowerCase()))
   const accounts: AcctResult[] = []
   for (const acc of IG_ACCOUNTS) {
