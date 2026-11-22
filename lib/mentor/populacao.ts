@@ -10,6 +10,7 @@
  *
  * Puro: a IA entra por injecção (`ia`), para a guarda e o servidor usarem o mesmo código.
  */
+import { detetarLingua, limparRaciocinio, respostaNaLingua } from "./lingua"
 import { montarSistema, separarNotas } from "./prompt"
 
 export const LINGUAS = ["pt", "pt-BR", "en", "es", "fr", "de", "it", "nl", "pl", "ro", "ar", "ru"] as const
@@ -100,13 +101,19 @@ export async function correrPersona(p: Persona, ia: ChamadaIA, voltas = 2) {
       } Uma mensagem só, sem aspas nem explicações.`,
       mensagens: v === 0 ? [{ role: "user", content: "Escreve a tua mensagem." }] : conversa.map((m) => ({ role: m.role === "user" ? "assistant" : "user", content: m.content })),
     })
-    conversa.push({ role: "user", content: aluno.texto.trim().slice(0, 1500), lingua })
-    const mentor = await ia({
-      preferencia: "qualidade",
-      sistema: montarSistema({ langApp: p.linguaApp, ultimaPorBotao: false, contexto: {} }),
-      mensagens: conversa.map((m) => ({ role: m.role, content: m.content })),
-    })
-    const { resposta, notas } = separarNotas(mentor.texto)
+    const alunoLimpo = limparRaciocinio(aluno.texto)
+    if (alunoLimpo.pareceRaciocinio) throw new Error("persona devolveu raciocínio em vez da mensagem")
+    conversa.push({ role: "user", content: alunoLimpo.texto.slice(0, 1500), lingua })
+    // Igual à rota real: a língua vista pelo servidor, raciocínio limpo e uma segunda tentativa.
+    const linguaDetetada = detetarLingua(conversa[conversa.length - 1].content)
+    const sistemaMentor = montarSistema({ langApp: p.linguaApp, ultimaPorBotao: false, contexto: {}, linguaDetetada })
+    const pedirMentor = (s: string) => ia({ preferencia: "qualidade", sistema: s, mensagens: conversa.map((m) => ({ role: m.role, content: m.content })) })
+    let limpo = limparRaciocinio((await pedirMentor(sistemaMentor)).texto)
+    if (limpo.pareceRaciocinio || (linguaDetetada && !respostaNaLingua(separarNotas(limpo.texto).resposta, linguaDetetada))) {
+      const l2 = limparRaciocinio((await pedirMentor(`${sistemaMentor}\n\nIMPORTANT: answer again, directly to the student, in the student's language.`)).texto)
+      if (!l2.pareceRaciocinio) limpo = l2
+    }
+    const { resposta, notas } = separarNotas(limpo.texto)
     conversa.push({ role: "assistant", content: resposta, lingua: notas?.lingua || "?", notas: notas ? JSON.stringify(notas) : null })
   }
 
