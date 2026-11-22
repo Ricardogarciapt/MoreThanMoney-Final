@@ -25,6 +25,33 @@ Divido a rotina em três blocos. Cada um tem um objetivo claro, e nenhum deles �
 
 Se não houver nenhuma condição válida no checklist, o bloco 2 termina com uma frase: «hoje não opero». Essa é uma decisão de trading tão válida como outra qualquer, e muitas vezes a melhor.
 
+## A minha rotina, tal como a faço
+
+Antes de te pedir uma rotina, mostro-te a minha. Tem duas partes, e a primeira não tem nada a ver com gráficos.
+
+**Antes do trading: a cabeça e o corpo primeiro**
+
+1. **Mindset.** Uns minutos para pôr a cabeça no sítio antes de olhar para qualquer preço. Lembro-me do plano e das regras, não do dinheiro.
+2. **Exercício.** Mexer o corpo antes de mexer na conta. Um corpo parado deixa a cabeça mais impaciente.
+3. **Perceber como estou.** Pergunto-me com honestidade: dormi bem? Estou calmo? Trago alguma coisa de ontem ou de casa? Se a resposta me preocupa, hoje não opero.
+4. **Saber para onde vou.** Releio os meus objetivos e a semana que planeei. Trading é uma peça do plano, não o plano inteiro.
+
+**Durante o trading: a checklist do Scanner Access**
+
+Só depois abro a área de scanners e sigo a mesma checklist de sempre, por esta ordem:
+
+| Bloco | O que confirmo |
+|---|---|
+| Rotina pré-trading | Notícias e calendário económico do dia, correlações entre mercados e posições já abertas |
+| Gestão de risco | Risco por operação dentro do meu limite, exposição total da conta e tamanho da posição bem calculado |
+| Estratégia de entrada | Um setup válido do plano, o sinal confirmado e alinhado com a tendência |
+| Estratégia de saída | Stop-loss definido para cada posição, alvos e se vou sair por partes |
+| Gestão da operação | Acompanhar sem mexer por impulso, ajustar o stop só pela regra e registar o resultado e o que aprendi |
+
+:::nota
+A ordem é de propósito. Primeiro a pessoa, depois o mercado. Nos dias em que saltei a primeira parte, foi a segunda que pagou.
+:::
+
 ## Checklist pré-operação
 
 O checklist é a parte mais importante da rotina. Serve para te obrigar a responder às perguntas que o entusiasmo tenta saltar. Imprime-o, escreve-o num caderno ou guarda-o no telemóvel, mas usa sempre o mesmo.

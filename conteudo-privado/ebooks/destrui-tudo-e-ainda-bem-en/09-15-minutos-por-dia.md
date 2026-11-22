@@ -25,6 +25,33 @@ I divide the routine into three blocks. Each one has a clear purpose, and none o
 
 If there's no valid condition on the checklist, block 2 ends with a sentence: "I'm not trading today." That's a trading decision as valid as any other, and often the best one.
 
+## My routine, exactly as I do it
+
+Before I ask you for a routine, let me show you mine. It has two parts, and the first has nothing to do with charts.
+
+**Before trading: mind and body first**
+
+1. **Mindset.** A few minutes to get my head right before I look at any price. I remind myself of the plan and the rules, not the money.
+2. **Exercise.** Move the body before touching the account. A still body makes an impatient mind.
+3. **Check how I am.** I ask myself honestly: did I sleep well? Am I calm? Am I carrying something from yesterday or from home? If the answer worries me, I don't trade today.
+4. **Know where I'm going.** I reread my goals and the week I planned. Trading is one piece of the plan, not the whole plan.
+
+**During trading: the Scanner Access checklist**
+
+Only then do I open the scanners area and follow the same checklist as always, in this order:
+
+| Block | What I confirm |
+|---|---|
+| Pre-trading routine | Today's news and economic calendar, correlations between markets and positions already open |
+| Risk management | Risk per trade within my limit, total account exposure and a correctly calculated position size |
+| Entry strategy | A valid setup from the plan, the signal confirmed and aligned with the trend |
+| Exit strategy | A stop-loss for every position, targets and whether I'll exit in parts |
+| Trade management | Follow the trade without impulsive changes, move the stop only by the rule and record the result and what I learned |
+
+:::nota
+The order is deliberate. The person first, then the market. On the days I skipped the first part, the second one paid for it.
+:::
+
 ## Pre-trade checklist
 
 The checklist is the most important part of the routine. It forces you to answer the questions that enthusiasm tries to skip. Print it, write it in a notebook or keep it on your phone, but always use the same one.
