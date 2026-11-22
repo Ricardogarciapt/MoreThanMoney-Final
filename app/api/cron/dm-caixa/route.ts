@@ -4,6 +4,7 @@ import { isCronAuthorized } from '@/lib/cron-auth'
 import { carregarTokensIG, candidateTokensForIgAccount, sendInstagramDmResilient } from '@/lib/instagram/dm-closer'
 import { PAGINAS, SEM_TEXTO, responderMensagem, contasInternas, type CanalDm } from '@/lib/social/dm-motor'
 import { linkAgendar } from '@/lib/agenda/link'
+import { entregarConteudoPendente } from '@/lib/educadores/conteudo'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -226,6 +227,12 @@ export async function GET(req: NextRequest) {
     await seguimentos(estado)
   } catch (e) {
     estado.seguimentosErro = String(e)
+  }
+  try {
+    // Conteúdo dos educadores (Ruben em francês, …): e-mail + DM fora do funil.
+    estado.conteudoEducadores = await entregarConteudoPendente()
+  } catch (e) {
+    estado.conteudoEducadoresErro = String(e)
   }
   try {
     await getSupabaseAdmin().from('site_settings').upsert({ key: 'dm_caixa_estado', value: estado }, { onConflict: 'key' })

@@ -111,7 +111,18 @@ export async function responderMensagem(m: MensagemRecebida): Promise<{ resultad
   const texto = (m.texto ?? '').trim()
   // TRAVÃO 1: contas nossas ou internas nunca recebem resposta automática (nos dois sentidos).
   if (!texto || !m.remetente || m.remetente === m.contaId) return { resultado: 'ignorada' }
-  if ((await contasInternas()).has(m.remetente)) return { resultado: 'ignorada' }
+  if ((await contasInternas()).has(m.remetente)) {
+    // Educadores e testes: sem resposta automática, mas regista-se a mensagem, porque é ela que
+    // abre a janela de 24 h para lhes entregar conteúdo por DM (lib/educadores/conteudo.ts).
+    if (!IDS_NOSSOS.has(m.remetente)) {
+      try {
+        await getSupabaseAdmin()
+          .from('ig_dm_log')
+          .insert({ mid: m.mid, account_id: m.contaId, sender_id: m.remetente, message: texto, status: 'interna' })
+      } catch {}
+    }
+    return { resultado: 'ignorada' }
+  }
   const supabase = getSupabaseAdmin()
   await carregarTokensIG()
 
