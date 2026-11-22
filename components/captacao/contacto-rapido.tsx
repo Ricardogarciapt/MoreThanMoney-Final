@@ -162,9 +162,15 @@ export default function ContactoRapido({
           Recebido, {nome.trim().split(' ')[0]}!
         </p>
         <p className="mt-2 text-[14px] leading-relaxed text-zinc-300">
-          Vamos mandar-te mensagem no WhatsApp. Se preferires não esperar, fala já connosco:
+          Não precisas de esperar: ativa já os teus dias grátis (sem cartão). Também te mandamos mensagem no WhatsApp.
         </p>
-        <div className="mt-4">{botaoWa}</div>
+        <a
+          href="/register?plan=premium&utm_source=contacto-rapido"
+          className="mt-4 flex min-h-[48px] items-center justify-center rounded-lg bg-[#D2A63C] px-4 text-[15px] font-semibold text-[#0A0A0B] hover:bg-[#E9C46A]"
+        >
+          Ativar o acesso grátis agora
+        </a>
+        <div className="mt-3">{botaoWa}</div>
       </div>
     )
   }
