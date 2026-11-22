@@ -1,3 +1,4 @@
+import { falarParaStorage } from '@/lib/voz'
 import { NextRequest, NextResponse } from 'next/server'
 import { getSupabaseAdmin } from '@/lib/supabase-admin-client'
 import { ehMotor } from '@/lib/conteudo-magnetico/acesso'
@@ -6,6 +7,7 @@ import { normalizarPalavras } from '@/lib/estudio/texto'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
+export const maxDuration = 60
 
 /**
  * MOTOR DO EDITOR — o Mac (services/estudio-editor → renderProjeto) monta aqui os projectos da
@@ -60,6 +62,17 @@ export async function GET(request: NextRequest) {
   const palavras: Record<string, unknown> = {}
   for (const t of takes ?? []) palavras[t.id] = normalizarPalavras((t.transcricao as any)?.palavras)
 
+  // Reel narrado (22/11): sem gémeo, a voz clonada do Ricardo é gerada aqui (Fish, com cache).
+  let narracao_url: string | null = null
+  if (p.cinematico?.narrado && !p.clips[0]?.fonte.url && !p.clips[0]?.fonte.caminho) {
+    const r = await falarParaStorage(db as any, p.cinematico.texto, `reels-narrados/${cand.id}.mp3`)
+    if (!r.ok) {
+      await db.from('estudio_projetos').update({ estado: 'erro', erro: `voz: ${r.motivo} ${r.detalhe}`.slice(0, 300) }).eq('id', cand.id)
+      return NextResponse.json({ ok: true, trabalho: null })
+    }
+    narracao_url = r.url
+  }
+
   const destino = `estudio/projetos/${cand.id}.mp4`
   const { data: subida } = await db.storage.from('uploads').createSignedUploadUrl(destino, { upsert: true })
   if (!subida) {
@@ -74,6 +87,7 @@ export async function GET(request: NextRequest) {
       marca: cand.marca,
       projeto: { ...p, clips: p.clips.map(comUrl), musica: p.musica ? comUrl(p.musica) : null },
       palavras,
+      narracao_url,
       subir_url: subida.signedUrl,
     },
   })
