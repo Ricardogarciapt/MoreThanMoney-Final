@@ -7,6 +7,7 @@ import type { Metadata } from 'next'
 import { notFound } from 'next/navigation'
 import { getSupabaseAdmin } from '@/lib/supabase-admin-client'
 import { verificarPacote, urlCapa, type Pacote } from '@/lib/educadores/conteudo'
+import { verifyAdminAccess } from '@/lib/admin-api-helpers'
 import { Copiar } from './copiar'
 
 export const dynamic = 'force-dynamic'
@@ -32,7 +33,8 @@ function Bloco({ titulo, children, copiar }: { titulo: string; children: React.R
 export default async function Page({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<{ t?: string }> }) {
   const { id } = await params
   const { t } = await searchParams
-  if (!/^[0-9a-f-]{36}$/.test(id) || !verificarPacote(id, t)) notFound()
+  if (!/^[0-9a-f-]{36}$/.test(id)) notFound()
+  if (!verificarPacote(id, t) && !(await verifyAdminAccess()).isAdmin) notFound()
   const { data } = await getSupabaseAdmin().from('educador_conteudo').select('educador, lingua, data, tema, pacote').eq('id', id).maybeSingle()
   if (!data) notFound()
   const p = data.pacote as Pacote
