@@ -158,6 +158,9 @@ export async function finalizar(entrada, destino, { formato: f = 'reel', qualida
   if (temAudio) args.push('-af', LOUDNORM)
   args.push('-map', '0:v:0')
   if (temAudio) args.push('-map', audio ? '1:a:0' : '0:a:0', '-shortest')
+  // 22/11 (Ricardo, regras novas do Instagram sobre conteúdo IA): o ficheiro final sai sem metadados herdados
+  // (nada de etiquetas de ferramentas/IA nos átomos do mp4) — o vídeo vive de fotos e voz reais montadas aqui.
+  args.push('-map_metadata', '-1', '-map_chapters', '-1')
   args.push(...codificar(qualidade, { semAudio: !temAudio }), destino)
   fs.mkdirSync(path.dirname(destino), { recursive: true })
   await correr(args, { nice })

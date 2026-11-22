@@ -13,6 +13,7 @@ import { corrigirPtPt, parecePortugues } from "@/lib/pt-pt"
 import { NextRequest, NextResponse } from "next/server"
 import { getSupabaseAdmin } from "@/lib/supabase-admin-client"
 import { isCronAuthorized } from "@/lib/cron-auth"
+import { levaReserva, guardarReserva, graduarReservas } from "@/lib/instagram/teste-reserva"
 import {
   publishScheduledPost,
   MediaNotReadyError,
@@ -20,6 +21,7 @@ import {
   isAutoPublishBlocked,
   autorizadoNaPessoal,
   CRIADOR_REELS_PESSOAL,
+  CRIADOR_REELS_CLONE,
   type ScheduledPost,
 } from "@/lib/instagram/publish"
 import { CHAVE_AUTO_PUBLICAR, lerAutoPublicar } from "@/lib/agentes/social-agente"
@@ -75,6 +77,14 @@ export async function GET(request: NextRequest) {
     if (!aud) console.log("[ig-publish] primeira auditoria do Instagram:", JSON.stringify(await auditarInstagram()))
   } catch (e) {
     console.error("[ig-publish] auditoria falhou:", e instanceof Error ? e.message : e)
+  }
+
+  // Técnica «rascunho duplicado»: mede os reels de teste e solta as reservas que viralizaram (de 3 em 3 h).
+  try {
+    const g = await graduarReservas(supabase)
+    if (g?.length) console.log("[ig-publish] reservas:", JSON.stringify(g))
+  } catch (e) {
+    console.error("[ig-publish] reservas falharam:", e instanceof Error ? e.message : e)
   }
 
   // Elegíveis: aprovados cuja hora chegou, ou já em processamento (ex.: Reels em encoding).
@@ -178,7 +188,10 @@ export async function GET(request: NextRequest) {
       // 21/11/2026, Ricardo: «Todos os meus reels devem ser postados como teste» → qualquer REEL do
       // @ricardogarciapt sai como «reel de teste» do Instagram (só a não seguidores). «E depois eu decido
       // se publico»: graduação MANUAL, a passagem aos seguidores é decisão dele na app.
-      trial: row.media_type === "REELS" && (row.ig_account_id === IG_ID.ricardo
+      // 22/11 «rascunho duplicado»: os reels do motor (estudio-clone) saem como teste em QUALQUER conta e
+      // guardam uma reserva; a reserva (reserva_de) é a cópia que sai normal, para os seguidores, se o teste viralizar.
+      trial: row.media_type === "REELS" && !row.reserva_de && (row.ig_account_id === IG_ID.ricardo
+        || row.created_by === CRIADOR_REELS_CLONE
         || (row.created_by === CRIADOR_REELS_PESSOAL && reelsRicardo?.teste)) ? "MANUAL" : null,
     }
 
@@ -201,6 +214,7 @@ export async function GET(request: NextRequest) {
         status: "published",
         permalink: res.permalink,
       })
+      if (levaReserva(row, post.trial ?? null)) await guardarReserva(supabase, row).catch((e) => console.error("[ig-publish] reserva:", e?.message))
       if (row.media_type === "REELS") await agendarReelEmStory(supabase, row)
     } catch (e: any) {
       if (e instanceof MediaNotReadyError) {
