@@ -70,7 +70,8 @@ export async function GET(request: NextRequest) {
       await db.from('estudio_projetos').update({ estado: 'erro', erro: `voz: ${r.motivo} ${r.detalhe}`.slice(0, 300) }).eq('id', cand.id)
       return NextResponse.json({ ok: true, trabalho: null })
     }
-    narracao_url = r.url
+    // ?v= evita a CDN servir a voz antiga quando o guião muda (o caminho é o mesmo)
+    narracao_url = `${r.url}?v=${Date.now()}`
   }
 
   const destino = `estudio/projetos/${cand.id}.mp4`

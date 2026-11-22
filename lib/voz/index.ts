@@ -19,6 +19,7 @@ import {
   caminhoDeCache,
   falha,
   prepararTexto,
+  pronunciaPtPt,
   resolverVoz,
   tipoDeConteudo,
   vozDoAmbiente,
@@ -120,7 +121,8 @@ export async function falar(texto: string, opcoes: OpcoesVoz = {}): Promise<Resu
   const contentType = tipoDeConteudo(formato)
   const cliente = opcoes.cliente || clienteFish
   const supabase = opcoes.cache || null
-  const caminho = caminhoDeCache({ voiceId, modelo, formato, texto })
+  // a cache segue o texto que a Fish lê (com a pronúncia PT-PT), para não devolver áudio antigo
+  const caminho = caminhoDeCache({ voiceId, modelo, formato, texto: pronunciaPtPt(texto) })
 
   if (supabase) {
     const guardado = await lerCache(supabase, caminho)
