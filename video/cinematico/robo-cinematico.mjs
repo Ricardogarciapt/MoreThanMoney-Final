@@ -150,14 +150,22 @@ async function montar({ id, marca, video, cin }) {
     const n = (t) => String(t).toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9 ]/g, ' ')
     const ini = config.gancho.ate, fimL = config.cta.de - 0.3, k = cin.lista.itens.length
     let cursor = ini
-    const itens = cin.lista.itens.map((t, i) => {
+    // 22/11: quando a voz numera («Um:», «Dois:», «Primeiro:»…), cada item entra no seu número — a busca por
+    // palavra trocava «ação» por «motivação» e «opera» por «operação» e mostrava itens antes do tempo.
+    const ORD = /^(um|uma|dois|duas|tres|quatro|cinco|seis|sete|primeiro|segundo|terceiro|quarto|quinto|sexto|setimo)$/
+    const ords = palavras.filter((w, j) => w.ini >= ini - 0.3 && w.ini < fimL && ORD.test(n(w.w).trim()) && /[:,.]$/.test(w.w.trim()) && j < palavras.length - 1)
+    if (ords.length >= k) {
+      const itens = cin.lista.itens.map((t, i) => ({ em: +Math.max(ini, ords[i].ini - 0.05).toFixed(2), t }))
+      config.lista = { titulo: cin.lista.titulo || '', itens, ...(cin.lista.contagem ? { contagem: true } : {}) }
+    }
+    const itens = config.lista ? config.lista.itens : cin.lista.itens.map((t, i) => {
       const chaves = n(t).split(/\s+/).filter((x) => x.length >= 4).sort((a, b) => b.length - a.length)
-      const p = palavras.find((w) => w.ini >= cursor - 0.05 && w.ini < fimL && chaves.some((c) => n(w.w).includes(c.slice(0, 5))))
+      const p = palavras.find((w) => w.ini >= cursor - 0.05 && w.ini < fimL && chaves.some((c) => n(w.w).trim().startsWith(c.slice(0, 5))))
       const em = p ? Math.max(cursor, p.ini - 0.15) : ini + ((fimL - ini) * i) / k
       cursor = em + 0.4
       return { em: +em.toFixed(2), t }
     })
-    config.lista = { titulo: cin.lista.titulo || '', itens, ...(cin.lista.contagem ? { contagem: true } : {}) }
+    if (!config.lista) config.lista = { titulo: cin.lista.titulo || '', itens, ...(cin.lista.contagem ? { contagem: true } : {}) }
     config.chips = []
     config.imagens = []
   }
