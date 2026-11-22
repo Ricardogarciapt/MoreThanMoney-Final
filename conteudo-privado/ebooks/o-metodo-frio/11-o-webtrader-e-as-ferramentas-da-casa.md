@@ -56,7 +56,7 @@ O WebTrader tem dois modos, e trocas entre eles no topo (ou com **Alt+M** no com
 | **SIMPLE** | Telemóvel, quem começa | O gráfico no ecrã todo, SELL · volume · BUY grandes em baixo e uma gaveta com Posições, Ordens, Histórico e Mais |
 | **PRO** | Computador, quem já analisa | Até 4 gráficos, a lista de símbolos, o ticket, o calendário e, em baixo, Posições · Ordens · Histórico · Estatísticas · Diário · Alertas · Conta |
 
-[[foto: wt-pro.png | O modo PRO: gráfico ao centro, lista e ticket à direita, posições e histórico em baixo. | larga]]
+[[foto: wt-pro.jpg | O modo PRO: gráfico ao centro, lista e ticket à direita, posições e histórico em baixo. | larga]]
 
 ## Abrir uma posição, passo a passo
 
@@ -69,7 +69,7 @@ O WebTrader tem dois modos, e trocas entre eles no topo (ou com **Alt+M** no com
 5. Lê o resumo: direção, entrada, stop, alvo, lote, **risco em dinheiro e em percentagem**, relação risco/retorno e margem.
 6. Carrega em **Confirmar**.
 
-[[foto: wt-ticket.png | O ticket com o volume em modo Risco: mexes no stop e o lote recalcula-se sozinho. | larga]]
+[[foto: wt-ticket.jpg | O ticket com o volume em modo Risco: mexes no stop e o lote recalcula-se sozinho. | larga]]
 
 :::alerta Erro clássico · Ligar a negociação num clique no primeiro dia
 O WebTrader tem um modo «num clique», como o MetaTrader e o TradingView: com ele ligado, tocar em BUY envia logo. É útil para quem já tem a mão treinada. No primeiro mês, deixa-o desligado. A confirmação é a tua última verificação antes de saltar.
@@ -91,7 +91,7 @@ No bloco **Avançado** do ticket podes ainda dividir a saída em **TP1, TP2 e TP
 
 O importante é **quem executa**. Nas contas MTM Funded e de demonstração, é o motor da MTM, preço a preço, num servidor. Nas tuas contas da corretora (TradeLocker e MetaTrader), os mesmos botões, com o mesmo significado, ficam gravados e são executados no servidor da MTM. O browser nunca move um stop de dinheiro real: se fechares o separador, a gestão não para a meio.
 
-[[foto: wt-gestao.png | Uma posição aberta com Auto BE e Auto Trailing. O stop sobe sozinho, nunca desce. | larga]]
+[[foto: wt-gestao.jpg | Uma posição aberta com Auto BE e Auto Trailing. O stop sobe sozinho, nunca desce. | larga]]
 
 [[grafico:auto-be-trailing]]
 
@@ -106,7 +106,7 @@ A Marta passou a última semana da demo para o WebTrader. Abriu um Buy Limit no 
 - **Multi-gráfico (PRO):** 1, 2 ou 4 gráficos, cada um com o seu símbolo e o seu tempo. O H4 num, o H1 no outro, como no capítulo 4.
 - **Estudos MTM no gráfico:** os scanners da casa desenham-se diretamente no gráfico do WebTrader. Quando um scanner ou uma ideia MTM dá um sinal, abre-se uma folha com todos os números (entrada, stop, alvo, lote, risco em dinheiro e em percentagem). Daí só tens três portas: confirmar, ajustar ou descartar. Um sinal nunca entra sozinho.
 
-[[foto: wt-mercado.png | O estado do mercado ao lado do símbolo: aberto, fechado e quanto falta para fechar. | larga]]
+[[foto: wt-mercado.jpg | O estado do mercado ao lado do símbolo: aberto, fechado e quanto falta para fechar. | larga]]
 
 ## Trabalhar com as estratégias da casa e os sinais delas
 
@@ -117,7 +117,7 @@ O WebTrader não é só um sítio para clicar em comprar e vender. As estratégi
 - **Sensei:** é o mais didático. Mostra uma tabela de confirmações (tendência, momento, estrutura, volatilidade) com uma nota de 0 a 20, e uma checklist do que ainda falta. Enquanto diz «a aguardar sinal», não há operação.
 - **TrendShot:** médias de tendência e os níveis de entrada e alvos na escala de preço.
 
-[[foto: wt-estrategia-scanner.png | O MTM Scanner ligado sozinho: entrada, stop e dois alvos com o risco-retorno, já desenhados. | larga]]
+[[foto: wt-estrategia-scanner.jpg | O MTM Scanner ligado sozinho: entrada, stop e dois alvos com o risco-retorno, já desenhados. | larga]]
 
 O caminho é sempre o mesmo:
 
@@ -129,7 +129,7 @@ O caminho é sempre o mesmo:
 
 Ao fim de um mês, o diário diz-te que estratégia funciona contigo. É por isso que o setup tem uma etiqueta própria («Sinal GoldKiller», «Sinal Sensei», «Sinal MTM Scanner»).
 
-[[foto: wt-estrategia-sensei.png | O Sensei: dez confirmações em vinte e a checklist do que falta. Ainda não é sinal. | larga]]
+[[foto: wt-estrategia-sensei.jpg | O Sensei: dez confirmações em vinte e a checklist do que falta. Ainda não é sinal. | larga]]
 
 ## Histórico, estatísticas e diário
 
@@ -139,7 +139,7 @@ No painel de baixo estão as três peças do capítulo 9, já ligadas entre si:
 - **Estatísticas:** a curva de saldo e de capital, o drawdown, a taxa de acerto, o ganho médio contra a perda média e os agrupamentos por símbolo, estratégia, hora e dia da semana. Sempre em dólares da conta, nunca em promessas.
 - **Diário:** uma nota por operação, com a emoção, o setup, as etiquetas e o print. Escreves o porquê ao lado do próprio histórico, e não num caderno que fica em casa.
 
-[[foto: wt-historico.png | Histórico e estatísticas lado a lado: a revisão de domingo do capítulo 9 em dois toques. | larga]]
+[[foto: wt-historico.jpg | Histórico e estatísticas lado a lado: a revisão de domingo do capítulo 9 em dois toques. | larga]]
 
 ## Calendário e alertas
 
@@ -151,7 +151,7 @@ No separador **Conta** podes gerar um **link público de auditoria**. A página 
 
 Serve para mostrares o teu trabalho a um mentor, a um colega ou a ti próprio daqui a seis meses. É o contrário de um print de lucro: mostra tudo, os dias bons e os maus.
 
-[[foto: wt-auditoria.png | O link de auditoria: tudo à vista, nada de dados pessoais. | larga]]
+[[foto: wt-auditoria.jpg | O link de auditoria: tudo à vista, nada de dados pessoais. | larga]]
 
 ## TradeLocker e WebTrader, lado a lado
 
