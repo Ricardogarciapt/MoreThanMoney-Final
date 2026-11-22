@@ -152,6 +152,12 @@ export type Cinematico = {
    */
   capa?: [('w' | 'c' | 'box' | 'k'), string][]
   capa_url?: string
+  /** 22/11 (Ricardo): reel «para música trend» — sai só com a voz e fica em rascunho para ele juntar o áudio na app. */
+  sem_musica?: boolean
+  /** Áudio trend de referência (nome + link) que ele junta na app. */
+  audio?: string
+  /** Funil que o CTA alimenta: Educação · PU Prime IB · Ricardo · B2B. */
+  funil?: string
 }
 
 export const MOLDES_EDICAO = ['cinema', 'impacto', 'documental'] as const
@@ -178,6 +184,9 @@ export function normalizarCinematico(v: any): Cinematico | null {
     ...(v.narrado === true ? { narrado: true } : {}),
     ...normalizarCapa(v.capa),
     ...(typeof v.capa_url === 'string' && /^https:\/\//.test(v.capa_url) ? { capa_url: v.capa_url.slice(0, 400) } : {}),
+    ...(v.sem_musica === true ? { sem_musica: true } : {}),
+    ...(typeof v.audio === 'string' && v.audio.trim() ? { audio: txt(v.audio, 200).trim() } : {}),
+    ...(typeof v.funil === 'string' && v.funil.trim() ? { funil: txt(v.funil, 30).trim() } : {}),
   }
 }
 
