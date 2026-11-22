@@ -134,6 +134,12 @@ export type Cinematico = {
    *  documental — barras de cinema, imagens a ecrã inteiro em corte (a voz continua), legenda discreta
    */
   molde?: MoldeEdicao
+  /**
+   * Lista viva (22/11/2026, formatos virais): um painel que se vai preenchendo enquanto o gémeo
+   * fala — «3 coisas», «5 erros» (contagem decrescente), «o caminho do zero». Cada item entra quando
+   * a legenda diz as palavras dele (ou, sem correspondência, a intervalos iguais).
+   */
+  lista?: { titulo: string; itens: string[]; contagem?: boolean }
 }
 
 export const MOLDES_EDICAO = ['cinema', 'impacto', 'documental'] as const
@@ -156,7 +162,15 @@ export function normalizarCinematico(v: any): Cinematico | null {
     apoio: (Array.isArray(v.apoio) ? v.apoio : []).filter((u: unknown) => typeof u === 'string' && /^https:\/\//.test(u)).slice(0, 4),
     cta_url: txt(v.cta_url, 80).trim(),
     ...((MOLDES_EDICAO as readonly string[]).includes(v.molde) ? { molde: v.molde as MoldeEdicao } : {}),
+    ...normalizarLista(v.lista),
   }
+}
+
+function normalizarLista(l: any): { lista?: Cinematico['lista'] } {
+  if (!l || typeof l !== 'object' || !Array.isArray(l.itens)) return {}
+  const itens = l.itens.filter((i: unknown) => typeof i === 'string' && i.trim()).map((i: string) => txt(i, 60).trim()).slice(0, 7)
+  if (itens.length < 2) return {}
+  return { lista: { titulo: txt(l.titulo, 40).trim(), itens, ...(l.contagem ? { contagem: true } : {}) } }
 }
 
 export const PROJETO_VAZIO: Projeto = {

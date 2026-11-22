@@ -16,6 +16,8 @@ export type Anuncio = {
   aviso?: string
   /** Molde de edição (21/11): cinema (omissão) · impacto (ecrã dividido) · documental (barras de cinema, cortes). */
   molde?: 'cinema' | 'impacto' | 'documental'
+  /** Lista viva: itens entram em `em` (s). contagem = numeração decrescente (5,4,3…). */
+  lista?: { titulo: string; itens: { em: number; t: string }[]; contagem?: boolean }
 }
 
 export const CAUDA = 2.4 // s de cartão final depois da voz

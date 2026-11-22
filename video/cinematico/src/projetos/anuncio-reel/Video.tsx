@@ -189,7 +189,7 @@ const Legendas: React.FC<{ k: string; a: Anuncio }> = ({ k, a }) => {
       </div>
     )
   }
-  const top = molde === 'impacto' && modoPip(fr, a.imagens) > 0.5 ? METADE - 70 : 1440
+  const top = a.lista ? 1470 : molde === 'impacto' && modoPip(fr, a.imagens) > 0.5 ? METADE - 70 : 1440
   return (
     <div style={{ position: 'absolute', left: 60, right: 60, top, textAlign: 'center', zIndex: 9 }}>
       {palavras.map((p, i) => {
@@ -204,6 +204,42 @@ const Legendas: React.FC<{ k: string; a: Anuncio }> = ({ k, a }) => {
 }
 
 /* ── Etiquetas que entram com a voz ── */
+/**
+ * Lista viva (22/11, formato viral «lista que se preenche»): painel de vidro sobre o peito do gémeo
+ * (a cara fica livre), cada linha entra com mola quando a voz a diz; a linha activa fica a ouro.
+ */
+const ListaViva: React.FC<{ a: Anuncio }> = ({ a }) => {
+  const fr = useCurrentFrame()
+  const { fps } = useVideoConfig()
+  const t = fr / FPS
+  const l = a.lista
+  if (!l || t < a.gancho.ate - 0.2 || t >= a.cta.de) return null
+  const n = l.itens.length
+  const linha = n > 5 ? 82 : 96
+  const altura = 96 + n * linha
+  const topo = 1400 - altura
+  const ativa = l.itens.reduce((m, it, i) => (t >= it.em ? i : m), -1)
+  const entrada = spring({ frame: fr - f(a.gancho.ate - 0.2), fps, config: { damping: 16, stiffness: 160 } })
+  const saida = interpolate(t, [a.cta.de - 0.35, a.cta.de], [1, 0], clamp)
+  return (
+    <div style={{ position: 'absolute', left: 54, right: 54, top: topo, height: altura, zIndex: 8, opacity: entrada * saida, transform: `translateY(${(1 - entrada) * 60}px)`, borderRadius: 30, background: 'rgba(8,8,10,.74)', border: `2px solid color-mix(in srgb, ${OURO_CLARO} 70%, transparent)`, boxShadow: `0 24px 70px rgba(0,0,0,.6), 0 0 40px color-mix(in srgb, ${OURO} 30%, transparent)`, backdropFilter: 'blur(14px)', padding: '22px 34px', boxSizing: 'border-box' }}>
+      <div style={{ fontFamily: OSW, fontWeight: 700, fontSize: 36, letterSpacing: 5, textTransform: 'uppercase', color: OURO_CLARO, height: 60 }}>{l.titulo}</div>
+      {l.itens.map((it, i) => {
+        const s = spring({ frame: fr - f(it.em), fps, config: { damping: 14, stiffness: 210 } })
+        const on = i === ativa
+        const num = l.contagem ? n - i : i + 1
+        const visto = t >= it.em - 0.05
+        return (
+          <div key={i} style={{ display: 'flex', alignItems: 'center', height: linha, gap: 22, borderTop: i ? '1px solid rgba(255,255,255,.08)' : undefined }}>
+            <div style={{ width: 62, height: 62, flex: '0 0 62px', borderRadius: 16, display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: ANTON, fontSize: 40, color: on ? '#111' : visto ? OURO_CLARO : 'rgba(255,255,255,.35)', background: on ? `linear-gradient(135deg, ${OURO_CLARO}, ${OURO})` : 'rgba(255,255,255,.06)', boxShadow: on ? `0 0 26px ${OURO}` : undefined }}>{num}</div>
+            <div style={{ fontFamily: OSW, fontWeight: 600, fontSize: n > 5 ? 42 : 46, lineHeight: 1.1, color: on ? OURO_CLARO : '#fff', opacity: visto ? s : 0, transform: `translateX(${(1 - s) * 50}px)`, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{visto ? it.t : ''}</div>
+          </div>
+        )
+      })}
+    </div>
+  )
+}
+
 const Chips: React.FC<{ a: Anuncio }> = ({ a }) => {
   const fr = useCurrentFrame()
   const { fps } = useVideoConfig()
@@ -440,6 +476,7 @@ export const Video: React.FC = () => {
       <Gancho a={a} />
       <Legendas k={k} a={a} />
       <Chips a={a} />
+      <ListaViva a={a} />
       <Destaque a={a} />
       <Cartoes a={a} />
       <Cta k={k} a={a} />

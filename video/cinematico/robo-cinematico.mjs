@@ -145,6 +145,22 @@ async function montar({ id, marca, video, cin }) {
   // Molde de edição (21/11): vem do projecto; sem ele roda pelo dia (cinema → impacto → documental).
   const MOLDES = ['cinema', 'impacto', 'documental']
   config.molde = MOLDES.includes(cin.molde) ? cin.molde : arg('molde') && MOLDES.includes(arg('molde')) ? arg('molde') : MOLDES[Math.floor(Date.now() / 86400000) % 3]
+  // Lista viva (22/11, formatos virais): cada item entra quando a voz diz a palavra mais marcante dele.
+  if (cin.lista && Array.isArray(cin.lista.itens) && cin.lista.itens.length >= 2) {
+    const n = (t) => String(t).toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9 ]/g, ' ')
+    const ini = config.gancho.ate, fimL = config.cta.de - 0.3, k = cin.lista.itens.length
+    let cursor = ini
+    const itens = cin.lista.itens.map((t, i) => {
+      const chaves = n(t).split(/\s+/).filter((x) => x.length >= 4).sort((a, b) => b.length - a.length)
+      const p = palavras.find((w) => w.ini >= cursor - 0.05 && w.ini < fimL && chaves.some((c) => n(w.w).includes(c.slice(0, 5))))
+      const em = p ? Math.max(cursor, p.ini - 0.15) : ini + ((fimL - ini) * i) / k
+      cursor = em + 0.4
+      return { em: +em.toFixed(2), t }
+    })
+    config.lista = { titulo: cin.lista.titulo || '', itens, ...(cin.lista.contagem ? { contagem: true } : {}) }
+    config.chips = []
+    config.imagens = []
+  }
   await capturarDemos(config, stockPresente())
   log('peça', JSON.stringify(config))
   const fim = legendas[legendas.length - 1][1]
