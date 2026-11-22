@@ -471,13 +471,21 @@ const Referencias: React.FC<{ a: Anuncio }> = ({ a }) => {
   const { fps } = useVideoConfig()
   const r = (a.referencias || []).find((x) => fr >= f(x.em) - 2 && fr <= f(x.ate) + 8)
   if (!r) return null
+  // 23/11 «letras sobrepostas»: o cartão nunca entra durante o gancho e acaba sempre acima do texto
+  // que estiver no ecrã (gancho a 1060, lista viva por cima de 1400, legendas a 1180).
+  if (fr < f(a.gancho.ate)) return null
+  const nL = a.lista ? a.lista.itens.length : 0
+  const topoLista = a.lista ? 1400 - (96 + nL * (nL > 5 ? 82 : 96)) : 1180
+  const TOPO = 210
+  const alt = Math.max(420, Math.min(900, topoLista - 50 - TOPO))
+  const larg = Math.min(820, Math.round(alt * 0.84))
   const A = f(r.em), B = f(r.ate)
   const s = spring({ frame: fr - A, fps, config: { damping: 12, stiffness: 200 } })
   const sai = interpolate(fr, [B, B + 8], [1, 0], clamp)
   const kb = interpolate(fr, [A, B], [1.0, 1.12], clamp)
   const rot = (A % 2 ? 1 : -1) * 2.5
   return (
-    <div style={{ position: 'absolute', left: 130, top: a.lista ? 230 : 300, width: 820, height: 980, zIndex: 8, opacity: sai, transform: `translateY(${(1 - s) * 140}px) scale(${0.82 + 0.18 * s}) rotate(${rot * s}deg)` }}>
+    <div style={{ position: 'absolute', left: Math.round((W - larg) / 2), top: TOPO, width: larg, height: alt, zIndex: 8, opacity: sai, transform: `translateY(${(1 - s) * 140}px) scale(${0.82 + 0.18 * s}) rotate(${rot * s}deg)` }}>
       <div style={{ position: 'absolute', inset: 0, borderRadius: 34, overflow: 'hidden', border: `5px solid ${OURO_CLARO}`, boxShadow: `0 40px 110px rgba(0,0,0,.75), 0 0 60px ${OURO}55`, background: '#000' }}>
         <Img src={staticFile(r.src)} style={{ width: '100%', height: '100%', objectFit: 'cover', transform: `scale(${kb})` }} />
         {r.fonte ? <div style={{ position: 'absolute', right: 14, bottom: 10, fontFamily: OSW, fontSize: 22, color: 'rgba(255,255,255,.75)', textShadow: '0 2px 6px #000' }}>{r.fonte}</div> : null}

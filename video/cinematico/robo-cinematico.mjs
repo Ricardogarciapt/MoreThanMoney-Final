@@ -196,7 +196,9 @@ async function montar({ id, marca, video, cin }) {
       const p = palavras.find((w) => w.ini >= config.gancho.ate - 0.3 && w.ini < fimR && alvo && nn(w.w).startsWith(alvo))
         || palavras.find((w) => w.ini < fimR && alvo && nn(w.w).startsWith(alvo))
       if (!p) { log('referência sem palavra', r.quando); continue }
-      const em = +Math.max(0.2, p.ini - 0.1).toFixed(2)
+      // nunca durante o gancho (23/11, texto sobreposto): se a palavra cai lá, o cartão entra logo a seguir
+      const em = +Math.max(config.gancho.ate + 0.15, p.ini - 0.1).toFixed(2)
+      if (em > fimR - 1) { log('referência sem espaço', r.quando); continue }
       if (config.referencias.some((x) => Math.abs(x.em - em) < 2)) continue
       config.referencias.push({ em, ate: +Math.min(fimR, em + (Number(r.dur) || 2.2)).toFixed(2), src: r.src, ...(r.etiqueta ? { t: String(r.etiqueta).slice(0, 24) } : {}), ...(r.fonte ? { fonte: String(r.fonte).slice(0, 40) } : {}) })
     }
