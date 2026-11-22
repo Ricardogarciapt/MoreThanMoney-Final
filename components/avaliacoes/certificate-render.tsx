@@ -11,6 +11,7 @@ const LABEL: Record<CertTemplate, string> = {
   bootcamp: "Certificado · Bootcamp de Trading",
   "teste-final": "Certificado Final · Junior Trader",
   "academia-ib": "Certificado · IB MTM × PU Prime",
+  "primeira-chave": "Certificado · A Primeira Chave",
 }
 
 export default function CertificateRender({
@@ -64,7 +65,7 @@ export default function CertificateRender({
           {gradeText && <p className="mt-1 text-sm font-bold text-[#D2A63C]">Classificação: {gradeText}</p>}
 
           <p className="mt-4 text-[10.5px] text-gray-500">
-            Ricardo Garcia · Educador{date ? ` · ${date}` : ""}
+            {template === "primeira-chave" ? "Ruben Pereira · Educador cripto" : "Ricardo Garcia · Educador"}{date ? ` · ${date}` : ""}
           </p>
         </div>
       </div>

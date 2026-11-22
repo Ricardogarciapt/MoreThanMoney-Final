@@ -151,4 +151,4 @@
 
 **Texto no ecrã:** 1 plan · 2 label · 3 daily chart · 4 decide and buy · 5 record · 15 minutes
 **Check question:** Which is the only step you never skip, even in a week with no purchase? Answer: recording.
-**Fecho / CTA da aula:** End of Module 7. Next module: 8, Taxes, perpetuals and your 30-day plan. On-screen button: “Continue to Module 8”.
+**Fecho / CTA da aula:** End of Module 7. Next module: 8, Build your portfolio. On-screen button: “Continue to Module 8”.

@@ -47,6 +47,13 @@ const TEMPLATES: Record<CertTemplate, TemplateConfig> = {
     grade: { cx: 741, baselineY: 548, maxW: 150, size: 19, color: "#d8a441" },
     footerColor: "#c8c8c8",
   },
+  // Curso «A Primeira Chave · Programa Completo» (Ruben Pereira), fundo desenhado em 22/11/2026
+  "primeira-chave": {
+    bg: "primeira-chave-bg.png",
+    name: { cx: 561, baselineY: 376, maxW: 760, size: 64, color: "#E9C46A" },
+    grade: { cx: 561, baselineY: 548, maxW: 600, size: 18, color: "#E9C46A", prefix: "Classificação final: ", suffix: " valores" },
+    footerColor: "#8f887a",
+  },
   "teste-final": {
     bg: "teste-final-bg.png",
     name: { cx: 575, baselineY: 388, maxW: 840, size: 43, color: "#a86a22" },

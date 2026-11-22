@@ -78,3 +78,4 @@ conteudo-privado/ebooks/*/*-grafica.pdf
 # slides e cadernos dos bootcamps: gerados por tools/ebooks/slides-bootcamp.mjs, vivem na pasta do projeto
 conteudo-privado/ebooks/bootcamps/*/producao/slides/
 conteudo-privado/ebooks/bootcamps/*/producao/caderno/
+conteudo-privado/ebooks/bootcamps/*/producao/guia/

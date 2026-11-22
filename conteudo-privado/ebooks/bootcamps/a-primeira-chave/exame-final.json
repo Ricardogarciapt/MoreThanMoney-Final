@@ -1,0 +1,1804 @@
+{
+ "perguntas": [
+  {
+   "modulo": 1,
+   "correct_index": 0,
+   "pt": {
+    "prompt": "Se o dinheiro vale porque todos o aceitam, o que acontece quando deixam de o aceitar?",
+    "options": [
+     "Deixa de cumprir a sua função, porque o valor depende da aceitação coletiva",
+     "Continua a valer o mesmo, porque o valor está impresso na nota",
+     "Passa a valer mais, porque fica automaticamente mais escasso",
+     "Continua a valer, mas só para quem tem conta no banco central"
+    ]
+   },
+   "en": {
+    "prompt": "If money has value because everyone accepts it, what happens when people stop accepting it?",
+    "options": [
+     "It stops doing its job, because its value depends on collective acceptance",
+     "It keeps the same value, because the value is printed on the note",
+     "It becomes worth more, because it automatically becomes scarcer",
+     "It keeps its value, but only for people who have an account at the central bank"
+    ]
+   },
+   "es": {
+    "prompt": "Si el dinero vale porque todo el mundo lo acepta, ¿qué pasa cuando dejan de aceptarlo?",
+    "options": [
+     "Deja de cumplir su función, porque su valor depende de la aceptación colectiva",
+     "Sigue valiendo lo mismo, porque el valor está impreso en el billete",
+     "Pasa a valer más, porque se vuelve automáticamente más escaso",
+     "Sigue valiendo, pero solo para quien tiene cuenta en el banco central"
+    ]
+   },
+   "fr": {
+    "prompt": "Si l'argent a de la valeur parce que tout le monde l'accepte, que se passe-t-il quand on cesse de l'accepter ?",
+    "options": [
+     "Il cesse de remplir sa fonction, car sa valeur dépend de l'acceptation collective",
+     "Il garde la même valeur, parce que la valeur est imprimée sur le billet",
+     "Il vaut davantage, parce qu'il devient automatiquement plus rare",
+     "Il garde sa valeur, mais seulement pour ceux qui ont un compte à la banque centrale"
+    ]
+   }
+  },
+  {
+   "modulo": 1,
+   "correct_index": 1,
+   "pt": {
+    "prompt": "Guardaste mil euros numa gaveta durante dez anos, sem juros, e a inflação foi em média de quatro por cento ao ano. O que aconteceu ao poder de compra?",
+    "options": [
+     "Ficou igual, porque mil euros continuam a ser mil euros",
+     "Perdeu poder de compra, porque cada euro passou a comprar menos",
+     "Ganhou poder de compra, porque o papel fica mais valioso com a idade",
+     "Duplicou, porque a regra dos 72 garante que o dinheiro dobra"
+    ]
+   },
+   "en": {
+    "prompt": "You kept one thousand euros in a drawer for ten years, with no interest, and inflation averaged four percent a year. What happened to its purchasing power?",
+    "options": [
+     "It stayed the same, because one thousand euros is still one thousand euros",
+     "It lost purchasing power, because each euro now buys less",
+     "It gained purchasing power, because paper becomes more valuable with age",
+     "It doubled, because the rule of 72 guarantees that money doubles"
+    ]
+   },
+   "es": {
+    "prompt": "Guardaste mil euros en un cajón durante diez años, sin intereses, y la inflación fue de media un cuatro por ciento anual. ¿Qué pasó con su poder adquisitivo?",
+    "options": [
+     "Se mantuvo igual, porque mil euros siguen siendo mil euros",
+     "Perdió poder adquisitivo, porque cada euro compra menos",
+     "Ganó poder adquisitivo, porque el papel se vuelve más valioso con los años",
+     "Se duplicó, porque la regla del 72 garantiza que el dinero se duplica"
+    ]
+   },
+   "fr": {
+    "prompt": "Tu as gardé mille euros dans un tiroir pendant dix ans, sans intérêts, et l'inflation a été en moyenne de quatre pour cent par an. Qu'est-il arrivé à son pouvoir d'achat ?",
+    "options": [
+     "Il est resté le même, car mille euros restent mille euros",
+     "Il a perdu du pouvoir d'achat, car chaque euro achète moins",
+     "Il a gagné du pouvoir d'achat, car le papier prend de la valeur avec le temps",
+     "Il a doublé, car la règle du 72 garantit que l'argent double"
+    ]
+   }
+  },
+  {
+   "modulo": 1,
+   "correct_index": 2,
+   "pt": {
+    "prompt": "No caderno da aldeia, o que impede alguém de mudar uma linha antiga sem que os outros percebam?",
+    "options": [
+     "Nada; quem tem o caderno pode reescrever a página quando quiser",
+     "A caneta é especial e só o dono a pode usar",
+     "Cada página tem um selo que depende da anterior: uma alteração parte a ligação e os outros veem-na",
+     "O professor confere cada página à mão, todas as semanas"
+    ]
+   },
+   "en": {
+    "prompt": "In the village notebook, what stops someone from changing an old line without the others noticing?",
+    "options": [
+     "Nothing; whoever holds the notebook can rewrite a page whenever they want",
+     "The pen is special and only the owner may use it",
+     "Each page has a seal that depends on the previous one: a change breaks the link and everyone sees it",
+     "The teacher checks every page by hand, every week"
+    ]
+   },
+   "es": {
+    "prompt": "En el cuaderno de la aldea, ¿qué impide que alguien cambie una línea antigua sin que los demás se den cuenta?",
+    "options": [
+     "Nada; quien tiene el cuaderno puede reescribir una página cuando quiera",
+     "El bolígrafo es especial y solo el dueño puede usarlo",
+     "Cada página tiene un sello que depende de la anterior: un cambio rompe el vínculo y todos lo ven",
+     "El maestro revisa cada página a mano, todas las semanas"
+    ]
+   },
+   "fr": {
+    "prompt": "Dans le cahier du village, qu'est-ce qui empêche quelqu'un de changer une ancienne ligne sans que les autres s'en aperçoivent ?",
+    "options": [
+     "Rien : celui qui a le cahier peut réécrire une page quand il veut",
+     "Le stylo est spécial et seul le propriétaire peut l'utiliser",
+     "Chaque page porte un sceau qui dépend de la précédente : une modification brise le lien et tout le monde le voit",
+     "Le professeur vérifie chaque page à la main, chaque semaine"
+    ]
+   }
+  },
+  {
+   "modulo": 2,
+   "correct_index": 3,
+   "pt": {
+    "prompt": "Se a oferta de bitcoin diminui, o preço sobe obrigatoriamente?",
+    "options": [
+     "Sim, porque a escassez garante uma subida",
+     "Sim, porque o limite de 21 milhões obriga o preço a subir",
+     "Sim, mas só se houver uma notícia positiva no mesmo dia",
+     "Não. A escassez não garante preço; a oferta é um facto, não uma promessa de subida"
+    ]
+   },
+   "en": {
+    "prompt": "If the supply of bitcoin decreases, does the price necessarily go up?",
+    "options": [
+     "Yes, because scarcity guarantees a rise",
+     "Yes, because the 21 million limit forces the price up",
+     "Yes, but only if there is good news on the same day",
+     "No. Scarcity does not guarantee a price; supply is a fact, not a promise of a rise"
+    ]
+   },
+   "es": {
+    "prompt": "Si la oferta de bitcoin disminuye, ¿el precio sube necesariamente?",
+    "options": [
+     "Sí, porque la escasez garantiza una subida",
+     "Sí, porque el límite de 21 millones obliga al precio a subir",
+     "Sí, pero solo si hay una noticia positiva el mismo día",
+     "No. La escasez no garantiza un precio; la oferta es un hecho, no una promesa de subida"
+    ]
+   },
+   "fr": {
+    "prompt": "Si l'offre de bitcoin diminue, le prix monte-t-il forcément ?",
+    "options": [
+     "Oui, car la rareté garantit une hausse",
+     "Oui, car la limite de 21 millions force le prix à monter",
+     "Oui, mais seulement s'il y a une bonne nouvelle le même jour",
+     "Non. La rareté ne garantit pas un prix ; l'offre est un fait, pas une promesse de hausse"
+    ]
+   }
+  },
+  {
+   "modulo": 2,
+   "correct_index": 0,
+   "pt": {
+    "prompt": "O que fazes se tens uma stablecoin e não encontras, no site do emissor, onde estão as reservas nem quem as audita?",
+    "options": [
+     "Concluis que não tens respostas claras, e isso já diz muito sobre o risco do emissor",
+     "Concluis que é uma boa oportunidade, porque as stablecoins nunca falham",
+     "Concluis que basta a tecnologia da cadeia para garantir a paridade",
+     "Esperas que o emissor publique um vídeo sobre o assunto"
+    ]
+   },
+   "en": {
+    "prompt": "What do you do if you hold a stablecoin and cannot find, on the issuer's site, where the reserves are or who audits them?",
+    "options": [
+     "You conclude that you have no clear answers, and that already tells you a lot about the issuer's risk",
+     "You conclude it is a good opportunity, because stablecoins never fail",
+     "You conclude that the chain's technology alone guarantees the peg",
+     "You wait for the issuer to publish a video about it"
+    ]
+   },
+   "es": {
+    "prompt": "¿Qué haces si tienes una stablecoin y no encuentras, en la web del emisor, dónde están las reservas ni quién las audita?",
+    "options": [
+     "Concluyes que no tienes respuestas claras, y eso ya dice mucho del riesgo del emisor",
+     "Concluyes que es una buena oportunidad, porque las stablecoins nunca fallan",
+     "Concluyes que la tecnología de la cadena basta para garantizar la paridad",
+     "Esperas a que el emisor publique un vídeo sobre el tema"
+    ]
+   },
+   "fr": {
+    "prompt": "Que fais-tu si tu détiens une stablecoin et que tu ne trouves pas, sur le site de l'émetteur, où sont les réserves ni qui les audite ?",
+    "options": [
+     "Tu conclus que tu n'as pas de réponses claires, et cela en dit déjà long sur le risque de l'émetteur",
+     "Tu conclus que c'est une bonne occasion, car les stablecoins ne tombent jamais",
+     "Tu conclus que la technologie de la chaîne suffit à garantir la parité",
+     "Tu attends que l'émetteur publie une vidéo sur le sujet"
+    ]
+   }
+  },
+  {
+   "modulo": 2,
+   "correct_index": 1,
+   "pt": {
+    "prompt": "O que fazes se escolheres uma moeda que ouviste falar esta semana e só conseguires responder a quatro das sete perguntas?",
+    "options": [
+     "Compras uma pequena quantia, porque falar muito dela nas redes é um bom sinal",
+     "Não a compras por enquanto, porque ainda não a conheces o suficiente",
+     "Perguntas num grupo se alguém a compra e segues o consenso",
+     "Compras já, porque se está nas notícias é porque tem utilidade"
+    ]
+   },
+   "en": {
+    "prompt": "What do you do if you pick a coin you heard about this week and can only answer four of the seven questions?",
+    "options": [
+     "You buy a small amount, because being talked about online is a good sign",
+     "You do not buy it for now, because you do not know it well enough yet",
+     "You ask in a group whether anyone is buying and follow the consensus",
+     "You buy it now, because if it is in the news it must have a use"
+    ]
+   },
+   "es": {
+    "prompt": "¿Qué haces si eliges una moneda de la que oíste hablar esta semana y solo consigues responder a cuatro de las siete preguntas?",
+    "options": [
+     "Compras una pequeña cantidad, porque que se hable mucho en redes es buena señal",
+     "No la compras por ahora, porque aún no la conoces lo suficiente",
+     "Preguntas en un grupo si alguien la compra y sigues el consenso",
+     "La compras ya, porque si sale en las noticias es porque tiene utilidad"
+    ]
+   },
+   "fr": {
+    "prompt": "Que fais-tu si tu choisis une monnaie dont tu as entendu parler cette semaine et que tu ne sais répondre qu'à quatre des sept questions ?",
+    "options": [
+     "Tu en achètes une petite quantité, car en parler beaucoup sur les réseaux est bon signe",
+     "Tu ne l'achètes pas pour l'instant, car tu ne la connais pas encore assez bien",
+     "Tu demandes dans un groupe si quelqu'un l'achète et tu suis le consensus",
+     "Tu l'achètes tout de suite, car si elle est dans l'actualité c'est qu'elle sert à quelque chose"
+    ]
+   }
+  },
+  {
+   "modulo": 3,
+   "correct_index": 2,
+   "pt": {
+    "prompt": "O que fazes se encontrares uma plataforma com um preço muito melhor do que as outras, mas que não consta do registo oficial?",
+    "options": [
+     "Compras uma quantia pequena para testar e verificas depois",
+     "Confias no preço, porque uma plataforma barata é sempre honesta",
+     "Não compras ali: uma plataforma autorizada pesa mais do que um bom preço",
+     "Pedes ao amigo que já lá comprou que confirme por ti"
+    ]
+   },
+   "en": {
+    "prompt": "What do you do if you find a platform with a much better price than the others, but it is not in the official register?",
+    "options": [
+     "You buy a small amount to test it and check later",
+     "You trust the price, because a cheap platform is always honest",
+     "You do not buy there: an authorised platform matters more than a good price",
+     "You ask the friend who already bought there to check for you"
+    ]
+   },
+   "es": {
+    "prompt": "¿Qué haces si encuentras una plataforma con un precio mucho mejor que las demás, pero que no consta en el registro oficial?",
+    "options": [
+     "Compras una cantidad pequeña para probar y lo compruebas después",
+     "Confías en el precio, porque una plataforma barata siempre es honesta",
+     "No compras allí: una plataforma autorizada pesa más que un buen precio",
+     "Le pides a tu amigo, que ya compró allí, que lo confirme por ti"
+    ]
+   },
+   "fr": {
+    "prompt": "Que fais-tu si tu trouves une plateforme avec un prix bien meilleur que les autres, mais qui ne figure pas au registre officiel ?",
+    "options": [
+     "Tu achètes une petite somme pour tester et tu vérifies plus tard",
+     "Tu fais confiance au prix, car une plateforme bon marché est toujours honnête",
+     "Tu n'achètes pas là-bas : une plateforme autorisée compte plus qu'un bon prix",
+     "Tu demandes à l'ami qui y a déjà acheté de vérifier pour toi"
+    ]
+   }
+  },
+  {
+   "modulo": 3,
+   "correct_index": 3,
+   "pt": {
+    "prompt": "Compras cinquenta euros e pagas taxas na entrada e na saída. O que tem de acontecer ao preço para cobrires os custos?",
+    "options": [
+     "Nada, porque as taxas só se pagam quando vendes com lucro",
+     "Basta que suba um por cento no próprio dia da compra",
+     "Tem de subir o dobro do valor investido",
+     "Tem de subir o suficiente para cobrir as taxas de entrada e de saída"
+    ]
+   },
+   "en": {
+    "prompt": "You buy fifty euros of crypto and pay fees on the way in and on the way out. What must the price do to cover your costs?",
+    "options": [
+     "Nothing, because fees are only charged when you sell at a profit",
+     "It only needs to rise one percent on the day you buy",
+     "It must rise to double the amount you invested",
+     "It must rise enough to cover the entry and exit fees"
+    ]
+   },
+   "es": {
+    "prompt": "Compras cincuenta euros y pagas comisiones al entrar y al salir. ¿Qué tiene que hacer el precio para cubrir los costes?",
+    "options": [
+     "Nada, porque las comisiones solo se pagan cuando vendes con beneficio",
+     "Basta con que suba un uno por ciento el mismo día de la compra",
+     "Tiene que subir el doble de lo invertido",
+     "Tiene que subir lo suficiente para cubrir las comisiones de entrada y de salida"
+    ]
+   },
+   "fr": {
+    "prompt": "Tu achètes cinquante euros de crypto et tu paies des frais à l'entrée et à la sortie. Que doit faire le prix pour couvrir tes coûts ?",
+    "options": [
+     "Rien, car les frais ne se payent que lorsque tu vends avec bénéfice",
+     "Il suffit qu'il monte d'un pour cent le jour même de l'achat",
+     "Il doit doubler le montant investi",
+     "Il doit monter assez pour couvrir les frais d'entrée et de sortie"
+    ]
+   }
+  },
+  {
+   "modulo": 3,
+   "correct_index": 0,
+   "pt": {
+    "prompt": "Vais fazer o teu primeiro investimento em cripto. O que fazes para decidir quanto arriscar?",
+    "options": [
+     "Arriscas só o valor que aguentas perder sem mudar a tua vida, e começas com um teste pequeno",
+     "Metade das poupanças, porque em cripto o risco é menor no início",
+     "Tudo o que tens na conta, para aproveitar a primeira subida",
+     "O dinheiro da renda, para o multiplicar a tempo do mês seguinte"
+    ]
+   },
+   "en": {
+    "prompt": "You are about to make your first crypto investment. What do you do to decide how much to risk?",
+    "options": [
+     "You risk only the amount you can lose without changing your life, and you start with a small test",
+     "Half your savings, because crypto is less risky at the start",
+     "Everything in your account, to catch the first rise",
+     "The money for next month's rent, so it grows in time"
+    ]
+   },
+   "es": {
+    "prompt": "Vas a hacer tu primera inversión en cripto. ¿Qué haces para decidir cuánto arriesgar?",
+    "options": [
+     "Arriesgas solo lo que puedas perder sin que cambie tu vida, y empiezas con una prueba pequeña",
+     "La mitad de tus ahorros, porque en cripto el riesgo es menor al principio",
+     "Todo lo que tienes en la cuenta, para aprovechar la primera subida",
+     "El dinero del alquiler del mes siguiente, para multiplicarlo a tiempo"
+    ]
+   },
+   "fr": {
+    "prompt": "Tu vas faire ton premier investissement en crypto. Que fais-tu pour décider combien risquer ?",
+    "options": [
+     "Tu ne risques que la somme que tu peux perdre sans que ta vie change, et tu commences par un petit test",
+     "La moitié de ton épargne, car la crypto est moins risquée au début",
+     "Tout ce que tu as sur ton compte, pour profiter de la première hausse",
+     "L'argent du loyer du mois suivant, pour le multiplier à temps"
+    ]
+   }
+  },
+  {
+   "modulo": 4,
+   "correct_index": 1,
+   "pt": {
+    "prompt": "Porque é que a carteira não é o sítio onde as moedas estão?",
+    "options": [
+     "Porque a carteira é só um cartão físico sem dados",
+     "Porque as moedas vivem na cadeia; a carteira guarda as chaves que permitem movê-las",
+     "Porque as moedas ficam guardadas dentro da app, no telemóvel",
+     "Porque a carteira só existe enquanto a plataforma estiver ligada"
+    ]
+   },
+   "en": {
+    "prompt": "Why is the wallet not where the coins actually are?",
+    "options": [
+     "Because the wallet is just a physical card with no data",
+     "Because the coins live on the chain; the wallet holds the keys that let you move them",
+     "Because the coins are kept inside the app on your phone",
+     "Because the wallet only exists while the platform is online"
+    ]
+   },
+   "es": {
+    "prompt": "¿Por qué la cartera no es el lugar donde están las monedas?",
+    "options": [
+     "Porque la cartera es solo una tarjeta física sin datos",
+     "Porque las monedas viven en la cadena; la cartera guarda las claves que permiten moverlas",
+     "Porque las monedas se guardan dentro de la app, en el móvil",
+     "Porque la cartera solo existe mientras la plataforma esté conectada"
+    ]
+   },
+   "fr": {
+    "prompt": "Pourquoi le portefeuille n'est-il pas l'endroit où se trouvent les monnaies ?",
+    "options": [
+     "Parce que le portefeuille n'est qu'une carte physique sans données",
+     "Parce que les monnaies vivent sur la chaîne ; le portefeuille garde les clés qui permettent de les déplacer",
+     "Parce que les monnaies sont conservées dans l'application, sur le téléphone",
+     "Parce que le portefeuille n'existe que tant que la plateforme est en ligne"
+    ]
+   }
+  },
+  {
+   "modulo": 4,
+   "correct_index": 2,
+   "pt": {
+    "prompt": "O que fazes se quiseres guardar a seed phrase numa nota do telemóvel, para não a perder?",
+    "options": [
+     "Guardas na nota, porque o telemóvel tem código de desbloqueio",
+     "Tiras uma foto e envias para ti próprio por email, como cópia",
+     "Escreves à mão, em papel, e guardas num sítio seguro",
+     "Escreves numa folha e colocas uma foto na cloud, para nunca a perder"
+    ]
+   },
+   "en": {
+    "prompt": "What do you do if you want to save your seed phrase in a note on your phone so you do not lose it?",
+    "options": [
+     "You save it in the note, because the phone has a lock code",
+     "You take a photo and email it to yourself as a backup",
+     "You write it by hand on paper and keep it somewhere safe",
+     "You write it on a sheet and upload a photo to the cloud so it is never lost"
+    ]
+   },
+   "es": {
+    "prompt": "¿Qué haces si quieres guardar la seed phrase en una nota del móvil para no perderla?",
+    "options": [
+     "La guardas en la nota, porque el móvil tiene código de desbloqueo",
+     "Haces una foto y te la envías por correo como copia",
+     "La escribes a mano, en papel, y la guardas en un sitio seguro",
+     "La escribes en una hoja y subes una foto a la nube para que nunca se pierda"
+    ]
+   },
+   "fr": {
+    "prompt": "Que fais-tu si tu veux enregistrer ta seed phrase dans une note de ton téléphone pour ne pas la perdre ?",
+    "options": [
+     "Tu l'enregistres dans la note, car le téléphone a un code de déverrouillage",
+     "Tu prends une photo et tu te l'envoies par e-mail comme copie",
+     "Tu l'écris à la main, sur papier, et tu la gardes dans un endroit sûr",
+     "Tu l'écris sur une feuille et tu envoies une photo dans le cloud pour ne jamais la perdre"
+    ]
+   }
+  },
+  {
+   "modulo": 4,
+   "correct_index": 3,
+   "pt": {
+    "prompt": "O que fazes se a tua cópia em papel da seed ficar encharcada?",
+    "options": [
+     "Tiras uma foto à folha molhada e guardas no telemóvel",
+     "Escreves de novo as palavras de memória, com as que te lembrares",
+     "Esperas que a plataforma te envie uma cópia por email",
+     "Usas a segunda cópia, guardada noutro local, e refazes o plano de guarda"
+    ]
+   },
+   "en": {
+    "prompt": "What do you do if your paper copy of the seed gets soaked?",
+    "options": [
+     "You photograph the wet sheet and keep the photo on your phone",
+     "You rewrite the words from memory, using whatever you remember",
+     "You wait for the platform to email you a copy",
+     "You use the second copy, kept in another place, and redo your storage plan"
+    ]
+   },
+   "es": {
+    "prompt": "¿Qué haces si tu copia en papel de la seed se moja y se estropea?",
+    "options": [
+     "Haces una foto a la hoja mojada y la guardas en el móvil",
+     "Escribes de nuevo las palabras de memoria, con las que recuerdes",
+     "Esperas a que la plataforma te envíe una copia por correo",
+     "Usas la segunda copia, guardada en otro lugar, y rehaces tu plan de custodia"
+    ]
+   },
+   "fr": {
+    "prompt": "Que fais-tu si ta copie papier de la seed phrase est trempée ?",
+    "options": [
+     "Tu prends une photo de la feuille mouillée et tu la gardes sur ton téléphone",
+     "Tu réécris les mots de mémoire, avec ceux dont tu te souviens",
+     "Tu attends que la plateforme t'envoie une copie par e-mail",
+     "Tu utilises la deuxième copie, gardée ailleurs, et tu refais ton plan de conservation"
+    ]
+   }
+  },
+  {
+   "modulo": 5,
+   "correct_index": 0,
+   "pt": {
+    "prompt": "O que fazes se um suporte, que te escreve sem pedires nada, insiste em pedir a tua seed phrase?",
+    "options": [
+     "Bloqueias o contacto, denuncias e avisas quem possa estar em risco",
+     "Envias as primeiras doze palavras, para não arriscar tudo",
+     "Respondes com a palavra-passe da app, para provar que és tu",
+     "Pedes mais tempo e, se a urgência continuar, envias as palavras"
+    ]
+   },
+   "en": {
+    "prompt": "What do you do if a support agent who wrote to you unprompted keeps insisting on your seed phrase?",
+    "options": [
+     "You block the contact, report it and warn anyone who might be at risk",
+     "You send the first twelve words, so you do not risk everything",
+     "You reply with your app password, to prove it is really you",
+     "You ask for more time and, if the urgency continues, you send the words"
+    ]
+   },
+   "es": {
+    "prompt": "¿Qué haces si un supuesto soporte, que te escribe sin que lo pidas, insiste en pedirte la seed phrase?",
+    "options": [
+     "Bloqueas el contacto, lo denuncias y avisas a quien pueda estar en riesgo",
+     "Envías las primeras doce palabras, para no arriesgarlo todo",
+     "Respondes con la contraseña de la app, para demostrar que eres tú",
+     "Pides más tiempo y, si la urgencia continúa, envías las palabras"
+    ]
+   },
+   "fr": {
+    "prompt": "Que fais-tu si un prétendu support, qui t'écrit sans que tu aies rien demandé, insiste pour obtenir ta seed phrase ?",
+    "options": [
+     "Tu bloques le contact, tu le signales et tu alertes ceux qui pourraient être en danger",
+     "Tu envoies les douze premiers mots, pour ne pas tout risquer",
+     "Tu réponds avec le mot de passe de l'application, pour prouver que c'est bien toi",
+     "Tu demandes plus de temps et, si l'urgence continue, tu envoies les mots"
+    ]
+   }
+  },
+  {
+   "modulo": 5,
+   "correct_index": 1,
+   "pt": {
+    "prompt": "Um projeto só paga bónus por trazeres amigos. De onde vem o dinheiro desses bónus?",
+    "options": [
+     "Das vendas de um produto que os clientes usam todos os dias",
+     "De quem entra depois, e não de um produto real",
+     "De um fundo de reserva que a empresa constituiu com lucros de anos",
+     "Do banco central, que financia todos os projetos de cripto"
+    ]
+   },
+   "en": {
+    "prompt": "A project only pays bonuses for bringing in friends. Where does the money for those bonuses come from?",
+    "options": [
+     "From sales of a product that customers use every day",
+     "From people who join later, not from a real product",
+     "From a reserve fund the company built up from years of profits",
+     "From the central bank, which finances every crypto project"
+    ]
+   },
+   "es": {
+    "prompt": "Un proyecto solo paga bonos por traer amigos. ¿De dónde sale el dinero de esos bonos?",
+    "options": [
+     "De las ventas de un producto que los clientes usan todos los días",
+     "De quien entra después, y no de un producto real",
+     "De un fondo de reserva que la empresa creó con los beneficios de años",
+     "Del banco central, que financia todos los proyectos de cripto"
+    ]
+   },
+   "fr": {
+    "prompt": "Un projet ne verse des bonus que si tu fais venir des amis. D'où vient l'argent de ces bonus ?",
+    "options": [
+     "Des ventes d'un produit que les clients utilisent chaque jour",
+     "De ceux qui entrent après, et non d'un produit réel",
+     "D'un fonds de réserve que l'entreprise a constitué avec les bénéfices de plusieurs années",
+     "De la banque centrale, qui finance tous les projets crypto"
+    ]
+   }
+  },
+  {
+   "modulo": 5,
+   "correct_index": 2,
+   "pt": {
+    "prompt": "O que fazes se uma página te pedir para aprovares um valor ilimitado?",
+    "options": [
+     "Aprovas, porque é o que todas as aplicações pedem",
+     "Aprovas um valor baixo, para não parecer desconfiado",
+     "Não aprovas às cegas: confirmas o que estás a autorizar e, se não percebes, não assinas",
+     "Aceitas, mas só depois de a página ter boa avaliação"
+    ]
+   },
+   "en": {
+    "prompt": "What do you do if a page asks you to approve an unlimited amount?",
+    "options": [
+     "You approve it, because every app asks for that",
+     "You approve a low amount, so you do not look suspicious",
+     "You do not approve blindly: you check what you are authorising and, if you do not understand it, you do not sign",
+     "You accept, but only once the page has good reviews"
+    ]
+   },
+   "es": {
+    "prompt": "¿Qué haces si una página te pide aprobar una cantidad ilimitada?",
+    "options": [
+     "Apruebas, porque es lo que piden todas las aplicaciones",
+     "Apruebas una cantidad baja, para no parecer desconfiado",
+     "No apruebas a ciegas: compruebas lo que estás autorizando y, si no lo entiendes, no firmas",
+     "Aceptas, pero solo cuando la página tenga buenas valoraciones"
+    ]
+   },
+   "fr": {
+    "prompt": "Que fais-tu si une page te demande d'approuver un montant illimité ?",
+    "options": [
+     "Tu approuves, car c'est ce que demandent toutes les applications",
+     "Tu approuves un petit montant, pour ne pas avoir l'air méfiant",
+     "Tu n'approuves pas à l'aveugle : tu vérifies ce que tu autorises et, si tu ne comprends pas, tu ne signes pas",
+     "Tu acceptes, mais seulement quand la page a de bonnes évaluations"
+    ]
+   }
+  },
+  {
+   "modulo": 6,
+   "correct_index": 3,
+   "pt": {
+    "prompt": "Num plano de DCA, porque é que o preço médio pode ficar abaixo da média simples dos preços pagos?",
+    "options": [
+     "Porque a plataforma dá um desconto a quem compra com regularidade",
+     "Porque as taxas diminuem sempre que o preço desce",
+     "Porque o DCA compra só nas quintas-feiras, quando os preços são mais baixos",
+     "Porque compras mais unidades quando o preço está baixo do que quando está alto"
+    ]
+   },
+   "en": {
+    "prompt": "In a DCA plan, why can the average price end up below the simple average of the prices paid?",
+    "options": [
+     "Because the platform gives a discount to people who buy regularly",
+     "Because fees fall whenever the price drops",
+     "Because DCA only buys on Thursdays, when prices tend to be lower",
+     "Because you buy more units when the price is low than when it is high"
+    ]
+   },
+   "es": {
+    "prompt": "En un plan de DCA, ¿por qué el precio medio puede quedar por debajo de la media simple de los precios pagados?",
+    "options": [
+     "Porque la plataforma da un descuento a quien compra con regularidad",
+     "Porque las comisiones bajan siempre que baja el precio",
+     "Porque el DCA solo compra los jueves, cuando los precios suelen ser más bajos",
+     "Porque compras más unidades cuando el precio está bajo que cuando está alto"
+    ]
+   },
+   "fr": {
+    "prompt": "Dans un plan de DCA, pourquoi le prix moyen peut-il être inférieur à la moyenne simple des prix payés ?",
+    "options": [
+     "Parce que la plateforme accorde une réduction à ceux qui achètent régulièrement",
+     "Parce que les frais baissent chaque fois que le prix chute",
+     "Parce que le DCA n'achète que le jeudi, quand les prix sont souvent plus bas",
+     "Parce que tu achètes davantage d'unités quand le prix est bas que quand il est haut"
+    ]
+   }
+  },
+  {
+   "modulo": 6,
+   "correct_index": 0,
+   "pt": {
+    "prompt": "Quantos bitcoins por bloco são atribuídos depois do halving de 2024?",
+    "options": [
+     "3,125",
+     "6,25",
+     "12,5",
+     "1,5625"
+    ]
+   },
+   "en": {
+    "prompt": "How many bitcoins per block are issued after the 2024 halving?",
+    "options": [
+     "3.125",
+     "6.25",
+     "12.5",
+     "1.5625"
+    ]
+   },
+   "es": {
+    "prompt": "¿Cuántos bitcoins por bloque se emiten después del halving de 2024?",
+    "options": [
+     "3,125",
+     "6,25",
+     "12,5",
+     "1,5625"
+    ]
+   },
+   "fr": {
+    "prompt": "Combien de bitcoins par bloc sont émis après le halving de 2024 ?",
+    "options": [
+     "3,125",
+     "6,25",
+     "12,5",
+     "1,5625"
+    ]
+   }
+  },
+  {
+   "modulo": 6,
+   "correct_index": 1,
+   "pt": {
+    "prompt": "O que fazes se o teu saldo estiver estável mas não tiveres um plano escrito para uma descida?",
+    "options": [
+     "Esperas pela descida para decidir, com o preço à frente",
+     "Escreves o plano agora, antes de a descida chegar",
+     "Vendes tudo, para não teres de decidir nada depois",
+     "Escreves o plano só depois de vender, quando já sabes o que perdeste"
+    ]
+   },
+   "en": {
+    "prompt": "What do you do if your balance is stable but you have no written plan for a drop?",
+    "options": [
+     "You wait for the drop and decide with the price in front of you",
+     "You write the plan now, before the drop arrives",
+     "You sell everything, so you do not have to decide anything later",
+     "You write the plan only after selling, when you already know what you lost"
+    ]
+   },
+   "es": {
+    "prompt": "¿Qué haces si tu saldo está estable pero no tienes un plan escrito para una bajada?",
+    "options": [
+     "Esperas a la bajada para decidir, con el precio delante",
+     "Escribes el plan ahora, antes de que llegue la bajada",
+     "Lo vendes todo, para no tener que decidir nada después",
+     "Escribes el plan solo después de vender, cuando ya sabes lo que perdiste"
+    ]
+   },
+   "fr": {
+    "prompt": "Que fais-tu si ton solde est stable mais que tu n'as pas de plan écrit pour une baisse ?",
+    "options": [
+     "Tu attends la baisse pour décider, le prix sous les yeux",
+     "Tu écris le plan maintenant, avant que la baisse n'arrive",
+     "Tu vends tout, pour ne rien avoir à décider ensuite",
+     "Tu n'écris le plan qu'après avoir vendu, quand tu sais déjà ce que tu as perdu"
+    ]
+   }
+  },
+  {
+   "modulo": 7,
+   "correct_index": 2,
+   "pt": {
+    "prompt": "O que fazes se estiveres numa semana de Forte Compra e o pote de reserva estiver vazio?",
+    "options": [
+     "Compras a base e o reforço extra, mesmo que ultrapasse o teto",
+     "Compras o dobro, pedindo emprestado o que falta",
+     "Compras só a base, porque o teto mensal não se fura",
+     "Não compras nada, porque o DCA só funciona com o pote cheio"
+    ]
+   },
+   "en": {
+    "prompt": "What do you do if you are in a Strong Buy week and the reserve pot is empty?",
+    "options": [
+     "You buy the base plus the extra, even if it goes over the cap",
+     "You buy double, borrowing what is missing",
+     "You buy only the base, because the monthly cap is never broken",
+     "You buy nothing, because DCA only works with a full pot"
+    ]
+   },
+   "es": {
+    "prompt": "¿Qué haces si estás en una semana de Compra Fuerte y el bote de reserva está vacío?",
+    "options": [
+     "Compras la base y el refuerzo extra, aunque supere el tope",
+     "Compras el doble, pidiendo prestado lo que falta",
+     "Compras solo la base, porque el tope mensual no se rompe",
+     "No compras nada, porque el DCA solo funciona con el bote lleno"
+    ]
+   },
+   "fr": {
+    "prompt": "Que fais-tu si tu es dans une semaine d'Achat Fort et que le pot de réserve est vide ?",
+    "options": [
+     "Tu achètes la base et le renfort supplémentaire, même si cela dépasse le plafond",
+     "Tu achètes le double, en empruntant ce qui manque",
+     "Tu n'achètes que la base, car le plafond mensuel ne se dépasse jamais",
+     "Tu n'achètes rien, car le DCA ne fonctionne qu'avec un pot plein"
+    ]
+   }
+  },
+  {
+   "modulo": 7,
+   "correct_index": 3,
+   "pt": {
+    "prompt": "O que fazes se o gráfico diário do Momentum estiver a vermelho forte, com cinco em cinco de venda?",
+    "options": [
+     "Não compras nada, porque o vermelho proíbe qualquer compra",
+     "Compras o pote inteiro, porque o preço está barato",
+     "Compras metade da base e metade do pote",
+     "Compras a base, e o pote fica guardado"
+    ]
+   },
+   "en": {
+    "prompt": "What do you do if the Momentum daily chart is strong red, with five out of five sell signals?",
+    "options": [
+     "You buy nothing, because red forbids any purchase",
+     "You buy the whole pot, because the price is cheap",
+     "You buy half the base and half the pot",
+     "You buy the base, and the pot stays saved"
+    ]
+   },
+   "es": {
+    "prompt": "¿Qué haces si el gráfico diario del Momentum está en rojo fuerte, con cinco de cinco en venta?",
+    "options": [
+     "No compras nada, porque el rojo prohíbe cualquier compra",
+     "Compras todo el bote, porque el precio está barato",
+     "Compras la mitad de la base y la mitad del bote",
+     "Compras la base, y el bote se queda guardado"
+    ]
+   },
+   "fr": {
+    "prompt": "Que fais-tu si le graphique journalier du Momentum est rouge foncé, avec cinq sur cinq en vente ?",
+    "options": [
+     "Tu n'achètes rien, car le rouge interdit tout achat",
+     "Tu achètes tout le pot, car le prix est bon marché",
+     "Tu achètes la moitié de la base et la moitié du pot",
+     "Tu achètes la base, et le pot reste en réserve"
+    ]
+   }
+  },
+  {
+   "modulo": 7,
+   "correct_index": 0,
+   "pt": {
+    "prompt": "O DCA Inteligente diz Forte Compra e o DEFY tem uma ideia de compra com estrelas no gráfico diário. O que compras?",
+    "options": [
+     "A base mais o pote, sempre dentro do teto mensal",
+     "Só a base, porque o pote só serve para semanas de Aguardar",
+     "O dobro da base, sem tocar no pote, porque o teto é semanal",
+     "Todo o pote, porque o DEFY é um sinal de compra"
+    ]
+   },
+   "en": {
+    "prompt": "The Smart DCA says Strong Buy and DEFY has a buy idea with stars on the daily chart. What do you buy?",
+    "options": [
+     "The base plus the pot, always within the monthly cap",
+     "Only the base, because the pot is only for Wait weeks",
+     "Double the base, without touching the pot, because the cap is weekly",
+     "The whole pot, because DEFY is a buy signal"
+    ]
+   },
+   "es": {
+    "prompt": "El DCA Inteligente dice Compra Fuerte y el DEFY tiene una idea de compra con estrellas en el gráfico diario. ¿Qué compras?",
+    "options": [
+     "La base más el bote, siempre dentro del tope mensual",
+     "Solo la base, porque el bote solo sirve para semanas de Esperar",
+     "El doble de la base, sin tocar el bote, porque el tope es semanal",
+     "Todo el bote, porque el DEFY es una señal de compra"
+    ]
+   },
+   "fr": {
+    "prompt": "Le DCA Intelligent indique Achat Fort et le DEFY a une idée d'achat avec des étoiles sur le graphique journalier. Que achètes-tu ?",
+    "options": [
+     "La base plus le pot, toujours dans le plafond mensuel",
+     "Seulement la base, car le pot ne sert qu'aux semaines Attendre",
+     "Le double de la base, sans toucher au pot, car le plafond est hebdomadaire",
+     "Tout le pot, car le DEFY est un signal d'achat"
+    ]
+   }
+  },
+  {
+   "modulo": 8,
+   "correct_index": 1,
+   "pt": {
+    "prompt": "O que fazes se um ativo subiu muito numa semana e queres pô-lo nos satélites?",
+    "options": [
+     "Compras já, porque a subida mostra que a tua tese se confirma",
+     "Escreves a tese em duas frases; se não consegues, não entras",
+     "Vendes o núcleo para pagar a entrada",
+     "Esperas que a subida continue e entras no dia seguinte"
+    ]
+   },
+   "en": {
+    "prompt": "What do you do if an asset rose a lot in one week and you want to put it in your satellites?",
+    "options": [
+     "You buy now, because the rise shows your thesis is confirmed",
+     "You write the thesis in two sentences; if you cannot, you do not enter",
+     "You sell the core to pay for the entry",
+     "You wait for the rise to continue and enter the next day"
+    ]
+   },
+   "es": {
+    "prompt": "¿Qué haces si un activo ha subido mucho en una semana y quieres meterlo en tus satélites?",
+    "options": [
+     "Compras ya, porque la subida demuestra que tu tesis se confirma",
+     "Escribes la tesis en dos frases; si no puedes, no entras",
+     "Vendes el núcleo para pagar la entrada",
+     "Esperas a que siga subiendo y entras al día siguiente"
+    ]
+   },
+   "fr": {
+    "prompt": "Que fais-tu si un actif a fortement monté en une semaine et que tu veux l'ajouter à tes satellites ?",
+    "options": [
+     "Tu achètes tout de suite, car la hausse prouve que ta thèse se confirme",
+     "Tu écris la thèse en deux phrases ; si tu n'y arrives pas, tu n'entres pas",
+     "Tu vends le noyau pour financer l'entrée",
+     "Tu attends que la hausse continue et tu entres le lendemain"
+    ]
+   }
+  },
+  {
+   "modulo": 8,
+   "correct_index": 2,
+   "pt": {
+    "prompt": "Porque é que uma stablecoin não é o mesmo que dinheiro no banco?",
+    "options": [
+     "Porque está sempre garantida pelo Estado",
+     "Porque não tem reservas nem qualquer emissor",
+     "Porque tem riscos próprios: do emissor, de ligação à moeda de referência e de regulação",
+     "Porque sobe sempre mais do que o euro"
+    ]
+   },
+   "en": {
+    "prompt": "Why is a stablecoin not the same as money in the bank?",
+    "options": [
+     "Because it is always guaranteed by the state",
+     "Because it has no reserves and no issuer",
+     "Because it carries its own risks: issuer risk, the peg to a reference currency, and regulation",
+     "Because it always rises more than the euro"
+    ]
+   },
+   "es": {
+    "prompt": "¿Por qué una stablecoin no es lo mismo que el dinero en el banco?",
+    "options": [
+     "Porque siempre la garantiza el Estado",
+     "Porque no tiene reservas ni emisor",
+     "Porque tiene riesgos propios: del emisor, de la vinculación con la moneda de referencia y de regulación",
+     "Porque siempre sube más que el euro"
+    ]
+   },
+   "fr": {
+    "prompt": "Pourquoi une stablecoin n'est-elle pas la même chose que l'argent à la banque ?",
+    "options": [
+     "Parce qu'elle est toujours garantie par l'État",
+     "Parce qu'elle n'a ni réserves ni émetteur",
+     "Parce qu'elle comporte ses propres risques : celui de l'émetteur, l'arrimage à la monnaie de référence et la réglementation",
+     "Parce qu'elle monte toujours plus que l'euro"
+    ]
+   }
+  },
+  {
+   "modulo": 8,
+   "correct_index": 3,
+   "pt": {
+    "prompt": "O que fazes se o Bitcoin subir e a tua divisão de carteira mudar?",
+    "options": [
+     "Vendes sempre, porque a divisão tem de ficar igual todos os dias",
+     "Nunca mexes, porque o rebalanceamento só serve para ativos que caem",
+     "Vendes tudo e compras stablecoins até a divisão mudar outra vez",
+     "Depende da regra escrita: cumpres a regra e não decides pelo gráfico do dia"
+    ]
+   },
+   "en": {
+    "prompt": "What do you do if Bitcoin rises and your portfolio split changes?",
+    "options": [
+     "You always sell, because the split must stay the same every day",
+     "You never touch it, because rebalancing only applies to falling assets",
+     "You sell everything and buy stablecoins until the split changes again",
+     "It depends on the written rule: you follow the rule and do not decide from today's chart"
+    ]
+   },
+   "es": {
+    "prompt": "¿Qué haces si el Bitcoin sube y cambia la división de tu cartera?",
+    "options": [
+     "Siempre vendes, porque la división tiene que mantenerse igual todos los días",
+     "Nunca tocas nada, porque el rebalanceo solo sirve para activos que bajan",
+     "Lo vendes todo y compras stablecoins hasta que la división vuelva a cambiar",
+     "Depende de la regla escrita: cumples la regla y no decides por el gráfico del día"
+    ]
+   },
+   "fr": {
+    "prompt": "Que fais-tu si le Bitcoin monte et que la répartition de ton portefeuille change ?",
+    "options": [
+     "Tu vends toujours, car la répartition doit rester la même chaque jour",
+     "Tu ne touches jamais à rien, car le rééquilibrage ne sert qu'aux actifs qui baissent",
+     "Tu vends tout et tu achètes des stablecoins jusqu'à ce que la répartition change à nouveau",
+     "Cela dépend de la règle écrite : tu suis la règle et tu ne décides pas d'après le graphique du jour"
+    ]
+   }
+  },
+  {
+   "modulo": 9,
+   "correct_index": 0,
+   "pt": {
+    "prompt": "O diário está a verde e o semanal está a vermelho forte. Paras o DCA?",
+    "options": [
+     "Não. A base compra-se sempre; o pote pede mais calma",
+     "Sim, até o semanal virar",
+     "Sim, mas só nas semanas com etiqueta de Forte Compra",
+     "Sim, e vendes a base para evitar perdas"
+    ]
+   },
+   "en": {
+    "prompt": "The daily chart is green and the weekly is strong red. Do you stop your DCA?",
+    "options": [
+     "No. The base is always bought; the pot calls for more patience",
+     "Yes, until the weekly turns",
+     "Yes, but only in weeks labelled Strong Buy",
+     "Yes, and you sell the base to avoid losses"
+    ]
+   },
+   "es": {
+    "prompt": "El diario está en verde y el semanal en rojo fuerte. ¿Paras el DCA?",
+    "options": [
+     "No. La base siempre se compra; el bote pide más calma",
+     "Sí, hasta que el semanal gire",
+     "Sí, pero solo en las semanas con etiqueta de Compra Fuerte",
+     "Sí, y vendes la base para evitar pérdidas"
+    ]
+   },
+   "fr": {
+    "prompt": "Le graphique journalier est vert et l'hebdomadaire rouge foncé. Tu arrêtes le DCA ?",
+    "options": [
+     "Non. La base s'achète toujours ; le pot demande plus de calme",
+     "Oui, jusqu'à ce que l'hebdomadaire se retourne",
+     "Oui, mais seulement les semaines étiquetées Achat Fort",
+     "Oui, et tu vends la base pour éviter les pertes"
+    ]
+   }
+  },
+  {
+   "modulo": 9,
+   "correct_index": 1,
+   "pt": {
+    "prompt": "O que fazes se o DEFY tiver três estrelas e o Momentum estiver a vermelho forte?",
+    "options": [
+     "Usas o pote inteiro, porque as três estrelas são uma confirmação forte",
+     "Compras a base e, no máximo, meio pote, porque só uma leitura está a favor",
+     "Compras a base dobrada e não usas o pote",
+     "Não compras nada e vendes a base por precaução"
+    ]
+   },
+   "en": {
+    "prompt": "What do you do if DEFY has three stars and the Momentum is strong red?",
+    "options": [
+     "You use the whole pot, because three stars are a strong confirmation",
+     "You buy the base and at most half the pot, because only one reading is in favour",
+     "You buy double the base and do not use the pot",
+     "You buy nothing and sell the base as a precaution"
+    ]
+   },
+   "es": {
+    "prompt": "¿Qué haces si el DEFY tiene tres estrellas y el Momentum está en rojo fuerte?",
+    "options": [
+     "Usas todo el bote, porque tres estrellas son una confirmación fuerte",
+     "Compras la base y, como máximo, medio bote, porque solo una lectura está a favor",
+     "Compras el doble de la base y no usas el bote",
+     "No compras nada y vendes la base por precaución"
+    ]
+   },
+   "fr": {
+    "prompt": "Que fais-tu si le DEFY affiche trois étoiles et que le Momentum est rouge foncé ?",
+    "options": [
+     "Tu utilises tout le pot, car trois étoiles sont une forte confirmation",
+     "Tu achètes la base et, au maximum, la moitié du pot, car une seule lecture est favorable",
+     "Tu achètes le double de la base et tu n'utilises pas le pot",
+     "Tu n'achètes rien et tu vends la base par précaution"
+    ]
+   }
+  },
+  {
+   "modulo": 9,
+   "correct_index": 2,
+   "pt": {
+    "prompt": "O que fazes se a etiqueta for Não Reforçar e o DEFY tiver três estrelas?",
+    "options": [
+     "Usas o pote, porque o DEFY tem prioridade sobre a etiqueta",
+     "Usas metade do pote e dobras a base",
+     "Não usas o pote: a base vai para lá e o plano continua",
+     "Não compras nada e perdes a base da semana"
+    ]
+   },
+   "en": {
+    "prompt": "What do you do if the label is Do Not Add and DEFY has three stars?",
+    "options": [
+     "You use the pot, because DEFY takes priority over the label",
+     "You use half the pot and double the base",
+     "You do not use the pot: the base goes into it and the plan carries on",
+     "You buy nothing and lose the week's base"
+    ]
+   },
+   "es": {
+    "prompt": "¿Qué haces si la etiqueta es No Reforzar y el DEFY tiene tres estrellas?",
+    "options": [
+     "Usas el bote, porque el DEFY tiene prioridad sobre la etiqueta",
+     "Usas la mitad del bote y doblas la base",
+     "No usas el bote: la base va allí y el plan sigue",
+     "No compras nada y pierdes la base de la semana"
+    ]
+   },
+   "fr": {
+    "prompt": "Que fais-tu si l'étiquette est Ne Pas Renforcer et que le DEFY affiche trois étoiles ?",
+    "options": [
+     "Tu utilises le pot, car le DEFY est prioritaire sur l'étiquette",
+     "Tu utilises la moitié du pot et tu doubles la base",
+     "Tu n'utilises pas le pot : la base y va et le plan continue",
+     "Tu n'achètes rien et tu perds la base de la semaine"
+    ]
+   }
+  },
+  {
+   "modulo": 10,
+   "correct_index": 3,
+   "pt": {
+    "prompt": "A escada de lucros obriga-te a comprar mais quando o preço sobe?",
+    "options": [
+     "Sim, cada degrau pede uma compra extra",
+     "Sim, mas só se o degrau for de vinte por cento",
+     "Não, mas obriga-te a vender tudo no primeiro degrau",
+     "Não. A escada define o que vendes em cada degrau, e o DCA continua separado"
+    ]
+   },
+   "en": {
+    "prompt": "Does your profit ladder force you to buy more when the price rises?",
+    "options": [
+     "Yes, every rung calls for an extra purchase",
+     "Yes, but only if the rung is twenty percent",
+     "No, but it forces you to sell everything at the first rung",
+     "No. The ladder defines what you sell at each rung, and DCA continues separately"
+    ]
+   },
+   "es": {
+    "prompt": "¿La escalera de beneficios te obliga a comprar más cuando el precio sube?",
+    "options": [
+     "Sí, cada peldaño pide una compra extra",
+     "Sí, pero solo si el peldaño es del veinte por ciento",
+     "No, pero te obliga a venderlo todo en el primer peldaño",
+     "No. La escalera define qué vendes en cada peldaño, y el DCA sigue por separado"
+    ]
+   },
+   "fr": {
+    "prompt": "L'échelle de gains t'oblige-t-elle à acheter davantage quand le prix monte ?",
+    "options": [
+     "Oui, chaque palier demande un achat supplémentaire",
+     "Oui, mais seulement si le palier est de vingt pour cent",
+     "Non, mais elle t'oblige à tout vendre au premier palier",
+     "Non. L'échelle définit ce que tu vends à chaque palier, et le DCA continue séparément"
+    ]
+   }
+  },
+  {
+   "modulo": 10,
+   "correct_index": 0,
+   "pt": {
+    "prompt": "O que fazes ao DCA se houver uma queda forte num só dia?",
+    "options": [
+     "Continuas a comprar a base, dentro do teto, e usas o pote só se o plano o disser",
+     "Paras tudo até a queda acabar, para não apanhar uma faca a cair",
+     "Vendes tudo para proteger o capital e recomeças depois",
+     "Dobras a base em todas as moedas de uma vez"
+    ]
+   },
+   "en": {
+    "prompt": "What do you do with your DCA if the market falls sharply in a single day?",
+    "options": [
+     "You keep buying the base within the cap, and use the pot only if the plan says so",
+     "You stop everything until the fall ends, so you do not catch a falling knife",
+     "You sell everything to protect your capital and restart later",
+     "You double the base across all coins at once"
+    ]
+   },
+   "es": {
+    "prompt": "¿Qué haces con el DCA si el mercado cae fuerte en un solo día?",
+    "options": [
+     "Sigues comprando la base, dentro del tope, y usas el bote solo si el plan lo dice",
+     "Paras todo hasta que acabe la caída, para no coger un cuchillo que cae",
+     "Lo vendes todo para proteger el capital y recomienzas después",
+     "Doblas la base en todas las monedas de golpe"
+    ]
+   },
+   "fr": {
+    "prompt": "Que fais-tu de ton DCA si le marché chute fortement en une seule journée ?",
+    "options": [
+     "Tu continues d'acheter la base, dans le plafond, et tu n'utilises le pot que si le plan le prévoit",
+     "Tu arrêtes tout jusqu'à la fin de la chute, pour ne pas attraper un couteau qui tombe",
+     "Tu vends tout pour protéger ton capital et tu recommences plus tard",
+     "Tu doubles la base sur toutes les monnaies d'un coup"
+    ]
+   }
+  },
+  {
+   "modulo": 10,
+   "correct_index": 1,
+   "pt": {
+    "prompt": "O que fazes se quiseres guardar uma foto da seed no telemóvel «só por segurança»?",
+    "options": [
+     "Guardas a foto numa pasta escondida, porque ninguém a encontra",
+     "Não a guardas. Qualquer cópia digital pode ser copiada ou sincronizada",
+     "Guardas, desde que o telemóvel tenha código de desbloqueio",
+     "Guardas, e apagas a foto depois de a veres"
+    ]
+   },
+   "en": {
+    "prompt": "What do you do if you want to keep a photo of the seed on your phone, just for safety?",
+    "options": [
+     "You keep the photo in a hidden folder, because nobody will find it",
+     "You do not. Any digital copy can be copied or synced",
+     "You keep it, as long as the phone has a lock code",
+     "You keep it, and delete the photo after you have seen it"
+    ]
+   },
+   "es": {
+    "prompt": "¿Qué haces si quieres guardar una foto de la seed en el móvil «solo por seguridad»?",
+    "options": [
+     "La guardas en una carpeta escondida, porque nadie la encontrará",
+     "No la guardas. Cualquier copia digital puede copiarse o sincronizarse",
+     "La guardas, siempre que el móvil tenga código de desbloqueo",
+     "La guardas y la borras después de verla"
+    ]
+   },
+   "fr": {
+    "prompt": "Que fais-tu si tu veux garder une photo de la seed sur ton téléphone, « juste par sécurité » ?",
+    "options": [
+     "Tu la gardes dans un dossier caché, car personne ne la trouvera",
+     "Tu ne la gardes pas. Toute copie numérique peut être copiée ou synchronisée",
+     "Tu la gardes, tant que le téléphone a un code de déverrouillage",
+     "Tu la gardes, et tu la supprimes après l'avoir regardée"
+    ]
+   }
+  },
+  {
+   "modulo": 11,
+   "correct_index": 2,
+   "pt": {
+    "prompt": "Estás comprado e o funding está positivo. Quem paga?",
+    "options": [
+     "A plataforma paga a todos, para atrair mais liquidez",
+     "Quem está vendido paga a quem está comprado",
+     "Quem está comprado paga a quem está vendido",
+     "Ninguém, porque o funding só existe em margem isolada"
+    ]
+   },
+   "en": {
+    "prompt": "You are long and the funding rate is positive. Who pays?",
+    "options": [
+     "The platform pays everyone, to attract more liquidity",
+     "Those who are short pay those who are long",
+     "Those who are long pay those who are short",
+     "Nobody, because funding only exists in isolated margin"
+    ]
+   },
+   "es": {
+    "prompt": "Estás en posición compradora y el funding es positivo. ¿Quién paga?",
+    "options": [
+     "La plataforma paga a todos, para atraer más liquidez",
+     "Quien está vendido paga a quien está comprado",
+     "Quien está comprado paga a quien está vendido",
+     "Nadie, porque el funding solo existe en margen aislado"
+    ]
+   },
+   "fr": {
+    "prompt": "Tu es en position acheteuse et le funding est positif. Qui paie ?",
+    "options": [
+     "La plateforme paie tout le monde, pour attirer davantage de liquidité",
+     "Ceux qui sont vendeurs paient ceux qui sont acheteurs",
+     "Ceux qui sont acheteurs paient ceux qui sont vendeurs",
+     "Personne, car le funding n'existe qu'en marge isolée"
+    ]
+   }
+  },
+  {
+   "modulo": 11,
+   "correct_index": 3,
+   "pt": {
+    "prompt": "Com margem cruzada, o que pode a posição com problemas usar para aguentar?",
+    "options": [
+     "Só a margem que lhe foi atribuída na abertura",
+     "Nada, porque a margem cruzada não partilha saldo",
+     "O fundo de seguro da plataforma, que cobre sempre as perdas",
+     "O saldo das outras posições, por isso o risco passa a ser da conta toda"
+    ]
+   },
+   "en": {
+    "prompt": "With cross margin, what can a troubled position use to hold on?",
+    "options": [
+     "Only the margin assigned to it when it was opened",
+     "Nothing, because cross margin does not share balance",
+     "The platform's insurance fund, which always covers losses",
+     "The balance of the other positions, so the risk becomes the whole account's"
+    ]
+   },
+   "es": {
+    "prompt": "Con margen cruzado, ¿qué puede usar la posición con problemas para aguantar?",
+    "options": [
+     "Solo el margen que se le asignó al abrirla",
+     "Nada, porque el margen cruzado no comparte saldo",
+     "El fondo de seguro de la plataforma, que siempre cubre las pérdidas",
+     "El saldo de las demás posiciones, así que el riesgo pasa a ser de toda la cuenta"
+    ]
+   },
+   "fr": {
+    "prompt": "En marge croisée, qu'est-ce que la position en difficulté peut utiliser pour tenir ?",
+    "options": [
+     "Seulement la marge qui lui a été attribuée à l'ouverture",
+     "Rien, car la marge croisée ne partage pas le solde",
+     "Le fonds d'assurance de la plateforme, qui couvre toujours les pertes",
+     "Le solde des autres positions, si bien que le risque devient celui de tout le compte"
+    ]
+   }
+  },
+  {
+   "modulo": 11,
+   "correct_index": 0,
+   "pt": {
+    "prompt": "Com a mesma margem de quinhentos euros, o que acontece ao preço de liquidação quando passas de dez para vinte vezes?",
+    "options": [
+     "Fica mais perto da entrada, porque a mesma garantia sustenta um nocional maior",
+     "Fica mais longe da entrada, porque a alavancagem protege a margem",
+     "Não muda, porque a liquidação depende só da margem",
+     "Fica igual, porque a plataforma liquida sempre ao mesmo preço"
+    ]
+   },
+   "en": {
+    "prompt": "With the same five hundred euros of margin, what happens to the liquidation price when you go from ten to twenty times leverage?",
+    "options": [
+     "It moves closer to the entry, because the same collateral supports a larger notional",
+     "It moves further from the entry, because leverage protects the margin",
+     "It does not change, because liquidation depends only on the margin",
+     "It stays the same, because the platform always liquidates at the same price"
+    ]
+   },
+   "es": {
+    "prompt": "Con los mismos quinientos euros de margen, ¿qué pasa con el precio de liquidación si pasas de diez a veinte veces?",
+    "options": [
+     "Se acerca a la entrada, porque la misma garantía sostiene un nocional mayor",
+     "Se aleja de la entrada, porque el apalancamiento protege el margen",
+     "No cambia, porque la liquidación depende solo del margen",
+     "Queda igual, porque la plataforma liquida siempre al mismo precio"
+    ]
+   },
+   "fr": {
+    "prompt": "Avec la même marge de cinq cents euros, que devient le prix de liquidation si tu passes de dix à vingt fois ?",
+    "options": [
+     "Il se rapproche de l'entrée, car la même garantie soutient un nominal plus élevé",
+     "Il s'éloigne de l'entrée, car l'effet de levier protège la marge",
+     "Il ne change pas, car la liquidation ne dépend que de la marge",
+     "Il reste identique, car la plateforme liquide toujours au même prix"
+    ]
+   }
+  },
+  {
+   "modulo": 12,
+   "correct_index": 1,
+   "pt": {
+    "prompt": "Porque é que um preço barato não é razão para comprar?",
+    "options": [
+     "Porque um preço barato significa sempre que a moeda está a morrer",
+     "Porque o preço barato pode continuar a descer; a direção é a tendência, não o preço",
+     "Porque as plataformas cobram mais taxas a quem compra barato",
+     "Porque só se compra quando o preço sobe duas vezes seguidas"
+    ]
+   },
+   "en": {
+    "prompt": "Why is a low price not a reason to buy?",
+    "options": [
+     "Because a low price always means the coin is dying",
+     "Because the price can keep falling; direction is the trend, not the price",
+     "Because platforms charge higher fees to people who buy cheap",
+     "Because you only buy once the price has risen twice in a row"
+    ]
+   },
+   "es": {
+    "prompt": "¿Por qué un precio bajo no es razón para comprar?",
+    "options": [
+     "Porque un precio bajo siempre significa que la moneda se está muriendo",
+     "Porque el precio bajo puede seguir bajando; la dirección es la tendencia, no el precio",
+     "Porque las plataformas cobran más comisiones a quien compra barato",
+     "Porque solo se compra cuando el precio ha subido dos veces seguidas"
+    ]
+   },
+   "fr": {
+    "prompt": "Pourquoi un prix bas n'est-il pas une raison d'acheter ?",
+    "options": [
+     "Parce qu'un prix bas signifie toujours que la monnaie est en train de mourir",
+     "Parce que le prix peut continuer à baisser ; c'est la tendance qui donne la direction, pas le prix",
+     "Parce que les plateformes facturent davantage de frais à ceux qui achètent bon marché",
+     "Parce qu'on n'achète qu'une fois que le prix a monté deux fois de suite"
+    ]
+   }
+  },
+  {
+   "modulo": 12,
+   "correct_index": 2,
+   "pt": {
+    "prompt": "Exemplo ilustrativo: a entrada está a 100 e o stop a 98. Qual é o alvo a 1:3, em percentagem?",
+    "options": [
+     "Quatro por cento acima da entrada, ou seja, 104",
+     "Três por cento acima da entrada, ou seja, 103",
+     "Seis por cento acima da entrada, ou seja, 106",
+     "Dois por cento acima da entrada, ou seja, 102"
+    ]
+   },
+   "en": {
+    "prompt": "Illustrative example: entry at 100 and stop at 98. What is the 1:3 target, in percentage terms?",
+    "options": [
+     "Four percent above entry, that is 104",
+     "Three percent above entry, that is 103",
+     "Six percent above entry, that is 106",
+     "Two percent above entry, that is 102"
+    ]
+   },
+   "es": {
+    "prompt": "Ejemplo ilustrativo: entrada a 100 y stop a 98. ¿Cuál es el objetivo a 1:3, en porcentaje?",
+    "options": [
+     "Un cuatro por ciento por encima de la entrada, es decir, 104",
+     "Un tres por ciento por encima de la entrada, es decir, 103",
+     "Un seis por ciento por encima de la entrada, es decir, 106",
+     "Un dos por ciento por encima de la entrada, es decir, 102"
+    ]
+   },
+   "fr": {
+    "prompt": "Exemple illustratif : entrée à 100 et stop à 98. Quel est l'objectif à 1:3, en pourcentage ?",
+    "options": [
+     "Quatre pour cent au-dessus de l'entrée, soit 104",
+     "Trois pour cent au-dessus de l'entrée, soit 103",
+     "Six pour cent au-dessus de l'entrée, soit 106",
+     "Deux pour cent au-dessus de l'entrée, soit 102"
+    ]
+   }
+  },
+  {
+   "modulo": 12,
+   "correct_index": 3,
+   "pt": {
+    "prompt": "O que fazes se surgir um sinal de compra, mas as três DEMA estiverem alinhadas para baixo?",
+    "options": [
+     "Entras, porque o sinal de compra vale mais do que as médias",
+     "Entras com metade do tamanho, para testar",
+     "Entras e afastas o stop, para não seres apanhado",
+     "Não entras: vai contra a tendência"
+    ]
+   },
+   "en": {
+    "prompt": "What do you do if a buy signal appears but the three DEMAs are aligned downward?",
+    "options": [
+     "You enter, because a buy signal outweighs the averages",
+     "You enter with half the size, to test it",
+     "You enter and move the stop further away, so you are not caught out",
+     "You do not enter: it goes against the trend"
+    ]
+   },
+   "es": {
+    "prompt": "¿Qué haces si aparece una señal de compra, pero las tres DEMA están alineadas a la baja?",
+    "options": [
+     "Entras, porque la señal de compra vale más que las medias",
+     "Entras con la mitad del tamaño, para probar",
+     "Entras y alejas el stop, para que no te saquen",
+     "No entras: va contra la tendencia"
+    ]
+   },
+   "fr": {
+    "prompt": "Que fais-tu si un signal d'achat apparaît mais que les trois DEMA sont alignées à la baisse ?",
+    "options": [
+     "Tu entres, car le signal d'achat pèse plus que les moyennes",
+     "Tu entres avec la moitié de la taille, pour tester",
+     "Tu entres et tu éloignes le stop, pour ne pas te faire sortir",
+     "Tu n'entres pas : cela va contre la tendance"
+    ]
+   }
+  },
+  {
+   "modulo": 13,
+   "correct_index": 0,
+   "pt": {
+    "prompt": "Tens mil euros em conta simulada. Qual é o risco máximo numa operação? (exemplo ilustrativo)",
+    "options": [
+     "Dez euros, ou seja um por cento do saldo",
+     "Cem euros, ou seja dez por cento do saldo",
+     "Mil euros, porque a conta é simulada",
+     "Cinquenta euros, para ter margem para recuperar"
+    ]
+   },
+   "en": {
+    "prompt": "You have one thousand euros in a simulated account. What is the maximum risk on one trade? (illustrative example)",
+    "options": [
+     "Ten euros, that is one percent of the balance",
+     "One hundred euros, that is ten percent of the balance",
+     "One thousand euros, because the account is simulated",
+     "Fifty euros, to leave room to recover"
+    ]
+   },
+   "es": {
+    "prompt": "Tienes mil euros en una cuenta simulada. ¿Cuál es el riesgo máximo en una operación? (ejemplo ilustrativo)",
+    "options": [
+     "Diez euros, es decir, un uno por ciento del saldo",
+     "Cien euros, es decir, un diez por ciento del saldo",
+     "Mil euros, porque la cuenta es simulada",
+     "Cincuenta euros, para tener margen de recuperación"
+    ]
+   },
+   "fr": {
+    "prompt": "Tu as mille euros sur un compte simulé. Quel est le risque maximal sur une opération ? (exemple illustratif)",
+    "options": [
+     "Dix euros, soit un pour cent du solde",
+     "Cent euros, soit dix pour cent du solde",
+     "Mille euros, car le compte est simulé",
+     "Cinquante euros, pour garder de la marge de récupération"
+    ]
+   }
+  },
+  {
+   "modulo": 13,
+   "correct_index": 1,
+   "pt": {
+    "prompt": "Risco de 10 euros, stop a 5 %. Qual é o tamanho da posição? (exemplo ilustrativo)",
+    "options": [
+     "100 euros",
+     "200 euros",
+     "50 euros",
+     "500 euros"
+    ]
+   },
+   "en": {
+    "prompt": "Risk of 10 euros, stop at 5%. What is the position size? (illustrative example)",
+    "options": [
+     "100 euros",
+     "200 euros",
+     "50 euros",
+     "500 euros"
+    ]
+   },
+   "es": {
+    "prompt": "Riesgo de 10 euros, stop al 5 %. ¿Cuál es el tamaño de la posición? (ejemplo ilustrativo)",
+    "options": [
+     "100 euros",
+     "200 euros",
+     "50 euros",
+     "500 euros"
+    ]
+   },
+   "fr": {
+    "prompt": "Risque de 10 euros, stop à 5 %. Quelle est la taille de la position ? (exemple illustratif)",
+    "options": [
+     "100 euros",
+     "200 euros",
+     "50 euros",
+     "500 euros"
+    ]
+   }
+  },
+  {
+   "modulo": 13,
+   "correct_index": 2,
+   "pt": {
+    "prompt": "O que fazes se perderes três operações seguidas no mesmo dia?",
+    "options": [
+     "Aumentas o tamanho na quarta, para recuperar tudo de uma vez",
+     "Mudas a regra do stop, para que as perdas sejam mais pequenas",
+     "Paras e não voltas ao ecrã nesse dia, como a regra escrita manda",
+     "Continuas, porque a sorte muda ao fim de três perdas"
+    ]
+   },
+   "en": {
+    "prompt": "What do you do if you lose three trades in a row on the same day?",
+    "options": [
+     "You increase the size on the fourth, to recover everything at once",
+     "You change the stop rule, so the losses are smaller",
+     "You stop and do not return to the screen that day, as the written rule says",
+     "You carry on, because luck changes after three losses"
+    ]
+   },
+   "es": {
+    "prompt": "¿Qué haces si pierdes tres operaciones seguidas el mismo día?",
+    "options": [
+     "Aumentas el tamaño en la cuarta, para recuperarlo todo de golpe",
+     "Cambias la regla del stop, para que las pérdidas sean menores",
+     "Paras y no vuelves a la pantalla ese día, como manda la regla escrita",
+     "Sigues, porque la suerte cambia después de tres pérdidas"
+    ]
+   },
+   "fr": {
+    "prompt": "Que fais-tu si tu perds trois opérations de suite le même jour ?",
+    "options": [
+     "Tu augmentes la taille à la quatrième, pour tout récupérer d'un coup",
+     "Tu changes la règle du stop, pour que les pertes soient plus petites",
+     "Tu t'arrêtes et tu ne reviens pas à l'écran ce jour-là, comme le dit la règle écrite",
+     "Tu continues, car la chance tourne après trois pertes"
+    ]
+   }
+  },
+  {
+   "modulo": 14,
+   "correct_index": 3,
+   "pt": {
+    "prompt": "Antes de colocares uma ordem na conta simulada, o que tens de escrever?",
+    "options": [
+     "O nome do ativo e a hora, para depois veres o gráfico",
+     "O valor que ganhaste no dia anterior",
+     "Só o tamanho em euros, porque o resto se vê no ecrã",
+     "A regra: porque entras, onde fica o stop, qual é o tamanho e o que farás se o preço for contra ti"
+    ]
+   },
+   "en": {
+    "prompt": "Before placing an order in the simulated account, what must you write down?",
+    "options": [
+     "The asset name and the time, so you can look at the chart later",
+     "The profit you made the day before",
+     "Only the size in euros, because the rest is visible on screen",
+     "The rule: why you enter, where the stop sits, what the size is and what you will do if the price moves against you"
+    ]
+   },
+   "es": {
+    "prompt": "Antes de colocar una orden en la cuenta simulada, ¿qué tienes que escribir?",
+    "options": [
+     "El nombre del activo y la hora, para mirar el gráfico después",
+     "El beneficio que obtuviste el día anterior",
+     "Solo el tamaño en euros, porque lo demás se ve en pantalla",
+     "La regla: por qué entras, dónde queda el stop, cuál es el tamaño y qué harás si el precio va en tu contra"
+    ]
+   },
+   "fr": {
+    "prompt": "Avant de passer un ordre sur le compte simulé, que dois-tu écrire ?",
+    "options": [
+     "Le nom de l'actif et l'heure, pour regarder le graphique plus tard",
+     "Le gain réalisé la veille",
+     "Seulement la taille en euros, car le reste se voit à l'écran",
+     "La règle : pourquoi tu entres, où se place le stop, quelle est la taille et ce que tu feras si le prix va contre toi"
+    ]
+   }
+  },
+  {
+   "modulo": 14,
+   "correct_index": 0,
+   "pt": {
+    "prompt": "O que fazes se uma cópia no MTM Auto perder dinheiro numa semana?",
+    "options": [
+     "Reconheces que a decisão de a ligar, o tamanho e a paragem são tuas, e revês as regras",
+     "Culpas a ferramenta e desligas a conta sem registar nada",
+     "Aumentas o limite para recuperar mais depressa",
+     "Deixas tudo a correr, porque copiar tira a responsabilidade"
+    ]
+   },
+   "en": {
+    "prompt": "What do you do if a copy in MTM Auto loses money in one week?",
+    "options": [
+     "You accept that the decision to switch it on, the size and the stop are yours, and you review your rules",
+     "You blame the tool and switch the account off without recording anything",
+     "You raise the limit to recover faster",
+     "You let it run, because copying takes away responsibility"
+    ]
+   },
+   "es": {
+    "prompt": "¿Qué haces si una copia en MTM Auto pierde dinero en una semana?",
+    "options": [
+     "Reconoces que la decisión de activarla, el tamaño y el stop son tuyos, y revisas las reglas",
+     "Culpas a la herramienta y apagas la cuenta sin registrar nada",
+     "Subes el límite para recuperar más rápido",
+     "Lo dejas correr, porque copiar quita la responsabilidad"
+    ]
+   },
+   "fr": {
+    "prompt": "Que fais-tu si une copie dans le MTM Auto perd de l'argent en une semaine ?",
+    "options": [
+     "Tu reconnais que la décision de l'activer, la taille et le stop sont à toi, et tu revois tes règles",
+     "Tu accuses l'outil et tu désactives le compte sans rien noter",
+     "Tu augmentes la limite pour récupérer plus vite",
+     "Tu la laisses tourner, car copier enlève la responsabilité"
+    ]
+   }
+  },
+  {
+   "modulo": 14,
+   "correct_index": 1,
+   "pt": {
+    "prompt": "O que fazes se perderes duas operações seguidas e tiveres vontade de aumentar a próxima?",
+    "options": [
+     "Aumentas, porque a próxima tem de compensar as duas perdas",
+     "Mantens o tamanho do plano; se bateste numa regra de paragem, paras o dia",
+     "Dobras o tamanho só desta vez, com um stop mais largo",
+     "Mudas de ativo para sair do sítio onde perdeste"
+    ]
+   },
+   "en": {
+    "prompt": "What do you do if you lose two trades in a row and feel like increasing the next one?",
+    "options": [
+     "You increase it, because the next trade has to make up for both losses",
+     "You keep the size from your plan; if you hit a stop rule, you stop for the day",
+     "You double the size just this once, with a wider stop",
+     "You switch to another asset to get away from where you lost"
+    ]
+   },
+   "es": {
+    "prompt": "¿Qué haces si pierdes dos operaciones seguidas y tienes ganas de aumentar la siguiente?",
+    "options": [
+     "La aumentas, porque la siguiente tiene que compensar las dos pérdidas",
+     "Mantienes el tamaño del plan; si has tocado una regla de paro, paras el día",
+     "Doblas el tamaño solo esta vez, con un stop más ancho",
+     "Cambias de activo para salir del sitio donde perdiste"
+    ]
+   },
+   "fr": {
+    "prompt": "Que fais-tu si tu perds deux opérations de suite et que tu as envie d'augmenter la suivante ?",
+    "options": [
+     "Tu l'augmentes, car la suivante doit compenser les deux pertes",
+     "Tu gardes la taille du plan ; si tu as atteint une règle d'arrêt, tu arrêtes pour la journée",
+     "Tu doubles la taille cette fois-ci, avec un stop plus large",
+     "Tu changes d'actif pour quitter l'endroit où tu as perdu"
+    ]
+   }
+  },
+  {
+   "modulo": 15,
+   "correct_index": 2,
+   "pt": {
+    "prompt": "Compraste há 200 dias e vendes com ganho. Em que regra estás? (exemplo ilustrativo)",
+    "options": [
+     "Na regra dos 365 dias ou mais, sem imposto em regra",
+     "Na regra dos 365 dias ou mais, com 28 % sobre o total vendido",
+     "Na regra dos menos de 365 dias, com 28 % sobre o ganho, salvo particularidades do teu caso",
+     "Na regra dos menos de 365 dias, com 15 % sobre o valor total da venda"
+    ]
+   },
+   "en": {
+    "prompt": "You bought 200 days ago and sell at a gain. Which rule applies? (illustrative example)",
+    "options": [
+     "The rule for 365 days or more, generally tax-free",
+     "The rule for 365 days or more, with 28% on the total amount sold",
+     "The rule for less than 365 days, with 28% on the gain, unless your case has particulars",
+     "The rule for less than 365 days, with 15% on the total sale value"
+    ]
+   },
+   "es": {
+    "prompt": "Compraste hace 200 días y vendes con ganancia. ¿En qué regla estás? (ejemplo ilustrativo)",
+    "options": [
+     "En la regla de 365 días o más, en general sin impuesto",
+     "En la regla de 365 días o más, con un 28 % sobre el total vendido",
+     "En la regla de menos de 365 días, con un 28 % sobre la ganancia, salvo particularidades de tu caso",
+     "En la regla de menos de 365 días, con un 15 % sobre el valor total de la venta"
+    ]
+   },
+   "fr": {
+    "prompt": "Tu as acheté il y a 200 jours et tu vends avec un gain. Quelle règle s'applique ? (exemple illustratif)",
+    "options": [
+     "La règle des 365 jours ou plus, en général exonérée",
+     "La règle des 365 jours ou plus, avec 28 % sur le montant total vendu",
+     "La règle de moins de 365 jours, avec 28 % sur le gain, sauf particularités de ton cas",
+     "La règle de moins de 365 jours, avec 15 % sur la valeur totale de la vente"
+    ]
+   }
+  },
+  {
+   "modulo": 15,
+   "correct_index": 3,
+   "pt": {
+    "prompt": "O que fazes se falhares uma sexta-feira na fase dois do plano de 90 dias?",
+    "options": [
+     "Recomeças o plano do zero, para não ficar com uma falha no registo",
+     "Desistes do plano, porque uma falha quebra o ritmo",
+     "Compras o dobro na sexta seguinte para compensar",
+     "Registas a falta e voltas na sexta seguinte; o plano continua"
+    ]
+   },
+   "en": {
+    "prompt": "What do you do if you miss a Friday in phase two of the 90-day plan?",
+    "options": [
+     "You restart the plan from scratch, so the record has no gap",
+     "You give up the plan, because one miss breaks the rhythm",
+     "You buy double the next Friday to make up for it",
+     "You log the miss and come back the following Friday; the plan carries on"
+    ]
+   },
+   "es": {
+    "prompt": "¿Qué haces si fallas un viernes en la fase dos del plan de 90 días?",
+    "options": [
+     "Reinicias el plan desde cero, para que el registro no tenga huecos",
+     "Abandonas el plan, porque un fallo rompe el ritmo",
+     "Compras el doble el viernes siguiente para compensar",
+     "Registras la falta y vuelves el viernes siguiente; el plan sigue"
+    ]
+   },
+   "fr": {
+    "prompt": "Que fais-tu si tu rates un vendredi pendant la phase deux du plan de 90 jours ?",
+    "options": [
+     "Tu recommences le plan à zéro, pour que le registre n'ait pas de trou",
+     "Tu abandonnes le plan, car un raté casse le rythme",
+     "Tu achètes le double le vendredi suivant pour compenser",
+     "Tu notes l'oubli et tu reprends le vendredi suivant ; le plan continue"
+    ]
+   }
+  },
+  {
+   "modulo": 15,
+   "correct_index": 0,
+   "pt": {
+    "prompt": "Qual é a única coisa que ninguém legítimo te pede?",
+    "options": [
+     "A tua seed phrase",
+     "O teu nome completo, para o certificado",
+     "O número de identificação do exame final",
+     "A confirmação do email da conta"
+    ]
+   },
+   "en": {
+    "prompt": "What is the one thing no legitimate person will ever ask you for?",
+    "options": [
+     "Your seed phrase",
+     "Your full name, for the certificate",
+     "The exam identification number",
+     "Confirmation of your account email"
+    ]
+   },
+   "es": {
+    "prompt": "¿Cuál es lo único que ninguna persona legítima te pide?",
+    "options": [
+     "Tu seed phrase",
+     "Tu nombre completo, para el certificado",
+     "El número de identificación del examen final",
+     "La confirmación del correo de tu cuenta"
+    ]
+   },
+   "fr": {
+    "prompt": "Quelle est la seule chose qu'aucune personne légitime ne te demandera jamais ?",
+    "options": [
+     "Ta seed phrase",
+     "Ton nom complet, pour le certificat",
+     "Le numéro d'identification de l'examen final",
+     "La confirmation de l'e-mail de ton compte"
+    ]
+   }
+  }
+ ]
+}

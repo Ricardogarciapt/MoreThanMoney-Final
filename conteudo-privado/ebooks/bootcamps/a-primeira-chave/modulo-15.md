@@ -1,0 +1,104 @@
+# Módulo 15 — Impostos, plano de 90 dias e certificado (≈15 min)
+**Objetivo:** conhecer o princípio base dos impostos sobre cripto em Portugal, ver o plano de 90 dias com os três níveis, rever o curso inteiro e fechar com o exame final e o certificado.  **No fim, o aluno consegue:** 1) explicar a regra dos 365 dias e fazer a conta de um exemplo; 2) montar o plano de 90 dias, com as três fases e as respetivas missões; 3) fazer a revisão do curso e saber o que falta para o exame e para o certificado.
+
+**Nota de produção:** o aviso sobre outros países (aula 15.1) lê-se em voz alta e aparece no ecrã sem cortes. Os valores da aula 15.1 são exemplos ilustrativos e diz-se isso em voz alta. Confirmar as regras em vigor no dia da gravação com um contabilista antes de publicar.
+
+## Aula 15.1 — Impostos em Portugal: a regra dos 365 dias (≈3–4 min)
+**Gancho (0:00–0:20):** "Em cripto, o imposto não se paga no dia em que compras. Pode aparecer, porém, no dia em que vendes, se não estiveres preparado."
+
+**[CENA 1]** Calendário animado com 365 dias a encherem-se, e um marcador a assinalar o dia 365.
+**NARRAÇÃO:** Vamos aos impostos, com uma nota prévia: falo em termos gerais, porque as regras mudam, e quem decide a tua situação é um contabilista certificado. Dito isto, há um princípio base que deves conhecer. Em Portugal, as mais-valias de cripto detidas durante menos de 365 dias são tributadas à taxa de 28 por cento. Se as detiveres 365 dias ou mais, ficam, em regra, isentas. Uma mais-valia é a diferença positiva entre o valor de venda e o valor de compra. Se vendes por menos do que compraste, não há mais-valia para tributar. O princípio é simples. Os detalhes é que mudam a conta, e são eles que apanham quem não está preparado. A data de compra e a data de venda contam dias, e um só dia de diferença pode mudar tudo.
+
+**[CENA 2]** Contas no ecrã: «mil euros de compra · mil e trezentos de venda · trezentos de mais-valia · oitenta e quatro de imposto a 28 %». Legenda: «exemplo ilustrativo · valores redondos, sem taxas».
+**NARRAÇÃO:** Vamos a um exemplo ilustrativo, com valores redondos e sem taxas. Compras mil euros de cripto e, três meses depois, vendes por mil e trezentos. A mais-valia é de trezentos euros. Sobre esses trezentos aplicas os vinte e oito por cento, e dá oitenta e quatro euros. Repara bem: o imposto não incide sobre o total de mil e trezentos, incide só sobre o ganho. Se o mesmo investimento tivesse sido mantido durante 365 dias ou mais, a regra geral seria outra, e a conta ficaria, em regra, isenta. Tudo isto pode mudar, por isso confirma sempre a versão atual antes de tirares conclusões.
+
+**[CENA 3]** Ecrã com uma folha de registo: colunas «Data», «Ativo», «Quantidade», «Valor em euros», «Taxas», «Tipo de operação».
+**NARRAÇÃO:** Por isso, regista tudo. Cada compra, cada venda e cada troca, com a data, o ativo, a quantidade, o valor em euros no momento e as taxas pagas. Acrescenta uma coluna para o tipo de operação. Não te fies em memórias nem em prints soltos, porque daqui a um ano já não vais lembrar-te de tudo. Uma folha de cálculo simples chega para começar. Se fizeres uma troca de uma moeda por outra, regista as duas pontas da operação, porque ambas podem contar. E guarda esta folha junto do diário de trading que aprendeste no módulo 14. São dois registos diferentes, e ambos te pagam o tempo que levam.
+
+**[CENA 4]** Aviso grande no ecrã: «Confirma com um contabilista certificado». Por baixo, em lista: «troca de cripto por cripto · staking · airdrops · englobamento».
+**NARRAÇÃO:** Agora o aviso mais importante da aula. Trocas de cripto por cripto, rendimentos de staking, airdrops e outros casos podem ter tratamento diferente, e não quero adivinhar isso num vídeo. Existe também a opção de englobamento, em que o ganho entra no teu rendimento anual. Pode ser mais vantajosa ou menos, conforme o teu escalão, e essa comparação precisa de alguém que veja os teus números completos. Não tomes decisões fiscais com base num vídeo, nem com base no que alguém disse num grupo de mensagens. Leva para a reunião com o contabilista a tua folha de registo e as perguntas que escreveste antes.
+
+**[CENA 5]** Texto grande no ecrã: «Vives em França ou noutro país? As regras são outras. Confirma junto da autoridade fiscal local e de um contabilista.» Ruben em plano próximo.
+**NARRAÇÃO:** Uma nota importante para quem não vive em Portugal, por exemplo em França ou noutro país. Esta aula explica as regras portuguesas, e as regras de outros países são outras. Podem ser diferentes na taxa, no prazo, na forma de declarar e no modo como tratam o cripto. Não apliques nada do que disse à tua situação sem confirmar. O que deves fazer é contactar a autoridade fiscal do teu país de residência e um contabilista habilitado nesse país. Pede a resposta por escrito e leva os teus registos. Se vives em França, por exemplo, a conversa é com as autoridades francesas e com um profissional francês, e não com este vídeo.
+
+**[CENA 6]** Caso ilustrativo: o Pedro, trinta e um anos, designer em Lisboa, a folhear extratos antigos num portátil. Legenda: «caso ilustrativo».
+**NARRAÇÃO:** Caso ilustrativo: o Pedro fez várias compras e vendas ao longo do ano, sem registar nada. Quando chegou a altura de declarar, não sabia as datas exatas nem o valor que tinha pago em cada operação. Passou semanas a pesquisar em extratos e em conversas antigas. O imposto em si nem era o pior. O pior foi o stress de reconstruir um ano inteiro de memória. Um registo de dez minutos por mês teria evitado tudo isso. Resumindo: menos de 365 dias pode significar 28 por cento sobre o ganho, 365 dias ou mais é, em regra, isenção, e o registo é o teu melhor aliado.
+
+**Texto no ecrã:** 365 dias é a linha · 28 % sobre o ganho, não sobre o total · registo mês a mês · confirma com um contabilista · vives noutro país? confirma lá
+**Pergunta de verificação:** Compraste há 200 dias e vendes com ganho. Em que regra estás? Resposta: na dos menos de 365 dias, com 28 % sobre a mais-valia, salvo particularidades do teu caso.
+**Fecho / CTA da aula:** "Próxima aula: o teu plano de 90 dias." Botão no ecrã: «Ver aula 15.2».
+
+## Aula 15.2 — O teu plano de 90 dias (≈3–4 min)
+**Gancho (0:00–0:20):** "Noventa dias parecem muito tempo. Mas o que vais ver é um calendário com três fases e uma regra: não saltes nenhuma."
+
+**[CENA 1]** Calendário de noventa dias em três blocos coloridos: «dias 1–30 · fundamentos e primeira compra», «dias 31–60 · o ritual DCA», «dias 61–90 · nível 3, opcional, em conta simulada».
+**NARRAÇÃO:** O plano de noventa dias tem três fases, e cada uma tem a sua missão. Dias um a trinta: fundamentos e primeira compra. Dias trinta e um a sessenta: o ritual DCA, o da sexta-feira, feito todas as semanas e registado. Dias sessenta e um a noventa: o nível três, que é opcional, e que só acontece em conta simulada. Repara na ordem. Primeiro percebes a tua chave e o dinheiro, depois compras com regra, e só depois praticas o que quiseres praticar, sem risco real. Não há atalhos entre as fases. Se uma correr mal, repete-a antes de avançares.
+
+**[CENA 2]** Ecrã da fase um com quatro blocos: «semana 1 · segurança», «semana 2 · escolher e verificar», «semana 3 · primeira compra», «semana 4 · revisão».
+**NARRAÇÃO:** Fase um, dias um a trinta. Semana um: segurança. Autenticação por aplicação, gestor de palavras-passe e a seed phrase escrita à mão, guardada em dois sítios separados. Semana dois: escolhes uma plataforma autorizada, fazes a verificação de identidade, percebes as taxas e a diferença entre ordem de mercado e ordem limite. Semana três: a primeira compra, com um valor pequeno, por exemplo dez euros, seguida de uma transferência de teste para a tua carteira. Exemplo ilustrativo, claro. Semana quatro: revês a checklist anti-burla e assinas a missão do nível um. Sem a checklist assinada, o nível um não está fechado.
+
+**[CENA 3]** Ruben com o caderno aberto. No ecrã: «Ritual de sexta · 15 minutos · quatro semanas seguidas · registo feito».
+**NARRAÇÃO:** Fase dois, dias trinta e um a sessenta. Aqui entra o ritual de sexta-feira, que aprendeste no módulo 7 com o DCA Inteligente, e tudo o que montaste nos módulos 8, 9 e 10: o portefólio com o pote de reserva, a leitura do mercado e as regras para realizar lucros. A missão do nível dois é simples de dizer e difícil de cumprir: um plano DCA escrito, com o teto mensal e o pote, os alertas DCA ligados na app e o ritual feito quatro semanas seguidas, registado no caderno. Se uma sexta falhar, não recomeças do zero. Registas o que aconteceu e voltas na sexta seguinte. O que conta é a consistência, e não a perfeição.
+
+**[CENA 4]** Ecrã da fase três com três caixas: «diário completo», «regras de paragem escritas», «30 operações simuladas». Legenda: «opcional».
+**NARRAÇÃO:** Fase três, dias sessenta e um a noventa, e aqui é opcional. Se quiseres seguir para o nível três, com o Aurum Flow Cripto e os perpétuos, a regra é a mesma que vimos no módulo 14: conta simulada, regras de paragem escritas e trinta operações com diário completo antes de pensares em conta real. Se não quiseres, está tudo bem. Um investidor que faz o DCA com disciplina e revê o seu plano não precisa de derivados para estar a fazer um bom trabalho. Os derivados são uma escolha, nunca uma obrigação, e nunca com dinheiro que te faça falta.
+
+**[CENA 5]** Caderno com o plano de noventa dias, com as datas preenchidas à mão. Legenda: «caso ilustrativo».
+**NARRAÇÃO:** Caso ilustrativo: a Sara fez o plano com o caderno ao lado. Na fase um, chegou à semana três sem comprar nada, porque não tinha confiança na plataforma. Em vez de saltar para a fase dois, repetiu a semana dois, fez a verificação e só então comprou. Na fase dois, falhou uma sexta por causa de uma viagem. Registou a falta no caderno e continuou na semana seguinte. Quando chegou aos noventa dias, não tinha feito tudo na perfeição. Tinha feito tudo na ordem certa. E é isso que o plano pede.
+
+**[CENA 6]** Ruben a fechar o caderno. No ecrã: «Uma fase de cada vez.»
+**NARRAÇÃO:** Uma última regra para o plano. Escreve-o numa folha, com as datas reais de início e de fim de cada fase, e assina-o. Põe a revisão de cada fase no calendário, como se fosse uma consulta marcada. E não avances para a fase seguinte só porque te sentes entediado. O tédio é normal no DCA, e é exatamente aí que a maior parte das pessoas abandona. Se a fase estiver fechada, avanças. Se não estiver, voltas à semana em falta. Isto não é uma corrida. É um calendário, e o calendário é teu. Guarda uma cópia do plano no caderno do curso, para o teres sempre à mão.
+
+**Texto no ecrã:** fase 1 · dias 1–30: fundamentos e primeira compra · fase 2 · dias 31–60: ritual DCA · fase 3 · dias 61–90: nível 3 opcional, em conta simulada
+**Pergunta de verificação:** Na fase dois, falhaste uma sexta. Recomeças o plano? Resposta: não. Registas a falta e voltas na sexta seguinte; o plano continua.
+**Fecho / CTA da aula:** "Próxima aula: a revisão do curso inteiro." Botão no ecrã: «Ver aula 15.3».
+
+## Aula 15.3 — Revisão do curso inteiro (≈3–4 min)
+**Gancho (0:00–0:20):** "Catorze módulos depois, a pergunta honesta é esta: o que é que realmente levas contigo?"
+
+**[CENA 1]** Mapa com três níveis lado a lado: «nível 1 · módulos 1 a 5», «nível 2 · módulos 6 a 10», «nível 3 · módulos 11 a 14, opcional».
+**NARRAÇÃO:** Vamos rever o curso inteiro, em poucos minutos, por níveis. Nível um, fundamentos, módulos um a cinco: o dinheiro e a blockchain, o mapa das moedas, a primeira compra segura, a tua chave e o escudo anti-burla. Nível dois, investidor com o DCA Inteligente, módulos seis a dez: os ciclos e o halving, o teu DCA com as ferramentas da casa, o portefólio com o pote de reserva, a leitura do mercado e a realização de lucros com regras escritas. Nível três, opcional, módulos onze a catorze: perpétuos, a estratégia Aurum Flow Cripto, risco e tamanho de posição, e executar sem emoção. Três níveis, uma ideia: cada um depende do anterior.
+
+**[CENA 2]** Lista de verificação no ecrã: «missão do nível 1 · primeira compra · transferência de teste · checklist anti-burla assinada».
+**NARRAÇÃO:** Revisão do nível um. A missão era uma primeira compra, pequena, numa plataforma autorizada, uma transferência de teste para a tua carteira e a checklist anti-burla assinada. Se as três caixas estão marcadas, o nível um está fechado. Se não estão, não avances. Uma compra feita sem a chave guardada e sem a checklist é um risco que não precisas de correr. Repara que não te pedi um resultado. Pedi-te processo: verificar, guardar, confirmar e registar. Isso é o que se pode controlar, e é o que o curso te ensinou a fazer.
+
+**[CENA 3]** Ecrã com as missões dos níveis dois e três, lado a lado, com a palavra «escrito» destacada.
+**NARRAÇÃO:** Revisão do nível dois: plano DCA escrito, com teto mensal e pote de reserva, alertas DCA ligados e quatro semanas seguidas do ritual de sexta, registadas. E do nível três, se o fizeste: trinta operações simuladas com diário completo e regras de paragem escritas. Pergunta-te, para cada missão: o que está escrito? Se a resposta for só «eu acho que sim», a missão não está fechada. O curso pede-te papel, não memória. Esse papel é a prova de que estás a aprender, e é também a única forma honesta de avaliares o teu próprio progresso.
+
+**[CENA 4]** Lista de conceitos no ecrã: «chave e seed · DCA · pote de reserva · liquidação · diário · regras de paragem · mais-valia».
+**NARRAÇÃO:** Agora os conceitos que não podem faltar, e que deves saber explicar sem olhar para as notas. Porque é que a chave é tua. O que é o DCA, e porque é que não pára. O que é o pote de reserva. O que é a liquidação, e porque é que a alavancagem não cria dinheiro. Para que serve o diário. E porque é que uma regra de paragem existe antes da emoção aparecer. Se não consegues explicar um destes conceitos com as tuas palavras, volta ao módulo correspondente. Não tens de decorar. Tens de perceber. Se quiseres, escreve cada um numa frase e compara com a versão do módulo correspondente quando acabares.
+
+**[CENA 5]** Ruben em plano próximo, com a frase no ecrã: «Escolhe o que aplicas primeiro. Não tudo.»
+**NARRAÇÃO:** Uma tentação típica, no fim de um curso, é querer aplicar tudo na mesma semana. Não faças isso. Escolhe uma coisa do que aprendeste e aplica-a durante um mês. Pode ser a checklist de segurança, pode ser o ritual de sexta, pode ser o diário. Uma prática pequena e constante vale mais do que dez intenções grandes. E se perceberes que te falta algum módulo, volta lá antes de avançares. Não há prémio para quem acaba primeiro, e o que interessa é que percebas o que estás a fazer. Se sentires essa vontade, escreve-a no caderno e espera uma semana antes de agir.
+
+**[CENA 6]** Ecrã com cinco perguntas numeradas: «1 · o que ficou? · 2 · o que ainda não cumpro? · 3 · que regra vou mudar? · 4 · que missão falta? · 5 · o que pergunto ao contabilista?»
+**NARRAÇÃO:** Antes do exame, cinco perguntas, escritas no caderno. O que ficou? O que ainda não estou a cumprir? Que regra vou mudar esta semana? Que missão falta fechar? E o que quero perguntar ao contabilista, se tiver dúvidas de impostos? Escreve as respostas, com data. Estas cinco perguntas são o teu resumo pessoal do curso, e valem mais do que qualquer resumo que eu te pudesse dar. A seguir está o exame final. Não tens de as responder em voz alta, mas tens de as escrever, com a data de hoje, e de as guardar junto do plano de noventa dias. São o teu ponto de partida para o que vem depois do curso, e vale a pena fazê-las com tempo e sem pressa.
+
+**Texto no ecrã:** nível 1 · fundamentos · nível 2 · investidor · nível 3 · opcional · papel, não memória
+**Pergunta de verificação:** Um aluno diz que cumpriu a missão do nível dois, mas não tem o diário escrito. Está cumprida? Resposta: não. Sem registo escrito, a missão não está fechada.
+**Fecho / CTA da aula:** "Próxima aula: o exame final, o certificado e o acompanhamento." Botão no ecrã: «Ver aula 15.4».
+
+## Aula 15.4 — Exame final, certificado e acompanhamento (≈3–4 min)
+**Gancho (0:00–0:20):** "Chegámos ao exame. Antes dele, uma pergunta que só tu podes responder: o que é que vais fazer com tudo isto, na próxima semana?"
+
+**[CENA 1]** Ecrã com o título «Exame final» e, por baixo, «perguntas sobre os catorze módulos». Ruben em plano médio.
+**NARRAÇÃO:** O exame final cobre os catorze módulos. São perguntas sobre o que aprendeste, e não sobre o que o mercado vai fazer, porque ninguém sabe isso. Vais encontrar perguntas sobre a chave e a segurança, sobre o DCA e o pote, sobre o diário, sobre a regra dos 365 dias e sobre a leitura do risco. Se fizeste as missões com papel, o exame é uma revisão tranquila. Se saltaste módulos, este é o momento de voltar a eles. Não há truque. Há processo, e o exame só pede o que o curso já te pediu ao longo do caminho.
+
+**[CENA 2]** Modelo de certificado no ecrã, com o campo do nome em branco e a legenda «certificado de conclusão MTM».
+**NARRAÇÃO:** Quando passares no exame, recebes o certificado MTM. Convém ser claro sobre o que ele é. É um certificado de conclusão deste curso. Não é uma licença, não é uma certificação profissional regulada e não te autoriza a prestar aconselhamento financeiro a ninguém. Mostra que completaste o programa e fizeste as missões. Usa-o com essa honestidade. Se alguém te disser que um certificado destes dá acesso a rendimentos garantidos, estás perante o sinal de alarme que já conheces de outros módulos. Repara que o certificado é o fim de um percurso de estudo, e não o início de uma carreira.
+
+**[CENA 3]** Ecrã com duas caixas: «sessões de grupo mensais» e «sala do curso no chat da app».
+**NARRAÇÃO:** Depois do curso, há acompanhamento. Uma sessão de grupo por mês, para levares as perguntas que foram surgindo no ritual, no diário e no plano. E a sala do curso, no chat da app, onde podes perguntar a outros alunos e tirar dúvidas sobre cada módulo. Atenção a uma coisa: é um espaço para aprender, não para decidir por ninguém. Não é uma recomendação de compra ou de venda, e ninguém da sala conhece a tua situação. Se alguém te pedir dinheiro, dados ou a tua chave, sai da conversa e avisa.
+
+**[CENA 4]** Checklist no ecrã: «1 · missões fechadas · 2 · exame feito · 3 · plano de 90 dias assinado e guardado».
+**NARRAÇÃO:** Antes de fechares o curso, três coisas. Primeiro, as missões dos níveis que decidiste fazer, com o papel preenchido. Segundo, o exame final, feito com calma e sem pressa de acabar. Terceiro, o plano de noventa dias assinado e guardado num sítio separado da tua seed phrase. Não misturas as duas coisas, porque quem guarda o plano e a chave no mesmo sítio tem um problema de segurança. Esta checklist é a tua prova de que chegaste ao fim com método. Se alguma destas não estiver feita, não é o fim do mundo: regressa ao módulo correspondente, faz o que falta e só depois dá o curso por terminado.
+
+**[CENA 5]** Ruben, plano próximo, com três frases no ecrã: «A chave é tua.» · «Os números são ilustrativos.» · «Espera vinte e quatro horas.»
+**NARRAÇÃO:** Agora, o aviso final, que não é opcional. Este curso é conteúdo educativo. Não é aconselhamento financeiro, não é uma recomendação de compra ou venda de nenhum ativo, e não sabe nada sobre a tua situação, o teu rendimento, as tuas dívidas ou os teus objetivos. Cripto é um mercado de alto risco. O risco de perda é real, e podes perder parte ou a totalidade do que lá puseres. Três regras para levares contigo. A chave é tua, e ninguém legítimo ta pede: nem o suporte, nem um técnico, nem alguém simpático numa conversa. Os números de exemplo são sempre ilustrativos, e desconfia de quem te promete ganhos e de quem te apressa. E um plano escrito, com vinte e quatro horas de espera, vale mais do que qualquer palpite.
+
+**[CENA 6]** Ecrã final com o logótipo MoreThanMoney e a frase: «Cuida da tua chave».
+**NARRAÇÃO:** Antes de fechar, a missão final do curso: escreve o teu plano de noventa dias numa folha, com a data de hoje, assina-o e guarda-o num sítio seguro, separado da tua seed phrase. Depois, faz as cinco perguntas da revisão. Obrigado por teres dado a este curso o tempo que pede. Nem todos se sentam a estudar isto com calma, e isso já diz muito sobre ti. Lembra-te: conteúdo educativo, não é aconselhamento financeiro, e o risco de perda é real. Cuida da tua chave. Até à próxima. Relê também a revisão do módulo 14 sobre a espiral, porque é aí que a tentação costuma voltar.
+
+**Texto no ecrã:** exame final · certificado de conclusão MTM · acompanhamento mensal · sala do curso no chat da app · a chave é tua
+**Pergunta de verificação:** Qual é a única coisa que ninguém legítimo te pede? Resposta: a tua seed phrase.
+**Fecho / CTA da aula:** Fim do curso «A Primeira Chave · Programa Completo». Botão no ecrã: «Voltar ao início do curso».

@@ -1,0 +1,327 @@
+[
+ {
+  "aula": "1.1",
+  "video": 1,
+  "titulo": "Qu'est-ce que l'argent, au fond"
+ },
+ {
+  "aula": "1.2",
+  "video": 2,
+  "titulo": "L'inflation et le café"
+ },
+ {
+  "aula": "1.3",
+  "video": 3,
+  "titulo": "2008 : pourquoi est né Bitcoin"
+ },
+ {
+  "aula": "1.4",
+  "video": 4,
+  "titulo": "Le cahier que personne n'efface"
+ },
+ {
+  "aula": "2.1",
+  "video": 5,
+  "titulo": "Bitcoin : 21 millions et le halving"
+ },
+ {
+  "aula": "2.2",
+  "video": 6,
+  "titulo": "Ethereum : le village aux règles qui s'appliquent d'elles-mêmes"
+ },
+ {
+  "aula": "2.3",
+  "video": 7,
+  "titulo": "Stablecoins : le dollar numérique et le risque de son émetteur"
+ },
+ {
+  "aula": "2.4",
+  "video": 8,
+  "titulo": "Altcoins, memecoins et les sept questions"
+ },
+ {
+  "aula": "3.1",
+  "video": 9,
+  "titulo": "Plateforme autorisée et KYC"
+ },
+ {
+  "aula": "3.2",
+  "video": 10,
+  "titulo": "Le coût réel d'un achat"
+ },
+ {
+  "aula": "3.3",
+  "video": 11,
+  "titulo": "Ordre au marché ou ordre limite"
+ },
+ {
+  "aula": "3.4",
+  "video": 12,
+  "titulo": "Ton premier euro"
+ },
+ {
+  "aula": "4.1",
+  "video": 13,
+  "titulo": "Portefeuilles chauds et froids"
+ },
+ {
+  "aula": "4.2",
+  "video": 14,
+  "titulo": "La seed phrase : les mots qui valent tout"
+ },
+ {
+  "aula": "4.3",
+  "video": 15,
+  "titulo": "Not your keys, not your coins"
+ },
+ {
+  "aula": "4.4",
+  "video": 16,
+  "titulo": "Le plan de garde : des copies qui survivent"
+ },
+ {
+  "aula": "5.1",
+  "video": 17,
+  "titulo": "Faux supports et demandes de clé"
+ },
+ {
+  "aula": "5.2",
+  "video": 18,
+  "titulo": "Doubler, pyramides et promesses"
+ },
+ {
+  "aula": "5.3",
+  "video": 19,
+  "titulo": "Hameçonnage, airdrops et approbations"
+ },
+ {
+  "aula": "5.4",
+  "video": 20,
+  "titulo": "Romance, pression et la checklist de 10 points"
+ },
+ {
+  "aula": "6.1",
+  "video": 21,
+  "titulo": "DCA, la méthode ennuyeuse qui enlève la devinette"
+ },
+ {
+  "aula": "6.2",
+  "video": 22,
+  "titulo": "Halving : l'horloge de l'offre"
+ },
+ {
+  "aula": "6.3",
+  "video": 23,
+  "titulo": "Cycles, volatilité et dominance : lire sans deviner"
+ },
+ {
+  "aula": "6.4",
+  "video": 24,
+  "titulo": "Mission du module : ton plan de DCA"
+ },
+ {
+  "aula": "7.1",
+  "video": 25,
+  "titulo": "Le DCA qui n'est pas bête"
+ },
+ {
+  "aula": "7.2",
+  "video": 26,
+  "titulo": "L'application MTM System dans ta poche"
+ },
+ {
+  "aula": "7.3",
+  "video": 27,
+  "titulo": "Les Portefólios : apprendre à regarder quelqu'un faire"
+ },
+ {
+  "aula": "7.4",
+  "video": 28,
+  "titulo": "Momentum en grand graphique : choisir la taille, pas le jour"
+ },
+ {
+  "aula": "7.5",
+  "video": 29,
+  "titulo": "DEFY : quand le prix s'étire trop"
+ },
+ {
+  "aula": "7.6",
+  "video": 30,
+  "titulo": "Le rituel du vendredi en 15 minutes"
+ },
+ {
+  "aula": "8.1",
+  "video": 31,
+  "titulo": "Noyau et satellites"
+ },
+ {
+  "aula": "8.2",
+  "video": 32,
+  "titulo": "Combien en BTC, ETH et stablecoins"
+ },
+ {
+  "aula": "8.3",
+  "video": 33,
+  "titulo": "Rééquilibrage et pot de réserve"
+ },
+ {
+  "aula": "8.4",
+  "video": 34,
+  "titulo": "Lire les Portefeuilles de la maison sans les copier"
+ },
+ {
+  "aula": "9.1",
+  "video": 35,
+  "titulo": "Momentum hebdomadaire"
+ },
+ {
+  "aula": "9.2",
+  "video": 36,
+  "titulo": "Le DEFY comme seconde opinion"
+ },
+ {
+  "aula": "9.3",
+  "video": 37,
+  "titulo": "Sentiment, peur et euphorie, et la dominance du BTC"
+ },
+ {
+  "aula": "9.4",
+  "video": 38,
+  "titulo": "Tout rassembler pour choisir la taille du renfort"
+ },
+ {
+  "aula": "10.1",
+  "video": 39,
+  "titulo": "Prendre des bénéfices avec des règles écrites"
+ },
+ {
+  "aula": "10.2",
+  "video": 40,
+  "titulo": "Que faire en cas de krach : le plan écrit avant"
+ },
+ {
+  "aula": "10.3",
+  "video": 41,
+  "titulo": "Sécurité avancée : copies, métal et lieux"
+ },
+ {
+  "aula": "10.4",
+  "video": 42,
+  "titulo": "Héritage crypto et mission du niveau 2"
+ },
+ {
+  "aula": "11.1",
+  "video": 43,
+  "titulo": "Qu'est-ce qu'un perpétuel et le funding"
+ },
+ {
+  "aula": "11.2",
+  "video": 44,
+  "titulo": "Marge isolée et marge croisée"
+ },
+ {
+  "aula": "11.3",
+  "video": 45,
+  "titulo": "Liquidation, avec un calcul illustratif"
+ },
+ {
+  "aula": "11.4",
+  "video": 46,
+  "titulo": "Frais et coût réel"
+ },
+ {
+  "aula": "11.5",
+  "video": 47,
+  "titulo": "Le levier ne change pas le bon risque"
+ },
+ {
+  "aula": "12.1",
+  "video": 48,
+  "titulo": "La philosophie : seulement dans le sens de la tendance"
+ },
+ {
+  "aula": "12.2",
+  "video": 49,
+  "titulo": "Le filtre des trois DEMA et la confirmation du momentum"
+ },
+ {
+  "aula": "12.3",
+  "video": 50,
+  "titulo": "Lire un signal : entrée, stop et distances en %"
+ },
+ {
+  "aula": "12.4",
+  "video": 51,
+  "titulo": "Les trois objectifs, les sorties partielles et le break-even"
+ },
+ {
+  "aula": "12.5",
+  "video": 52,
+  "titulo": "Quand ne pas entrer, et la mission"
+ },
+ {
+  "aula": "13.1",
+  "video": 53,
+  "titulo": "Risque de 1 % par opération"
+ },
+ {
+  "aula": "13.2",
+  "video": 54,
+  "titulo": "Calculer la taille à partir de la distance du stop"
+ },
+ {
+  "aula": "13.3",
+  "video": 55,
+  "titulo": "Levier utile et tableau de bord du compte"
+ },
+ {
+  "aula": "13.4",
+  "video": 56,
+  "titulo": "Limite quotidienne, séries de pertes et règles d'arrêt"
+ },
+ {
+  "aula": "14.1",
+  "video": 57,
+  "titulo": "WebTrader MTM et compte simulé MTM Funded"
+ },
+ {
+  "aula": "14.2",
+  "video": 58,
+  "titulo": "MTM Auto : copier avec des règles et des limites"
+ },
+ {
+  "aula": "14.3",
+  "video": 59,
+  "titulo": "Le journal de trading"
+ },
+ {
+  "aula": "14.4",
+  "video": 60,
+  "titulo": "Audit hebdomadaire et routine de 30 minutes"
+ },
+ {
+  "aula": "14.5",
+  "video": 61,
+  "titulo": "Règles d'arrêt, psychologie et mission du niveau 3"
+ },
+ {
+  "aula": "15.1",
+  "video": 62,
+  "titulo": "Impôts au Portugal : la règle des 365 jours"
+ },
+ {
+  "aula": "15.2",
+  "video": 63,
+  "titulo": "Ton plan de 90 jours"
+ },
+ {
+  "aula": "15.3",
+  "video": 64,
+  "titulo": "Révision de l'ensemble du cours"
+ },
+ {
+  "aula": "15.4",
+  "video": 65,
+  "titulo": "Examen final, certificat et suivi"
+ }
+]

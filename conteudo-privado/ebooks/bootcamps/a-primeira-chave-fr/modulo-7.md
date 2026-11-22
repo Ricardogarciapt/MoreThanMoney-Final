@@ -151,4 +151,4 @@
 
 **Texto no ecrã:** 1 plan · 2 étiquette · 3 graphique journalier · 4 décider et acheter · 5 enregistrer · 15 minutes
 **Question de vérification :** Quelle est la seule étape que l'on ne saute jamais, même une semaine sans achat ? Réponse : enregistrer.
-**Fecho / CTA da aula:** Fin du Module 7. Module suivant : 8, Impôts, perpétuels et ton plan de 30 jours. Bouton à l'écran : « Continuer vers le Module 8 ».
+**Fecho / CTA da aula:** Fin du Module 7. Module suivant : 8, Construire ton portefeuille. Bouton à l'écran : « Continuer vers le Module 8 ».
