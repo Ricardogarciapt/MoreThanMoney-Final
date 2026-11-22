@@ -1,0 +1,1456 @@
+{
+  "slug": "a-primeira-chave-en",
+  "gerado": "2026-11-22",
+  "velocidade": 1.03,
+  "modulos": [
+    {
+      "ficheiro": "modulo-1.md",
+      "titulo": "Módulo 1 — Money, blockchain and Bitcoin (≈17 min)",
+      "aulas": [
+        {
+          "id": "1.1",
+          "titulo": "Aula 1.1 — What money actually is",
+          "gancho": "A fifty-euro note is a piece of paper. So why do you agree to trade a day's work for it?",
+          "cenas": [
+            {
+              "cena": 1,
+              "visual": "Black screen. Text appears letter by letter: \"Educational content. This is not financial advice. The risk of loss is real.\" Then Ruben in a medium shot, almost black background, gold details.",
+              "narracao": "Hi, I'm Ruben Pereira, and this is the A Primeira Chave bootcamp. Before we start, there's a warning you must not skip. This bootcamp is educational. It is not financial advice. I won't tell you what to buy, or when. Crypto is a high-risk market: prices can fall a lot, and you can lose everything you put in. So the first rule of this house is this: never invest money you can't afford to lose. If you need it for next month's rent, that money is not for crypto. I've said it, and I'll say it again at the end of the module. If there's one thing from this bootcamp that stays with you, let it be this."
+            },
+            {
+              "cena": 2,
+              "visual": "Animation: a fisherman with a basket of horse mackerel at the door of a bakery. Two arrows cross between the two of them, and a question mark appears between the arrows.",
+              "narracao": "Before money, people swapped things. Imagine you're a fisherman in Peniche. You take a basket of horse mackerel to the bakery, because you need bread. But what if the baker doesn't want fish that day? Or what if the fish spoils before he wants it? Economists call this the lack of a double coincidence of wants: the person who has what you want doesn't always want what you have. Direct swapping works, but it's slow and depends a lot on luck."
+            },
+            {
+              "cena": 3,
+              "visual": "Animated timeline, from left to right: shells, salt, metal coins, a paper note and, at the end, a balance flashing on a phone screen. At each step the object disappears and the same word stays in the centre: \"trust\".",
+              "narracao": "That's why, throughout history, people chose objects that almost everyone accepted. There were shells, salt, livestock, metals. Then came coins, and after them paper notes. Today, most money isn't even paper. It's a number on your bank's screen. You pay for a coffee with your phone, you send money through a payment app, and none of it passes from hand to hand. It's still money, because you still trust the system that recorded it."
+            },
+            {
+              "cena": 4,
+              "visual": "A castle with three pillars, gold on charcoal. The pillars have captions: \"the baker accepts\", \"the landlord accepts\", \"the State accepts\". One of the pillars starts to tremble, subtly.",
+              "narracao": "Notice what this means. If trust is the foundation of everything, whoever controls the system controls that trust. A central bank can create more units of currency. A government can change the tax rules. I'm not saying this is bad by definition. I'm saying it's a human choice, made by human institutions, and those choices reach everyone's wallet. As long as the three pillars are standing, the note is worth something. If one of them starts to tremble, the conversation changes."
+            },
+            {
+              "cena": 5,
+              "visual": "A fifty-euro note next to a bank card. Underneath, the sentence appears gradually: \"Money is a promise.\"",
+              "narracao": "The first big consequence of money being a promise is called inflation. You'll see it in the next lesson, with a coffee and a simple sum anyone can do in their head. For now, keep this idea: promises can be kept or broken, slowly and quietly."
+            },
+            {
+              "cena": 6,
+              "visual": "Ruben with an open notebook on the table. A two-minute timer appears in the corner of the screen.",
+              "narracao": "Before we finish, a two-minute exercise. Take a note, or look at your bank balance. Ask yourself: what do I believe in, to accept this as value? Write the answer by hand. There's no right answer. The goal is for you to realise that you already trust many things without thinking about it."
+            }
+          ],
+          "palavras": 473,
+          "minutos": 3.1
+        },
+        {
+          "id": "1.2",
+          "titulo": "Aula 1.2 — Inflation and the coffee",
+          "gancho": "If you keep a thousand euros under the mattress for ten years, what can they buy at the end?",
+          "cenas": [
+            {
+              "cena": 1,
+              "visual": "A coffee in a cup, with a one-euro price tag. The tag starts to rise, cent by cent, like a counter ticking.",
+              "narracao": "Let's do a sum. A coffee costs one euro today. It sounds like very little, and it is very little. Now imagine prices rise four percent a year. This is a round, hypothetical number, just so we can do the maths. It's an illustrative example, nothing more. After one year, the coffee costs one euro and four cents. After five years, it costs about one euro and twenty-two. After ten years, it reaches one euro and forty-eight. Nobody notices anything special. It's a cent here, another there, and suddenly the same coffee costs almost half as much again."
+            },
+            {
+              "cena": 2,
+              "visual": "Animated line chart: the price of the coffee rising year by year, with the 1, 5 and 10 year marks highlighted.",
+              "narracao": "Now think about your money. If you have a thousand euros sitting in a drawer, ten years from now you still have a thousand euros on paper. But those thousand euros no longer buy what they used to. To keep being able to buy in ten years what a thousand euros buys today, you'd need about one thousand four hundred and eighty euros. Put the other way round: today's thousand euros are worth, in purchasing power, about six hundred and seventy-six euros."
+            },
+            {
+              "cena": 3,
+              "visual": "Two bars side by side. The first, full, labelled \"1000 €\". The second, shorter, labelled \"≈676 € of purchasing power\", with the difference slowly disappearing bit by bit.",
+              "narracao": "Notice that this sum doesn't need a special year or a crisis. A small, steady inflation is enough. A rate of two percent, which is the European Central Bank's medium-term reference, already cuts money's purchasing power in half in about thirty-six years. Nobody feels that in a month. You feel it over a whole lifetime."
+            },
+            {
+              "cena": 4,
+              "visual": "Split screen: on the left, the formula \"72 ÷ 4 = 18\", on the right an hourglass emptying to the halfway mark.",
+              "narracao": "There's a practical rule worth memorising. It's called the rule of 72. You divide 72 by the inflation rate, and you get, in years, how long it takes for money to lose half its purchasing power. At four percent, that's eighteen years. It's an approximation, but it gives you the order of magnitude. And the order of magnitude is what you need to decide well. When you hear someone say inflation isn't anything anymore, come back to this sum. A small number, repeated for years, is a huge force."
+            },
+            {
+              "cena": 5,
+              "visual": "Illustrative example: Inês, twenty-nine years old, a nurse in Coimbra, with a simple portrait and a drawn ID card, sitting at her desk with three thousand euros in a current account.",
+              "narracao": "Let's be honest. Inflation isn't anyone's plan to harm you. It's a phenomenon that results from many decisions: demand, costs, monetary policy. But its effect always arrives the same way. Inês had three thousand euros in a current account earning practically nothing. She didn't want to risk everything, and she didn't want to watch her money shrink either. The first thing she did was understand the problem, not choose a product. That's the step I want you to take too. Before any decision, know how much money you have, how long you can leave it idle, and what the effect of inflation is in that specific case."
+            },
+            {
+              "cena": 6,
+              "visual": "Ruben with a calculator on screen. A list of four everyday prices appears: bread, petrol, a transport pass, part of the rent.",
+              "narracao": "This matters for the rest of the bootcamp, because it's the first reason people look for alternatives. It's not because they want to get rich quickly. It's because they want their savings not to melt away in silence. So throughout this bootcamp, whenever we talk about returns, you'll ask one simple question: is it a gain above inflation, or just a nice-looking number on the screen? But be careful: looking for an alternative doesn't mean any alternative will do. Some assets rise a lot and fall even faster. In the next lessons, we'll see how to tell them apart."
+            }
+          ],
+          "palavras": 549,
+          "minutos": 3.6
+        },
+        {
+          "id": "1.3",
+          "titulo": "Aula 1.3 — 2008: why Bitcoin was born",
+          "gancho": "In October 2008, a short document appeared that changed the conversation about money. Let's look at the context.",
+          "cenas": [
+            {
+              "cena": 1,
+              "visual": "Stylised archive image, in greys and gold: a city skyline with the lights going out, one by one.",
+              "narracao": "In 2008, the financial world was in crisis. Large banks had lent money to people who couldn't repay it, and the problem spread through the whole system. Governments and central banks rushed to rescue institutions. Many people lost their home, their job or their savings. It was in this context that many people started asking whether the traditional financial system was the only possible path."
+            },
+            {
+              "cena": 2,
+              "visual": "Screen with the title of a document being typed slowly: \"Bitcoin: A Peer-to-Peer Electronic Cash System\". Below it, the date: 31 October 2008.",
+              "narracao": "On 31 October 2008, a document with that title appeared on the internet. It was signed by a person using the name Satoshi Nakamoto. To this day, nobody knows for sure who that person is, or whether it's a group. That's the first strange thing, and it's worth keeping in mind, because it forces us to judge the idea and not the person."
+            },
+            {
+              "cena": 3,
+              "visual": "A small diagram: two people exchanging a coin. Between them, a bank counter fades away, with a line crossing it out.",
+              "narracao": "The central idea was simple to say and hard to do. Money that could be sent from one person to another without going through a bank, without an intermediary approving every transfer. Instead of relying on trust in an institution, it relied on a rule written in code, which the whole network checked. That's the difference to hold on to: trust in a person versus trust in a process."
+            },
+            {
+              "cena": 4,
+              "visual": "Timeline with two highlighted dates: \"3 January 2009\" and, underneath, a golden square block labelled \"genesis block\".",
+              "narracao": "On 3 January 2009, the network created the first block, called the genesis block. Inside that block, the author left a message: a headline from a British newspaper about bank bailouts. You don't need to interpret it much. Whoever wrote it wanted to make clear the context in which the idea was born, and that tells you something about the distrust that animated it at the time. It isn't an absolute truth about anyone's intentions, but it's a historical fact that explains a lot of the discourse you hear today."
+            },
+            {
+              "cena": 5,
+              "visual": "Ruben sitting on a park bench, looking at the camera. Text in the corner: \"Telling the story is not predicting the price.\"",
+              "narracao": "Let's be clear about what I'm doing here. I'm telling a story. If you want context, think of it this way: back then, for most people, money meant a bank. Anyone who wanted to transfer value to the other side of the world depended on banks, on delays and on fees. The proposal was to cut out that middleman, and not much more than that."
+            },
+            {
+              "cena": 6,
+              "visual": "Three animated icons side by side: a payment arrow, a safe and a line chart. Each lights up in turn.",
+              "narracao": "The problem the document tries to solve has a name: double spending. With a digital file, copying costs nothing. If you send a photo to someone, you still have it. With digital money, the question is different: how do you guarantee that the same unit isn't spent twice, without a bank confirming every operation? That question is older than Bitcoin, and it's the key to understanding everything else."
+            },
+            {
+              "cena": 7,
+              "visual": "An on-screen exercise, with a lined sheet of paper and a pen writing.",
+              "narracao": "Reflection exercise: write on one line what you think an intermediary does when it approves a transfer. Then write what you lose if it doesn't exist. There's no right answer. The goal is for you to see what Bitcoin tries to replace, and what that replacement costs."
+            }
+          ],
+          "palavras": 485,
+          "minutos": 3.1
+        },
+        {
+          "id": "1.4",
+          "titulo": "Aula 1.4 — The notebook nobody erases",
+          "gancho": "Imagine a notebook that the whole village has, and that nobody can tear up without everyone noticing.",
+          "cenas": [
+            {
+              "cena": 1,
+              "visual": "A simply drawn village, with a square and several houses. In each house, an open notebook with the same handwriting.",
+              "narracao": "Imagine a village where everyone has an account book. Every time someone owes money to another person, a line is written: who paid, who to, how much, and the date. Only here there's one rule. There isn't a single notebook kept by the head of the parish council. Everyone has a copy, and the copies are updated together. That is, in very simple terms, a blockchain: a chain of blocks, where each block is a page with several lines."
+            },
+            {
+              "cena": 2,
+              "visual": "Animated graphic `blockchain-caderno`: one line, one page, a chain of pages linked together. Each line of text appears inside a page.",
+              "narracao": "Let's go step by step. First, the lines. A transaction says: this wallet sent so many units of this currency to that wallet. Second, the pages. A block bundles several transactions and closes when it's full, or when a certain amount of time has passed. Third, the link between pages. Each page has a kind of seal that results from the content of the page before it. Technically it's called a hash function, but think of it as a fingerprint of the content: if the content changes, the fingerprint changes. If someone alters an old line, the seal no longer matches, and all the following pages become invalid."
+            },
+            {
+              "cena": 3,
+              "visual": "Animation: someone tries to erase a line on an old page. The page turns red, and the following pages turn grey, one by one, like dominoes.",
+              "narracao": "This is what makes the notebook hard to erase. It's not that changing anything is impossible. It's that changing it means redoing the whole path, and it has to be accepted by the majority of the network. And that majority has copies of the notebook. Anyone trying to tamper with an old page has to convince the whole village that the story is different. In practice, that doesn't happen."
+            },
+            {
+              "cena": 4,
+              "visual": "Two screens side by side. On the left, a computer solving a puzzle. On the right, a set of coins locked as collateral. Underneath, the labels \"proof of work\" and \"proof of stake\".",
+              "narracao": "But then, who writes the new page? This is where many people find things confusing, and I'll simplify it. There are two main methods. The first is called proof of work, or mining. Computers compete to solve a difficult mathematical problem. Whoever solves it first writes the next page and receives a reward. It uses a lot of energy, and it's the method Bitcoin uses. The second is called proof of stake. Instead of competing with calculation, participants lock up coins as collateral, and the system chooses who writes the page. If that person tries to cheat, they lose the collateral. This is the method the Ethereum network adopted in September 2022, in a transition called The Merge."
+            },
+            {
+              "cena": 5,
+              "visual": "An animated scale: on one pan, \"energy\", on the other, \"collateral\". Both pans stay in balance, with an arrow saying \"nobody writes without paying\".",
+              "narracao": "Notice what the two have in common. Nobody writes in the notebook without paying a cost, whether it's energy or collateral. And nobody decides on their own what is true. That's the big idea behind a blockchain: a shared record without a central authority having the last word."
+            },
+            {
+              "cena": 6,
+              "visual": "A highlighted warning, gold on charcoal, with a discreet exclamation mark: \"Solid technology is not the same as a good project.\"",
+              "narracao": "Now an important warning. A blockchain solves a specific problem: keeping a shared record without a central entity. That doesn't mean the project is safe, or that the currency is good, or that the price will rise. Solid technology can be attached to a badly designed product. We'll separate these things throughout the course, and from module 2 onwards you'll have tools to do that."
+            },
+            {
+              "cena": 7,
+              "visual": "Illustrative example: Inês explaining the four-page notebook to her husband, who works in logistics, with the pages linked by arrows.",
+              "narracao": "Illustrative example, to close. Inês wanted to understand this with her husband, who works in logistics, and he asked her why nobody could erase the notebook. She answered with a simple three-step exercise: draw four pages, with two lines each, write on each seal a word that summed up the previous page, and then change one line on the first page to see what happened to the others. He got it in two minutes. You'll need a little more, and that's fine. You don't need to understand the maths to understand the logic. You just need to see why changing the past is so costly."
+            }
+          ],
+          "palavras": 609,
+          "minutos": 3.9
+        }
+      ]
+    },
+    {
+      "ficheiro": "modulo-2.md",
+      "titulo": "Módulo 2 — The crypto map (≈17 min)",
+      "aulas": [
+        {
+          "id": "2.1",
+          "titulo": "Aula 2.1 — Bitcoin: 21 million and the halving",
+          "gancho": "There's a coin that will only ever exist in 21 million units. Sounds like good news. But there's a detail: how do those units come into existence?",
+          "cenas": [
+            {
+              "cena": 1,
+              "visual": "A golden digital safe on a charcoal background. A counter in the corner shows 0 and slowly climbs towards a limit marked in red: \"21,000,000\".",
+              "narracao": "Bitcoin has a programmed limit: twenty-one million units, at most. That number wasn't chosen by chance, and it doesn't change by the decision of one person or one company. It is written into the protocol, and anyone who uses the network accepts that rule when they use it. It sounds simple, but it has an important consequence: the quantity of coins never grows without limit, and that is different from almost every currency you know."
+            },
+            {
+              "cena": 2,
+              "visual": "An animated clock with the caption \"210,000 blocks ≈ 4 years\". Each time the clock completes a turn, the reward is cut in half, with a small click.",
+              "narracao": "This is the halving, which means cut in half. Every two hundred and ten thousand blocks, the reward is cut in half. Since blocks come out, on average, every ten minutes, this happens roughly every four years. It isn't exact, because the pace varies a little, but it's the right order of magnitude for you to see the pattern."
+            },
+            {
+              "cena": 3,
+              "visual": "Animated graphic `halving`: a descending staircase. Each step shows the date and the reward per block. The last step blinks.",
+              "narracao": "Let's go through the sequence, which is what matters. Fifty units per block until 2012. Then twenty-five. In 2016, twelve point five. In 2020, six point two five. In 2024, three point one two five. Notice the pattern. Each cut slows the pace at which new units are created. The more time passes, the fewer new coins come in. That's why people who see Bitcoin as a store of value use this argument: it's a supply that shrinks over time, unlike currencies that central banks can issue with no technical limit."
+            },
+            {
+              "cena": 4,
+              "visual": "An animated scale: on one pan, \"less new supply\"; on the other, \"demand, news, mood, regulation\". The scale swings, without settling.",
+              "narracao": "Now the counterpoint, because there has to be one. Less new supply doesn't guarantee a high price. The price depends on how many people want to buy, how many want to sell, news, mood, regulation, and everything else. Think of a limited edition of a book: the print run is fixed, but nobody guarantees that readers will show up. A cut in the reward is one factor among many. History shows that the effect on the price is neither automatic nor predictable, and anyone who sells you a certainty on this point is selling you a fantasy."
+            },
+            {
+              "cena": 5,
+              "visual": "A sum on screen, step by step: \"50 + 25 + 12.5 + 6.25 + …\" and, underneath, \"× 210,000 = 21,000,000\".",
+              "narracao": "Let's do the sum, so you can see the number is real. If you add fifty, twenty-five, twelve point five, and so on, each period lasts two hundred and ten thousand blocks. If you multiply the sum of the rewards by that number of blocks, you get roughly twenty-one million. That's why the limit is what it is. It isn't a round number chosen to look nice; it's the result of a series that keeps shrinking. If you do the sum on your phone's calculator, you'll see the result approaches twenty-one million and never goes past it."
+            },
+            {
+              "cena": 6,
+              "visual": "Illustrative example: a cake with one hundred slices. Each person who helps bake receives ten slices, then five, then two and a half. The remaining slices are marked in grey.",
+              "narracao": "Illustrative example, with round, invented numbers. Imagine a cake that only has one hundred slices. In the first days, each person who helps bake gets ten slices. Then they get five. Then two and a half. The cake never goes past one hundred slices, and new slices become rarer and rarer. But this says nothing about whether the cake is good, or whether it's worth eating. Scarcity is a property, not an investment thesis."
+            },
+            {
+              "cena": 7,
+              "visual": "Illustrative example: Tiago, twenty-eight years old, a programmer in Braga, making notes in a notebook beside his laptop.",
+              "narracao": "Illustrative example: Tiago, twenty-eight years old, a programmer in Braga, understood this argument and found it reasonable. But he didn't stop there. He asked himself who was buying, why, and what would happen if those people stopped buying. That's the question I want you to keep in mind throughout this module. Scarcity explains one part of the story. Demand explains the other."
+            }
+          ],
+          "palavras": 582,
+          "minutos": 3.8
+        },
+        {
+          "id": "2.2",
+          "titulo": "Aula 2.2 — Ethereum: the village with rules that enforce themselves",
+          "gancho": "Bitcoin is a notebook of accounts. Ethereum tries to be a whole village, with rules that enforce themselves.",
+          "cenas": [
+            {
+              "cena": 1,
+              "visual": "Two notebooks side by side. The first has a single column, \"who has what\". The second has columns, functions and small blocks of code.",
+              "narracao": "Bitcoin was designed, above all, to record who has what. Ethereum launched in 2015 with a different ambition: to let anyone write rules into the notebook, and to have those rules run by themselves, without an intermediary. It isn't just a record of balances. It's a kind of shared computer, where many people run programmes at the same time, and everyone confirms the result."
+            },
+            {
+              "cena": 2,
+              "visual": "An animated vending machine. A coin goes in, the selection lights up, the product drops. Above it, the caption: \"if this, then that\".",
+              "narracao": "These rules are called smart contracts. The name is a bit misleading. They aren't contracts in the legal sense, and they aren't smart in the sense of thinking. They are programmes that run on the network. A helpful analogy is the vending machine. You insert a coin, choose an option, and the machine hands over the product. You don't need an employee to confirm it. The rule is inside, and it applies the same way to everyone. A smart contract works like this: if this happens, then that happens. When the condition is met, the action executes. Each of these programmes has the same skeleton: a rule, a condition and an automatic execution. The difference lies in what gets executed, and in who is responsible if something goes wrong."
+            },
+            {
+              "cena": 3,
+              "visual": "Four small icons: a loan, an exchange market, a game, a digital collection. Each has a question mark underneath.",
+              "narracao": "This opens many doors. You can have automatic loans, exchange markets between people, games, digital collections. I won't tell you which of these will work. Not all of them do, and some should never have existed. Just because something is technically possible doesn't mean it's a good idea to use it, or that it has any real use for you."
+            },
+            {
+              "cena": 4,
+              "visual": "A contract written on a screen, with a red line and a flashing warning: \"error in code\".",
+              "narracao": "And here comes the warning that is worth its weight in gold: code can fail too. A contract written in a hurry can contain a mistake, and mistakes on a blockchain are hard to correct, because the notebook can't be torn out. In 2016, a project called The DAO lost an enormous amount of ether because of a flaw in its code, and that led to a split of the network itself. I don't want to scare you with numbers. I want you to understand one thing: code is not a guarantee of anything on its own."
+            },
+            {
+              "cena": 5,
+              "visual": "A timeline: 2015 labelled \"launch\", September 2022 labelled \"The Merge\", and between the two an arrow changing colour from red to gold.",
+              "narracao": "Now let's talk about the big change in 2022. Until September of that year, Ethereum used proof of work, like Bitcoin. Then it moved to proof of stake. That transition is called The Merge. The network stopped depending on computers competing through calculation, and started depending on participants who lock up coins as collateral. The change altered how the network uses energy and how new coins are issued. But it didn't remove the need to understand what you're buying. A better technology doesn't fix a badly designed project."
+            },
+            {
+              "cena": 6,
+              "visual": "A wallet screen with a fee field flashing in yellow. Beside it, a label: \"twenty euros sent, similar fee\".",
+              "narracao": "It's also worth understanding how Ethereum charges for operations. Every action on the network has a cost, called a fee, and that fee varies with demand. At busy moments, it can become expensive. If you ever send a small amount and are surprised by the cost, now you know why. Illustrative example: Inês wanted to send twenty euros from one wallet to another, and the fee ended up almost as high as the transfer itself. It wasn't a tragedy. It was a lesson. Also think about this: when the network is very full, each operation competes with the others for space, and whoever pays more goes first. So the same transfer can cost little on a calm morning and a lot in a busy afternoon. Before any operation, always check how much it's going to cost you."
+            },
+            {
+              "cena": 7,
+              "visual": "Two columns on a board: \"Bitcoin\" and \"Ethereum\". Ruben writing, by hand, a question at the bottom: \"do I need a notebook or a programme?\"",
+              "narracao": "Think of these as two different tools. A simple notebook is good for recording who owes what. A programme running on the network is good for executing complicated rules without an intermediary. Both are useful, and both have their own risks. The common mistake is to assume that complexity means quality. Often it's just more surface area for things to go wrong."
+            }
+          ],
+          "palavras": 655,
+          "minutos": 4.2
+        },
+        {
+          "id": "2.3",
+          "titulo": "Aula 2.3 — Stablecoins: the digital dollar and the risk of whoever issues it",
+          "gancho": "There's a crypto that is supposed to always be worth one dollar. It looks like a safe vault. Ask yourself: who holds the key to the vault?",
+          "cenas": [
+            {
+              "cena": 1,
+              "visual": "A digital coin with the dollar symbol, sliding along a line that should be perfectly straight. The line trembles slightly.",
+              "narracao": "A stablecoin is a digital coin that tries to hold a fixed value, normally one dollar. The best-known examples are USDC and USDT. It sounds like the ideal scenario: a digital dollar that moves across the network in seconds. But notice the word tries. A stablecoin has no magic guarantee. On the contrary, its value depends on a concrete promise, and that promise has to be kept by someone."
+            },
+            {
+              "cena": 2,
+              "visual": "An illustration of a casino chip: a value written on its face, and behind it a small hand holding the promise.",
+              "narracao": "What a stablecoin promises is something specific: that, for each unit issued, there is an equivalent reserve, in cash or in low-risk assets, and that the issuer redeems it at the exact value. Think of a casino chip, or a supermarket voucher. The chip is worth what is printed on it because the casino honours it. If the casino stops honouring it, the chip loses value. A stablecoin works in the same way: its value depends on who issues it. An everyday example: a company meal card is only worth what the restaurant accepts, and the restaurant only accepts it while the system keeps paying it. Trust runs down in layers, and one weak layer drags the others down with it."
+            },
+            {
+              "cena": 3,
+              "visual": "A diagram with three linked boxes: \"reserves\", \"issuer\", \"redemption\". A panic arrow, coming from many people, points to \"redemption\".",
+              "narracao": "That's why there's a term you should know: issuer risk. Whoever issues the coin has to hold verifiable reserves, has to follow rules, and has to be able to redeem coins when people ask. If there are doubts about the reserves, or if many people try to redeem at the same time, the value can drift away from the dollar. That isn't a theoretical possibility. It's exactly the scenario that gets tested when the market panics."
+            },
+            {
+              "cena": 4,
+              "visual": "A line chart that rises to the right and, on one day, drops sharply. The caption says \"loss of peg\".",
+              "narracao": "This has already happened. In 2022, an algorithmic stablecoin, from an ecosystem that at one point became enormous, lost its peg to the dollar and dragged a lot of value down with it. It was not a coin backed by dollar reserves. It was a balancing mechanism between two digital coins. When that balance broke, the value collapsed. This story is the best argument for not trusting the word stable."
+            },
+            {
+              "cena": 5,
+              "visual": "A generic regulatory seal logo, with the abbreviation \"MiCA\" (Markets in Crypto-Assets) and a date: 30 December 2024.",
+              "narracao": "In the European Union, there is now a legal framework called MiCA, which has applied to crypto-asset service providers since thirty December 2024. It brings more rules, more transparency and more supervision. It's a real step forward. But rules are not price guarantees, and it's important not to confuse the two. A stablecoin can comply with regulation and still carry risks that depend on its reserves, its liquidity and the trust of the people who use it. Notice a practical difference: a regulation obliges companies to meet their duties. It doesn't oblige the coin to hold a fixed price. They are different things, and one doesn't replace the other."
+            },
+            {
+              "cena": 6,
+              "visual": "Illustrative example: one hundred units of a stablecoin, with the value dropping from one dollar to ninety cents.",
+              "narracao": "Let's look at an illustrative example, with round, invented numbers. Imagine you hold one hundred units of a stablecoin that is worth one dollar. If the coin loses its peg and drops to ninety cents, your balance is now worth ninety dollars. Nothing dramatic at first glance. But if you were using it as a safe haven, you've lost ten percent at the exact moment you were looking for security. That's what makes the example uncomfortable."
+            },
+            {
+              "cena": 7,
+              "visual": "Illustrative example: Rui, forty-one years old, a teacher in Leiria, at his desk with a notepad and three questions written on it.",
+              "narracao": "Why do people use stablecoins? To get out of volatile positions quickly, to send value between countries, to hold a digital dollar for a period of time. These are legitimate uses. But none of them removes the risk. Illustrative example: Rui, forty-one years old, a teacher in Leiria, had put part of his savings into a stablecoin, convinced it was idle money with no risk. When he asked where the reserves were and who audited them, he realised he had assumed something without checking it. He didn't lose everything, but he learned to ask questions. If you have doubts about how a value behaves, the first question is always the same: who is obliged to redeem it, and under what conditions?"
+            }
+          ],
+          "palavras": 669,
+          "minutos": 4.3
+        },
+        {
+          "id": "2.4",
+          "titulo": "Aula 2.4 — Altcoins, memecoins and the seven questions",
+          "gancho": "There are thousands of coins, and most of them will disappear. How do you tell a serious project from a joke with a logo?",
+          "cenas": [
+            {
+              "cena": 1,
+              "visual": "A screen full of coin logos appearing and disappearing, like leaves in the wind.",
+              "narracao": "We call altcoins all the cryptocurrencies that are not Bitcoin. There are many, with very different goals. Some try to be better payment systems, others want to connect data chains, others want to be platforms for applications. And then there are memecoins, which deserve a section of their own. A reminder: this is educational content, and not financial advice. The risk of loss is real, and in crypto it is often total."
+            },
+            {
+              "cena": 2,
+              "visual": "A coin drawn with a smiling face and the caption \"born from a joke\". Underneath, an attention bar that rises and falls quickly.",
+              "narracao": "A memecoin is often born from a joke, an image or a social media trend. As a rule, it doesn't solve a concrete problem. Its value depends almost entirely on the attention it receives. When the attention changes, the price changes. This can happen in hours, sometimes in minutes. Think of a soap bubble at a birthday party: it's pretty, everyone points at it, and it bursts without warning. And notice a word that keeps coming up: attention. If the value comes from attention, whoever sells early wins, and whoever buys late loses."
+            },
+            {
+              "cena": 3,
+              "visual": "Split screen: on the left, an advert with stars and the phrase \"guaranteed profit\". On the right, the same phrase crossed out in red.",
+              "narracao": "I'm not saying all of them are fraud. I'm saying the risk is extremely high and that, often, the marketing is the only product. When someone sells you a coin with a guaranteed profit, the right response is to be suspicious. No honest project can guarantee a return, and anyone who says it can is trying to stop you asking questions."
+            },
+            {
+              "cena": 4,
+              "visual": "A panel with seven numbers, from one to seven, in a row. Each number lights up when Ruben talks about it.",
+              "narracao": "So that you don't rely on instinct, I'm going to give you a tool: seven questions. They aren't a formula, they're a filter. If you can't answer one of them, you're not ready to buy. First: what problem does this project solve? If the answer is just it's going to go up, that's a bad sign. Second: who is behind it, and is that public? An anonymous team isn't necessarily fraud, but it raises the risk, and you need to know that before deciding. A project with identified people who publicly stand behind what they do carries a different kind of risk. Neither of them is free of risk."
+            },
+            {
+              "cena": 5,
+              "visual": "A pie chart: one very large slice in dark grey, labelled \"one wallet\", and small slices for the rest.",
+              "narracao": "Third: what is the total supply, and who holds it? If a small number of wallets hold most of the coins, the price can be manipulated easily. Fourth: is there real utility, or only speculation? Ask who uses the project for anything other than buying and selling. Fifth: who controls the code, and can they change it? If one person can change the rules without warning, you need to know that before you get in. A supplementary question worth asking: who decides on updates, and how are those decisions communicated?"
+            },
+            {
+              "cena": 6,
+              "visual": "An exit door labelled \"liquidity\". The door is narrow, and in front of it many people are pushing at the same time.",
+              "narracao": "Sixth: where is it traded, and is there enough liquidity to sell? An asset without buyers is an asset you can't sell at the price you see on the screen. Seventh, and perhaps the most useful: what happens if the project disappears tomorrow? If the answer is nothing, I lose everything, you already know how much you can risk. If you have no way of selling, the chart on the screen is just an opinion. These seven questions won't give you certainties. They'll give you better questions than the ones the advertising asks you."
+            },
+            {
+              "cena": 7,
+              "visual": "Illustrative example: a card with four lines marked in red and a final stamp: \"don't enter\".",
+              "narracao": "Illustrative example, with invented numbers. Imagine a coin that promises high yield, has a founder with no face, holds ninety percent of its supply in a single wallet, and has no use outside the coin itself. You've answered badly to almost all of them. You don't need anything more to decide not to enter. And if, on the other hand, the answers were good, they still wouldn't oblige you to buy. A good answer only tells you it's worth studying more, never that the price will go up. Also watch out for requests: if someone asks you to send crypto to unlock a sum of money, or pressures you to decide today, that isn't analysis. It's pressure. We'll talk about scams in more detail in module 5. Notice that I haven't asked you to get it right. I've asked you not to be carried away by haste, and to understand what you don't know yet."
+            }
+          ],
+          "palavras": 698,
+          "minutos": 4.5
+        }
+      ]
+    },
+    {
+      "ficheiro": "modulo-3.md",
+      "titulo": "Módulo 3 — Buying for the first time (≈17 min)",
+      "aulas": [
+        {
+          "id": "3.1",
+          "titulo": "Aula 3.1 — Authorized platform and KYC",
+          "gancho": "Your first crypto purchase might ask for your ID card, a selfie and your tax number. Strange? It isn't. It's there for a reason.",
+          "cenas": [
+            {
+              "cena": 1,
+              "visual": "A phone screen with a gold button that says \"buy\". Above it, a red warning: \"Confirm before you continue.\"",
+              "narracao": "Before you buy anything, you need a platform. It's called an exchange, or trading platform. It's where you swap euros for cryptocurrencies and back again. And at this stage, the choice is the most important decision you'll make in the whole bootcamp. More important than the price, the coin or the timing. Why do I say that? Because most of the serious losses people suffer don't start with the market. They start with the platform."
+            },
+            {
+              "cena": 2,
+              "visual": "An illustration of a bank vault with a half-open door and a small warning sign beside it.",
+              "narracao": "A platform that isn't authorized can run off with your money, freeze your account or lie about where the funds are. It doesn't have to be a sophisticated fraud. It just has to have nobody supervising what it does. Think of it this way: a restaurant with a license from the city council and one without a license can serve the same food. Only one of them has someone answerable to the law if something goes wrong. So the first test is simple: is the platform authorized, and does an official body supervise it? If the answer is no, the conversation ends here."
+            },
+            {
+              "cena": 3,
+              "visual": "A regulation document with the acronym \"MiCA\" highlighted, and beside it an official seal with the word \"register\".",
+              "narracao": "In the European Union there is the MiCA regulation, which we've already talked about. Platforms that provide crypto-asset services need authorization and are supervised. In Portugal, the body that supervises the securities markets is the CMVM, the Portuguese securities market regulator. Go to the official website of that body, or of the authority in the country where the platform says it's based, and check whether the platform appears on the register of authorized providers. If it isn't there, it doesn't matter how nice the website looks."
+            },
+            {
+              "cena": 4,
+              "visual": "Three sources of information side by side: an advert with stars, an influencer video, an official register page. The first two are blurred; the third is sharp.",
+              "narracao": "Don't rely only on a logo, an advert or an influencer who gets paid to talk about a platform. Trust the official register. Write down the platform's exact name, search for it in the register, and compare the name and the website domain with what's listed there. It sounds like extra work, and it's exactly the work that scammers hope you won't do. One minute of checking is worth more than any promotion that reaches you by message."
+            },
+            {
+              "cena": 5,
+              "visual": "A form screen with fields to fill in: name, date of birth, tax number, and a button to upload a photo of your document.",
+              "narracao": "Now, KYC. The letters stand for know your customer, and it's the identity verification process. You'll need to provide an identity document, often a selfie holding that document, and your tax number. It might feel intrusive. But it's exactly what the law requires to fight money laundering and fraud. It's also the difference between a serious platform and one that just wants your money with no questions asked. Anyone who asks you for documents is doing their duty. Anyone who asks for nothing deserves a second look. Notice that this isn't distrust of you. Banks do exactly the same when you open an account, and nobody finds that strange. In crypto, a lot of people still think anonymity is a feature. Almost always, it's a risk signal."
+            },
+            {
+              "cena": 6,
+              "visual": "A phone receiving a message with a link. Below it, an alarm icon and the sentence: \"Deposit now to unlock your account.\"",
+              "narracao": "It's worth spotting a warning sign. If a platform lets you deposit without verifying your identity, be wary. If it asks you for money off the books, or to unlock an account, or to pay a fee you've never seen before, set it aside. KYC isn't an obstacle. It's a sign that someone is doing their homework. And a message rushing you to deposit is almost always a message from someone who wants your money before you've had time to think."
+            },
+            {
+              "cena": 7,
+              "visual": "Illustrative case: Gonçalo, thirty-two, a maintenance technician in Setúbal, looking at a laptop with the official register open.",
+              "narracao": "Illustrative case: Gonçalo, thirty-two, a maintenance technician in Setúbal, was about to deposit money into a platform that had reached him through a message. It looked well made, and it even had a support contact with a name. Before going ahead, he checked the official register and couldn't find the platform. He didn't buy anything. He learned that the message was a trap. It sounds like a small thing, but it was the most valuable decision he made that month."
+            }
+          ],
+          "palavras": 654,
+          "minutos": 4.2
+        },
+        {
+          "id": "3.2",
+          "titulo": "Aula 3.2 — The real cost of buying",
+          "gancho": "You buy a hundred euros of a crypto and, a minute later, it's worth less than a hundred euros. The price hasn't even moved. So what happened?",
+          "cenas": [
+            {
+              "cena": 1,
+              "visual": "An animated purchase receipt. Each line appears in turn: \"amount\", \"fee\", \"spread\", \"total\". The total is underlined.",
+              "narracao": "When you buy crypto, you pay more than the price you see on the screen. That's not a trick. These are costs, and it's worth knowing them before you buy, not after. Imagine you're buying an item of clothing in a shop, and at the till an extra amount appears that wasn't on the price tag. You don't feel cheated if you already knew that amount existed. You feel cheated when nobody warned you. There are three costs that almost everyone runs into. The first is the platform fee. It's a percentage of the value of the transaction, and it can vary depending on the payment method and the type of account. Always read the full fee table, not just the summary on the front page."
+            },
+            {
+              "cena": 2,
+              "visual": "A bar with two prices: on the left, \"buy price\", a little higher; on the right, \"sell price\", a little lower. A gap between the two bars, marked in gold.",
+              "narracao": "The second cost is the spread. It's the difference between the price at which you buy and the price at which you sell, at the same moment. If the buy price is a bit higher than the sell price, that difference is the spread, and it stays with the platform or with whoever is making the market. It sounds like a detail, but you feel it on every trade, even when you don't notice it."
+            },
+            {
+              "cena": 3,
+              "visual": "A wallet icon receiving an arrow, labelled \"network fee\". The arrow changes size depending on demand.",
+              "narracao": "The third cost, if you transfer to your own wallet, is the network fee. Every transfer on the blockchain has a cost, and it changes with how busy the network is. We've already seen this with Ethereum. It isn't the platform that charges it, it's the network itself. And anyone who doesn't know this is surprised when the amount that arrives is smaller than the amount they sent."
+            },
+            {
+              "cena": 4,
+              "visual": "Illustrative example: a paper receipt with round numbers. \"€100 purchase\", \"− €1 fee\", \"− €0.50 spread\", \"= €98.50 real value\".",
+              "narracao": "Let's do the sums with round, hypothetical numbers. Illustrative example. You buy one hundred euros. The platform charges a one percent fee. The spread, at that moment, is half a percent. You're paying around one and a half euros in costs. About ninety-eight euros and fifty cents is left, in market terms. That seems small. But look at it from the other side. A cost of one and a half euros on a hundred-euro purchase looks like rounding. Only, the cost doesn't sit still: it works against you from the first second."
+            },
+            {
+              "cena": 5,
+              "visual": "An arrow pointing down two percent from the 98.50 euro position. The balance drops to 96.53, and a second arrow, pointing up, tries to get back to the starting point.",
+              "narracao": "If the price falls two percent straight after, your balance drops to around ninety-six euros and fifty cents. You need the price to rise by more than two percent just to get back to where you started. The costs push you backwards before the market gives you any gain. And the more often you buy and sell, the more the costs eat into the result. Every trade carries a small, invisible tax, and it adds up. This isn't a rule made up by sellers. It's arithmetic. Someone who gets in and out often has to earn more just to stay where they were. This example isn't special in any way: it's the same for anyone buying the same amount, with the same fees."
+            },
+            {
+              "cena": 6,
+              "visual": "Ruben holding a calculator in his hand, turning the camera to show the screen.",
+              "narracao": "This is the part a lot of people skip. Think about the total cost of getting in and getting out. If you buy and sell, you pay twice. If you just hold, you pay once, but waiting also costs something, in risk and in opportunity. I'm not saying buying is bad. I'm saying the cost has to be on the sheet before the first click. If you only think about the price, you're seeing half the bill. And there's one detail that's worth its weight in gold: the cost of buying with a card is often different from the cost of transferring from a bank. Always ask which method is cheapest for your case, and compare against the official fee table, not against your memory."
+            },
+            {
+              "cena": 7,
+              "visual": "Illustrative case: Inês comparing an app with a notebook, a pencil crossing out a line.",
+              "narracao": "Illustrative case: Inês made a small purchase and noticed the app showed a slightly lower value than what she had paid. She thought the app was wrong. It wasn't. It was the fees and the spread. After working it out with pen and paper, she understood everything, and from then on she looked at the cost before every trade. It was the best way for her to learn, because the mistake cost her very little."
+            }
+          ],
+          "palavras": 711,
+          "minutos": 4.6
+        },
+        {
+          "id": "3.3",
+          "titulo": "Aula 3.3 — Market order or limit order",
+          "gancho": "You press the buy button, and the price on the screen isn't the price you pay. Let's understand why.",
+          "cenas": [
+            {
+              "cena": 1,
+              "visual": "Two buttons side by side: \"market\" and \"limit\". Under each, a short text explaining the difference.",
+              "narracao": "When you place an order on a platform, you have to choose an order type. The two most common are the market order and the limit order. They sound like technical jargon, but they decide what happens to your money. Let's take them one at a time, calmly, because this is one of the points where people most often slip up on their very first purchase."
+            },
+            {
+              "cena": 2,
+              "visual": "An animation of an arrow shooting up fast, with a market order executed a little above the price shown on the screen.",
+              "narracao": "A market order tells the platform: buy now, at whatever price is available. It's fast, and it guarantees the purchase goes through. The risk is that the price can move between the moment you press the button and the moment the order is executed. In fast markets, that's called slippage, and it can be significant. You're certain to buy, but you're not certain of the price. Think of a market stall: you pay the price written on the sign. On a busy platform, the price can change between when you press the button and when the order arrives. It's the same idea, just at a different speed."
+            },
+            {
+              "cena": 3,
+              "visual": "A horizontal line marked \"€100\". A limit order sits below it, labelled \"I only buy up to here\". The price arrow comes down, touches the line, and the order executes.",
+              "narracao": "A limit order says: only buy if the price is equal to or lower than this value that I choose. You control the maximum price you'll pay. The risk is that the order never gets filled, if the price never reaches your level. You're left without a purchase, and nothing happens. It seems weak, but it's a form of protection. In practice, a limit order won't buy for you at the worst moment. It can also be only partly filled if there isn't enough liquidity at that price. Read the platform's terms on this point, because they vary from place to place."
+            },
+            {
+              "cena": 4,
+              "visual": "Illustrative example: an asset at €100. Two scenarios in parallel: one rises to €102, the other stays put, waiting.",
+              "narracao": "Let's go with an illustrative example and invented numbers. Imagine an asset that's trading at one hundred euros, and you want to buy one hundred euros' worth of exposure. With a market order, you buy straight away, and the price may rise to one hundred and two in the second it takes to execute. With a limit order at ninety-eight, you only buy if the price falls to that level. If it doesn't fall, you don't buy. Neither one is the universal answer. Each one chooses a different risk."
+            },
+            {
+              "cena": 5,
+              "visual": "A set of scales with two pans: one says \"certainty of execution\", the other \"certainty of price\". The scales wobble, and the needle settles in the middle.",
+              "narracao": "Notice what this means. A market order trades certainty of price for certainty of execution. A limit order trades certainty of execution for certainty of price. There isn't one that's better in every situation. Anyone who says one order type is always superior to the other is oversimplifying, and in markets, oversimplifying tends to be expensive. There's one that suits what you're doing, the time you have and how much price movement bothers you. Think about time too: if an order stays open for days, the market can change completely, and the order you wrote yesterday may no longer reflect what you want today."
+            },
+            {
+              "cena": 6,
+              "visual": "A table with two columns: \"I use market when\" and \"I use limit when\". Ruben pointing at the columns.",
+              "narracao": "For someone just starting out, the practical rule is this. Use a limit order when you're not in a hurry and want to control the price. Use a market order when you need to get in now and you accept the price movement. But never use a market order in a moment of panic, because that's when the price moves the most. If the screen is red and you feel the urge to get in right now, that urge is your signal to stop and read your notes. And watch out for a common mistake: setting a limit too close to the current price, thinking it's a bargain, and then staring at an order that never fills. A limit has to be a decision, not a guess."
+            },
+            {
+              "cena": 7,
+              "visual": "Illustrative case: Gonçalo, the technician from Setúbal, looking at a trade history with a market order highlighted.",
+              "narracao": "Illustrative case: Gonçalo placed a market order on a day of fast-moving news, and paid more than he had expected. It wasn't a disaster, but he learned that an order is a decision, not an automatic click. Since then, he always writes down the maximum price he's willing to pay before pressing any button."
+            }
+          ],
+          "palavras": 668,
+          "minutos": 4.3
+        },
+        {
+          "id": "3.4",
+          "titulo": "Aula 3.4 — Your first euro",
+          "gancho": "Your first purchase should be the smallest of all. It isn't timidity. It's method.",
+          "cenas": [
+            {
+              "cena": 1,
+              "visual": "Ruben writing a number on a sheet of paper, then underlining it twice. A caption appears: \"loss limit\".",
+              "narracao": "We've reached the moment of buying. Before that, I want you to set a limit. Not a profit target, a loss limit. An amount that, if it disappears, won't change your life. Choose it calmly, without rushing. Ask yourself: how much money can I lose without hurting my income, my food, the household bills, my emergency fund? That amount, or a small fraction of it, is your first euro. If you can't find an amount like that, don't buy. There's no hurry, and no coin will vanish because you waited a week. A loss limit isn't a forecast. It's a rule you write for yourself, before the market starts talking."
+            },
+            {
+              "cena": 2,
+              "visual": "An animated list of steps, each with a tick appearing: \"2FA\", \"address verified\", \"small test\", \"decision made\", \"record kept\".",
+              "narracao": "Let's go through the practical steps, so you don't improvise. One: turn on two-factor authentication on the platform. It's the code that goes to your phone when you log in. Without it, anyone who finds out your password can get into your account. Two: confirm the address of everything you're going to use. The site, the app, the platform's name. Type the address by hand or save it in your bookmarks, and never click on links that reach you by message."
+            },
+            {
+              "cena": 3,
+              "visual": "A small deposit animation, with a symbolic amount going into the account and a tick appearing beside it.",
+              "narracao": "Three: do a test run first. A small deposit, a small purchase and, if relevant, a small transfer to check the route works. Only then do you increase. The first operation is there to learn the process, not to make money. If something doesn't add up, you'll find out with little at stake. And a golden rule: don't test with the amount you intend to use for the big purchase. The test is for learning the route, not for testing your luck."
+            },
+            {
+              "cena": 4,
+              "visual": "A market screen flashing green, and below it a buy button with a small padlock showing it isn't loaded yet.",
+              "narracao": "Four: buy only after you've made the decision, not during a price move. When the screen is flashing green, the temptation is to jump in now. That urge is the first sign to stop. Decisions made under the pressure of a chart are rarely the best, because the chart knows nothing about your life. A useful trick: write the decision down in a note before you open the app, with the amount and the reason. If the urge to buy passes, the note is still there, and you decide with a cool head."
+            },
+            {
+              "cena": 5,
+              "visual": "An open notebook with a table drawn in it: \"date\", \"amount\", \"price\", \"fee\", \"order type\", \"reason\".",
+              "narracao": "Five: record everything. Date, amount, price, fee, order type, reason. It sounds like paperwork, but that's where you learn. In three months' time, you'll look back at this record and understand better than you do today what worked and what didn't. People who don't keep records tend to remember only what went well, and that fools anyone. If, when you review the record, you notice you buy whenever the price goes up and make mistakes when it goes down, you already have precious information about yourself. That's worth more than any technical analysis."
+            },
+            {
+              "cena": 6,
+              "visual": "Illustrative case: Inês with the printed checklist on a café table, each line ticked off in pen.",
+              "narracao": "Illustrative case: Inês did exactly this. She chose an amount she didn't need, turned on authentication, tested with a small deposit and wrote each step in a notebook. She didn't get rich or poor in the first month, and that wasn't the goal anyway. She ended up with a process, and that's what we want you to have. The process is what protects you when emotions get in the way. And if one day the checklist tells you no, that isn't a failure. It's the process working."
+            },
+            {
+              "cena": 7,
+              "visual": "Ruben standing, medium shot, closing the notebook. On-screen text: \"Educational content, not financial advice. The risk of loss is real.\"",
+              "narracao": "Exercise: create a five-line checklist with the steps I've just gone through, and tick each one off as you do it. Don't move on to buying until you have all five. If you think one line doesn't apply, write down why, and talk to someone you trust before you cross it off. Let me repeat the essentials of this module: educational content, not financial advice, and the risk of loss is real. If the amount you've chosen doesn't let you sleep soundly, it's because it's too high."
+            }
+          ],
+          "palavras": 647,
+          "minutos": 4.2
+        }
+      ]
+    },
+    {
+      "ficheiro": "modulo-4.md",
+      "titulo": "Módulo 4 — Your key: wallets and the seed phrase (≈17 min)",
+      "aulas": [
+        {
+          "id": "4.1",
+          "titulo": "Aula 4.1 — Hot and cold wallets",
+          "gancho": "A wallet doesn't store coins. It never has. It stores keys. And whoever holds the key holds the money.",
+          "cenas": [
+            {
+              "cena": 1,
+              "visual": "An animation of an open wallet, with a golden key coming out of it. Behind it, the blockchain appears as a grid of pages, and the key points to one of them.",
+              "narracao": "Let's correct something right away, because it's the most common confusion. A crypto wallet isn't a safe with coins inside. The coins live on the blockchain, the shared ledger we talked about in module 1. The wallet holds the keys that let you sign transactions, and those keys are what give you access to the value. Once you understand this, the way you think about security changes, because you stop looking for where the coins are and start looking for where the keys are. Think of an everyday analogy: your bank card number doesn't give you money, but anyone who has it and knows the code can spend. With crypto, the key plays that role, only there's no counter and no complaints department."
+            },
+            {
+              "cena": 2,
+              "visual": "A golden key in the foreground against a charcoal background. The sentence appears slowly: \"In crypto, whoever holds the key holds the money.\"",
+              "narracao": "That's why the key is the metaphor for this bootcamp. In crypto, whoever holds the key holds the money. There's no manager you can ask for a replacement, and no counter where you can explain that you lost your card. If the key is lost, access is lost. If the key is stolen, the value goes with it. That may sound harsh, but it's exactly what gives meaning to the phrase being the owner of your money. Being the owner also means being responsible."
+            },
+            {
+              "cena": 3,
+              "visual": "A phone screen with an app open, and a small padlock blinking in the corner. Label: \"hot wallet\".",
+              "narracao": "There are two main types of wallet. The first is the hot wallet. It's an app or a program connected to the internet. It's convenient, quick, and good for everyday operations. The risk is that, because it's connected, it's more exposed: to an infected phone, a fake website, a copied app that looks identical to the original. Convenience and exposure always go together. A well-built app isn't insecure for that reason, but you need to check every time where you downloaded it from."
+            },
+            {
+              "cena": 4,
+              "visual": "A small physical device being plugged into a computer with a cable. Beside it, a screen on the device itself asks for confirmation. Label: \"cold wallet\".",
+              "narracao": "The second is the cold wallet. It's a physical device, often the size of a USB stick, that keeps your keys offline. To sign a transaction, you plug it in and confirm on the device itself. A well-known commercial example is Ledger, which is sold in the MTM shop. The advantage is that the key never leaves the device. The downside is that it's less convenient, and if you lose it without a backup, the problem remains. We'll get to that."
+            },
+            {
+              "cena": 5,
+              "visual": "An animated bar chart `tipos-carteira`: two columns compared in bars. \"Convenience\", \"exposure\", \"daily use\", \"long-term storage\". Each bar grows into its place.",
+              "narracao": "Here's a simple comparison. A hot wallet is like having cash in your pocket: it's within reach, and it's good for buying a coffee. A cold wallet is like a safe at home, with a key that only you use, for your savings. Neither one is the universal answer. It depends on how much you have, how often you move it, and how much risk you're willing to take. The chart shows the trade-off: the more convenience, the more exposure. It isn't a quality ranking. A cold wallet isn't better in every situation; it's better for certain situations."
+            },
+            {
+              "cena": 6,
+              "visual": "Ruben pointing at a rule written on a board: \"small amount, frequent use → hot. Amount parked → cold.\"",
+              "narracao": "There's a practical rule worth keeping. Small amounts you use often can live in a hot wallet. Amounts you won't touch for months deserve a cold one. And no wallet protects you from your own mistakes, like sending to the wrong address, or signing something you didn't understand. Technical security doesn't replace attention. Before you confirm any transaction, read what you're confirming. Also note that a cold wallet won't save you from scams. If someone convinces you to sign a malicious transaction on the device itself, the technology is there, but you're the one deciding."
+            },
+            {
+              "cena": 7,
+              "visual": "Illustrative case: Tiago, a programmer from Braga, looking at his phone with a \"wallet recovered\" message on the screen.",
+              "narracao": "Be careful: the wallet address is public, like an account number. You can share it to receive funds. But the private key and the recovery phrase never. Illustrative case: Tiago had almost everything in a phone app. One day he lost the device. He managed to recover the account because he had the recovery phrase stored, but he spent a whole weekend sorting it out. He learned that convenience has a price, and that the price is paid in time, stress and attention."
+            }
+          ],
+          "palavras": 666,
+          "minutos": 4.3
+        },
+        {
+          "id": "4.2",
+          "titulo": "Aula 4.2 — The seed phrase: the words that are worth everything",
+          "gancho": "Twelve or twenty-four words, in a precise order. Whoever has them has the money. Nobody else needs you for anything.",
+          "cenas": [
+            {
+              "cena": 1,
+              "visual": "A grid of twelve numbered boxes, filling in word by word, with the label \"seed phrase\".",
+              "narracao": "When you create a wallet, the app or the device generates a recovery phrase. It's called a seed phrase, or secret recovery phrase. It usually has twelve or twenty-four words, in a specific order. In practice, that phrase is the master key to your wallet. It isn't a password you can change whenever you like. It's the origin of the keys themselves, and whoever has it can recreate the wallet anywhere. Think of it as the combination of a safe, not the door: whoever knows it can open the safe from anywhere, at any time, and leave no trail that anyone can follow in time. Also note that the phrase is generated once, when you create the wallet. That's why it's the moment you need to be most alert."
+            },
+            {
+              "cena": 2,
+              "visual": "A lost phone on a table, and beside it a sheet of paper with the words handwritten. An arrow shows the wallet reappearing on a new computer.",
+              "narracao": "Why does it matter so much? Because if you lose your phone, if the app fails, if the device breaks, you can recreate the wallet somewhere else with just those words. Without them, there is no recovery. And with them, whoever holds them can do everything you do. They don't need your password, your code or you. This is the difference that most people don't understand."
+            },
+            {
+              "cena": 3,
+              "visual": "A screen with four numbered rules appearing one by one, each with a \"not allowed\" icon beside it.",
+              "narracao": "That's why there are rules that always apply. There are no exceptions. First rule: never enter your seed phrase on a website. Not to verify, not to recover, not to unlock. No serious platform, no legitimate support team, no official app will ever ask you for those words. Second rule: never send it to anyone, by message, email, call or photo. If someone introduces themselves as support and asks for the phrase, it's a scam. Full stop."
+            },
+            {
+              "cena": 4,
+              "visual": "A phone screen with an incoming call and a generic name: \"Support\". Below it, the line: \"Confirm your words to validate your account.\"",
+              "narracao": "Third rule: never photograph it, and never store it on your phone, your computer, your email, a notes app or in the cloud. Any digital copy is a copy that can be stolen, often without you noticing. Fourth rule: write it by hand, on paper, with a pen. And never keep it in the same place as your bank card or your passwords."
+            },
+            {
+              "cena": 5,
+              "visual": "Illustrative example: Inês on the phone, with a notes sheet on the table and a question mark growing on the screen.",
+              "narracao": "Does this sound like overkill? Think about it. Most people who lose crypto don't lose it because of the market. They lose it because they gave the words to someone who phoned them saying they were from support. Illustrative example: Inês received a call from a number that claimed to belong to a platform. The person on the other end was friendly, had a professional tone, and asked her for the words to confirm her identity. She hung up. Only later did she realize she had come within a step of losing everything, and that the pressure was part of the scheme."
+            },
+            {
+              "cena": 6,
+              "visual": "Three keywords highlighted one at a time: \"urgency\", \"authority\", \"request for words\". Below them, the caption: \"always the same script\".",
+              "narracao": "Notice the pattern. Urgency, authority, a request for words. It's always the same script, and only the platform's name and the tone of voice change. When you feel the pressure rising, stop. No legitimate person needs you in that much of a hurry. No message, no video and no call that starts with urgency is a good reason to unlock anything. Urgency is the favorite tool of anyone who wants your money before you've had time to think. And if the call pushes you to decide now, the answer is to hang up and call the official number yourself. We'll look at all the scam patterns in module 5."
+            },
+            {
+              "cena": 7,
+              "visual": "Ruben at a clean sheet of paper, writing the words one by one, with the number beside each, then checking them with his finger.",
+              "narracao": "Let's go through the correct way to store it. Take a clean sheet of paper, write the words one by one, with the number beside each, and check them twice. Then keep the sheet somewhere dry and secure. Don't fold it too often, because paper and damp don't get along. If you ever write a word down wrong, don't try to guess the correction on anyone's screen. Start the sheet again, calmly, at home, with nobody rushing you. And don't show it or photograph it, not even to remind yourself of a word. If you ever need to recover, use only the official app, downloaded from the official stores, and never a link someone sent you."
+            }
+          ],
+          "palavras": 682,
+          "minutos": 4.4
+        },
+        {
+          "id": "4.3",
+          "titulo": "Aula 4.3 — Not your keys, not your coins",
+          "gancho": "Leaving crypto on a platform is a bit like leaving money in a bank. It's convenient. But who holds the key?",
+          "cenas": [
+            {
+              "cena": 1,
+              "visual": "A sentence highlighted in gold on charcoal: \"not your keys, not your coins\". Below it, the plain meaning: \"if you don't hold the keys, you don't hold the coins\".",
+              "narracao": "There's a phrase that veterans repeat: not your keys, not your coins. In plain terms, it means: if you don't hold the keys, you don't hold the coins. Let's understand what that means, without dramatizing it, because the phrase doesn't mean that leaving crypto on a platform is automatically a mistake. It means you need to know what you're accepting when you do it."
+            },
+            {
+              "cena": 2,
+              "visual": "An illustration of a platform as a big safe with many drawers. Each drawer has a username. One of them is marked: \"your balance\".",
+              "narracao": "When you buy crypto on a platform and leave it there, the platform keeps the keys for you. This is called third-party custody. It's the most convenient option. You recover your password if you forget it, you see your balance on the screen, and you can sell with one click. For many people, this convenience is exactly what they're looking for, and there's nothing wrong with that, as long as the choice is made knowingly."
+            },
+            {
+              "cena": 3,
+              "visual": "A line between two boxes: \"platform\" and \"you\". The line grows thin and flickers, with a warning icon.",
+              "narracao": "The price of that convenience is that you start depending on the platform. If the platform has a technical problem, if it's attacked, if it's badly run, or if it stops operating, your access can be blocked. In some cases, the money may not come back. It isn't the most common scenario, but it's exactly what the word custody means: someone looks after what belongs to you, and you have to trust that they do. Think of a traditional bank: the money is in your name, but the bank has the systems, and you trust it to keep them secure. With crypto it's similar, only the regulation and the recovery rights vary a great deal from case to case."
+            },
+            {
+              "cena": 4,
+              "visual": "A split screen: on the left, a personal wallet with a key in the hand of the person using it. On the right, a platform vault with a padlock that isn't yours.",
+              "narracao": "And there's the opposite too. A personal wallet, with no custody, gives you full control. But if you lose the key, you lose everything, and there's nobody to ask for help. The risk moves from whoever holds it for you to yourself. Notice that the word recover can mean two things: recovering your account, when you've forgotten your password, and recovering your money, when something goes wrong. The first is normal. The second depends on who holds it and on the rules you accepted when you signed up. There's no abstract right choice. There's the right choice for your situation, for your amount, for the way you handle technology."
+            },
+            {
+              "cena": 5,
+              "visual": "A simple chart: a large bar labeled \"trading\", sitting above a small bar labeled \"savings parked\". An arrow marks the split.",
+              "narracao": "Many people use a hybrid approach. They leave on the platform the amount they use for trading, and move to a cold wallet the amount they want to keep for months. It isn't the only way to do it, but it's a sensible way to separate what moves from what rests. And separating is often the best protection there is. Remember the essentials: separating isn't running away. Someone who separates has a plan for each part, and that's what sets management apart from improvisation."
+            },
+            {
+              "cena": 6,
+              "visual": "A rule written on a board: \"the more value and the less use → more self-custody. The less value and the more use → regulated platform, with support.\"",
+              "narracao": "Here's a practical rule. The more value you have, the less waiting time you accept, and the greater the need for self-custody. The less value and the more you use it, the more sense it makes to be on a regulated platform, with support and account recovery. Nobody is forcing you to pick one extreme. You can sit somewhere in the middle, as long as you know where you stand. Before you leave value anywhere, read the custody terms, find out who is responsible and how an account is recovered. If you can't find that information, it's one more question to ask before you go ahead."
+            },
+            {
+              "cena": 7,
+              "visual": "Illustrative case: Rui, a teacher from Leiria, looking at a notebook where he has written a list of steps, with a tick beside each one.",
+              "narracao": "Illustrative case: Rui, a teacher from Leiria, had everything on one platform and had never thought about it. When he understood the difference, he didn't change everything overnight. It isn't about being better or worse. It's about knowing where your responsibilities lie. He started by moving the part he wasn't using into a cold wallet, and left the rest where it was for trading. He made the change calmly, and wrote down each step. It took a few weeks, and he says it was the best use of his time in crypto so far."
+            }
+          ],
+          "palavras": 672,
+          "minutos": 4.3
+        },
+        {
+          "id": "4.4",
+          "titulo": "Aula 4.4 — The storage plan: copies that survive",
+          "gancho": "A wet piece of paper can't be read. A stolen photo protects nothing. How do you keep a key safe for twenty years?",
+          "cenas": [
+            {
+              "cena": 1,
+              "visual": "Three animated icons in a row: a flame, a drop of water, a clock labelled \"years\". Each one passes over the backup without destroying it.",
+              "narracao": "We've reached the last lesson of the module, and the plan you're going to put together. The central idea is this: your backup has to survive three things. Fire, water, and your own forgetfulness. It may sound like an exaggerated list, but it's the list of problems most people report when they lose access. A good plan thinks about these three risks from the start, not when it's already too late."
+            },
+            {
+              "cena": 2,
+              "visual": "A metal plate slowly rotating, with the words engraved on it. Label: \"Cryptotag Zeus, sold in the MTM shop\".",
+              "narracao": "Paper is cheap and good for getting started. But paper degrades with damp, with time, with a spilled coffee. That's why many people use metal plates, with the words engraved or stamped into them. One product sold in the MTM shop is the Cryptotag Zeus, a metal plate for recording your seed. It isn't the only method, and it isn't mandatory. It's a way to have a copy that doesn't wear out easily, and that already counts for a lot."
+            },
+            {
+              "cena": 3,
+              "visual": "A four-step plan appearing on a board: \"1. how many copies\", \"2. where\", \"3. who knows\", \"4. test\".",
+              "narracao": "Let's build the plan in four steps. First, decide how many copies you want. Two is the reasonable minimum. One copy means that if it's lost, you lose everything. And if the paper copy and the metal copy are in the same place, you aren't making two copies. You're making one, twice. More than three complicates management and increases exposure. For most people, two well-kept copies are the right balance between security and simplicity."
+            },
+            {
+              "cena": 4,
+              "visual": "A simple map of a house and an outside location, with two copies marked in different spots. A dotted arrow links the two places.",
+              "narracao": "Second, choose different locations. If both copies are in the same drawer, a fire or a burglary takes both. Think about home, and a trusted place outside it, with safe and discreet access. The goal isn't to hide them, it's to spread the risk. A copy that survives a problem at home is a copy that saves you."
+            },
+            {
+              "cena": 5,
+              "visual": "Two people on a screen with a padlock between them. The one on the left has a sealed envelope. The one on the right has nothing in their hand.",
+              "narracao": "Third, decide who knows what. Nobody needs to know the phrase. It's enough for someone you trust to know that a plan exists, and where the copies are, in case something happens to you. That person doesn't need to have the words. If they do, they become one more point of failure, and one more place where the phrase can be copied without you knowing."
+            },
+            {
+              "cena": 6,
+              "visual": "A test screen: an empty wallet, a phrase being entered, and a green tick appearing when the wallet recovers successfully.",
+              "narracao": "Fourth, test the recovery. This is the part almost nobody does, and it's the most important. With a zero or negligible amount, in an official app, try to recreate the wallet using only the written phrase. If you manage it, the copy works. If you don't, you've discovered the problem now, and not when you really need it. A failed test today is a cheap lesson. A test that reveals a failure ten years from now is a loss. Repeat the test whenever you change wallet or app, and at least once a year, because apps change and memory does too."
+            },
+            {
+              "cena": 7,
+              "visual": "Illustrative case: Inês with a metal plate in one hand and a folded sheet of paper in the other, on a wooden table.",
+              "narracao": "Illustrative case: Inês engraved the phrase on a metal plate, kept a second paper copy in a relative's safe, and did the recovery test with a symbolic amount in a test wallet. It took an afternoon. For her, it was the most useful afternoon of the year as far as crypto goes. Not because she gained anything, but because she stopped depending on luck. Notice that the plan doesn't require anything technical. It requires method and discipline. Inês didn't have to become an expert. She had to have a plan and stick to it."
+            },
+            {
+              "cena": 8,
+              "visual": "Ruben closing a notebook, with the phrase \"the key has to work before you use it for real\" appearing in the corner.",
+              "narracao": "The idea I want you to take from here is that the four steps have one common goal: for your key to keep existing when you're no longer paying attention to it. A key that only works in your head isn't a key. It's a hope. And hope isn't a security plan. Think of it as insurance: you don't like paying for it, but you never see it as wasted on the day you need it."
+            }
+          ],
+          "palavras": 642,
+          "minutos": 4.2
+        }
+      ]
+    },
+    {
+      "ficheiro": "modulo-5.md",
+      "titulo": "Módulo 5 — Anti-scam shield (≈17 min)",
+      "aulas": [
+        {
+          "id": "5.1",
+          "titulo": "Aula 5.1 — Fake support and requests for your key",
+          "gancho": "Imagine you get a message from a platform's support team saying your account has been blocked and you have to act right now. If that makes you nervous, this lesson is for you.",
+          "cenas": [
+            {
+              "cena": 1,
+              "visual": "A phone screen with a private message notification. The logo looks almost identical to the original, but the lettering is slightly different. A clock in the corner is counting down.",
+              "narracao": "Let's start with the most common scam, and also the easiest one to stop. Someone messages you on social media or in a group chat and presents themselves as a platform's support team. They say your account has been blocked, that there's an urgent verification, and that they need to confirm something. The message looks real. It has the right logo, the right language and even a reference number. But it's a lie, and the urgency is the first clue. Whoever is trying to catch you needs you to make a quick mistake, without thinking twice. That's why the countdown clock isn't a detail. It's their main weapon."
+            },
+            {
+              "cena": 2,
+              "visual": "Three padlocks animated as they close, labelled: password, two-factor code, seed phrase.",
+              "narracao": "Here's the rule that is never broken. No legitimate support team will ask you for your seed phrase. They won't ask for your password, or for the code that arrives by SMS or in the app. And they won't write to you first to say you have a problem. The seed phrase, those twelve or twenty-four words you keep to recover your wallet, is the key to everything you hold there. Whoever has it has the money. There are no exceptions, not for support, not for a technician who calls you, not for anyone who says they work with the platform. If a message asks you to confirm something you never even looked for, the answer is no."
+            },
+            {
+              "cena": 3,
+              "visual": "Illustrative case. A café in Coimbra, Inês sitting by the window with her phone in her hand. Small caption: \"illustrative case\".",
+              "narracao": "Let me tell you an illustrative case. Inês, twenty-nine, a nurse in Coimbra, received a message like this one on an afternoon off, while she was having a coffee. The support name looked official, and they asked her to validate her account through a website. She was suspicious for a simple reason: the message arrived without her having asked anyone for help. Instead of clicking, she closed the conversation, opened the app she already had installed and looked for herself. There was no block at all. There was a trap waiting for one tap."
+            },
+            {
+              "cena": 4,
+              "visual": "A split screen. On the left, a long, strange link. On the right, the official app, with the address typed by hand into the browser.",
+              "narracao": "That's exactly what Inês did, and it's what you should do too. If you think there's a problem with an account, don't use the link you received. Open the official app, or type the website address by hand into your browser. Look for the information there. If the problem is real, you'll find it in the right place, in the security area or in the notifications. If nothing shows up, the message was fake, and you stopped it without losing anything. This habit seems small, but it's what separates people who lose money from people who don't. Also save the official address in your bookmarks, so you can use it next time without relying on anyone."
+            },
+            {
+              "cena": 5,
+              "visual": "Large text on screen: \"If someone asks for your key, it's a scam.\" The word \"support\" is crossed out in red.",
+              "narracao": "Keep this sentence: if someone asks for your key, it's a scam, even if they look like support. Don't reply out of politeness, don't send a test message and don't click to sort it out quickly. Block the contact, report it on the platform where it appeared, and warn anyone who might be in the same situation, especially older family members, who are a favorite target for these messages. Scammers buy lists of accounts and phone numbers at random, and send thousands of identical messages. It isn't a personal attack, it's a volume business, which is why the best response is to give them nothing at all. If by any chance you've already given away your seed phrase, consider the wallet compromised. Create a new wallet on a clean device, and move what you can as quickly as possible. Then contact the platform. Every minute counts, because the person who scammed you is in a hurry too."
+            },
+            {
+              "cena": 6,
+              "visual": "The clock from scene 1 stops at zero. An arrow points to lesson 5.2.",
+              "narracao": "To sum up: nobody legitimate asks for your key, urgency is always a clue, and the link in a message is never the right way in. In the next lesson we'll look at the promise to double your money. It seems very different, but it's the same story in different clothes, and the maths behind it is even more revealing."
+            }
+          ],
+          "palavras": 686,
+          "minutos": 4.4
+        },
+        {
+          "id": "5.2",
+          "titulo": "Aula 5.2 — Doubling, pyramids and promises",
+          "gancho": "If someone guarantees that your money will double in a few days, the first thing you should feel is distrust, not excitement.",
+          "cenas": [
+            {
+              "cena": 1,
+              "visual": "An on-screen advert: \"Send 500 and receive 1,000 in 7 days\". Below it, a label: \"guaranteed doubling\".",
+              "narracao": "This is the oldest promise in the world in new clothes. You send crypto to an address, or you join a group, and they tell you you'll get double back in a short time. Sometimes it's presented as a prize draw, sometimes as a sign-up bonus, sometimes as a rewards programme that levels up. The format changes, but the structure is almost always the same. Before anything else, ask yourself one very simple question: where does the money for that doubling come from? If there's no answer, the conversation ends there."
+            },
+            {
+              "cena": 2,
+              "visual": "An animated diagram: people joining from the bottom, money rising to those at the top, and more and more small circles coming together.",
+              "narracao": "In a pyramid scheme, the money paid to the first participants doesn't come from any real product or activity. It comes from the people who join later. To pay those who joined early, more and more people have to keep joining. And here's the arithmetic that's usually hidden. Imagine that each person has to bring in two new people to move up a level. By the tenth level, that step alone needs one thousand and twenty-four new people. By the twentieth, it's more than a million. No market can sustain that sum for long, and whoever joins late is the one left paying."
+            },
+            {
+              "cena": 3,
+              "visual": "An animated list with four signs, one at a time: \"fixed high return\", \"today only\", \"bring friends to level up\", \"fees to withdraw\".",
+              "narracao": "There are signs that keep repeating. They promise a fixed, high return, with no risk explained. They create time pressure, with phrases like today only or last place. They pay bonuses for bringing in friends, rather than for using a product or a service. And when you ask to take money out, fees, deadlines or new requirements appear, as if you had to pay to get out. If you see two or more of these signs at the same time, it's not the moment to study the offer calmly. It's the moment to leave."
+            },
+            {
+              "cena": 4,
+              "visual": "Illustrative case. A small office in Leiria, Tiago, thirty-four, a refrigeration technician, looking at his phone. Caption: \"illustrative case\".",
+              "narracao": "Let me tell you an illustrative case. Tiago, thirty-four, a refrigeration technician in Leiria, joined a group because a friend told him he had got double his money back. At first, everything seemed to work, and they even paid him a small amount to build his trust. Then they asked him for another two hundred euros to level up. When he tried to withdraw what he had, the request was under review for weeks. He realized too late that the payments he was receiving came from the money of the people who joined after him. As this is an illustrative case, the numbers belong to nobody, but the pattern repeats in many stories."
+            },
+            {
+              "cena": 5,
+              "visual": "A blank screen with one large question: \"Who pays your profit?\"",
+              "narracao": "The question you should always ask is this: who pays the profit? In a real investment, the return comes from something real, such as an activity, a company or a market with genuine supply and demand. It can go up or down, and you can lose everything, but there's a visible source. If the answer is the people who join next, you're looking at a pyramid, however well packaged it is. And pay attention to the pressure to invite other people, because that's how the scheme grows. When your success depends on bringing in people, the product is the entry itself."
+            },
+            {
+              "cena": 6,
+              "visual": "A split screen. On the left, a chart that always goes up. On the right, the same chart with a warning line saying \"withdrawal blocked\".",
+              "narracao": "Notice a detail that fools a lot of people. The first payments are usually real. They're there precisely to give you confidence. The problem shows up when you want to withdraw a large amount, and that's when the door slowly closes. So never judge an offer by what you've already received. Judge it by how easily you're allowed to get out. If you can't get out easily, it isn't an investment, it's a trap with a nice-looking receipt. So what do you do when someone promises you double? You don't join, you don't send anything to test it, and you don't ask the contact who wrote to you for more details. Search for the project's name together with the word scam and read what other people have said. And before any money decision, apply the 24-hour rule, which we'll look at more closely in the checklist. An honest offer can handle that wait without any problem."
+            }
+          ],
+          "palavras": 680,
+          "minutos": 4.4
+        },
+        {
+          "id": "5.3",
+          "titulo": "Aula 5.3 — Phishing, airdrops and approvals",
+          "gancho": "Sometimes a single swapped letter in a website address is enough to make you lose your entire wallet. Let's see how that happens.",
+          "cenas": [
+            {
+              "cena": 1,
+              "visual": "Two almost identical addresses side by side. One letter in the second address is highlighted in red.",
+              "narracao": "Let's talk about phishing. It's a copy. Scammers build a site that looks identical to the original, with the same logo, the same colors and the same buttons. Often only one letter in the address changes, or they use a lookalike domain with one extra little dash. When you get there, you type in your password or connect your wallet, and whoever set up the site keeps whatever you gave them. The site looks right, but the address is different. And the difference is in the address, which is what saves you. These sites are built in minutes and tend to last only briefly, because they're reported quickly. So don't trust the appearance, or how fast the page loads."
+            },
+            {
+              "cena": 2,
+              "visual": "A search engine screen with the first result marked \"Ad\".",
+              "narracao": "There's an extra caution here. Sponsored ads at the top of search engines can also lead to fake sites. Don't trust a result just because it appears first. Look for the official site, check the address and, if you can, save it in your browser bookmarks. Notice that the genuine site rarely asks you for anything urgent on its homepage. If a page pressures you to enter details, be suspicious of the page itself."
+            },
+            {
+              "cena": 3,
+              "visual": "A message on screen: \"You've received 5,000 free tokens! Connect your wallet to claim them\". A red counter counting down.",
+              "narracao": "Airdrops are free distributions of tokens. They do exist, but they're rare, and they almost never arrive by private message from a stranger. When someone offers you free tokens and asks you to connect your wallet to a site, you're giving a permission. And that permission can allow someone to move your funds. The red counter is the same old pressure, dressed up as a game. If something is free and asks you to connect your wallet, be suspicious first and research afterwards. If someone asks you to share your screen while you claim the prize, it's even more serious, because they can see everything you do."
+            },
+            {
+              "cena": 4,
+              "visual": "A simulated approval window on screen. The word \"unlimited\" is highlighted, with an arrow pointing to the \"Approve\" button.",
+              "narracao": "Here's the technical detail most people never read. When you use some decentralized applications, the wallet asks for an approval. It's an authorization for a contract to move certain tokens you hold. Often, the approval comes with an unlimited amount already selected by default. If you approve a malicious contract with unlimited permission, it can withdraw those tokens whenever it likes, without asking you again. So always read what you're authorizing. And revoke the approvals you no longer use, with the official permission-revocation tools."
+            },
+            {
+              "cena": 5,
+              "visual": "Illustrative case. A student bedroom in Braga, Gonçalo, twenty-six, watching the countdown of an airdrop on his laptop. Caption: \"illustrative case\".",
+              "narracao": "Let me tell you an illustrative case. Gonçalo, twenty-six, a student in Braga, received a link to claim an airdrop. The page was attractive, it had a countdown, and even a list of winners that kept updating. He connected his wallet, approved something he didn't understand and went to bed. Days later, he noticed tokens were missing. Nobody had asked him for his seed phrase, but he had given permission to whoever wanted it. The mistake wasn't technical. It was haste, and haste is exactly what these sites are designed to provoke."
+            },
+            {
+              "cena": 6,
+              "visual": "A screen with three questions in a row: \"Who's asking? Why now? What am I authorizing?\"",
+              "narracao": "Before any connection or approval, ask yourself three questions. Who is asking? If you don't have a clear answer, that's a warning sign. Why is this happening now? If the justification is urgency, or a prize that expires today, be suspicious. And what am I authorizing, exactly? If you can't answer that precisely, don't sign. Every signature is a decision, not a courtesy click. You can hold on to a simple rule, and it's worth repeating: if you don't understand it, don't sign it. No prize is worth losing your wallet. And if you've already signed something suspicious, revoke that permission as soon as you can and check your balances. That doesn't mean everything is lost, but it does mean you need to act now, not tomorrow. In the last lesson of this module we'll look at the hardest part of all: the scam that is simply a friendly conversation."
+            }
+          ],
+          "palavras": 649,
+          "minutos": 4.2
+        },
+        {
+          "id": "5.4",
+          "titulo": "Aula 5.4 — Romance, pressure and the 10-point checklist",
+          "gancho": "The scam that's hardest to stop doesn't start with a website. It starts with a friendly conversation that gets closer and closer.",
+          "cenas": [
+            {
+              "cena": 1,
+              "visual": "A dating app screen with a smiling photo and the line: \"I met you by chance, you seemed so nice\".",
+              "narracao": "There's a scam that begins slowly. Someone meets you on a dating app, or in a group chat, and the relationship grows closer over several weeks. You share routines, photos, jokes and confidences. When the subject of money comes up, the person talks about a crypto investment that's going really well for them, and offers to let you in too. They show you screenshots of profits and a platform with a beautiful dashboard. The closer the relationship gets, the harder it is to be suspicious. It comes disguised as friendship, and that's what makes it so dangerous. Look at the dashboard. Those numbers are designed to look real, and whoever shows them to you controls everything you see. It proves nothing. A platform that only exists inside a screen someone else shows you doesn't prove a profit, it only proves that somebody knows how to draw a chart. If you can't withdraw the money without paying more fees, or without waiting weeks for a new verification, the problem is there, not in your bad luck."
+            },
+            {
+              "cena": 2,
+              "visual": "An animated checklist, with the points appearing one by one, each with a tick.",
+              "narracao": "So let's go through the ten-point checklist, which you can print and keep. One: nobody asks you for your seed phrase, your password or a code, ever. Two: you type the address by hand or use a verified bookmark, and you never click a link that reached you by message. Three: the platform is authorized under MiCA, the European regulation for crypto-asset service providers, and you can confirm that on the register of the authority in the country where it operates. Four: you turn on two-factor authentication with an app, not with SMS. Five: you use a unique password, stored in a password manager. Six: you're suspicious of any guaranteed return or any doubling. Seven: time pressure is an alarm, not an incentive."
+            },
+            {
+              "cena": 3,
+              "visual": "The checklist continues, with points eight to ten appearing on screen.",
+              "narracao": "Eight: you never approve a contract you don't understand. Nine: you never install remote-access software at the request of a stranger, because whoever controls your screen controls everything you do. Ten: before you move any money, you wait twenty-four hours and talk to someone you trust. That last rule protects more people than any software does. Haste is the fuel of every scam, and waiting is the cheapest antidote there is."
+            },
+            {
+              "cena": 4,
+              "visual": "An animation of five concentric rings, each with a short label. Chart ID: camadas-seguranca.",
+              "narracao": "No single defense is enough, so think in layers. The first layer is your email account, with a strong, unique password. The second is app-based authentication on the platforms you use. The third is a verified address, always the same one, saved in your bookmarks. The fourth is withdrawal limits and the allowed-address list, when the platform offers that option. And the fifth, the most important one for large amounts, is keeping most of it in a cold wallet, away from any screen connected to the internet. If one layer fails, the next one still protects you."
+            },
+            {
+              "cena": 5,
+              "visual": "A screen with a large clock and the line: \"Is the person not letting you think? You already have the answer.\"",
+              "narracao": "When someone pressures you to decide today, you're not talking to a friend who wants to help you. You're talking to someone who needs you not to think. A serious investment can withstand a week of reflection, and an honest project doesn't get angry when you ask for time. If the person gets irritated, disappears or makes you feel guilty for hesitating, you already have your answer. Your calm is the best defense you have, and it costs nothing."
+            },
+            {
+              "cena": 6,
+              "visual": "A screen with the title \"Module mission\" and a box to tick.",
+              "narracao": "The module's mission is simple and concrete. This week, print the ten-point checklist and place it next to your computer. Check whether your platforms have app-based authentication. Review the active approvals in the wallets you use, and revoke any you don't recognize. And write your seed phrase on paper, by hand, in a safe place, without photographing it or sending it to anyone. When you've done all of this, tick the word done. This is the first key to your shield, and it's the one that matters most."
+            }
+          ],
+          "palavras": 655,
+          "minutos": 4.2
+        }
+      ]
+    },
+    {
+      "ficheiro": "modulo-6.md",
+      "titulo": "Módulo 6 — DCA, cycles and halving (≈17 min)",
+      "aulas": [
+        {
+          "id": "6.1",
+          "titulo": "Aula 6.1 — DCA, the boring method that takes the guesswork out",
+          "gancho": "There is a way of investing that almost nobody wants to hear about, because it is boring. That is exactly why it takes the guesswork out of the equation.",
+          "cenas": [
+            {
+              "cena": 1,
+              "visual": "Animated calendar with one marked day in each month and a coin falling onto every marked day.",
+              "narracao": "DCA stands for regular buying, or dollar cost averaging. The idea is simple. Instead of investing everything at once, you buy a fixed amount at regular intervals. It can be one hundred euros a month, or twenty euros a week. You buy when the price is high and you buy when it is low, without trying to pick the right moment. The goal is not to hit the top or the bottom of the market. It is to stay disciplined for a long time, without relying on a hunch that makes you stop or speed up. This is the part that sounds unexciting, and it is also the part most people give up on. Think of it as the monthly savings you put aside, except that instead of leaving it sitting still, you put it into an asset."
+            },
+            {
+              "cena": 2,
+              "visual": "Animated table with the illustrative example: three purchases of one hundred euros, at prices of fifty, twenty-five and fifty. Caption: “illustrative example, made-up figures”.",
+              "narracao": "Let's look at an illustrative example, with made-up, round prices, just to understand the mechanics. Imagine you buy one hundred euros a month, for three months, in a hypothetical asset. In the first month it costs fifty euros, so you buy two units. In the second month the price drops to twenty-five, and with the same one hundred euros you buy four units. In the third month it goes back up to fifty, and you buy two more. In total you have eight units and you have spent three hundred euros. Your average price per unit is thirty-seven euros and fifty cents. Notice that this figure is below the simple average of the three prices, because you bought more when it was cheap."
+            },
+            {
+              "cena": 3,
+              "visual": "Split screen. On the left, the lump sum: three hundred euros at fifty, six units. On the right, DCA: eight units. The totals change across three milestones.",
+              "narracao": "Now the comparison. If you had invested the full three hundred euros in the first month, at fifty euros, you would have six units. At the end of the example, with the price back at fifty, the eight DCA units are worth four hundred euros, and the six lump-sum units are worth three hundred. But look at the middle of the path. After the second month, with the price at twenty-five, DCA has six units, worth one hundred and fifty euros on two hundred invested. The lump sum also has six units and is worth one hundred and fifty, but on three hundred invested. In percentage terms, the lump sum is down fifty percent and DCA is down twenty-five percent."
+            },
+            {
+              "cena": 4,
+              "visual": "Red alert on screen: “Not a guarantee of profit”. Below it, a chart of a price that rises right at the start and never comes back down.",
+              "narracao": "Now notice what this example does not say. It does not say that DCA is always better. If the price had risen in the first month and never come back down, the lump sum would have earned much more. DCA trades part of that opportunity for less stress and less risk of buying everything at the top. It is not a guarantee of profit, and an asset can fall for years without recovering. So the amount you use in each purchase has to be an amount you can afford to lose, without it affecting your income, your bills or your sleep."
+            },
+            {
+              "cena": 5,
+              "visual": "Calendar with a tick mark in each month, and beside it a sheet with the rules written down.",
+              "narracao": "DCA works like a habit. The biggest enemy is not the market. It is your hand pressing the button when the price falls and fear kicks in, or when it rises and greed kicks in. So write the rules down before you start. How much you buy, on which day, on which platform, and what you do if one month you are short of money. Then stick to them. A rule written on a sheet of paper is worth more than ten decisions made in a hurry, in the middle of the night, with your phone in your hand. Once the rule is written, the emotion of the day no longer runs the show."
+            },
+            {
+              "cena": 6,
+              "visual": "Arrow pointing to lesson 6.2. Text beside it: “What actually changes?”.",
+              "narracao": "In the next lesson we will look at one of the most talked-about topics in the crypto world, the halving, and why so many people get so excited about it. You will understand what actually changes on the network, and what is just noise around the date. Keep the central idea of this lesson: DCA does not predict anything. It organises your purchases and lets the market do whatever it wants. Work through the sum yourself, with other made-up prices, and you will understand the logic in ten minutes."
+            }
+          ],
+          "palavras": 714,
+          "minutos": 4.6
+        },
+        {
+          "id": "6.2",
+          "titulo": "Aula 6.2 — Halving: the supply clock",
+          "gancho": "Roughly every four years, the creation of new bitcoins is cut in half. Do you know why, and do you know what that really means?",
+          "cenas": [
+            {
+              "cena": 1,
+              "visual": "Animation of a reward bar shrinking in five steps, with the dates underneath: fifty, twenty-five, twelve point five, six point two five, three point one two five. Chart ID: halving.",
+              "narracao": "New bitcoins are created by miners, as a reward for validating blocks of transactions. That reward is not fixed. It is set in the protocol itself: every 210,000 blocks, which takes about four years on average, the reward per block is cut in half. This is called the halving. When the network started, in 2009, the reward was fifty bitcoins per block. In 2012 it dropped to twenty-five. In 2016 it went to twelve point five, in 2020 to six point two five, and in 2024 to three point one two five. Each step cuts the new supply in half. Notice that the rule does not depend on any one person: it is written in the code and applies in the same way to everyone."
+            },
+            {
+              "cena": 2,
+              "visual": "Screen with the phrase “21 million” and a bar filling up, almost to the top.",
+              "narracao": "With this rule, the total supply converges towards the limit of twenty-one million bitcoins. Most of it has already been issued, and what remains comes out in smaller and smaller slices, almost unnoticed. This is a fact about new supply, and that is what makes the topic interesting. Fewer new bitcoins per day means, in theory, less supply entering the market. Miners also pay for energy and equipment, so the drop in reward has a big effect on their accounts. But theory and price are different things, and this is where many people get it wrong. Supply is one piece of the puzzle. Demand, context and the mood of all the participants are the other pieces."
+            },
+            {
+              "cena": 3,
+              "visual": "Line chart with the price and vertical markers at the halving years. Above it, a box saying “what happened before”.",
+              "narracao": "It is tempting to look at past halvings and conclude that the price always rises after each one. That conclusion is dangerous. There are too few cases to draw a rule from, the context changed a lot from one cycle to the next, and the market may have anticipated the event months earlier. Each halving is a fact about supply, not a date marked for a price rise. Use it as information to understand the market, never as a certainty about what will happen."
+            },
+            {
+              "cena": 4,
+              "visual": "Illustrative case. A bedroom in Aveiro, Marta, 38, a teacher, with her laptop open at night. Caption: “illustrative case”.",
+              "narracao": "I want to tell you an illustrative case. Marta, 38, a teacher in Aveiro, watched a video about the halving and became convinced that a rise was certain. She bought everything at once, in one night, with money she had set aside for the car. In the following weeks the price fell, and she was left staring at the screen, not knowing what to do. She did not sell in a panic, but she did not have a plan either. The mistake was not the halving, which is a real fact. The mistake was treating a date as a guarantee, and using money that should not have been used. If the purchase had been made in instalments, with a written plan, she would have had time to review her decisions at every step."
+            },
+            {
+              "cena": 5,
+              "visual": "Split screen: on the left, the logo of a proof-of-work network; on the right, that of a proof-of-stake network. Text: “Not every network has a halving”.",
+              "narracao": "A technical note, because it is easy to get confused. Not every network works this way. Bitcoin uses proof of work, with miners competing with energy and equipment. Ethereum moved to proof of stake in September 2022, in the event known as The Merge, and it no longer has mining or halvings. Each network has its own issuance rule. Before you say that something will rise because it has a halving, first ask yourself whether that network has a halving at all, and what kind."
+            },
+            {
+              "cena": 6,
+              "visual": "Screen with a big question: “Fact, news or promise?”. Three boxes underneath.",
+              "narracao": "So what does the halving teach you that is useful? It teaches you to think in long cycles and in supply, not in the news of the day. It also teaches you to be wary of anyone who sells the halving as a money machine. There is a lot of content that turns a date into a show, with countdown clocks and dramatic music. You do not need any of that. You need to understand the rule, keep the fact in mind, and decide what to do with your money based on a plan, not on a countdown. That brings us to the topic of the next lesson: how to read the market without guessing."
+            }
+          ],
+          "palavras": 683,
+          "minutos": 4.4
+        },
+        {
+          "id": "6.3",
+          "titulo": "Aula 6.3 — Cycles, volatility and dominance: reading without guessing",
+          "gancho": "The crypto market goes up and down with a force that frightens anyone who is not prepared. The question is not how to get it right. It is how to read it without guessing.",
+          "cenas": [
+            {
+              "cena": 1,
+              "visual": "Chart with a volatility line and the caption: “drops of more than 70% in different years”.",
+              "narracao": "Let's start with volatility, which is the size of price movements. In crypto it is very high. Bitcoin has fallen more than seventy percent from its peak, on more than one occasion, and many other coins have fallen even further. Before you buy, ask yourself an honest question: if my balance fell by half, could I carry on without selling in a panic? If the answer is no, your exposure is too big, whatever the videos say. This question is worth more than any forecast."
+            },
+            {
+              "cena": 2,
+              "visual": "Cycle curve drawn on screen, with four phases marked: accumulation, uptrend, euphoria, downtrend.",
+              "narracao": "Many people talk about cycles: a phase of accumulation, a strong rise, a euphoria in which everyone seems rich, then a long decline and a period of exhaustion. Cycles are a useful way of reading the past, because they help you recognise patterns of human behaviour. But they are not a calendar. In the euphoria it seems the whole world has got rich, and in the decline it seems it will never recover. Nobody knows exactly when the phase changes. There is a dangerous phrase you hear in every cycle: this time is different. Sometimes there are real changes, but the wish for it to be different is always the same old emotion. Anyone who swears they know is almost always trying to sell you something. You do not need to memorise any of this."
+            },
+            {
+              "cena": 3,
+              "visual": "Pie chart with the bitcoin slice standing out, and an arrow going up and down.",
+              "narracao": "Another indicator is bitcoin dominance, which is the percentage of the total market value that belongs to bitcoin. When dominance rises, money tends to concentrate in bitcoin, which is seen as the most established asset. When it falls, there can be more appetite for altcoins, which are riskier and more volatile coins. It is not a magic rule, and it can mislead you if you read it on its own. But it is a way of seeing where the money is going, and that is already useful information for your plan. Notice that dominance also rises when the market falls back, because smaller coins usually drop harder."
+            },
+            {
+              "cena": 4,
+              "visual": "Screen with three headlines in a row: “It's going to explode!”, “It's all over!”, “Official news: new rule published”. The last one is highlighted.",
+              "narracao": "Learn to separate news from noise. News is a verifiable fact: a law passed, a confirmed technical failure, a concrete change in supply or regulation. Noise is an opinion repeated a thousand times, the alarmist headline, and the video with epic music and red arrows. Before you react, ask: has this changed anything in the project, or has it only changed people's mood? If it is only mood, you usually do not need to act today. A good habit is to save the news in a list and review that list a week later. If nobody is talking about it any more, it was probably noise."
+            },
+            {
+              "cena": 5,
+              "visual": "Screen with a weekly calendar and the phrase “Plan before the guess”. A clock with its hand stopped.",
+              "narracao": "Reading the market without guessing means accepting that you do not know what comes tomorrow, and organising yourself for that. Define your plan before things happen. Write down what would make you change your mind, and trust that piece of paper more than the noise of the moment. Check your balance once a week, not every minute, because watching nonstop increases emotion and reduces clarity. Someone without a plan ends up reacting to everything, and reacting to everything is usually expensive, because decisions get made out of fear or euphoria. The market owes you nothing, and that is not a problem. The problem is being left without a plan."
+            },
+            {
+              "cena": 6,
+              "visual": "Final screen with the phrase: “Reading without guessing = written plan + verified information”.",
+              "narracao": "To sum up this lesson: volatility shows you how much you could suffer, cycles show you patterns that are not a calendar, dominance shows you where the money is going, and verifiable news is separated from noise. None of these pieces gives you the right answer for tomorrow. Together, they give you something better, which is a criterion for deciding calmly. If any of these ideas seem complicated, that is fine. Just start with one of them and write down what you observed. In the last lesson of this module we will turn all of this into a concrete buying plan."
+            }
+          ],
+          "palavras": 677,
+          "minutos": 4.4
+        },
+        {
+          "id": "6.4",
+          "titulo": "Aula 6.4 — Module mission: your DCA plan",
+          "gancho": "Moving from theory to practice is the step most people skip. Today we are not going to skip it. We are going to do it with paper and pen.",
+          "cenas": [
+            {
+              "cena": 1,
+              "visual": "Sheet with five fields to fill in: monthly amount, fixed day, platform, exception rule, review date.",
+              "narracao": "We are going to build a DCA plan, step by step. First, choose a monthly amount that you could lose without it ruining your life. It is not whatever happens to be left at the end of the month by chance. It is what remains after your fixed bills, an emergency fund and the taxes you already have to pay. Second, choose a fixed day, for example the day after payday. Third, choose the regulated platform where you will buy, and confirm that verification and authentication are in order. Fourth, write the exception rule: what you do in a month when it is not possible. Fifth, mark when you will review the plan, for example every three months. Remember: the plan is not a contract with the market. It is a contract with yourself."
+            },
+            {
+              "cena": 2,
+              "visual": "Large warning on screen: “Never money for rent, your transport pass or water”.",
+              "narracao": "One rule that is not negotiable: never use money you need for rent, your transport pass, water, electricity or the IRS, the Portuguese income tax. If a month goes wrong, you do not want to be forced to sell in order to pay for your home, and that is exactly when decisions turn bad. Start small. Ten or twenty euros a week is enough to learn the process, understand the fees and see how you feel when the price falls. That feeling is the most valuable part of the training. If you have doubts about the platform, ask before you buy, never after."
+            },
+            {
+              "cena": 3,
+              "visual": "Screen with the MTM logo and the text “Salas DCA com MTM”, with a group room made of small squares.",
+              "narracao": "If you want to practise with support, there are the Salas DCA com MTM, the DCA group rooms, where this method is worked on as a group, with examples and live questions. I am not going to promise you results or returns, because I do not control them and I cannot guarantee them to anyone. What I can say is that learning from other people, discussing plans, mistakes and doubts, helps you avoid deciding alone and in a hurry. And there is the MoreThanMoney community, where you can ask simple questions without feeling embarrassed. If you decide to join, remember that the group is there to help you learn, not to tell you what to buy. If it makes sense for you, take a look, with no rush and no pressure. The decision is yours."
+            },
+            {
+              "cena": 4,
+              "visual": "Checklist with boxes to tick: written plan, date, verified platform, active authentication, 24-hour wait.",
+              "narracao": "Once you have written the plan, sign it with the date and keep it somewhere safe, separate from your seed phrase. Before the first purchase, confirm that the platform is verified, that two-factor authentication is active, and that you have the addresses saved in your bookmarks. And let 24 hours pass before you make the first purchase. That wait is the final test: if, the next day, you still want to, the plan is yours. If you no longer want to, good thing you waited. Do not rush just because the market seems to be in a good mood that day. Also write down what you will do if the price falls by half, so the rule is clear before the scare, not during it."
+            },
+            {
+              "cena": 5,
+              "visual": "Screen titled “Module mission” with a box to tick. Underneath, the warning phrase in small letters.",
+              "narracao": "The module mission is this: write your DCA plan on paper, with the five points we covered, and sign it. Do not buy anything yet if you do not have the platform verified and two-factor authentication active. And always remember: this is educational content, not financial advice, and the risk of loss is real. You can lose what you put in. So the plan is your protection, and haste is the enemy. Keep this paper and reread it before every review."
+            },
+            {
+              "cena": 6,
+              "visual": "Closing screen with the number 7 and the phrase: “Next module: your DCA with the MTM tools”.",
+              "narracao": "With this lesson you close Module 6. You now know what DCA is, you can read the halving without falling for the show, and you can separate volatility, cycles, dominance and noise. In the next module we take this plan and put it to work with the MTM tools: the DCA Inteligente MTM, the MTM System app, the Portefólios and two scanners that help you choose the size of each top-up. Until then, write your plan and stick to it. Thank you for getting this far, I really mean it."
+            }
+          ],
+          "palavras": 697,
+          "minutos": 4.5
+        }
+      ]
+    },
+    {
+      "ficheiro": "modulo-7.md",
+      "titulo": "Módulo 7 — Your DCA with the MTM tools (≈16 min)",
+      "aulas": [
+        {
+          "id": "7.1",
+          "titulo": "Aula 7.1 — DCA that is not dumb",
+          "gancho": "DCA has a reputation: it is the method for people who don't think. You always buy the same amount, on the same day, whatever happens. And what if I told you that you can think a little, without spoiling what is good about DCA?",
+          "cenas": [
+            {
+              "cena": 1,
+              "visual": "Ruben in a medium shot, almost black background, details in gold. Text on screen: “Educational content. The risk of loss is real.”",
+              "narracao": "In the previous module you wrote your plan: an amount, a fixed day, a platform. That plan is the most important thing in this bootcamp, and we are not going to touch it. What we will do in this lesson is give it a small steering wheel. Classic DCA always buys the same amount. Smart DCA always buys too, but it lets you adjust the size of each purchase depending on whether the market is more expensive or cheaper than usual. Notice the word “always”. Smart DCA never stops buying because of an opinion. It only changes the size."
+            },
+            {
+              "cena": 2,
+              "visual": "Animation: a price line with small gold circles on every Friday. At first they are all the same size; then, on the days when the price drops, the circles get bigger; on the days of euphoria, they get smaller.",
+              "narracao": "The idea is old and it is common sense. When the price has dropped a lot in one day, your money buys more units. When the price has shot up, it buys fewer. If you top up a little more on the days of decline and a little less on the days of euphoria, your average price tends to become more balanced. Tends to. I don't guarantee anything, and nobody can guarantee anything to you. But it is a line of reasoning you can understand and check with pencil and paper."
+            },
+            {
+              "cena": 3,
+              "visual": "Screen of the MTM System app, Portefólios tab, “Análise DCA” panel. Slow zoom onto the labels: Forte Compra, Compra, Aguardar, Não Reforçar.",
+              "narracao": "At MoreThanMoney this has a name: DCA Inteligente. Every day the system looks at the assets in the portfolios, crypto and ETFs, compares today's price with recent behaviour, and gives each one one of four labels. Forte Compra, which means strong buy, when there has been a sharp drop. Compra, which means buy, when there has been a relevant drop. Aguardar, which means wait, when everything is calm. And Não Reforçar, which means do not top up, when the price has risen a lot in a single day and it is best not to chase it."
+            },
+            {
+              "cena": 4,
+              "visual": "Animated table, gold on charcoal: “Forte Compra → up to 2× the base · Compra → 1.5× · Aguardar → half · Não Reforçar → zero on that asset”.",
+              "narracao": "Each label comes with a suggested size, always relative to your base amount. In crypto, for example, a daily drop of eight percent or more gives Forte Compra and suggests up to double the base. A drop of four percent or more gives Compra, and suggests one and a half times the base. For ETFs the thresholds are lower, because they move less. Remember: these are suggestions from a system, for education. The decision is yours."
+            },
+            {
+              "cena": 5,
+              "visual": "Ruben is back, with a notebook. On screen the phrase appears: “The ceiling matters more than the label.”",
+              "narracao": "And now the rule that makes this safe. Your monthly ceiling does not change. If your plan is one hundred euros a month, it is one hundred euros a month, whether there is a Forte Compra or not. How does that work? With a reserve pot. In the weeks when the label says Aguardar or Não Reforçar, the part you don't spend goes into the pot. In the weeks of Forte Compra, the extra top-up comes out of the pot. If the pot is empty, you buy the base and that's it. You never go and get money from outside the plan."
+            },
+            {
+              "cena": 6,
+              "visual": "Exercise sheet with four Fridays, one column “label”, another “purchase” and another “pot”.",
+              "narracao": "Two-minute exercise. Imagine a base of twenty-five euros a week. On the first Friday the label is Aguardar: you buy twelve euros and fifty cents, and the twelve euros and fifty cents go into the pot. On the second, Não Reforçar: zero on that asset, twenty-five into the pot. On the third, Forte Compra: you buy fifty, twenty-five from the base and twenty-five from the pot. On the fourth, Compra. Do the sum yourself. An illustrative example, of course."
+            }
+          ],
+          "palavras": 587,
+          "minutos": 3.8
+        },
+        {
+          "id": "7.2",
+          "titulo": "Aula 7.2 — The MTM System app in your pocket",
+          "gancho": "If you have to remember to go and check the market, you will forget. The trick is for the market to come to you, at the right time, and only with what matters.",
+          "cenas": [
+            {
+              "cena": 1,
+              "visual": "Phone screen recording: opening the MTM System app, logging in with the account, main menu.",
+              "narracao": "Let's go to the app. Everything you see in this lesson is in the MTM System app, on your phone or on your computer. I won't show you balances, because they don't matter here. I'll show you three places: where the daily analysis appears, where the portfolios are, and where you turn on the alerts."
+            },
+            {
+              "cena": 2,
+              "visual": "Screen of the DCA analysis channel in the app chat: the daily post with the summary and the opportunities by label.",
+              "narracao": "First place: the Análise DCA Inteligente channel. Every day the system posts a summary there, split into crypto and ETFs and stocks, with the assets that are in Forte Compra or Compra and a short reading of the day. You don't need to read this every day. You need to read it on your DCA day. If your day is Friday, you open Friday's post."
+            },
+            {
+              "cena": 3,
+              "visual": "Portefólios → Análise DCA screen, with the list of assets, the price, the change and the label for each one.",
+              "narracao": "Second place: inside Portefólios, the Análise DCA panel. Here you see asset by asset: the price, the change, the label and a one-line explanation. This is the screen where you make your choice for the week. Look only at the assets that are in your plan. The others can be in Forte Compra all they like. They are not in your plan, so they are not your concern."
+            },
+            {
+              "cena": 4,
+              "visual": "Settings screen with the DCA alerts switch being turned on. A notification drops onto the lock screen.",
+              "narracao": "Third place: the alerts. Turn on the DCA alerts in the app settings. That way, when an asset enters a top-up zone, you get a notice. Careful, this is not an order to buy outside your day. It is information. The discipline of the fixed day still applies. The alert is there so that you reach Friday already knowing what is waiting for you."
+            },
+            {
+              "cena": 5,
+              "visual": "Ruben, close-up, speaking directly to the camera.",
+              "narracao": "An honest note. The app is a tool for following the market and for education. It does not buy for you, it does not keep your money, and it does not know what will happen tomorrow. You make the purchase yourself, on your authorised platform, as you learned in module three. The app helps you decide calmly and with information, which is already a lot."
+            },
+            {
+              "cena": 6,
+              "visual": "Checklist on screen with three boxes: “DCA channel open”, “Análise DCA panel viewed”, “alerts on”.",
+              "narracao": "Mission for this lesson: open the app, find the three places and tick each one. It takes five minutes. In the next lesson we will look at the portfolios, which is the best way I know to learn how to do DCA by watching someone else do it."
+            }
+          ],
+          "palavras": 398,
+          "minutos": 2.6
+        },
+        {
+          "id": "7.3",
+          "titulo": "Aula 7.3 — The Portefólios: learning by watching someone else",
+          "gancho": "The best way to learn to cook is not to read recipes. It is to stand in the kitchen next to someone. With DCA it is the same.",
+          "cenas": [
+            {
+              "cena": 1,
+              "visual": "Portefólios screen with the two house portfolios side by side: “Crypto” and “ETF”, with the evolution curve.",
+              "narracao": "In the app there are two house portfolios: one crypto and one ETF. They are topped up every Friday, with fixed amounts per asset, and they are recorded in the app, purchase by purchase. You can see what was bought, when and at what price. It is an open DCA diary."
+            },
+            {
+              "cena": 2,
+              "visual": "Zoom into the portfolio's list of movements: Friday dates, asset, amount, reason “weekly DCA”.",
+              "narracao": "Notice the dates. Friday, Friday, Friday. Weeks of good markets, weeks of bad markets, and the purchase is there. This is what I want you to see: the hard part of DCA is not the maths. It is carrying on buying when everyone around you says it is nonsense, and not buying too much when everyone says it is now or never."
+            },
+            {
+              "cena": 3,
+              "visual": "Animation: the portfolio split into coloured slices, with captions “one larger asset, some medium, some small”.",
+              "narracao": "Also look at how the portfolio is divided. There is a larger weight on a few assets and smaller weights on others. I am not telling you to copy these assets. I am telling you to copy the idea: a portfolio has a structure, written down beforehand, and that structure does not change every week because of a headline."
+            },
+            {
+              "cena": 4,
+              "visual": "Ruben showing the notebook with a table: “asset · weight · amount per week”.",
+              "narracao": "Now do yours. Write down the assets in your plan, the weight of each one and the amount per week. If you are starting out, less is more. One or two assets are perfectly enough. Remember the seven questions from module two before you put any name on this list."
+            },
+            {
+              "cena": 5,
+              "visual": "Screen split in two: on the left the house portfolio, on the right the student's table.",
+              "narracao": "Use the house portfolios as a mirror, not as a template. When you have doubts, for example “should I buy this week, with the market falling like this?”, go and see what happened in the house portfolios in similar weeks. You will see that the answer, almost always, was to buy the base and move on."
+            },
+            {
+              "cena": 6,
+              "visual": "Final text on screen with the warning: “Demo and educational portfolios. Past results do not guarantee future results.”",
+              "narracao": "The house portfolios exist for learning. What they did in the past says nothing about what they will do in the future, nor about what yours will do. In the next lesson we will go up a step and look at the chart, with a tool you already know by name: Momentum."
+            }
+          ],
+          "palavras": 358,
+          "minutos": 2.3
+        },
+        {
+          "id": "7.4",
+          "titulo": "Aula 7.4 — Momentum on the big chart: choosing the size, not the day",
+          "gancho": "Momentum is a trading scanner. So what is it doing in a DCA module? It is acting as a traffic light.",
+          "cenas": [
+            {
+              "cena": 1,
+              "visual": "Screen recording of TradingView: daily Bitcoin chart with the Momentum scanner. Cloud, exponential average, volume panel and RSI.",
+              "narracao": "You have already heard of Momentum, the MTM scanner that works with colours. Green for buy, red for sell. Traders use it on fifteen-minute or one-hour charts. We are going to use it differently: on the daily and weekly charts, the big charts, which show the underlying direction and not the noise of the day."
+            },
+            {
+              "cena": 2,
+              "visual": "Animation with five squares lighting up one by one: cloud, position of the cloud, exponential average, volume, RSI.",
+              "narracao": "Momentum has five confirmations, and each one is worth one point. Is the cloud present and the right colour? Is the cloud on the correct side of the candles? Does the exponential average agree? Does the volume have the colour of the direction? And is the RSI crossing in the right zone? Five out of five is the most complete signal. Four out of five is still good. With fewer, Momentum is telling you it does not have a strong opinion."
+            },
+            {
+              "cena": 3,
+              "visual": "Three daily charts side by side, with captions: “green and in favour”, “strong red”, “lilac boxes”.",
+              "narracao": "Now, how does this fit into DCA? With three simple readings, on your top-up day. First: a green daily chart, with four or five buy confirmations. The underlying trend is in your favour. You make the top-up that DCA Inteligente suggests. Second: a strong red daily chart, five out of five sell. The decline is under way. You buy the base, but you don't empty the pot yet. You wait for the selling pressure to ease. Third: lilac boxes on top of the candles, a sideways market. For a trader, this is where you don't enter. For someone doing DCA, it is an ordinary day. You buy the base."
+            },
+            {
+              "cena": 4,
+              "visual": "Weekly chart of the same asset, with a slow zoom out.",
+              "narracao": "And the weekly chart? Use it once a month, to see the whole picture. If the weekly chart has turned to buy after a long decline, it is a good moment to review your plan and confirm that the pot is ready for the Forte Compra weeks. If the weekly chart is in strong sell, you change nothing. DCA was designed for exactly those phases."
+            },
+            {
+              "cena": 5,
+              "visual": "Ruben, close-up, with the phrase on screen: “The traffic light does not switch off the car.”",
+              "narracao": "The golden rule: Momentum does not stop your DCA. Never. It helps you decide whether you use the pot or not, and how much. If you ever catch yourself saying “I'm not buying this week because it's red”, come back to this lesson. Red on the daily chart, for someone doing DCA, means base, not zero."
+            },
+            {
+              "cena": 6,
+              "visual": "Exercise sheet with three charts and three boxes to fill in: “reading”, “points”, “what I do”.",
+              "narracao": "Exercise: open the daily chart of an asset in your plan with Momentum. Count the confirmations. Write down the reading, the points, and what you would do next Friday: base, base plus pot, or base without the pot. Do this for three Fridays in a row, without buying anything extra, just recording. You will learn more from this than from any video."
+            }
+          ],
+          "palavras": 449,
+          "minutos": 2.9
+        },
+        {
+          "id": "7.5",
+          "titulo": "Aula 7.5 — DEFY: when the price stretches too far",
+          "gancho": "There are days when the price falls so much that it looks like an elastic band stretched to its limit. DEFY was built to show you those days.",
+          "cenas": [
+            {
+              "cena": 1,
+              "visual": "Daily chart with DEFY: inner, middle and outer exhaustion bands around a smooth average, with the dashed projection.",
+              "narracao": "DEFY is another MTM scanner. It draws exhaustion bands around a smooth average: an inner one, a middle one and an outer one. When the price stretches out to the outer band and turns with a strong candle, DEFY marks an idea. For a trader, it is a possible entry point. For us, who do DCA, it is something else: it is a sign that the price is stretched to the downside, far from its normal level."
+            },
+            {
+              "cena": 2,
+              "visual": "Zoom into a DEFY buy idea, with the stars above the candle.",
+              "narracao": "DEFY also adds up confirmations. Is the price at a level where it has reacted before? Is the trend cloud on the same side? Is there a volume break? With three confirmations, one star appears. With more, two or three. And when everything lines up, the candle turns gold. The stars measure how many confirmations there are. They do not measure the certainty of the result, because that does not exist."
+            },
+            {
+              "cena": 3,
+              "visual": "Animated table: “DCA Inteligente on Forte Compra + DEFY with a buy idea on the daily → use the pot”.",
+              "narracao": "How is it used in DCA? As a second opinion. If on your top-up day DCA Inteligente says Forte Compra, and DEFY has a buy idea on the daily chart, with stars, the two readings agree: the price is stretched and there has been a sharp drop. That is the kind of week where it makes sense to use the reserve pot. If only one of them agrees, you buy the base and a little more from the pot, if you want. If neither agrees, base only."
+            },
+            {
+              "cena": 4,
+              "visual": "Ruben drawing a small three-line decision table in the notebook.",
+              "narracao": "Let's put this into a simple table, to stick next to the screen. Two readings in favour: base plus pot. One reading in favour: base plus half the pot, at most. None: base only. And above all of it, the monthly ceiling, which is not broken. Choose one tool, Momentum or DEFY. Using both at the same time, at the start, is too much noise."
+            },
+            {
+              "cena": 5,
+              "visual": "Warning on screen, large letters: “DEFY signals are for trading. In DCA, they only affect the size.”",
+              "narracao": "Be careful of a temptation. DEFY draws entry, stop and targets, because it was built for trading. Using DEFY does not give your DCA a stop and targets. Your DCA is long term, and it stays that way. If one day you want to trade with DEFY, that is a different course, a different account and a different risk."
+            },
+            {
+              "cena": 6,
+              "visual": "Summary screen with the complete decision table.",
+              "narracao": "Lesson summary: DEFY shows you when the price has stretched too far. In DCA, it only helps you decide whether to use the pot. In the next lesson we bring everything together into a Friday ritual that fits in fifteen minutes."
+            }
+          ],
+          "palavras": 428,
+          "minutos": 2.8
+        },
+        {
+          "id": "7.6",
+          "titulo": "Aula 7.6 — The Friday ritual in 15 minutes",
+          "gancho": "Fifteen minutes a week. That is all your DCA needs from you. The rest of the week is for living.",
+          "cenas": [
+            {
+              "cena": 1,
+              "visual": "Animated clock with fifteen minutes split into five slices, each with an icon.",
+              "narracao": "Let's bring everything together. The ritual has five steps and fits into fifteen minutes. Always do it on the same day and at the same time. I suggest Friday afternoon or the end of the day, but choose whatever works for you."
+            },
+            {
+              "cena": 2,
+              "visual": "Step 1 on screen: “Plan in front of you (1 min)”. Ruben opens the notebook at the page with the plan.",
+              "narracao": "Step one, one minute: open your written plan. Base amount, assets, monthly ceiling and how much you have in the pot. Without this in front of you, nothing else gets done."
+            },
+            {
+              "cena": 3,
+              "visual": "Step 2: “DCA Inteligente (3 min)”. Portefólios → Análise DCA screen.",
+              "narracao": "Step two, three minutes: open the Análise DCA panel in the app and write down the label of each asset in your plan. Forte Compra, Compra, Aguardar or Não Reforçar."
+            },
+            {
+              "cena": 4,
+              "visual": "Step 3: “Daily chart (4 min)”. TradingView with Momentum or DEFY.",
+              "narracao": "Step three, four minutes: open the daily chart of each asset with your tool, Momentum or DEFY. Write down the reading: in favour, against or neutral."
+            },
+            {
+              "cena": 5,
+              "visual": "Steps 4 and 5: “Decide and buy (5 min)” and “Record (2 min)”. Record sheet with columns: date, asset, label, reading, purchase, pot.",
+              "narracao": "Step four, five minutes: apply the decision table. Base, base plus half the pot, or base plus the pot, always within the ceiling. Make the purchase on your authorised platform. Step five, two minutes: record everything in one line of the sheet. Date, asset, label, reading, how much you bought and how much stayed in the pot. This sheet will serve you for taxes, which you will see in the next module, and for learning from yourself."
+            },
+            {
+              "cena": 6,
+              "visual": "Ruben closing the notebook. Final text: “Module 7 mission: three Fridays in a row, full ritual, recorded.” Underneath, the educational warning.",
+              "narracao": "Module mission: do the ritual on three Fridays in a row and record the three lines. If you are not buying yet, do the ritual anyway and record what you would have done. That is how you train. And keep this: the MTM tools help you decide with more calm and more information. They do not decide for you, they do not guarantee anything, and the risk of loss is always yours. Educational content, not financial advice. See you in the last module."
+            }
+          ],
+          "palavras": 309,
+          "minutos": 2
+        }
+      ]
+    },
+    {
+      "ficheiro": "modulo-8.md",
+      "titulo": "Módulo 8 — Taxes, perpetuals and your 30-day plan (≈17 min)",
+      "aulas": [
+        {
+          "id": "8.1",
+          "titulo": "Aula 8.1 — Taxes in Portugal: the 365-day rule",
+          "gancho": "In crypto, tax is not paid on the day you buy. It can, however, appear on the day you sell, if you are not prepared.",
+          "cenas": [
+            {
+              "cena": 1,
+              "visual": "Animated calendar with 365 days filling up, and a marker showing day 365.",
+              "narracao": "I am going to talk about taxes in general terms, because the rules change and the person who decides your situation is a certified accountant. That said, there is a basic principle you should know. Since 2023, in Portugal, crypto capital gains on assets held for less than 365 days are taxed at a rate of 28 percent. If you hold them for 365 days or more, they are, as a rule, exempt. A capital gain, mais-valia in Portuguese, is the positive difference between the sale value and the purchase value. If you sell for less than you paid, there is no gain to tax. If you live outside Portugal, the rules where you live are different, so check with your own tax authority or an accountant. The principle is simple. It is the details that change the sum, and they are what catch you off guard. For example, the purchase date and the sale date are counted in days, and a single day's difference can change everything."
+            },
+            {
+              "cena": 2,
+              "visual": "Illustrative example with the sums on screen: one thousand euros bought, one thousand three hundred sold, three hundred gain, eighty-four tax. Caption: “round figures, no fees”.",
+              "narracao": "Let's look at an illustrative example, with round figures and no fees. You buy one thousand euros of crypto and, three months later, you sell for one thousand three hundred. The capital gain is three hundred euros. On those three hundred you apply the twenty-eight percent, which gives eighty-four euros. Notice this carefully: the tax does not apply to the full value of one thousand three hundred, only to the gain. If the same investment had been held for 365 days or more, the general rule would be different, and the sum would, as a rule, be exempt. All of this can change, so always confirm the current version before drawing conclusions. Also remember that the fees paid when buying and selling can reduce the gain, which is why they go into the record."
+            },
+            {
+              "cena": 3,
+              "visual": "Screen with a spreadsheet: columns Date, Asset, Quantity, Value in euros, Fees, Type of operation.",
+              "narracao": "So, record everything. Every purchase, every sale and every swap, with the date, the asset, the quantity, the value in euros at that moment and the fees paid. Add a column for the type of operation, so you can see at a glance what was a purchase, a sale or a swap. Do not rely on memory or loose screenshots, because a year from now you will not remember everything. A simple spreadsheet is enough to start. When the time comes to declare, you will thank yourself, and so will the accountant. If you swap one coin for another, record both sides of the operation, because both count."
+            },
+            {
+              "cena": 4,
+              "visual": "Large warning on screen: “Check with a certified accountant”. Underneath, a list of three cases: crypto-to-crypto swaps, staking, airdrops.",
+              "narracao": "Now the most important warning in this lesson. Crypto-to-crypto swaps, staking income, airdrops and other cases can be treated differently, and I don't want to guess that in a video. There is also the option of joint taxation with your income, which is called englobamento in Portuguese, where the gain is added to your annual income. It can be more advantageous or less, depending on your tax bracket, and that comparison needs someone who sees your full numbers. Do not make tax decisions based on a two-minute video, or on what someone said in a group chat. Take your record sheet and the questions you wrote down beforehand to the meeting with the accountant."
+            },
+            {
+              "cena": 5,
+              "visual": "Illustrative case. An office in Lisbon, Pedro, 31, a designer, going through old statements on a laptop. Caption: “illustrative case”.",
+              "narracao": "Illustrative case: Pedro, 31, a designer in Lisbon, made several purchases and sales over the year without recording anything. When it came time to declare, he did not know the exact dates, nor the amount he had paid in each transaction. He spent weeks searching through statements and old conversations. The tax itself was not even the worst part. The worst part was the stress of rebuilding a whole year from memory. A ten-minute record each month would have prevented all of that, and would have saved hours of doubt."
+            },
+            {
+              "cena": 6,
+              "visual": "Three icons in a row: a calendar, a percentage, a sheet of paper. Arrow pointing to lesson 8.2.",
+              "narracao": "To sum up: less than 365 days can mean 28 percent on the gain, 365 days or more is, as a rule, exemption, and your record is your best ally. In the next lesson we will talk about perpetuals and leverage, the territory where numbers can be lost in minutes, and where tax is the smallest of your worries."
+            }
+          ],
+          "palavras": 698,
+          "minutos": 4.5
+        },
+        {
+          "id": "8.2",
+          "titulo": "Aula 8.2 — Perpetuals and leverage: why not start here",
+          "gancho": "Imagine a bet where, if the price moves one percent against you, you lose everything you put in. It sounds exaggerated. With very high leverage, in perpetuals, it can happen in seconds.",
+          "cenas": [
+            {
+              "cena": 1,
+              "visual": "A contract on screen, with no expiry date, and an infinity symbol spinning.",
+              "narracao": "A perpetual is a derivative contract with no expiry date. Instead of buying the asset, you bet that the price will go up or down. You can go long, if you think it will rise, or short, if you think it will fall. There is often a funding rate, paid periodically between those who are long and those who are short, depending on the difference between the contract price and the spot market price. Leverage lets you open a position much larger than the money you have deposited. This is where the risk multiplies, because what you gain and what you lose is calculated on the whole position, not on your deposit. That means a small price movement can represent a huge slice of your money."
+            },
+            {
+              "cena": 2,
+              "visual": "Animated table on screen, with two columns: leverage and the approximate drop that liquidates the position.",
+              "narracao": "Here are the approximate numbers, leaving out fees. At two times, a drop of about fifty percent liquidates the position. At five times, about twenty percent. At ten times, about ten. At twenty times, about five. At fifty times, about two percent. And at one hundred times, about one percent. One percent. In a market like crypto, which can move one percent without much effort in a single afternoon, this is not leverage. It is a roulette wheel with your money. Notice that the higher the leverage, the shorter the path to liquidation, and there is no room for error. And be careful: fees and the maintenance margin make liquidation happen even sooner than the table suggests."
+            },
+            {
+              "cena": 3,
+              "visual": "Illustrative case. A bedroom in Lisbon, Hugo, 27, a programmer, with a laptop where a chart turns red. Caption: “illustrative case”.",
+              "narracao": "Illustrative case: Hugo, 27, a programmer in Lisbon, opened a position with fifty times leverage, because, in his own words, he only needed to be right once. The price made a small move against him, just over two percent, and the position was liquidated in minutes. He lost the whole margin, including money he had saved for other things. He did not lose because he was a bad programmer. He lost because the structure of the product amplifies every mistake, and he had no written limit before he went in. When leverage is high, every small move weighs as much as a big one."
+            },
+            {
+              "cena": 4,
+              "visual": "Three cards on screen: “You can't yet read the market with confidence”, “You don't yet have tested rules”, “You don't yet know how to handle a losing position”.",
+              "narracao": "So my recommendation is clear: do not start here. A beginner does not yet have a solid reading of the market, does not yet have tested risk rules, and does not yet know how to handle the emotion of being in a losing position. Perpetuals amplify everything, the right calls and the wrong ones, and the amplification of mistakes usually arrives first. If your first experience is a perpetual, the first lesson can be an expensive one. First learn to buy, to hold and to record. Only after that, if you want, study derivatives, always with money you are prepared to lose in full."
+            },
+            {
+              "cena": 5,
+              "visual": "A phone with the notification “Signal received: enter now!” and, underneath, the question: “Who decides?”.",
+              "narracao": "Even when there is a signal, a scanner or a tool pointing to an entry, the decision and the risk are still yours. A signal does not give you the position size, does not give you the loss limit, and does not tell you what to do when the price goes against you. If you enter just because an urgent notification arrived, you are delegating something you cannot delegate. Always ask yourself: if this tool fails, do I know what I will do? If the answer is no, do not enter. And if the answer is yes, still think about the position size before you go ahead."
+            },
+            {
+              "cena": 6,
+              "visual": "Final screen with the phrase: “Leverage does not create money. It only amplifies what already happens”.",
+              "narracao": "Keep this idea: leverage does not create money. It only amplifies what already happens in the market, in both directions. If you cannot explain liquidation in your own words, you are not ready to touch it. Write the explanation on a piece of paper, without looking at your notes, and compare it afterwards. In the next lesson we will bring together everything we have seen into a thirty-day plan, which is the practical part of this bootcamp."
+            }
+          ],
+          "palavras": 667,
+          "minutos": 4.3
+        },
+        {
+          "id": "8.3",
+          "titulo": "Aula 8.3 — Your 30-day plan",
+          "gancho": "In thirty days you will not master crypto. But you can leave with a solid foundation, and that is already far more than most people who start in a rush.",
+          "cenas": [
+            {
+              "cena": 1,
+              "visual": "Table on screen with four columns, one per week: security, choose and buy, DCA and record, review.",
+              "narracao": "Let's design a thirty-day plan, split into four weeks. Week one: security. You turn on app-based authentication, you create a password manager, you write your seed phrase on paper, and you confirm the platforms you are going to use. Week two: you choose a regulated platform, complete identity verification, understand the fees, and learn the difference between a market order and a limit order. Week three: you start DCA with a small amount and record everything. Week four: you review the numbers, the rules and what you felt. Each week has one main task and one secondary task, so you don't get stuck in the detail. And one week per phase, without skipping any. If a week goes badly, repeat it before you move on. There is no prize for haste."
+            },
+            {
+              "cena": 2,
+              "visual": "Printable security checklist, with boxes to tick.",
+              "narracao": "In the first week, your minimum checklist is this. A single strong password, kept in a password manager. Two-factor authentication through an app, not by SMS. Your seed phrase written by hand, in two separate places, never photographed, never sent, never saved in an email or a note on your phone. Addresses verified and saved in your bookmarks. No links from messages, ever. And turn off the price notifications that make you look at the screen every minute. You don't need to be perfect. You need to be consistent. If you remember this by heart, you are already ahead of many people who start with money and without this foundation."
+            },
+            {
+              "cena": 3,
+              "visual": "List of terms on screen: seed phrase, DCA, halving, liquidation, dominance, airdrop, capital gain.",
+              "narracao": "So that you don't get lost in the words, go to the glossary in the e-book, which has thirty terms explained in plain language. Seed phrase, DCA, halving, liquidation, dominance, airdrop, capital gain, and so on. For example, capital gain, liquidation and custody are terms you will come across in almost every conversation. Write down in your notebook the words you don't understand and look them up before you decide. A term you don't understand is always a signal to stop. What would be dangerous is deciding without understanding what you are doing. If you come across a new term in a lesson, pause the video, look it up, and only then carry on."
+            },
+            {
+              "cena": 4,
+              "visual": "Review diary on screen, with numbered questions, and a pen underlining the last one.",
+              "narracao": "At the end of thirty days, do an honest review. How many times did you keep to the plan, and how many times did you drift away? What made you want to change course? How much did you invest in total, and what is worth today what you bought? Do not answer with what you wished had happened. Answer with what actually happened, even if it is not pretty. If you want, share that review with someone you trust, because it helps you stay honest. That record is worth more than any advice I could give you, because it is your own experience, written with true numbers. Read it at the end of every week, not only at the end of the month."
+            },
+            {
+              "cena": 5,
+              "visual": "Large warning on screen: “This plan guarantees nothing”.",
+              "narracao": "Before you move on, a warning that is not optional. This plan does not guarantee profits or results. It is there so that you can learn safely, with money you can afford to lose. If anyone ever promises you that a plan like this will give you a certain return, be suspicious straight away, and go back to lessons 5.1 and 5.2. A promise of certainty is almost always the first clue of a scam. And if the plan goes badly, it is not a sign that you are incompetent. It is a sign that you learned something expensive, and that also counts."
+            },
+            {
+              "cena": 6,
+              "visual": "Screen with week one highlighted, and the phrase: “Security first”.",
+              "narracao": "The first step of this plan is the most boring, and it is the most important: security. Before you buy anything at all, your key has to be stored safely and your account has to be protected. If you do your first week today, you are ahead of those who have not even started. In the last lesson of this bootcamp I will close with a final warning and an invitation. Until then, write your week one. And keep the security checklist in sight, because your memory, under pressure, is not reliable."
+            }
+          ],
+          "palavras": 703,
+          "minutos": 4.6
+        },
+        {
+          "id": "8.4",
+          "titulo": "Aula 8.4 — Closing: final warning, invitation and module mission",
+          "gancho": "We have reached the end of the bootcamp. Before anything else, I need to tell you one thing clearly, out loud.",
+          "cenas": [
+            {
+              "cena": 1,
+              "visual": "Screen with large, sober text: “Educational content, not financial advice. The risk of loss is real”.",
+              "narracao": "This bootcamp is educational content. It is not financial advice. It is not a recommendation to buy or sell any asset, and it knows nothing about your situation, your income, your debts or your goals. Crypto is a high-risk market. The risk of loss is real, and you can lose part or all of what you put in. Never invest what you cannot afford to lose. And do not make tax or investment decisions without speaking to a qualified professional, who will look at your full numbers and explain what applies to your case. If you have questions about tax, bring them in writing, and ask for a written answer."
+            },
+            {
+              "cena": 2,
+              "visual": "Three cards in a row, each with a short sentence, appearing one at a time.",
+              "narracao": "If you take only three things from these weeks, let them be these. The first: the key is yours, and no legitimate person will ever ask you for it. Not support, not a technician, not someone who has been friendly to you for months in a chat. The second: the example numbers are always illustrative, and the oldest rule is still the best one. Be wary of anyone who promises to double your money and of anyone who rushes you. The third: a written plan and a twenty-four hour wait are worth more than any hunch, however confident it sounds. You don't need to memorise anything. You need to come back to these rules when the rush shows up. These three rules fit on a sticky note, and that is a virtue, not a flaw."
+            },
+            {
+              "cena": 3,
+              "visual": "Two cards on screen: “DCA group rooms with MTM” and “MoreThanMoney community”.",
+              "narracao": "If you want to keep practising with other people, there are the Salas DCA com MTM, the DCA group rooms, where the method is worked on with support and live questions. There is also the MoreThanMoney community, where you share doubts and learn from people who are also just starting out. I am not promising you results, because I do not control them and I cannot guarantee them to anyone, and be wary of anyone who promises you the opposite. What I offer you is a place to ask without embarrassment, with people who are also learning, and with the security rules at the front of everything. If you join, join to learn, not to be certain of anything."
+            },
+            {
+              "cena": 4,
+              "visual": "Three buttons on screen: “Review the plan”, “Do the checklist”, “Decide, without rushing”.",
+              "narracao": "The next steps are simple. Review the thirty-day plan. Do the security checklist, point by point. And decide, without rushing, whether you want to join the rooms or the community. The decision is yours, and it can be no. Take one step at a time, not all three at once. If anyone tells you that you have to decide today, or that you will miss a unique opportunity, you already know what to do: you close the chat, you breathe, and you come back to this plan. Whoever profits from your haste is not the person who wishes you well. When in doubt, silence is also a valid answer."
+            },
+            {
+              "cena": 5,
+              "visual": "Mission screen, with a box to tick and the phrase “Module 8 mission”.",
+              "narracao": "The mission of module eight, and of the bootcamp, is just one. By the end of this week, write your thirty-day plan on a sheet of paper, with today's date, and sign it. Keep it somewhere safe, separate from your seed phrase, without mixing the two. Then, mark the word “done” on the checklist you printed. Thank you for giving these lessons the time they ask for. Not everyone sits down to study this calmly, and that already says a lot about you."
+            },
+            {
+              "cena": 6,
+              "visual": "Final screen with the MoreThanMoney logo and the phrase: “Look after your key”.",
+              "narracao": "Before I close, I'll leave you one last idea. In crypto, the market will always be there, tomorrow, next week and a year from now. You do not need to get in today so as not to miss an opportunity, because opportunities come round again, and your security does not come round again. If you ever have doubts, come back to these lessons, do the checklist and write down what you observe. Until next time. If you want to return to these lessons, they are here. Remember: educational content, not financial advice, and the risk of loss is real. Look after your key."
+            }
+          ],
+          "palavras": 680,
+          "minutos": 4.4
+        }
+      ]
+    }
+  ]
+}

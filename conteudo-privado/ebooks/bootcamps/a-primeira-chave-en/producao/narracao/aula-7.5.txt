@@ -1,0 +1,13 @@
+There are days when the price falls so much that it looks like an elastic band stretched to its limit. DEFY was built to show you those days.
+
+DEFY is another MTM scanner. It draws exhaustion bands around a smooth average: an inner one, a middle one and an outer one. When the price stretches out to the outer band and turns with a strong candle, DEFY marks an idea. For a trader, it is a possible entry point. For us, who do DCA, it is something else: it is a sign that the price is stretched to the downside, far from its normal level.
+
+DEFY also adds up confirmations. Is the price at a level where it has reacted before? Is the trend cloud on the same side? Is there a volume break? With three confirmations, one star appears. With more, two or three. And when everything lines up, the candle turns gold. The stars measure how many confirmations there are. They do not measure the certainty of the result, because that does not exist.
+
+How is it used in DCA? As a second opinion. If on your top-up day DCA Inteligente says Forte Compra, and DEFY has a buy idea on the daily chart, with stars, the two readings agree: the price is stretched and there has been a sharp drop. That is the kind of week where it makes sense to use the reserve pot. If only one of them agrees, you buy the base and a little more from the pot, if you want. If neither agrees, base only.
+
+Let's put this into a simple table, to stick next to the screen. Two readings in favour: base plus pot. One reading in favour: base plus half the pot, at most. None: base only. And above all of it, the monthly ceiling, which is not broken. Choose one tool, Momentum or DEFY. Using both at the same time, at the start, is too much noise.
+
+Be careful of a temptation. DEFY draws entry, stop and targets, because it was built for trading. Using DEFY does not give your DCA a stop and targets. Your DCA is long term, and it stays that way. If one day you want to trade with DEFY, that is a different course, a different account and a different risk.
+
+Lesson summary: DEFY shows you when the price has stretched too far. In DCA, it only helps you decide whether to use the pot. In the next lesson we bring everything together into a Friday ritual that fits in fifteen minutes.

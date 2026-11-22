@@ -174,7 +174,7 @@ export async function entregarCompraDoMarketplace(session: Stripe.Checkout.Sessi
       if (ehEbook(base)) {
         const quem = session.customer_details.email
         const tok = assinarEbook(base, 365, quem)
-        const lk = (l: 'pt' | 'en' | 'es') => {
+        const lk = (l: 'pt' | 'en' | 'es' | 'fr') => {
           const s = l === 'pt' ? base : `${base}-${l}`
           return ehEbook(s) ? linkEbook(s, tok) : linkEbook(base, tok)
         }
@@ -183,14 +183,14 @@ export async function entregarCompraDoMarketplace(session: Stripe.Checkout.Sessi
           nome: session.customer_details.name ?? null,
           titulo: EBOOKS[base].titulo,
           linkBiblioteca: `${getSiteUrl()}/marketplace/biblioteca`,
-          links: { pt: lk('pt'), en: lk('en'), es: lk('es') },
+          links: { pt: lk('pt'), en: lk('en'), es: lk('es'), ...(ehEbook(`${base}-fr`) ? { fr: lk('fr') } : {}) },
         }).catch((e) => console.warn('[marketplace] email do e-book não saiu:', session.id, e))
       }
     }
 
     // «O Método Frio» a 5 € inclui 7 dias de acompanhamento com o Ricardo (decisão 21/11/2026):
     // cada compra abre uma tarefa no CRM para marcar a conversa. Best-effort: a compra já está gravada.
-    if (/^o-metodo-frio(-en|-es)?$/.test(produto.slug)) {
+    if (/^o-metodo-frio(-en|-es|-fr)?$/.test(produto.slug)) {
       const email = session.customer_details?.email ?? null
       const nome = session.customer_details?.name ?? null
       await db.from('aios_tasks').insert({

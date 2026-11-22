@@ -183,7 +183,7 @@ export async function sendEbookPurchaseEmail(p: {
   nome?: string | null
   titulo: string
   linkBiblioteca: string
-  links: { pt: string; en: string; es: string }
+  links: { pt: string; en: string; es: string; fr?: string }
 }) {
   const ouro = '#D2A63C'
   const btn = (href: string, txt: string) =>
@@ -196,6 +196,7 @@ export async function sendEbookPurchaseEmail(p: {
 ${bloco(`Obrigado${ola}!`, 'O teu livro está pronto. Abre-o já no link abaixo (válido por um ano) ou, quando quiseres, na tua Biblioteca, com a conta com que compraste.', 'Ler em português', p.links.pt, 'A minha Biblioteca')}
 ${bloco('English', 'Your book is ready. Open it with the link below (valid for one year) or anytime in your Library.', 'Read in English', p.links.en, 'My Library')}
 ${bloco('Español', 'Tu libro está listo. Ábrelo con el enlace de abajo (válido un año) o cuando quieras en tu Biblioteca.', 'Leer en español', p.links.es, 'Mi Biblioteca')}
+${p.links.fr ? bloco('Français', 'Ton livre est prêt. Ouvre-le avec le lien ci-dessous (valable un an) ou quand tu veux dans ta Bibliothèque.', 'Lire en français', p.links.fr, 'Ma Bibliothèque') : ''}
 <p style="margin:28px 0 0;font-size:12px;color:#999">Conteúdo educativo, não constitui consultoria financeira. · MoreThanMoney.pt</p></div>`
   await sendHtmlMail(p.to, `O teu livro: «${p.titulo}» · Your book · Tu libro`, html)
 }

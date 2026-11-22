@@ -13,7 +13,7 @@ const nextConfig = {
   // separadas: tudo junto dava 360 MB e a Vercel recusa funções acima de 250 MB.
   outputFileTracingIncludes: {
     '/api/ebooks/[slug]': servidos(LIVROS),
-    '/api/ebooks-traducoes/[slug]': servidos(LIVROS.flatMap((l) => [`${l}-en`, `${l}-es`])),
+    '/api/ebooks-traducoes/[slug]': servidos([...LIVROS.flatMap((l) => [`${l}-en`, `${l}-es`]), 'a-primeira-chave-fr']),
   },
   outputFileTracingExcludes: {
     '*': ['public/videos/**', 'public/**/*.mp4', 'public/**/*.mov'],

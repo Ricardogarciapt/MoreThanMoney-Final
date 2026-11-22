@@ -1,0 +1,13 @@
+Il y a des jours où le prix baisse tellement qu'il ressemble à un élastique tendu à sa limite. DEFY a été conçu pour te montrer ces jours-là.
+
+DEFY est un autre scanner de la MTM. Il dessine des bandes d'épuisement autour d'une moyenne lisse : une intérieure, une moyenne et une extérieure. Quand le prix s'étire jusqu'à la bande extérieure et repart avec une bougie forte, DEFY marque une idée. Pour le trader, c'est un point d'entrée possible. Pour nous, qui faisons du DCA, c'est autre chose : c'est un signal que le prix est étiré vers le bas, loin de sa normalité.
+
+DEFY additionne aussi des confirmations. Le prix se trouve-t-il à un niveau où il a déjà réagi auparavant ? Le nuage de tendance est-il du même côté ? Y a-t-il une rupture de volume ? Avec trois confirmations, une étoile apparaît. Avec davantage, deux ou trois. Et quand tout s'aligne, la bougie devient dorée. Les étoiles mesurent le nombre de confirmations. Elles ne mesurent pas la certitude du résultat, qui n'existe pas.
+
+Comment l'utiliser dans le DCA ? Comme un second avis. Si le jour de ton renfort le DCA Inteligente affiche Forte Compra, et que DEFY a une idée d'achat sur le graphique journalier, avec des étoiles, les deux lectures sont d'accord : le prix est étiré et il y a eu une forte baisse. C'est le genre de semaine où il est logique d'utiliser la cagnotte de réserve. Si une seule des deux est d'accord, tu achètes la base et un peu plus de la cagnotte, si tu le souhaites. Si aucune n'est d'accord, la base seulement.
+
+Mettons cela dans un cadre simple, à coller à côté de l'écran. Deux lectures favorables : base plus cagnotte. Une lecture favorable : base plus la moitié de la cagnotte, au maximum. Aucune : seulement la base. Et au-dessus de tout, le plafond mensuel, qui ne se franchit pas. Choisis un outil, Momentum ou DEFY. Les deux en même temps, au début, c'est du bruit en trop.
+
+Attention à une tentation. DEFY dessine une entrée, un stop et des objectifs, parce qu'il a été conçu pour le trading. Ce n'est pas parce que tu utilises DEFY que ton DCA se met à avoir un stop et des objectifs. Ton DCA est de long terme, et il le reste. Si un jour tu veux faire du trading avec DEFY, c'est un autre cours, un autre compte et un autre risque.
+
+Résumé de la leçon : DEFY te montre quand le prix s'est trop étiré. Dans le DCA, il sert seulement à décider si tu utilises la cagnotte. Dans la prochaine leçon, nous réunissons tout dans un rituel du vendredi qui tient en quinze minutes.
