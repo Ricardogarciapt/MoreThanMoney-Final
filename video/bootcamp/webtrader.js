@@ -110,7 +110,7 @@
 
   function folhaTicket() {
     const t = el('div', null, null, { background: '#111318', padding: '22px', color: '#ddd', font: '500 16px Inter', borderTop: '1px solid #2a2d35', boxShadow: '0 -20px 60px rgba(0,0,0,.6)' })
-    t.innerHTML = `<div style="display:flex;gap:6px;margin-bottom:12px">${['Mercado', 'Limit', 'Stop'].map((s, i) => `<span data-t="tipo-${s}" style="flex:1;text-align:center;padding:7px 0;border-radius:8px;border:1px solid #2a2d35;${i ? '' : `background:${OURO};color:#111;font-weight:700`}">${s}</span>`).join('')}</div>
+    t.innerHTML = `<div style="display:flex;gap:6px;margin-bottom:12px">${['Mercado', 'Limit', 'Stop'].map((s, i) => `<span data-t="tipo-${s}" style="flex:1;text-align:center;padding:7px 0;border-radius:8px;border:1px solid #2a2d35;${i ? '' : `background:${OURO};color:#111;font-weight:700`}">${s === 'Mercado' ? tx('Mercado', 'Market') : s}</span>`).join('')}</div>
       <div data-t="vol" style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid #22252c"><span>Volume</span><b class="mono">0,10</b></div>
       <div data-t="risco" style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid #22252c"><span>Risco %</span><b class="mono">1,0 %</b></div>
       <div data-t="sl" style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid #22252c;color:${VERM}"><span>Stop loss</span><b class="mono">— pips</b></div>
