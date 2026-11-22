@@ -56,6 +56,14 @@ The colours only tell you whether the last price went down (red) or up (blue) co
 
 To open an order or a chart, tap the pair and choose the option in the menu that appears.
 
+### Adding a pair to the list
+
+:::galeria Search by name
+mt5-tel-procurar-simbolo.png | Tap the "+" in Quotes and type the pair's name. Assets are grouped: Forex, commodities, indices and crypto.
+:::
+
+Keep the list short. The pairs in your plan and little else. A list with forty lines invites you to hunt for opportunities instead of waiting for yours.
+
 ## 4. The chart: the same pair on two timeframes
 
 :::galeria Changing the timeframe changes the story
@@ -67,6 +75,25 @@ mt5-tel-grafico-velas.png | H1: each candle is one hour. The trend is easier to 
 - **The price line:** the coloured label on the right marks the current price.
 - **Indicators:** the *f* button at the top. Use one, two at most.
 - **Objects:** lines, zones and Fibonacci are also at the top. Draw your zones before you think about entering.
+
+:::galeria Timeframe and indicators
+mt5-tel-periodos.png | Hold your finger on the chart to choose the timeframe: minutes, hours and days.
+mt5-tel-indicadores.png | The f button lists indicators by family: trend, oscillators, volumes.
+:::
+
+:::galeria Draw and fine-tune
+mt5-tel-objetos.png | The list of drawn objects, by pair. From here you edit, hide or delete them.
+mt5-tel-fibonacci.png | A Fibonacci's properties: points, levels, colour and style.
+:::
+
+### Setting up the chart your way
+
+:::galeria Less noise, better reading
+mt5-tel-definicoes-grafico.png | In Settings › Charts you choose Japanese candles and what appears on screen.
+mt5-tel-cores.png | The colour of each part of the chart. Pick one scheme and leave it alone.
+:::
+
+Turn on only what you use. The Ask line helps you see the buy price. The countdown to the candle close helps you not decide halfway through a candle. The rest can stay off.
 
 :::alerta Classic mistake · Living on M1
 On the 1-minute chart everything looks like an opportunity. It's the timeframe where people trade the most and think the least. Only open it once you've already decided on a higher timeframe.
@@ -116,6 +143,10 @@ In step 2 the app shows the loss in money before you confirm. If that number mak
 
 :::alerta Classic mistake · The comma in the lot
 You wanted 0.10 and typed 1.0. On a phone this happens with one clumsy finger. Before placing, read the volume out loud.
+:::
+
+:::galeria The lot selector
+mt5-tel-ordem-lotes.png | Tapping the volume opens a selector with buttons from −0.10 to +0.10. Check the big number before you close it.
 :::
 
 :::alerta Classic mistake · Mixing up Limit and Stop

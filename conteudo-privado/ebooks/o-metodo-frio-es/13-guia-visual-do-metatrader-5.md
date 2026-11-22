@@ -56,6 +56,14 @@ Los colores solo dicen si el último precio bajó (rojo) o subió (azul) respect
 
 Para abrir una orden o un gráfico, toca el par y elige la opción en el menú que aparece.
 
+### Añadir un par a la lista
+
+:::galeria Buscar por el nombre
+mt5-tel-procurar-simbolo.png | Toca el «+» en Cotizaciones y escribe el nombre del par. Los activos vienen agrupados: Forex, materias primas, índices y cripto.
+:::
+
+Mantén la lista corta. Los pares de tu plan y poco más. Una lista de cuarenta líneas invita a buscar oportunidades en vez de esperar las tuyas.
+
 ## 4. El gráfico: el mismo par en dos temporalidades
 
 :::galeria Cambiar la temporalidad cambia la historia
@@ -67,6 +75,25 @@ mt5-tel-grafico-velas.png | H1: cada vela es una hora. La tendencia se ve mejor.
 - **La línea del precio:** la etiqueta de color a la derecha marca el precio actual.
 - **Indicadores:** el botón *f* arriba. Pon uno, dos como máximo.
 - **Objetos:** líneas, zonas y Fibonacci también están arriba. Dibuja tus zonas antes de pensar en entrar.
+
+:::galeria Periodo e indicadores
+mt5-tel-periodos.png | Mantén el dedo en el gráfico para elegir el periodo: minutos, horas y días.
+mt5-tel-indicadores.png | En el botón f eliges el indicador por familias: tendencia, osciladores, volúmenes.
+:::
+
+:::galeria Dibujar y afinar
+mt5-tel-objetos.png | La lista de objetos dibujados, por par. Desde aquí los editas, ocultas o borras.
+mt5-tel-fibonacci.png | Las propiedades de un Fibonacci: puntos, niveles, color y estilo.
+:::
+
+### Poner el gráfico a tu gusto
+
+:::galeria Menos ruido, mejor lectura
+mt5-tel-definicoes-grafico.png | En Ajustes › Gráficos eliges velas japonesas y lo que aparece en pantalla.
+mt5-tel-cores.png | Los colores de cada parte del gráfico. Elige un esquema y no lo toques más.
+:::
+
+Activa solo lo que usas. La línea Ask ayuda a ver el precio de compra. La cuenta atrás para el cierre de la vela ayuda a no decidir a mitad de una vela. El resto puede quedarse apagado.
 
 :::alerta Error clásico · Vivir en el M1
 En el gráfico de 1 minuto todo parece una oportunidad. Es la temporalidad en la que más se opera y menos se piensa. Ábrelo solo cuando ya hayas decidido en una mayor.
@@ -116,6 +143,10 @@ En el paso 2 la app muestra la pérdida en dinero antes de confirmar. Si esa cif
 
 :::alerta Error clásico · La coma en el lote
 Querías 0,10 y escribiste 1,0. En el móvil pasa con un dedo torpe. Antes de colocar, lee el volumen en voz alta.
+:::
+
+:::galeria El selector de lotes
+mt5-tel-ordem-lotes.png | Al tocar el volumen se abre un selector con botones de −0,10 a +0,10. Confirma el número grande antes de cerrarlo.
 :::
 
 :::alerta Error clásico · Confundir Limit con Stop

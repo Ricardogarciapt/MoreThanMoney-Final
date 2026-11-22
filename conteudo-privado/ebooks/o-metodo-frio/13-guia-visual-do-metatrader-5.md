@@ -56,6 +56,14 @@ As cores só dizem se o último preço desceu (vermelho) ou subiu (azul) em rela
 
 Para abrir uma ordem ou um gráfico, toca no par e escolhe a opção no menu que aparece.
 
+### Acrescentar um par à lista
+
+:::galeria Procurar pelo nome
+mt5-tel-procurar-simbolo.png | Toca no «+» em Cotações e escreve o nome do par. Os ativos vêm arrumados por grupos: Forex, matérias-primas, índices e cripto.
+:::
+
+Mantém a lista curta. Os pares do teu plano e pouco mais. Uma lista com quarenta linhas convida a procurar oportunidades em vez de esperar pelas tuas.
+
 ## 4. O gráfico: o mesmo par em dois tempos
 
 :::galeria Mudar o tempo muda a história
@@ -67,6 +75,25 @@ mt5-tel-grafico-velas.png | H1: cada vela é uma hora. A tendência vê-se melho
 - **A linha do preço:** a etiqueta colorida à direita marca o preço atual.
 - **Indicadores:** o botão *f* no topo. Põe um, no máximo dois.
 - **Objetos:** linhas, zonas e Fibonacci também estão no topo. Desenha as tuas zonas antes de pensar em entrar.
+
+:::galeria Período e indicadores
+mt5-tel-periodos.png | Mantém o dedo no gráfico para escolher o período: minutos, horas e dias.
+mt5-tel-indicadores.png | No botão f escolhes o indicador por famílias: tendência, osciladores, volumes.
+:::
+
+:::galeria Desenhar e afinar
+mt5-tel-objetos.png | A lista de objetos desenhados, por par. Daqui editas, escondes ou apagas.
+mt5-tel-fibonacci.png | As propriedades de um Fibonacci: pontos, níveis, cor e estilo.
+:::
+
+### Pôr o gráfico a teu gosto
+
+:::galeria Menos ruído, mais leitura
+mt5-tel-definicoes-grafico.png | Em Configurações › Gráficos escolhes velas japonesas e o que aparece no ecrã.
+mt5-tel-cores.png | As cores de cada parte do gráfico. Escolhe um esquema e não mexas mais.
+:::
+
+Liga só o que usas. A linha Ask ajuda a ver o preço de compra. A contagem para o fecho da vela ajuda a não decidir a meio de uma vela. O resto pode ficar desligado.
 
 :::alerta Erro clássico · Viver no M1
 No gráfico de 1 minuto tudo parece uma oportunidade. É o tempo em que se fazem mais operações e se pensa menos. Abre-o só quando já decidiste num tempo maior.
@@ -116,6 +143,10 @@ No passo 2 a app mostra a perda em dinheiro antes de confirmares. Se esse valor 
 
 :::alerta Erro clássico · A vírgula no lote
 Querias 0,10 e escreveste 1,0. No telemóvel isto acontece com um dedo mais gordo. Antes de colocar, lê o volume em voz alta.
+:::
+
+:::galeria O seletor de lotes
+mt5-tel-ordem-lotes.png | Ao tocar no volume abre-se um seletor com botões de −0,10 a +0,10. Confirma o número grande antes de fechar.
 :::
 
 :::alerta Erro clássico · Trocar Limit por Stop
