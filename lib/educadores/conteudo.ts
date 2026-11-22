@@ -194,3 +194,47 @@ export async function entregarConteudoPendente(): Promise<Record<string, unknown
   }
   return { entregues: feitos.length, feitos }
 }
+
+let cfgCache: { em: number; cfg: Config } | null = null
+async function configEmCache(): Promise<Config> {
+  if (cfgCache && Date.now() - cfgCache.em < 60_000) return cfgCache.cfg
+  const cfg = await lerConfig()
+  cfgCache = { em: Date.now(), cfg }
+  return cfg
+}
+
+/**
+ * Chamado pelo leitor da caixa para cada conversa do Instagram. Se quem escreveu é um educador
+ * (por IGSID já guardado ou pelo @ em `ig_handle`):
+ *  - guarda o IGSID na config e mete-o em `dm_contas_internas` (o funil nunca lhe responde);
+ *  - regista a mensagem em `ig_dm_log` com status 'interna' e a hora real dela, que é o que
+ *    abre a janela de 24 h para lhe entregar o conteúdo por DM.
+ * Devolve a chave do educador, ou null se não for um.
+ */
+export async function notarMensagemEducador(m: { de: string; username?: string; mid: string; texto: string; contaId: string; criado?: string }): Promise<string | null> {
+  const cfg = await configEmCache()
+  const eds = Object.entries(cfg.educadores ?? {})
+  const user = m.username?.toLowerCase()
+  const achado = eds.find(([, e]) => e.igsid === m.de) ?? (user ? eds.find(([, e]) => e.ig_handle?.toLowerCase() === user) : undefined)
+  if (!achado) return null
+  const [chave, ed] = achado
+  const db = getSupabaseAdmin()
+  if (ed.igsid !== m.de) {
+    const novo: Config = { ...cfg, educadores: { ...cfg.educadores, [chave]: { ...ed, igsid: m.de } } }
+    await db.from('site_settings').upsert({ key: 'educador_conteudo', value: novo }, { onConflict: 'key' })
+    cfgCache = { em: Date.now(), cfg: novo }
+    const { data } = await db.from('site_settings').select('value').eq('key', 'dm_contas_internas').maybeSingle()
+    const v = data?.value as unknown
+    const lista: unknown[] = Array.isArray(v) ? v : Array.isArray((v as { ids?: unknown[] })?.ids) ? (v as { ids: unknown[] }).ids : []
+    if (!lista.map(String).includes(m.de)) {
+      await db.from('site_settings').upsert({ key: 'dm_contas_internas', value: [...lista, m.de] }, { onConflict: 'key' })
+    }
+  }
+  const quando = m.criado ? new Date(m.criado) : new Date()
+  if (Date.now() - quando.getTime() < 24 * 3600_000) {
+    try {
+      await db.from('ig_dm_log').insert({ mid: m.mid, account_id: m.contaId, sender_id: m.de, message: m.texto.slice(0, 1000), status: 'interna', created_at: quando.toISOString() })
+    } catch {}
+  }
+  return chave
+}

@@ -2,9 +2,9 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getSupabaseAdmin } from '@/lib/supabase-admin-client'
 import { isCronAuthorized } from '@/lib/cron-auth'
 import { carregarTokensIG, candidateTokensForIgAccount, sendInstagramDmResilient } from '@/lib/instagram/dm-closer'
-import { PAGINAS, SEM_TEXTO, responderMensagem, contasInternas, type CanalDm } from '@/lib/social/dm-motor'
+import { PAGINAS, IDS_NOSSOS, SEM_TEXTO, responderMensagem, contasInternas, type CanalDm } from '@/lib/social/dm-motor'
 import { linkAgendar } from '@/lib/agenda/link'
-import { entregarConteudoPendente } from '@/lib/educadores/conteudo'
+import { entregarConteudoPendente, notarMensagemEducador } from '@/lib/educadores/conteudo'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -32,14 +32,14 @@ export const maxDuration = 120
 const GRAPH = 'https://graph.facebook.com/v21.0'
 const JANELA_MS = 24 * 3600_000
 
-type Msg = { id?: string; message?: string; created_time?: string; from?: { id?: string } }
+type Msg = { id?: string; message?: string; created_time?: string; from?: { id?: string; username?: string } }
 type Conversa = { id?: string; updated_time?: string; messages?: { data?: Msg[] } }
 
 async function conversas(pageId: string, plataforma: 'instagram' | 'messenger', token: string, pasta?: string) {
   const qs = new URLSearchParams({
     platform: plataforma,
     ...(pasta ? { folder: pasta } : {}),
-    fields: 'id,updated_time,messages.limit(2){id,message,created_time,from}',
+    fields: 'id,updated_time,messages.limit(2){id,message,created_time,from{id,username}}',
     limit: '25',
     access_token: token,
   })
@@ -193,6 +193,12 @@ export async function GET(req: NextRequest) {
       for (const c of r.dados ?? []) {
         const ultima = c.messages?.data?.[0]
         const de = ultima?.from?.id
+        // Educadores (Ruben, …): nunca entram no funil; a mensagem abre a janela para lhes
+        // entregar o conteúdo por DM (lib/educadores/conteudo.ts).
+        if (ultima?.id && de && plataforma === 'instagram' && !IDS_NOSSOS.has(de)) {
+          const ed = await notarMensagemEducador({ de, username: ultima.from?.username, mid: ultima.id, texto: ultima.message ?? '', contaId: p.ig, criado: ultima.created_time })
+          if (ed) continue
+        }
         if (!ultima?.id || !de || proprios.has(de)) continue
         if (agora - new Date(ultima.created_time ?? 0).getTime() > JANELA_MS) continue
         porResponder++
