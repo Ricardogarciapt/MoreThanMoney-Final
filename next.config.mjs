@@ -17,6 +17,8 @@ const nextConfig = {
   },
   outputFileTracingExcludes: {
     '*': ['public/videos/**', 'public/**/*.mp4', 'public/**/*.mov'],
+    // O formulário grátis só assina links: não precisa dos livros nem do public/ (passava os 250 MB).
+    '/api/ebooks/[slug]/gratis': ['conteudo-privado/**', 'public/**'],
   },
   eslint: {
     ignoreDuringBuilds: true,
