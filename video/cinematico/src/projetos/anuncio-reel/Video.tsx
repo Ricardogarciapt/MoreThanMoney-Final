@@ -180,12 +180,13 @@ const Legendas: React.FC<{ k: string; a: Anuncio }> = ({ k, a }) => {
   if (!seg) return null
   const palavras = seg[2].split(' ')
   const pos = (t - seg[0]) / Math.max(0.2, seg[1] - seg[0])
-  const ativa = Math.min(palavras.length - 1, Math.floor(pos * palavras.length))
+  const ativa = Math.max(0, Math.min(palavras.length - 1, Math.floor(pos * palavras.length)))
   const molde = moldeDe(a)
   const est = estiloDe(a)
   if (est === 'palavra') {
     // uma palavra de cada vez, enorme, com murro (estilo «palavra a palavra» dos virais)
-    const p = palavras[ativa]
+    const p = palavras[ativa] || ''
+    if (!p) return null
     const iniP = f(seg[0] + (ativa / palavras.length) * (seg[1] - seg[0]))
     const s = spring({ frame: fr - iniP, fps, config: { damping: 11, stiffness: 260 } })
     const forte = p.replace(/[^\p{L}\p{N}]/gu, '').length >= 6 || /\d/.test(p)
