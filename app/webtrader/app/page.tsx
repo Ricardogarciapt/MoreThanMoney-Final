@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react"
 import { Loader2 } from "lucide-react"
 import { supabase } from "@/lib/supabase"
+import { guardarOrigem, urlDeVoltaSegura } from "@/lib/webtrader/origem"
 import { decidirPassagem, destinoDaEntrada, tokenDoFragmento, userIdDoToken } from "@/lib/webtrader/sessao-app"
 
 /**
@@ -98,6 +99,9 @@ export default function EntradaWebtraderApp() {
     }
 
     const ponte = ponteDaCasca()
+    // A seta «voltar à MTM Auto» no WebTrader (pedido do Ricardo, 22/11): lembra-se de onde se veio.
+    if (ponte) guardarOrigem({ nome: "MTM Auto", tipo: "casca" })
+    else if (window.location.hash.includes("mtmauto=")) guardarOrigem({ nome: "MTM Auto", tipo: "url", url: urlDeVoltaSegura(document.referrer) ?? "https://mtm-auto.vercel.app" })
     if (!ponte) {
       /**
        * BROWSER. O token vem no fragmento — e a PRIMEIRA coisa a fazer é tirá-lo do histórico,

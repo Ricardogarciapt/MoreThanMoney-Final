@@ -46,7 +46,7 @@ export function anexarTrendShot(
   inputs: Partial<InputsTrendShot> & { simbolo: string; etiquetasEixo?: boolean },
 ): TrendShotLW {
   const etiquetas = inputs.etiquetasEixo !== false
-  const comum = { lineWidth: 2 as const, priceLineVisible: false, lastValueVisible: etiquetas, crosshairMarkerVisible: false }
+  const comum = { lineWidth: 2 as const, priceLineVisible: false, lastValueVisible: etiquetas, crosshairMarkerVisible: false, autoscaleInfoProvider: () => null }
   const rapida = chart.addSeries(LineSeries, { ...comum, color: COR_DESCIDA, title: etiquetas ? 'EMA20' : '' })
   const lenta = chart.addSeries(LineSeries, { ...comum, color: COR_SUBIDA, title: etiquetas ? 'EMA50' : '' })
   const longa = chart.addSeries(LineSeries, { ...comum, lineWidth: 3, color: COR_LONGA, title: etiquetas ? 'EMA238' : '' })
@@ -72,14 +72,16 @@ export function anexarTrendShot(
       marcas.setMarkers(m)
       for (const l of linhas) serie.removePriceLine(l)
       linhas = []
-      const ultimo = r.sinais[r.sinais.length - 1]
+      // Só o sinal vivo (sem SL nem TP4 tocados) desenha níveis: um sinal antigo deixava as linhas
+      // longe do preço, espremidas num canto (visto pelo Ricardo a 22/11 no BTCUSD 10m).
+      const u = r.ultima, ultimo = u && !u.slTocado && !u.tpTocado[3] ? u.sinal : null
       if (ultimo) {
         const seta = ultimo.direcao === 'buy' ? '▲' : '▼'
         const nova = (price: number, color: string, title: string) =>
           linhas.push(serie.createPriceLine({ price, color, title: `TS ${seta} ${title}`, lineWidth: 1, lineStyle: 2, axisLabelVisible: etiquetas }))
         nova(ultimo.entrada, COR_ENTRADA, 'Entry')
         nova(ultimo.sl, COR_SL, 'SL')
-        ultimo.tps.forEach((tp, k) => nova(tp, COR_TP, `TP${k + 1}`))
+        ultimo.tps.forEach((tp, k) => { if (!u!.tpTocado[k]) nova(tp, COR_TP, `TP${k + 1}`) })
       }
       return r
     },

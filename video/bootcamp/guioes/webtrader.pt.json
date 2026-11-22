@@ -1,0 +1,1281 @@
+{
+ "estrategia": "WebTrader",
+ "marca": "MoreThanMoney",
+ "motor": "webtrader",
+ "playlist": "webtrader",
+ "cores": {
+  "bull": "#26a69a",
+  "bear": "#ef5350"
+ },
+ "serie": {
+  "pt": "BOOTCAMP WEBTRADER",
+  "en": "WEBTRADER BOOTCAMP"
+ },
+ "pilula": {
+  "pt": "Vídeo",
+  "en": "Video"
+ },
+ "tituloPlaylist": {
+  "pt": "Bootcamp WebTrader MTM",
+  "en": "MTM WebTrader Bootcamp"
+ },
+ "vel": 1.12,
+ "pronuncia": [
+  [
+   "WebTrader",
+   "Web Trader"
+  ],
+  [
+   "TradeLocker",
+   "Trade Locker"
+  ],
+  [
+   "MetaTrader",
+   "Meta Trader"
+  ],
+  [
+   "TradingView",
+   "Trading View"
+  ],
+  [
+   "GoldKiller",
+   "Gold Killer"
+  ],
+  [
+   "TrendShot",
+   "Trend Shot"
+  ],
+  [
+   "RocketNova",
+   "Rocket Nova"
+  ],
+  [
+   "XAUUSD",
+   "X A U U S D"
+  ],
+  [
+   "EURUSD",
+   "E U R U S D"
+  ],
+  [
+   "BTCUSD",
+   "B T C U S D"
+  ],
+  [
+   "US30",
+   "U S trinta"
+  ],
+  [
+   "ETFs",
+   "E T Fs"
+  ],
+  [
+   "FOMO",
+   "fomo"
+  ],
+  [
+   "POC",
+   "P O C"
+  ],
+  [
+   "R R",
+   "R R"
+  ],
+  [
+   "MTM",
+   "M T M"
+  ],
+  [
+   "PUPrime",
+   "PU Prime"
+  ]
+ ],
+ "videos": [
+  {
+   "rotulo": "WebTrader MTM · 1/6",
+   "titulo": "O que é o WebTrader MTM e para que serve",
+   "serie": "curto",
+   "cenas": [
+    {
+     "id": "a00",
+     "tipo": "abertura",
+     "kicker": "Bootcamp WebTrader · 1 de 6",
+     "titulo": "WebTrader",
+     "sub": "A plataforma de trading da MTM, no browser",
+     "rodape": "morethanmoney.pt/webtrader",
+     "semVoz": 4
+    },
+    {
+     "id": "a01",
+     "tipo": "simplepro",
+     "cap": "O que é",
+     "kicker": "Uma plataforma, todos os ecrãs",
+     "titulo": "Telemóvel, tablet e computador",
+     "fala": "Olá, eu sou o Ricardo Garcia e este é o bootcamp do WebTrader MTM. O WebTrader é a nossa plataforma de trading. Abre no browser, em morethanmoney.pt barra webtrader, e funciona no telemóvel, no tablet e no computador. Não precisas de instalar nada. Se quiseres, adicionas ao ecrã principal e fica como uma app."
+    },
+    {
+     "id": "a02",
+     "tipo": "contas",
+     "cap": "Para que serve",
+     "kicker": "As tuas contas num só sítio",
+     "titulo": "MTM Funded, TradeLocker e MetaTrader",
+     "fala": "Para que serve? Para teres as tuas contas num só sítio. Entras com a tua conta MTM e as contas aparecem logo. Tens as contas MTM Funded, dos desafios e dos torneios, com login a começar por setenta e sete. E podes ligar as tuas contas de corretora: TradeLocker e MetaTrader cinco ou quatro. Nas contas reais, as ordens são executadas na tua corretora."
+    },
+    {
+     "id": "a03",
+     "tipo": "ui",
+     "cap": "O ecrã",
+     "kicker": "Modo PRO",
+     "titulo": "Gráfico, ticket, posições",
+     "img": "pro-xauusd-fechado.jpg",
+     "focoImg": [
+      0.5,
+      0.35
+     ],
+     "zoom": 1.25,
+     "fala": "Este é o ecrã. Em cima, a conta e o saldo. Ao centro, o gráfico, com as temporalidades e os estudos das estratégias MTM. À direita, a lista de ativos e o ticket para abrir ordens. Em baixo, as posições, as ordens, o histórico e as estatísticas da conta."
+    },
+    {
+     "id": "a04",
+     "tipo": "pontos",
+     "cap": "O que tem",
+     "kicker": "O que o WebTrader faz por ti",
+     "titulo": "Mais do que comprar e vender",
+     "itens": [
+      "Estudos MTM no gráfico: GoldKiller, Sensei, MTM Scanner, TrendShot, Premium Scanner, RocketNova",
+      "Lote calculado pelo risco",
+      "Break-even e trailing automáticos no servidor",
+      "Diário, estatísticas e link de auditoria"
+     ],
+     "fala": "O WebTrader não serve só para comprar e vender. Tem os estudos das nossas estratégias desenhados no gráfico, com o plano de cada sinal. Calcula o lote pelo risco que escolhes. Tem break-even e trailing stop automáticos, que correm no nosso servidor, mesmo com o browser fechado. E tem diário, estatísticas e um link de auditoria para mostrares o teu histórico."
+    },
+    {
+     "id": "a05",
+     "tipo": "gestao",
+     "cap": "Gestão automática",
+     "kicker": "Corre no servidor",
+     "titulo": "O stop protege-se sozinho",
+     "be": 15,
+     "offset": 1,
+     "ativacao": 20,
+     "distancia": 15,
+     "fala": "Olha para este exemplo. A posição abre, o preço anda a favor, e ao chegar ao gatilho o stop passa para a entrada. A partir daí o trailing segue o preço a uma distância fixa. Se o mercado voltar para trás, a saída acontece com parte do movimento protegido. Isto não é garantia de resultado. É disciplina automática."
+    },
+    {
+     "id": "a06",
+     "tipo": "checklist",
+     "cap": "Neste bootcamp",
+     "kicker": "Seis vídeos",
+     "titulo": "O que vais aprender",
+     "itens": [
+      "Simple e PRO: qual usar",
+      "A primeira ordem e os sinais",
+      "Ligar contas e preparar o ecrã",
+      "Ticket profissional e gestão",
+      "Estratégias, diário e auditoria"
+     ],
+     "fala": "Neste bootcamp vais aprender a escolher entre o modo Simple e o modo PRO, a abrir a primeira ordem com risco controlado e a usar os sinais. Depois, nos vídeos longos, vamos ligar contas, dominar o ticket e a gestão automática, e trabalhar com as estratégias, o diário e a auditoria."
+    },
+    {
+     "id": "a07",
+     "tipo": "aviso",
+     "cap": "",
+     "titulo": "Até ao vídeo 2",
+     "sub": "Simple e PRO",
+     "texto": "Conteúdo educativo. Não é aconselhamento financeiro. Negociar forex, índices, metais e cripto envolve risco elevado e podes perder parte ou a totalidade do capital. Os mercados mostrados são ilustrativos ou capturas de uma conta de treino. Resultados passados não garantem resultados futuros.",
+     "fala": "Lembra-te: isto é conteúdo educativo e não é aconselhamento financeiro. O trading tem risco e podes perder dinheiro. Treina primeiro numa conta de desafio ou demo. Vemo-nos no vídeo dois.",
+     "respiro": 4
+    }
+   ]
+  },
+  {
+   "rotulo": "WebTrader MTM · 2/6",
+   "titulo": "Simple e PRO: as diferenças e quando usar cada um",
+   "serie": "curto",
+   "cenas": [
+    {
+     "id": "b00",
+     "tipo": "abertura",
+     "kicker": "Bootcamp WebTrader · 2 de 6",
+     "titulo": "Simple e PRO",
+     "sub": "Dois modos, a mesma conta",
+     "rodape": "morethanmoney.pt/webtrader",
+     "semVoz": 4
+    },
+    {
+     "id": "b01",
+     "tipo": "comparar",
+     "cap": "Dois modos",
+     "kicker": "O mesmo motor por baixo",
+     "titulo": "Simple ou PRO?",
+     "cartoes": [
+      {
+       "t": "Simple",
+       "d": "Gráfico grande, Comprar e Vender sempre à mão, lote com mais e menos. Feito para o telemóvel."
+      },
+      {
+       "t": "PRO",
+       "d": "Painéis, até quatro gráficos, ticket completo, separadores de análise e atalhos de teclado."
+      }
+     ],
+     "fala": "O WebTrader tem dois modos: Simple e PRO. Os dois usam a mesma conta e o mesmo motor. Muda só a forma como o ecrã se organiza. O Simple é feito para o telemóvel. O PRO é feito para quem tem ecrã grande e quer tudo à vista."
+    },
+    {
+     "id": "b02",
+     "tipo": "ui",
+     "cap": "Simple",
+     "kicker": "Modo Simple",
+     "titulo": "Gráfico grande e dois botões",
+     "img": "simple.jpg",
+     "focoImg": [
+      0.38,
+      0.95
+     ],
+     "zoom": 1.5,
+     "fala": "No modo Simple tens o gráfico em grande e, por baixo, dois botões: Vender e Comprar, com o preço de cada um. No meio, o lote, com menos e mais, e a margem que essa ordem vai usar. À direita, ou por baixo no telemóvel, tens as posições, as ordens, o histórico e o separador Mais."
+    },
+    {
+     "id": "b03",
+     "tipo": "ui",
+     "cap": "Simple",
+     "kicker": "Modo Simple · Mais",
+     "titulo": "Estatísticas sem sair do modo",
+     "img": "simple-mais-estatisticas.jpg",
+     "focoImg": [
+      0.75,
+      0.3
+     ],
+     "zoom": 1.4,
+     "fala": "No separador Mais encontras as estatísticas da conta, o calendário económico e o resto. Ou seja, o Simple não é uma versão pobre. É a mesma plataforma, com menos ruído."
+    },
+    {
+     "id": "b04",
+     "tipo": "ui",
+     "cap": "PRO",
+     "kicker": "Modo PRO",
+     "titulo": "Tudo à vista",
+     "img": "ticket-risco.jpg",
+     "focoImg": [
+      0.5,
+      0.5
+     ],
+     "zoom": 1.15,
+     "fala": "No modo PRO o ecrã divide-se em painéis. Gráfico ao centro, lista de ativos e ticket à direita, e em baixo os separadores: Posições, Ordens, Histórico, Estatísticas, Diário, Alertas, Registo e A minha conta. Podes ver um, dois ou quatro gráficos ao mesmo tempo."
+    },
+    {
+     "id": "b05",
+     "tipo": "pontos",
+     "cap": "Atalhos",
+     "kicker": "No computador",
+     "titulo": "Atalhos de teclado",
+     "itens": [
+      "Alt + M: troca entre Simple e PRO",
+      "F9: abre o ticket",
+      "Alt + 1 a 4: número de gráficos",
+      "?: mostra todos os atalhos"
+     ],
+     "fala": "No computador há atalhos. Alt mais M troca entre Simple e PRO. F9 abre o ticket. Alt mais um a quatro escolhe quantos gráficos vês. E o ponto de interrogação mostra a lista completa. O botão Simple e PRO também está sempre no canto superior direito."
+    },
+    {
+     "id": "b06",
+     "tipo": "frase",
+     "cap": "Qual escolher",
+     "texto": "Simple para executar o plano.<br>PRO para construir o plano.",
+     "autor": "Regra da casa",
+     "fala": "Qual escolher? A minha regra é simples. Usa o PRO para analisar e preparar o plano, com calma, no computador. Usa o Simple para executar e acompanhar no telemóvel. A escolha fica guardada para ti."
+    },
+    {
+     "id": "b07",
+     "tipo": "aviso",
+     "cap": "",
+     "titulo": "Até ao vídeo 3",
+     "sub": "A primeira ordem e os sinais",
+     "texto": "Conteúdo educativo. Não é aconselhamento financeiro. Negociar forex, índices, metais e cripto envolve risco elevado e podes perder parte ou a totalidade do capital. Os mercados mostrados são ilustrativos ou capturas de uma conta de treino. Resultados passados não garantem resultados futuros.",
+     "fala": "Conteúdo educativo, não é aconselhamento financeiro. O trading tem risco. No próximo vídeo abrimos a primeira ordem com o risco controlado.",
+     "respiro": 4
+    }
+   ]
+  },
+  {
+   "rotulo": "WebTrader MTM · 3/6",
+   "titulo": "A primeira ordem com risco controlado e como usar os sinais",
+   "serie": "curto",
+   "cenas": [
+    {
+     "id": "c00",
+     "tipo": "abertura",
+     "kicker": "Bootcamp WebTrader · 3 de 6",
+     "titulo": "Primeira ordem",
+     "sub": "Risco primeiro, botão depois",
+     "rodape": "morethanmoney.pt/webtrader",
+     "semVoz": 4
+    },
+    {
+     "id": "c01",
+     "tipo": "ticket",
+     "cap": "O ticket",
+     "kicker": "Ordem a mercado",
+     "titulo": "Quatro decisões antes de carregar",
+     "passos": [
+      {
+       "texto": "Escolhe o tipo: Mercado",
+       "zona": "tipo-Mercado",
+       "tipo": "Mercado"
+      },
+      {
+       "texto": "Define o risco: 1 % do saldo",
+       "zona": "risco",
+       "valores": {
+        "risco": "1,0 %"
+       }
+      },
+      {
+       "texto": "Coloca o stop loss",
+       "zona": "sl",
+       "valores": {
+        "sl": "25 pips"
+       }
+      },
+      {
+       "texto": "O lote calcula-se sozinho",
+       "zona": "vol",
+       "valores": {
+        "vol": "0,21",
+        "tp": "50 pips",
+        "rr": "1 : 2"
+       }
+      }
+     ],
+     "fala": "Abrir uma ordem no WebTrader são quatro decisões. Primeiro o tipo: a mercado entra já, ao preço atual. Depois o risco: em vez de escolheres o lote à sorte, dizes quanto aceitas perder, por exemplo um por cento do saldo. Terceiro, o stop loss. E aqui está o truque: com o risco e o stop definidos, o WebTrader calcula o lote por ti."
+    },
+    {
+     "id": "c02",
+     "tipo": "ui",
+     "cap": "No ecrã real",
+     "kicker": "Risco % · lote calculado",
+     "titulo": "1 % do saldo = 0,21 lotes",
+     "img": "ticket-risco.jpg",
+     "focoImg": [
+      0.86,
+      0.62
+     ],
+     "zoom": 1.9,
+     "fala": "Aqui está no ecrã real. Escrevi um por cento e o WebTrader respondeu: zero vírgula vinte e um lotes. Por baixo tens o stop e o take profit, que podes escrever em preço, em pips, em dólares ou em percentagem. E antes de enviar aparece o resumo: o risco, o ganho no alvo e a relação risco recompensa. Só depois confirmas."
+    },
+    {
+     "id": "c03",
+     "tipo": "pontos",
+     "cap": "Desenhar no gráfico",
+     "kicker": "Posição longa ou curta",
+     "titulo": "Arrasta a entrada, o SL e o TP",
+     "itens": [
+      "Toca em posição longa ou posição curta",
+      "Arrasta as linhas no gráfico",
+      "O WebTrader valida: numa compra, o stop fica abaixo do preço",
+      "Confirmar, ou um clique se ligares o ⚡"
+     ],
+     "fala": "Também podes desenhar a ordem no gráfico. Tocas em posição longa ou posição curta e arrastas a entrada, o stop e o alvo. O WebTrader valida tudo: numa compra, o stop tem de ficar abaixo do preço. Antes de enviar há sempre uma confirmação, a não ser que ligues a negociação num clique, o relâmpago. Recomendo deixá-lo desligado até teres prática."
+    },
+    {
+     "id": "c04",
+     "tipo": "sinal",
+     "cap": "Os sinais",
+     "kicker": "Do estudo ao ticket",
+     "titulo": "Usar este sinal",
+     "origem": "GoldKiller",
+     "fala": "Agora os sinais. Quando ligas uma estratégia no gráfico, por exemplo o GoldKiller, e ela marca uma entrada, aparece uma barra com o sinal: direção, entrada, stop e alvo. O botão Usar este sinal preenche o ticket com esses valores. Repara: preenche, não envia. Quem decide e confirma és tu."
+    },
+    {
+     "id": "c05",
+     "tipo": "ui",
+     "cap": "Os sinais",
+     "kicker": "No ecrã real",
+     "titulo": "GoldKiller compra · Usar este sinal",
+     "img": "pro-xauusd-fechado.jpg",
+     "focoImg": [
+      0.66,
+      0.2
+     ],
+     "zoom": 1.8,
+     "fala": "Aqui está o GoldKiller no ouro, com a compra, o stop e o alvo na barra amarela, e o botão azul Usar este sinal. Neste momento o mercado estava fechado, e o WebTrader avisa: abre daqui a nove horas."
+    },
+    {
+     "id": "c06",
+     "tipo": "checklist",
+     "cap": "Resumo",
+     "kicker": "Antes de cada ordem",
+     "titulo": "A checklist curta",
+     "itens": [
+      "Uma estratégia de cada vez no gráfico",
+      "Risco em % antes do lote",
+      "Stop sempre colocado",
+      "Confirmar o resumo: risco, ganho, R:R"
+     ],
+     "fala": "Resumindo. Liga uma estratégia de cada vez, para o gráfico não te baralhar. Define o risco em percentagem antes de pensares no lote. Nunca abras sem stop. E lê o resumo antes de confirmar. Nos próximos três vídeos vamos ao detalhe de cada parte."
+    },
+    {
+     "id": "c07",
+     "tipo": "aviso",
+     "cap": "",
+     "titulo": "Até ao vídeo 4",
+     "sub": "Ligar contas e preparar o ecrã",
+     "texto": "Conteúdo educativo. Não é aconselhamento financeiro. Negociar forex, índices, metais e cripto envolve risco elevado e podes perder parte ou a totalidade do capital. Os mercados mostrados são ilustrativos ou capturas de uma conta de treino. Resultados passados não garantem resultados futuros.",
+     "fala": "Conteúdo educativo, não é aconselhamento financeiro. Os sinais são ideias, não garantias. Treina numa conta de desafio ou demo antes de usares dinheiro real.",
+     "respiro": 4
+    }
+   ]
+  },
+  {
+   "rotulo": "WebTrader MTM · 4/6",
+   "titulo": "Treino 1: entrar, ligar contas MetaTrader e TradeLocker e preparar o ecrã",
+   "serie": "longo",
+   "cenas": [
+    {
+     "id": "d00",
+     "tipo": "abertura",
+     "kicker": "Bootcamp WebTrader · 4 de 6 · Treino",
+     "titulo": "Contas e ecrã",
+     "sub": "Entrar, ligar, organizar",
+     "rodape": "morethanmoney.pt/webtrader",
+     "semVoz": 4
+    },
+    {
+     "id": "d01",
+     "tipo": "capitulo",
+     "numero": "01",
+     "titulo": "Entrar no WebTrader",
+     "sub": "Quatro portas",
+     "cap": "Entrar",
+     "fala": "Bem-vindo ao primeiro treino longo. Neste vídeo vamos fazer tudo o que se faz uma vez e depois fica: entrar, ligar as contas, organizar o seletor e preparar o ecrã para trabalhar. Começamos pela entrada."
+    },
+    {
+     "id": "d02",
+     "tipo": "pontos",
+     "cap": "Entrar",
+     "kicker": "Ecrã Entrar no WebTrader",
+     "titulo": "Quatro formas de entrar",
+     "itens": [
+      "Entrar com a conta MTM",
+      "Continuar com Google",
+      "Entrar com PrimeVerse",
+      "Entrar só com credenciais de conta"
+     ],
+     "fala": "Quando abres o WebTrader sem sessão aparece o ecrã Entrar no WebTrader, com quatro opções. Entrar com a conta MTM é a recomendada: as tuas contas aparecem sozinhas e o WebTrader abre a última que usaste. Também podes continuar com Google ou entrar com PrimeVerse. E há a quarta porta: entrar só com as credenciais de uma conta, sem conta MTM. Útil para abrir uma conta específica num computador que não é teu."
+    },
+    {
+     "id": "d03",
+     "tipo": "fluxo",
+     "cap": "Entrar",
+     "kicker": "Vindo de outra app",
+     "titulo": "Da MTM Auto para o WebTrader e de volta",
+     "passos": [
+      {
+       "t": "MTM Auto",
+       "d": "Tocas em WebTrader"
+      },
+      {
+       "t": "Sessão",
+       "d": "Entras com a mesma conta, sem escrever a password"
+      },
+      {
+       "t": "WebTrader",
+       "d": "Abre com as tuas contas"
+      },
+      {
+       "t": "Voltar",
+       "d": "A seta no canto leva-te de volta à app"
+      }
+     ],
+     "fala": "Se vieres de outra app nossa, por exemplo a MTM Auto, a passagem é automática. Tocas em WebTrader, a app passa a tua sessão e entras com a mesma conta, sem escrever a password. E quando quiseres regressar, tens a seta no canto superior esquerdo, que te leva de volta à app de onde vieste."
+    },
+    {
+     "id": "d04",
+     "tipo": "capitulo",
+     "numero": "02",
+     "titulo": "Ligar contas",
+     "sub": "MTM Funded, TradeLocker, MetaTrader",
+     "cap": "Contas",
+     "fala": "Segundo capítulo: ligar contas. O WebTrader fala com três tipos de conta, e cada um tem o seu formulário."
+    },
+    {
+     "id": "d05",
+     "tipo": "contas",
+     "cap": "Contas",
+     "kicker": "Contas MTM Funded",
+     "titulo": "Desafios e torneios",
+     "foco": "funded",
+     "fala": "Primeiro, as contas MTM Funded. São as contas dos desafios e dos torneios. Se compraste um desafio ou entraste num torneio com a tua conta MTM, a conta já está lá. Se só tens as credenciais, escolhes MTM Funded, escreves o login, que começa por setenta e sete, e a password. A password master negoceia. A password investor só deixa ver, o que é ótimo para mostrares a conta a alguém sem lhe dares controlo."
+    },
+    {
+     "id": "d06",
+     "tipo": "contas",
+     "cap": "Contas",
+     "kicker": "Conta de corretora",
+     "titulo": "TradeLocker",
+     "foco": "tradelocker",
+     "fala": "Segundo, TradeLocker. Precisas de estar com a conta MTM. Escreves o email e a password da TradeLocker e o servidor, que é o nome da corretora na TradeLocker. Carregas em Ver as minhas contas TradeLocker, escolhes a conta e pronto. A partir daqui as ordens que enviares são executadas na tua corretora, com o teu dinheiro. O WebTrader diz-to sempre, a vermelho, no topo: conta real."
+    },
+    {
+     "id": "d07",
+     "tipo": "contas",
+     "cap": "Contas",
+     "kicker": "Conta de corretora",
+     "titulo": "MetaTrader 5 ou 4",
+     "foco": "mt5",
+     "fala": "Terceiro, MetaTrader. Escolhes a versão, cinco ou quatro. Escreves o login, a password master e o servidor da corretora, por exemplo PUPrime Live. Há uma pesquisa de servidores para não te enganares no nome. A ligação MetaTrader também pede a conta MTM, porque usa a nossa ligação ao servidor da corretora. Se preferires, gere as contas ligadas na área de membro, em Gerir contas ligadas."
+    },
+    {
+     "id": "d08",
+     "tipo": "pontos",
+     "cap": "Contas",
+     "kicker": "Segurança",
+     "titulo": "Regras de ouro das credenciais",
+     "itens": [
+      "Password investor para mostrar, master para negociar",
+      "Nunca partilhes a password master",
+      "Real a vermelho: as ordens vão para a corretora",
+      "Sair desta conta: o X no seletor"
+     ],
+     "fala": "Quatro regras de ouro. Usa a password investor quando só queres mostrar a conta. Nunca partilhes a password master com ninguém, nem connosco. Quando vires a palavra real a vermelho, lembra-te que cada ordem vai para a tua corretora. E se abriste uma conta por credenciais num computador emprestado, tira-a com o X no seletor, ou usa o botão Sair para terminar a sessão no WebTrader."
+    },
+    {
+     "id": "d09",
+     "tipo": "capitulo",
+     "numero": "03",
+     "titulo": "O seletor de contas",
+     "sub": "Organizar, estrela, nome",
+     "cap": "Seletor",
+     "fala": "Terceiro capítulo: o seletor de contas, no canto superior esquerdo. Com várias contas, ele é o teu painel de controlo."
+    },
+    {
+     "id": "d10",
+     "tipo": "pontos",
+     "cap": "Seletor",
+     "kicker": "Escolher conta",
+     "titulo": "Arrumar as tuas contas",
+     "itens": [
+      "Filtros: As minhas, Mestres, Todas",
+      "Organizar: arrastar pela pega e esconder com o olho",
+      "Estrela: a conta que abre primeiro",
+      "Lápis: um nome teu para cada conta"
+     ],
+     "fala": "No seletor as contas aparecem agrupadas por corretora e servidor, com o estado e o capital de cada uma. Tens filtros. Tens o modo Organizar, onde arrastas as contas pela pega e escondes as que não usas com o olho. A estrela marca a conta que abre primeiro. E o lápis dá um nome teu a cada conta, por exemplo desafio dez mil ou conta de swing. Parece um pormenor, mas evita negociar na conta errada."
+    },
+    {
+     "id": "d11",
+     "tipo": "ui",
+     "cap": "Seletor",
+     "kicker": "A barra de cima",
+     "titulo": "Conta, aviso e modo",
+     "img": "auditoria-link.jpg",
+     "focoImg": [
+      0.1,
+      0.03
+     ],
+     "zoom": 2.2,
+     "fala": "Ao lado do seletor fica sempre o aviso da conta ativa: em que fase do caminho está, se é desafio, se é real. Esse aviso nunca desaparece. Do outro lado, o interruptor Simple e PRO e o botão para adicionar ao ecrã principal."
+    },
+    {
+     "id": "d12",
+     "tipo": "capitulo",
+     "numero": "04",
+     "titulo": "Preparar o gráfico",
+     "sub": "Ativos, tempos, camadas",
+     "cap": "Gráfico",
+     "fala": "Quarto capítulo: preparar o gráfico para trabalhar. Esta parte faz-se uma vez e o WebTrader guarda tudo."
+    },
+    {
+     "id": "d13",
+     "tipo": "ui",
+     "cap": "Gráfico",
+     "kicker": "Mercados",
+     "titulo": "Procurar ativo e favoritos",
+     "img": "ticket-risco.jpg",
+     "focoImg": [
+      0.86,
+      0.2
+     ],
+     "zoom": 1.9,
+     "fala": "À direita tens a lista de mercados. Escreves no campo Procurar ativo, por exemplo XAUUSD, EURUSD ou US30. Tens separadores por classe: Favoritos, Todos, Ações, Commodities, Cripto, Energia e ETFs. A estrela põe o ativo nos favoritos. Cada linha mostra o preço e a variação das últimas vinte e quatro horas."
+    },
+    {
+     "id": "d14",
+     "tipo": "pontos",
+     "cap": "Gráfico",
+     "kicker": "Barra do gráfico",
+     "titulo": "Temporalidade, tipo e camadas",
+     "itens": [
+      "Temporalidade: escolhe no menu, de 1 minuto a 1 mês",
+      "Tipo: velas, barras, linha ou área",
+      "Camadas: negociações, linha Ask e notícias",
+      "Ecrã inteiro e esconder o gráfico"
+     ],
+     "fala": "Na barra do gráfico escolhes a temporalidade no menu, de um minuto a um mês, e tens à mão as mais usadas: cinco minutos, quinze, uma hora e quatro horas. Ao lado, o tipo de gráfico: velas, barras, linha ou área. No menu Camadas ligas as tuas negociações no gráfico, a linha do preço Ask e as notícias do calendário económico. E tens o ecrã inteiro e o botão para esconder o gráfico quando só queres ver as posições."
+    },
+    {
+     "id": "d15",
+     "tipo": "pontos",
+     "cap": "Gráfico",
+     "kicker": "Ferramentas à esquerda",
+     "titulo": "Desenhar no gráfico",
+     "itens": [
+      "Linhas horizontais e de tendência",
+      "Texto e marcações",
+      "Esconder ou apagar desenhos",
+      "Multi-gráfico: 1, 2 ou 4 no PRO"
+     ],
+     "fala": "À esquerda do gráfico estão as ferramentas de desenho: linhas horizontais, linhas de tendência, texto, e os botões para esconder ou apagar o que desenhaste. No modo PRO, os ícones no canto superior direito dividem o ecrã em um, dois ou quatro gráficos. Uso muito dois gráficos: o mesmo ativo numa temporalidade maior e numa menor."
+    },
+    {
+     "id": "d16",
+     "tipo": "ui",
+     "cap": "Gráfico",
+     "kicker": "A linha de baixo",
+     "titulo": "Saldo, equity, margem e limites",
+     "img": "posicao-autobe-trailing.jpg",
+     "focoImg": [
+      0.78,
+      0.69
+     ],
+     "zoom": 2.0,
+     "fala": "Em baixo, à direita, está a linha da conta: saldo, equity, flutuante, margem, margem livre e nível de margem. Nas contas de desafio aparecem também os limites: a perda diária restante, a perda máxima restante e o objetivo. Habitua-te a olhar para esta linha antes de cada ordem. É ela que te diz quanto espaço tens para errar."
+    },
+    {
+     "id": "d17",
+     "tipo": "capitulo",
+     "numero": "05",
+     "titulo": "Sair e instalar",
+     "sub": "Fechar bem a sessão",
+     "cap": "Sessão",
+     "fala": "Último capítulo: instalar e sair."
+    },
+    {
+     "id": "d18",
+     "tipo": "pontos",
+     "cap": "Sessão",
+     "kicker": "No fim do dia",
+     "titulo": "Instalar, voltar e sair",
+     "itens": [
+      "Adicionar ao ecrã principal: abre como app",
+      "Seta: volta à app de onde vieste",
+      "Sair: termina a sessão neste dispositivo",
+      "As tuas contas continuam guardadas na conta MTM"
+     ],
+     "fala": "No botão Adicionar ao ecrã principal instalas o WebTrader como uma app, com ícone próprio. Se vieste de outra app nossa, a seta leva-te de volta. E o botão Sair termina a sessão no WebTrader neste dispositivo: toca uma vez e confirma. Não apaga nada da tua conta. Da próxima vez que entrares, as contas voltam a aparecer."
+    },
+    {
+     "id": "d19",
+     "tipo": "checklist",
+     "cap": "Treino",
+     "kicker": "Faz agora",
+     "titulo": "Exercício do treino 1",
+     "itens": [
+      "Entra com a conta MTM",
+      "Liga uma conta de desafio ou demo",
+      "Dá-lhe um nome e marca-a com estrela",
+      "Escolhe dois ativos favoritos e a tua temporalidade",
+      "Sai e volta a entrar"
+     ],
+     "fala": "Agora é contigo. Pausa o vídeo e faz este exercício. Entra com a conta MTM. Liga uma conta de desafio ou uma conta demo. Dá-lhe um nome e marca-a com a estrela. Escolhe dois ativos favoritos e a tua temporalidade de trabalho. No fim, sai e volta a entrar, para veres que tudo ficou guardado. No próximo treino vamos ao ticket profissional e à gestão automática."
+    },
+    {
+     "id": "d20",
+     "tipo": "aviso",
+     "cap": "",
+     "titulo": "Até ao treino 2",
+     "sub": "Ticket profissional e gestão",
+     "texto": "Conteúdo educativo. Não é aconselhamento financeiro. Negociar forex, índices, metais e cripto envolve risco elevado e podes perder parte ou a totalidade do capital. Os mercados mostrados são ilustrativos ou capturas de uma conta de treino. Resultados passados não garantem resultados futuros.",
+     "fala": "Conteúdo educativo, não é aconselhamento financeiro. Nas contas reais as ordens são executadas na tua corretora e podes perder dinheiro. Começa sempre por uma conta de treino.",
+     "respiro": 4
+    }
+   ]
+  },
+  {
+   "rotulo": "WebTrader MTM · 5/6",
+   "titulo": "Treino 2: ticket profissional, Trailing Stop e Auto Break-Even",
+   "serie": "longo",
+   "cenas": [
+    {
+     "id": "e00",
+     "tipo": "abertura",
+     "kicker": "Bootcamp WebTrader · 5 de 6 · Treino",
+     "titulo": "Ticket e gestão",
+     "sub": "Do risco à saída",
+     "rodape": "morethanmoney.pt/webtrader",
+     "semVoz": 4
+    },
+    {
+     "id": "e01",
+     "tipo": "capitulo",
+     "numero": "01",
+     "titulo": "Tipos de ordem",
+     "sub": "Mercado, Limit e Stop",
+     "cap": "Tipos",
+     "fala": "Segundo treino longo. Hoje é o ticket a fundo, do tipo de ordem à saída da posição, com a gestão automática. Abre o teu WebTrader numa conta de treino e faz comigo."
+    },
+    {
+     "id": "e02",
+     "tipo": "comparar",
+     "cap": "Tipos",
+     "kicker": "Ticket · F9",
+     "titulo": "Três tipos de ordem",
+     "cartoes": [
+      {
+       "t": "Mercado",
+       "d": "Entra já, ao preço atual. Para quando o plano diz agora."
+      },
+      {
+       "t": "Limit",
+       "d": "Espera por um preço melhor: comprar mais baixo ou vender mais alto."
+      },
+      {
+       "t": "Stop",
+       "d": "Entra a favor do movimento, quando o preço passar um nível."
+      }
+     ],
+     "fala": "No topo do ticket escolhes o tipo de ordem. Mercado entra já, ao preço atual. Limit fica à espera de um preço melhor: comprar mais abaixo ou vender mais acima, por exemplo num recuo a uma zona. Stop entra a favor do movimento, quando o preço ultrapassa um nível, como um rompimento. Limit e Stop ficam em Ordens até serem executadas ou canceladas."
+    },
+    {
+     "id": "e03",
+     "tipo": "capitulo",
+     "numero": "02",
+     "titulo": "Volume pelo risco",
+     "sub": "Lote, Risco $ ou Risco %",
+     "cap": "Volume",
+     "fala": "Segundo capítulo, o mais importante deste bootcamp: o volume."
+    },
+    {
+     "id": "e04",
+     "tipo": "ticket",
+     "cap": "Volume",
+     "kicker": "Volume",
+     "titulo": "Três formas de dizer o tamanho",
+     "passos": [
+      {
+       "texto": "Lote: escolhes o lote à mão",
+       "zona": "vol",
+       "valores": {
+        "vol": "0,10"
+       }
+      },
+      {
+       "texto": "Risco $: quanto perdes no stop, em dólares",
+       "zona": "risco",
+       "valores": {
+        "risco": "100 $"
+       }
+      },
+      {
+       "texto": "Risco %: quanto perdes, em % do saldo",
+       "zona": "risco",
+       "valores": {
+        "risco": "1,0 %"
+       }
+      },
+      {
+       "texto": "Com o stop, o lote calcula-se",
+       "zona": "vol",
+       "valores": {
+        "sl": "25 pips",
+        "vol": "0,21"
+       }
+      }
+     ],
+     "fala": "O volume escolhe-se de três formas. Lote: escreves o lote à mão, com menos e mais. Risco em dólares: dizes quanto aceitas perder se o stop for tocado. Risco em percentagem: o mesmo, mas em percentagem do saldo. Nos dois modos de risco o WebTrader precisa do stop para calcular o lote. Se ainda não o puseste, ele avisa: define o stop, em preço ou pips, ou arrasta a linha, para calcular o lote."
+    },
+    {
+     "id": "e05",
+     "tipo": "frase",
+     "cap": "Volume",
+     "texto": "Primeiro decides quanto podes perder.<br>Só depois quanto queres ganhar.",
+     "autor": "Gestão de risco MTM",
+     "fala": "Isto muda a forma de negociar. Primeiro decides quanto podes perder nesta ideia. Só depois pensas no ganho. Em contas de desafio, muita gente usa entre meio e um por cento por operação. Encontra o teu número e mantém-no."
+    },
+    {
+     "id": "e06",
+     "tipo": "capitulo",
+     "numero": "03",
+     "titulo": "Stop e alvo",
+     "sub": "Preço, pips, $ ou %",
+     "cap": "SL e TP",
+     "fala": "Terceiro capítulo: o stop loss e o take profit."
+    },
+    {
+     "id": "e07",
+     "tipo": "ui",
+     "cap": "SL e TP",
+     "kicker": "SL / TP",
+     "titulo": "Quatro unidades, o mesmo nível",
+     "img": "ticket-risco.jpg",
+     "focoImg": [
+      0.86,
+      0.66
+     ],
+     "zoom": 2.0,
+     "fala": "Em SL e TP escolhes a unidade: preço, pips, dólares ou percentagem. É o mesmo nível dito de quatro maneiras, e o WebTrader converte. Por baixo de cada campo vês sempre a distância em pips, o valor em dólares e a percentagem do saldo. Escreve na unidade em que pensas. Eu penso em preço quando o stop vem de uma estrutura do gráfico, e em pips quando segue uma regra fixa da estratégia."
+    },
+    {
+     "id": "e08",
+     "tipo": "ui",
+     "cap": "SL e TP",
+     "kicker": "Desenhar no gráfico",
+     "titulo": "Arrasta a entrada, o SL e o TP",
+     "img": "ticket-risco.jpg",
+     "focoImg": [
+      0.35,
+      0.3
+     ],
+     "zoom": 1.7,
+     "fala": "A forma mais rápida é desenhar. Tocas em posição longa ou posição curta e aparecem três linhas no gráfico: entrada, stop e alvo. Arrasta-as para onde o teu plano diz. Repara na etiqueta do stop: mostra a distância e quanto perdes se for tocado. Em baixo, o resumo: comprar a mercado, o lote, o stop, o alvo e o R R. Entrada perto do preço executa a mercado. Longe do preço cria uma ordem pendente."
+    },
+    {
+     "id": "e09",
+     "tipo": "pontos",
+     "cap": "SL e TP",
+     "kicker": "O resumo antes de enviar",
+     "titulo": "Lê estes números",
+     "itens": [
+      "Risco e Ganho em dólares",
+      "Pips SL / TP",
+      "R:R, a relação risco recompensa",
+      "Margem necessária, valor do pip e comissão"
+     ],
+     "fala": "Antes de confirmar, lê o resumo. O risco e o ganho em dólares. Os pips do stop e do alvo. O R R, que é quanto ganhas por cada unidade que arriscas. A margem necessária, o valor do pip e a comissão. Se a margem não chega, o WebTrader diz-to antes de enviares. E lembra-te: numa compra o stop fica abaixo do preço, numa venda fica acima. Se trocares, a ordem não sai."
+    },
+    {
+     "id": "e10",
+     "tipo": "capitulo",
+     "numero": "04",
+     "titulo": "Ordens avançadas",
+     "sub": "Parciais, trailing, BE, GTD, OCO",
+     "cap": "Avançado",
+     "fala": "Quarto capítulo: as ordens avançadas, que estão no fundo do ticket, em Avançado."
+    },
+    {
+     "id": "e11",
+     "tipo": "pontos",
+     "cap": "Avançado",
+     "kicker": "Ticket · Avançado",
+     "titulo": "Cinco ferramentas",
+     "itens": [
+      "Take-profits parciais: fechar por partes",
+      "Trailing stop: o stop segue o preço",
+      "Break-even automático: stop na entrada",
+      "Expira (GTD): a pendente caduca",
+      "OCO: uma cancela a outra"
+     ],
+     "fala": "Em Avançado tens cinco ferramentas. Take profits parciais, para fechar a posição por partes em vários alvos. Trailing stop, para o stop seguir o preço. Break-even automático, para o stop ir para a entrada a partir de certo ganho. Expira, para uma ordem pendente caducar numa data. E OCO, duas ordens em que uma cancela a outra, por exemplo uma compra acima e uma venda abaixo de uma zona. Expiração e OCO só existem em ordens Limit e Stop."
+    },
+    {
+     "id": "e12",
+     "tipo": "capitulo",
+     "numero": "05",
+     "titulo": "Gestão automática",
+     "sub": "Auto BE, Auto TS e TS já",
+     "cap": "Gestão",
+     "fala": "Quinto capítulo: a gestão automática da posição aberta. É aqui que o WebTrader trabalha por ti."
+    },
+    {
+     "id": "e13",
+     "tipo": "ui",
+     "cap": "Gestão",
+     "kicker": "Posição aberta",
+     "titulo": "Auto BE · Auto TS · TS já",
+     "img": "posicao-autobe-trailing.jpg",
+     "focoImg": [
+      0.83,
+      0.79
+     ],
+     "zoom": 2.4,
+     "fala": "Com uma posição aberta, a linha dela mostra três botões. Auto BE: quando o preço chegar ao gatilho, o stop vai para a entrada. Auto TS: o trailing arranca a partir de certo ganho e segue o preço a uma distância. E TS já: o trailing começa agora, sem esperar. Na própria linha aparecem as etiquetas TRAIL e BE para saberes o que está ligado."
+    },
+    {
+     "id": "e14",
+     "tipo": "ui",
+     "cap": "Gestão",
+     "kicker": "Confirmação",
+     "titulo": "Auto trailing: arranca a +305 pontos, segue a 180",
+     "img": "posicao-autobe-trailing.jpg",
+     "focoImg": [
+      0.5,
+      0.96
+     ],
+     "zoom": 2.2,
+     "fala": "Quando ligas, o WebTrader confirma com uma mensagem, por exemplo: auto trailing em BTCUSD, arranca a mais trezentos e cinco pontos, segue a cento e oitenta, feito. Os valores por defeito ajustam-se ao ativo: no ouro e no forex em pips, nos índices e na cripto proporcionais ao preço. Podes mudá-los em Gestão automática e guardar os teus."
+    },
+    {
+     "id": "e15",
+     "tipo": "gestao",
+     "cap": "Gestão",
+     "kicker": "Câmara lenta",
+     "titulo": "Break-even e trailing, passo a passo",
+     "be": 15,
+     "offset": 1,
+     "ativacao": 20,
+     "distancia": 15,
+     "seed": 9,
+     "fala": "Vamos ver em câmara lenta. Compra no ouro, stop a vinte e cinco pips. Break-even armado a mais quinze, com um pip de folga. Trailing a arrancar a mais vinte e a seguir a quinze pips. O preço sobe, toca no gatilho, e o stop salta para a entrada mais um pip. A partir daqui, o pior cenário é sair praticamente a zero. O preço continua, o trailing ativa e começa a subir o stop atrás do preço. Quando o mercado recua, a posição fecha no trailing, com parte do movimento guardado."
+    },
+    {
+     "id": "e16",
+     "tipo": "pontos",
+     "cap": "Gestão",
+     "kicker": "Importante",
+     "titulo": "Corre no servidor, não no teu browser",
+     "itens": [
+      "O motor MTM vigia a posição 24 horas",
+      "Funciona com o browser ou o telemóvel fechados",
+      "Break-even armado → aplicado",
+      "Trailing à espera → a seguir o preço"
+     ],
+     "fala": "Um ponto importante. A gestão automática corre no motor MTM, no servidor, não no teu browser. Podes fechar o telemóvel e ir trabalhar. O estado aparece na posição: break-even armado, que passa a break-even aplicado, e trailing à espera da ativação, que passa a trailing a seguir o preço."
+    },
+    {
+     "id": "e17",
+     "tipo": "capitulo",
+     "numero": "06",
+     "titulo": "Fechar posições",
+     "sub": "Total, parcial, em grupo",
+     "cap": "Fecho",
+     "fala": "Último capítulo: fechar."
+    },
+    {
+     "id": "e18",
+     "tipo": "pontos",
+     "cap": "Fecho",
+     "kicker": "Separador Posições",
+     "titulo": "Fechar com intenção",
+     "itens": [
+      "Fecho parcial: só reduz o volume",
+      "Mover SL e TP na linha ou no gráfico",
+      "Fechar todas · Ganhadoras · Perdedoras",
+      "Nota no diário ao fechar"
+     ],
+     "fala": "No separador Posições tens o fecho parcial, que só reduz o volume: útil para tirar parte do lucro no primeiro alvo. Podes mover o stop e o alvo na própria linha ou arrastando no gráfico. Em cima tens Fechar todas, Ganhadoras e Perdedoras, para fechar em grupo. E ao fechar, escreve uma nota no diário. No último vídeo vais ver porque é que isto vale ouro."
+    },
+    {
+     "id": "e19",
+     "tipo": "checklist",
+     "cap": "Treino",
+     "kicker": "Faz agora, em conta de treino",
+     "titulo": "Exercício do treino 2",
+     "itens": [
+      "Abre uma ordem com Risco 1 %",
+      "Desenha o SL e o TP no gráfico",
+      "Liga Auto BE e Auto TS",
+      "Faz um fecho parcial no TP1",
+      "Cria uma ordem Limit com expiração"
+     ],
+     "fala": "Exercício. Numa conta de treino, abre uma ordem com risco de um por cento. Desenha o stop e o alvo no gráfico. Liga o Auto BE e o Auto TS e acompanha os estados. Faz um fecho parcial no primeiro alvo. E cria uma ordem Limit com data de expiração. Repete até conseguires fazer tudo sem pensar."
+    },
+    {
+     "id": "e20",
+     "tipo": "aviso",
+     "cap": "",
+     "titulo": "Até ao treino 3",
+     "sub": "Estratégias, sinais, diário e auditoria",
+     "texto": "Conteúdo educativo. Não é aconselhamento financeiro. Negociar forex, índices, metais e cripto envolve risco elevado e podes perder parte ou a totalidade do capital. Os mercados mostrados são ilustrativos ou capturas de uma conta de treino. Resultados passados não garantem resultados futuros.",
+     "fala": "Conteúdo educativo, não é aconselhamento financeiro. A gestão automática não elimina o risco: com gaps ou notícias o preço pode saltar o stop. Treina primeiro.",
+     "respiro": 4
+    }
+   ]
+  },
+  {
+   "rotulo": "WebTrader MTM · 6/6",
+   "titulo": "Treino 3: estratégias MTM e os seus sinais, diário, estatísticas e auditoria",
+   "serie": "longo",
+   "cenas": [
+    {
+     "id": "f00",
+     "tipo": "abertura",
+     "kicker": "Bootcamp WebTrader · 6 de 6 · Treino",
+     "titulo": "Estratégias e disciplina",
+     "sub": "Sinais, diário, auditoria",
+     "rodape": "morethanmoney.pt/webtrader",
+     "semVoz": 4
+    },
+    {
+     "id": "f01",
+     "tipo": "capitulo",
+     "numero": "01",
+     "titulo": "As estratégias no gráfico",
+     "sub": "Uma de cada vez",
+     "cap": "Estratégias",
+     "fala": "Último treino. Hoje juntamos tudo: as estratégias MTM dentro do WebTrader, os sinais delas, e as ferramentas que te tornam consistente: diário, estatísticas e auditoria."
+    },
+    {
+     "id": "f02",
+     "tipo": "ui",
+     "cap": "Estratégias",
+     "kicker": "Barra dos estudos",
+     "titulo": "Os estudos MTM",
+     "img": "pro-xauusd-fechado.jpg",
+     "focoImg": [
+      0.6,
+      0.16
+     ],
+     "zoom": 2.0,
+     "fala": "Na barra do gráfico estão os estudos das estratégias MTM: GoldKiller, Sensei, MTM Scanner, TrendShot, Premium Scanner e RocketNova. Cada um desenha no gráfico o mesmo que o indicador desenha no TradingView, calculado aqui, ao vivo. Vês os que o teu plano inclui: os membros e quem tem o scanner têm acesso."
+    },
+    {
+     "id": "f03",
+     "tipo": "frase",
+     "cap": "Estratégias",
+     "texto": "Uma estratégia de cada vez.<br>Um plano de cada vez.",
+     "autor": "Regra do WebTrader",
+     "fala": "E há uma regra: uma estratégia de cada vez. Quando escolhes outra, a anterior desliga-se. Não é uma limitação, é de propósito. Três indicadores em cima uns dos outros não te dão três vezes mais certeza. Dão-te três vezes mais confusão. Escolhe a estratégia, segue o plano dela."
+    },
+    {
+     "id": "f04",
+     "tipo": "comparar",
+     "cap": "Estratégias",
+     "kicker": "O que cada uma desenha",
+     "titulo": "Seis estudos, seis leituras",
+     "cartoes": [
+      {
+       "t": "GoldKiller",
+       "d": "Níveis em degrau, faixas e BUY ou SELL com entrada, SL e alvos."
+      },
+      {
+       "t": "Sensei",
+       "d": "Médias, nuvem, estrutura, order blocks, sinais e painéis."
+      },
+      {
+       "t": "MTM Scanner",
+       "d": "Médias, POC, B e S, Entry, Stop e TPs, BOS e CHoCH."
+      }
+     ],
+     "fala": "O que desenha cada uma. O GoldKiller desenha níveis em degrau, faixas, e as etiquetas de compra e venda com a entrada, o stop e os alvos. O Sensei desenha médias, a nuvem, a estrutura, os order blocks, os sinais e dois painéis de leitura. O MTM Scanner desenha as médias, o ponto de controlo, as letras B e S, a entrada, o stop e os alvos, e as quebras de estrutura."
+    },
+    {
+     "id": "f05",
+     "tipo": "comparar",
+     "cap": "Estratégias",
+     "kicker": "O que cada uma desenha",
+     "titulo": "Seis estudos, seis leituras",
+     "cartoes": [
+      {
+       "t": "TrendShot",
+       "d": "EMA 20, 50 e 238; sinal no cruzamento, das 8 às 21 h; Entry, SL e TP1 a TP4."
+      },
+      {
+       "t": "Premium Scanner",
+       "d": "Só no ouro: sessões Ásia, Londres e Nova Iorque, zona em recuo, SL e TP1 a TP4."
+      },
+      {
+       "t": "RocketNova",
+       "d": "EMA 20, 50 e 238, estrelas de lançamento, Rocket Candle e Entry, SL e TP1 a TP4."
+      }
+     ],
+     "fala": "O TrendShot desenha as médias de vinte, cinquenta e duzentos e trinta e oito, e marca o sinal no cruzamento, dentro do horário das oito às vinte e uma, com entrada, stop e quatro alvos. O Premium Scanner é só para o ouro: desenha as sessões da Ásia, Londres e Nova Iorque, a zona de recuo e os alvos. Noutro ativo o botão fica apagado. E o RocketNova junta as mesmas três médias às estrelas de lançamento e à vela foguete, com o plano completo."
+    },
+    {
+     "id": "f06",
+     "tipo": "capitulo",
+     "numero": "02",
+     "titulo": "Trabalhar os sinais",
+     "sub": "Do estudo ao ticket",
+     "cap": "Sinais",
+     "fala": "Segundo capítulo: trabalhar os sinais."
+    },
+    {
+     "id": "f07",
+     "tipo": "fluxo",
+     "cap": "Sinais",
+     "kicker": "O caminho de um sinal",
+     "titulo": "Do gráfico à posição",
+     "passos": [
+      {
+       "t": "Estudo",
+       "d": "A estratégia marca a entrada na vela fechada"
+      },
+      {
+       "t": "Barra do sinal",
+       "d": "Direção, entrada, SL e alvo"
+      },
+      {
+       "t": "Usar este sinal",
+       "d": "Preenche o ticket, não envia"
+      },
+      {
+       "t": "Tu confirmas",
+       "d": "Risco %, R:R, margem"
+      },
+      {
+       "t": "Gestão",
+       "d": "Auto BE e trailing no servidor"
+      }
+     ],
+     "fala": "O caminho de um sinal é sempre este. A estratégia marca a entrada numa vela fechada, nunca na que ainda se está a formar. Aparece a barra do sinal com a direção, a entrada, o stop e o alvo. Tocas em Usar este sinal e o ticket fica preenchido. Ajustas o risco em percentagem, confirmas o R R e a margem, e envias. Depois ligas a gestão automática."
+    },
+    {
+     "id": "f08",
+     "tipo": "sinal",
+     "cap": "Sinais",
+     "kicker": "Sinal do scanner",
+     "titulo": "Confirmar compra",
+     "origem": "Sinal do scanner",
+     "fala": "Quando o sinal vem de um alerta, de uma Ideia MTM ou do scanner na app, o WebTrader abre já este quadro: o plano, o ganho no alvo, o risco recompensa, a distância, a margem e a comissão. Confirmar compra, ou confirmar venda, abre a posição com o stop e o alvo colocados. Mais uma vez: é sempre um toque teu."
+    },
+    {
+     "id": "f09",
+     "tipo": "pontos",
+     "cap": "Sinais",
+     "kicker": "Filtros do trader",
+     "titulo": "Quando NÃO usar o sinal",
+     "itens": [
+      "O preço já andou muito da entrada",
+      "Há notícia forte nos próximos minutos",
+      "A perda diária restante não chega para o stop",
+      "Fora do horário da estratégia"
+     ],
+     "fala": "Tão importante como usar o sinal é saber quando não o usar. Se o preço já andou muito desde a entrada, o R R estragou-se. Se há uma notícia forte daqui a minutos, liga a camada de notícias e espera. Se a perda diária restante da conta não chega para o stop, não entras. E se a estratégia tem horário, respeita-o."
+    },
+    {
+     "id": "f10",
+     "tipo": "pontos",
+     "cap": "Sinais",
+     "kicker": "Separador Alertas",
+     "titulo": "Alertas de preço",
+     "itens": [
+      "Cria um alerta num nível do gráfico",
+      "Recebes o aviso quando o preço lá chegar",
+      "O alerta abre o quadro do sinal",
+      "Calendário: os eventos de impacto médio e alto"
+     ],
+     "fala": "No separador Alertas crias alertas de preço nos teus níveis. Quando o preço lá chega, recebes o aviso e o alerta abre o mesmo quadro de confirmação. E no Calendário vês os eventos económicos de impacto médio e alto das moedas do ativo que estás a negociar."
+    },
+    {
+     "id": "f11",
+     "tipo": "capitulo",
+     "numero": "03",
+     "titulo": "O diário",
+     "sub": "Emoção e setup",
+     "cap": "Diário",
+     "fala": "Terceiro capítulo: o diário. A ferramenta mais subestimada do trading."
+    },
+    {
+     "id": "f12",
+     "tipo": "ui",
+     "cap": "Diário",
+     "kicker": "Separador Diário",
+     "titulo": "Uma nota por operação",
+     "img": "diario.jpg",
+     "focoImg": [
+      0.72,
+      0.85
+     ],
+     "zoom": 1.8,
+     "fala": "No separador Diário cada operação tem a sua nota. Escreves porque entraste, o risco, a gestão e o que aprendeste. Nesta nota, por exemplo, escrevi: entrei a favor do sinal GoldKiller em alta, com risco de um por cento, liguei o Auto BE e o Auto Trailing e fechei à mão com ganho pequeno. Da próxima vez deixo a gestão automática trabalhar até ao alvo. Depois marcas a emoção, calmo, confiante, ansioso, FOMO, e o setup, incluindo o sinal de cada estratégia."
+    },
+    {
+     "id": "f13",
+     "tipo": "pontos",
+     "cap": "Diário",
+     "kicker": "Porque funciona",
+     "titulo": "O diário mostra padrões",
+     "itens": [
+      "Que emoção aparece nas perdas",
+      "Que setup te dá mais R",
+      "Se fechas cedo demais",
+      "Nota do dia: o plano antes da sessão"
+     ],
+     "fala": "Ao fim de vinte ou trinta notas começas a ver padrões. Que emoção aparece antes das perdas. Que setup te dá mais R. Se costumas fechar cedo demais, como eu nessa nota. E usa a Nota do dia antes de abrires o gráfico: escreve o plano da sessão. Faz parte da minha rotina de pré-trading."
+    },
+    {
+     "id": "f14",
+     "tipo": "capitulo",
+     "numero": "04",
+     "titulo": "Números honestos",
+     "sub": "Estatísticas e auditoria",
+     "cap": "Números",
+     "fala": "Quarto capítulo: os números honestos."
+    },
+    {
+     "id": "f15",
+     "tipo": "ui",
+     "cap": "Números",
+     "kicker": "Separador Estatísticas",
+     "titulo": "Os teus números",
+     "img": "estatisticas-pro.jpg",
+     "focoImg": [
+      0.4,
+      0.82
+     ],
+     "zoom": 1.6,
+     "fala": "Em Estatísticas e em Métricas, dentro do Histórico, tens os números da conta: a curva, os resultados por ativo, por dia e por estratégia, o fator de lucro, o drawdown. Não olhes para um dia. Olha para cinquenta operações. É aí que se vê se a estratégia e a tua execução funcionam juntas."
+    },
+    {
+     "id": "f16",
+     "tipo": "ui",
+     "cap": "Números",
+     "kicker": "Histórico",
+     "titulo": "Cada operação, com origem",
+     "img": "historico.jpg",
+     "focoImg": [
+      0.5,
+      0.8
+     ],
+     "zoom": 1.6,
+     "fala": "No Histórico tens cada operação fechada, e nos Movimentos os depósitos e ajustes. Cada operação fica ligada à origem: o sinal da estratégia que a abriu, ou a tua ideia."
+    },
+    {
+     "id": "f17",
+     "tipo": "ui",
+     "cap": "Números",
+     "kicker": "A minha conta · Partilhar",
+     "titulo": "Link de auditoria",
+     "img": "auditoria-link.jpg",
+     "focoImg": [
+      0.35,
+      0.68
+     ],
+     "zoom": 1.7,
+     "fala": "E em A minha conta, no separador Partilhar, crias o link de auditoria. É uma página pública com o histórico verificável da conta: cada operação ligada ao sinal que a abriu, o resultado em R e em pips, o drawdown e o risco de ruína. Não mostra o teu nome, nem o email, nem passwords. Podes copiar a versão em inglês, gerar um endereço novo ou desligar quando quiseres. É prova com origem, não capturas de ecrã."
+    },
+    {
+     "id": "f18",
+     "tipo": "capitulo",
+     "numero": "05",
+     "titulo": "A rotina",
+     "sub": "Juntar tudo",
+     "cap": "Rotina",
+     "fala": "Para fechar o bootcamp, a rotina."
+    },
+    {
+     "id": "f19",
+     "tipo": "checklist",
+     "cap": "Rotina",
+     "kicker": "Todos os dias",
+     "titulo": "A rotina WebTrader MTM",
+     "itens": [
+      "Antes: mindset, nota do dia, calendário",
+      "Uma estratégia, a tua temporalidade",
+      "Sinal → Usar este sinal → risco % → confirmar",
+      "Auto BE e trailing ligados",
+      "Depois: nota no diário e estatísticas da semana"
+     ],
+     "fala": "A minha rotina é esta. Antes de negociar, mindset e exercício, perceber como estou, escrever a nota do dia e ver o calendário. Depois, uma estratégia e a minha temporalidade. Quando há sinal: usar este sinal, risco em percentagem, confirmar. Gestão automática ligada. No fim, nota no diário de cada operação e, ao fim de semana, as estatísticas."
+    },
+    {
+     "id": "f20",
+     "tipo": "frase",
+     "cap": "Rotina",
+     "texto": "A plataforma não faz o trader.<br>A rotina faz.",
+     "autor": "Ricardo Garcia",
+     "fala": "O WebTrader dá-te ferramentas que muita plataforma paga não dá. Mas a plataforma não faz o trader. A rotina faz. Obrigado por teres feito este bootcamp comigo. Encontras os seis vídeos na sala WebTrader da Academia e no próprio WebTrader, em Tutorial."
+    },
+    {
+     "id": "f21",
+     "tipo": "aviso",
+     "cap": "",
+     "titulo": "Fim do bootcamp",
+     "sub": "Bons treinos",
+     "texto": "Conteúdo educativo. Não é aconselhamento financeiro. Negociar forex, índices, metais e cripto envolve risco elevado e podes perder parte ou a totalidade do capital. Os mercados mostrados são ilustrativos ou capturas de uma conta de treino. Resultados passados não garantem resultados futuros.",
+     "fala": "Conteúdo educativo, não é aconselhamento financeiro. Os estudos e os sinais são ideias educativas, não garantias. O trading tem risco elevado e podes perder dinheiro. Treina numa conta de desafio ou demo antes de usares dinheiro real.",
+     "respiro": 4
+    }
+   ]
+  }
+ ]
+}

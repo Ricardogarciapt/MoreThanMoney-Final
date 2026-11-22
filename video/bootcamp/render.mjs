@@ -21,10 +21,11 @@ const preview = process.argv.includes('--preview')
 const FPS = preview ? 8 : motorVideo.FPS
 const ABRE = 0.5, RESPIRO = 0.7
 // Velocidade da narração: +10% pedido a 06/11 15:26, depois -7% a 20:08 → 1.03. --vel=1 volta ao normal.
-const VEL = Number(arg('vel') || 1.03)
 
 const G = JSON.parse(fs.readFileSync(path.join(DIR, 'guioes', `${est}.${lang}.json`), 'utf8'))
 const V = G.videos[Number(nv) - 1]
+// o guião pode fixar a sua velocidade (tutoriais 1,12×: bootcamp do WebTrader); --vel manda sempre
+const VEL = Number(arg('vel') || G.vel || 1.03)
 if (!V) throw new Error(`sem vídeo ${nv} em ${est}`)
 const vozDir = path.join(DIR, 'voz', est, `v${nv}`, lang)
 const duracao = f => Number(execFileSync('ffprobe', ['-v', 'error', '-show_entries', 'format=duration', '-of', 'csv=p=0', f]).toString())
