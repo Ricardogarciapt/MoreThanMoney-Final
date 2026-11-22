@@ -72,7 +72,17 @@ const H = { Authorization: `Bearer ${T}` }
 const minhas = []
 for (let p = ''; ;) { const j = await (await chk(await fetch(`${API}/playlists?part=snippet&mine=true&maxResults=50${p ? '&pageToken=' + p : ''}`, { headers: H }), 'playlists')).json(); minhas.push(...(j.items || [])); if (!(p = j.nextPageToken)) break }
 const lib = fs.readFileSync(path.join(RAIZ, 'lib/estrategias-mtm.ts'), 'utf8')
-async function playlistDe(est, nome, lang) {
+async function playlistDe(est, nome, lang, tituloFixo) {
+  // Playlists próprias (ex.: Bootcamp WebTrader MTM): procura-se pelo título exacto e cria-se com esse título,
+  // sem a procura aproximada por nome, que podia apanhar e renomear uma playlist alheia.
+  if (tituloFixo) {
+    const q = minhas.find(x => x.snippet.title === tituloFixo)
+    if (q) return q.id
+    const j = await (await chk(await fetch(`${API}/playlists?part=snippet,status`, { method: 'POST', headers: { ...H, 'content-type': 'application/json' }, body: JSON.stringify({ snippet: { title: tituloFixo, description: lang === 'en' ? `${nome} by MoreThanMoney. Educational content, not financial advice.` : `${nome} da MoreThanMoney. Conteúdo educativo, não constitui consultoria financeira.`, defaultLanguage: lang === 'en' ? 'en' : 'pt-PT' }, status: { privacyStatus: 'public' } }) }), 'criar playlist')).json()
+    console.log(`playlist criada: ${tituloFixo} https://www.youtube.com/playlist?list=${j.id}`)
+    minhas.push(j)
+    return j.id
+  }
   const bloco = lib.split(`slug: "${est}"`)[1] || ''
   const m = bloco.match(/playlist: \{ pt: (null|"[^"]+"), en: (null|"[^"]+") \}/) || []
   const link = (lang === 'pt' ? m[1] : m[2]) || 'null'
@@ -112,6 +122,7 @@ try {
   for (const f of fs.readdirSync(path.join(DIR, 'guioes')).filter(f => /\.pt\.json$/.test(f))) {
     const est = f.replace('.pt.json', '')
     for (const lang of ['pt', 'en']) { const G = guiao(est, lang), novo = G?.tituloPlaylist?.[lang]; if (!novo) continue
+      if (G.playlistPropria) continue // criada já com o título certo
       const id = await playlistDe(G.playlist || est, G.estrategia, lang), p = minhas.find(x => x.id === id)
       if (!p || p.snippet.title === novo) continue
       await chk(await fetch(`${API}/playlists?part=snippet`, { method: 'PUT', headers: { ...H, 'content-type': 'application/json' }, body: JSON.stringify({ id, snippet: { title: novo, description: p.snippet.description || '', defaultLanguage: p.snippet.defaultLanguage || (lang === 'en' ? 'en' : 'pt-PT') } }) }), 'renomear playlist')
@@ -149,7 +160,14 @@ try {
         const corpo = `--${bnd}\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n${meta}\r\n--${bnd}\r\nContent-Type: text/vtt\r\n\r\n${fs.readFileSync(base + '.vtt', 'utf8')}\r\n--${bnd}--`
         await fetch(`${UP}/captions?uploadType=multipart&part=snippet`, { method: 'POST', headers: { ...H, 'content-type': `multipart/related; boundary=${bnd}` }, body: corpo }).then(r => extra.push(r.ok ? 'legendas' : `legendas ${r.status}`))
       }
-      const pl = await playlistDe(G.playlist || est, G.estrategia, lang)
+      const pl = await playlistDe(G.playlist || est, G.estrategia, lang, G.playlistPropria ? G.tituloPlaylist?.[lang] : undefined)
+      // «tambemEm»: o mesmo vídeo entra noutras playlists (ex.: o vídeo 1 do WebTrader no curso «Como usar a MoreThanMoney»)
+      for (const pref of (G.tambemEm?.[n]?.[lang] || [])) {
+        const outra = minhas.find(x => x.id === pref || x.id.startsWith(pref))
+        if (!outra) { extra.push(`tambemEm ${pref}: playlist não encontrada`); continue }
+        await fetch(`${API}/playlistItems?part=snippet`, { method: 'POST', headers: { ...H, 'content-type': 'application/json' }, body: JSON.stringify({ snippet: { playlistId: outra.id, resourceId: { kind: 'youtube#video', videoId: id } } }) })
+          .then(r => extra.push(r.ok ? `também em ${outra.snippet.title}` : `tambemEm ${r.status}`))
+      }
       // sem «position» entra no fim; o arrumar põe os «inicio» no topo e os módulos por ordem
       await fetch(`${API}/playlistItems?part=snippet`, { method: 'POST', headers: { ...H, 'content-type': 'application/json' }, body: JSON.stringify({ snippet: { playlistId: pl, resourceId: { kind: 'youtube#video', videoId: id } } }) })
         .then(async r => extra.push(r.ok ? 'playlist' : `playlist ${r.status}`))
