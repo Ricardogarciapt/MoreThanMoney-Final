@@ -25,6 +25,33 @@ Divido la rutina en tres bloques. Cada uno tiene un objetivo claro, y ninguno de
 
 Si no hay ninguna condición válida en el checklist, el bloque 2 termina con una frase: «hoy no opero». Esa es una decisión de trading tan válida como cualquier otra, y muchas veces la mejor.
 
+## Mi rutina, tal como la hago
+
+Antes de pedirte una rutina, te enseño la mía. Tiene dos partes, y la primera no tiene nada que ver con gráficos.
+
+**Antes del trading: primero la cabeza y el cuerpo**
+
+1. **Mindset.** Unos minutos para poner la cabeza en su sitio antes de mirar cualquier precio. Me recuerdo el plan y las reglas, no el dinero.
+2. **Ejercicio.** Mover el cuerpo antes de tocar la cuenta. Un cuerpo quieto deja la cabeza más impaciente.
+3. **Ver cómo estoy.** Me pregunto con honestidad: ¿he dormido bien? ¿Estoy tranquilo? ¿Arrastro algo de ayer o de casa? Si la respuesta me preocupa, hoy no opero.
+4. **Saber hacia dónde voy.** Releo mis objetivos y la semana que planifiqué. El trading es una pieza del plan, no el plan entero.
+
+**Durante el trading: el checklist del Scanner Access**
+
+Solo después abro el área de escáneres y sigo el mismo checklist de siempre, en este orden:
+
+| Bloque | Qué confirmo |
+|---|---|
+| Rutina previa al trading | Noticias y calendario económico del día, correlaciones entre mercados y posiciones ya abiertas |
+| Gestión del riesgo | Riesgo por operación dentro de mi límite, exposición total de la cuenta y tamaño de la posición bien calculado |
+| Estrategia de entrada | Un setup válido del plan, la señal confirmada y alineada con la tendencia |
+| Estrategia de salida | Stop-loss definido para cada posición, objetivos y si voy a salir por partes |
+| Gestión de la operación | Acompañar sin tocar por impulso, mover el stop solo según la regla y registrar el resultado y lo aprendido |
+
+:::nota
+El orden es a propósito. Primero la persona, después el mercado. Los días que me salté la primera parte, la pagó la segunda.
+:::
+
 ## Checklist previo a la operación
 
 El checklist es la parte más importante de la rutina. Sirve para obligarte a responder las preguntas que el entusiasmo intenta saltarse. Imprímelo, escríbelo en un cuaderno o guárdalo en el móvil, pero usa siempre el mismo.
