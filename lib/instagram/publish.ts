@@ -42,6 +42,19 @@ export function isAutoPublishBlocked(igAccountId: string | null | undefined): bo
 }
 
 /**
+ * CONVERSAR não é PUBLICAR (Ricardo, 22/11/2026: «deves também prospetar em ricardogarciapt»).
+ *
+ * Responder a quem comentou e escrever-lhe por DM é conversa com uma pessoa que nos procurou, e o
+ * dono mandou fazê-la também na conta pessoal. Publicar posts continua bloqueado por
+ * `isAutoPublishBlocked` (só as excepções nomeadas acima passam). Para voltar a fechar a conversa
+ * na pessoal, põe IG_PESSOAL_CONVERSA='false' na Vercel.
+ */
+export function podeConversarSozinha(igAccountId: string | null | undefined): boolean {
+  if (String(igAccountId ?? "") !== IG_PERSONAL_ID) return true
+  return process.env.IG_PESSOAL_CONVERSA?.trim() !== "false"
+}
+
+/**
  * A ÚNICA excepção, pedida pelo próprio Ricardo a 06/11/2026: «todos os dias cria-me para o
  * Ricardo Garcia conteúdo novo de carrossel (…) e publicar no instagram @ricardogarciapt».
  * Só os carrosséis do cron carrossel-diario (lib/carrossel-diario) passam, e só enquanto o
