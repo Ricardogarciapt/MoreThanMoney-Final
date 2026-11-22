@@ -81,7 +81,11 @@ export type ResultadoDm = 'respondida' | 'repetida' | 'ignorada' | 'erro'
 
 export async function responderMensagem(m: MensagemRecebida): Promise<{ resultado: ResultadoDm; erro?: string }> {
   const texto = (m.texto ?? '').trim()
-  if (!texto || !m.remetente || IDS_NOSSOS.has(m.remetente)) return { resultado: 'ignorada' }
+  // Só se ignora a própria conta que recebe (eco). A outra conta nossa conta como pessoa.
+  const propria = m.contaId
+  const igDaConta = m.canal === 'instagram' ? m.contaId : igDaPagina(m.contaId)
+  if (!texto || !m.remetente || m.remetente === propria || m.remetente === igDaConta) return { resultado: 'ignorada' }
+  if (igDaConta === '17841474872672009' && m.remetente === '621570614380294') return { resultado: 'ignorada' }
   const supabase = getSupabaseAdmin()
   await carregarTokensIG()
 
