@@ -41,6 +41,8 @@ function modoPip(fr: number, imgs: Imagem[]) {
 
 /* ── Cortes secos com zoom (jump cut) a cada frase ── */
 const moldeDe = (a: Anuncio) => (getInputProps() as { molde?: Anuncio['molde'] }).molde ?? a.molde ?? 'cinema'
+const estiloDe = (a: Anuncio) => (getInputProps() as { estilo?: Anuncio['estilo'] }).estilo ?? a.estilo ?? 'classico'
+const NOIR = 'grayscale(1) contrast(1.28) brightness(0.96)'
 const METADE = Math.round(H * 0.5)
 const BARRA = 170 // barras de cinema do molde documental
 
@@ -68,14 +70,15 @@ const Gemeo: React.FC<{ k: string; a: Anuncio }> = ({ k, a }) => {
   const w = interpolate(m, [0, 1], [W, alvo.w]), h = interpolate(m, [0, 1], [H, alvo.h])
   const x = interpolate(m, [0, 1], [0, alvo.x]), y = interpolate(m, [0, 1], [0, alvo.y])
   const opGemeo = molde === 'documental' ? 1 - m : 1
-  const zf = zoomFrase(t, k, molde)
+  const est = estiloDe(a)
+  const zf = zoomFrase(t, k, molde) * (est === 'palavra' ? 1.04 : 1)
   // pequeno tremor no corte
   const ultimoCorte = segsDe(k).filter((s, i, arr) => i > 0 && s[0] <= t && /[.?:!]$/.test(arr[i - 1][2].trim())).pop()
   const desdeCorte = ultimoCorte ? fr - f(ultimoCorte[0]) : 99
   const shake = molde === 'documental' ? 0 : desdeCorte < 6 ? (6 - desdeCorte) * 1.6 * Math.sin(desdeCorte * 2.3) : 0
   const push = interpolate(fr, [0, f(fim)], [1.0, 1.05])
   const z = (m > 0.5 && molde === 'cinema' ? 1.12 : zf) * push
-  const filtro = `contrast(1.08) saturate(1.06) brightness(${1 - fimCena * 0.55}) blur(${fimCena * 14}px)`
+  const filtro = `${est === 'noir' ? NOIR : est === 'nativo' ? 'saturate(1.02)' : 'contrast(1.08) saturate(1.06)'} brightness(${1 - fimCena * 0.55}) blur(${fimCena * 14}px)`
   const estilo: React.CSSProperties = { width: '100%', height: '100%', objectFit: 'cover', transform: `translate(${shake}px, ${shake * 0.6}px) scale(${z})`, transformOrigin: '50% 30%', filter: filtro }
   return (
     <div style={{ position: 'absolute', left: x, top: y, width: w, height: h, opacity: opGemeo, borderRadius: molde === 'cinema' ? m * 30 : 0, overflow: 'hidden', zIndex: 5, borderTop: molde === 'impacto' && m > 0.05 ? `${Math.round(6 * m)}px solid ${OURO_CLARO}` : undefined, boxShadow: molde === 'cinema' && m > 0.05 ? `0 30px 90px rgba(0,0,0,.65), 0 0 0 ${3 * m}px ${OURO_CLARO}, 0 0 ${50 * m}px ${OURO}` : undefined }}>
@@ -179,6 +182,27 @@ const Legendas: React.FC<{ k: string; a: Anuncio }> = ({ k, a }) => {
   const pos = (t - seg[0]) / Math.max(0.2, seg[1] - seg[0])
   const ativa = Math.min(palavras.length - 1, Math.floor(pos * palavras.length))
   const molde = moldeDe(a)
+  const est = estiloDe(a)
+  if (est === 'palavra') {
+    // uma palavra de cada vez, enorme, com murro (estilo «palavra a palavra» dos virais)
+    const p = palavras[ativa]
+    const iniP = f(seg[0] + (ativa / palavras.length) * (seg[1] - seg[0]))
+    const s = spring({ frame: fr - iniP, fps, config: { damping: 11, stiffness: 260 } })
+    const forte = p.replace(/[^\p{L}\p{N}]/gu, '').length >= 6 || /\d/.test(p)
+    return (
+      <div style={{ position: 'absolute', left: 40, right: 40, top: a.lista ? 1500 : 1180, textAlign: 'center', zIndex: 9 }}>
+        <span style={{ display: 'inline-block', fontFamily: ANTON, textTransform: 'uppercase', fontSize: p.length > 10 ? 120 : 156, lineHeight: 1, color: forte ? OURO_CLARO : '#fff', transform: `scale(${0.55 + 0.45 * s}) rotate(${(1 - s) * (ativa % 2 ? 4 : -4)}deg)`, WebkitTextStroke: '5px rgba(0,0,0,.9)', paintOrder: 'stroke fill', textShadow: '0 12px 30px rgba(0,0,0,.85)' }}>{p}</span>
+      </div>
+    )
+  }
+  if (est === 'nativo') {
+    // legenda como a do próprio Instagram: frase em caixas brancas, letra preta, sem efeitos
+    return (
+      <div style={{ position: 'absolute', left: 80, right: 80, top: a.lista ? 1500 : 1320, textAlign: 'center', zIndex: 9, lineHeight: 1.55 }}>
+        <span style={{ fontFamily: "'Helvetica Neue', Arial, sans-serif", fontWeight: 700, fontSize: 58, color: '#111', background: '#fff', padding: '6px 18px', borderRadius: 14, boxDecorationBreak: 'clone', WebkitBoxDecorationBreak: 'clone' }}>{seg[2]}</span>
+      </div>
+    )
+  }
   if (molde === 'documental') {
     // legenda discreta, frase inteira, por cima da barra de baixo
     return (
@@ -451,11 +475,13 @@ export const Video: React.FC = () => {
   const entra = Math.min(f(2.5), Math.max(1, fim - 20))
   const volMusica = interpolate(fr, [0, entra, entra + 12, fim - 6, fim + 6], [0, 0, 0.126, 0.126, 0.5], clamp)
   const molde = moldeDe(a)
+  const est = estiloDe(a)
+  const progresso = interpolate(fr, [0, fim], [0, 1], clamp)
   return (
     <AbsoluteFill style={{ background: FUNDO, overflow: 'hidden' }}>
       <style>{FONTES}</style>
       {/* imagens de apoio por baixo do gémeo em janela (impacto: só na metade de cima) */}
-      <div style={molde === 'impacto' ? { position: 'absolute', left: 0, top: 0, width: W, height: METADE, overflow: 'hidden', zIndex: 2 } : { position: 'absolute', inset: 0, zIndex: 2 }}>
+      <div style={{ ...(molde === 'impacto' ? { position: 'absolute', left: 0, top: 0, width: W, height: METADE, overflow: 'hidden', zIndex: 2 } : { position: 'absolute', inset: 0, zIndex: 2 }), ...(est === 'noir' ? { filter: NOIR } : {}) }}>
       {a.imagens.map((i, n) =>
         i.tipo === 'video' ? (
           <AbsoluteFill key={n} style={{ zIndex: 2 }}><Plano src={i.src} de={f(i.de) - 6} dur={f(i.ate) - f(i.de) + 12} grade={i.grade} zoom={[1.06, 1.18]} escuro={0.15} /></AbsoluteFill>
@@ -490,7 +516,8 @@ export const Video: React.FC = () => {
         {[...a.imagens.map((i) => i.de), a.cta.de].map((s, n) => <Varrimento key={n} em={f(s)} sentido={n % 2 ? -1 : 1} />)}
       </AbsoluteFill>
       {fr < 10 && <AbsoluteFill style={{ zIndex: 19, background: '#000', opacity: interpolate(fr, [0, 9], [1, 0], clamp), pointerEvents: 'none' }} />}
-      <AbsoluteFill style={{ zIndex: 16, pointerEvents: 'none' }}><Pelicula /></AbsoluteFill>
+      {est === 'nativo' ? null : <AbsoluteFill style={{ zIndex: 16, pointerEvents: 'none' }}><Pelicula /></AbsoluteFill>}
+      {est === 'palavra' && fr < fim && <div style={{ position: 'absolute', left: 0, top: 0, height: 10, width: W * progresso, background: OURO_CLARO, zIndex: 18, boxShadow: `0 0 16px ${OURO}` }} />}
       <Moldura k={k} a={a} total={durationInFrames} />
       {semMusica(k) ? null : <Audio src={staticFile(musicaDe(k))} volume={volMusica} />}
     </AbsoluteFill>

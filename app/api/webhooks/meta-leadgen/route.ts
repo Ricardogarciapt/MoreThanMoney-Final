@@ -10,6 +10,7 @@ import {
   type LeadMeta,
 } from '@/lib/pedido-contacto'
 import { registarPedidoDeContacto } from '@/lib/pedido-contacto-registo'
+import { mensagensDoWebhook, responderMensagem } from '@/lib/social/dm-motor'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -124,8 +125,14 @@ export async function POST(req: NextRequest) {
   } catch {
     return NextResponse.json({ ok: true, ignorado: 'json' })
   }
+  // Mensagens do Messenger (objecto `page`, campo `messages`) chegam a este URL quando é ele o
+  // callback da Página. Antes deitavam-se fora; agora vão para o motor único de DMs (22/11).
+  const mensagens = mensagensDoWebhook(corpo)
+  if (mensagens.length && process.env.IG_DM_SELFHOSTED_ENABLED !== 'false') {
+    for (const m of mensagens) await responderMensagem(m)
+  }
   const eventos = eventosLeadgen(corpo)
-  if (!eventos.length) return NextResponse.json({ ok: true, ignorado: 'sem leadgen' })
+  if (!eventos.length) return NextResponse.json({ ok: true, ignorado: 'sem leadgen', mensagens: mensagens.length })
 
   const tokens = await tokensDePagina()
   const resultados: Array<{ leadgen: string; estado: string }> = []

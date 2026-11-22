@@ -145,6 +145,11 @@ async function montar({ id, marca, video, cin }) {
   // Molde de edição (21/11): vem do projecto; sem ele roda pelo dia (cinema → impacto → documental).
   const MOLDES = ['cinema', 'impacto', 'documental']
   config.molde = MOLDES.includes(cin.molde) ? cin.molde : arg('molde') && MOLDES.includes(arg('molde')) ? arg('molde') : MOLDES[Math.floor(Date.now() / 86400000) % 3]
+  // Estilo de edição (22/11, «usa mais estilos»): vem do projecto; sem ele roda por reel (id + dia), para os 5 do dia
+  // não saírem iguais.
+  const ESTILOS = ['classico', 'palavra', 'nativo', 'noir']
+  const semente = [...String(id)].reduce((s, c) => s + c.charCodeAt(0), 0) + Math.floor(Date.now() / 86400000)
+  config.estilo = ESTILOS.includes(cin.estilo) ? cin.estilo : arg('estilo') && ESTILOS.includes(arg('estilo')) ? arg('estilo') : ESTILOS[semente % ESTILOS.length]
   // Lista viva (22/11, formatos virais): cada item entra quando a voz diz a palavra mais marcante dele.
   if (cin.lista && Array.isArray(cin.lista.itens) && cin.lista.itens.length >= 2) {
     const n = (t) => String(t).toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9 ]/g, ' ')
