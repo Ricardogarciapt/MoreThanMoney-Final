@@ -1,7 +1,7 @@
 "use client"
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
-import { TrendingUp, TrendingDown, Lock, Zap, Eye, EyeOff, Maximize2, Minimize2 } from "lucide-react"
+import { TrendingUp, TrendingDown, Lock, Zap, Eye, EyeOff, Maximize2, Minimize2, Layers } from "lucide-react"
 import { useAuth } from "@/contexts/auth-context"
 import { scannersPermitidos } from "@/lib/mtmfunded/acesso"
 import { ESTUDOS_WEBTRADER, type ChaveEstudoWebtrader } from "@/lib/scanners/estudos"
@@ -24,6 +24,8 @@ import { sinalDoTrendShot } from "./trendshot-estudo"
 import type { ResultadoTrendShot } from "@/lib/estudos/trendshot/motor"
 import { sinalDoPremium } from "./premium-estudo"
 import type { ResultadoPremium } from "@/lib/estudos/premium-scanner/motor"
+import { sinalDoRocketNova } from "./rocketnova-estudo"
+import type { ResultadoRocketNova } from "@/lib/estudos/rocketnova/motor"
 
 export type { PosicaoGrafico, OrdemGrafico, Ferramenta } from "./grafico-tipos"
 
@@ -58,6 +60,12 @@ export type { PosicaoGrafico, OrdemGrafico, Ferramenta } from "./grafico-tipos"
  */
 
 const CHAVE_ESTUDOS = "mtmfunded_estudos"
+const GRUPOS_TF = [
+  ["Minutos", ["M1", "M2", "M3", "M5", "M10", "M15", "M30"]],
+  ["Horas", ["H1", "H2", "H4", "H6", "H8", "H12"]],
+  ["Dias", ["D1", "W1", "MN"]],
+] as const
+const TF_RAPIDOS: Tf[] = ["M5", "M15", "H1", "H4"]
 const CHAVE_NEGOCIOS = "mtmfunded_grafico_negocios"
 const CHAVE_ASK = "mtmfunded_grafico_ask"
 const CHAVE_TIPO = "mtmfunded_grafico_tipo"
@@ -154,7 +162,8 @@ export default function FundedGrafico(props: GraficoProps) {
   }, [])
 
   useEffect(() => {
-    setEstudos(ler<ChaveEstudoWebtrader[]>(CHAVE_ESTUDOS, ["Goldkiller"]))
+    // Uma estratégia de cada vez (pedido do Ricardo, 22/11): de uma lista antiga com várias fica a última.
+    setEstudos(ler<ChaveEstudoWebtrader[]>(CHAVE_ESTUDOS, ["Goldkiller"]).slice(-1))
     const guardado = ler<string | null>(CHAVE_TF + (props.chaveTf ?? ""), null)
     if (guardado && TIMEFRAMES.some((t) => t.chave === guardado)) setTfEstado(guardado as Tf)
   }, [])
@@ -170,7 +179,8 @@ export default function FundedGrafico(props: GraficoProps) {
     [estudos, permitidos],
   )
   const alternarEstudo = (c: ChaveEstudoWebtrader) => {
-    const novo = estudos.includes(c) ? estudos.filter((x) => x !== c) : [...estudos, c]
+    // Exclusivo: escolher uma estratégia desliga a anterior; tocar na que está ligada desliga-a.
+    const novo: ChaveEstudoWebtrader[] = estudos.includes(c) ? [] : [c]
     setEstudos(novo)
     guardar(CHAVE_ESTUDOS, novo)
   }
@@ -189,9 +199,11 @@ export default function FundedGrafico(props: GraficoProps) {
   const [resultadoTS, setResultadoTS] = useState<ResultadoTrendShot | null>(null)
   const psLocal = ativos.includes("PremiumScanner")
   const [resultadoPS, setResultadoPS] = useState<ResultadoPremium | null>(null)
+  const rnLocal = ativos.includes("RocketNova")
+  const [resultadoRN, setResultadoRN] = useState<ResultadoRocketNova | null>(null)
   const estudosSetas = useMemo(
-    () => ativos.filter((c) => !(senseiLocal && c === "Sensei") && !(gkLocal && c === "Goldkiller") && !(msLocal && c === "MTMScanner") && !(tsLocal && c === "TrendShot") && !(psLocal && c === "PremiumScanner")),
-    [ativos, senseiLocal, gkLocal, msLocal, tsLocal, psLocal],
+    () => ativos.filter((c) => !(senseiLocal && c === "Sensei") && !(gkLocal && c === "Goldkiller") && !(msLocal && c === "MTMScanner") && !(tsLocal && c === "TrendShot") && !(psLocal && c === "PremiumScanner") && !(rnLocal && c === "RocketNova")),
+    [ativos, senseiLocal, gkLocal, msLocal, tsLocal, psLocal, rnLocal],
   )
   const { sinais, ultimoAtivo: ultimoAlerta } = useSinaisEstudos(simbolo.symbol, estudosSetas)
   const sinalSensei = useMemo(() => (senseiLocal ? sinalDoSensei(resultadoSensei, simbolo.symbol) : null), [senseiLocal, resultadoSensei, simbolo.symbol])
@@ -199,8 +211,9 @@ export default function FundedGrafico(props: GraficoProps) {
   const sinalMS = useMemo(() => (msLocal ? sinalDoMTMScanner(resultadoMS, simbolo.symbol) : null), [msLocal, resultadoMS, simbolo.symbol])
   const sinalTS = useMemo(() => (tsLocal ? sinalDoTrendShot(resultadoTS, simbolo.symbol) : null), [tsLocal, resultadoTS, simbolo.symbol])
   const sinalPS = useMemo(() => (psLocal ? sinalDoPremium(resultadoPS, simbolo.symbol) : null), [psLocal, resultadoPS, simbolo.symbol])
+  const sinalRN = useMemo(() => (rnLocal ? sinalDoRocketNova(resultadoRN, simbolo.symbol) : null), [rnLocal, resultadoRN, simbolo.symbol])
   // O sinal em jogo: o mais recente entre a trade ativa do Sensei, a viragem do GoldKiller, o B/S do MTM Scanner, o cruzamento do TrendShot e o último alerta ativo.
-  const ultimoAtivo = [sinalSensei, sinalGK, sinalMS, sinalTS, sinalPS, ultimoAlerta].reduce<typeof ultimoAlerta>((melhor, x) => (x && (!melhor || x.em > melhor.em) ? x : melhor), null)
+  const ultimoAtivo = [sinalSensei, sinalGK, sinalMS, sinalTS, sinalPS, sinalRN, ultimoAlerta].reduce<typeof ultimoAlerta>((melhor, x) => (x && (!melhor || x.em > melhor.em) ? x : melhor), null)
   const configSensei = useMemo(
     () => (senseiLocal ? { inputs: inputsSensei, paineis: true, aoCalcular: setResultadoSensei } : null),
     [senseiLocal, JSON.stringify(inputsSensei)], // eslint-disable-line react-hooks/exhaustive-deps
@@ -217,11 +230,12 @@ export default function FundedGrafico(props: GraficoProps) {
 
   const configTS = useMemo(() => (tsLocal ? { aoCalcular: setResultadoTS } : null), [tsLocal])
   const configPS = useMemo(() => (psLocal ? { aoCalcular: setResultadoPS } : null), [psLocal])
+  const configRN = useMemo(() => (rnLocal ? { aoCalcular: setResultadoRN } : null), [rnLocal])
 
   const usarSinal = () => {
     // Só pré-preenche: nunca envia, nem com a negociação num clique ligada.
     if (!ultimoAtivo || !rascunho) return
-    const local = ultimoAtivo.id.startsWith("sensei-local:") || ultimoAtivo.id.startsWith("goldkiller-local:") || ultimoAtivo.id.startsWith("mtmscanner-local:") || ultimoAtivo.id.startsWith("trendshot-local:") || ultimoAtivo.id.startsWith("premium-local:")
+    const local = ultimoAtivo.id.startsWith("sensei-local:") || ultimoAtivo.id.startsWith("goldkiller-local:") || ultimoAtivo.id.startsWith("mtmscanner-local:") || ultimoAtivo.id.startsWith("trendshot-local:") || ultimoAtivo.id.startsWith("premium-local:") || ultimoAtivo.id.startsWith("rocketnova-local:")
     rascunho.aplicar({ lado: ultimoAtivo.direcao, entrada: ultimoAtivo.entrada, sl: ultimoAtivo.sl, tp: ultimoAtivo.tp, origem: "scanner", ideiaRef: local ? null : ultimoAtivo.id, escolhido: false })
   }
 
@@ -261,9 +275,19 @@ export default function FundedGrafico(props: GraficoProps) {
 
       {/* Linha 2 — timeframes, estudos (setas), ferramentas */}
       <div className="flex items-center gap-1 overflow-x-auto border-b px-2 py-1 text-[12px] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden" style={{ borderColor: TV.borda }}>
-        {TIMEFRAMES.map((t) => (
-          <button key={t.chave} onClick={() => setTf(t.chave)} className="shrink-0 rounded px-2 py-1 font-medium hover:bg-white/5" style={{ color: tf === t.chave ? TV.azul : TV.texto }}>
-            {t.rotulo}
+        {/* Temporalidades num dropdown (pedido do Ricardo, 22/11): a fila de 16 botões tapava os estudos.
+            Ficam à mão só os quatro mais usados, e só em ecrãs largos. */}
+        <select aria-label="Temporalidade" value={tf} onChange={(e) => setTf(e.target.value as Tf)}
+          className="shrink-0 rounded border bg-transparent px-1.5 py-1 text-[11.5px] font-semibold" style={{ borderColor: TV.borda, color: TV.azul, colorScheme: "dark" }}>
+          {GRUPOS_TF.map(([grupo, chaves]) => (
+            <optgroup key={grupo} label={grupo}>
+              {TIMEFRAMES.filter((t) => (chaves as readonly string[]).includes(t.chave)).map((t) => <option key={t.chave} value={t.chave}>{t.rotulo}</option>)}
+            </optgroup>
+          ))}
+        </select>
+        {TF_RAPIDOS.map((c) => (
+          <button key={c} onClick={() => setTf(c)} className="hidden shrink-0 rounded px-2 py-1 font-medium hover:bg-white/5 sm:block" style={{ color: tf === c ? TV.azul : TV.texto }}>
+            {TIMEFRAMES.find((t) => t.chave === c)?.rotulo}
           </button>
         ))}
         <select aria-label="Tipo de gráfico" value={tipoGrafico} onChange={(e) => { const v = e.target.value as TipoGrafico; setTipoGrafico(v); guardar(CHAVE_TIPO, v) }}
@@ -276,10 +300,12 @@ export default function FundedGrafico(props: GraficoProps) {
         ) : permitidos.map((e) => {
           const on = ativos.includes(e.chave)
           const completo = true
+          // O Premium Scanner mede em dólares do ouro: fora do XAU não desenha nada (parecia avariado).
+          const soOuro = e.chave === "PremiumScanner" && !/XAU/i.test(simbolo.symbol)
           return (
             <span key={e.chave} className="flex shrink-0 items-center gap-1">
-              <button onClick={() => alternarEstudo(e.chave)} title={completo ? (e.chave === "Sensei" ? "MTM Sensei completo no gráfico (DEMAs, cloud, estrutura, OB, sinais e painéis)" : e.chave === "Goldkiller" ? "MTM GoldKiller completo no gráfico (níveis HLCC4, faixas, BUY/SELL)" : e.chave === "MTMScanner" ? "MTM Scanner V3.5 completo no gráfico (DEMAs, POC, B/S, Entry/Stop/TP, estrutura)" : e.chave === "PremiumScanner" ? "Premium Scanner no gráfico (ouro, sessões Ásia/Londres/NY, zona em recuo, SL e TP1–4)" : e.chave === "RocketNova" ? "RocketNova no gráfico (EMA 20/50/238, estrela de lançamento, Entry/SL/TP1–4)" : "TrendShot no gráfico (EMA 20/50/238, sinais no cruzamento dentro do horário 08–21, Entry/SL/TP1–4)") : `Setas dos sinais ${e.rotulo} no gráfico`} className="flex shrink-0 items-center gap-1 rounded border px-2 py-0.5 text-[11px]"
-                style={on ? { borderColor: e.cor, color: e.cor, background: `${e.cor}1f` } : { borderColor: TV.borda, color: TV.textoFraco }}>
+              <button onClick={() => alternarEstudo(e.chave)} disabled={soOuro && !on} title={soOuro ? "O Premium Scanner só funciona no ouro (XAUUSD)" : completo ? (e.chave === "Sensei" ? "MTM Sensei completo no gráfico (DEMAs, cloud, estrutura, OB, sinais e painéis)" : e.chave === "Goldkiller" ? "MTM GoldKiller completo no gráfico (níveis HLCC4, faixas, BUY/SELL)" : e.chave === "MTMScanner" ? "MTM Scanner V3.5 completo no gráfico (DEMAs, POC, B/S, Entry/Stop/TP, estrutura)" : e.chave === "PremiumScanner" ? "Premium Scanner no gráfico (ouro, sessões Ásia/Londres/NY, zona em recuo, SL e TP1–4)" : e.chave === "RocketNova" ? "RocketNova no gráfico (EMA 20/50/238, estrela de lançamento, Entry/SL/TP1–4)" : "TrendShot no gráfico (EMA 20/50/238, sinais no cruzamento dentro do horário 08–21, Entry/SL/TP1–4)") : `Setas dos sinais ${e.rotulo} no gráfico`} className="flex shrink-0 items-center gap-1 rounded border px-2 py-0.5 text-[11px]"
+                style={on ? { borderColor: e.cor, color: e.cor, background: `${e.cor}1f` } : { borderColor: TV.borda, color: TV.textoFraco, opacity: soOuro ? 0.45 : 1 }}>
                 <span className="h-1.5 w-1.5 rounded-full" style={{ background: on ? e.cor : TV.textoFraco }} /> {e.rotulo}
               </button>
               {completo && on && e.chave === "Sensei" && <PopoverInputsSensei inputs={inputsSensei} definir={definirSensei} repor={reporSensei} cor={e.cor} />}
@@ -289,14 +315,23 @@ export default function FundedGrafico(props: GraficoProps) {
           )
         })}
         <div className="ml-auto flex shrink-0 gap-1 pl-2">
-          {([["Negociações", verNegocios, () => { setVerNegocios(!verNegocios); guardar(CHAVE_NEGOCIOS, !verNegocios) }, "Mostrar no gráfico as últimas 100 negociações deste símbolo"],
+          {/* Negociações, Ask e Notícias saíram da barra das estratégias para este menu (pedido do Ricardo, 22/11). */}
+          <details className="relative">
+            <summary className={`${botao} cursor-pointer list-none text-[11px] [&::-webkit-details-marker]:hidden`} title="Camadas do gráfico: negociações, linha Ask e notícias"
+              style={verNegocios || verAsk || verEventos ? { borderColor: TV.azul, color: "#fff" } : { borderColor: TV.borda, color: TV.textoFraco }}>
+              <Layers className="h-3.5 w-3.5" /> <span className="hidden sm:inline">Camadas</span>
+            </summary>
+            <div className="absolute right-0 z-50 mt-1 w-56 space-y-0.5 rounded-md border p-1.5 shadow-xl" style={{ background: TV.fundo, borderColor: TV.borda }}>
+              {([["Negociações", verNegocios, () => { setVerNegocios(!verNegocios); guardar(CHAVE_NEGOCIOS, !verNegocios) }, "Mostrar no gráfico as últimas 100 negociações deste símbolo"],
              ["Ask", verAsk, () => { setVerAsk(!verAsk); guardar(CHAVE_ASK, !verAsk) }, "Mostrar a linha do preço Ask (as velas são o Bid)"],
              ["Notícias", verEventos, () => { setVerEventos(!verEventos); guardar(CHAVE_EVENTOS, !verEventos) }, "Eventos do calendário económico (impacto médio e alto) das moedas deste ativo"]] as const).map(([nome, on, alternar, titulo]) => (
-            <button key={nome} type="button" onClick={alternar} title={titulo} aria-pressed={on} className={`${botao} text-[11px]`}
-              style={on ? { borderColor: TV.azul, color: "#fff", background: "rgba(41,98,255,0.2)" } : { borderColor: TV.borda, color: TV.textoFraco }}>
-              {nome}
+            <button key={nome} type="button" onClick={alternar} title={titulo} aria-pressed={on} className="flex w-full items-center justify-between rounded px-2 py-1.5 text-left text-[11.5px] hover:bg-white/5"
+              style={{ color: on ? "#fff" : TV.textoFraco }}>
+              {nome} <span style={{ color: on ? TV.azul : TV.textoFraco }}>{on ? "ligado" : "desligado"}</span>
             </button>
           ))}
+            </div>
+          </details>
           <button type="button" onClick={() => (cheio ? sair() : void entrar())} className={botao}
             title={cheio ? "Sair do ecrã inteiro (Esc)" : "Gráfico em ecrã inteiro"} aria-label={cheio ? "sair do ecrã inteiro" : "gráfico em ecrã inteiro"} aria-pressed={Boolean(cheio)}
             style={cheio ? { borderColor: TV.azul, color: "#fff", background: "rgba(41,98,255,0.2)" } : { borderColor: TV.borda, color: TV.texto }}>
@@ -341,7 +376,7 @@ export default function FundedGrafico(props: GraficoProps) {
       <div className={mostrar ? "contents" : "hidden"}>
       {/* A trade ativa do Sensei já tem as linhas ENTRY/SL/EXIT do próprio estudo e o GoldKiller os
           seus níveis: só o alerta (não o sinal local) leva as linhas ténues de referência. */}
-      <GraficoLeve {...props} negocios={verNegocios ? props.negocios : []} linhaAsk={verAsk} tipoGrafico={tipoGrafico} eventos={verEventos ? eventos : []} preencher={encher} sinais={sinais} sinalAtivo={ultimoAlerta} sensei={configSensei} goldkiller={configGK} mtmscanner={configMS} trendshot={configTS} premium={configPS} tf={tf} modo={modo} setModo={setModo} />
+      <GraficoLeve {...props} negocios={verNegocios ? props.negocios : []} linhaAsk={verAsk} tipoGrafico={tipoGrafico} eventos={verEventos ? eventos : []} preencher={encher} sinais={sinais} sinalAtivo={ultimoAlerta} sensei={configSensei} goldkiller={configGK} mtmscanner={configMS} trendshot={configTS} premium={configPS} rocketnova={configRN} tf={tf} modo={modo} setModo={setModo} />
       </div>
     </div>
   )

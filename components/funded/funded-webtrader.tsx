@@ -8,6 +8,7 @@ import { Loader2, LogIn, ChevronDown, ShieldAlert, X, Settings2, Pencil, Check, 
 import { candidatosDeTicker } from "@/lib/mtmfunded/simulado/ordens"
 import { type ContaResumo, type SessaoConta, pedir, lerSessoes, guardarSessao, apagarSessao, gravarEtiqueta, lerOrdemContas, gravarOrdemContas, gravarContaFavorita, gravarFiltroContas, gravarContasOcultas, usd, COR_ESTADO, corDoEstado } from "./api"
 import InstalarWebtrader from "./instalar-webtrader"
+import { SairWebtrader, VoltarApp } from "@/components/webtrader/barra-saida"
 import PopoverAncorado from "./popover-contas"
 import { preaquecerWebtrader } from "./pre-carga"
 import { InterruptorModo, useModoWebtrader } from "./modo-webtrader"
@@ -330,7 +331,8 @@ export default function FundedWebtrader({ contexto = "embutido", onSimbolo }: {
     >
       {/* A barra: marca, conta, modo. O aviso de conta simulada fica SEMPRE à vista (spec §1). */}
       <div className="flex shrink-0 items-center gap-2 border-b border-white/10 bg-[#0d0f15] px-2 py-1.5">
-        {contexto === "app" && <img src="/icon-192x192.png" alt="MTM" className="h-6 w-6 shrink-0 rounded" />}
+        {contexto === "app" && <VoltarApp />}
+        {contexto === "app" && <img src="/icon-192x192.png" alt="MTM" className="hidden h-6 w-6 shrink-0 rounded sm:block" />}
         {todas.length > 0 && (
           <div className="relative min-w-0">
             <button ref={botaoSeletor} onClick={() => { if (seletorAberto) fecharSeletor(); else { setErroEtiqueta(null); setSeletorAberto(true) } }} aria-expanded={seletorAberto} aria-haspopup="listbox"
@@ -455,6 +457,7 @@ export default function FundedWebtrader({ contexto = "embutido", onSimbolo }: {
           {/* O SIMPLE/PRO já vale para as contas reais: desenham-se com os mesmos layouts. */}
           {emTrader && <InterruptorModo compacto={false} />}
           <InstalarWebtrader contexto={contexto} />
+          {contexto === "app" && (temSessaoMtm || todas.length > 0) && <SairWebtrader compacto />}
         </div>
       </div>
       {emTrader && ativaReal ? (

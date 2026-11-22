@@ -9,6 +9,7 @@ import type { InputsGoldKiller, ResultadoGoldKiller } from "@/lib/estudos/goldki
 import LegendaMTMScanner from "@/lib/estudos/mtmscanner/legenda"
 import type { InputsMTMScanner, ResultadoMTMScanner } from "@/lib/estudos/mtmscanner/tipos"
 import type { ResultadoTrendShot } from "@/lib/estudos/trendshot/motor"
+import type { ResultadoRocketNova } from "@/lib/estudos/rocketnova/motor"
 import type { ResultadoPremium } from "@/lib/estudos/premium-scanner/motor"
 import type { InputsSensei, ResultadoSensei, Vela } from "@/lib/estudos/sensei/tipos"
 import { type Direcao, lucroUsd, spreadEmPreco } from "@/lib/mtmfunded/simulado/matematica"
@@ -190,6 +191,10 @@ export default function GraficoLeve(props: GraficoProps & {
     /** Cada resultado novo (null ao desligar) — alimenta o «Usar este sinal». */
     aoCalcular?: (r: ResultadoTrendShot | null) => void
   } | null
+  /** RocketNova desenhado no gráfico (null/undefined = desligado) — lib/estudos/rocketnova. */
+  rocketnova?: {
+    aoCalcular?: (r: ResultadoRocketNova | null) => void
+  } | null
   /** MTM Premium Scanner desenhado no gráfico (null/undefined = desligado) — lib/estudos/premium-scanner. */
   premium?: {
     aoCalcular?: (r: ResultadoPremium | null) => void
@@ -302,6 +307,11 @@ export default function GraficoLeve(props: GraficoProps & {
   const trendshotLigado = Boolean(props.trendshot)
   const aoCalcularTSRef = useRef(props.trendshot?.aoCalcular)
   aoCalcularTSRef.current = props.trendshot?.aoCalcular
+  const rnRef = useRef<import("@/lib/estudos/rocketnova/lightweight").RocketNovaLW | null>(null)
+  const [rnPronto, setRnPronto] = useState(false)
+  const rocketnovaLigado = Boolean(props.rocketnova)
+  const aoCalcularRNRef = useRef(props.rocketnova?.aoCalcular)
+  aoCalcularRNRef.current = props.rocketnova?.aoCalcular
   const psRef = useRef<import("@/lib/estudos/premium-scanner/lightweight").PremiumLW | null>(null)
   const [psPronto, setPsPronto] = useState(false)
   const premiumLigado = Boolean(props.premium)
@@ -880,6 +890,31 @@ export default function GraficoLeve(props: GraficoProps & {
     if (snapshot.length < 60) return
     aoCalcularTSRef.current?.(tsRef.current.update(snapshot))
   }, [tsPronto, versaoVelas, historicoCompleto, estadoVelas])
+
+  // ── RocketNova ── (EMAs, estrelas e Rocket Candles: cálculo leve, sem Web Worker)
+  useEffect(() => {
+    if (!pronto || !rocketnovaLigado) return
+    let vivo = true
+    import("@/lib/estudos/rocketnova/lightweight").then((mod) => {
+      if (!vivo || !graficoRef.current || !serieRef.current) return
+      rnRef.current = mod.anexarRocketNova(graficoRef.current, serieRef.current, { simbolo: simbolo.symbol, etiquetasEixo: !props.compacto })
+      setRnPronto(true)
+    }).catch(() => { /* sem estudo — o gráfico continua */ })
+    return () => {
+      vivo = false
+      try { rnRef.current?.remove() } catch { /* o gráfico já foi removido */ }
+      rnRef.current = null
+      setRnPronto(false)
+      aoCalcularRNRef.current?.(null)
+    }
+  }, [pronto, rocketnovaLigado, simbolo.symbol, tf]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  useEffect(() => {
+    if (!rnPronto || !rnRef.current || estadoVelas === "a_carregar") return
+    const snapshot = velasRef.current.slice()
+    if (snapshot.length < 60) return
+    aoCalcularRNRef.current?.(rnRef.current.update(snapshot))
+  }, [rnPronto, versaoVelas, historicoCompleto, estadoVelas])
 
   // ── Premium Scanner ── (voto de 5 e níveis fixos: cálculo leve, sem Web Worker)
   useEffect(() => {

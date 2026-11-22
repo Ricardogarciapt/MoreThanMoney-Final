@@ -278,6 +278,8 @@ window.iniciar=(tl,legendas,dados)=>{ window.NOME=dados.nome||''; window.LANG=da
   document.getElementById('marcaTxt').textContent=dados.marca||'MoreThanMoney · Bootcamp'
   MOTOR=(window.MOTORES||{})[dados.motor||dados.est]||null
   if(MOTOR) (MOTOR.camadasLado||[]).forEach(x=>DEFAULT_VIS[x]=1); else simIniciar(dados.est,dados.lang||'pt')
+  // motores que não são indicadores (ex.: webtrader.js) trazem tipos de cena próprios
+  if(MOTOR&&MOTOR.tipos) Object.assign(TIPOS,MOTOR.tipos)
   for(const id in dados.cenas){ const s=dados.cenas[id]; if(s.tipo==='grafico') [...(s.base||[]),...(s.camadas||[])].forEach(x=>{ if(!['sinal','plano','setas','toque','volume'].includes(x)) DEFAULT_VIS[x]=1 }) }
   for(const c of tl){ const r=el('div','cena'); palco.append(r); const s=dados.cenas[c.id]; montadas[c.id]={r,u:TIPOS[s.tipo](r,s),c,s} } }
 window.renderAt=t=>{ let leg=''
