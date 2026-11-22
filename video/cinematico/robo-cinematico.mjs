@@ -132,6 +132,7 @@ async function montar({ id, marca, video, cin }) {
 
   // Referências visuais (22/11, «se falas do GTA VI, mostra o GTA VI»): imagem real do que a voz nomeia
   const refs = []
+  if (Array.isArray(cin.visuais) && cin.visuais.length) log('referências pedidas', cin.visuais.length)
   for (const [i, r] of (Array.isArray(cin.visuais) ? cin.visuais : []).slice(0, 4).entries()) {
     try {
       if (!r || !/^https:\/\//.test(r.url || '') || !r.quando) continue
