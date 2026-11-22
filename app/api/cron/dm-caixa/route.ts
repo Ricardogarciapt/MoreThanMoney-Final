@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getSupabaseAdmin } from '@/lib/supabase-admin-client'
 import { isCronAuthorized } from '@/lib/cron-auth'
 import { carregarTokensIG, candidateTokensForIgAccount, sendInstagramDmResilient } from '@/lib/instagram/dm-closer'
-import { PAGINAS, responderMensagem, type CanalDm } from '@/lib/social/dm-motor'
+import { PAGINAS, SEM_TEXTO, responderMensagem, type CanalDm } from '@/lib/social/dm-motor'
 import { linkAgendar } from '@/lib/agenda/link'
 
 export const runtime = 'nodejs'
@@ -193,7 +193,7 @@ export async function GET(req: NextRequest) {
       for (const c of r.dados ?? []) {
         const ultima = c.messages?.data?.[0]
         const de = ultima?.from?.id
-        if (!ultima?.id || !de || proprios.has(de) || !ultima.message?.trim()) continue
+        if (!ultima?.id || !de || proprios.has(de)) continue
         if (agora - new Date(ultima.created_time ?? 0).getTime() > JANELA_MS) continue
         porResponder++
         const canal: CanalDm = plataforma === 'instagram' ? 'instagram' : 'messenger'
@@ -202,7 +202,8 @@ export async function GET(req: NextRequest) {
           contaId: canal === 'instagram' ? p.ig : p.pagina,
           remetente: de,
           mid: ultima.id,
-          texto: ultima.message,
+          // Sem texto (foto, partilha, sticker, gosto, áudio): o closer abre com um quebra-gelo.
+          texto: ultima.message?.trim() || SEM_TEXTO,
           origem: 'caixa',
         })
         if (res.resultado === 'respondida') ok++
