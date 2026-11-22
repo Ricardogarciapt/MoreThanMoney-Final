@@ -315,7 +315,9 @@ async function umTrabalho() {
     const final = await montar({ id: t.id, marca, video, cin })
     const s = await fetch(t.subir_url, { method: 'PUT', headers: { 'content-type': 'video/mp4', 'x-upsert': 'true' }, body: fs.readFileSync(final) })
     if (!s.ok) throw new Error(`upload ${s.status}`)
-    log('pronto', t.id, await (await responder({ ok: true })).text())
+    // Capa (22/11, Ricardo): todos os reels levam capa, cada uma diferente; uma capa que falhe não trava o reel.
+    const capa = await subirCapa(t, marca, cin).catch((e) => { log('capa falhou', t.id, e.message); return false })
+    log('pronto', t.id, await (await responder({ ok: true, capa })).text())
     fs.rmSync(final, { force: true })
   } catch (e) {
     log('falhou', t.id, e.message)
@@ -323,6 +325,29 @@ async function umTrabalho() {
   } finally {
     limpar(t.id)
   }
+  return true
+}
+
+/**
+ * Capa 9:16 (video/cinematico/capas/capa_reel.py): RG no estilo @ricardogarciapt (ciano + faixa azul),
+ * MTM com o branding MTM (ouro sobre carvão). A foto sai do id do projecto, para cada capa ser diferente.
+ * Linhas: cin.capa ou, sem elas, o gancho partido em branco / destaque / faixa.
+ */
+function linhasDaCapa(cin) {
+  if (Array.isArray(cin.capa) && cin.capa.length) return cin.capa
+  const p = String(cin.gancho || cin.lista?.titulo || '').replace(/[.!?…]+$/, '').split(/\s+/).filter(Boolean)
+  if (p.length <= 2) return [['w', p.join(' ') || 'Trading'], ['c', cin.palavra_chave || 'com método']]
+  if (p.length <= 4) return [['w', p.slice(0, 2).join(' ')], ['c', p.slice(2).join(' ')]]
+  const a = Math.ceil(p.length * 0.35), b = Math.ceil(p.length * 0.65)
+  return [['w', p.slice(0, a).join(' ')], ['c', p.slice(a, b).join(' ')], ['box', p.slice(b).join(' ')]]
+}
+
+async function subirCapa(t, marca, cin) {
+  if (!t.capa_subir_url) return false
+  const saida = path.join(AUTO, `${t.id}-capa.jpg`)
+  correr('python3', [path.join(AQUI, 'capas', 'capa_reel.py'), `--marca=${marca}`, `--semente=${t.id}`, `--linhas=${JSON.stringify(linhasDaCapa(cin))}`, `--saida=${saida}`])
+  const r = await fetch(t.capa_subir_url, { method: 'PUT', headers: { 'content-type': 'image/jpeg', 'x-upsert': 'true' }, body: fs.readFileSync(saida) })
+  if (!r.ok) throw new Error(`upload capa ${r.status}`)
   return true
 }
 

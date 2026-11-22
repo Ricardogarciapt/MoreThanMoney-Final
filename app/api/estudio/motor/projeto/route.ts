@@ -80,6 +80,8 @@ export async function GET(request: NextRequest) {
     await db.from('estudio_projetos').update({ estado: 'erro', erro: 'motor: falhou a preparar o upload' }).eq('id', cand.id)
     return NextResponse.json({ erro: 'Não consegui preparar o upload.' }, { status: 500 })
   }
+  // Capa do reel (22/11, Ricardo: todos os reels levam capa, cada uma diferente): o robô desenha-a e sobe-a aqui.
+  const { data: subidaCapa } = await db.storage.from('uploads').createSignedUploadUrl(`estudio/projetos/${cand.id}-capa.jpg`, { upsert: true })
   return NextResponse.json({
     ok: true,
     trabalho: {
@@ -90,6 +92,7 @@ export async function GET(request: NextRequest) {
       palavras,
       narracao_url,
       subir_url: subida.signedUrl,
+      capa_subir_url: subidaCapa?.signedUrl ?? null,
     },
   })
 }
@@ -99,14 +102,19 @@ export async function POST(request: NextRequest) {
   const b = await request.json().catch(() => ({}))
   if (typeof b.id !== 'string') return NextResponse.json({ erro: 'Falta o id.' }, { status: 400 })
   const db = getSupabaseAdmin()
-  const { data: p } = await db.from('estudio_projetos').select('id, estado').eq('id', b.id).maybeSingle()
+  const { data: p } = await db.from('estudio_projetos').select('id, estado, projeto').eq('id', b.id).maybeSingle()
   if (!p || p.estado !== 'a_montar') return NextResponse.json({ erro: 'Trabalho desconhecido ou já fechado.' }, { status: 409 })
   if (!b.ok) {
     await db.from('estudio_projetos').update({ estado: 'erro', erro: String(b.erro || 'erro').slice(0, 500) }).eq('id', p.id)
     return NextResponse.json({ ok: true })
   }
   const url = db.storage.from('uploads').getPublicUrl(`estudio/projetos/${p.id}.mp4`).data.publicUrl
-  await db.from('estudio_projetos').update({ estado: 'pronto', erro: null, video_url: `${url}?v=${Date.now()}`, atualizado_em: new Date().toISOString() }).eq('id', p.id)
+  const agora = Date.now()
+  const atual = (p.projeto ?? {}) as Record<string, any>
+  const projeto = b.capa
+    ? { ...atual, cinematico: { ...(atual.cinematico ?? {}), capa_url: `${db.storage.from('uploads').getPublicUrl(`estudio/projetos/${p.id}-capa.jpg`).data.publicUrl}?v=${agora}` } }
+    : atual
+  await db.from('estudio_projetos').update({ estado: 'pronto', erro: null, video_url: `${url}?v=${agora}`, projeto, atualizado_em: new Date().toISOString() }).eq('id', p.id)
   // Reel do clone HeyGen → fila do Instagram como rascunho + pedido de aprovação ao Ricardo.
   const { rascunhoDoReelDoClone } = await import('@/lib/estudio/reel-aprovacao')
   const post_id = await rascunhoDoReelDoClone(db, p.id)

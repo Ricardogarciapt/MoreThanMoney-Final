@@ -145,6 +145,13 @@ export type Cinematico = {
    * clone Fish do Ricardo (gerada pelo site) e o fundo são as fotos reais animadas + b-roll.
    */
   narrado?: boolean
+  /**
+   * Capa do reel (22/11/2026, Ricardo: todos os reels levam capa, cada uma diferente; RG no estilo
+   * dele, MTM com o branding MTM). Linhas do título: w = branco, c = destaque (ciano/ouro), box = faixa.
+   * Sem linhas, o robô parte o gancho. capa_url é a imagem já desenhada (vai para media_urls[1]).
+   */
+  capa?: [('w' | 'c' | 'box'), string][]
+  capa_url?: string
 }
 
 export const MOLDES_EDICAO = ['cinema', 'impacto', 'documental'] as const
@@ -169,7 +176,18 @@ export function normalizarCinematico(v: any): Cinematico | null {
     ...((MOLDES_EDICAO as readonly string[]).includes(v.molde) ? { molde: v.molde as MoldeEdicao } : {}),
     ...normalizarLista(v.lista),
     ...(v.narrado === true ? { narrado: true } : {}),
+    ...normalizarCapa(v.capa),
+    ...(typeof v.capa_url === 'string' && /^https:\/\//.test(v.capa_url) ? { capa_url: v.capa_url.slice(0, 400) } : {}),
   }
+}
+
+function normalizarCapa(c: any): { capa?: Cinematico['capa'] } {
+  if (!Array.isArray(c)) return {}
+  const linhas = c
+    .filter((l: any) => Array.isArray(l) && ['w', 'c', 'box'].includes(l[0]) && typeof l[1] === 'string' && l[1].trim())
+    .map((l: any) => [l[0], txt(l[1], 40).trim()] as [('w' | 'c' | 'box'), string])
+    .slice(0, 4)
+  return linhas.length ? { capa: linhas } : {}
 }
 
 function normalizarLista(l: any): { lista?: Cinematico['lista'] } {

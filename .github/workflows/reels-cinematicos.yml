@@ -58,7 +58,7 @@ jobs:
         run: |
           sudo apt-get update -qq
           sudo apt-get install -y -qq ffmpeg
-          pip install -q numpy faster-whisper
+          pip install -q numpy faster-whisper pillow
           cd video/cinematico && npm ci --no-audit --no-fund --loglevel=error
           # ecrãs das Demos/Soluções fotografados do site ao montar (capturarDemos)
           npm i --no-save --no-audit --no-fund --loglevel=error playwright@1.49.1 && npx playwright install --with-deps chromium
