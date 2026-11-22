@@ -28,6 +28,9 @@ import { registarVendaDoMarketplace } from './venda-equipa'
 import { registarPasso } from './leads'
 import { compraEntregue } from './comprador'
 import { lerVendedor, pctDoProduto, registarCompra } from './servidor'
+import { assinarEbook, ehEbook, linkEbook, partesEbook, EBOOKS } from '@/lib/ebooks/acesso'
+import { sendEbookPurchaseEmail } from '@/lib/email-service'
+import { getSiteUrl } from '@/lib/mail-transport'
 
 export async function entregarCompraDoMarketplace(session: Stripe.Checkout.Session): Promise<void> {
   const produtoId = session.metadata?.product_id
@@ -163,6 +166,27 @@ export async function entregarCompraDoMarketplace(session: Stripe.Checkout.Sessi
       produto: { id: produto.id, titulo: produto.titulo as string, slug: (produto.slug as string) ?? '' },
       parteCasaCents: Math.max(0, (session.amount_total ?? 0) - Math.round(((session.amount_total ?? 0) * pct) / 100)),
     })
+
+    // E-book: email com o link (PT/EN/ES) logo a seguir ao pagamento, para quem fecha a página
+    // antes de chegar à Biblioteca. Best-effort: a compra já está gravada e a Biblioteca abre-o.
+    if (ehEbook(produto.slug) && session.customer_details?.email) {
+      const base = partesEbook(produto.slug).base
+      if (ehEbook(base)) {
+        const quem = session.customer_details.email
+        const tok = assinarEbook(base, 365, quem)
+        const lk = (l: 'pt' | 'en' | 'es') => {
+          const s = l === 'pt' ? base : `${base}-${l}`
+          return ehEbook(s) ? linkEbook(s, tok) : linkEbook(base, tok)
+        }
+        await sendEbookPurchaseEmail({
+          to: quem,
+          nome: session.customer_details.name ?? null,
+          titulo: EBOOKS[base].titulo,
+          linkBiblioteca: `${getSiteUrl()}/marketplace/biblioteca`,
+          links: { pt: lk('pt'), en: lk('en'), es: lk('es') },
+        }).catch((e) => console.warn('[marketplace] email do e-book não saiu:', session.id, e))
+      }
+    }
 
     // «O Método Frio» a 5 € inclui 7 dias de acompanhamento com o Ricardo (decisão 21/11/2026):
     // cada compra abre uma tarefa no CRM para marcar a conversa. Best-effort: a compra já está gravada.
