@@ -34,13 +34,7 @@ La app tiene cinco pestañas en la parte inferior de la pantalla. Aprende en el 
 
 [[foto: mt5-android-negociacao.jpg | La pestaña de operaciones y el historial en el MetaTrader 5 para Android y tablet. Aquí ves el saldo, el capital y el margen. Imagen: MetaQuotes (metatrader5.com). | larga]]
 
-:::galeria El MetaTrader 5 en el móvil, por dentro
-mt5-video-conta.png | Configuración: abrir cuenta nueva, noticias, calendario y gráficos.
-mt5-video-cotacoes.png | Cotizaciones: precio de venta y de compra, lado a lado.
-mt5-video-grafico.png | Un gráfico de 1 minuto, con el precio actual a la derecha.
-:::
-
-*Capturas reales del MetaTrader 5 en el móvil, con los datos de la cuenta difuminados.*
+*Las pantallas reales de la app, organizadas por temas, están en la **Guía visual de MetaTrader 5**, al final del libro.*
 
 
 En una cuenta demo recién abierta con 500 €, la pestaña «Operaciones» muestra saldo 500,00 €, capital 500,00 €, margen 0,00 € y margen libre 500,00 € (valores ilustrativos).
