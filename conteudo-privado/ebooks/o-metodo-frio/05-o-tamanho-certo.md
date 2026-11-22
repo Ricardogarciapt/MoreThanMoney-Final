@@ -68,6 +68,14 @@ A Marta queria abrir 0,10 lotes, «para valer a pena». Com 500 € de demo e 1 
 
 Com 200 € e 1 % de risco, arriscas 2 € por operação. Com o lote mínimo de 0,01 (cerca de 0,10 $ por pip no EUR/USD), isso dá um stop de uns 20 pips. Se a tua ideia precisa de mais, não há lote mais pequeno para baixar. Tens duas saídas honestas: esperar por uma entrada com stop mais curto, ou não entrar. «Arriscar 5 % só desta vez» não é uma saída. É o início do problema.
 
+## Da minha vida: 1.037 € por mês
+
+Entrei na GNR em 2010. Fiquei lá catorze anos. No fim, o meu ordenado líquido era de 1.037 € por mês, com mulher, uma filha pequena e três horas de comboio por dia para ir e voltar do Comando Territorial de Lisboa.
+
+Com 1.037 € aprende-se gestão de risco à força. Cada euro tem um destino antes de chegar: renda, comida, transportes, escola. Não há margem para «vou arriscar um bocadinho mais este mês». Quando comecei no trading, trouxe essa conta comigo. Foi ela que me salvou de fazer o que vejo tantos fazerem: abrir uma operação com o dinheiro da prestação da casa.
+
+A fórmula deste capítulo é a mesma conta que eu fazia ao ordenado. Primeiro decides quanto podes perder sem que a tua vida mude. Só depois descobres quanto podes comprar.
+
 ## A regra fria deste capítulo
 
 :::cartao Regra fria n.º 5

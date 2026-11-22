@@ -63,6 +63,18 @@ Duas perdas antes das 8h. As duas com plano, as duas com stop, 5 € cada. A Mar
 
 Há um livro que recomendo a quem quer ir mais fundo nisto: «The Daily Trading Coach», de Brett Steenbarger, um psicólogo que trabalha com traders. Cada capítulo é uma lição curta para aplicar no dia seguinte.
 
+## Da minha vida: o ano em que tudo veio junto
+
+[[foto: rg-pb.jpg | Frio não é não sentir. É sentir e decidir na mesma. | lado]]
+
+No dia de anos da minha filha já se suspeitava do cancro da Liliana. Nesse mesmo dia, o meu sobrinho teve um acidente de carro. A rapariga que ia com ele morreu. Ele esteve em coma e hoje anda de cadeira de rodas. A Constança tinha três anos. Em novembro o diagnóstico confirmou-se e começaram os tratamentos.
+
+Nessa altura já não tinha família adotiva viva. A minha avó morreu de velhice quando eu estava no curso de Fuzileiros. A minha irmã Carla morreu de cancro do pulmão em 2019, no mesmo mês da minha mãe. Só conheci a minha família biológica depois do funeral da minha mãe, e não ficámos ligados. Mudámo-nos para Santarém à procura de apoio, vendemos a casa de que gostávamos, e o dinheiro e o tempo não chegavam para nada.
+
+Também trazia comigo uma agressão de que fui alvo, fora de serviço, por causa do meu trabalho. Deixou marcas que demorei anos a tratar. Não vou alongar-me nisso aqui.
+
+Tirei a licença parental toda e estive presente. E foi nesse ano, o pior de todos, que aprendi a regra mais importante deste livro: as emoções não se desligam, gerem-se. Quem decide com a cabeça a ferver perde, no mercado e na vida. As regras de paragem deste capítulo são as que eu precisei de ter quando tudo veio junto.
+
 ## A regra fria deste capítulo
 
 :::cartao Regra fria n.º 10

@@ -25,6 +25,23 @@ imagem: The market does not know you exist.
 legenda: And that is great news. It means it is not against you. You only need to stop being against yourself. 🧊
 :::
 
+## Where I come from, in a few lines
+
+I was born in Porto and adopted at 17 months by a humble family. Nine of us grew up in a century-old house with four or five rooms. Food was shared, hygiene was whatever was possible, and I watched people I loved get sick and go because of a poverty nobody chooses. It was only around the age of eight that I started calling them mum, grandma and sister. Those words were hard to say, and they stayed.
+
+At 16 I asked my grandma Miquinhas for €25 to buy a pair of baggy hip-hop trousers. It was the fashion in Porto at the time and I wanted to be like everyone else. She looked at me and said: "Oh Ricardo, I can't anymore, everyone has already borrowed from me." The allowance I got for being adopted was feeding the whole house: there were sick people, there were unemployed people, and the money didn't stretch any further. That was the day I decided I was not going to die poor. A week later I was working and studying, and I moved into the house next door, which had a rent of €25. The same amount as the trousers.
+
+:::cartao Portugal, for context
+- **2003:** the national minimum wage was €356.60. It was the year I joined the Army.
+- **2011 to 2014:** request for financial assistance, the troika programme and the minimum wage frozen at €485. In the public sector there were cuts to salaries and allowances.
+- **2013:** unemployment went past 17%. Among young people, more than one in three had no job.
+- **2021 to 2023:** the pandemic, then inflation of close to 8% in 2022 and mortgage payments rising with Euribor.
+
+Public figures (INE, Banco de Portugal), rounded. They are there so you can see the ground that many people in my generation tried to build something on.
+:::
+
+I don't tell this so that you feel sorry for me. I tell it because Forex attracts a lot of people from exactly that place: people who count what is left at the end of the month, people who already work hard and want a way out. They are the ones who need a cold method most, because they have the most to lose with a hot one. Throughout the book I will tell you, chapter by chapter, the pieces of my life that taught me each rule.
+
 ## What this book is (and what it is not)
 
 It is a manual for people starting out in Forex who want to do it without burning out in the first few months. You will understand what you are trading, how much each trade costs, how to place an order in MetaTrader 5 with a stop and a target, how to work out the right size and how to build a plan that fits on one page.
@@ -50,8 +67,9 @@ Each chapter has the same parts, always in the same order:
 2. **The screen**: where that idea lives in MetaTrader, with real captures of the app.
 3. **One classic mistake**, the one almost everybody makes at the start, with an explanation of what it costs.
 4. **A piece of Marta's story**, an example character who starts from zero in chapter 1 and applies each rule, stumbles included, to the end of the book.
-5. **One cold rule**, short, for you to stick up near your screen.
-6. **One task for today** on your demo or in a notebook, which takes less than 30 minutes.
+5. **A piece of my life**, from Porto to the paratroopers, to the Marines (Fuzileiros) and to the GNR (Portuguese National Guard), with the moment I learned that rule.
+6. **One cold rule**, short, for you to stick up near your screen.
+7. **One task for today** on your demo or in a notebook, which takes less than 30 minutes.
 
 :::cartao The five cold rules of this book
 - I decide beforehand. In the moment, I only execute.

@@ -97,12 +97,18 @@ tu: Blocked.
 
 If it has not happened to you yet, it will. Nobody reputable guarantees returns in Forex. Nobody reputable asks you for money to put into their account.
 
-When one day you move from the demo to a real account (and you only do that in chapter 11), ask the broker these four questions:
+When one day you move from the demo to a real account (and you only do that in chapter 12), ask the broker these four questions:
 
 1. **Who regulates me?** Look up the entity and the licence number on the regulator's website, not only on the broker's website.
 2. **Which entity holds my account?** Many groups have several entities in different countries, with different rules.
 3. **What does it cost?** Typical spread, commissions, swap, withdrawal costs.
 4. **Can I withdraw?** Read the withdrawal rules before you deposit.
+
+## From my life: the €25 I did not have
+
+Remember the €25 trousers from the introduction? My grandmother did not say no because she didn't love me. She was the person who gave me the most love in that house. She said no because the money wasn't enough, and money doesn't care who loves whom.
+
+The market is the same. It does not know you exist, it does not know you need that profit for the rent, it does not know you had a bad month. When I understood that at 16, in a kitchen in Porto, I stopped asking the world to be fair to me and started asking what I could control. In the market, the answer is short: the pair you choose, the hour you enter, how much you risk and where you get out. The rest is not up to you.
 
 ## The cold rule of this chapter
 

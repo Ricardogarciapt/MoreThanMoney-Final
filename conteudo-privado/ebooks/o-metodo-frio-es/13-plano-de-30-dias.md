@@ -41,7 +41,7 @@ Este plan se hace todo en cuenta demo, con 30 a 45 minutos al día. No salta pas
 |---|---|
 | 22 a 27 | Seguir. Activar las reglas de parada siempre que proceda, sin excepciones (capítulo 10) |
 | 28 | Calcular los tres números: cumplimiento, acierto, ganancia media ÷ pérdida media |
-| 29 | Comparar con los criterios de paso (capítulo 11) |
+| 29 | Comparar con los criterios de paso (capítulo 12) |
 | 30 | Escribir una carta a ti mismo: qué aprendiste, qué vas a mantener, qué vas a cambiar |
 
 [[grafico:rotina-15min]]

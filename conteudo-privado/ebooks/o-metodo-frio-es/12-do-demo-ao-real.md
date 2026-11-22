@@ -65,7 +65,7 @@ Si este libro te ha sido útil, hay tres pasos posibles a partir de aquí:
 
 ## La regla fría de este capítulo
 
-:::cartao Regla fría n.º 11
+:::cartao Regla fría n.º 12
 Paso a la real cuando mandan los números, no cuando pide la ganas. Empiezo con el lote mínimo, con el mismo plan, y vuelvo a la demo sin vergüenza cada vez que el cumplimiento baje.
 :::
 

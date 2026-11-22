@@ -10,11 +10,15 @@ Soy Ricardo Garcia. Vengo de una familia adoptiva, de origen humilde, en la ciud
 
 Hay una cosa que quien no crece con una base muy firme aprende pronto: a mirar hacia delante y a hacer cuentas con lo que tiene. Tardé años en darme cuenta de que resistir solo es un método caro. Y de que se puede sustituir por otro, mejor.
 
+Éramos nueve en una casa centenaria con cuatro o cinco habitaciones. Solo hacia los ocho años empecé a decir mamá, abuela y hermana. Mi abuelo adoptivo era severo, pero también era quien me llevaba de la mano al patio, a las gallinas y a los huertos, y quien trabajaba en la tienda de ultramarinos Vilares, entre el bacalao y los chorizos colgados. Cuando murió, perdí a la persona que me sostenía, me reñía y me daba un camino. Mi madre adoptiva, auxiliar de educación en un colegio de Oporto, nunca se recuperó de esa pérdida y enfermó.
+
 [[foto: rg-recomeco.jpg | Hoy. La sonrisa llegó después, no antes. | lado]]
 
 ## Los dieciséis años
 
 A los dieciséis años entendí que tenía que ser diferente. No por ser mejor que los demás. Porque, desde el principio, ya lo era, y el camino que se veía delante de mí no me servía. Esa percepción nunca se borró, y fue ella la que me acompañó durante los años siguientes.
+El momento exacto tiene un precio: 25 €. Se los pedí a mi abuela Miquinhas para unos pantalones anchos de hip-hop, de esos que llevaba todo el mundo en Oporto. Ella, que era quien más amor me daba, me respondió: «Oh Ricardo, ya no puedo, ya todo el mundo me ha sacado dinero.» La ayuda que recibía por ser adoptado estaba alimentando la casa. Ese día decidí que no iba a morir pobre. Una semana después estaba trabajando y estudiando, y me mudé a la casa de al lado, con un alquiler de 25 €.
+
 
 :::destaque
 Cuando sientes que has nacido para «otra cosa», la sensación no te dice qué hacer. Solo te dice que el camino que estás siguiendo ya no es el tuyo.
@@ -23,6 +27,8 @@ Cuando sientes que has nacido para «otra cosa», la sensación no te dice qué 
 ## Catorce años de servicio
 
 Antes de llegar a la vida civil, pasé por tres instituciones del Estado. Entré en el Exército (el ejército portugués) en 2003, pasé a los Fuzileiros (infantería de marina portuguesa) en 2008 y a la GNR (Guardia Nacional Republicana, policía de Portugal) en 2010. En total, catorce años de servicio. Fue ahí donde construí la disciplina de la que hablo en el capítulo siguiente, y fue ahí donde entendí que la disciplina, por sí sola, no basta para cambiar de vida.
+
+En el Ejército elegí los paracaidistas, teniendo miedo a las alturas. Entré por los pelos en las pruebas físicas y salí como el mejor del curso en esa parte. En el segundo salto se me reventó la rodilla derecha al aterrizar, a un día del brevet y de la boina. Salí para cuidar de mi salud. Fue mi primera rendición, y me dijeron que no volvería a correr. Siguió la caballería y, después, la vida civil en restaurantes, almacenes y logística. En paro, me presenté a los Fuzileiros sin saber nadar. Entré, entrené tres veces al día y terminé el curso en el 12.º puesto. En la GNR me guié por tres frases: «Siempre hay alguien peor que nosotros», «Donde come uno, comen dos» y «El tiempo no se para».
 
 Una cosa que la disciplina enseña muy bien es a cumplir. Cumplir horarios, cumplir órdenes, cumplir lo que se espera de ti. El problema es que cumplir bien una vida que no has elegido es una forma sofisticada de quedarte atrapado. Esa es la parte más difícil de admitir, y por eso la dejo escrita aquí.
 
@@ -39,6 +45,8 @@ rg-curso-gnr.jpg | Mi curso en la GNR. Toda la promoción, de blanco.
 Dejé mi trabajo de ensueño. Suena contradictorio, y lo es. Pero el empleo, por mucho que lo quisiera, dejó de darme lo que necesitaba. Y lo que necesitaba en aquel momento era tiempo, cabeza y estar cerca de la familia.
 
 Liliana, mi mujer, estaba luchando contra un cáncer de mama. Constança tenía tres años. Vendimos la casa que nos gustaba para estar más cerca de los tratamientos. El sueldo del Estado no llegaba. Eran tres horas de transporte al día. No tenía libertad ni cabeza para nada. Y además estaba el estrés postraumático de un pasado que llevaba solo, y que me estaba consumiendo.
+
+Ese año ya no tenía familia adoptiva viva: mi abuela, mi hermana Carla y mi madre habían fallecido. Mi sueldo neto era de 1.037 €. La gota que colmó el vaso fue un papel: para justificar una ausencia, me pidieron una declaración de compromiso de honor de que mi mujer tenía cáncer. No culpo a quien me la pidió ni a la institución en la que serví. Pero ese día me sentí un número. Empecé a estudiar desarrollo personal y trading por la noche y en el tren, y unos seis meses después me fui. En «El Método Frío» cuento estos años con más detalle, capítulo a capítulo.
 
 :::historia
 Lo que pasó en mi vida no se reduce a una elección profesional. Fue un conjunto de piezas que se cayeron a la vez, y yo fui el último en darme cuenta de que el problema no era una sola pieza: era toda la estructura.

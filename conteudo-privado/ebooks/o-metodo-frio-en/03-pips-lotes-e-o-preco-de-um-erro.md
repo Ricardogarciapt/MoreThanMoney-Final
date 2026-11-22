@@ -91,6 +91,16 @@ When the open loss eats into the margin up to a certain level, the broker warns 
 
 This chart explains why protection is worth more than attack. After you lose half of your account, you need to double what is left just to get back to the start. Nobody remembers this when they overdo the lot size on a trade.
 
+## From my life: the second jump
+
+I chose the paratroopers even though I was afraid of heights. My grandmother had told me something I never forgot: "You don't have to be afraid. You're someone who hugs fears." I was a skinny kid. In the physical tests I did 30 press-ups when 35 were required, passed the bars and made up for it on the squats. I passed by the skin of my teeth. Because I had missed an inspection, I was the oldest in a course of about 400, and I ended up as the course leader of the 1st platoon, with decisions landing on me every day. From recruit training to the parachute course, I went from barely getting in to being the best of the course in the physical part. I lost my fear of heights along the way.
+
+The course kept shrinking: from 400 to just over a hundred, and about 53 for the jumps. On the first jump I was the first at the door. Green light, jump, and a sense of freedom that made me decide, right there in the air, that military life was what I wanted. On the second jump the positions were reversed. I was the last, and I jumped with the red light already on, outside the clear zone. The jump went well. It was on the landing, during the roll, that my right knee blew out.
+
+There was one day to go. The next day, three more jumps would have earned me the wings and the green beret. Instead, I had to have 1.8 cm of cartilage removed and choose between a brace with screws or keyhole surgery at the Rábida Hospital, paid for by my insurance, because the Army didn't pay for it. I left the paratroopers to look after my health. It was the first time I gave up on anything in my life, and I was told I would never run again.
+
+I'm telling you this in a chapter about pips and lots for one simple reason: a small mistake, in the wrong place, can cost something enormous. A slipped decimal in the volume, a lot size worked out in a rush, an entry "since I'm already here" with the red light on. In the market, as on that jump, the size of the damage doesn't depend on the size of the mistake. It depends on where it happens.
+
 ## The cold rule of this chapter
 
 :::cartao Cold rule no. 3

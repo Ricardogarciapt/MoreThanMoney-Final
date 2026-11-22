@@ -101,6 +101,12 @@ Uma ordem colocada não é uma ordem esquecida. O terceiro botão da barra de ba
 O preço está a dois pips do teu stop e tu modificas a posição para arrastar o S/L para mais longe, «para dar espaço». Acabaste de mudar o plano a meio, com o coração, e de aumentar o risco que tinhas aceitado. Um stop só se mexe numa direção: a favor da operação, para proteger. Nunca para longe.
 :::
 
+## Da minha vida: ninguém salta sem verificar
+
+Antes de cada salto nos paraquedistas havia uma verificação do equipamento, sempre pela mesma ordem, feita por ti e pelo camarada do lado. Ninguém a saltava porque «já sabia». Nos Fuzileiros era igual com o material, com as armas e com a embarcação. A verificação não existe para quem é distraído. Existe porque o momento da ação é o pior momento para pensar.
+
+Uma ordem no mercado é um salto pequeno. Tem um equipamento (volume, stop, alvo), uma porta (o botão) e uma luz (o teu plano). A checklist que vem a seguir é a minha verificação antes de saltar. Faço-a sempre, mesmo quando «é óbvio».
+
 ## A checklist antes de clicar
 
 Cola isto perto do ecrã. Se uma das respostas for «não», a ordem não sai.

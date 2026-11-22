@@ -91,6 +91,16 @@ Quando a perda aberta come a margem até um certo nível, a corretora avisa (mar
 
 Este gráfico explica porque é que a proteção vale mais do que o ataque. Depois de perderes metade da conta, precisas de duplicar o que sobra só para voltar ao início. Ninguém se lembra disto na operação em que exagera no lote.
 
+## Da minha vida: o segundo salto
+
+Escolhi os paraquedistas tendo medo das alturas. A minha avó tinha-me dito uma coisa que nunca esqueci: «Tu não tens de ter medo. És uma pessoa que abraça os medos.» Era um miúdo magro. Nas provas físicas fiz 30 flexões quando eram precisas 35, passei nas barras e compensei nos agachamentos. Passei à justa. Por ter faltado a uma inspeção, era o mais velho de um curso de cerca de 400 e fiquei chefe de curso do 1.º pelotão, com decisões a cair-me em cima todos os dias. Da recruta ao curso de paraquedismo, passei de entrar à justa a ser o melhor do curso na parte física. Perdi o medo das alturas pelo caminho.
+
+O curso foi encolhendo: de 400 para cem e poucos, e cerca de 53 nos saltos. No primeiro fui o primeiro à porta. Luz verde, salto, e uma sensação de liberdade que me fez decidir ali, no ar, que a vida militar era o que eu queria. No segundo salto as posições inverteram-se. Fui o último, e saltei já com a luz vermelha, fora da zona limpa. O salto correu bem. Foi na aterragem, no rolamento, que o joelho direito rebentou.
+
+Faltava um dia. No dia seguinte, mais três saltos davam-me o brevê e a boina verde. Em vez disso, tive de tirar 1,8 cm de cartilagem e escolher entre um imobilizador com parafusos ou uma artroscopia no Hospital da Rábida, paga pelo meu seguro, porque o exército não a pagava. Saí dos paraquedistas para tratar a saúde. Foi a primeira vez que desisti de alguma coisa na vida, e disseram-me que não voltaria a correr.
+
+Conto-te isto num capítulo sobre pips e lotes por uma razão simples: um erro pequeno, no sítio errado, pode custar uma coisa enorme. Uma vírgula no volume, um lote calculado à pressa, uma entrada «já que estou aqui» com a luz vermelha acesa. No mercado, como naquele salto, o tamanho do estrago não depende do tamanho do erro. Depende de onde ele acontece.
+
 ## A regra fria deste capítulo
 
 :::cartao Regra fria n.º 3

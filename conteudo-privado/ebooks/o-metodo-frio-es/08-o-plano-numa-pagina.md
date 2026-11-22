@@ -67,6 +67,18 @@ Cambiar todo a la vez es como cambiar de dieta, de gimnasio y de horario de sue�
 
 Este gráfico ayuda a entender por qué el objetivo mínimo de 1:1,5 está en el plan. Con 1:1, necesitas acertar la mitad de las veces solo para quedarte en cero, antes de costes. Con 1:2, basta con un tercio. No es una promesa de que vayas a acertar un tercio. Es solo la cuenta del equilibrio.
 
+## De mi vida: tres frases que me sujetaron
+
+En la GNR (Guardia Nacional Republicana) me guié por tres frases durante catorce años. Nunca las escribí en un papel, pero me las sabía de memoria:
+
+:::cartao Los tres lemas
+- Siempre hay alguien peor que nosotros.
+- Donde come uno, comen dos.
+- El tiempo no se para.
+:::
+
+La primera me quitaba la pena de mí mismo en los días malos. La segunda me recordaba que lo que tengo se reparte. La tercera me empujaba cuando las ganas eran aplazar. Un plan de trading funciona igual: pocas frases, dichas siempre de la misma manera, que decides cuando estás tranquilo para que te sujeten cuando no lo estás.
+
 ## La regla fría de este capítulo
 
 :::cartao Regla fría n.º 8

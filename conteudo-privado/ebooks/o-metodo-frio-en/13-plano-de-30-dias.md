@@ -41,7 +41,7 @@ This plan is done entirely on a demo account, with 30 to 45 minutes a day. It do
 |---|---|
 | 22 to 27 | Carry on. Activate the stopping rules whenever it applies, with no exceptions (chapter 10) |
 | 28 | Calculate the three numbers: adherence, win rate, average win ÷ average loss |
-| 29 | Compare with the passing criteria (chapter 11) |
+| 29 | Compare with the passing criteria (chapter 12) |
 | 30 | Write a letter to yourself: what you learned, what you will keep, what you will change |
 
 [[grafico:rotina-15min]]

@@ -119,6 +119,14 @@ If you want to try one, choose a simple moving average on H4, just to see the di
 
 At MoreThanMoney we use scanners that mark zones, trend and possible entries automatically. A scanner does not decide for you: it saves you time drawing and helps you not see what is not there. The rule stays the same: entry, stop, target and lot come from your plan. In "I Destroyed It All. And I'm Glad." I explain in detail the trend-regression reading I use. Here is the essential point: a good tool in the hands of someone without rules is still just a tool.
 
+## From my life: reading the terrain, not guessing
+
+After the knee, I did about two years on a cavalry contract, and then civilian life took me to restaurants, warehouses and logistics. Around 2007 I was unemployed and applied for everything that could give me a uniform back: paratroopers again, rangers, special operations, air police and the Marines (Fuzileiros). I joined the Marines without knowing how to swim.
+
+Nobody gave me a crystal ball to get through that course. They gave me a map: exercises, timetables, tracks, patterns that kept repeating. The mud track and the combat track always had the same spots where people fell. Those who knew them prepared for them. I trained three times a day, and my swimming mark went from 9 to almost 20. I finished the nine-month course at 27 years old, in 12th place.
+
+A chart is like that. It doesn't tell you what is going to happen. It shows you where the terrain has already made people fall or get back up, and it lets you decide beforehand what you will do when you get there.
+
 ## The cold rule of this chapter
 
 :::cartao Cold rule no. 4

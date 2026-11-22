@@ -89,6 +89,12 @@ imagem: El diario no miente. Tú a veces sí.
 legenda: La diferencia entre quien evoluciona y quien anda en círculos no está en la estrategia. Está en quien escribe lo que hizo, incluido lo que no quería ver.
 :::
 
+## De mi vida: era un número
+
+En 2021 mi mujer, Liliana, recibió un diagnóstico de cáncer de mama. Para justificar una ausencia, me pidieron una «declaración de compromiso de honor» de que mi mujer tenía cáncer. Entiendo que los servicios necesiten papeles. Aun así, aquel día sentí que era un número en una hoja, y no una persona con una familia en casa. No culpo a quien me hizo la petición ni a la institución en la que serví con orgullo. Era el sistema funcionando como funciona.
+
+Ahí empecé a escribirlo todo. Lo que sentía, lo que decidía, lo que aprendía. Mi diario de trading nació de aquella libreta. Un diario es lo contrario de ser un número: es el sitio donde tu decisión tiene un porqué, una emoción y un nombre. Cuando repasas el diario el domingo, no te ves como una estadística. Te ves como alguien que está cambiando.
+
 ## La regla fría de este capítulo
 
 :::cartao Regla fría n.º 9

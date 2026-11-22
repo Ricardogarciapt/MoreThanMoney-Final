@@ -122,6 +122,14 @@ Puedes recibir en el móvil las alertas que pongas en el PC. En la app, en **Aju
 
 Hazlo hoy, aunque todavía no entiendas para qué sirve. En el capítulo 7 usarás estas alertas para dejar de mirar la pantalla esperando a que llegue el precio.
 
+## De mi vida: el patio del abuelo
+
+Mi abuelo adoptivo era severo. Cuando hacía una tontería, me tiraba la chancla. Pero enseguida llegaba la otra mitad de él: «Anda, cálzate y vente conmigo.» Y nos íbamos al patio, junto a los escombros de un edificio que habían derribado. Gallinas, huertos, la azada en su sitio, la regadera en su sitio. Era su válvula de escape, y fue mi primera escuela de método.
+
+Durante el día trabajaba en la tienda de ultramarinos Vilares, en Oporto. Bacalao colgado, chorizos en fila, olor a sal y a embutidos ahumados, clientes que entraban con un «¡Oye Evaristo, tienes de esto?», como en una vieja película portuguesa. Nada estaba fuera de sitio, porque en una tienda llena quien no ordena no encuentra nada.
+
+Cuando murió, aguanté en el funeral. No lloré. Días después, en un café con una mesa de billar, me quedé mirando las bolas quietas sobre el paño verde, y se me vino todo encima: había perdido a la persona que me sostenía, que me reñía y que me daba un camino. Hoy, cuando ordeno mi puesto de trabajo antes de abrir un gráfico, todavía oigo su voz: cada cosa en su sitio, y solo después se trabaja.
+
 ## La regla fría de este capítulo
 
 :::cartao Regla fría n.º 1

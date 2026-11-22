@@ -18,7 +18,7 @@ import { pedir } from "./api"
 
 interface Link { url: string; mostrarLogin: boolean; criadoEm: string; visitas: number }
 
-export default function PartilharAuditoria({ accountId, contaRef, podeGerir }: { accountId?: string; contaRef?: string; podeGerir: boolean }) {
+export default function PartilharAuditoria({ accountId, contaRef, podeGerir, contaRealCasa }: { accountId?: string; contaRef?: string; podeGerir: boolean; contaRealCasa?: boolean }) {
   const real = !accountId && !!contaRef
   const alvo = real ? `ref=${encodeURIComponent(contaRef!)}` : `accountId=${accountId}`
   const sessao = real ? null : accountId
@@ -121,7 +121,7 @@ export default function PartilharAuditoria({ accountId, contaRef, podeGerir }: {
         <p className="text-[11.5px] text-zinc-500">O dono da conta ainda não criou um link de partilha.</p>
       )}
       {erro && <p role="alert" className="text-[11px] text-rose-300">{erro}</p>}
-      <p className="text-[10.5px] text-zinc-500">{real ? "Conta real na tua corretora" : "Conta simulada"}. Resultados passados não garantem resultados futuros.</p>
+      <p className="text-[10.5px] text-zinc-500">{real ? "Conta real na tua corretora" : contaRealCasa ? "Conta real MTM Funded" : "Conta simulada"}. Resultados passados não garantem resultados futuros.</p>
     </div>
   )
 }

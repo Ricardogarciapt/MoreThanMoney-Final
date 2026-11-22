@@ -101,6 +101,12 @@ A placed order is not a forgotten order. The third button in the bottom bar, **T
 The price is two pips from your stop and you modify the position to drag the S/L further away, "to give it room". You have just changed the plan halfway through, with your heart, and increased the risk you had accepted. A stop only moves in one direction: in favour of the trade, to protect it. Never away from it.
 :::
 
+## From my life: nobody jumps without checking
+
+Before every jump with the paratroopers there was an equipment check, always in the same order, done by you and by the comrade next to you. Nobody skipped it because they "already knew". In the Marines (Fuzileiros) it was the same with the kit, the weapons and the boat. The check does not exist for the careless. It exists because the moment of action is the worst moment to think.
+
+An order in the market is a short jump. It has equipment (volume, stop, target), a door (the button) and a light (your plan). The checklist that follows is my check before I jump. I do it every time, even when it seems "obvious".
+
 ## A checklist before you click
 
 Stick this near your screen. If any answer is "no", the order does not go in.

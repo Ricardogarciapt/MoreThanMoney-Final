@@ -89,6 +89,12 @@ imagem: The journal does not lie. You sometimes do.
 legenda: The difference between people who improve and people who go round in circles is not the strategy. It is who writes down what they did, including what they did not want to see.
 :::
 
+## From my life: I was a number
+
+In 2021 my wife, Liliana, was diagnosed with breast cancer. To justify an absence, they asked me for a "declaration of honour" that my wife had cancer. I understand that services need paperwork. Even so, that day I felt like a number on a sheet of paper, and not a person with a family at home. I don't blame the person who asked me, or the institution where I served with pride. It was the system working the way it works.
+
+That's when I started writing everything down: what I felt, what I decided, what I learned. My trading journal was born from that notebook. A journal is the opposite of being a number. It is the place where your decision has a reason, an emotion and a name. When you review your week on Sunday, you don't see yourself as a statistic. You see yourself as someone who is changing.
+
 ## The cold rule of this chapter
 
 :::cartao Cold rule no. 9

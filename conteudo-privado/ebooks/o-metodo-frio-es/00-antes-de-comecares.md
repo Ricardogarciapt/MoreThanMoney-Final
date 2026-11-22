@@ -25,6 +25,23 @@ imagem: El mercado no sabe que existes.
 legenda: Y eso es una gran noticia. Significa que no está en tu contra. Solo tienes que dejar de estar en tu contra. 🧊
 :::
 
+## De dónde vengo, en pocas líneas
+
+Nací en Oporto y me adoptaron a los 17 meses, en una familia humilde. Éramos nueve personas en una casa centenaria con cuatro o cinco habitaciones. La comida se repartía, la higiene era la posible, y vi enfermar y marcharse a personas que quería por una pobreza que no se elige. Solo hacia los ocho años empecé a llamarles mamá, abuela y hermana. Esas palabras me costaron salir, y se quedaron.
+
+A los 16 años le pedí a mi abuela Miquinhas 25 € para comprarme unos pantalones anchos de hip-hop. Era la moda en Oporto en aquella época y yo quería ser igual que los demás. Ella me miró y dijo: «Oh Ricardo, ya no puedo, ya todo el mundo me ha sacado dinero.» La ayuda que recibía por ser adoptado estaba alimentando a toda la casa: había enfermos, había parados, y el dinero no daba para más. Ese día decidí que no iba a morir pobre. Una semana después estaba trabajando y estudiando, y me mudé a la casa de al lado, que tenía un alquiler de 25 €. El mismo valor que los pantalones.
+
+:::cartao Portugal, para contexto
+- **2003:** el salario mínimo nacional era de 356,60 €. Fue el año en que entré en el Ejército.
+- **2011 a 2014:** solicitud de asistencia financiera, programa de la troika y salario mínimo congelado en 485 €. En la función pública hubo recortes en los sueldos y en las pagas extra.
+- **2013:** el paro superó el 17 %. Entre los jóvenes, más de uno de cada tres no tenía trabajo.
+- **2021 a 2023:** pandemia, después inflación de cerca del 8 % en 2022 y cuotas de la hipoteca subiendo con el Euríbor.
+
+Cifras públicas (INE, Banco de Portugal), redondeadas. Sirven para que entiendas el terreno en el que mucha gente de mi generación intentó construir algo.
+:::
+
+No te lo cuento para que sientas pena. Te lo cuento porque el Forex atrae a mucha gente justo desde ese sitio: quien hace cuentas a final de mes, quien ya trabaja mucho y quiere una salida. Es la persona que más necesita un método frío, porque es la que más tiene que perder con un método caliente. A lo largo del libro te voy a contar, capítulo a capítulo, los trozos de mi vida que me enseñaron cada regla.
+
 ## Qué es este libro (y qué no es)
 
 Es un manual para quien empieza en Forex y quiere hacerlo sin quemarse en los primeros meses. Vas a entender qué estás negociando, cuánto cuesta cada operación, cómo abrir una orden en MetaTrader 5 con stop y objetivo, cómo calcular el tamaño correcto y cómo construir un plan que cabe en una página.
@@ -50,8 +67,9 @@ Cada capítulo tiene las mismas piezas, siempre en el mismo orden:
 2. **La pantalla**: dónde vive esa idea en MetaTrader, con capturas reales de la app.
 3. **Un error clásico**, ese que casi todo el mundo comete al principio, con la explicación de lo que cuesta.
 4. **Un trozo de la historia de Marta**, un personaje de ejemplo que empieza desde cero en el capítulo 1 y aplica cada regla, con tropiezos incluidos, hasta el final del libro.
-5. **Una regla fría**, corta, para pegar cerca de la pantalla.
-6. **Una tarea para hoy** en tu demo o en una libreta, que se hace en menos de 30 minutos.
+5. **Un trozo de mi vida**, del Porto a los paracaidistas, a los Fuzileiros (infantería de marina) y a la GNR (Guardia Nacional Republicana), con el momento en que aprendí esa regla.
+6. **Una regla fría**, corta, para pegar cerca de la pantalla.
+7. **Una tarea para hoy** en tu demo o en una libreta, que se hace en menos de 30 minutos.
 
 :::cartao Las cinco reglas frías de este libro
 - Decido antes. En el momento, solo ejecuto.

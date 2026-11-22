@@ -97,12 +97,18 @@ tu: Bloqueado.
 
 Si todavía no te ha pasado, pasará. Nadie serio garantiza rentabilidad en el Forex. Nadie serio te pide dinero para su cuenta.
 
-Cuando algún día pases de la demo a la cuenta real (y solo pasas en el capítulo 11), hazle al bróker estas cuatro preguntas:
+Cuando algún día pases de la demo a la cuenta real (y solo pasas en el capítulo 12), hazle al bróker estas cuatro preguntas:
 
 1. **¿Quién me regula?** Busca la entidad y el número de licencia en la web del regulador, no solo en la web del bróker.
 2. **¿Qué entidad se queda con mi cuenta?** Muchos grupos tienen varias entidades en países distintos, con reglas distintas.
 3. **¿Cuánto cuesta?** Spread típico, comisiones, swap, costes de retirada.
 4. **¿Puedo retirar?** Lee las reglas de retirada antes de ingresar.
+
+## De mi vida: los 25 € que no había
+
+¿Te acuerdas de los pantalones de 25 € de la introducción? Mi abuela no me dijo que no porque no me quisiera. Era la persona que más amor me daba en aquella casa. Me dijo que no porque el dinero no llegaba, y el dinero no sabe de quién quiere a quién.
+
+El mercado es igual. No sabe que existes, no sabe que necesitas esa ganancia para pagar el alquiler, no sabe que has tenido un mes difícil. Cuando lo entendí, a los 16 años, en una cocina de Oporto, dejé de pedirle al mundo que fuera justo conmigo y empecé a preguntarme qué podía controlar. En el mercado la respuesta es corta: el par que eliges, la hora a la que entras, cuánto arriesgas y dónde sales. Lo demás no depende de ti.
 
 ## La regla fría de este capítulo
 

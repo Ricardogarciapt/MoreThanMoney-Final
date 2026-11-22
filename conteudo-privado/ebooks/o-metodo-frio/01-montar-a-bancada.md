@@ -122,6 +122,14 @@ Podes receber no telemóvel os alertas que puseste no PC. Na app, em **Configura
 
 Faz isto hoje, mesmo que ainda não percebas para que serve. No capítulo 7 vais usar estes alertas para deixares de olhar para o ecrã à espera que o preço chegue.
 
+## Da minha vida: o quintal do avô
+
+O meu avô adotivo era rígido. Quando eu fazia asneira, voava o chinelo. Mas logo a seguir vinha a outra metade dele: «Anda lá, calça-te e vem comigo.» E íamos para o quintal, ao lado do entulho de um prédio que tinham deitado abaixo. Galinhas, hortas, a enxada no sítio da enxada, o regador no sítio do regador. Era o escape dele, e foi a minha primeira escola de método.
+
+Durante o dia trabalhava na mercearia Vilares, no Porto. Bacalhau pendurado, chouriços em fila, o cheiro a sal e a fumeiro, clientes que entravam com um «Ó Evaristo, tens cá disto?» como num filme português antigo. Nada estava fora do sítio, porque numa mercearia cheia quem não arruma não encontra.
+
+Quando ele morreu, aguentei-me no funeral. Não chorei. Dias depois, num café com uma mesa de bilhar, fiquei a olhar para as bolas paradas no pano verde e caiu-me tudo em cima: tinha perdido a pessoa que me apoiava, que me ralhava e que me dava um caminho. Hoje, quando arrumo a bancada antes de abrir um gráfico, ainda é a voz dele que oiço: cada coisa no seu sítio, e só depois se trabalha.
+
 ## A regra fria deste capítulo
 
 :::cartao Regra fria n.º 1

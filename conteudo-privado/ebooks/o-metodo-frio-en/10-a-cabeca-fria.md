@@ -63,6 +63,18 @@ Two losses before 8:00 AM. Both with the plan, both with a stop, €5 each. Mart
 
 There is a book I recommend to anyone who wants to go deeper: *The Daily Trading Coach* by Brett Steenbarger, a psychologist who works with traders. Each chapter is a short lesson to apply the next day.
 
+## From my life: the year everything came together
+
+[[foto: rg-pb.jpg | Cool doesn't mean not feeling. It means feeling and deciding at the same time. | lado]]
+
+On my daughter's birthday, Liliana's cancer was already suspected. That same day my nephew had a car accident. The girl who was with him died. He was in a coma and today he uses a wheelchair. Constança was three years old. In November the diagnosis was confirmed and the treatments began.
+
+By then I no longer had any living adoptive family. My grandmother died of old age while I was on the Marines (Fuzileiros) course. My sister Carla died of lung cancer in 2019, in the same month as my mother. I only met my biological family after my mother's funeral, and we didn't stay in touch. We moved to Santarém looking for support, we sold the house we loved, and the money and the time didn't stretch to anything.
+
+I was also carrying an assault I suffered while off duty, because of my job. It left marks that took me years to treat. I won't go into it here.
+
+I took all of my parental leave and I was there. And it was in that year, the worst of all, that I learned the most important rule in this book: emotions don't switch off, you manage them. Whoever decides with a boiling head loses, in the market and in life. The stopping rules in this chapter are the ones I needed when everything came together.
+
 ## The cold rule of this chapter
 
 :::cartao Cold rule no. 10

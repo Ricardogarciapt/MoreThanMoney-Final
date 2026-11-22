@@ -65,7 +65,7 @@ If this book has been useful to you, there are three possible next steps:
 
 ## The cold rule of this chapter
 
-:::cartao Cold rule no. 11
+:::cartao Cold rule no. 12
 I move to real when the numbers call for it, not when the urge does. I start with the minimum lot, with the same plan, and go back to the demo without shame whenever adherence drops.
 :::
 

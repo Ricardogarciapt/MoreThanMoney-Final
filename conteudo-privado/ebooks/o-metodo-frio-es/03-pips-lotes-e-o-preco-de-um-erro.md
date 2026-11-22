@@ -91,6 +91,16 @@ Cuando la pérdida abierta se come el margen hasta cierto nivel, el bróker avis
 
 Este gráfico explica por qué la protección vale más que el ataque. Después de perder la mitad de la cuenta, necesitas duplicar lo que queda solo para volver al inicio. Nadie se acuerda de esto en la operación en la que se pasa con el lote.
 
+## De mi vida: el segundo salto
+
+Elegí los paracaidistas teniendo miedo a las alturas. Mi abuela me había dicho algo que nunca olvidé: «Tú no tienes que tener miedo. Eres una persona que abraza los miedos.» Era un chaval flaco. En las pruebas físicas hice 30 flexiones cuando se pedían 35, aprobé las barras y compensé en las sentadillas. Aprobé por los pelos. Por haber faltado a una inspección, era el mayor de un curso de unos 400, y acabé como jefe de curso del 1.º pelotón, con decisiones cayéndome encima todos los días. Desde la recluta hasta el curso de paracaidismo, pasé de entrar por los pelos a ser el mejor del curso en la parte física. Por el camino perdí el miedo a las alturas.
+
+El curso fue menguando: de 400 a cien y pocos, y unos 53 en los saltos. En el primero fui el primero en la puerta. Luz verde, salto, y una sensación de libertad que me hizo decidir allí mismo, en el aire, que la vida militar era lo que quería. En el segundo salto se invirtieron las posiciones. Fui el último, y salté ya con la luz roja, fuera de la zona limpia. El salto salió bien. Fue en el aterrizaje, en la voltereta, cuando se me reventó la rodilla derecha.
+
+Faltaba un día. Al día siguiente, tres saltos más me darían el brevet y la boina verde. En lugar de eso, tuve que quitarme 1,8 cm de cartílago y elegir entre un inmovilizador con tornillos o una artroscopia en el Hospital da Rábida, pagada por mi seguro, porque el ejército no la pagaba. Salí de los paracaidistas para cuidar de mi salud. Fue la primera vez que me rendí en la vida, y me dijeron que no volvería a correr.
+
+Te cuento esto en un capítulo sobre pips y lotes por una razón sencilla: un error pequeño, en el sitio equivocado, puede costar algo enorme. Una coma en el volumen, un lote calculado a las prisas, una entrada «ya que estoy aquí» con la luz roja encendida. En el mercado, como en aquel salto, el tamaño del estrago no depende del tamaño del error. Depende de dónde ocurre.
+
 ## La regla fría de este capítulo
 
 :::cartao Regla fría n.º 3

@@ -367,6 +367,30 @@ const G = {
     return fig('limit-stop', 'Limit ou Stop: onde fica a tua ordem em relação ao preço', s, 'Acima do preço: Sell Limit e Buy Stop. Abaixo: Buy Limit e Sell Stop. Troca-os e entras no sítio errado.')
   },
 
+  'webtrader-ordem': () => fig('webtrader-ordem', 'Uma ordem fria no WebTrader, do símbolo à gestão',
+    passos([{ r: 'Símbolo', s: 'lista\nou gráfico' }, { r: 'Risco', s: 'volume\nem 1 %' }, { r: 'SL e TP', s: 'escrever\nou arrastar' }, { r: 'Resumo', s: 'risco em $\ne em %' }, { r: 'Confirmar', s: 'sem modo\nnum clique' }, { r: 'Gestão', s: 'Auto BE\ne trailing' }]),
+    'O lote sai do stop, não da vontade. Mexes no stop e o lote recalcula-se sozinho.'),
+  'auto-be-trailing': () => {
+    const pr = [60, 58, 64, 70, 67, 76, 82, 78, 88, 94, 90, 99, 104, 98, 92]
+    const X = (j) => 50 + j * 38, Y = (v) => 320 - (v - 40) * 3.6
+    let d = pr.map((v, j) => `${j ? 'L' : 'M'}${X(j)},${Y(v)}`).join(' ')
+    let s = `<line class="g-grelha" x1="40" x2="${W - 20}" y1="${Y(60)}" y2="${Y(60)}" stroke-dasharray="5 5"/><text class="g-eixo" x="${W - 22}" y="${Y(60) - 6}" text-anchor="end">entrada</text>`
+    s += `<path class="g-linha g-c0 traca" pathLength="1" style="--d:0s;stroke-width:3;fill:none" d="${d}"/>`
+    // o stop: começa abaixo da entrada, passa à entrada (Auto BE) e depois segue o preço a 14, só a subir
+    let sl = 46, pts = []
+    pr.forEach((v, j) => { if (j >= 3 && sl < 60) sl = 60; if (j >= 5) sl = Math.max(sl, v - 14); pts.push([X(j), Y(sl)]) })
+    let ds = pts.map(([x, y], j) => (j ? `H${x} V${y}` : `M${x},${y}`)).join(' ')
+    s += `<path class="g-linha g-c3 traca" pathLength="1" style="--d:0.6s;stroke-width:3;fill:none" d="${ds}"/>`
+    s += `<g class="surge" style="--d:1.2s"><circle class="g-pinta" cx="${X(3)}" cy="${Y(60)}" r="7"/><text class="g-rot" x="${X(3)}" y="${Y(60) + 26}" text-anchor="middle">Auto BE</text></g>`
+    s += `<g class="surge" style="--d:1.6s"><text class="g-rot" x="${X(8)}" y="${Y(100) - 6}" text-anchor="middle">Auto Trailing</text></g>`
+    s += `<g class="surge" style="--d:2s"><circle class="g-pinta" cx="${X(14)}" cy="${Y(90)}" r="7"/><text class="g-rot" x="${X(14) - 6}" y="${Y(90) + 26}" text-anchor="end">fecha com ganho</text></g>`
+    s += `<text class="g-eixo" x="50" y="${H - 8}">preço</text><text class="g-tc3" x="120" y="${H - 8}" style="font-size:13px">stop</text>`
+    return fig('auto-be-trailing', 'Auto BE e Auto Trailing: o stop só anda para o teu lado', s, 'Ilustrativo. O stop passa para a entrada quando o preço anda a teu favor e depois segue-o a uma distância fixa. Nunca recua.')
+  },
+  'webtrader-contas': () => fig('webtrader-contas', 'Um WebTrader, três tipos de conta',
+    grelha(['Demo', 'MTM Funded\n(simulada)', 'Corretora\n(TradeLocker, MT5)'], ['Treino', 'Gestão\nautomática', 'Diário e\nauditoria'], [[{ n: 3, t: 'sem risco\nsaldo realista' }, { n: 3, t: 'motor MTM' }, { n: 3, t: 'sim' }], [{ n: 2, t: 'regras e\nobjetivos' }, { n: 3, t: 'motor MTM' }, { n: 3, t: 'sim' }], [{ n: 1, t: 'dinheiro\nverdadeiro' }, { n: 3, t: 'servidor MTM' }, { n: 2, t: 'auditoria\nsem dados pessoais' }]]),
+    'O mesmo ecrã do treino à conta real: mudas de conta, não de hábitos.'),
+
 }
 
 export function grafico(id, ctx = {}) {

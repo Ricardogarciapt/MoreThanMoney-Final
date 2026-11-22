@@ -68,6 +68,14 @@ Marta quería abrir 0,10 lotes, «para que valga la pena». Con 500 € de demo 
 
 Con 200 € y 1 % de riesgo, arriesgas 2 € por operación. Con el lote mínimo de 0,01 (unos 0,10 $ por pip en EUR/USD), eso da un stop de unos 20 pips. Si tu idea necesita más, no hay un lote más pequeño al que bajar. Tienes dos salidas honestas: esperar a una entrada con stop más corto, o no entrar. «Arriesgar 5 % solo esta vez» no es una salida. Es el principio del problema.
 
+## De mi vida: 1.037 € al mes
+
+Entré en la GNR (Guardia Nacional Republicana) en 2010. Estuve allí catorce años. Al final, mi sueldo neto era de 1.037 € al mes, con mi mujer, una hija pequeña y tres horas de tren al día para ir y volver del Comando Territorial de Lisboa.
+
+Con 1.037 € se aprende gestión del riesgo a la fuerza. Cada euro tiene un destino antes de llegar: alquiler, comida, transporte, colegio. No hay margen para «voy a arriesgar un poquito más este mes». Cuando empecé en el trading, traje esa cuenta conmigo. Fue ella la que me salvó de hacer lo que veo que hacen tantos: abrir una operación con el dinero de la cuota de la hipoteca.
+
+La fórmula de este capítulo es la misma cuenta que hacía con mi sueldo. Primero decides cuánto puedes perder sin que tu vida cambie. Solo después descubres cuánto puedes comprar.
+
 ## La regla fría de este capítulo
 
 :::cartao Regla fría n.º 5
