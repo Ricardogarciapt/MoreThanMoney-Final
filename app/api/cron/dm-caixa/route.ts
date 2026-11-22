@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getSupabaseAdmin } from '@/lib/supabase-admin-client'
 import { isCronAuthorized } from '@/lib/cron-auth'
 import { carregarTokensIG, candidateTokensForIgAccount, sendInstagramDmResilient } from '@/lib/instagram/dm-closer'
-import { PAGINAS, IDS_NOSSOS, responderMensagem, type CanalDm } from '@/lib/social/dm-motor'
+import { PAGINAS, responderMensagem, type CanalDm } from '@/lib/social/dm-motor'
 import { linkAgendar } from '@/lib/agenda/link'
 
 export const runtime = 'nodejs'
@@ -34,9 +34,10 @@ const JANELA_MS = 24 * 3600_000
 type Msg = { id?: string; message?: string; created_time?: string; from?: { id?: string } }
 type Conversa = { id?: string; updated_time?: string; messages?: { data?: Msg[] } }
 
-async function conversas(pageId: string, plataforma: 'instagram' | 'messenger', token: string) {
+async function conversas(pageId: string, plataforma: 'instagram' | 'messenger', token: string, pasta?: string) {
   const qs = new URLSearchParams({
     platform: plataforma,
+    ...(pasta ? { folder: pasta } : {}),
     fields: 'id,updated_time,messages.limit(2){id,message,created_time,from}',
     limit: '25',
     access_token: token,
@@ -171,12 +172,28 @@ export async function GET(req: NextRequest) {
         caixas.push(caixa)
         continue
       }
+      // Pedidos de mensagem (quem não nos segue cai em «pedidos», não na caixa principal).
+      const pedidos = await conversas(p.pagina, plataforma, token, 'pending')
+      if (pedidos.erro) caixa.pedidosErro = pedidos.erro
+      else if (pedidos.dados?.length) {
+        const vistos = new Set((r.dados ?? []).map((c) => c.id))
+        for (const c of pedidos.dados) if (!vistos.has(c.id)) r.dados!.push(c)
+        caixa.pedidos = pedidos.dados.length
+      }
+      // Os ids desta caixa (a própria página e conta IG). A OUTRA conta nossa conta como pessoa:
+      // o Ricardo a escrever da pessoal para a marca é uma conversa a sério (e é o teste dele).
+      const proprios = new Set<string>([p.pagina, p.ig, ...(p.ig === '17841474872672009' ? ['621570614380294'] : [])])
+      // Amostra para diagnóstico: quem escreveu por último e há quantos minutos.
+      caixa.amostra = (r.dados ?? []).slice(0, 3).map((c) => {
+        const u = c.messages?.data?.[0]
+        return { de: u?.from?.id ?? null, nosso: proprios.has(String(u?.from?.id)), min: u?.created_time ? Math.round((agora - new Date(u.created_time).getTime()) / 60000) : null }
+      })
       let porResponder = 0
       let ok = 0
       for (const c of r.dados ?? []) {
         const ultima = c.messages?.data?.[0]
         const de = ultima?.from?.id
-        if (!ultima?.id || !de || IDS_NOSSOS.has(de) || !ultima.message?.trim()) continue
+        if (!ultima?.id || !de || proprios.has(de) || !ultima.message?.trim()) continue
         if (agora - new Date(ultima.created_time ?? 0).getTime() > JANELA_MS) continue
         porResponder++
         const canal: CanalDm = plataforma === 'instagram' ? 'instagram' : 'messenger'
