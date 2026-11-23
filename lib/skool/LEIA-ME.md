@@ -48,3 +48,18 @@ Tudo o que outra pessoa vê exige `confirmar: true`, depois de o texto ser mostr
 As leituras são o formato estável do site. Os caminhos de escrita foram tirados do que o site chama e
 **confirmam-se no primeiro teste com a sessão real**; se o Skool mudar uma rota, usa-se `skool_api` e
 corrige-se aqui.
+
+## Animação da comunidade (lib/skool/comunidade.ts, 23/11/2026)
+
+Corre dentro do ciclo de hora a hora (só com sessão do dono guardada):
+
+| Quando (Lisboa) | O quê |
+|---|---|
+| 8h–23h, todas as horas | Responde a até 5 comentários novos, no idioma de quem escreveu, voz humana (`VOZ_SKOOL`). Na 1.ª corrida só marca o que existe. |
+| 9h | Desafio do dia (já existia) + convite para a app Missão |
+| 12h seg | Anúncio do bootcamp da semana (estratégia rotativa de `conteudo/bootcamps-scanners.json`) |
+| 12h ter–qui | Bootcamp dia 1, 2, 3: vídeo, exercício, live call (próxima `lms_streams` aberta ou /live-sessions), dia 3 → /caminho |
+| 18h | Programa do dia: seg/qui sondagem · ter «pergunta-me tudo» · qua experiência 24 h · sex iscas grátis + convidar amigo · sáb missão da app · dom plano da semana |
+| 19h, de 3 em 3 dias | Evento/desafio activo da app Missão (`rg_app_eventos`) |
+
+Estado em `site_settings.skool_ciclo.comunidade` (ids de comentários vistos, data do último evento). IA sempre `chamarIAGratis`.
