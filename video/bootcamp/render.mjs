@@ -74,6 +74,9 @@ const page = await browser.newPage({ viewport: { width: 1920, height: 1080 } })
 await page.goto('file://' + path.join(DIR, 'cenas.html'))
 // gráfico fiel ao Pine da estratégia, quando existe (video/bootcamp/<motor>.js)
 const motorJs = path.join(DIR, `${G.motor || est}.js`)
+// animações por tema (ex.: primeira-chave-temas.js), carregadas antes do motor
+const temasJs = path.join(DIR, `${G.motor || est}-temas.js`)
+if (fs.existsSync(temasJs)) await page.addScriptTag({ path: temasJs })
 if (fs.existsSync(motorJs)) await page.addScriptTag({ path: motorJs })
 const cenas = Object.fromEntries(V.cenas.map(c => [c.id, c]))
 await page.evaluate(([tl, leg, dados, tot]) => { window.TOTAL = tot; window.iniciar(tl, leg, dados) },
