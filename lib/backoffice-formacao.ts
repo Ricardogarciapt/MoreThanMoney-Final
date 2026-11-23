@@ -82,7 +82,7 @@ export const CURSO = {
     en: 'The back office, the roles and the scripts to convert with our own tools.',
   } as T,
   /** Playlists no YouTube (não listadas), por língua. */
-  playlist: {} as Partial<Record<Lingua, string>>,
+  playlist: { pt: 'PLWO6cX95lKWQ', en: 'PLYx_ZZWGPnk0' } as Partial<Record<Lingua, string>>,
   aviso: {
     pt: 'Formação interna. Conteúdo educativo, não constitui consultoria financeira. Resultados não garantidos.',
     en: 'Internal training. Educational content, not financial advice. Results are not guaranteed.',
@@ -206,7 +206,7 @@ const aula1: Aula = {
       porque: t('Nunca se custodia nem se executa dinheiro real de clientes.', 'We never hold or trade real client money.'),
     },
   ],
-  youtube: {},
+  youtube: { pt: '3luev0WP7lo', en: '0xa4UEEtwd0' },
 }
 
 const aula2: Aula = {
@@ -355,7 +355,7 @@ const aula2: Aula = {
       porque: t('A IA redige, a pessoa envia.', 'AI drafts, the person sends.'),
     },
   ],
-  youtube: {},
+  youtube: { pt: 'amc8gAAmdeU', en: 'ewIGqDgs3-E' },
 }
 
 const aula3: Aula = {
@@ -453,7 +453,7 @@ const aula3: Aula = {
       porque: t('Primeiro abre-se a conversa; a oferta vem muito depois.', 'First you open the conversation; the offer comes much later.'),
     },
   ],
-  youtube: {},
+  youtube: { pt: 'OsU5bgjd1Fk', en: 'xg05XD6k_Ek' },
 }
 
 const aula4: Aula = {
@@ -564,7 +564,7 @@ const aula4: Aula = {
       porque: t('Uma escolha fácil marca; uma pergunta aberta arrasta.', 'An easy choice books; an open question drags.'),
     },
   ],
-  youtube: {},
+  youtube: { pt: 'm9YyY67Hvyc', en: 'rtsMzdmKVW4' },
 }
 
 const aula5: Aula = {
@@ -691,7 +691,7 @@ const aula5: Aula = {
       porque: t('Apresentar tudo transforma a conversa numa discussão de preço.', 'Presenting everything turns the conversation into a price argument.'),
     },
   ],
-  youtube: {},
+  youtube: { pt: '3w_PE7ToIXU', en: 'v-anxu7I48M' },
 }
 
 const aula6: Aula = {
@@ -790,7 +790,7 @@ const aula6: Aula = {
       porque: t('Resultados e promessas ficam de fora, sempre.', 'Results and promises always stay out.'),
     },
   ],
-  youtube: {},
+  youtube: { pt: 'SuoRh_nv59w', en: 'qaDNyR-zPrU' },
 }
 
 const aula7: Aula = {
@@ -876,7 +876,7 @@ const aula7: Aula = {
       porque: t('Primeiro o valor, depois o preço.', 'Value first, price second.'),
     },
   ],
-  youtube: {},
+  youtube: { pt: 'av3922QDzCI', en: 'K0U37VO52dM' },
 }
 
 const aula8: Aula = {
@@ -961,10 +961,167 @@ const aula8: Aula = {
       porque: t('O Hoje já está ordenado pelo que vale mais agora.', 'Today is already sorted by what is worth most right now.'),
     },
   ],
+  youtube: { pt: '6nwdzNwQlnE', en: 'F1CGvB2u2SA' },
+}
+
+const aula9: Aula = {
+  slug: '09-ib-atrair-leads',
+  numero: 9,
+  papel: 'afiliado',
+  titulo: t('IBs: demonstrar e atrair leads nas redes', 'IBs: demo and attract leads on social media'),
+  objetivo: t(
+    'Fazer uma demonstração curta que leva a um passo concreto e publicar com ritmo nas redes para que as pessoas venham ter contigo.',
+    'Run a short demo that leads to one concrete step and post on social media with a steady rhythm so people come to you.',
+  ),
+  tarefa: t(
+    'Planeia as três publicações desta semana com o gerador e marca a tua primeira demonstração com alguém que já te fez uma pergunta.',
+    'Plan this week’s three posts with the generator and book your first demo with someone who has already asked you a question.',
+  ),
+  cenas: [
+    {
+      tipo: 'capa',
+      titulo: t('Demonstrar e atrair leads', 'Demo and attract leads'),
+      sub: t('Aula 9 · Extra para IBs', 'Lesson 9 · Extra for IBs'),
+      fala: t(
+        'Esta é uma aula extra para IBs e afiliados. Vamos ver duas coisas que andam juntas: como fazer uma demonstração que acaba num passo concreto, e como publicar nas redes para que as pessoas venham ter contigo, em vez de andares atrás delas.',
+        'This is an extra lesson for IBs and affiliates. We will cover two things that go together: how to run a demo that ends in one concrete step, and how to post on social media so people come to you, instead of you chasing them.',
+      ),
+    },
+    {
+      tipo: 'mapa',
+      centro: t('O teu ciclo', 'Your cycle'),
+      ramos: [
+        {
+          nome: t('Publicar', 'Post'),
+          folhas: [t('Três vezes por semana', 'Three times a week'), t('Stories todos os dias', 'Stories every day'), t('Método, não resultados', 'Method, not results')],
+        },
+        {
+          nome: t('Conversar', 'Talk'),
+          folhas: [t('Responde a quem comenta', 'Reply to whoever comments'), t('Uma pergunta de cada vez', 'One question at a time'), t('Convida para a demonstração', 'Invite to the demo')],
+        },
+        {
+          nome: t('Demonstrar', 'Demo'),
+          folhas: [t('Chamada curta por vídeo', 'Short video call'), t('Mostra a app ao vivo', 'Show the app live'), t('Acaba com um passo', 'End with one step')],
+        },
+      ],
+      fala: t(
+        'O teu trabalho é um ciclo. Publicas com ritmo, respondes a quem reage e convidas quem mostra interesse para uma demonstração. A demonstração acaba sempre com um passo concreto. E o que aprendes nas conversas dá-te as ideias para as próximas publicações.',
+        'Your work is a cycle. You post with rhythm, reply to whoever reacts, and invite those who show interest to a demo. The demo always ends with one concrete step. And what you learn in conversations gives you ideas for the next posts.',
+      ),
+    },
+    {
+      tipo: 'lista',
+      titulo: t('O que publicar numa semana', 'What to post in a week'),
+      itens: [
+        t('Bastidores: a tua rotina de estudo e como usas a app', 'Behind the scenes: your study routine and how you use the app'),
+        t('Uma lição: gestão de risco, stop, tamanho de posição', 'A lesson: risk management, stop loss, position size'),
+        t('Uma pergunta à tua audiência sobre o que a trava', 'A question to your audience about what holds them back'),
+        t('Stories diárias: o que estás a aprender hoje', 'Daily stories: what you are learning today'),
+        t('Chamada à ação: «manda-me mensagem e mostro-te como funciona»', 'Call to action: “message me and I’ll show you how it works”'),
+      ],
+      fala: t(
+        'Numa semana, três publicações chegam. Uma de bastidores, a mostrar a tua rotina e como usas a app. Uma lição curta sobre risco, por exemplo porque é que nunca entras sem stop. E uma pergunta à tua audiência sobre o que a trava. Nos stories, todos os dias, mostra o que estás a aprender. E termina com uma chamada à ação simples: manda-me mensagem e mostro-te como funciona.',
+        'In a week, three posts are enough. One behind the scenes, showing your routine and how you use the app. A short lesson on risk, for example why you never enter without a stop loss. And a question to your audience about what holds them back. In your stories, every day, show what you are learning. And finish with a simple call to action: message me and I’ll show you how it works.',
+      ),
+    },
+    {
+      tipo: 'ecra',
+      ecra: 'material',
+      titulo: t('O gerador escreve contigo', 'The generator writes with you'),
+      destaques: [
+        t('Publicação: gancho, corpo e chamada à ação', 'Post: hook, body and call to action'),
+        t('Legenda curta para um vídeo teu', 'Short caption for your own video'),
+        t('Mensagem de abordagem para quem comentou', 'Opening message for whoever commented'),
+      ],
+      fala: t(
+        'Não precisas de escrever do zero. Em Materiais tens o gerador: escolhes publicação, legenda curta ou mensagem de abordagem, dizes o tema, e ele escreve no tom da casa, já com o aviso educativo. Revês, pões a tua voz, e publicas. Os teus links também estão ali, prontos a copiar.',
+        'You don’t need to write from scratch. In Materials you have the generator: you pick post, short caption or opening message, give the topic, and it writes in the house tone, already with the educational disclaimer. You review it, add your own voice, and publish. Your links are also there, ready to copy.',
+      ),
+    },
+    {
+      tipo: 'regra',
+      titulo: t('Nas redes, nunca', 'On social media, never'),
+      itens: [
+        t('Prints de saldo, lucros ou resultados', 'Screenshots of balances, profits or results'),
+        t('Promessas de ganhos ou de rendimento', 'Promises of gains or income'),
+        t('Publicar sem o aviso educativo', 'Posting without the educational disclaimer'),
+        t('Mensagens em massa ou spam em grupos alheios', 'Mass messages or spam in other people’s groups'),
+        t('Falar mal de outras empresas ou pessoas', 'Talking badly about other companies or people'),
+      ],
+      fala: t(
+        'E há coisas que nunca entram. Nada de prints de saldo ou de lucros, nada de promessas de ganhos. O aviso educativo vai sempre. Nada de mensagens em massa nem de spam em grupos de outras pessoas. E nunca falamos mal de outras empresas: mostramos o nosso método e deixamos que fale por si.',
+        'And some things never go in. No screenshots of balances or profits, no promises of gains. The educational disclaimer always goes in. No mass messages and no spam in other people’s groups. And we never talk badly about other companies: we show our method and let it speak for itself.',
+      ),
+    },
+    {
+      tipo: 'guiao',
+      titulo: t('Convite para a demonstração', 'Invitation to the demo'),
+      quando: t('Quando alguém comenta ou te manda mensagem', 'When someone comments or messages you'),
+      texto: t(
+        'Olá! Vi que comentaste. Posso mostrar-te por vídeo como funciona a app e o método que uso, numa chamada curta, sem compromisso. Preferes hoje ao fim do dia ou amanhã de manhã?',
+        'Hi! I saw your comment. I can show you on a video call how the app and the method I use work, in a short call, no commitment. Do you prefer today in the evening or tomorrow morning?',
+      ),
+      fala: t(
+        'Quando alguém comenta ou te manda mensagem, não despejes informação. Convida para uma demonstração curta, sem compromisso, e dá duas opções de horário. Uma pergunta só, fácil de responder.',
+        'When someone comments or messages you, don’t dump information. Invite them to a short demo, no commitment, and give two time options. Just one question, easy to answer.',
+      ),
+    },
+    {
+      tipo: 'fluxo',
+      titulo: t('A demonstração, passo a passo', 'The demo, step by step'),
+      passos: [
+        t('Pergunta o que a pessoa procura', 'Ask what the person is looking for'),
+        t('Mostra a app ao vivo, no ecrã partilhado', 'Show the app live, on a shared screen'),
+        t('Explica a conta própria na corretora regulada', 'Explain the own account at the regulated broker'),
+        t('Propõe um passo: conta pelo teu link ou chamada com a equipa', 'Propose one step: account through your link or a call with the team'),
+      ],
+      fala: t(
+        'A demonstração tem quatro passos. Primeiro perguntas o que a pessoa procura: aprender, ter ferramentas, ou as duas. Depois partilhas o ecrã e mostras a app ao vivo: a formação, os alertas com gestão de risco, e como tu a usas no teu dia. A seguir explicas a rota da corretora: a conta é dela, numa corretora regulada, aberta pelo teu link, e o dinheiro nunca passa por nós. E acabas com um passo concreto: abrir a conta pelo teu link agora, ou marcar uma chamada com a equipa se ainda tiver dúvidas.',
+        'The demo has four steps. First you ask what the person is looking for: learning, tools, or both. Then you share your screen and show the app live: the training, the alerts with risk management, and how you use it in your day. Next you explain the broker route: the account is theirs, at a regulated broker, opened through your link, and the money never goes through us. And you finish with one concrete step: open the account through your link now, or book a call with the team if they still have questions.',
+      ),
+    },
+    {
+      tipo: 'ecra',
+      ecra: 'ib',
+      titulo: t('Depois da demonstração', 'After the demo'),
+      destaques: [
+        t('Quem abriu conta aparece na tua rede', 'Whoever opened an account shows up in your network'),
+        t('Marca o ponto de cada conversa', 'Mark where each conversation stands'),
+        t('Quem ficou com dúvidas volta à agenda', 'Whoever still has questions goes back to the calendar'),
+      ],
+      fala: t(
+        'Depois da demonstração, acompanha na Rede de IBs. Quem abriu conta aparece ali e podes marcar o ponto de cada conversa. Quem ficou com dúvidas não se perde: marcas novo contacto ou passas à equipa. E o que te perguntaram na chamada é a tua próxima publicação.',
+        'After the demo, follow up in the IB Network. Whoever opened an account shows up there and you can mark where each conversation stands. Whoever still has questions is not lost: you schedule a new contact or hand them to the team. And what they asked you on the call is your next post.',
+      ),
+    },
+    {
+      tipo: 'fim',
+      titulo: t('Tarefa da aula', 'Lesson task'),
+      cta: t('Três publicações + uma demonstração esta semana', 'Three posts + one demo this week'),
+      fala: t(
+        'Tarefa: planeia as três publicações desta semana com o gerador e marca a tua primeira demonstração com alguém que já te fez uma pergunta. Constância primeiro, o resto vem atrás.',
+        'Task: plan this week’s three posts with the generator and book your first demo with someone who has already asked you a question. Consistency first, the rest follows.',
+      ),
+    },
+  ],
+  quiz: [
+    {
+      pergunta: t('Como acaba uma boa demonstração?', 'How does a good demo end?'),
+      opcoes: [t('Com um passo concreto proposto', 'With one concrete step proposed'), t('Com «pensa nisso e depois diz-me»', 'With “think about it and let me know”')],
+      certa: 0,
+      porque: t('Sem um passo claro, a conversa morre. Propõe a conta pelo teu link ou uma chamada com a equipa.', 'Without a clear step, the conversation dies. Propose the account through your link or a call with the team.'),
+    },
+    {
+      pergunta: t('O que nunca entra numa publicação?', 'What never goes into a post?'),
+      opcoes: [t('A tua rotina de estudo', 'Your study routine'), t('Um print do teu saldo ou lucro', 'A screenshot of your balance or profit')],
+      certa: 1,
+      porque: t('Resultados e promessas ficam sempre de fora. Mostra o método.', 'Results and promises always stay out. Show the method.'),
+    },
+  ],
   youtube: {},
 }
 
-export const AULAS: Aula[] = [aula1, aula2, aula3, aula4, aula5, aula6, aula7, aula8]
+export const AULAS: Aula[] = [aula1, aula2, aula3, aula4, aula5, aula6, aula7, aula8, aula9]
 
 /** O texto narrado de uma aula, numa língua (as falas das cenas, por ordem). */
 export function narracao(aula: Aula, lingua: Lingua): string {

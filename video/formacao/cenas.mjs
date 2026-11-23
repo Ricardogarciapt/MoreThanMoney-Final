@@ -149,7 +149,7 @@ function miolo(id, L) {
       <div class="cartao" style="border-color:rgba(210,166,60,.4)"><div style="font:700 30px monospace;color:${OURO}">ANA7K2</div><div style="color:#a1a1aa;margin-top:4px">morethanmoney.pt/register?ref=ANA7K2</div></div>
       <div class="cartao"><b>${pt ? 'Kit de setter' : 'Setter kit'}</b> · ${pt ? 'guiões, triagem, objeções' : 'scripts, triage, objections'}</div>
       <div class="cartao"><b>${pt ? 'A oferta, como ela é hoje' : 'The offer, as it is today'}</b> · ${pt ? 'preços lidos do sistema' : 'prices read from the system'}</div>
-      <div class="cartao"><b>Academia de Vendas</b> · ${pt ? '8 aulas' : '8 lessons'}</div>`,
+      <div class="cartao"><b>Academia de Vendas</b> · ${pt ? '9 aulas' : '9 lessons'}</div>`,
     extracto: `<h3>${pt ? 'O meu extracto' : 'My statement'}</h3><div class="sub">${pt ? 'O que ganhei, de onde veio, o que falta receber' : 'What I earned, where from, what is pending'}</div>
       ${[[pt ? 'Venda confirmada · Membro' : 'Confirmed sale · Member', 'setter', '+'], [pt ? 'Venda confirmada · Premium' : 'Confirmed sale · Premium', 'closer', '+'], [pt ? 'Devolução' : 'Refund', 'closer', '−']].map(([d, p, s]) => `<div class="cartao"><b>${d}</b><span class="chip c">${p}</span><span style="float:right;color:${s === '+' ? '#4ade80' : '#f87171'};font-weight:700">${s} · · ·</span></div>`).join('')}`,
     equipa: `<h3>${pt ? 'A minha equipa' : 'My team'}</h3><div class="sub">${pt ? 'Quem responde a ti' : 'Who reports to you'}</div>
