@@ -73,13 +73,13 @@ async function noCrm(l: { nome: string; email: string; telefone: string; objecti
     if (ex?.id) {
       const etiquetas = Array.from(new Set([...((ex.etiquetas as string[]) || []), ORIGEM, 'iman-de-leads']))
       await db.from('vendas_negocios').update({
-        etiquetas, telefone: ex.telefone || l.telefone, contactavel: true,
+        etiquetas, telefone: ex.telefone || l.telefone,
         nota: [ex.nota, nota].filter(Boolean).join('\n').slice(0, 4000), atualizado_em: new Date().toISOString(),
       }).eq('id', ex.id)
     } else {
       await db.from('vendas_negocios').insert({
         nome: l.nome.slice(0, 120), email: l.email, telefone: l.telefone, estado: 'lead', funil: 'educacao',
-        origem: ORIGEM, interesse: 'formacao', chave_origem: `${ORIGEM}:${l.pedidoId || l.email}`, etiquetas: [ORIGEM, 'iman-de-leads'], contactavel: true, nota,
+        origem: ORIGEM, interesse: 'formacao', chave_origem: `${ORIGEM}:${l.pedidoId || l.email}`, etiquetas: [ORIGEM, 'iman-de-leads'], nota,
       })
     }
   } catch (e) { console.error('[app-ricardo] íman não ligou ao CRM:', e) }

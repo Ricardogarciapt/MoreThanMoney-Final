@@ -54,8 +54,8 @@ export function VisaoGeral({ r, dono, irPara }: { r: ResumoSocial; dono: boolean
   return (
     <div className="space-y-6">
       <div className="grid grid-cols-2 gap-2 md:grid-cols-5">
-        <Numero valor={r.rascunhosPorRever ?? vivo(r.porEstado.draft)} rotulo="Rascunhos por rever" tom="ouro" onClick={() => irPara("fila")} />
-        <Numero valor={vivo(r.porEstado.approved)} rotulo="Aprovados na fila" onClick={() => irPara("fila")} />
+        <Numero valor={r.rascunhosPorRever ?? vivo(r.porEstado.draft)} rotulo="Rascunhos por rever" tom="ouro" onClick={() => irPara("aprovar")} />
+        <Numero valor={vivo(r.porEstado.approved)} rotulo="Aprovados na fila" onClick={() => irPara("aprovar")} />
         <Numero valor={vivo(r.porEstado.failed) + r.semImagem} rotulo="Falhados ou sem imagem" tom="alerta" onClick={() => irPara("fila")} />
         <Numero valor={r.novos24h} rotulo="Leads novos · 24 h" onClick={() => irPara("leads")} />
         <Numero valor={r.conversoes24h} rotulo="Conversões · 24 h" onClick={() => irPara("funil")} />

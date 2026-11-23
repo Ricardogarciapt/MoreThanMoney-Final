@@ -46,20 +46,18 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ slu
   try {
     const recentes = await contarRecentes({ ipHash, telefone: v.pedido.telefone })
     if (!excedeLimite(recentes)) {
-      const reg = await registarPedidoDeContacto({ pedido: v.pedido, linhas: v.linhas, fonte: 'site', ipHash })
-      if (reg.pedidoId) {
-        const db = getSupabaseAdmin()
-        await db.from('pedidos_contacto').update({ respostas: { ebook: slug, ...r.respostas } }).eq('id', reg.pedidoId)
-        // Entra também no pipeline de vendas (CRM do backoffice), como o íman da app do Ricardo.
-        const { error: eN } = await db.from('vendas_negocios').insert({
-          nome: v.pedido.nome, email: v.pedido.email, telefone: v.pedido.telefone,
-          origem: v.pedido.origem ?? `ebook:${slug}`, chave_origem: `ebook:${slug}:${reg.pedidoId}`,
-          funil: 'educacao', estado: 'lead', interesse: 'formacao', contactavel: true,
+      // Entra no pipeline (CRM do back-office) pela mesma porta dos outros pedidos, como e-book.
+      const reg = await registarPedidoDeContacto({
+        pedido: v.pedido, linhas: v.linhas, fonte: 'site', ipHash,
+        negocio: {
+          origem: v.pedido.origem ?? `ebook:${slug}`,
           etiquetas: [`ebook-${base}`, 'iman-de-leads', ...(freebie ? [freebie.etiqueta] : [])],
           nota: `E-book grátis «${slug}». Respostas: ${Object.entries(r.respostas).map(([k, x]) => `${k}=${x}`).join(', ')}` +
             (freebie ? ' · Próximo passo: Premium 3 dias grátis → plano Membro.' : ''),
-        })
-        if (eN) console.warn('[ebook-gratis] não entrou no pipeline:', eN.message)
+        },
+      })
+      if (reg.pedidoId) {
+        await getSupabaseAdmin().from('pedidos_contacto').update({ respostas: { ebook: slug, ...r.respostas } }).eq('id', reg.pedidoId)
       }
     }
     const quem = v.pedido.email || v.pedido.telefone || ''

@@ -8,13 +8,17 @@
  *  1. interruptor `site_settings.whatsapp_reencontro` (desligado por omissão);
  *  2. tecto diário (omissão 40) e horário de Lisboa (10h–20h) — a qualidade do número depende de ir
  *     devagar (pesquisa 19/11: 250 conversas/dia no TIER_250, subir aos poucos);
- *  3. `enviarWhatsApp` com finalidade `campanha`: sem linha no livro do consentimento NÃO sai. Esta
- *     rotina não cria essa linha; a base legal dos contactos importados é decisão do Ricardo.
+ *  3. `enviarWhatsApp` com finalidade `campanha`: sem linha no livro do consentimento NÃO sai — a
+ *     menos que o dono tenha dado licença (`licenca_dono`, decisão do Ricardo a 23/11/2026 para os
+ *     3.965 contactos importados). A licença só cobre ESTE template (pedido de licença com botões);
+ *     o que vem a seguir só sai com o «Sim, manda» dela;
+ *  4. lista de exclusão (`contacto_exclusao`) e «SAIR» ganham sempre; cada número recebe isto uma vez.
  *
  * Corre dentro do cron do executor do pipeline (sem cron novo).
  */
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { enviarWhatsApp } from '@/lib/whatsapp-mensageiro'
+import { normalizarE164, variantesDoNumero } from '@/lib/whatsapp-envio'
 import { primeiroNome } from '@/lib/whatsapp/templates-mtm'
 import { TEMPLATE_REENCONTRO } from '@/lib/vendas/guiao-whatsapp'
 
@@ -28,6 +32,8 @@ interface Config {
   hora_fim: number
   /** Origens de `vendas_negocios` a abordar. */
   origens: string[]
+  /** Licença do dono para os contactos sem linha no livro (quem decidiu e quando). */
+  licenca_dono?: { por?: string; em?: string; nota?: string } | null
 }
 
 const OMISSAO: Config = { ligado: false, por_dia: 40, hora_ini: 10, hora_fim: 20, origens: ['whatsapp_import'] }
@@ -83,7 +89,17 @@ export async function correrReencontro(db: Db): Promise<ResultadoReencontro> {
     if (!digitos) continue
     const { data: ja } = await db.from('telegram_leads').select('chat_id').eq('chat_id', `wa:${digitos}`).maybeSingle()
     if (ja) continue
+    const { e164 } = normalizarE164(c.telefone)
+    if (e164) {
+      const { data: fora } = await db.from('contacto_exclusao').select('identificador').in('identificador', [...variantesDoNumero(e164), `+${digitos}`]).limit(1)
+      if (fora?.length) {
+        r.recusados.exclusao = (r.recusados.exclusao ?? 0) + 1
+        await db.from('vendas_negocios').update({ estado: 'perdido', motivo_perda: 'pediu para sair (SAIR / lista de exclusão)' }).eq('id', c.id)
+        continue
+      }
+    }
     const res = await enviarWhatsApp({
+      licencaDono: cfg.licenca_dono?.por ? `${cfg.licenca_dono.por} ${cfg.licenca_dono.em ?? ''}`.trim() : null,
       para: c.telefone,
       finalidade: 'campanha',
       template: { nome: TEMPLATE_REENCONTRO, idioma: 'pt_PT', parametros: [primeiroNome(c.nome)] },

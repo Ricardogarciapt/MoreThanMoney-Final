@@ -20,8 +20,8 @@ const GUIA: SlugEbook = 'guia-dos-scanners'
  *  - cupão FREEBIE validado na mesma porta de todos os cupões (`avaliarCupao`) e o uso registado
  *    em `coupon_usages`;
  *  - lead em `pedidos_contacto` + `captacao_consentimento` + tarefa do setter (`registarPedidoDeContacto`);
- *  - negócio no pipeline (`vendas_negocios`, etiqueta freebie-goldkiller: o executor do pipeline
- *    faz o seguimento até ao plano Membro);
+ *  - negócio no pipeline pela mesma porta (`negocio` do registo; etiqueta freebie-goldkiller: o
+ *    executor do pipeline faz o seguimento até ao plano Membro);
  *  - duas tarefas no backoffice (`aios_tasks`): ativar o convite no TradingView já, e retirar o
  *    acesso + oferecer o Membro ao dia 30;
  *  - aviso ao dono no Telegram e email com o guia (PT/EN/ES) e os passos de ativação.
@@ -57,18 +57,19 @@ export async function POST(req: NextRequest) {
   try {
     const recentes = await contarRecentes({ ipHash, telefone: v.pedido.telefone })
     if (!excedeLimite(recentes)) {
-      const reg = await registarPedidoDeContacto({ pedido: v.pedido, linhas: v.linhas, fonte: 'site', ipHash })
+      // O negócio no pipeline nasce (ou junta-se ao que já existe) pela porta comum dos pedidos.
+      const reg = await registarPedidoDeContacto({
+        pedido: v.pedido, linhas: v.linhas, fonte: 'site', ipHash,
+        negocio: {
+          origem: v.pedido.origem ?? 'freebie:goldkiller',
+          etiquetas: ['freebie-goldkiller', 'iman-de-leads', 'scanner-goldkiller', `ebook-${GUIA}`],
+          nota: `GoldKiller ${DIAS_GOLDKILLER_GRATIS} dias grátis (cupão ${cupao.cupao.code}) · TradingView @${tv}. Próximo passo: Premium 3 dias grátis → plano Membro.`,
+        },
+      })
       if (reg.pedidoId && !reg.duplicado) {
         const id = reg.pedidoId
         await db.from('pedidos_contacto').update({ respostas: { ebook: GUIA, freebie: 'goldkiller', tradingview: tv, cupao: cupao.cupao.code } }).eq('id', id)
         const passos = await Promise.allSettled([
-          db.from('vendas_negocios').insert({
-            nome: v.pedido.nome, email: v.pedido.email, telefone: v.pedido.telefone,
-            origem: v.pedido.origem ?? 'freebie:goldkiller', chave_origem: `freebie:goldkiller:${id}`,
-            funil: 'educacao', estado: 'lead', interesse: 'formacao', contactavel: true,
-            etiquetas: ['freebie-goldkiller', 'iman-de-leads', 'scanner-goldkiller', `ebook-${GUIA}`],
-            nota: `GoldKiller ${DIAS_GOLDKILLER_GRATIS} dias grátis (cupão ${cupao.cupao.code}) · TradingView @${tv}. Próximo passo: Premium 3 dias grátis → plano Membro.`,
-          }),
           db.from('coupon_usages').insert({ coupon_id: cupao.cupao.id, user_id: null, context: `freebie:goldkiller:${id}` }),
           db.from('aios_tasks').insert({
             title: `Ativar GoldKiller ${DIAS_GOLDKILLER_GRATIS} dias · TradingView @${tv}`,
