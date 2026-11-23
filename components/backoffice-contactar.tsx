@@ -10,6 +10,7 @@
  * e divergiriam no caso difícil, que é o único que importa.
  */
 import { caminhos, type Canal, type PessoaDoNegocio } from '@/lib/vendas/abordagem'
+import { linkWhatsApp, primeiraMensagem } from '@/lib/whatsapp/primeira-mensagem'
 
 const ROTULO: Record<Canal, string> = {
   whatsapp: 'WhatsApp',
@@ -20,11 +21,11 @@ const ROTULO: Record<Canal, string> = {
 }
 
 /** O endereço que abre cada canal. Os números vão sem espaços nem sinais — é o que as apps aceitam. */
-function abrir(canal: Canal, destino: string): string | null {
-  const so = destino.replace(/[^\d+]/g, '').replace(/^\+/, '')
+function abrir(canal: Canal, destino: string, pessoa: PessoaDoNegocio): string | null {
   switch (canal) {
     case 'whatsapp':
-      return so ? `https://wa.me/${so}` : null
+      // Ainda em «lead»: a conversa abre com a primeira mensagem já escrita (só falta «Enviar»).
+      return linkWhatsApp(destino, !pessoa.estado || pessoa.estado === 'lead' ? primeiraMensagem(pessoa) : null)
     case 'telefone':
       return `tel:${destino.replace(/\s/g, '')}`
     case 'email':
@@ -57,7 +58,7 @@ export function Contactar({ pessoa, limite = 3 }: { pessoa: PessoaDoNegocio; lim
   return (
     <div className="flex flex-wrap items-center gap-1.5">
       {vias.map((v) => {
-        const href = abrir(v.canal, v.destino)
+        const href = abrir(v.canal, v.destino, pessoa)
         if (!href) return null
         return (
           <a

@@ -301,4 +301,23 @@ const cTplSemParams = corpoParaCloudApi('+351912345678', {
 }) as Record<string, any>
 assert.equal('components' in cTplSemParams.template, false)
 
+// Licença do dono (23/11): só o pedido de licença passa sem livro; nunca por cima do «retirou».
+const licSemLivro = estado({ ultimaEntradaIso: null, baseLegal: null })
+assert.equal(
+  decidirEnvio(pedido({ tipo: 'template', templateNome: 'mtm_reencontro', finalidade: 'campanha', licencaDono: 'Ricardo 23/11' }), licSemLivro, AGORA).pode,
+  true,
+)
+assert.equal(
+  decidirEnvio(pedido({ tipo: 'template', templateNome: 'mtm_seguimento', finalidade: 'campanha', licencaDono: 'Ricardo 23/11' }), licSemLivro, AGORA).codigo,
+  'sem_origem',
+)
+assert.equal(
+  decidirEnvio(pedido({ tipo: 'template', templateNome: 'mtm_reencontro', finalidade: 'campanha', licencaDono: 'Ricardo 23/11' }), estado({ retirou: true }), AGORA).codigo,
+  'retirou',
+)
+assert.equal(
+  decidirEnvio(pedido({ tipo: 'template', templateNome: 'mtm_reencontro', finalidade: 'campanha' }), licSemLivro, AGORA).pode,
+  false,
+)
+
 console.log('whatsapp-envio.check: ok')
