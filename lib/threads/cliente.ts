@@ -68,6 +68,27 @@ export async function publicarTexto(t: TokenThreads, texto: string, respostaA?: 
   return p.id
 }
 
+/** Post com imagem (URL pública nossa ou livre de direitos). Espera o contentor ficar pronto. */
+export async function publicarImagem(t: TokenThreads, texto: string, imagemUrl: string): Promise<string> {
+  const c = await pedir<{ id: string }>(`${THREADS_GRAPH}/me/threads`, {
+    method: 'POST',
+    body: new URLSearchParams({ media_type: 'IMAGE', image_url: imagemUrl, text: texto.slice(0, 500), access_token: t.access_token }),
+  })
+  for (let i = 0; i < 6; i++) {
+    const st = await pedir<{ status?: string; error_message?: string }>(
+      `${THREADS_GRAPH}/${c.id}?fields=status,error_message&access_token=${encodeURIComponent(t.access_token)}`,
+    )
+    if (st.status === 'FINISHED') break
+    if (st.status === 'ERROR' || st.status === 'EXPIRED') throw new Error(`imagem: ${st.error_message ?? st.status}`)
+    await new Promise((r) => setTimeout(r, 3000))
+  }
+  const p = await pedir<{ id: string }>(`${THREADS_GRAPH}/me/threads_publish`, {
+    method: 'POST',
+    body: new URLSearchParams({ creation_id: c.id, access_token: t.access_token }),
+  })
+  return p.id
+}
+
 export type RespostaThreads = { id: string; text?: string; username?: string; timestamp?: string }
 
 /** Respostas diretas a um post nosso. */
