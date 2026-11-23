@@ -205,6 +205,10 @@ export async function runLeadFunnelReply(input: {
     `${MTMAUTO_PRECO} mas fica a ZERO com conta real na PU Prime, e conduz passo a passo — abrir conta pelo ` +
     `nosso link, depositar ${MIN_DEPOSIT} $ (o dinheiro é dele e fica na conta dele), mandar o UID e o print para eu ` +
     `validar, e só depois instalar a app e ligar a conta MT5. Uma coisa de cada vez, nunca tudo de enfiada. ` +
+    `QUANDO A PESSOA QUER ABRIR CONTA (diz «conta», «quero abrir», «sim» ao link): NÃO perguntes se podes enviar o link — ` +
+    `manda-o JÁ nessa mensagem: https://www.puprime.com/campaign?cs=morethanmoney , diz que o depósito mínimo é ${MIN_DEPOSIT} $ ` +
+    `e que depois te manda AQUI MESMO, nesta conversa, o UID (só o número) e um print do depósito, que tu validas. ` +
+    `Tudo se faz nesta conversa, nunca a mandes para outro sítio para validar. ` +
     `Se for (A): segue o funil normal da comunidade. Se ainda não sabe, pergunta com as duas opções. ` +
     `NUNCA cites lucro em euros nem prometas ganhos: ` +
     `os resultados dos sinais falam-se em PIPS e PERCENTAGEM, e o valor em dinheiro apresenta-se como ` +
@@ -243,7 +247,8 @@ export async function runLeadFunnelReply(input: {
    * Sem isto o WhatsApp é um canal de uma mensagem só: a Meta deixa responder dentro das 24 horas
    * em que a pessoa escreveu e mais nada, e o número fica na base a não servir para nada.
    */
-  const perguntar = devePerguntar({
+  // 23/11: não se cola o pedido de consentimento a uma mensagem com um link (o passo é o link).
+  const perguntar = !/https?:\/\//.test(answer) && devePerguntar({
     mensagensDela: (lead?.message_count ?? 0) + 1,
     jaPerguntado: etiquetas.includes(ETIQUETA_PERGUNTADO),
     jaConsentiu: false,

@@ -21,6 +21,8 @@ import type { Lingua } from '@/lib/whatsapp/linguas'
 import { linkAgendar } from '@/lib/agenda/link'
 
 const SITE = 'https://www.morethanmoney.pt'
+// Link de parceiro da PU Prime (o mesmo de lib/telegram-broker-gate.ts; aqui sem importar o motor todo).
+const PUPRIME = 'https://www.puprime.com/campaign?cs=morethanmoney'
 const AGENDA = linkAgendar('apresentacao')
 
 export const ROTAS_WA = ['educacao', 'corretora', 'funded', 'solucoes', 'curioso'] as const
@@ -30,6 +32,8 @@ export type RotaWa = (typeof ROTAS_WA)[number]
 export const TEMPLATE_REENCONTRO = 'mtm_reencontro'
 /** A abertura de 23/11, nas 5 línguas (mesmo nome, uma versão por língua na Meta). */
 export const TEMPLATE_REENCONTRO_V3 = 'mtm_reencontro_v3'
+/** 23/11: abertura de prospeto novo (5 línguas) — a que sai para a lista importada. */
+export const TEMPLATE_PROSPETO = 'mtm_prospeto'
 
 /** Id da linha «mudar de língua» no menu de rotas. */
 export const ID_MUDAR_LINGUA = 'mudar_lingua'
@@ -115,7 +119,7 @@ export const GUIAO: Record<Lingua, Guiao> = {
         case 'educacao':
           return `📚 Formação MoreThanMoney\n• Membro: ${eur(MEMBRO_MENSAL_EUR, 'pt')}/mês\n• Premium: ${eur(PREMIUM_MENSAL_EUR, 'pt')}/mês (acesso completo)\nVê por dentro: ${SITE}/f/educacao\n\nJá operaste alguma vez ou começas do zero?`
         case 'corretora':
-          return `🏦 Rota Corretora\n1) Abres conta: ${SITE}/abrir-conta\n2) Depósito mínimo: ${MIN_DEPOSIT} $\n3) Mandas-me o UID e fica tudo ativo.\n\nJá tens conta numa corretora?`
+          return `🏦 Rota Corretora, tudo aqui no WhatsApp:\n1) Abres conta na PU Prime: ${PUPRIME}\n2) Depositas o mínimo de ${MIN_DEPOSIT} $ (o dinheiro fica em teu nome)\n3) Mandas-me aqui o teu UID (só o número) e um print do depósito, e eu valido.\n\nJá tens conta na PU Prime?`
         case 'funded':
           return `🎯 MTM Funded (conta simulada): ${SITE}/mtmfunded\n\nQueres que te explique as regras do primeiro desafio?`
         case 'solucoes':
@@ -180,7 +184,7 @@ export const GUIAO: Record<Lingua, Guiao> = {
         case 'educacao':
           return `📚 MoreThanMoney training\n• Member: ${eur(MEMBRO_MENSAL_EUR, 'en')}/month\n• Premium: ${eur(PREMIUM_MENSAL_EUR, 'en')}/month (full access)\nSee it inside: ${SITE}/f/educacao\n\nHave you ever traded, or are you starting from zero?`
         case 'corretora':
-          return `🏦 Broker route\n1) Open your account: ${SITE}/abrir-conta\n2) Minimum deposit: $${MIN_DEPOSIT}\n3) Send me your UID and everything gets activated.\n\nDo you already have a broker account?`
+          return `🏦 Broker route, all right here:\n1) Open your PU Prime account: ${PUPRIME}\n2) Deposit at least $${MIN_DEPOSIT} (the money stays in your name)\n3) Send me your UID (just the number) and a screenshot of the deposit here, and I validate it.\n\nDo you already have a PU Prime account?`
         case 'funded':
           return `🎯 MTM Funded (simulated account): ${SITE}/mtmfunded\n\nShall I explain the rules of the first challenge?`
         case 'solucoes':
@@ -245,7 +249,7 @@ export const GUIAO: Record<Lingua, Guiao> = {
         case 'educacao':
           return `📚 Formation MoreThanMoney\n• Membre : ${eur(MEMBRO_MENSAL_EUR, 'fr')}/mois\n• Premium : ${eur(PREMIUM_MENSAL_EUR, 'fr')}/mois (accès complet)\nVoir de l'intérieur : ${SITE}/f/educacao\n\nTu as déjà tradé ou tu pars de zéro ?`
         case 'corretora':
-          return `🏦 Voie courtier\n1) Ouvre ton compte : ${SITE}/abrir-conta\n2) Dépôt minimum : ${MIN_DEPOSIT} $\n3) Envoie-moi ton UID et tout est activé.\n\nTu as déjà un compte chez un courtier ?`
+          return `🏦 Voie courtier, tout ici :\n1) Ouvre ton compte PU Prime : ${PUPRIME}\n2) Dépose au moins ${MIN_DEPOSIT} $ (l'argent reste à ton nom)\n3) Envoie-moi ici ton UID (juste le numéro) et une capture du dépôt, et je valide.\n\nTu as déjà un compte PU Prime ?`
         case 'funded':
           return `🎯 MTM Funded (compte simulé) : ${SITE}/mtmfunded\n\nTu veux que je t'explique les règles du premier challenge ?`
         case 'solucoes':
@@ -310,7 +314,7 @@ export const GUIAO: Record<Lingua, Guiao> = {
         case 'educacao':
           return `📚 MoreThanMoney Ausbildung\n• Mitglied: ${eur(MEMBRO_MENSAL_EUR, 'de')}/Monat\n• Premium: ${eur(PREMIUM_MENSAL_EUR, 'de')}/Monat (voller Zugang)\nSchau rein: ${SITE}/f/educacao\n\nHast du schon mal getradet oder fängst du bei null an?`
         case 'corretora':
-          return `🏦 Broker-Weg\n1) Konto eröffnen: ${SITE}/abrir-conta\n2) Mindesteinzahlung: ${MIN_DEPOSIT} $\n3) Schick mir deine UID und alles wird aktiviert.\n\nHast du schon ein Konto bei einem Broker?`
+          return `🏦 Broker-Weg, alles hier:\n1) Konto bei PU Prime eröffnen: ${PUPRIME}\n2) Mindestens ${MIN_DEPOSIT} $ einzahlen (das Geld bleibt auf deinen Namen)\n3) Schick mir hier deine UID (nur die Nummer) und einen Screenshot der Einzahlung, ich prüfe es.\n\nHast du schon ein PU-Prime-Konto?`
         case 'funded':
           return `🎯 MTM Funded (Demokonto): ${SITE}/mtmfunded\n\nSoll ich dir die Regeln der ersten Challenge erklären?`
         case 'solucoes':
@@ -375,7 +379,7 @@ export const GUIAO: Record<Lingua, Guiao> = {
         case 'educacao':
           return `📚 Formación MoreThanMoney\n• Miembro: ${eur(MEMBRO_MENSAL_EUR, 'es')}/mes\n• Premium: ${eur(PREMIUM_MENSAL_EUR, 'es')}/mes (acceso completo)\nMíralo por dentro: ${SITE}/f/educacao\n\n¿Ya has operado alguna vez o empiezas de cero?`
         case 'corretora':
-          return `🏦 Ruta bróker\n1) Abres tu cuenta: ${SITE}/abrir-conta\n2) Depósito mínimo: ${MIN_DEPOSIT} $\n3) Me mandas tu UID y queda todo activado.\n\n¿Ya tienes cuenta en algún bróker?`
+          return `🏦 Ruta bróker, todo aquí:\n1) Abres tu cuenta en PU Prime: ${PUPRIME}\n2) Depositas al menos ${MIN_DEPOSIT} $ (el dinero queda a tu nombre)\n3) Me mandas aquí tu UID (solo el número) y una captura del depósito, y lo valido.\n\n¿Ya tienes cuenta en PU Prime?`
         case 'funded':
           return `🎯 MTM Funded (cuenta simulada): ${SITE}/mtmfunded\n\n¿Quieres que te explique las reglas del primer desafío?`
         case 'solucoes':

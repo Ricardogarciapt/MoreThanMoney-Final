@@ -20,7 +20,7 @@ import type { SupabaseClient } from '@supabase/supabase-js'
 import { enviarWhatsApp } from '@/lib/whatsapp-mensageiro'
 import { normalizarE164, variantesDoNumero } from '@/lib/whatsapp-envio'
 import { primeiroNome } from '@/lib/whatsapp/templates-mtm'
-import { TEMPLATE_REENCONTRO, TEMPLATE_REENCONTRO_V3 } from '@/lib/vendas/guiao-whatsapp'
+import { TEMPLATE_PROSPETO, TEMPLATE_REENCONTRO_V3 } from '@/lib/vendas/guiao-whatsapp'
 import { INFO_LINGUA, linguaDoIndicativo, type Lingua } from '@/lib/whatsapp/linguas'
 
 type Db = SupabaseClient
@@ -102,14 +102,15 @@ export async function correrReencontro(db: Db): Promise<ResultadoReencontro> {
       }
     }
     // Língua pelo indicativo; só o v3 existe nas 5 línguas, os antigos são só em português.
-    const tpl = cfg.template || TEMPLATE_REENCONTRO
-    const lingua: Lingua = tpl === TEMPLATE_REENCONTRO_V3 ? linguaDoIndicativo(c.telefone) : 'pt'
+    // 23/11: a lista antiga é tratada como prospeto novo (template `mtm_prospeto`, 5 línguas).
+    const tpl = cfg.template || TEMPLATE_PROSPETO
+    const lingua: Lingua = tpl === TEMPLATE_REENCONTRO_V3 || tpl === TEMPLATE_PROSPETO ? linguaDoIndicativo(c.telefone) : 'pt'
     const res = await enviarWhatsApp({
       licencaDono: cfg.licenca_dono?.por ? `${cfg.licenca_dono.por} ${cfg.licenca_dono.em ?? ''}`.trim() : null,
       para: c.telefone,
       finalidade: 'campanha',
       template: { nome: tpl, idioma: INFO_LINGUA[lingua].codigoMeta, parametros: [primeiroNome(c.nome)] },
-      agente: { funil: 'whatsapp:reencontro' },
+      agente: { funil: 'whatsapp:prospeto' },
     })
     if (!res.enviado) {
       const k = res.decisao?.codigo ?? 'erro'

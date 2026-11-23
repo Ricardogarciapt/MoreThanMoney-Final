@@ -291,6 +291,100 @@ export const TEMPLATES_MTM = [
       },
     ],
   },
+  /*
+   * Prospeto (23/11, ordem do Ricardo): a abertura para QUALQUER contacto da lista, tratado como prospeto
+   * novo, sem «há algum tempo» nem «reencontro». Mesmos botões do v3 (`GUIAO[*].botao*`), para o funil
+   * (`lib/whatsapp/fluxo.ts`) tratar a resposta igual.
+   */
+  {
+    name: 'mtm_prospeto',
+    language: 'pt_PT',
+    category: 'MARKETING',
+    components: [
+      { type: 'BODY', text: 'Olá {{1}}, é o Ricardo Garcia, da MoreThanMoney 👋\n\nAjudo pessoas a aprender trading com método e gestão de risco, e empresas a pôr a IA a trabalhar por elas.\n\nGravei um áudio de 1 minuto a explicar como funciona e como podes começar. Posso mandar-to?', example: { body_text: [['Ana']] } },
+      { type: 'FOOTER', text: 'Podes deixar de receber a qualquer momento' },
+      {
+        type: 'BUTTONS',
+        buttons: [
+          { type: 'QUICK_REPLY', text: 'Sim, manda' },
+          { type: 'QUICK_REPLY', text: 'Agora não' },
+          { type: 'QUICK_REPLY', text: 'Não quero receber' },
+        ],
+      },
+    ],
+  },
+  {
+    name: 'mtm_prospeto',
+    language: 'en',
+    category: 'MARKETING',
+    components: [
+      { type: 'BODY', text: "Hi {{1}}, it's Ricardo Garcia from MoreThanMoney 👋\n\nI help people learn to trade with a proper method and risk management, and businesses put AI to work for them.\n\nI recorded a 1-minute voice note on how it works and how you can start. Can I send it to you?", example: { body_text: [['Anna']] } },
+      { type: 'FOOTER', text: 'You can stop these messages at any time' },
+      {
+        type: 'BUTTONS',
+        buttons: [
+          { type: 'QUICK_REPLY', text: 'Yes, send it' },
+          { type: 'QUICK_REPLY', text: 'Not now' },
+          { type: 'QUICK_REPLY', text: 'Stop messages' },
+          { type: 'QUICK_REPLY', text: 'Português' },
+        ],
+      },
+    ],
+  },
+  {
+    name: 'mtm_prospeto',
+    language: 'fr',
+    category: 'MARKETING',
+    components: [
+      { type: 'BODY', text: "Salut {{1}}, c'est Ricardo Garcia, de MoreThanMoney 👋\n\nJ'aide des personnes à apprendre le trading avec une vraie méthode et une bonne gestion du risque, et des entreprises à mettre l'IA au travail pour elles.\n\nJ'ai enregistré un vocal d'une minute pour expliquer comment ça marche et comment commencer. Je peux te l'envoyer ?", example: { body_text: [['Anne']] } },
+      { type: 'FOOTER', text: 'Tu peux arrêter de recevoir à tout moment' },
+      {
+        type: 'BUTTONS',
+        buttons: [
+          { type: 'QUICK_REPLY', text: 'Oui, envoie' },
+          { type: 'QUICK_REPLY', text: 'Pas maintenant' },
+          { type: 'QUICK_REPLY', text: 'Ne plus recevoir' },
+          { type: 'QUICK_REPLY', text: 'Português' },
+        ],
+      },
+    ],
+  },
+  {
+    name: 'mtm_prospeto',
+    language: 'de',
+    category: 'MARKETING',
+    components: [
+      { type: 'BODY', text: 'Hallo {{1}}, hier ist Ricardo Garcia von MoreThanMoney 👋\n\nIch helfe Menschen, Trading mit einer echten Methode und Risikomanagement zu lernen, und Unternehmen, KI für sich arbeiten zu lassen.\n\nIch habe eine einminütige Sprachnachricht aufgenommen, wie es funktioniert und wie du anfangen kannst. Darf ich sie dir schicken?', example: { body_text: [['Anna']] } },
+      { type: 'FOOTER', text: 'Du kannst den Empfang jederzeit beenden' },
+      {
+        type: 'BUTTONS',
+        buttons: [
+          { type: 'QUICK_REPLY', text: 'Ja, schick es' },
+          { type: 'QUICK_REPLY', text: 'Jetzt nicht' },
+          { type: 'QUICK_REPLY', text: 'Nicht mehr erhalten' },
+          { type: 'QUICK_REPLY', text: 'Português' },
+        ],
+      },
+    ],
+  },
+  {
+    name: 'mtm_prospeto',
+    language: 'es',
+    category: 'MARKETING',
+    components: [
+      { type: 'BODY', text: 'Hola {{1}}, soy Ricardo Garcia, de MoreThanMoney 👋\n\nAyudo a personas a aprender trading con método y gestión del riesgo, y a empresas a poner la IA a trabajar para ellas.\n\nGrabé un audio de 1 minuto explicando cómo funciona y cómo puedes empezar. ¿Te lo puedo mandar?', example: { body_text: [['Ana']] } },
+      { type: 'FOOTER', text: 'Puedes dejar de recibirlos cuando quieras' },
+      {
+        type: 'BUTTONS',
+        buttons: [
+          { type: 'QUICK_REPLY', text: 'Sí, mándalo' },
+          { type: 'QUICK_REPLY', text: 'Ahora no' },
+          { type: 'QUICK_REPLY', text: 'No quiero recibir' },
+          { type: 'QUICK_REPLY', text: 'Português' },
+        ],
+      },
+    ],
+  },
 ] as const
 
 /** Template de primeiro contacto para cada interesse do formulário «Quero que me liguem». */
