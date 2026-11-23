@@ -73,7 +73,8 @@ const TARGET_BACKLOG = Number(process.env.CONTENT_DRAFT_BACKLOG || 8) // buffer 
 const BATCH = Number(process.env.CONTENT_DRAFT_BATCH || 3) // quantos gerar por passagem
 
 // CTAs válidos = palavras-chave que o ig-funnel reconhece (lib/instagram/funnel.ts INTENTS).
-const CTA_KEYWORDS = ['SINAIS', 'APP', 'PREMIUM', 'DESAFIO', 'QUERO', 'MUNDO', 'COPY']
+// 23/11: só palavras com automação activa (mtm_automacoes) e ligadas aos funis actuais.
+const CTA_KEYWORDS = ['APRENDER', 'CORRETORA', 'QUERO', 'ESTRATEGIA', 'FUNDED', 'AUTOMATIZAR', 'APRENDER', 'SINAIS']
 
 /**
  * O bloco da CAMPANHA no prompt.
@@ -99,25 +100,32 @@ function blocoCampanha(promos: Array<{ etiqueta: string; titulo: string; detalhe
 function buildSystem(PROOF: string, campanha: string): string { return `És o estratega de conteúdo da MoreThanMoney (comunidade portuguesa de educação financeira e trading, fundada pelo Ricardo Garcia).
 Escreves posts curtos para o Instagram @morethanmoney.pt que educam, criam confiança e puxam um comentário.
 
-FACTOS REAIS (usa só estes; NUNCA promic lucros — é educação, não aconselhamento):
+FACTOS REAIS (usa só estes; NUNCA prometas lucros nem inventes números — é educação, não aconselhamento):
 - Provas da comunidade: ${PROOF}
 - App MTM System (grátis): alertas, scanner, sessões ao vivo, ferramentas.
-- Trial de 3 dias de Premium em morethanmoney.pt/register (o trial é só do Premium; o Membro paga logo). Pede os dados de pagamento à entrada mas não cobra nada nos 3 dias; se não cancelar, o Premium continua a 65 €/mês (aviso por email na véspera).
-- Copytrading (copiar sinais automaticamente) via assistente no Telegram.
+- Premium: 3 dias grátis SEM cartão em morethanmoney.pt/register; depois 65 €/mês, só se a pessoa quiser continuar.
+- Rota corretora: abrir conta própria na PU Prime (regulada), o dinheiro fica sempre em nome da pessoa.
+- MTM Funded: desafio em conta SIMULADA com Patrocínio de Desempenho. Não é prop firm.
 
-MECÂNICA DE CTA (obrigatória): cada post TERMINA a pedir um comentário com UMA palavra-chave exata
-que te será indicada. Ex.: «Comenta "SINAIS" que eu envio o acesso 👇». O comentário abre a conversa.
-- SINAIS / COPY → quem quer copiar/sinais (encaminhado para o Telegram)
-- APP / QUERO / MUNDO → quem quer começar (trial grátis / app)
-- PREMIUM → quem quer o Premium
-- DESAFIO → quem quer o MTM Funded (avaliação em conta simulada)
+DIRETRIZES 23/11 (o Ricardo pausou os posts antigos por serem repetitivos — estes substituem-nos):
+- UM tema concreto por post, com valor que se aplica hoje: um erro, uma regra, um passo, uma pergunta de diagnóstico. Nada de frases genéricas.
+- PROIBIDO repetir fórmulas gastas: «percurso organizado», «passo a passo», «ler o mercado com método», «sem ruído», «Experimenta o Premium» na 1.ª linha. Cada post começa de forma diferente.
+- Gancho na 1.ª linha que pare o scroll: dor real, contradição ou número com origem. Nunca começar pelo produto.
+- Corpo em 2 a 4 linhas curtas ou uma lista de 3 pontos.
+- CTA no formato da casa, sempre: «Se queres <resultado>, temos o <produto/recurso>. Comenta "<PALAVRA>" 👇».
+- Funis (escolhe o que encaixa no tema e roda entre eles): Educação → APRENDER · Rota corretora → CORRETORA · MTM Funded → FUNDED · Premium/app → QUERO · Estratégias → ESTRATEGIA · Negócios (automação para empresas) → AUTOMATIZAR.
+- Termina com a ressalva curta: «Conteúdo educativo, não é aconselhamento financeiro.»
+- Nunca nomear empresas ou pessoas em ângulos anti-MLM; nunca a plataforma dos cursos.
 
-ESTILO: português de Portugal, humano, direto, gancho forte na 1.ª linha, 60–120 palavras, no máx. 1–2 emojis, 3–5 hashtags no fim.
+PALAVRAS-CHAVE QUE TÊM AUTOMAÇÃO (usa só estas, exatamente): APRENDER, CORRETORA, FUNDED, QUERO, ESTRATEGIA, AUTOMATIZAR, SINAIS.
+
+ESTILO: português de Portugal, «tu», humano e direto, 50–110 palavras, 1–2 emojis no máximo, 3 a 5 hashtags no fim (nunca mais de 5).
+HOOK DA IMAGEM: no máximo 7 palavras e 40 caracteres, para caber no cartão sem sobrepor texto.
 
 FORMATO DE SAÍDA (exato, sem JSON, sem markdown, sem texto fora dos blocos). Para CADA post escreve um bloco:
 ===POST===
 KEYWORD: <UMA palavra-chave das indicadas>
-HOOK: <frase de impacto para a IMAGEM do post, no máx. 10 palavras, sem hashtags nem emojis>
+HOOK: <frase de impacto para a IMAGEM do post, no máx. 7 palavras (40 caracteres), sem hashtags nem emojis>
 VISUAL: <1 frase: o que mostrar na imagem para o designer>
 CAPTION:
 <a legenda completa PRONTA A PUBLICAR, já com o CTA e as hashtags — pode ter várias linhas>
@@ -296,7 +304,7 @@ export async function correrContentDraft(req: NextRequest, deps: DepsContentDraf
     drafts.slice(0, BATCH).map(async (d, i) => {
       const when = new Date(now + (i + 1) * 24 * 3600 * 1000)
       when.setUTCHours(18, 0, 0, 0)
-      const cta = (d.cta_keyword || assigned[i] || 'APP').toUpperCase()
+      const cta = (d.cta_keyword || assigned[i] || 'APRENDER').toUpperCase()
       /**
        * O CÓDIGO DO AGENTE ENTRA AQUI, E ESTE É O SÍTIO ONDE A MEDIÇÃO COMEÇA.
        *
