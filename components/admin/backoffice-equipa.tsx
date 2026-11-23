@@ -19,6 +19,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { adminApiCall } from '@/lib/admin-helpers'
 import { PAPEIS, PAPEL_NOME, type Papel } from '@/lib/backoffice-papeis'
+import { PERFIS, capacidadesDoPerfil, perfilPorId } from '@/lib/backoffice-perfis'
 import { AREAS_SITE, AREA_NOME, type AreaSite } from '@/lib/backoffice-acessos-site'
 import BackofficeEquipasMontar, { type CandidatoLider } from '@/components/admin/backoffice-equipas-montar'
 import BackofficePlanosComissao from '@/components/admin/backoffice-planos-comissao'
@@ -341,17 +342,31 @@ export default function BackofficeEquipa() {
             className="w-full rounded-lg border border-gray-700 bg-gray-950 px-3 py-2 text-sm text-white placeholder:text-gray-600"
           />
         </div>
-        <select
-          value={alvoPapel}
-          onChange={(e) => setAlvoPapel(e.target.value as Papel)}
-          className="rounded-lg border border-gray-700 bg-gray-950 px-3 py-2 text-sm text-white"
-        >
-          {PAPEIS.map((p) => (
-            <option key={p} value={p}>
-              {PAPEL_NOME[p]}
-            </option>
-          ))}
-        </select>
+        <div className="w-full">
+          <label className="mb-1 block text-xs uppercase tracking-wide text-gray-500">Perfil</label>
+          <select
+            value={alvoPapel}
+            onChange={(e) => setAlvoPapel(e.target.value as Papel)}
+            className="w-full rounded-lg border border-gray-700 bg-gray-950 px-3 py-2 text-sm text-white"
+          >
+            {PERFIS.map((p) => (
+              <option key={p.id} value={p.id}>
+                {p.nome}
+              </option>
+            ))}
+          </select>
+          {/* As permissões à vista ANTES de atribuir: o que a pessoa vai ver, dito em português. */}
+          {perfilPorId(alvoPapel) && (
+            <div className="mt-2 rounded-lg border border-gray-800 bg-gray-950/60 p-3 text-xs text-gray-400">
+              <p className="mb-2 text-gray-300">{perfilPorId(alvoPapel)?.descricao}</p>
+              <ul className="list-disc space-y-0.5 pl-4">
+                {capacidadesDoPerfil(alvoPapel).map((nome) => (
+                  <li key={nome}>{nome}</li>
+                ))}
+              </ul>
+            </div>
+          )}
+        </div>
         <button
           type="button"
           disabled={!alvoEmail || ocupado === 'por-email'}
