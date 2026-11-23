@@ -66,6 +66,8 @@ interface Post {
   status: string
   permalink: string | null
   error: string | null
+  youtube_short_url?: string | null
+  youtube_erro?: string | null
 }
 
 /** O que o painel devolve — ver `/api/admin/social/painel`. */
@@ -543,6 +545,17 @@ export default function CentroSocial({ embutido = false }: { embutido?: boolean 
                       Ver publicação <ExternalLink className="h-3 w-3" />
                     </a>
                   )}
+                  {p.youtube_short_url && (
+                    <a
+                      href={p.youtube_short_url}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="mt-1 ml-3 inline-flex items-center gap-1 text-xs text-red-400"
+                    >
+                      Ver Short no YouTube <ExternalLink className="h-3 w-3" />
+                    </a>
+                  )}
+                  {p.youtube_erro && <p className="mt-1 text-xs text-amber-500">YouTube: {p.youtube_erro}</p>}
                 </div>
                 <div className="flex flex-none flex-col gap-2">
                   {p.status === "draft" && (

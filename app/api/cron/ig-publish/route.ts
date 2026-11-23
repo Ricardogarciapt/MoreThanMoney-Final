@@ -221,7 +221,17 @@ export async function GET(request: NextRequest) {
       if (row.media_type === "REELS") {
         // Depois do Instagram estar marcado como publicado: falhar aqui não repete nem reverte o reel.
         const yt = await publicarReelNoYoutube(row as any, post.caption ?? "", inicioRonda)
-        if (yt) results.push({ id: row.id, youtube: yt.ok ? yt.url : null, youtube_erro: yt.erro ?? null })
+        if (yt) {
+          results.push({ id: row.id, youtube: yt.ok ? yt.url : null, youtube_erro: yt.erro ?? null })
+          // Estado guardado para aparecer ao lado do reel em /admin/social (colunas: migração 284).
+          await supabase
+            .from("social_scheduled_posts")
+            .update(yt.ok
+              ? { youtube_short_id: yt.videoId, youtube_short_url: yt.url, youtube_erro: null }
+              : { youtube_erro: yt.erro ?? "erro no YouTube" })
+            .eq("id", row.id)
+            .then(({ error }) => { if (error) console.error("[ig-publish] estado do Short não guardado:", error.message) })
+        }
       }
     } catch (e: any) {
       if (e instanceof MediaNotReadyError) {
