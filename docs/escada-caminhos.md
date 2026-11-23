@@ -65,6 +65,6 @@ Ordem do dono: **grátis → Premium 65 €/mês (com a comunidade privada) → 
 
 - `PATAMARES` em `lib/escada-caminhos.ts` diz o que cada patamar abre (divisão de acessos por preço);
   /caminho desenha-a e a comunidade divide os cursos pela mesma lista.
-- Membro 35 €, Elite 597 €/ano e os degraus de 5/10 € ficam como alternativas, sem mudar preços.
+- Membro 35 €, Elite 597 €/ano e os degraus de 5/10 € ficam como alternativas, sem mudar preços. Os de 5/10 € são só do site: na comunidade (Skool) salta-se do grátis para o Premium (Ricardo, 23/11).
 - /mentoria: página do high-ticket, sem checkout; a chamada é `/agendar?t=fecho-alto-valor` e quem
   fecha é o Ricardo (`regras-fecho.ts`, tipo `mentoria`). O Bootcamp fecha-o o agente com o link do marketplace.
