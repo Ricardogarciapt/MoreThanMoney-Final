@@ -28,6 +28,7 @@ import { CHAVE_AUTO_PUBLICAR, lerAutoPublicar } from "@/lib/agentes/social-agent
 import { lerInterruptor } from "@/lib/carrossel-diario/interruptor"
 import { lerInterruptorReels, type EstadoReelsRicardo } from "@/lib/reels-ricardo/interruptor"
 import { garantirCarrosselDoDia } from "@/lib/carrossel-diario/rede"
+import { publicarReelNoYoutube } from "@/lib/youtube/shorts-reel"
 import { garantirLinhasDoDia } from "@/lib/carrossel-diario/linhas"
 import { auditarInstagram, CHAVE_AUDITORIA } from "@/lib/instagram/auditoria"
 
@@ -38,6 +39,7 @@ const MAX_PER_RUN = 4
 const MAX_ATTEMPTS = 3
 
 export async function GET(request: NextRequest) {
+  const inicioRonda = Date.now()
   if (!isCronAuthorized(request)) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
   }
@@ -216,6 +218,11 @@ export async function GET(request: NextRequest) {
       })
       if (levaReserva(row, post.trial ?? null)) await guardarReserva(supabase, row).catch((e) => console.error("[ig-publish] reserva:", e?.message))
       if (row.media_type === "REELS") await agendarReelEmStory(supabase, row)
+      if (row.media_type === "REELS") {
+        // Depois do Instagram estar marcado como publicado: falhar aqui não repete nem reverte o reel.
+        const yt = await publicarReelNoYoutube(row as any, post.caption ?? "", inicioRonda)
+        if (yt) results.push({ id: row.id, youtube: yt.ok ? yt.url : null, youtube_erro: yt.erro ?? null })
+      }
     } catch (e: any) {
       if (e instanceof MediaNotReadyError) {
         // Container ainda a processar — guarda e retoma na próxima ronda.

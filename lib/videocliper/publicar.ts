@@ -36,8 +36,9 @@ export interface ResultadoPublicacao {
 }
 
 export async function tokenDoYoutube(): Promise<string> {
-  const cid = process.env.YOUTUBE_CLIENT_ID?.trim()
-  const secret = process.env.YOUTUBE_CLIENT_SECRET?.trim()
+  // Em produção o par de cliente OAuth chama-se GOOGLE_CLIENT_ID/SECRET; YOUTUBE_CLIENT_* tem prioridade se existir.
+  const cid = (process.env.YOUTUBE_CLIENT_ID || process.env.GOOGLE_CLIENT_ID || '').trim()
+  const secret = (process.env.YOUTUBE_CLIENT_SECRET || process.env.GOOGLE_CLIENT_SECRET || '').trim()
   const refresh = process.env.YOUTUBE_REFRESH_TOKEN?.trim()
   if (!cid || !secret || !refresh) throw new Error('credenciais YOUTUBE_* em falta')
 
@@ -95,7 +96,7 @@ async function garantirPlaylist(token: string): Promise<string | null> {
  * segundos e alguns megabytes, e um falhanço repete-se inteiro mais depressa do que se
  * negociaria a retoma.
  */
-async function subirShort(
+export async function subirShort(
   token: string,
   video: Buffer,
   titulo: string,
