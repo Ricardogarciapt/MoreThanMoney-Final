@@ -17,6 +17,10 @@ export const ESCOPOS = [
   'threads_content_publish',
   'threads_manage_replies',
   'threads_read_replies',
+  // 23/11: prospeção ativa (pesquisa por palavra-chave), menções e métricas para aprender o que pega.
+  'threads_keyword_search',
+  'threads_manage_mentions',
+  'threads_manage_insights',
 ].join(',')
 
 export type TokenThreads = { access_token: string; user_id: string; expira_em: string; username?: string }
@@ -70,6 +74,39 @@ export type RespostaThreads = { id: string; text?: string; username?: string; ti
 export async function respostasDe(t: TokenThreads, mediaId: string): Promise<RespostaThreads[]> {
   const j = await pedir<{ data?: RespostaThreads[] }>(
     `${THREADS_GRAPH}/${mediaId}/replies?fields=id,text,username,timestamp&access_token=${encodeURIComponent(t.access_token)}`,
+  )
+  return j.data ?? []
+}
+
+export type PostThreads = { id: string; text?: string; username?: string; timestamp?: string; permalink?: string }
+
+/** Pesquisa pública por palavra-chave (posts recentes). Precisa de threads_keyword_search. */
+export async function pesquisar(t: TokenThreads, q: string, limite = 25): Promise<PostThreads[]> {
+  const u = new URLSearchParams({
+    q,
+    search_type: 'RECENT',
+    fields: 'id,text,username,timestamp,permalink',
+    limit: String(limite),
+    access_token: t.access_token,
+  })
+  const j = await pedir<{ data?: PostThreads[] }>(`${THREADS_GRAPH}/keyword_search?${u}`)
+  return j.data ?? []
+}
+
+/** Métricas de um post nosso (views, likes, replies, reposts, quotes). Precisa de threads_manage_insights. */
+export async function metricasDe(t: TokenThreads, mediaId: string): Promise<Record<string, number>> {
+  const j = await pedir<{ data?: { name: string; values?: { value: number }[]; total_value?: { value: number } }[] }>(
+    `${THREADS_GRAPH}/${mediaId}/insights?metric=views,likes,replies,reposts,quotes&access_token=${encodeURIComponent(t.access_token)}`,
+  )
+  const out: Record<string, number> = {}
+  for (const m of j.data ?? []) out[m.name] = m.total_value?.value ?? m.values?.[0]?.value ?? 0
+  return out
+}
+
+/** Menções recentes a @ricardogarciapt. Precisa de threads_manage_mentions. */
+export async function mencoes(t: TokenThreads): Promise<PostThreads[]> {
+  const j = await pedir<{ data?: PostThreads[] }>(
+    `${THREADS_GRAPH}/${t.user_id}/mentions?fields=id,text,username,timestamp,permalink&access_token=${encodeURIComponent(t.access_token)}`,
   )
   return j.data ?? []
 }
