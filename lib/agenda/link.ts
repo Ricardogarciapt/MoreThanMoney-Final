@@ -32,6 +32,8 @@ export type AssuntoDaChamada =
   | 'negocios'
   /** Fecho de alto valor (a partir de 1.200 €) com o Ricardo — só nos blocos de alto valor (16/11). */
   | 'fecho-alto-valor'
+  /** Entrevista de candidatos à equipa comercial (setter, closer, prospector, afiliado), por Google Meet (23/11). */
+  | 'entrevista-equipa'
 
 /**
  * O link para marcar. Sem assunto, abre a lista toda; com assunto, salta o primeiro ecrã.
@@ -55,3 +57,6 @@ export const LINK_AGENDAR = linkAgendar()
 
 /** A chamada de fecho de alto valor: é para onde o closer manda o que sobe para o Ricardo. */
 export const LINK_AGENDAR_FECHO_ALTO_VALOR = linkAgendar('fecho-alto-valor', AG.CLOSER)
+
+/** A entrevista dos candidatos à equipa comercial (/work → formulário → CRM com `candidato_equipa`). */
+export const LINK_AGENDAR_ENTREVISTA_EQUIPA = linkAgendar('entrevista-equipa', AG.SETTER)
