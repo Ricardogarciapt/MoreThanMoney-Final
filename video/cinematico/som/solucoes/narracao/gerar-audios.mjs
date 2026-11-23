@@ -43,4 +43,4 @@ for (const nome of nomes) {
   }
   fs.writeFileSync(durFile, JSON.stringify(dur, null, 2))
 }
-console.log('Feito. Agora: git add video/cinematico/som/solucoes/narracao && git commit -m "solucoes: narração EN/DE/FR" && git push origin claude/project-thread-zyeuyj')
+console.log('Feito. Agora: git add video/cinematico/som/solucoes/narracao && git commit -m "solucoes: narração EN/DE/FR" && git push origin HEAD:claude/project-thread-zyeuyj')

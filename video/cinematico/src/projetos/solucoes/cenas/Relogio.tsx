@@ -4,6 +4,7 @@ import { ThreeCanvas } from '@remotion/three'
 import { EffectComposer, Bloom } from '@react-three/postprocessing'
 import { Titulo, clamp, ease, rng, Plano } from '../../../motor/util'
 import { OURO, OURO_CLARO } from '../tempo'
+import { t, tt } from '../i18n'
 
 const Poeira: React.FC<{ n?: number; seed?: number; cor?: string; t: number }> = ({ n = 400, seed = 3, cor = OURO_CLARO, t }) => {
   const pos = useMemo(() => {
@@ -68,7 +69,7 @@ export const Relogio: React.FC = () => {
       <Plano src="noite_cansado_2" de={0} dur={60} grade="noite" fade={3} desde={20} />
       <Plano src="noite_cansado_1" de={54} dur={62} grade="noite" desde={30} />
       <Titulo texto="23:47" de={12} ate={70} size={230} y={-10} cor="#fff" />
-      <Titulo texto="E ainda estás a responder a mensagens?" de={78} ate={160} size={96} destaque={['mensagens']} />
+      <Titulo {...tt('E ainda estás a responder a mensagens?', ['mensagens'], 96)} de={78} ate={160} />
     </AbsoluteFill>
   )
 }
