@@ -1118,7 +1118,7 @@ const aula9: Aula = {
       porque: t('Resultados e promessas ficam sempre de fora. Mostra o método.', 'Results and promises always stay out. Show the method.'),
     },
   ],
-  youtube: {},
+  youtube: { pt: 'DVpX0TtwX40', en: 'R7290ySJF2A' },
 }
 
 export const AULAS: Aula[] = [aula1, aula2, aula3, aula4, aula5, aula6, aula7, aula8, aula9]
