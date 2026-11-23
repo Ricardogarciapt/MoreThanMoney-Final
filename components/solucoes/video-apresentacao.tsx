@@ -8,8 +8,12 @@ import { useT } from "@/components/solucoes/idioma"
  * O vídeo de apresentação do /solucoes. Arranca sem som (o browser não deixa autoplay com som); o botão dourado liga a narração desde o início. Só toca
  * quando está à vista. Com movimento reduzido fica parado na capa até a pessoa carregar.
  */
+// Versões narradas noutras línguas (voz clonada do Ricardo). As restantes ficam com a narração em português.
+const NARRADO = new Set(["en", "de", "fr"])
+
 export function VideoApresentacao() {
   const { t, idioma } = useT()
+  const suf = NARRADO.has(idioma) ? `-${idioma}` : ""
   const ref = useRef<HTMLVideoElement>(null)
   const [som, setSom] = useState(false)
 
@@ -44,7 +48,7 @@ export function VideoApresentacao() {
       <video
         ref={ref}
         className="aspect-video w-full"
-        poster="/images/solucoes/solucoes-poster.jpg"
+        poster={`/images/solucoes/solucoes-poster${suf}.jpg`}
         muted
         loop
         playsInline
@@ -52,8 +56,8 @@ export function VideoApresentacao() {
         controls={false}
         aria-label={t("Vídeo de apresentação: como a IA muda a rotina de um negócio")}
       >
-        <source src="/videos/solucoes-web-720.mp4" type="video/mp4" media="(max-width: 767px)" />
-        <source src="/videos/solucoes-web-1080.mp4" type="video/mp4" />
+        <source src={`/videos/solucoes-web-720${suf}.mp4`} type="video/mp4" media="(max-width: 767px)" />
+        <source src={`/videos/solucoes-web-1080${suf}.mp4`} type="video/mp4" />
       </video>
       {som ? (
         <button
@@ -75,7 +79,7 @@ export function VideoApresentacao() {
             <span className="absolute inset-0 rounded-full bg-[#08090C]/20 motion-safe:animate-ping" />
             <VolumeX className="relative h-4 w-4 sm:h-5 sm:w-5" />
           </span>
-          {idioma === "pt" ? t("Ouvir com som") : t("Ouvir com som (narração em português)")}
+          {idioma === "pt" || NARRADO.has(idioma) ? t("Ouvir com som") : t("Ouvir com som (narração em português)")}
         </button>
       )}
     </div>
