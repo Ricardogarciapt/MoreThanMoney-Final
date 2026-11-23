@@ -15,7 +15,7 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { KIND_ENVIO } from '@/lib/envios-aprovacao'
 import { linkSaida } from '@/lib/vendas/executor-pipeline'
-import { classificarFunil, ehRecruta, ETQ_EDIFICADO, ETQ_ONBOARDING_OK, ETQ_RECRUTA } from '@/lib/vendas/funil-fases'
+import { classificarFunil, ehRecruta, ETQ_CANDIDATO_EQUIPA, ETQ_EDIFICADO, ETQ_ONBOARDING_OK, ETQ_RECRUTA } from '@/lib/vendas/funil-fases'
 
 type Db = SupabaseClient
 const SITE = (process.env.NEXT_PUBLIC_SITE_URL || 'https://www.morethanmoney.pt').replace(/\/$/, '')
@@ -47,6 +47,7 @@ export function emailDaFase(
   fase: 'edificacao' | 'onboarding' | 'recrutador',
   primeiroNome: string | null,
   email: string,
+  etiquetas: string[] = [],
 ): { assunto: string; texto: string; link: string } {
   const ola = primeiroNome ? `Olá ${primeiroNome},` : 'Olá,'
   if (fase === 'edificacao') {
@@ -71,6 +72,22 @@ export function emailDaFase(
         `${ola}\n\nBem-vindo. Para tirares partido de tudo desde o primeiro dia, segue os cinco passos ` +
         `(conta, app, corretora, sinais e chamada de boas-vindas), com um vídeo curto em cada um:\n\n${link}\n\n` +
         `Se encravares num passo, responde a este email e ajudamos-te.` +
+        rodape(email),
+    }
+  }
+  // Candidatos à equipa comercial (formulário /work): a proposta é de função, não de parceria de educador.
+  if (etiquetas.includes(ETQ_CANDIDATO_EQUIPA) || etiquetas.includes('form:work')) {
+    const link = `${SITE}/agendar?t=entrevista-equipa`
+    return {
+      link,
+      assunto: 'A tua candidatura à equipa MoreThanMoney',
+      texto:
+        `${ola}\n\nObrigado por te candidatares. Estamos a montar a equipa comercial (prospectors, setters e closers, ` +
+        `100% remoto) e o próximo passo é uma conversa de 30 minutos por Google Meet.\n\n` +
+        `Como funciona: comissão por cada venda fechada, registada no back-office com o teu código ` +
+        `(prospector 5%, setter 10%, closer 20% a 30% conforme o volume do mês, mais 5% nas renovações). ` +
+        `Formação interna no back-office antes de começares, com guiões e as nossas ferramentas.\n\n` +
+        `Marca aqui a tua entrevista: ${link}\nDetalhes da função: ${SITE}/work` +
         rodape(email),
     }
   }
@@ -156,7 +173,7 @@ export async function correrFases(db: Db, limite = 20): Promise<ResultadoFases> 
     else if (etq.includes(ETQ_RECRUTA) && ['lead', 'contactado', 'qualificado'].includes(n.estado)) fase = 'recrutador'
     if (!fase) continue
     const nome = (n.nome ?? '').split(' ')[0] || null
-    const m = emailDaFase(fase, nome, email)
+    const m = emailDaFase(fase, nome, email, etq)
     const c = await criarEnvioPorAprovar({
       kind: KIND_ENVIO.EMAIL_SEGUIMENTO,
       chave: `fase:${fase}:${n.id}`,
