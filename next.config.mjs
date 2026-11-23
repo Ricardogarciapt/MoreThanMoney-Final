@@ -14,6 +14,8 @@ const nextConfig = {
   outputFileTracingIncludes: {
     '/api/ebooks/[slug]': servidos(LIVROS),
     '/api/ebooks-traducoes/[slug]': servidos([...LIVROS.flatMap((l) => [`${l}-en`, `${l}-es`]), 'a-primeira-chave-fr']),
+    // material do curso do Ruben (slides, caderno e guia nas 4 línguas, ~31 MB): só sai pela rota com acesso
+    '/api/cursos/a-primeira-chave/material': ['./conteudo-privado/cursos/a-primeira-chave/**/*.pdf'],
   },
   outputFileTracingExcludes: {
     '*': ['public/videos/**', 'public/**/*.mp4', 'public/**/*.mov'],
