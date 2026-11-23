@@ -17,6 +17,7 @@
 import { MIN_DEPOSIT } from '@/lib/broker/deposito-minimo'
 import { TRIAL_DAYS } from '@/lib/trial-access'
 import type { Interesse } from '@/lib/pedido-contacto-textos'
+import { TRIAL_CONDICAO, TRIAL_CURTO } from '@/lib/escada-caminhos'
 
 export const FUNIS_PUBLICIDADE = ['educacao', 'corretora', 'funded'] as const
 export type FunilPublicidade = (typeof FUNIS_PUBLICIDADE)[number]
@@ -61,10 +62,10 @@ export const FUNIS: Readonly<Record<FunilPublicidade, DefinicaoFunil>> = {
     ag: 'AG-SETTER',
     seo: {
       titulo: 'Aprende trading com método · MoreThanMoney',
-      descricao: `Formação em trading com gestão de risco, sessões ao vivo e comunidade. Experimenta o Premium ${TRIAL_DAYS} dias sem cartão.`,
+      descricao: `Formação em trading com gestão de risco, sessões ao vivo e comunidade. Experimenta o Premium: ${TRIAL_CURTO}.`,
     },
     titulo: 'Aprende a ler o mercado antes de arriscar',
-    subtitulo: `Formação em trading com método e gestão de risco. Experimenta o Premium ${TRIAL_DAYS} dias, sem cartão.`,
+    subtitulo: `Formação em trading com método e gestão de risco. Experimenta o Premium: ${TRIAL_CURTO}.`,
     imagem: { src: '/images/apresentacao/app-aulas.jpg', alt: 'Aulas da MoreThanMoney na app' },
     pontos: [
       { titulo: 'Aulas e sessões ao vivo', texto: 'Em português, do primeiro gráfico à gestão de risco, ao teu ritmo.' },
@@ -74,11 +75,11 @@ export const FUNIS: Readonly<Record<FunilPublicidade, DefinicaoFunil>> = {
     passos: [
       { titulo: 'Deixas o contacto', texto: 'Só o nome e o WhatsApp. Ou falas connosco já no WhatsApp.' },
       { titulo: 'Falamos contigo', texto: 'Uma conversa curta sobre o teu ponto de partida e o tempo que tens.' },
-      { titulo: 'Começas pelo plano certo', texto: `Premium com ${TRIAL_DAYS} dias sem cartão, ou Membro se já tens corretora.` },
+      { titulo: 'Começas pelo plano certo', texto: `Premium com ${TRIAL_CURTO}, ou Membro se preferires começar sem trial.` },
     ],
     formulario: {
       titulo: `Recebe no WhatsApp o acesso grátis de ${TRIAL_DAYS} dias`,
-      subtitulo: 'Deixa o nome e o WhatsApp e mandamos-te o acesso ao Premium. Sem cartão, sem compromisso.',
+      subtitulo: `Deixa o nome e o WhatsApp e mandamos-te o acesso ao Premium. ${TRIAL_CONDICAO}.`,
       botao: 'Quero o acesso grátis',
     },
     atalho: { texto: `Experimentar ${TRIAL_DAYS} dias`, href: '/register' },

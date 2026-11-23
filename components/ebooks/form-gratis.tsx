@@ -2,6 +2,7 @@
 import { useState } from 'react'
 import { perguntasDe } from '@/lib/ebooks/gratis'
 import { FREEBIES, PROXIMO_PASSO, freebieDe } from '@/lib/freebies'
+import { passoSeguinte } from '@/lib/escada-caminhos'
 import { origemComAnuncio } from '@/components/captacao/contacto-rapido'
 import { rastrear } from '@/lib/funis-pixel-browser'
 
@@ -89,15 +90,18 @@ export default function FormGratis({ slug, titulo = 'O Método Frio' }: { slug: 
   )
 }
 
-/** Depois de um freebie: o passo seguinte (Premium grátis, Membro) e os outros dois guias. */
+/** Depois de um freebie: o passo seguinte da escada (degrau de entrada) e os outros dois guias. */
 export function ProximoPasso({ slug }: { slug: string }) {
   const outros = FREEBIES.filter((x) => x !== freebieDe(slug))
+  // O passo seguinte vem da escada (lib/escada-caminhos.ts): o guia dos scanners abre o caminho
+  // das ferramentas; os outros guias e e-books abrem o de quem está a aprender.
+  const passo = passoSeguinte(slug.startsWith('guia-dos-scanners') ? 'ferramentas' : 'aprender', { recebeuIman: true })
   return (
     <div className="mt-6 border-t border-white/10 pt-5 text-left">
       <p className="text-sm text-white/65">Também te enviámos o link por email. O passo seguinte, quando quiseres:</p>
       <div className="mt-3 flex flex-wrap gap-2">
-        <a href={PROXIMO_PASSO.premiumGratis.href} className="rounded-full bg-white px-5 py-2.5 text-sm font-bold text-black">{PROXIMO_PASSO.premiumGratis.texto}</a>
-        <a href={PROXIMO_PASSO.membro.href} className="rounded-full border border-white/25 px-5 py-2.5 text-sm font-semibold text-white">{PROXIMO_PASSO.membro.texto}</a>
+        {passo && <a href={passo.href} className="rounded-full bg-white px-5 py-2.5 text-sm font-bold text-black">{passo.titulo}</a>}
+        <a href={PROXIMO_PASSO.caminho.href} className="rounded-full border border-white/25 px-5 py-2.5 text-sm font-semibold text-white">{PROXIMO_PASSO.caminho.texto}</a>
       </div>
       <p className="mt-5 text-sm text-white/65">Os outros guias grátis da coleção:</p>
       <ul className="mt-2 space-y-1 text-sm">

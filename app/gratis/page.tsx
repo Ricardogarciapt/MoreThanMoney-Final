@@ -33,6 +33,7 @@ export default function Gratis() {
           <p className="text-white/70">Queres ver a app por dentro?</p>
           <div className="mt-4 flex flex-wrap justify-center gap-3">
             <Link href={PROXIMO_PASSO.premiumGratis.href} className="rounded-full bg-white px-5 py-2.5 text-sm font-bold text-black">{PROXIMO_PASSO.premiumGratis.texto}</Link>
+            <Link href={PROXIMO_PASSO.caminho.href} className="rounded-full border border-[#D2A63C]/60 px-5 py-2.5 text-sm font-semibold text-[#E9C46A]">{PROXIMO_PASSO.caminho.texto}</Link>
             <Link href={PROXIMO_PASSO.agendar.href} className="rounded-full border border-white/25 px-5 py-2.5 text-sm font-semibold">{PROXIMO_PASSO.agendar.texto}</Link>
           </div>
         </div>

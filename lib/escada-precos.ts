@@ -32,6 +32,18 @@ export const PREMIUM_MENSAL_EUR = 65
 export const PREMIUM_1O_MES_EUR = 35
 /** O degrau de cima, anual. planId `elite_annual` (ver {@link NOME_DEGRAU_TOPO}). */
 export const TOPO_ANUAL_EUR = 597
+/**
+ * Degraus de ENTRADA (pagamento único, 23/11/2026 — estudo da escada): o salto do grátis para uma
+ * mensalidade era o único caminho, e em 4.173 leads houve 2 vendas. Estes dois produtos já
+ * existiam e já cobram; passam a ser o primeiro passo pago a seguir ao íman.
+ *  • «O Método Frio» + 7 dias de acompanhamento — preço em `marketplace_produtos` (slug o-metodo-frio).
+ *  • Desafio MTM Funded Launch 10K, conta SIMULADA — `mtm_funded_programs.launch-10k-2f`, um por pessoa.
+ * Se o preço mudar na base, muda aqui também (a guarda escada-caminhos não o lê da base).
+ */
+export const ENTRADA_LER_EUR = 5
+export const ENTRADA_PRATICAR_EUR = 10
+export const SLUG_ENTRADA_PRATICAR = 'launch-10k-2f'
+
 /** O bónus que a PU Prime dá sobre o depósito, em percentagem. */
 export const BONUS_DEPOSITO_PCT = 100
 
