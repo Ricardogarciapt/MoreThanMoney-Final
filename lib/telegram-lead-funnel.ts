@@ -136,12 +136,6 @@ export async function runLeadFunnelReply(input: {
   /** Canal de origem — para segmentar com as MESMAS tags (telegram | whatsapp | instagram). */
   source?: string
 }): Promise<string | null> {
-  const key = process.env.ANTHROPIC_API_KEY?.trim()
-  if (!key) return null
-  const model =
-    process.env.TELEGRAM_FUNNEL_MODEL?.trim() ||
-    process.env.ANTHROPIC_MODEL?.trim() ||
-    'claude-haiku-4-5-20251001'
 
   const supabase = getSupabaseAdmin()
   const { data: existing } = await supabase
@@ -218,25 +212,22 @@ export async function runLeadFunnelReply(input: {
     `passados não garantem resultados futuros.`,
   )
 
+  // 23/11: IA via `lib/ia/chamar.ts`, grátis primeiro (regra do Framework). A chamada directa à
+  // Anthropic falhava sem créditos e o lead recebia sempre a mesma pergunta de recurso, em loop.
   let answer: string | null = null
   try {
-    const res = await fetch('https://api.anthropic.com/v1/messages', {
-      method: 'POST',
-      headers: {
-        'content-type': 'application/json',
-        'x-api-key': key,
-        'anthropic-version': '2023-06-01',
-      },
-      body: JSON.stringify({ model, max_tokens: 350, system: `${systemPrompt}\n\n${contextoAdaptativo(lead)}\n\n${blocoFramework('closer')}`, messages }),
+    const { chamarIAGratis } = await import('@/lib/ia/chamar')
+    const r = await chamarIAGratis({
+      sistema: `${systemPrompt}\n\n${contextoAdaptativo(lead)}\n\n${blocoFramework('closer')}`,
+      mensagens: messages,
+      maxTokens: 350,
+      tarefa: 'telegram-bot',
+      prioridade: 'interativo',
+      timeoutMs: 15_000,
     })
-    if (res.ok) {
-      const data = await res.json()
-      answer = (data?.content?.[0]?.text ?? '').trim() || null
-    } else {
-      console.error('[lead-funnel] Anthropic', res.status, (await res.text()).slice(0, 200))
-    }
+    answer = (r.texto ?? '').trim() || null
   } catch (e) {
-    console.error('[lead-funnel] erro Claude:', e)
+    console.error('[lead-funnel] IA falhou:', e instanceof Error ? e.message : e)
   }
   if (!answer) return null
 

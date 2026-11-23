@@ -81,7 +81,7 @@ export const GUIAO: Record<Lingua, Guiao> = {
     botaoLinguas: 'Língua',
     textoDepois: 'Sem problema 🙂 Fica com o meu contacto. Quando quiseres, é só escreveres aqui.',
     textoHumano: `Combinado 🙂 Um assistente da nossa equipa vai falar contigo em breve, aqui mesmo.\n\nSe preferires, marca já uma conversa à hora que te der jeito: ${AGENDA}`,
-    avisoIa: 'Áudio com a voz do Ricardo, feita com IA',
+    avisoIa: '',
     licenca: (n) => `Combinado${n ? `, ${n}` : ''} 🙂 Posso mandar-te o áudio de 1 minuto a contar como tudo começou?`,
     audioAbertura: (n) =>
       `Olá ${n}, obrigado por responderes, a sério. ` +
@@ -146,7 +146,7 @@ export const GUIAO: Record<Lingua, Guiao> = {
     botaoLinguas: 'Language',
     textoDepois: "No problem 🙂 Keep my number. Whenever you want, just write here.",
     textoHumano: `Sure 🙂 Someone from our team will be in touch with you shortly, right here.\n\nIf you prefer, book a call at a time that suits you: ${AGENDA}`,
-    avisoIa: "Voice note in Ricardo's voice, made with AI",
+    avisoIa: '',
     licenca: (n) => `Sure${n ? `, ${n}` : ''} 🙂 Can I send you the 1-minute voice note about how it all started?`,
     audioAbertura: (n) =>
       `Hi ${n}, thanks for replying, really. ` +
@@ -211,7 +211,7 @@ export const GUIAO: Record<Lingua, Guiao> = {
     botaoLinguas: 'Langue',
     textoDepois: "Pas de souci 🙂 Garde mon numéro. Quand tu veux, écris-moi ici.",
     textoHumano: `D'accord 🙂 Quelqu'un de notre équipe va te contacter très bientôt, ici même.\n\nSi tu préfères, réserve un appel au moment qui t'arrange : ${AGENDA}`,
-    avisoIa: 'Vocal avec la voix de Ricardo, créé avec IA',
+    avisoIa: '',
     licenca: (n) => `D'accord${n ? `, ${n}` : ''} 🙂 Je peux t'envoyer le vocal d'une minute qui raconte comment tout a commencé ?`,
     audioAbertura: (n) =>
       `Salut ${n}, merci de ta réponse, vraiment. ` +
@@ -276,7 +276,7 @@ export const GUIAO: Record<Lingua, Guiao> = {
     botaoLinguas: 'Sprache',
     textoDepois: 'Kein Problem 🙂 Behalte meine Nummer. Wann immer du willst, schreib mir einfach hier.',
     textoHumano: `Alles klar 🙂 Jemand aus unserem Team meldet sich in Kürze bei dir, direkt hier.\n\nWenn du willst, buch dir gleich einen Termin, wann es dir passt: ${AGENDA}`,
-    avisoIa: 'Sprachnachricht mit Ricardos Stimme, per KI',
+    avisoIa: '',
     licenca: (n) => `Alles klar${n ? `, ${n}` : ''} 🙂 Darf ich dir die einminütige Sprachnachricht schicken, wie alles angefangen hat?`,
     audioAbertura: (n) =>
       `Hallo ${n}, danke für deine Antwort, wirklich. ` +
@@ -341,7 +341,7 @@ export const GUIAO: Record<Lingua, Guiao> = {
     botaoLinguas: 'Idioma',
     textoDepois: 'Sin problema 🙂 Guarda mi número. Cuando quieras, escríbeme aquí.',
     textoHumano: `Vale 🙂 Alguien de nuestro equipo te contactará muy pronto, aquí mismo.\n\nSi prefieres, reserva ya una llamada a la hora que te venga bien: ${AGENDA}`,
-    avisoIa: 'Audio con la voz de Ricardo, hecho con IA',
+    avisoIa: '',
     licenca: (n) => `Vale${n ? `, ${n}` : ''} 🙂 ¿Te mando el audio de 1 minuto contando cómo empezó todo?`,
     audioAbertura: (n) =>
       `Hola ${n}, gracias por responder, de verdad. ` +

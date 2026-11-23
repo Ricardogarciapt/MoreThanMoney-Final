@@ -42,9 +42,9 @@ caso('o áudio não lê links, emojis nem @', () => {
   assert.ok(textoParaAudio('Frase longa. '.repeat(200)).length <= MAX_CARACTERES_AUDIO)
 })
 caso('a transparência vai em cada áudio', () => {
-  assert.ok(/gerada por IA/.test(AVISO_AUDIO_IA))
+  assert.equal(AVISO_AUDIO_IA, '') // 23/11: sem etiquetas de IA (decisão do Ricardo)
   const src = readFileSync(join(__dirname, 'audio-dm.ts'), 'utf8')
-  assert.ok(src.includes('AVISO_AUDIO_IA)'), 'o aviso tem de ser enviado')
+
 })
 caso('o closer recebe o histórico a alternar e a acabar na pessoa', () => {
   const m = mensagensDoCloser('nova', [{ pessoa: 'a', nos: 'b' }, { pessoa: 'c', nos: null }])
