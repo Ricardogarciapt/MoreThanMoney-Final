@@ -13,6 +13,7 @@
  * Depois de qualquer freebie, o passo seguinte é sempre o mesmo: Premium 3 dias grátis e o plano Membro.
  */
 import type { SlugEbook } from '@/lib/ebooks/acesso'
+import { TRIAL_CURTO } from '@/lib/escada-caminhos'
 
 export const BASE_SITE = 'https://www.morethanmoney.pt'
 
@@ -89,7 +90,8 @@ export function linkDoFreebie(f: Freebie, origem?: { s?: string; c?: string }): 
 
 /** O passo seguinte a qualquer freebie: o mesmo em todo o lado (página de sucesso, email, setter). */
 export const PROXIMO_PASSO = {
-  premiumGratis: { texto: 'Experimentar o Premium 3 dias grátis (sem cartão)', href: '/register' },
+  premiumGratis: { texto: `Experimentar o Premium · ${TRIAL_CURTO}`, href: '/register?plan=premium' },
   membro: { texto: 'Ser Membro MoreThanMoney', href: '/upgrade?plan=app_member_monthly' },
   agendar: { texto: 'Falar com a equipa (conversa grátis)', href: '/agendar' },
+  caminho: { texto: 'Ver o meu caminho (3 portas)', href: '/caminho' },
 } as const

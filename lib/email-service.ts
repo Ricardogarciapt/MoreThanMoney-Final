@@ -230,7 +230,7 @@ export async function sendFreebieEmail(p: {
 ${btn(p.links.pt, 'Abrir o guia')}${outras}
 ${gk}
 <h2 style="color:${ouro};font-size:18px;margin:28px 0 8px">O passo seguinte</h2>
-<p style="margin:0 0 12px;line-height:1.55">Se quiseres fazer isto acompanhado, o Premium tem 3 dias grátis, sem cartão: aulas ao vivo, comunidade, WebTrader e as ideias da casa. Quando quiseres continuar, o plano Membro dá-te tudo isso todos os meses.</p>
+<p style="margin:0 0 12px;line-height:1.55">Se quiseres fazer isto acompanhado, o Premium tem 3 dias grátis (só cobra ao 4.º dia e cancelas quando quiseres): aulas ao vivo, comunidade, WebTrader e as ideias da casa. Quando quiseres continuar, o plano Membro dá-te tudo isso todos os meses.</p>
 ${btn(`${site}/register`, 'Premium 3 dias grátis')}${btn(`${site}/upgrade?plan=app_member_monthly`, 'Ser Membro', false)}
 <p style="margin:28px 0 0;font-size:12px;color:#999">Conteúdo educativo, não constitui consultoria financeira. Negociar tem risco. Para deixares de receber, responde SAIR. · MoreThanMoney.pt</p></div>`
   await sendHtmlMail(p.to, `O teu guia grátis: «${p.titulo}»`, html)

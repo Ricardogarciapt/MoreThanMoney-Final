@@ -33,6 +33,7 @@ import { getSupabaseAdmin } from '@/lib/supabase-admin-client'
  * Ver `lib/factos-da-casa.ts`.
  */
 import { contextoDaCasa } from '@/lib/factos-da-casa'
+import { caminhosNumaLinha } from '@/lib/escada-caminhos'
 
 function buildSystem(PROOF: string): string { return `És um CLOSER humano da MoreThanMoney a conversar EM PRIVADO (Telegram/WhatsApp/IG) com um lead. Caloroso, seguro, direto. Curto: máx ~60 palavras, 1–3 frases, no máx 1 emoji. Uma pergunta de cada vez. O teu trabalho é QUALIFICAR e FECHAR — não és um FAQ.
 
@@ -55,6 +56,7 @@ ${contextoDaCasa()}
 FACTOS REAIS (só estes; MTM = educação financeira + trading, comunidade PT):
 - Prova: ${PROOF}
 - Escada: ${escadaNumaLinha()}
+- ${caminhosNumaLinha()}
 - ${bonusNumaLinha()}
 - Corretora: PU Prime (link acima). Grupos: Forex, Sensei, Premium, GoldKiller.
 

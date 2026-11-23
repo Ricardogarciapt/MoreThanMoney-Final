@@ -30,6 +30,7 @@ import { linkAssinado } from '@/lib/agentes/codigos'
 import { AGENTE_DO_PASSO } from '@/lib/vendas/escada-followup'
 import { PRECO_MEMBRO } from '@/lib/escada-precos'
 import { MIN_DEPOSIT } from '@/lib/broker/deposito-minimo'
+import { porta } from '@/lib/escada-caminhos'
 
 type Db = SupabaseClient
 
@@ -74,6 +75,9 @@ export function emailDoToque(
   const ola = primeiroNome ? `Olá ${primeiroNome},` : 'Olá,'
   const membro = linkAssinado('/register?plano=membro', AGENTE_DO_PASSO.membro)
   const corretora = linkAssinado('/abrir-conta', AGENTE_DO_PASSO.corretora)
+  // Degraus de entrada (pagamento único) para quem recusa a mensalidade — lib/escada-caminhos.ts.
+  const ler = porta('entrada_ler')
+  const desafio = porta('entrada_praticar')
   const rodape =
     `\n\n—\nRicardo Garcia · MoreThanMoney (morethanmoney.pt)\n` +
     `Conteúdo educativo, não constitui consultoria financeira. Resultados passados não garantem resultados futuros.\n` +
@@ -106,6 +110,7 @@ export function emailDoToque(
         `${ola}\n\nFaltam poucos dias para o teu acesso de 30 dias ao GoldKiller terminar. Se quiseres mantê-lo, ` +
         `o pack Membro (${PRECO_MEMBRO}) inclui-o, com a formação e a comunidade: ${membro}\n\n` +
         `Se preferires a rota da corretora, com a conta validada o Premium fica incluído: ${corretora}\n\n` +
+        `Se ainda não é altura de uma mensalidade: ${desafio.titulo}. ${desafio.texto} ${SITE}${desafio.href}\n\n` +
         `Não te volto a escrever sobre isto. Qualquer dúvida, é só responder.` + rodape,
     }
   }
@@ -131,7 +136,8 @@ export function emailDoToque(
     assunto: 'Fico por aqui',
     texto:
       `${ola}\n\nNão te volto a escrever sobre isto. Se um dia quiseres avançar, o pack Membro está em ${membro} ` +
-      `e a rota da corretora em ${corretora}. Qualquer dúvida, é só responder.` + rodape,
+      `e a rota da corretora em ${corretora}.\n\nSe ainda não é altura de uma mensalidade, há um primeiro passo de pagamento único: ` +
+      `${ler.titulo} (${SITE}${ler.href}), ou ${desafio.titulo} (${SITE}${desafio.href}).\n\nQualquer dúvida, é só responder.` + rodape,
   }
 }
 

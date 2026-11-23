@@ -162,7 +162,7 @@ export default function ContactoRapido({
           Recebido, {nome.trim().split(' ')[0]}!
         </p>
         <p className="mt-2 text-[14px] leading-relaxed text-zinc-300">
-          Não precisas de esperar: ativa já os teus dias grátis (sem cartão). Também te mandamos mensagem no WhatsApp.
+          Não precisas de esperar: ativa já os teus dias grátis (só cobra no fim e cancelas quando quiseres). Também te mandamos mensagem no WhatsApp.
         </p>
         <a
           href="/register?plan=premium&utm_source=contacto-rapido"

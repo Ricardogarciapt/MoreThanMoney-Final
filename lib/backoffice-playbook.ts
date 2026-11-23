@@ -19,6 +19,7 @@
  */
 import { escadaNumaLinha, bonusNumaLinha, NOME_DEGRAU_TOPO } from '@/lib/escada-precos'
 import type { EstadoPipeline } from '@/lib/backoffice-vista'
+import { caminhosNumaLinha } from '@/lib/escada-caminhos'
 
 export interface Sugestao {
   /** O movimento, em três ou quatro palavras. É o que a pessoa lê primeiro. */
@@ -75,7 +76,7 @@ const GUIAO: Record<EstadoPipeline, Sugestao> = {
     porque:
       'A escada já foi apresentada: o que falta é escolher com a pessoa, e não voltar a explicá-la. Reapresentar é começar outra vez.',
     abrir:
-      `Perguntar qual dos degraus faz sentido para ela HOJE e fechar nesse. A escada, pela ordem da casa: ${escadaNumaLinha()}. ` +
+      `Perguntar qual dos degraus faz sentido para ela HOJE e fechar nesse. A escada, pela ordem da casa: ${escadaNumaLinha()}. ${caminhosNumaLinha()} ` +
       `O ${NOME_DEGRAU_TOPO} é para quem sobe, nunca a abertura.`,
   },
   ganho: {

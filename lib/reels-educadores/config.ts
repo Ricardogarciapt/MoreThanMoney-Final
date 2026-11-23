@@ -188,9 +188,9 @@ export const LINHAS_REELS: EducadorReel[] = [
     slug: 'mtm-cta', nome: 'MoreThanMoney', area: 'Começa hoje',
     foto: `${SITE}/images/apresentacao/app-feed.jpg`,
     palavra: 'COMEÇAR', depois: 'e recebes o link para entrar', publicar: true, cortes: false,
-    objetivo: 'CTA directo: convidar a começar hoje (conta gratuita, aulas, app, Premium com experiência de 3 dias sem cartão). Honesto, sem urgência falsa nem promessas.',
+    objetivo: 'CTA directo: convidar a começar hoje (conta gratuita, aulas, app, Premium com experiência de 3 dias grátis, cancelas quando quiseres; nunca dizer «sem cartão»). Honesto, sem urgência falsa nem promessas.',
     temas: [
-      'começa hoje: aulas, app e comunidade', 'experimenta o Premium 3 dias sem cartão', 'três caminhos: aprender, abrir conta ou treinar num desafio',
+      'começa hoje: aulas, app e comunidade', 'experimenta o Premium 3 dias grátis', 'três caminhos: aprender, abrir conta ou treinar num desafio',
       'não aprendas sozinho', 'a app MTM no telemóvel',
     ],
     demos: [], hashtags: SEGUE,

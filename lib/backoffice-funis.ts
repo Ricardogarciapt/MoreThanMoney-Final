@@ -16,7 +16,7 @@ export const FUNIL_NOME: Record<Funil, string> = {
 
 /** Uma frase por funil: o que se vende ali, para quem trabalha o quadro não confundir. */
 export const FUNIL_RESUMO: Record<Funil, string> = {
-  educacao: 'Membro e Premium (trial sem cartão).',
+  educacao: 'Membro e Premium (trial de 3 dias, pede cartão e só cobra no fim).',
   corretora: 'Conta na PU Prime financiada desbloqueia o Premium.',
   funded: 'Sem capital: contas simuladas e Patrocínio de Desempenho. Não é prop firm.',
   b2b: 'Negócios locais: soluções e demos em /solucoes.',
