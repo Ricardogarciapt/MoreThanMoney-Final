@@ -28,6 +28,8 @@ import { Cabecalho, Falhou, Vazio } from '../_partes/blocos'
 import { Gerador } from './gerador'
 import { KitDosPapeis } from './kit'
 import { kitsPara } from '@/lib/backoffice-kit-papeis'
+import { AULAS, CURSO, aulasPara } from '@/lib/backoffice-formacao'
+import Link from 'next/link'
 
 export const dynamic = 'force-dynamic'
 export const metadata = { title: 'Materiais · Backoffice MTM' }
@@ -90,6 +92,23 @@ export default async function MaterialPage() {
         titulo="Materiais"
         sub="O teu código, os links que podes partilhar, e um gerador de peças com o tom da casa."
       />
+
+      {/* A formação da equipa vive aqui, ao lado do material que ela ensina a usar. */}
+      <section className="space-y-3">
+        <h2 className="text-sm font-semibold uppercase tracking-wide text-zinc-500">Formação</h2>
+        <Link
+          href="/backoffice/material/formacao"
+          className="block rounded-xl border border-[#D2A63C]/40 bg-gradient-to-br from-[#D2A63C]/10 to-transparent p-5 transition-colors hover:border-[#D2A63C]/70"
+        >
+          <div className="text-lg font-semibold text-white">{CURSO.titulo.pt} · PT / EN</div>
+          <p className="mt-1 text-sm leading-relaxed text-zinc-400">
+            {AULAS.length} aulas narradas pelo Ricardo: o back-office, prospector, setter, closer, afiliados e IBs, Soluções e a rotina
+            diária. Para ti há {aulasPara(ctx.papeis, ctx.admin || ctx.papeis.includes('team_leader')).length} — com guiões para copiar,
+            mind maps e quiz.
+          </p>
+          <span className="mt-3 inline-block text-sm font-semibold text-[#D2A63C]">Começar →</span>
+        </Link>
+      </section>
 
       <section className="space-y-3">
         <h2 className="text-sm font-semibold uppercase tracking-wide text-zinc-500">O teu código</h2>
