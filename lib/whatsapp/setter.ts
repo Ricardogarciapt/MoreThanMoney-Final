@@ -4,6 +4,7 @@
  * negócio do pipeline (criado se ainda não existir). Nunca rebenta o funil.
  */
 import { getSupabaseAdmin } from '@/lib/supabase-admin-client'
+import { donoPorPapel, marcarDonoNoNegocio } from '@/lib/vendas/dono-por-papel'
 import { variantesDoNumero } from '@/lib/whatsapp-envio'
 import type { Lingua } from '@/lib/whatsapp/linguas'
 
@@ -35,6 +36,8 @@ export async function passarParaSetter(e164: string, nome: string, lingua: Lingu
     const chave = `wa-${motivo === 'pediu' ? 'humano' : 'seguimento'}:${neg.id}:${hoje}`
     const { data: ja } = await db.from('vendas_tarefas').select('id').eq('chave', chave).maybeSingle()
     if (!ja) {
+      const dono = await donoPorPapel(db, 'setter')
+      if (dono) await marcarDonoNoNegocio(db, neg.id, dono)
       await db.from('vendas_tarefas').insert({
         chave,
         titulo: motivo === 'pediu' ? `Falar com ${neg.nome || nome || e164} no WhatsApp (pediu uma pessoa)` : `Retomar ${neg.nome || nome || e164} no WhatsApp (foi ao site e calou-se)`,
@@ -43,6 +46,7 @@ export async function passarParaSetter(e164: string, nome: string, lingua: Lingu
           : `Seguimento automático do WhatsApp esgotado. Língua: ${lingua.toUpperCase()}. Número ${e164}. ${frase.slice(0, 400)}`,
         negocio_id: neg.id,
         papel: 'setter',
+        responsavel_id: dono?.userId ?? null,
         prazo: hoje,
         estado: 'aberta',
       })
@@ -79,12 +83,15 @@ export async function passarParaSetterTelegram(chatId: string, nome: string, lin
     const chave = `tg-${motivo === 'pediu' ? 'humano' : 'seguimento'}:${neg.id}:${hoje}`
     const { data: ja } = await db.from('vendas_tarefas').select('id').eq('chave', chave).maybeSingle()
     if (!ja) {
+      const dono = await donoPorPapel(db, 'setter')
+      if (dono) await marcarDonoNoNegocio(db, neg.id, dono)
       await db.from('vendas_tarefas').insert({
         chave,
         titulo: motivo === 'pediu' ? `Falar com ${neg.nome || nome || chatId} no Telegram (pediu uma pessoa)` : `Retomar ${neg.nome || nome || chatId} no Telegram (foi ao site e calou-se)`,
         descricao: `${motivo === 'pediu' ? 'Pediu para falar com uma pessoa no funil do Telegram.' : 'Seguimento automático do Telegram esgotado.'} Língua: ${lingua.toUpperCase()}. Chat ${chatId}. ${frase.slice(0, 400)} Responde no back-office → Conversas → Telegram.`,
         negocio_id: neg.id,
         papel: 'setter',
+        responsavel_id: dono?.userId ?? null,
         prazo: hoje,
         estado: 'aberta',
       })

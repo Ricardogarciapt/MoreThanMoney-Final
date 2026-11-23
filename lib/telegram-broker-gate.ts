@@ -35,8 +35,52 @@ async function tg(method: string, body: Record<string, unknown>) {
     return null
   }
 }
-const send = (chatId: string | number, text: string, extra: Record<string, unknown> = {}) =>
-  tg('sendMessage', { chat_id: chatId, text, parse_mode: 'HTML', disable_web_page_preview: true, ...extra })
+/**
+ * 23/11: o mesmo funil serve o WhatsApp. Um lead de WhatsApp vive em `telegram_leads` com
+ * `chat_id = 'wa:<número>'`; para esses, a mensagem sai pelo WhatsApp (HTML convertido em texto).
+ */
+const ehWhatsApp = (chatId: string | number) => String(chatId).startsWith('wa:')
+function htmlParaTexto(t: string): string {
+  return t
+    .replace(/<a [^>]*href="([^"]+)"[^>]*>(.*?)<\/a>/g, '$2: $1')
+    .replace(/<\/?(b|strong)>/g, '*')
+    .replace(/<\/?(i|em)>/g, '_')
+    .replace(/<\/?code>/g, '')
+    .replace(/<[^>]+>/g, '')
+    .replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&amp;/g, '&')
+}
+async function send(chatId: string | number, text: string, extra: Record<string, unknown> = {}) {
+  if (ehWhatsApp(chatId)) {
+    const { enviarWhatsApp } = await import('@/lib/whatsapp-mensageiro')
+    const r = await enviarWhatsApp({ para: String(chatId).slice(3), finalidade: 'servico', texto: htmlParaTexto(text) })
+    return { ok: r.enviado }
+  }
+  return tg('sendMessage', { chat_id: chatId, text, parse_mode: 'HTML', disable_web_page_preview: true, ...extra })
+}
+
+/** Foto para o admin: `file_id` do Telegram, ou os bytes (print vindo do WhatsApp). */
+async function fotoAoAdmin(adminChat: string, foto: string | Blob, legenda: string, teclado: unknown): Promise<string | null> {
+  if (typeof foto === 'string') {
+    await tg('sendPhoto', { chat_id: adminChat, photo: foto, caption: legenda, parse_mode: 'HTML', reply_markup: teclado })
+    return foto
+  }
+  const token = BOT()
+  if (!token) return null
+  try {
+    const f = new FormData()
+    f.append('chat_id', adminChat)
+    f.append('caption', legenda)
+    f.append('parse_mode', 'HTML')
+    f.append('reply_markup', JSON.stringify(teclado))
+    f.append('photo', foto, 'print.jpg')
+    const r = await fetch(`https://api.telegram.org/bot${token}/sendPhoto`, { method: 'POST', body: f })
+    const j = (await r.json().catch(() => null)) as { result?: { photo?: Array<{ file_id: string }> } } | null
+    const fotos = j?.result?.photo ?? []
+    return fotos.length ? fotos[fotos.length - 1].file_id : null
+  } catch {
+    return null
+  }
+}
 
 /**
  * Um UID de corretora = número com 5–12 dígitos.
@@ -125,6 +169,14 @@ export async function handleBrokerUid(
   if (await autoValidated(supabase, uid)) {
     await grantBrokerAccess(supabase, chatId)
     return
+  }
+  // 23/11: o mesmo UID já foi validado noutro canal (Telegram e WhatsApp) e vale aqui também.
+  {
+    const { data: outro } = await supabase.from('telegram_leads').select('chat_id').eq('broker_uid', uid).eq('stage', 'granted').neq('chat_id', chatId).limit(1)
+    if (outro?.length) {
+      await grantBrokerAccess(supabase, chatId)
+      return
+    }
   }
   await avisarAdminSeUidNaoCasa(supabase, chatId, uid, firstName)
   await send(
@@ -227,7 +279,7 @@ async function linhaPrimeGateDoLead(supabase: Supa, chatId: string): Promise<str
 export async function handleProofPhoto(
   supabase: Supa,
   chatId: string,
-  fileId: string,
+  foto: string | Blob,
   firstName?: string | null,
 ): Promise<void> {
   const { data: lead } = await supabase
@@ -247,21 +299,21 @@ export async function handleProofPhoto(
   }
   await supabase
     .from('telegram_leads')
-    .update({ proof_file_id: fileId, stage: 'pending_review', first_name: firstName ?? null, updated_at: new Date().toISOString() })
+    .update({ ...(typeof foto === 'string' ? { proof_file_id: foto } : {}), stage: 'pending_review', first_name: firstName ?? null, updated_at: new Date().toISOString() })
     .eq('chat_id', chatId)
-  await send(chatId, '📸 Recebido! Estou a validar o teu depósito — em breve liberto o acesso. 🙌')
+  await send(chatId, '📸 Recebido! Estou a validar o teu depósito, em breve liberto o acesso. 🙌')
 
   const adminChat = await getAdminChatId(supabase)
   if (!adminChat) {
-    console.warn('[broker-gate] telegram_admin_chat_id não configurado — não é possível notificar aprovação')
+    console.warn('[broker-gate] telegram_admin_chat_id não configurado, não é possível notificar aprovação')
     return
   }
-  await tg('sendPhoto', {
-    chat_id: adminChat,
-    photo: fileId,
-    caption: `🆕 <b>Pedido de acesso</b>\nUID: <code>${uid}</code>\nLead: ${firstName ?? chatId} (chat ${chatId})${await linhaPrimeGateDoLead(supabase, chatId)}\n\nDepósito ≥ $${MIN_DEPOSIT}?`,
-    parse_mode: 'HTML',
-    reply_markup: {
+  const canal = ehWhatsApp(chatId) ? 'WhatsApp' : 'Telegram'
+  const fileId = await fotoAoAdmin(
+    adminChat,
+    foto,
+    `🆕 <b>Pedido de acesso</b> (${canal})\nUID: <code>${uid}</code>\nLead: ${firstName ?? chatId} (chat ${chatId})${await linhaPrimeGateDoLead(supabase, chatId)}\n\nDepósito ≥ $${MIN_DEPOSIT}?`,
+    {
       inline_keyboard: [
         [
           { text: '✅ Aprovar', callback_data: `bkapprove:${chatId}` },
@@ -269,7 +321,10 @@ export async function handleProofPhoto(
         ],
       ],
     },
-  })
+  )
+  if (typeof foto !== 'string' && fileId) {
+    await supabase.from('telegram_leads').update({ proof_file_id: fileId }).eq('chat_id', chatId)
+  }
 }
 
 /** Cria um cupão Premium individual e devolve o código. */
@@ -315,6 +370,27 @@ export async function grantBrokerAccess(supabase: Supa, chatId: string): Promise
     .update({ stage: 'granted', coupon_code: coupon, granted_at: new Date().toISOString(), updated_at: new Date().toISOString() })
     .eq('chat_id', chatId)
 
+  // 23/11: CRM (negócio ganho, ligado ao utilizador do site) + tarefa da chamada de onboarding.
+  try {
+    const { membroValidado } = await import('@/lib/vendas/membro-validado')
+    await membroValidado({ chatId, uid })
+  } catch {
+    /* o acesso não pode ficar preso ao CRM */
+  }
+  const { LINK_AGENDAR_ONBOARDING } = await import('@/lib/agenda/link')
+
+  if (ehWhatsApp(chatId)) {
+    await send(
+      chatId,
+      `🎉 <b>Conta validada, acesso libertado!</b>\n\n` +
+        (coupon ? `📲 O teu cupão Premium para a app: <code>${coupon}</code>\nCria conta e usa-o aqui: https://www.morethanmoney.pt/register\n\n` : '') +
+        `📅 Marca já a tua chamada de onboarding (30 min, ajudo-te a pôr tudo a funcionar): ${LINK_AGENDAR_ONBOARDING}\n\n` +
+        `📡 Os grupos de sinais estão no Telegram: abre https://t.me/MoreThanMoney_aibot e envia o teu UID${uid ? ` (${uid})` : ''}, reconheço-te logo.\n\n` +
+        `Mantém o saldo ≥ $${MIN_DEPOSIT} na PU Prime para continuares com acesso.`,
+    )
+    return
+  }
+
   // Quem já tinha pedido para entrar num grupo de sinais é aprovado agora, sem ter de pedir outra vez.
   try {
     const { aprovarPedidosPendentes } = await import('@/lib/telegram-porta-sinais')
@@ -334,6 +410,7 @@ export async function grantBrokerAccess(supabase: Supa, chatId: string): Promise
         ? `📲 O teu cupão Premium para a app: <code>${coupon}</code>\n` +
           `Descarrega a app, cria conta e usa o cupão para ativar + fazer onboarding: https://www.morethanmoney.pt/register\n\n`
         : '') +
+      `📅 Marca a tua chamada de onboarding (30 min): ${LINK_AGENDAR_ONBOARDING}\n\n` +
       `Mantém o saldo ≥ $${MIN_DEPOSIT} na PU Prime para continuares com acesso. Bons trades! 🚀`,
   )
 

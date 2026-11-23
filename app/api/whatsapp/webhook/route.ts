@@ -50,6 +50,23 @@ interface WAMessage {
   button?: { text?: string; payload?: string }
   /** Toque num botão ou numa linha de lista de uma mensagem interativa. */
   interactive?: { button_reply?: { id?: string; title?: string }; list_reply?: { id?: string; title?: string } }
+  /** Foto (o print do depósito, no passo da corretora). */
+  image?: { id?: string; caption?: string; mime_type?: string }
+}
+
+/** Descarrega uma foto recebida no WhatsApp (Graph API: id → url → bytes). Nada se guarda. */
+async function baixarFotoWhatsApp(mediaId: string): Promise<Blob | null> {
+  const token = (process.env.WHATSAPP_TOKEN ?? '').trim()
+  if (!token) return null
+  try {
+    const meta = await fetch(`https://graph.facebook.com/v21.0/${mediaId}`, { headers: { Authorization: `Bearer ${token}` } })
+    const j = (await meta.json().catch(() => null)) as { url?: string } | null
+    if (!j?.url) return null
+    const r = await fetch(j.url, { headers: { Authorization: `Bearer ${token}` } })
+    return r.ok ? await r.blob() : null
+  } catch {
+    return null
+  }
 }
 
 /** O que a pessoa escreveu ou tocou, e o id do botão/linha quando tocou. Puro. */
@@ -117,6 +134,24 @@ export async function POST(req: NextRequest) {
       for (const m of (value?.messages ?? []) as WAMessage[]) {
         const from = m.from
         const { texto: text, botao } = lerEntrada(m)
+
+        /**
+         * 23/11: ABRIR CONTA E VALIDAR SEM SAIR DO WHATSAPP. O print do depósito chega como foto e vai
+         * ao Ricardo para aprovar (o mesmo motor do Telegram, `lib/telegram-broker-gate.ts`).
+         */
+        if (from && m.type === 'image' && m.image?.id) {
+          try {
+            await registarEntrada({ numero: from, texto: '[foto]', waMessageId: m.id ?? null, nome: contactName })
+            const foto = await baixarFotoWhatsApp(m.image.id)
+            if (foto) {
+              const { handleProofPhoto } = await import('@/lib/telegram-broker-gate')
+              await handleProofPhoto(getSupabaseAdmin() as never, `wa:${from}`, foto, contactName)
+            }
+          } catch (e) {
+            console.error('[whatsapp] foto/print falhou:', e instanceof Error ? e.message : e)
+          }
+          continue
+        }
         if (!from || !text) continue
 
         /**
@@ -165,6 +200,22 @@ export async function POST(req: NextRequest) {
          * guião texto → áudio → lista → áudio → link (`lib/whatsapp/fluxo.ts`). Vem ANTES do filtro de
          * leads novos porque o reencontro é precisamente com contactos que o Ricardo já tem.
          */
+        // 23/11: UID da PU Prime (só o número) ou email da conta → validação, como no Telegram.
+        if (!botao) {
+          try {
+            const bg = await import('@/lib/telegram-broker-gate')
+            const uid = bg.looksLikeBrokerUid(text)
+            const db = getSupabaseAdmin() as never
+            if (uid) {
+              await bg.handleBrokerUid(db, `wa:${from}`, uid, contactName)
+              continue
+            }
+            if (await bg.tratarEmailPrimeGate(db, `wa:${from}`, text)) continue
+          } catch (e) {
+            console.error('[whatsapp] validação da corretora falhou:', e instanceof Error ? e.message : e)
+          }
+        }
+
         const { data: est } = await getSupabaseAdmin().from('telegram_leads').select('stage').eq('chat_id', `wa:${from}`).maybeSingle()
         const noGuiao = typeof est?.stage === 'string' && est.stage.startsWith('wa_') && est.stage !== 'wa_humano'
         if (numero) {
