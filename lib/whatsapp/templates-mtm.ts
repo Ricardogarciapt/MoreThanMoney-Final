@@ -165,6 +165,36 @@ export const TEMPLATES_MTM = [
       },
     ],
   },
+  {
+    /**
+     * Reencontro v2 (23/11): o mesmo pedido de licença, mas a apresentar o número. Quem recebe tem o
+     * Ricardo guardado com o número pessoal, não este; sem isto a 1.ª mensagem chega de um desconhecido.
+     * Mesmos botões (BOTAO_* em `lib/vendas/guiao-whatsapp.ts`).
+     */
+    name: 'mtm_reencontro_v2',
+    language: 'pt_PT',
+    category: 'MARKETING',
+    components: [
+      {
+        type: 'BODY',
+        text:
+          'Olá {{1}}, é o Ricardo Garcia 👋\n\n' +
+          'Este é o número oficial da MoreThanMoney, o meu número de trabalho (guarda-o, se quiseres). ' +
+          'Tinha o teu contacto e lembrei-me de ti: estou a abrir uma coisa nova e queria saber se te interessa.\n\n' +
+          'Posso mandar-te um áudio curto, de 1 minuto, a explicar?',
+        example: { body_text: [['Ana']] },
+      },
+      { type: 'FOOTER', text: 'Podes deixar de receber a qualquer momento' },
+      {
+        type: 'BUTTONS',
+        buttons: [
+          { type: 'QUICK_REPLY', text: 'Sim, manda' },
+          { type: 'QUICK_REPLY', text: 'Agora não' },
+          { type: 'QUICK_REPLY', text: 'Não quero receber' },
+        ],
+      },
+    ],
+  },
 ] as const
 
 /** Template de primeiro contacto para cada interesse do formulário «Quero que me liguem». */

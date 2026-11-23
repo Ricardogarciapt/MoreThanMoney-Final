@@ -211,7 +211,7 @@ export interface Pedido {
 }
 
 /** Templates cujo corpo é só um pedido de licença com botões Sim / Não / Sair. */
-export const TEMPLATES_PEDIDO_DE_LICENCA = ['mtm_reencontro'] as const
+export const TEMPLATES_PEDIDO_DE_LICENCA = ['mtm_reencontro', 'mtm_reencontro_v2'] as const
 
 export interface Decisao {
   pode: boolean

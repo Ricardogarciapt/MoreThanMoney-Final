@@ -34,6 +34,8 @@ interface Config {
   origens: string[]
   /** Licença do dono para os contactos sem linha no livro (quem decidiu e quando). */
   licenca_dono?: { por?: string; em?: string; nota?: string } | null
+  /** Template da abertura (omissão `mtm_reencontro`; `mtm_reencontro_v2` apresenta o número). */
+  template?: string
 }
 
 const OMISSAO: Config = { ligado: false, por_dia: 40, hora_ini: 10, hora_fim: 20, origens: ['whatsapp_import'] }
@@ -102,7 +104,7 @@ export async function correrReencontro(db: Db): Promise<ResultadoReencontro> {
       licencaDono: cfg.licenca_dono?.por ? `${cfg.licenca_dono.por} ${cfg.licenca_dono.em ?? ''}`.trim() : null,
       para: c.telefone,
       finalidade: 'campanha',
-      template: { nome: TEMPLATE_REENCONTRO, idioma: 'pt_PT', parametros: [primeiroNome(c.nome)] },
+      template: { nome: cfg.template || TEMPLATE_REENCONTRO, idioma: 'pt_PT', parametros: [primeiroNome(c.nome)] },
       agente: { funil: 'whatsapp:reencontro' },
     })
     if (!res.enviado) {
