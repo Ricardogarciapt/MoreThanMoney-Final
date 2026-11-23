@@ -100,6 +100,8 @@ export async function GET(req: NextRequest) {
       token,
     ),
   )
+  // 23/11: chamadas de voz (WhatsApp Business Calling). Diz se o número tem chamadas ligadas.
+  out.chamadas = limpo(await g(`${phoneId}/settings`, token))
   out.numeros_da_waba = limpo(await g(`${waba}/phone_numbers?fields=id,display_phone_number,verified_name,status,quality_rating,code_verification_status,platform_type`, token))
 
   if (acao === 'subscrever') {
