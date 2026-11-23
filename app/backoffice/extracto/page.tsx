@@ -31,7 +31,8 @@
  * A tabela pagina-se em memória, e de propósito: os totais em cima têm de somar o PERÍODO todo e
  * não a página. Uma paginação na base dava quatro números que mudavam ao virar a página.
  *
- * SÓ LEITURA. Aprovar e pagar comissões é um acto do dono, e faz-se no admin.
+ * Aprovar é um acto do dono, no admin. Os dados de recebimento (Stripe Connect) preenchem-se aqui;
+ * com eles completos, o aprovado é transferido no ciclo diário (lib/pagamentos/comissoes-stripe.ts).
  */
 import { getSupabaseAdmin } from '@/lib/supabase-admin-client'
 // O âmbito vem do modelo de equipas; o tecto de linhas vem do extracto. As duas coisas são
@@ -49,6 +50,7 @@ import {
 } from '@/lib/backoffice-vista'
 import { fatiar, fimDoDia, inicioDoDia, lerDia, lerPagina } from '@/lib/backoffice-paginacao'
 import { abrirPagina, SemAcesso } from '../_partes/acesso'
+import { ReceberPagamentos } from '../_partes/receber-pagamentos'
 import { Aviso, Cabecalho, Etiqueta, Falhou, Numero, Vazio } from '../_partes/blocos'
 import { Campo, ESTILO_CAMPO, Filtros, Paginacao, type Params } from '../_partes/navegar'
 
@@ -120,6 +122,8 @@ export default async function ExtractoPage({ searchParams }: { searchParams: Pro
             : 'O que ganhaste pelo teu trabalho na equipa e pela tua rede, numa lista só. O que foi devolvido por um cliente aparece a negativo e desconta no saldo.'
         }
       />
+
+      {!ambito.todos && <ReceberPagamentos />}
 
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
         <Numero

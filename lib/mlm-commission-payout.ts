@@ -3,7 +3,7 @@ import type Stripe from 'stripe'
 
 export type PayoutResult = {
   id: string
-  status: 'transferred' | 'manual' | 'failed'
+  status: 'transferred' | 'manual' | 'failed' | 'awaiting_connect' | 'house'
   transfer_id?: string
   error?: string
 }
@@ -35,13 +35,20 @@ export async function payApprovedCommissions(
   for (const commission of commissions || []) {
     const { data: beneficiary } = await supabase
       .from('profiles')
-      .select('stripe_connect_account_id, stripe_connect_status')
+      .select('stripe_connect_account_id, stripe_connect_status, user_type')
       .eq('id', commission.beneficiary_id)
       .single()
 
     const hasConnect =
       beneficiary?.stripe_connect_account_id &&
       beneficiary?.stripe_connect_status === 'complete'
+
+    // A casa (admins) não recebe transferências: era dinheiro a sair e a voltar. Fica aprovada.
+    if (beneficiary?.user_type === 'admin') {
+      await supabase.from('mlm_commissions').update({ payout_status: 'house' }).eq('id', commission.id)
+      results.push({ id: commission.id, status: 'house' })
+      continue
+    }
 
     if (hasConnect) {
       try {
@@ -54,7 +61,7 @@ export async function payApprovedCommissions(
             commission_id: commission.id,
             beneficiary_id: commission.beneficiary_id,
           },
-        })
+        }, { idempotencyKey: `mlm-commission-${commission.id}` })
 
         await supabase
           .from('mlm_commissions')
@@ -78,16 +85,15 @@ export async function payApprovedCommissions(
         continue
       }
     } else {
+      // ANTES (até 23/11/2026) isto marcava 'paid' sem ter pago nada. Agora fica aprovada à espera
+      // dos dados de recebimento; o cron diário paga-a quando a conta Connect ficar completa.
       await supabase
         .from('mlm_commissions')
-        .update({
-          status: 'paid',
-          paid_at: new Date().toISOString(),
-          payout_status: 'manual',
-        })
+        .update({ payout_status: 'awaiting_connect' })
         .eq('id', commission.id)
 
-      results.push({ id: commission.id, status: 'manual' })
+      results.push({ id: commission.id, status: 'awaiting_connect' })
+      continue
     }
 
     const prev = totalsMap.get(commission.beneficiary_id) ?? 0
@@ -127,7 +133,7 @@ export async function payApprovedCommissions(
   }
 
   const transferred = results.filter((r) => r.status === 'transferred').length
-  const manual = results.filter((r) => r.status === 'manual').length
+  const manual = results.filter((r) => r.status === 'awaiting_connect' || r.status === 'house').length
   const failed = results.filter((r) => r.status === 'failed').length
 
   return {
@@ -135,6 +141,6 @@ export async function payApprovedCommissions(
     transferred,
     manual,
     failed,
-    count: transferred + manual,
+    count: transferred,
   }
 }
