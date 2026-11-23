@@ -10,7 +10,7 @@ import { correrRecrutamentoThreads } from '@/lib/threads/ciclo'
  * Bearer CRON_SECRET (ou x-vercel-cron).
  */
 export const dynamic = 'force-dynamic'
-export const maxDuration = 120
+export const maxDuration = 300
 
 export async function GET(req: NextRequest) {
   const secret = process.env.CRON_SECRET

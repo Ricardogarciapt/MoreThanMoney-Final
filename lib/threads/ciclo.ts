@@ -4,10 +4,12 @@
  *  1. Renova o token se faltar pouco.
  *  2. Publica um post de vaga de 3,5 em 3,5 dias (site_settings.threads_recrutamento.ligado).
  *  3. A cada pessoa nova que responde a um post de vaga: UMA resposta pública com o link da
- *     candidatura e o candidato no CRM (recruta + candidato_equipa + threads) com tarefa de setter.
+ *     candidatura (escrita pela IA grátis) e o candidato no CRM com tarefa de setter.
+ *  4. Agente (lib/threads/agente.ts): prospeção por palavra-chave, conversas e métricas.
  */
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { lerToken, publicarTexto, renovarSeFaltarPouco, respostasDe } from '@/lib/threads/cliente'
+import { correrAgenteThreads, respostaARecruta } from '@/lib/threads/agente'
 import { devePublicar, ehInteressado, postDaSemana, respostaAoInteressado } from '@/lib/threads/recrutamento'
 
 const CHAVE = 'threads_recrutamento'
@@ -54,7 +56,7 @@ export async function correrRecrutamentoThreads(db: SupabaseClient): Promise<Rec
       if (!u || respondidos.has(u) || !ehInteressado(resp.text, resp.username, token.username)) continue
       if (r.candidatos >= 10) break
       try {
-        await publicarTexto(token, respostaAoInteressado(resp.username), resp.id)
+        await publicarTexto(token, await respostaARecruta(resp.text ?? '', resp.username!, respostaAoInteressado(resp.username)), resp.id)
         const chave = `threads:${u}`
         const { data: neg } = await db
           .from('vendas_negocios')
@@ -95,5 +97,10 @@ export async function correrRecrutamentoThreads(db: SupabaseClient): Promise<Rec
 
   est.respondidos = [...respondidos].slice(-2000)
   await db.from('site_settings').upsert({ key: CHAVE, value: est }, { onConflict: 'key' })
-  return { ok: true, ...r }
+
+  // 23/11: prospeção ativa, conversas e métricas (IA grátis). Uma falha lá não estraga o resto.
+  const agente = await correrAgenteThreads(db, token, { responsavel, postsNossos: est.posts ?? [] }).catch((e) => ({
+    erro: e instanceof Error ? e.message : String(e),
+  }))
+  return { ok: true, ...r, agente }
 }
