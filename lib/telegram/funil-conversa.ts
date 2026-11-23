@@ -56,7 +56,7 @@ async function falar(chatId: string, texto: string, lingua: Lingua): Promise<'au
   try {
     const ref = createHash('sha1').update(texto).digest('hex').slice(0, 20)
     const pub = await falarParaStorage(getSupabaseAdmin() as never, texto, `wa-audio/guiao/${ref}.mp3`)
-    if (pub.ok && (await tg('sendVoice', { chat_id: chatId, voice: pub.url, caption: GUIAO[lingua].avisoIa.slice(0, 200) }))) return 'audio'
+    if (pub.ok && (await tg('sendVoice', { chat_id: chatId, voice: pub.url, ...(GUIAO[lingua].avisoIa ? { caption: GUIAO[lingua].avisoIa.slice(0, 200) } : {}) }))) return 'audio'
   } catch (e) {
     console.warn('[tg-funil] voz falhou:', e instanceof Error ? e.message : e)
   }

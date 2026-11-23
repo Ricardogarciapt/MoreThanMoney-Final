@@ -225,7 +225,7 @@ export async function tratarFluxoWhatsApp(p: {
     await enviarWhatsApp({
       para: p.from,
       finalidade: 'resposta',
-      texto: seguirLinks(textoDaRota(rota, lingua), p.e164, AGENDA) + (comoSaiu === 'audio' ? `\n\n_${g().avisoIa}_` : ''),
+      texto: seguirLinks(textoDaRota(rota, lingua), p.e164, AGENDA) + (comoSaiu === 'audio' && g().avisoIa ? `\n\n_${g().avisoIa}_` : ''),
       agente: { funil: FUNIL },
     })
     await guardarEstado(chatId, { stage: `wa_rota_${rota}`, interest: rota, first_name: nome || null, lang: lingua })
@@ -253,7 +253,7 @@ async function abrirFunil(p: { from: string }, chatId: string, nome: string, lin
   await enviarWhatsApp({
     para: p.from,
     finalidade: 'resposta',
-    interativo: { tipo: 'lista', corpo: g.textoMenu, botao: g.botaoMenu, linhas: menuComLingua(lingua), ...(comoSaiu === 'audio' ? { rodape: g.avisoIa } : {}) },
+    interativo: { tipo: 'lista', corpo: g.textoMenu, botao: g.botaoMenu, linhas: menuComLingua(lingua), ...(comoSaiu === 'audio' && g.avisoIa ? { rodape: g.avisoIa } : {}) },
   })
   await guardarEstado(chatId, { stage: 'wa_menu', first_name: nome || null, lang: lingua })
 }

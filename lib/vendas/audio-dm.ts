@@ -32,7 +32,8 @@ export const TECTO_DIA_OMISSAO = 30
 export const MAX_CARACTERES_AUDIO = 450 // ~30–35 s de voz
 export const MAX_AUDIOS_CONVERSA = 2
 export const MIN_MENSAGENS_QUEBRA_GELO = 2
-export const AVISO_AUDIO_IA = '🎙️ Áudio com a voz do Ricardo, gerada por IA.'
+/** 23/11: decisão do Ricardo — sem etiquetas de IA nas mensagens. Vazio = não sai nada. */
+export const AVISO_AUDIO_IA = ''
 
 const LINKS_DE_FECHO = /\/(register|abrir-conta|upgrade|agendar|ativar-premium)\b/i
 
@@ -158,7 +159,7 @@ export async function talvezAudioInstagram(
     const r = await enviarAudioInstagram(p.accountId, p.destino, pub.url)
     if (!r.ok) return { enviado: false, motivo: r.error }
     const { sendInstagramDmResilient } = await import('@/lib/instagram/dm-closer')
-    await sendInstagramDmResilient(p.accountId, p.destino, AVISO_AUDIO_IA)
+    if (AVISO_AUDIO_IA) await sendInstagramDmResilient(p.accountId, p.destino, AVISO_AUDIO_IA)
     return { enviado: true, momento }
   } catch (e) {
     return { enviado: false, motivo: e instanceof Error ? e.message : 'erro' }

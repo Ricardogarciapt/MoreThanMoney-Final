@@ -3,6 +3,7 @@ import { runLeadFunnelReply } from '@/lib/telegram-lead-funnel'
 import { getSupabaseAdmin } from '@/lib/supabase-admin-client'
 import { enviarWhatsApp, lerEstadoDoContacto, registarEntrada } from '@/lib/whatsapp-mensageiro'
 import { talvezAudioWhatsApp } from '@/lib/whatsapp/audio'
+import { linkAgendar } from '@/lib/agenda/link'
 
 /**
  * Webhook do WhatsApp (Meta Cloud API) — funil de vendas MTM no WhatsApp, reutilizando o MESMO
@@ -210,6 +211,27 @@ export async function POST(req: NextRequest) {
          * Sem código, a mensagem sai exactamente igual — só fica escrita como não atribuível. A
          * capacidade de responder nunca depende de haver atribuição.
          */
+        // 23/11: se a IA falhar duas vezes seguidas, não se repete a pergunta de recurso em loop:
+        // passa-se à fila dos setters (uma pessoa responde) e diz-se isso ao lead.
+        let recurso = 'Diz-me só: procuras aprender, copiar sinais prontos ou algo automático? 🙂'
+        if (!reply) {
+          const { data: ultimas } = await getSupabaseAdmin()
+            .from('whatsapp_mensagens')
+            .select('texto')
+            .eq('direcao', 'saida')
+            .order('criado_em', { ascending: false })
+            .eq('telefone', numero ?? from)
+            .limit(1)
+          if (String(ultimas?.[0]?.texto ?? '') === recurso) {
+            recurso = `Boa pergunta. Vou passar-te a uma pessoa da equipa, que te responde aqui mesmo. Se preferires falar já, marca aqui: ${linkAgendar('apresentacao')}`
+            try {
+              const { passarParaSetter } = await import('@/lib/whatsapp/setter')
+              await passarParaSetter(numero ?? from, contactName ?? '', 'pt', text.slice(0, 200), 'pediu')
+            } catch (e) {
+              console.warn('[whatsapp] setter falhou:', e instanceof Error ? e.message : e)
+            }
+          }
+        }
         const { data: leadWa } = await getSupabaseAdmin()
           .from('telegram_leads')
           .select('agente_codigo')
@@ -218,7 +240,7 @@ export async function POST(req: NextRequest) {
         const r = await enviarWhatsApp({
           para: from,
           finalidade: 'resposta',
-          texto: reply || 'Diz-me só: procuras aprender, copiar sinais prontos ou algo automático? 🙂',
+          texto: reply || recurso,
           estado: estado ? { ...estado, ultimaEntradaIso: estado.ultimaEntradaIso ?? new Date().toISOString() } : undefined,
           agente: {
             funil: 'whatsapp:funil',
