@@ -10,10 +10,9 @@
  * antiga» (os contactos importados do WhatsApp, mais antigos primeiro). Excluídos (SAIR) não aparecem.
  */
 import { getSupabaseAdmin } from '@/lib/supabase-admin-client'
-import { linkWhatsApp, primeiraMensagem } from '@/lib/whatsapp/primeira-mensagem'
 import { abrirPagina, SemAcesso } from '../../_partes/acesso'
 import { Cabecalho, Falhou, Vazio } from '../../_partes/blocos'
-import { MarcarEnviada } from './marcar'
+import { LinhaFila } from './linha'
 
 export const dynamic = 'force-dynamic'
 export const metadata = { title: 'WhatsApp · primeira mensagem · Backoffice MTM' }
@@ -73,25 +72,13 @@ export default async function FilaWhatsApp({ searchParams }: { searchParams: Pro
       ) : (
         <ul className="space-y-3">
           {linhas.map((n) => {
-            const texto = primeiraMensagem(n)
-            const href = linkWhatsApp(n.telefone, texto)
             return (
               <li key={n.id} className="rounded-lg border border-gray-800 bg-black/30 p-3">
                 <div className="flex flex-wrap items-center gap-2">
                   <a href={`/backoffice/pipeline/ficha/${n.id}`} className="font-semibold text-white hover:text-[#E9C46A]">{n.nome || 'Sem nome'}</a>
                   <span className="text-xs text-gray-500">{n.telefone} · {n.origem ?? '—'} · {new Date(n.criado_em).toLocaleDateString('pt-PT')}</span>
                 </div>
-                <p className="mt-2 whitespace-pre-line text-[13px] text-gray-300">{texto}</p>
-                <div className="mt-2 flex flex-wrap items-center gap-2">
-                  {href ? (
-                    <a href={href} target="_blank" rel="noreferrer" className="rounded-md bg-[#D2A63C] px-3 py-1.5 text-sm font-semibold text-black hover:bg-[#E9C46A]">
-                      Abrir WhatsApp
-                    </a>
-                  ) : (
-                    <span className="text-xs text-amber-400">Número não utilizável</span>
-                  )}
-                  <MarcarEnviada id={n.id} />
-                </div>
+                <LinhaFila id={n.id} telefone={n.telefone} negocio={{ nome: n.nome, origem: n.origem, interesse: n.interesse, etiquetas: n.etiquetas }} />
               </li>
             )
           })}
