@@ -199,7 +199,7 @@ export const TEMPLATES_MTM = [
    * Reencontro v3 (23/11), nas 5 línguas. Segue o que resulta nas aberturas de reativação: quem
    * escreve (nome próprio), porque é que escreve deste número, o que faz em 1 frase, e UMA pergunta
    * de sim/não com botões, sem links nem preços. Nas línguas estrangeiras há um 4.º botão
-   * «🇵🇹 Português», porque muitos destes contactos são emigrantes portugueses.
+   * «Português» (a Meta não aceita emojis nos botões), porque muitos destes contactos são emigrantes portugueses.
    * Os botões têm de bater com `GUIAO[*].botao*` em `lib/vendas/guiao-whatsapp.ts`.
    */
   {
@@ -232,7 +232,7 @@ export const TEMPLATES_MTM = [
           { type: 'QUICK_REPLY', text: 'Yes, send it' },
           { type: 'QUICK_REPLY', text: 'Not now' },
           { type: 'QUICK_REPLY', text: 'Stop messages' },
-          { type: 'QUICK_REPLY', text: '🇵🇹 Português' },
+          { type: 'QUICK_REPLY', text: 'Português' },
         ],
       },
     ],
@@ -250,7 +250,7 @@ export const TEMPLATES_MTM = [
           { type: 'QUICK_REPLY', text: 'Oui, envoie' },
           { type: 'QUICK_REPLY', text: 'Pas maintenant' },
           { type: 'QUICK_REPLY', text: 'Ne plus recevoir' },
-          { type: 'QUICK_REPLY', text: '🇵🇹 Português' },
+          { type: 'QUICK_REPLY', text: 'Português' },
         ],
       },
     ],
@@ -268,7 +268,7 @@ export const TEMPLATES_MTM = [
           { type: 'QUICK_REPLY', text: 'Ja, schick es' },
           { type: 'QUICK_REPLY', text: 'Jetzt nicht' },
           { type: 'QUICK_REPLY', text: 'Nicht mehr erhalten' },
-          { type: 'QUICK_REPLY', text: '🇵🇹 Português' },
+          { type: 'QUICK_REPLY', text: 'Português' },
         ],
       },
     ],
@@ -286,7 +286,7 @@ export const TEMPLATES_MTM = [
           { type: 'QUICK_REPLY', text: 'Sí, mándalo' },
           { type: 'QUICK_REPLY', text: 'Ahora no' },
           { type: 'QUICK_REPLY', text: 'No quiero recibir' },
-          { type: 'QUICK_REPLY', text: '🇵🇹 Português' },
+          { type: 'QUICK_REPLY', text: 'Português' },
         ],
       },
     ],

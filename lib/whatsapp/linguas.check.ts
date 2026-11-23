@@ -21,7 +21,7 @@ teste('Alemanha DE', linguaDoIndicativo('+491701234567') === 'de')
 teste('Espanha ES', linguaDoIndicativo('+34612345678') === 'es')
 teste('EUA EN', linguaDoIndicativo('+12025550123') === 'en')
 teste('bandeira id', linguaEscolhida('lingua:fr') === 'fr')
-teste('botão PT do template', linguaEscolhida('🇵🇹 Português') === 'pt')
+teste('botão PT do template', linguaEscolhida('Português') === 'pt' && linguaEscolhida('🇵🇹 Português') === 'pt')
 teste('5 bandeiras', linhasDeLinguas().length === 5)
 for (const l of ['pt', 'en', 'fr', 'de', 'es'] as const) {
   const g = GUIAO[l]
@@ -37,7 +37,7 @@ for (const l of ['pt', 'en', 'fr', 'de', 'es'] as const) {
   const botoes = (tpl?.components.find((c) => c.type === 'BUTTONS') as { buttons: Array<{ text: string }> } | undefined)?.buttons.map((b) => b.text) ?? []
   teste(`${l}: template v3 existe`, !!tpl)
   teste(`${l}: botões do template batem com o guião`, botoes[0] === g.botaoSim && botoes[1] === g.botaoDepois && botoes[2] === g.botaoSair)
-  teste(`${l}: botão PT nas estrangeiras`, l === 'pt' || botoes[3] === '🇵🇹 Português')
+  teste(`${l}: botão PT nas estrangeiras`, l === 'pt' || botoes[3] === 'Português')
 }
 
 if (falhas.length) { console.error('FALHOU:\n- ' + falhas.join('\n- ')); process.exit(1) }
