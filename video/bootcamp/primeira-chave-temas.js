@@ -479,7 +479,7 @@
   // Painel animado de um tema: canvas com transformação para o espaço 800×600.
   function painel(r, tema, rect, el, grafico) {
     if (MERCADO[tema] || !TEMAS[tema]) {
-      const G = grafico(r, { cenario: tema === 'dca' ? 'tendencia' : 'compra', seed: 7 + (rect.seed || 0), w: rect.w, h: rect.h, top: rect.y, left: rect.x })
+      const G = grafico(r, { cenario: tema === 'dca' ? 'tendencia' : 'compra', seed: 7 + (rect.seed || 0), w: rect.w, h: rect.h, top: rect.y, left: rect.x }, el)
       const cam = (MERCADO[tema] || MERCADO.dca).camadas
       return { wrap: G.wrap, u: (k) => { const kk = (k % 14) / 14, vis = { medias: 1, dca: cam.includes('dca') ? 1 : 0, plano: cam.includes('plano') ? eo((kk - 0.6) / 0.15) : 0 }; G.desenha(vis, 0.35 + 0.65 * eio(Math.min(1, kk / 0.85))) } }
     }
