@@ -24,8 +24,86 @@ export type PaginaVenda = {
   aviso: string
 }
 
-type SlugBase = 'destrui-tudo-e-ainda-bem' | 'o-metodo-frio' | 'a-primeira-chave' | 'so-as-maos'
+type SlugBase = 'destrui-tudo-e-ainda-bem' | 'o-metodo-frio' | 'a-primeira-chave' | 'so-as-maos' | 'o-primeiro-passo' | 'o-plano-de-3-passos' | 'guia-dos-scanners'
 const VENDAS_PT: Record<SlugBase | 'a-decisao-que-adias', PaginaVenda> = {
+  'o-primeiro-passo': {
+    slug: 'o-primeiro-passo', cor: '#E9C46A', cor2: '#D2A63C', fundo: '#0b0b0c', fonteTitulo: 'Anton, Oswald, Impact, sans-serif',
+    titulo: 'O Primeiro', titulo2: 'Passo',
+    gancho: 'Trabalhas cada vez mais e o dinheiro não estica. Por onde se começa?',
+    sub: 'O guia grátis para quem nunca investiu: onde está o teu dinheiro hoje, que caminhos existem (com o risco à vista), como não cair em promessas, e um plano de 7 dias para começares.',
+    autor: 'Ricardo Garcia', autorFoto: '/marketplace/ebooks/o-primeiro-passo-capa.jpg',
+    autorBio: 'Fundador da MoreThanMoney. Adotado aos 17 meses, cresceu no Porto. Catorze anos de serviço (Exército, Fuzileiros, GNR) antes de recomeçar do zero. Perdeu a primeira conta por fazer tudo sozinho e sem regras; hoje ensina com método e em comunidade.',
+    numeros: [{ v: '38', r: 'páginas' }, { v: '6', r: 'capítulos' }, { v: '6', r: 'exercícios' }, { v: '7', r: 'dias de plano' }],
+    capitulos: [
+      { t: 'A conta das horas', d: 'Porque é que trabalhar mais não chega, e o que é liberdade financeira sem filtros.' },
+      { t: 'O teu dinheiro numa folha', d: 'Vinte minutos com o extrato, as três caixas e o colchão de emergência.' },
+      { t: 'Porque poupar não chega', d: 'A inflação, o juro composto e a diferença entre apostar e investir.' },
+      { t: 'Os caminhos que existem', d: 'Depósitos, ETF e DCA, trading e cripto, lado a lado, com o risco à vista.' },
+      { t: 'Como não cair em promessas', d: 'Os sinais de alarme, as cinco perguntas antes de pagar e os erros de quem começa.' },
+      { t: 'O teu primeiro passo', d: 'Sete dias, quinze minutos por dia, e o caminho na MoreThanMoney.' },
+    ],
+    paraQuem: ['Nunca investiste e não sabes por onde começar.', 'Sentes que o salário acaba antes do mês.', 'Queres perceber os caminhos antes de arriscar um euro.'],
+    naoE: ['Uma promessa de ficar rico.', 'Dicas de investimento para copiar.', 'Uma venda disfarçada: o guia vale por si.'],
+    faq: [
+      { p: 'Quanto custa?', r: 'Nada. Deixas o nome, o email, o WhatsApp e duas respostas rápidas, e o link chega logo a seguir e por email.' },
+      { p: 'Em que formato recebo?', r: 'PDF (para ler e imprimir) e versão interativa no navegador, em português, inglês e espanhol. O link abre durante um ano.' },
+      { p: 'Preciso de saber alguma coisa?', r: 'Não. É escrito para quem começa do zero, com exemplos portugueses e exercícios de 15 minutos.' },
+      { p: 'E depois?', r: 'Há mais dois guias grátis na coleção («O Plano de 3 Passos» e o «Guia dos Scanners MTM») e o Premium tem 3 dias grátis, sem cartão.' },
+    ],
+    aviso: 'Conteúdo educativo. Não constitui aconselhamento financeiro. Investir envolve risco, incluindo a perda do capital. Não há resultados garantidos.',
+  },
+  'o-plano-de-3-passos': {
+    slug: 'o-plano-de-3-passos', cor: '#E9C46A', cor2: '#D2A63C', fundo: '#0b0b0c', fonteTitulo: 'Anton, Oswald, Impact, sans-serif',
+    titulo: 'O Plano', titulo2: 'de 3 Passos',
+    gancho: 'Um plano simples que cumpres vale mais do que um perfeito que fica na gaveta.',
+    sub: 'Educar, criar rendimento, automatizar. O guia grátis com as quatro ideias que separam quem dura de quem desaparece nos mercados, folhas de trabalho para preencher e um plano de 30 dias em conta demo.',
+    autor: 'Ricardo Garcia', autorFoto: '/marketplace/ebooks/o-plano-de-3-passos-capa.jpg',
+    autorBio: 'Fundador da MoreThanMoney. Adotado aos 17 meses, cresceu no Porto. Catorze anos de serviço (Exército, Fuzileiros, GNR) antes de recomeçar do zero. Perdeu a primeira conta por fazer tudo sozinho e sem regras; hoje ensina com método e em comunidade.',
+    numeros: [{ v: '36', r: 'páginas' }, { v: '3', r: 'passos' }, { v: '8', r: 'folhas de trabalho' }, { v: '30', r: 'dias de plano' }],
+    capitulos: [
+      { t: 'Passo 1 · O que precisas mesmo de saber', d: 'Risco por operação, stop, alavancagem, conta demo e a medida R.' },
+      { t: 'Passo 1 · A base mental', d: 'Apostador ou investidor, a tua razão e a rotina de 15 minutos.' },
+      { t: 'Passo 2 · Escolhe como participar', d: 'Operar com as ferramentas, seguir as ideias da casa ou copiar uma estratégia.' },
+      { t: 'Passo 2 · A primeira operação, a frio', d: 'O ciclo de uma operação, o volume certo e as sequências de perdas.' },
+      { t: 'Passo 3 · Automatizar', d: 'Auto Break-Even, Trailing Stop, saídas parciais, regras de paragem e auditoria.' },
+      { t: 'Passo 3 · Crescer sem ganância', d: 'A regra de escala, o plano de 30 dias e o plano numa página.' },
+    ],
+    paraQuem: ['Queres começar nos mercados e precisas de uma ordem.', 'Já tentaste sozinho e perdeste o fio.', 'Tens 15 minutos por dia e queres usá-los bem.'],
+    naoE: ['Uma estratégia secreta.', 'Sinais para seguir sem perceber.', 'Uma promessa de rendimento.'],
+    faq: [
+      { p: 'Quanto custa?', r: 'Nada. Deixas o nome, o email, o WhatsApp e duas respostas rápidas, e o link chega logo a seguir e por email.' },
+      { p: 'Em que formato recebo?', r: 'PDF (para ler e imprimir) e versão interativa no navegador, em português, inglês e espanhol. O link abre durante um ano.' },
+      { p: 'Tenho de ter conta numa corretora?', r: 'Não. O plano todo faz-se primeiro em conta demo. Só passas para real quando o teu diário o justificar.' },
+      { p: 'E depois?', r: 'O «Guia dos Scanners MTM» dá-te 30 dias do Scanner GoldKiller grátis, e o Premium tem 3 dias grátis, sem cartão.' },
+    ],
+    aviso: 'Conteúdo educativo. Não constitui aconselhamento financeiro. Negociar Forex, ouro e CFD com alavancagem envolve risco elevado de perda. As contas MTM Funded são simuladas. Não há resultados garantidos.',
+  },
+  'guia-dos-scanners': {
+    slug: 'guia-dos-scanners', cor: '#E9C46A', cor2: '#D2A63C', fundo: '#0b0b0c', fonteTitulo: 'Anton, Oswald, Impact, sans-serif',
+    titulo: 'Guia dos', titulo2: 'Scanners MTM',
+    gancho: 'O Scanner GoldKiller 30 dias grátis, com o guia e os vídeos do bootcamp.',
+    sub: 'Ativa o GoldKiller no TradingView com o cupão FREEBIE, aprende a ler cada sinal, passa do sinal à operação com risco controlado e segue um plano de 30 dias em demo. Com os bootcamps em vídeo de todas as ferramentas da casa.',
+    autor: 'Ricardo Garcia', autorFoto: '/marketplace/ebooks/guia-dos-scanners-capa.jpg',
+    autorBio: 'Fundador da MoreThanMoney. Adotado aos 17 meses, cresceu no Porto. Catorze anos de serviço (Exército, Fuzileiros, GNR) antes de recomeçar do zero. Perdeu a primeira conta por fazer tudo sozinho e sem regras; hoje ensina com método e em comunidade.',
+    numeros: [{ v: '30', r: 'dias de GoldKiller' }, { v: '37', r: 'páginas' }, { v: '12', r: 'bootcamps em vídeo' }, { v: '15', r: 'min por dia' }],
+    capitulos: [
+      { t: 'Ativar o GoldKiller no TradingView', d: 'O pedido com o cupão FREEBIE, o separador «Só por convite» e as definições da casa.' },
+      { t: 'Ler o GoldKiller', d: 'O motor de tendência, a viragem BUY/SELL, a linha central e os níveis Gain e Drawdown.' },
+      { t: 'Do sinal à operação', d: 'As quatro confirmações, entrada, stop, tamanho da posição, três alvos e quando não entrar.' },
+      { t: 'A rotina e o diário', d: 'Quinze minutos por dia, o diário em R e o plano dos 30 dias.' },
+      { t: 'O mapa dos scanners MTM', d: 'DEFY, Golden Zone, Momentum, Aurum Flow e os bootcamps de todas as ferramentas.' },
+      { t: 'Depois dos 30 dias', d: 'A revisão com o diário e os caminhos a partir daqui.' },
+    ],
+    paraQuem: ['Queres experimentar um scanner a sério antes de pagar.', 'Operas ouro ou queres começar por ele.', 'Preferes aprender com vídeos e um guia ao lado.'],
+    naoE: ['Uma ferramenta que acerta sempre.', 'Sinais para copiar sem perceber.', 'Uma promessa de resultados.'],
+    faq: [
+      { p: 'Quanto custa?', r: 'Nada. Pedes em morethanmoney.pt/gratis/goldkiller com o cupão FREEBIE e o teu nome de utilizador do TradingView. O guia chega logo; o scanner é ativado pela equipa em até 24 horas, por 30 dias.' },
+      { p: 'Preciso de TradingView pago?', r: 'Não. A conta gratuita do TradingView chega para usar o GoldKiller.' },
+      { p: 'E depois dos 30 dias?', r: 'Decides com o teu diário. Podes continuar como Membro MoreThanMoney, comprar o GoldKiller ou parar. Nada se renova sozinho e não pedimos cartão.' },
+      { p: 'Em que formato recebo o guia?', r: 'PDF e versão interativa no navegador, em português, inglês e espanhol. O link abre durante um ano.' },
+    ],
+    aviso: 'Conteúdo educativo. Não constitui aconselhamento financeiro. Os scanners são ferramentas de análise e não garantem resultados. Negociar ouro, Forex e CFD com alavancagem envolve risco elevado de perda.',
+  },
   'a-decisao-que-adias': {
     slug: 'a-decisao-que-adias', cor: '#E9C46A', cor2: '#D2A63C', fundo: '#070b16', fonteTitulo: 'Anton, Oswald, Impact, sans-serif',
     titulo: 'A Decisão', titulo2: 'Que Adias',
@@ -192,4 +270,10 @@ export const VENDAS: Record<SlugEbook, PaginaVenda> = {
   'a-primeira-chave-fr': traduzida('a-primeira-chave', 'fr'),
   'so-as-maos-en': traduzida('so-as-maos', 'en'),
   'so-as-maos-es': traduzida('so-as-maos', 'es'),
+  'o-primeiro-passo-en': traduzida('o-primeiro-passo', 'en'),
+  'o-primeiro-passo-es': traduzida('o-primeiro-passo', 'es'),
+  'o-plano-de-3-passos-en': traduzida('o-plano-de-3-passos', 'en'),
+  'o-plano-de-3-passos-es': traduzida('o-plano-de-3-passos', 'es'),
+  'guia-dos-scanners-en': traduzida('guia-dos-scanners', 'en'),
+  'guia-dos-scanners-es': traduzida('guia-dos-scanners', 'es'),
 }

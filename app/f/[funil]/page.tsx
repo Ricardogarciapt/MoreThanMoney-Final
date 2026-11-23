@@ -5,6 +5,7 @@ import { notFound } from 'next/navigation'
 import FormularioFunil from '@/components/funis/formulario-funil'
 import MedicaoConsentida from '@/components/funis/medicao-consentida'
 import { AVISO_GERAL, FUNIS, FUNIS_PUBLICIDADE, ehFunilPublicidade } from '@/lib/funis-publicidade'
+import { FREEBIES } from '@/lib/freebies'
 
 /**
  * /f/<funil> — as páginas de entrada dos anúncios: /f/educacao, /f/corretora, /f/funded.
@@ -101,6 +102,23 @@ export default async function PaginaFunil({ params }: Props) {
           </div>
         </div>
       </section>
+
+      {/* Educação: para quem ainda não quer falar com ninguém, os 3 guias grátis (lib/freebies.ts). */}
+      {f.chave === 'educacao' && (
+        <section className="border-t border-white/10">
+          <div className="mx-auto max-w-6xl px-4 py-12 sm:px-6">
+            <p className="text-sm font-semibold text-zinc-300">Ainda não queres falar com ninguém? Começa por um guia grátis.</p>
+            <div className="mt-5 grid gap-4 sm:grid-cols-3">
+              {FREEBIES.map((g) => (
+                <Link key={g.slug} href={g.pagina} className="flex items-center gap-4 rounded-2xl border border-white/10 p-4 transition hover:border-[#D2A63C]/60">
+                  <Image src={g.capa} alt={g.titulo} width={64} height={80} className="h-20 w-auto" />
+                  <span><span className="block font-bold text-white">{g.titulo}</span><span className="mt-1 block text-xs text-zinc-400">{g.gancho}</span></span>
+                </Link>
+              ))}
+            </div>
+          </div>
+        </section>
+      )}
 
       <footer className="border-t border-white/10">
         <div className="mx-auto grid max-w-6xl gap-3 px-4 pb-28 pt-10 text-[12.5px] leading-relaxed text-zinc-500 sm:px-6">
