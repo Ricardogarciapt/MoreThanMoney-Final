@@ -102,6 +102,12 @@ function decoCapa(livro) {
     for (let k = 0; k <= 20; k++) r += `<path d="M${k % 5 ? 14 : 0},${10 + k * 14} H30" stroke="#E9C46A" stroke-width="${k % 5 ? 1 : 2}" opacity="${k % 5 ? .55 : .95}"/>`
     return `<svg class="capa-deco" viewBox="0 0 40 300" aria-hidden="true">${r}<text x="34" y="24" fill="#E9C46A" style="font:600 9px var(--sub);letter-spacing:.1em" transform="rotate(90 34 24)">${ui(livro).semImpulso}</text></svg>`
   }
+  if (livro.variante === 'mente') {
+    // ondas concêntricas a ouro: a «vibração» do capítulo 9, que se afasta do centro
+    let r = ''
+    for (let k = 1; k <= 7; k++) r += `<circle cx="150" cy="150" r="${k * 20}" fill="none" stroke="#E9C46A" stroke-width="${k === 3 ? 2.2 : 1}" opacity="${(1.05 - k * 0.12).toFixed(2)}"${k % 2 ? '' : ' stroke-dasharray="3 6"'}/>`
+    return `<svg class="capa-deco" viewBox="0 0 300 300" aria-hidden="true">${r}<circle cx="150" cy="150" r="5" fill="#E9C46A"/></svg>`
+  }
   if (livro.tema === 'rg') {
     // fratura a ouro que atravessa o título: o «destruí» desenhado
     return `<svg class="capa-deco" viewBox="0 0 600 300" preserveAspectRatio="none" aria-hidden="true"><defs><linearGradient id="fr" x1="0" x2="1"><stop offset="0" stop-color="#E9C46A" stop-opacity="0"/><stop offset=".18" stop-color="#E9C46A"/><stop offset=".6" stop-color="#D2A63C"/><stop offset="1" stop-color="#8a6a1f" stop-opacity="0"/></linearGradient></defs>
@@ -117,7 +123,7 @@ function decoCapa(livro) {
 function carimbo(livro) {
   const chave = livro.variante || livro.tema
   const t = ui(livro).carimbo[chave]
-  const cor = { rg: '#E9C46A', frio: '#E9C46A', cripto: '#F3CF73', faceless: '#E6D3B5' }[chave]
+  const cor = { rg: '#E9C46A', frio: '#E9C46A', mente: '#E9C46A', cripto: '#F3CF73', faceless: '#E6D3B5' }[chave]
   return `<svg class="capa-carimbo" viewBox="0 0 120 120" aria-hidden="true"><defs><path id="circ-${livro.tema}" d="M60,60 m-47,0 a47,47 0 1,1 94,0 a47,47 0 1,1 -94,0"/></defs>
     <circle cx="60" cy="60" r="58" fill="rgba(10,9,8,.55)" stroke="${cor}" stroke-width="1"/><circle cx="60" cy="60" r="36" fill="none" stroke="${cor}" stroke-width=".6" opacity=".6"/>
     <text fill="${cor}"><textPath href="#circ-${livro.tema}" textLength="288" lengthAdjust="spacing">${t[0]}</textPath></text>
@@ -282,6 +288,14 @@ body{margin:0;background:var(--fundo);color:var(--tinta);font-family:var(--corpo
 .variante-frio .capa-titulo em{font-family:'Anton',sans-serif;text-transform:uppercase;color:#E9C46A;font-size:41cqw;line-height:.92;transform:none;margin:0;letter-spacing:-.01em;text-shadow:0 .5cqw 0 #6b4d10,0 0 6cqw rgba(190,215,235,.18)}
 .variante-frio .capa-deco{left:auto;right:5cqw;bottom:auto;top:34cqw;width:6cqw;height:46cqw}
 .variante-frio .capa-carimbo{top:14cqw;right:auto;left:6cqw}
+.variante-mente{--fundo:#070b16;--escuro:#0b1226;--tinta:#141a2c;--mut:#5f6680;--claro-sobre-escuro:#f1ead8}
+.variante-mente .capa-face{background:#070b16}
+.variante-mente .capa-foto{filter:grayscale(1) contrast(1.3) brightness(.6) sepia(.4) hue-rotate(185deg) saturate(1.6);object-position:50% 20%;height:78%}
+.variante-mente .capa-veu{background:linear-gradient(rgba(16,32,90,.28),rgba(16,32,90,.28)),linear-gradient(180deg,rgba(7,11,22,.6) 0,transparent 18%,transparent 40%,rgba(7,11,22,.86) 62%,#070b16 76%),radial-gradient(80% 50% at 15% 85%,rgba(210,166,60,.16),transparent 60%)}
+.variante-mente .capa-titulo span{font-family:'Oswald',sans-serif;font-weight:300;text-transform:uppercase;color:#fff;font-size:10cqw;letter-spacing:.3em;line-height:1.05;margin-left:.6cqw}
+.variante-mente .capa-titulo em{font-family:'Anton',sans-serif;text-transform:uppercase;color:#E9C46A;font-size:24cqw;line-height:.9;transform:none;margin:0;letter-spacing:-.005em;text-shadow:0 .5cqw 0 #5e4410,0 0 5cqw rgba(30,50,110,.45)}
+.variante-mente .capa-deco{left:auto;right:-14cqw;bottom:auto;top:6cqw;width:64cqw;height:64cqw;opacity:.75}
+.variante-mente .capa-carimbo{top:14cqw;right:auto;left:6cqw}
 .tema-cripto .capa-face{background:#0a0806}.tema-cripto .capa-foto{object-position:50% 0;height:74%}
 .tema-cripto .capa-veu{background:linear-gradient(180deg,rgba(10,8,6,.55) 0,transparent 16%,transparent 40%,rgba(10,8,6,.85) 62%,#0a0806 72%)}
 .tema-cripto .capa-titulo span{font-family:'Anton',sans-serif;text-transform:uppercase;color:#fff;font-size:15.5cqw;letter-spacing:.01em;line-height:1}
@@ -416,6 +430,8 @@ figure{margin:0}
 .ga-grelha{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
 .ga-grelha figure{margin:0;background:#fff;padding:7px 7px 10px;box-shadow:0 12px 22px -14px rgba(0,0,0,.5);transform:rotate(var(--r,0deg))}
 .ga-grelha img{width:100%;aspect-ratio:4/5;object-fit:cover;display:block}
+.galeria.ecras .ga-grelha,.galeria.ecras .ga-grelha:has(figure:nth-child(4):last-child){grid-template-columns:repeat(var(--n,3),1fr);gap:10px}.galeria.ecras figure{transform:none}.galeria.ecras figure{background:#111;padding:6px 6px 10px;border-radius:14px}.galeria.ecras img{aspect-ratio:auto;object-fit:contain;border-radius:9px}.galeria.ecras figcaption{color:#ddd;font-size:12px}@media print{.galeria.ecras figcaption{font-size:8.5pt}}
+.galeria.ecras.tel .ga-grelha{grid-template-columns:repeat(var(--n,2),minmax(0,250px));justify-content:center;gap:18px}.galeria.ecras.tel figure{background:none;box-shadow:none;padding:0;border-radius:0}.galeria.ecras.tel img{border-radius:0}.galeria.ecras.tel figcaption{color:#3b352a;font-family:'Kalam',cursive;font-size:13px}
 .ga-grelha figcaption{font-family:'Kalam',cursive;font-size:13.5px;line-height:1.2;color:#3b352a;margin-top:6px;text-align:center}
 .ga-grelha:has(figure:nth-child(4):last-child){grid-template-columns:repeat(2,1fr)}
 .ga-grelha:has(figure:nth-child(2):last-child){grid-template-columns:repeat(2,1fr)}
@@ -552,7 +568,7 @@ async function construir(slug, { pdf = true } = {}) {
 }
 
 function mockup3d(capa, livro) {
-  const cor = { rg: '#D2A63C', cripto: '#D9A93A', faceless: '#a8876a' }[livro.tema]
+  const cor = { rg: livro.variante === 'mente' ? '#3550a0' : '#D2A63C', cripto: '#D9A93A', faceless: '#a8876a' }[livro.tema]
   return `<!doctype html><html><body style="margin:0;width:1200px;height:1200px;display:grid;place-items:center;background:transparent;perspective:2200px">
   <div style="position:absolute;width:760px;height:120px;bottom:150px;left:220px;background:radial-gradient(closest-side,rgba(0,0,0,.55),transparent);filter:blur(12px)"></div>
   <div style="position:absolute;width:700px;height:700px;border-radius:50%;background:radial-gradient(closest-side,${cor}55,transparent);filter:blur(40px)"></div>

@@ -18,6 +18,18 @@ Uma nota honesta antes de arrancarmos: isto não é aconselhamento financeiro ne
 
 [[foto: ruben-retrato.jpg | Simplificar o complexo. É para isso que aqui estou. | polaroid]]
 
+## Quem te escreve
+
+A minha história é simples. Venho de uma família normal e humilde, com três irmãos. Trabalhei sempre com as mãos, como plaquista. Há sete anos, os gráficos fascinaram-me, sobretudo os da cripto, e ainda hoje é isso que mais me prende a este mundo.
+
+Com treino, experiência e muito trabalho pessoal, cheguei a viver deste negócio. Depois perdi o controlo. Juntei-me a pessoas que não eram as certas e tive de recomeçar praticamente do zero. Pode soar a cliché, mas foi a partir desse zero que tudo mudou.
+
+Foi nessa altura que conheci o Ricardo, através de uma amiga em comum, quando a MoreThanMoney ainda estava no início. Aceitei o convite, dediquei-me mais à cripto e aprendi a trabalhar com método. Hoje vivo da cripto e tenho estabilidade. Ainda não vivo a 100 % disto, mas é uma escolha minha.
+
+:::nota
+Conto isto por uma razão: os erros que te vou ajudar a evitar neste livro são, em grande parte, os meus. Perdi dinheiro por confiar nas pessoas erradas e por não ter regras. Foi assim que aprendi que, sem método, o gráfico manda em ti.
+:::
+
 ## O risco é real, e pode ser total
 
 Uma criptomoeda pode descer muito e depressa. Já aconteceu com moedas que pareciam sólidas, e algumas deixaram simplesmente de ter utilizadores e de valer alguma coisa. Quando falo em risco de perda, falo em perder tudo o que lá puseste, e não só uma parte.

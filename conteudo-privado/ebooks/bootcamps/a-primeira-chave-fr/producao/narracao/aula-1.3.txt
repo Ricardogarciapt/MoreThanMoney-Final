@@ -1,0 +1,15 @@
+En octobre 2008, un court document est apparu et a changé la conversation sur l'argent. Voyons le contexte.
+
+En 2008, le monde financier traversait une crise. De grandes banques avaient prêté de l'argent à des personnes qui ne pouvaient pas le rembourser, et le problème s'est répandu dans tout le système. Les gouvernements et les banques centrales se sont précipités pour sauver des institutions. Beaucoup de gens ont perdu leur maison, leur emploi ou leur épargne. C'est dans ce contexte que beaucoup ont commencé à se demander si le système financier traditionnel était la seule voie possible.
+
+Le 31 octobre 2008, un document portant ce titre est apparu sur internet. Celui qui le signait s'appelait Satoshi Nakamoto. Aujourd'hui encore, personne ne sait avec certitude qui est cette personne, ni s'il s'agit d'un groupe. C'est la première chose étrange, et il vaut la peine de la garder en tête, car elle nous oblige à évaluer l'idée et non la personne.
+
+L'idée centrale était simple à dire et difficile à réaliser. De l'argent qui pourrait être envoyé d'une personne à une autre sans passer par une banque, sans un intermédiaire qui approuve chaque virement. Au lieu de dépendre de la confiance dans une institution, il dépendait d'une règle écrite en code, que tout le réseau vérifiait. C'est la différence que tu dois retenir : la confiance dans une personne contre la confiance dans un processus.
+
+Le 3 janvier 2009, le réseau a créé le premier bloc, appelé bloc genèse. Dans ce bloc, l'auteur a laissé un message : un titre d'un journal britannique sur les renflouements de banques. Il n'y a pas besoin de beaucoup interpréter. Celui qui l'a écrit a voulu montrer dans quel contexte l'idée est née, et cela t'en dit long sur la méfiance qui l'animait à l'époque. Ce n'est pas une vérité absolue sur les intentions de quiconque, mais c'est un fait historique qui explique beaucoup du discours que tu entends aujourd'hui.
+
+Soyons clairs sur ce que je fais ici. Je raconte une histoire. Si tu veux du contexte, pense ainsi : à l'époque, pour la plupart des gens, argent était synonyme de banque. Quiconque voulait transférer de la valeur à l'autre bout du monde dépendait de banques, de délais et de frais. La proposition était de couper cet intermédiaire, et pas beaucoup plus que cela.
+
+Le problème que le document tente de résoudre a un nom : la double dépense. Dans un fichier numérique, copier ne coûte rien. Si tu envoies une photo à quelqu'un, tu la gardes toujours. Avec l'argent numérique, la question est différente : comment garantir que la même unité n'est pas dépensée deux fois, sans qu'une banque confirme chaque opération ? Cette question est plus ancienne que Bitcoin, et c'est la clé pour comprendre tout le reste.
+
+Exercice de réflexion : écris sur une ligne ce que, selon toi, un intermédiaire fait quand il approuve un virement. Ensuite, écris ce que tu perds s'il n'existe pas. Il n'y a pas de bonne réponse. Le but est que tu comprennes ce que Bitcoin tente de remplacer, et ce que coûte ce remplacement.

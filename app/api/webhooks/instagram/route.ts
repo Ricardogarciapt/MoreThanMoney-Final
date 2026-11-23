@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from "next/server"
-import { getSupabaseAdmin } from "@/lib/supabase-admin-client"
-import { generateDmReply, sendInstagramDmResilient, candidateTokensForIgAccount, carregarTokensIG } from "@/lib/instagram/dm-closer"
+import { mensagensDoWebhook, responderMensagem } from "@/lib/social/dm-motor"
 
 export const runtime = "nodejs"
 export const dynamic = "force-dynamic"
@@ -29,164 +28,25 @@ export async function GET(request: NextRequest) {
   return NextResponse.json({ error: "verify failed" }, { status: 403 })
 }
 
-type IgMessaging = {
-  sender?: { id?: string }
-  recipient?: { id?: string }
-  timestamp?: number
-  message?: { mid?: string; text?: string; is_echo?: boolean }
-}
-
-// ── POST: mensagens recebidas ────────────────────────────────────────────────
+// ── POST: mensagens recebidas (Instagram e, desde 22/11, Messenger das Páginas) ─────────────
 export async function POST(request: NextRequest) {
-  // Responder 200 rápido é obrigatório; processamos e respondemos na mesma invocação (maxDuration 60).
-  let body: {
-    object?: string
-    entry?: { id?: string; messaging?: IgMessaging[]; time?: number }[]
-  } = {}
+  let body: unknown = null
   try {
     body = await request.json()
   } catch {
     return NextResponse.json({ ok: true })
   }
-
-  if (body.object !== "instagram" || !Array.isArray(body.entry)) {
-    return NextResponse.json({ ok: true, ignored: true })
-  }
-
   // INTERRUPTOR: motor desligado → não responde (e ninguém responde por nós).
   if (process.env.IG_DM_SELFHOSTED_ENABLED === "false") {
     return NextResponse.json({ ok: true, selfhosted: false })
   }
-
-  const supabase = getSupabaseAdmin()
-  await carregarTokensIG()
+  const mensagens = mensagensDoWebhook(body)
+  if (!mensagens.length) return NextResponse.json({ ok: true, ignored: true })
   let handled = 0
-
-  for (const entry of body.entry) {
-    const accountId = entry.id || ""
-    for (const m of entry.messaging ?? []) {
-      const msg = m.message
-      const senderId = m.sender?.id
-      // Ignora echos (mensagens nossas), sem texto, ou sem remetente.
-      if (!msg || msg.is_echo || !msg.text?.trim() || !senderId) continue
-      const mid = msg.mid || `${senderId}-${m.timestamp ?? ""}`
-
-      // Dedup + auditoria (resiliente: se a tabela ainda não existir, segue em frente).
-      let alreadySeen = false
-      try {
-        const { data: ins } = await supabase
-          .from("ig_dm_log")
-          .insert({ mid, account_id: accountId, sender_id: senderId, message: msg.text, status: "received" })
-          .select("id")
-          .maybeSingle()
-        alreadySeen = !ins // conflito no mid único → já tratado
-      } catch {
-        /* tabela em falta ou erro de BD → não bloqueia a resposta */
-      }
-      if (alreadySeen) continue
-
-      if (candidateTokensForIgAccount(accountId).length === 0) {
-        try {
-          await supabase.from("ig_dm_log").update({ status: "error", error: "sem token IG" }).eq("mid", mid)
-        } catch {}
-        continue
-      }
-
-      try {
-        /**
-         * A RESPOSTA DO CLOSER LEVA CÓDIGO E FICA NO LIVRO DO AGENTE.
-         *
-         * O `DM_SYSTEM` manda o modelo fechar em `morethanmoney.pt/register` ou no Telegram, e
-         * até aqui esses links saíam sem nada que os medisse: `ig_dm_log` guardava o texto e o
-         * erro e não dizia de quem era. Ou seja, a conversa que mais perto está de uma venda — uma
-         * DM a sério, com uma pessoa a responder — era a menos atribuível de todas.
-         *
-         * Aqui NÃO há post comentado de onde herdar (quem escreve a DM pode nem ter comentado
-         * nada). O dono decidiu a 06/10: a DM do Instagram é do AG-CLOSER
-         * (`AGENTE_POR_FUNIL['instagram:dm-closer']`) — nenhum link da máquina sai sem `?ag=`.
-         */
-        const { prepararMensagem } = await import("@/lib/agentes/mensagem-saida")
-        const { registarMensagemDeAgente } = await import("@/lib/agentes/mensagem-livro")
-        // Quem pede para falar recebe o link da agenda na resposta (AG-SETTER, 06/10).
-        const { comLinkDaAgenda } = await import("@/lib/agenda/pedido-de-chamada")
-        // O closer vê as últimas trocas desta pessoa (16/11): sem histórico recomeçava a qualificação a cada DM.
-        let historico: { pessoa: string; nos: string | null }[] = []
-        try {
-          const { data: antes } = await supabase
-            .from("ig_dm_log")
-            .select("message, reply, created_at")
-            .eq("sender_id", senderId)
-            .neq("mid", mid)
-            .order("created_at", { ascending: false })
-            .limit(6)
-          historico = ((antes ?? []) as Array<{ message: string | null; reply: string | null }>)
-            .reverse()
-            .map((r) => ({ pessoa: String(r.message ?? ""), nos: r.reply }))
-        } catch {}
-        // Quantos áudios já levou esta pessoa (no máximo 2 por conversa: quebra-gelo e fecho).
-        let audiosAntes = 0
-        try {
-          const { count } = await supabase
-            .from("ig_dm_log")
-            .select("mid", { count: "exact", head: true })
-            .eq("sender_id", senderId)
-            .not("audio_motivo", "is", null)
-          audiosAntes = count ?? 0
-        } catch {
-          audiosAntes = 99 // sem contagem não se arrisca um terceiro áudio
-        }
-        const bruta = comLinkDaAgenda(await generateDmReply(msg.text, { historico }), msg.text)
-        const marcacao = prepararMensagem({ canal: "instagram", texto: bruta, funil: "instagram:dm-closer" })
-        const reply = marcacao.texto
-        const sent = await sendInstagramDmResilient(accountId, senderId, reply)
-        try {
-          await supabase
-            .from("ig_dm_log")
-            .update({
-              reply,
-              status: sent.ok ? "replied" : "error",
-              error: sent.ok ? null : sent.error,
-            })
-            .eq("mid", mid)
-        } catch {}
-        await registarMensagemDeAgente({
-          canal: "instagram",
-          destino: senderId,
-          funil: "instagram:dm-closer",
-          tipo: "dm",
-          texto: reply,
-          estado: sent.ok ? "enviada" : "falhou",
-          motivo: sent.ok ? null : String(sent.error ?? "erro").slice(0, 300),
-          referencia: mid,
-          marcacao,
-        })
-        if (sent.ok) {
-          handled++
-          // Áudio na voz do Ricardo: quebra-gelo depois de 2 mensagens dela, e no fecho (interruptor vendas_audio_dm).
-          const { talvezAudioInstagram } = await import("@/lib/vendas/audio-dm")
-          const audio = await talvezAudioInstagram(supabase as never, {
-            accountId,
-            destino: senderId,
-            resposta: reply,
-            referencia: mid,
-            conversa: { mensagensAntes: historico.length, audiosAntes },
-          })
-          if (audio.enviado && audio.momento) {
-            try {
-              await supabase.from("ig_dm_log").update({ audio_motivo: audio.momento }).eq("mid", mid)
-            } catch {}
-          }
-        }
-      } catch (e) {
-        try {
-          await supabase
-            .from("ig_dm_log")
-            .update({ status: "error", error: e instanceof Error ? e.message : "erro" })
-            .eq("mid", mid)
-        } catch {}
-      }
-    }
+  // O motor (lib/social/dm-motor.ts) faz dedup por mid, closer, envio, livro e áudio.
+  for (const m of mensagens) {
+    const r = await responderMensagem(m)
+    if (r.resultado === "respondida") handled++
   }
-
   return NextResponse.json({ ok: true, handled })
 }

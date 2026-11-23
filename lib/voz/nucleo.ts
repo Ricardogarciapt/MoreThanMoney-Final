@@ -106,8 +106,23 @@ export type TextoPreparado = { ok: true; partes: string[] }
  * Valida e parte o texto. Devolve as partes a sintetizar (1 na maioria dos casos:
  * os cues da dobragem são curtos, por isso o caminho vivo não muda).
  */
+/**
+ * Pronúncia PT-PT (22/11, Ricardo: «DCA» saía com dicção errada/espanholada e «Garcia» às vezes parecia espanhol).
+ * A Fish lê o que lhe escrevemos: siglas soletradas à portuguesa e nomes reescritos com pistas de PT-PT
+ * («â» fechado como em «câmara»). Só mexe no texto que vai para a síntese, nunca nas legendas.
+ */
+const PRONUNCIA_PT: [RegExp, string][] = [
+  [/\bDCA\b/g, 'dê cê á'],
+  [/\bGarcia\b/g, 'Gârcia'],
+]
+export function pronunciaPtPt(texto: string): string {
+  let t = texto || ''
+  for (const [re, por] of PRONUNCIA_PT) t = t.replace(re, por)
+  return t
+}
+
 export function prepararTexto(texto: string): TextoPreparado | FalhaVoz {
-  const limpo = (texto || '').trim()
+  const limpo = pronunciaPtPt(texto || '').trim()
   if (!limpo) return falha('texto-invalido', 'texto vazio')
   if (limpo.length > MAX_CARACTERES_TOTAL) {
     return falha(

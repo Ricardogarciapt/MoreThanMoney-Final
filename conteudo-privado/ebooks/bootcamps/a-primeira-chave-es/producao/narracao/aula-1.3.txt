@@ -1,0 +1,15 @@
+En octubre de 2008 apareció un documento corto que cambió la conversación sobre el dinero. Veamos el contexto.
+
+En 2008, el mundo financiero estaba en crisis. Los grandes bancos habían prestado dinero a quien no podía devolverlo, y el problema se extendió por todo el sistema. Gobiernos y bancos centrales corrieron a salvar instituciones. Mucha gente perdió su casa, su empleo o sus ahorros. Fue en ese contexto cuando muchos empezaron a preguntarse si el sistema financiero tradicional era el único camino posible.
+
+El 31 de octubre de 2008 apareció en internet un documento con ese título. Quien lo firmaba se llamaba Satoshi Nakamoto. Hasta hoy, nadie sabe con certeza quién es esa persona, o si es un grupo. Esa es la primera cosa extraña, y conviene tenerla presente, porque nos obliga a evaluar la idea y no a la persona.
+
+La idea central era fácil de decir y difícil de hacer. Dinero que pudiera enviarse de una persona a otra sin pasar por un banco, sin un intermediario que aprobara cada transferencia. En lugar de depender de la confianza en una institución, dependía de una regla escrita en código, que toda la red comprobaba. Esa es la diferencia que tienes que guardar: confianza en una persona frente a confianza en un proceso.
+
+El 3 de enero de 2009, la red creó el primer bloque, llamado bloque génesis. Dentro de ese bloque, el autor dejó un mensaje: un titular de un periódico británico sobre rescates a bancos. No hace falta interpretar mucho. Quien lo escribió quiso dejar claro en qué contexto nació la idea, y eso te dice algo sobre la desconfianza que la animaba en aquel momento. No es una verdad absoluta sobre las intenciones de nadie, pero es un dato histórico que explica mucho del discurso que oyes hoy.
+
+Seamos claros sobre lo que estoy haciendo aquí. Estoy contando una historia. Si quieres contexto, piénsalo así: en aquel momento, para la mayoría de la gente, dinero era sinónimo de banco. Quien quisiera transferir valor al otro lado del mundo dependía de bancos, plazos y comisiones. La propuesta era eliminar ese intermediario, y no mucho más que eso.
+
+El problema que el documento intenta resolver tiene nombre: el doble gasto. En un archivo digital, copiar no cuesta nada. Si envías una fotografía a alguien, sigues teniéndola. Con dinero digital, la pregunta es otra: ¿cómo garantizar que la misma unidad no se gasta dos veces, sin un banco que confirme cada operación? Esa pregunta es más antigua que Bitcoin, y es la clave para entender todo lo demás.
+
+Ejercicio de reflexión: escribe en una línea lo que crees que hace un intermediario cuando aprueba una transferencia. Después escribe lo que pierdes si no existe. No hay respuesta correcta. El objetivo es que entiendas lo que Bitcoin intenta sustituir, y lo que cuesta esa sustitución.

@@ -1,0 +1,13 @@
+El Momentum es un escáner de trading. Entonces, ¿qué hace en un módulo de DCA? Hace de semáforo.
+
+Ya habrás oído hablar del Momentum, el escáner de MTM que funciona por colores. Verde para compra, rojo para venta. Los traders lo usan en gráficos de quince minutos o de una hora. Nosotros lo vamos a usar de otra forma: en el gráfico diario y en el semanal, los gráficos grandes, que muestran la dirección de fondo y no el ruido del día.
+
+El Momentum tiene cinco confirmaciones, y cada una vale un punto. ¿La nube está presente y con el color correcto? ¿La nube está al lado correcto de las velas? ¿La media exponencial concuerda? ¿El volumen tiene el color de la dirección? ¿Y el RSI está cruzando en la zona correcta? Cinco de cinco es la señal más completa. Cuatro de cinco sigue siendo buena. Con menos, el Momentum te está diciendo que no tiene una opinión fuerte.
+
+Ahora, ¿cómo entra esto en el DCA? Con tres lecturas sencillas, en tu día de refuerzo. Primera: gráfico diario en verde, con cuatro o cinco confirmaciones de compra. La tendencia de fondo está a favor. Haces el refuerzo que sugiere el DCA Inteligente. Segunda: gráfico diario en rojo fuerte, cinco de cinco de venta. La caída está en curso. Compras la base, pero todavía no vacías el bote. Esperas a que la presión de venta se suavice. Tercera: cajas lilas encima de las velas, mercado lateral. Para un trader, es un sitio donde no se entra. Para quien hace DCA, es un día normal. Compras la base.
+
+¿Y el semanal? Úsalo una vez al mes, para ver el cuadro completo. Si el semanal ha girado a compra después de una bajada larga, es un buen momento para revisar tu plan y confirmar que el bote está listo para las semanas de Compra Fuerte. Si el semanal está en venta fuerte, no cambias nada. El DCA se hizo exactamente para esas fases.
+
+La regla de oro: el Momentum no para tu DCA. Nunca. Te ayuda a decidir si usas el bote o no, y cuánto. Si alguna vez te pillas diciendo esta semana no compro porque está en rojo, vuelve a esta lección. Rojo en el gráfico diario, para quien hace DCA, significa base, no significa cero.
+
+Ejercicio: abre el gráfico diario de un activo de tu plan con el Momentum. Cuenta las confirmaciones. Escribe la lectura, los puntos y qué harías el próximo viernes: base, base más bote, o base sin bote. Hazlo durante tres viernes seguidos, sin comprar nada de más, solo registrando. Vas a aprender más con esto que con cualquier vídeo.

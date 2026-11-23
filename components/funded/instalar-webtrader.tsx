@@ -94,9 +94,9 @@ export default function InstalarWebtrader({ contexto }: { contexto: "embutido" |
         type="button"
         onClick={instalar}
         className="flex shrink-0 items-center gap-1 rounded-md border border-amber-400/40 bg-black/30 px-2 py-1 text-[11px] font-semibold text-amber-100"
-        title={podePedir ? k("instTitulo") : undefined}
+        title={podePedir ? k("instTitulo") : k("instAdicionar")} aria-label={k("instAdicionar")}
       >
-        <Download className="h-3.5 w-3.5" /> {k("instAdicionar")}
+        <Download className="h-3.5 w-3.5" /> <span className="hidden sm:inline">{k("instAdicionar")}</span>
       </button>
       {folha && (
         <FolhaInstalar titulo={k("instTitulo")} rotuloFechar={k("fechar")} onFechar={() => setFolha(null)}>

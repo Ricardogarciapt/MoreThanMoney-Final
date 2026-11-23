@@ -71,14 +71,6 @@ tempo: 15 min to 1 hour
 It works with colours: green buys, red sells. It combines five pieces (cloud, position relative to the cloud, exponential average, volume and RSI) and each one is worth a point. The lilac boxes mark a sideways market, and a sideways market is where you don't enter.
 :::
 
-:::scanner Quantum
-foto: sc-quantum.jpg
-estilo: Trend with entry on a pullback
-ativos: Forex, crypto, indices, gold
-tempo: 15 min to 1 hour
-Three steps, always in the same order: confirm the trend, wait for the price to pull back, and enter when the oscillator is in the right zone and the signal appears. The hard part isn't seeing the signal. It's waiting for the pullback.
-:::
-
 :::scanner Sniper Pro
 foto: sc-sniper-pro.jpg
 estilo: Intraday, momentum and reversal
@@ -116,7 +108,7 @@ The right question isn't "which one is best?". It's "which one fits into my day?
 | If your life looks like this | Start looking at |
 |---|---|
 | You have 15 minutes in the morning and another 15 in the evening | Regression reading on the 1-hour or 4-hour chart (chapter 7) |
-| You have your lunch hour, which in Lisboa coincides with London being open | Sniper Pro or Quantum, confirmed on the larger chart |
+| You have your lunch hour, which in Lisboa coincides with London being open | Sniper Pro, confirmed on the larger chart |
 | You have the afternoon free and can stay alert | Golden Zone or TrendShot, only during the London and New York overlap |
 | You can only look at weekends | Daily and weekly charts; no scalping |
 

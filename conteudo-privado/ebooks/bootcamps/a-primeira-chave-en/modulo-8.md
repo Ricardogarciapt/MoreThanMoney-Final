@@ -1,0 +1,104 @@
+# Módulo 8 — Build your portfolio (≈14 min)
+**Objetivo:** turn the plan from module seven into a written portfolio, with a core, capped satellites, a reserve pot and rebalancing rules that hold up through the bad weeks.  **No fim, o aluno consegue:** 1) separate core and satellites and give each one its weight; 2) do the sums for how much goes into BTC, ETH and stablecoins, with illustrative examples; 3) define how and when you rebalance, and what you do with the reserve pot; 4) read the house Portfolios as a mirror and write your target portfolio in the notebook.
+
+**Production note:** every figure in these lessons is an illustrative example and is said out loud and shown on screen. In the house Portfolios, record with data from the day of recording and blur any balance.
+
+## Aula 8.1 — Core and satellites (≈3–4 min)
+**Gancho (0:00–0:20):** "Imagine a house. You have a structure you never touch, and some rooms you decorate over the years. A crypto portfolio works in much the same way."
+
+**[CENA 1]** Ruben in a medium shot, almost black background, details in gold. Text on screen: “Educational content. The risk of loss is real.”
+**NARRAÇÃO:** Before you set up anything, I want you to understand one thing. In a portfolio, the most important question is not which coin I buy. It is how much of my money goes into each piece, and why. This module is about that question. We are going to build the portfolio in layers, from the most stable to the riskiest, and each layer has its own role. If you have got this far, you already know what DCA is and you already have your plan, with a base amount, a fixed day and a ceiling. What is missing is giving shape to what you buy. And notice: we are talking about organisation and education. No portfolio gives you guarantees. The risk of loss is real, and it can be total.
+
+**[CENA 2]** Animation: a large gold circle in the centre, with smaller circles around it. Labels: “core” in the centre, “satellites” around it.
+**NARRAÇÃO:** The model we are going to use is called core and satellites. The core is the big part, the one you intend to hold for years. It is usually made up of the best-known assets with the longest history, and that is where your DCA spends most of its time. The satellites are the smaller part: smaller, more volatile assets, each with its own thesis, which you must be able to explain in two sentences. The core weathers the storms. The satellites are where you can regret things fastest. So the core is the foundation, and the satellites are an extra, with a cap.
+
+**[CENA 3]** Stacked bar chart: core at the bottom, satellites on top, with a dashed line marking the satellite cap. Caption: “illustrative example”.
+**NARRAÇÃO:** Let us put numbers on it, so you can see the order of magnitude. Illustrative example: a plan of one hundred euros a month. Ninety euros go to the core and ten to the satellites. Then, within the satellites, no single asset gets more than a small slice, say a third of the satellite pie. These numbers are not a recommendation. They are a way of making visible a decision that, without paper, stays hidden in a Thursday-night impulse. Once the decision is written down, it is much harder to take it badly on impulse. Notice that the sum is always the same: first the total, then the split, and only at the end the name of each asset.
+
+**[CENA 4]** Ruben with an open notebook, a page divided into two columns: “core” and “satellites”, with a space underneath for the thesis of each asset.
+**NARRAÇÃO:** Every satellite needs a written thesis. Ask yourself: why is it here? What problem does it solve, or what bet am I making? If the answer is “because it went up a lot last week”, that is not a thesis, it is a headline. Write the thesis before you buy, and review it once a month. If you can no longer explain why it is there, take it out of the satellites. Careful: DCA does not stop because of that. It is the plan that changes, in the notebook, calmly, and never in the middle of a drop. The new money then goes somewhere else in the plan.
+
+**[CENA 5]** Split screen: on the left, a wallet with ten tiny slices; on the right, one with three well-defined slices. Text: “fewer assets, more thesis”.
+**NARRAÇÃO:** A very common trap is holding twelve assets with one-euro slices. It looks like diversification, but in practice it is a collection of decisions you do not understand. Anyone starting should have a core of one or two assets and, at most, two or three satellites. If you are thinking about more, wait. You can always add later, once you have the habit of writing the thesis and recording every purchase. Fewer assets, more thesis, and a DCA you actually follow, rather than a DCA lost on a screen full of coins.
+
+**[CENA 6]** Exercise sheet with three lines: “core”, “satellite 1”, “satellite 2”. Ruben writing by hand.
+**NARRAÇÃO:** Three-minute exercise. Take your plan and write three lines in the notebook. On the first, the core, with the asset and its percentage of the plan. On the second and third, the satellites, if you want to have them, with the thesis in two sentences each. If you have no satellites, write “no satellites” and move on. It is a valid decision, and often the most sensible one. Next lesson we will see how much to put into each piece and how stablecoins fit into this sum. There is no exact percentage that suits everyone. Anyone who tells you there is, is selling you something.
+
+**Texto no ecrã:** core and satellites · capped satellites · each satellite with a written thesis · fewer assets, more thesis
+**Check question:** An asset has gone up a lot in one week and you want to put it in the satellites. What do you do first? Answer: I write the thesis in two sentences; if I cannot, I do not enter.
+**Fecho / CTA da aula:** "Next lesson: how much in BTC, ETH and stablecoins, with examples."
+
+## Aula 8.2 — How much in BTC, ETH and stablecoins (≈3–4 min)
+**Gancho (0:00–0:20):** "Everyone asks how much to put into each coin. The honest answer starts with a different question: what is each one for?"
+
+**[CENA 1]** Three cards on screen, one per coin: BTC, ETH and stablecoins, each with a short line about its role.
+**NARRAÇÃO:** Let us look at the three most common pieces of a crypto portfolio. Bitcoin is the oldest and best-known coin, which is why many people use it as the base of the core. Ethereum is a platform on which applications run, and its role is different: it is a bet on how that platform is used, with more variables along the way. Stablecoins are tokens, generally tied to a currency such as the dollar. They try to keep a stable value, but they are not money in your bank account, and they carry risks of their own. Each one answers a different question. Do not throw them all in the same bag.
+
+**[CENA 2]** Animation: a bar at one hundred per cent, split into three parts, labelled “BTC”, “ETH” and “stablecoins”. Corner of the screen: “illustrative example”.
+**NARRAÇÃO:** Let us do some sums with an illustrative example. Imagine a plan of one hundred euros a month and a rule you wrote yourself: the core is Bitcoin, the satellites are Ethereum, and a small part stays in stablecoins. One possible design, just so you can see the sum, would be seventy, twenty, ten. Seventy euros in Bitcoin, twenty in Ethereum, ten in stablecoins. Notice that this is not a recommendation. It is an example, to show how a percentage turns into euros, and to make clear that your design has to fit your plan, not what you saw in someone else's video.
+
+**[CENA 3]** Animated table: “plan of €100 · illustrative example”, with the rows BTC €70, ETH €20 and stablecoins €10. Underneath, one line: “if ETH falls 20%, its share is worth less”.
+**NARRAÇÃO:** Now, what happens when the market moves. Imagine, illustrative example, that the Ethereum part falls twenty per cent. The twenty euros you put in there are now worth sixteen. That is not a tragedy, it is arithmetic. What matters is that the split of your plan does not change because of it. The following month is still one hundred euros, and the split is still seventy, twenty and ten. If you change the split in the middle of a drop, you are deciding out of fear. If you still need to change it, record the change in the notebook and write down why, with the date.
+
+**[CENA 4]** Ruben with a three-column table drawn in the notebook: “role”, “when it makes sense”, “what can go wrong”.
+**NARRAÇÃO:** Let us go through the role of each piece, which is what should guide your choice. Bitcoin has the role of base, with a long history, a lot of liquidity and a lot of discussion around it. Ethereum has the role of a bet on the platform, with more complexity and more factors that can change. Stablecoins have the role of parking and liquidity, never of growth, and they bring issuer risk, risk linked to the reference currency, and regulatory risk. Notice that what can go wrong is written next to each one. Anyone who only writes the good side has not yet done the work.
+
+**[CENA 5]** Screen with a table titled “cap per coin”. Note in the corner: “illustrative example, not a recommendation”.
+**NARRAÇÃO:** A practical rule: set a cap per coin before you start. Illustrative example: no satellite goes above ten per cent of the plan, and stablecoins do not go above twenty per cent, even if they seem safe. These numbers are only there so you can do your own sums. What matters is that the cap exists, that it is written down and that you keep it. If your plan is small, do the sums with five or ten euros and see whether the design still makes sense. Often it does not, and it is much better to find that out on paper than with the money already on the platform.
+
+**[CENA 6]** Exercise sheet with a blank table. Ruben crosses out a line and writes another one above it.
+**NARRAÇÃO:** Exercise: write your monthly plan, say one hundred and fifty euros, and split it into three lines: BTC, ETH and stablecoins. Use a design that seems reasonable to you. Then do the sum for one month in which the smallest part falls twenty per cent, illustrative example, and for another in which it rises. It is not about getting it right. It is about seeing whether you could keep the plan without touching it. If the answer is “no”, the design is too big for your wallet or for your stomach. Adjust it until you can stick to it.
+
+**Texto no ecrã:** BTC: base · ETH: bet on the platform · stablecoins: parking, not growth · illustrative examples, not a recommendation
+**Check question:** Why is a stablecoin not the same as money in the bank? Answer: because it carries its own risks: issuer risk, the link to the reference currency and regulatory risk.
+**Fecho / CTA da aula:** "Next lesson: rebalancing and the reserve pot."
+
+## Aula 8.3 — Rebalancing and the reserve pot (≈3–4 min)
+**Gancho (0:00–0:20):** "A portfolio moves on its own. One coin rises, another falls, and the split you wrote three months ago no longer exists. What do you do about it?"
+
+**[CENA 1]** Two bar charts side by side. Left: 70, 20 and 10. Right: 80, 12 and 8. Caption: “illustrative example”.
+**NARRAÇÃO:** It is called drift. Illustrative example: you started with seventy per cent in Bitcoin, twenty in Ethereum and ten in stablecoins. A year later, Bitcoin has risen a lot and you have eighty per cent. Ethereum and the stablecoins have fallen to twelve and eight. Nobody gave you a signal. The portfolio simply changed shape. Rebalancing is the act of going back to the split you wrote down, using a rule you defined beforehand, and not the mood of the day. It is not a guess about what is going to happen. It is keeping the risk you chose.
+
+**[CENA 2]** Ruben with a calendar in his hand and a board with two rules written: “calendar: once a quarter” and “band: I act if it drifts five points”.
+**NARRAÇÃO:** There are two simple ways to rebalance. The first is by calendar: once a quarter, you review the split and correct whatever has drifted. The second is by band: you only act when a part drifts further than a certain number of points from its target. Illustrative example: a five-point band. If the core is written as seventy, you act only if it leaves sixty-five or seventy-five. Each method has its advantages. The calendar is simpler to follow. The band only reacts when the drift is real. Choose one, write it in the notebook and keep to it, with no exceptions invented on the spot.
+
+**[CENA 3]** Animation: a clay pot with gold coins, label “reserve pot”, arrows coming in from the left and going out to the right.
+**NARRAÇÃO:** Now the reserve pot, which you already know from module seven. It is the part of the plan's money that was not spent in a given week. It does not disappear and it is not lost: it is kept aside, and it has one use only. Topping up in weeks when the MTM Smart DCA label is Strong Buy, within the monthly ceiling. The ceiling comes first. The pot is not a second account to spend freely. That is why it has to be in the notebook, with a balance and an exit rule, so that it is never an improvised decision.
+
+**[CENA 4]** Notebook sheet with four fields: “pot: balance”, “in”, “out”, “rule”.
+**NARRAÇÃO:** The exit rule is the most important part, and you write it down before you need it. For example: the pot is only used in Strong Buy weeks, and never for more than half of its balance at once. Illustrative example, of course. And there is another rule that is never broken: the pot is never used to buy what has risen sharply. If the market is euphoric, the pot stays still. When you use the pot, record the week, the asset and the reason on the same Friday ritual sheet, so that the saved money always has a history you can account for.
+
+**[CENA 5]** Ruben, close-up, talking to camera. Line on screen: “Rebalancing is not guessing.”
+**NARRAÇÃO:** A common confusion: rebalancing is not an attempt to guess the top or the bottom. When you sell a little of what has risen to get back to the split, you are not saying the price is going to fall. You are keeping the risk you chose. And when you buy what has fallen to restore the split, you are not saying it will rise. You are respecting the plan. Rebalancing also has costs: platform fees, possible taxes, which we will look at at the end of the programme, and the work of recording everything. So do not rebalance every week, and always confirm the conditions on your authorised platform.
+
+**[CENA 6]** Exercise sheet with the line “date · split before · split after · reason”. Ruben writes the rule and a starting balance.
+**NARRAÇÃO:** Five-minute exercise. Write your rebalancing rule in the notebook: calendar or band, and the value. Then create your pot: one line with the starting balance, which can perfectly well be zero. Write the exit rule in one sentence, and keep the notebook. You do not have to rebalance today. You have to know, before you need to, what you would do. That is what separates a plan from a wish. If you do not know which to choose, start with the calendar, because it is the easiest to keep in a busy week. Notice that you are not choosing the best rule in the world. You are choosing one you are going to respect.
+
+**Texto no ecrã:** drift · rebalance by rule · pot: used only within the ceiling · rebalancing is not guessing
+**Check question:** Bitcoin has risen and your split has changed. Do you sell to restore it? Answer: it depends on the rule you wrote. If you have a calendar or a band, you follow the rule and do not decide by the chart of the day.
+**Fecho / CTA da aula:** "Last lesson of the module: reading the house Portfolios without copying them, and your mission."
+
+## Aula 8.4 — Reading the house Portfolios without copying them (≈3–4 min)
+**Gancho (0:00–0:20):** "Copying is the shortest route to learning nothing. Looking carefully is slower, and gives you much more."
+
+**[CENA 1]** Screen of the MTM System app, Portfolios tab, with the two house portfolios. Text on screen: “demonstration and education portfolios”.
+**NARRAÇÃO:** You already know the two house portfolios: one crypto and one ETF, topped up every Friday and recorded purchase by purchase. Today we are going to learn how to read them. Not to copy them, but to see a recorded structure working over time. A demonstration portfolio does not tell you what to do. It tells you what was done, with rules that, ideally, are written down, and it lets you ask why. That question is what is worth taking from this lesson. You do not need to memorise them. You need to open them with a clear goal, which is to learn the method and not to copy the result.
+
+**[CENA 2]** Zoom into three areas of the screen, each with a caption: “structure”, “dates”, “consistency”.
+**NARRAÇÃO:** Look at three things. First, the structure: how many assets there are and which one carries the most weight. Second, discipline: the dates of the moves, all on a Friday. Third, consistency: compare each top-up with what the MTM Smart DCA indicated that day. If the portfolio follows its own rule, you can see it in the dates and in the labels. If it does not, ask why. A careful reader is not looking for the right answer. They look for the rule behind each move, and notice when it does not appear. Do this reading with the notebook open, not from memory, because memory tends to keep only what we like to see.
+
+**[CENA 3]** Ruben showing the notebook, with two columns: “what I copy” and “what I learn”.
+**NARRAÇÃO:** There is one distinction I want you to always make. What to copy: no assets, no percentages, no moments. What to learn: the order of things. First you write the structure. Then you define the rhythm. Only then do you top up. Another person's assets, or the house's, are the context of that portfolio, and your context is different: a different base amount, a different time horizon, a different tolerance for falls. Copying someone else's context is the fastest way to buy at the wrong bottom without understanding why. Once the distinction is clear, the house portfolio stops being a mirror of ambition and becomes a mirror of method.
+
+**[CENA 4]** Animation: three questions appear one by one over a chart: “Why is it here?”, “How much does it weigh, and has that changed?”, “Which rule explains the change?”.
+**NARRAÇÃO:** When you look at a portfolio, ask it three questions. Why is this asset here? How much does it weigh, and has that changed over time? Which rule explains a change? If you find no answer, that is not a fault of yours. Often the answer is simply not written down. In that case, the portfolio is not an example for you, it is just a record. And that is fine: a record also teaches, as long as you know you are not looking at a manual. Write the answers with the date beside them, because in a few months you will want to compare your reading today with the one you make when you have more experience.
+
+**[CENA 5]** Split screen: the house portfolio on the left, the student's table on the right. Text on screen: “mirror, not mould”.
+**NARRAÇÃO:** Use the house portfolio as a mirror. When you have your own table, put the two side by side. Ask: does my split follow the same logic? Does it have a core, capped satellites, a pot and a rule? If yours has something the house does not have, for example a different satellite, write down why. The difference is not an error. It is your decision, and that is what we want to see in the notebook. And remember: past results do not guarantee future results, neither those of the house nor yours. If any difference bothers you, do not erase it straight away. Write it down and leave it there for a week before you decide what to do.
+
+**[CENA 6]** Ruben with the notebook closed in front of him. A warning in large letters on screen: “Demonstration and education portfolios. Past results do not guarantee future results.”
+**NARRAÇÃO:** Mission for this module: write your target portfolio in the notebook. One page. It has the core, with the asset and its weight. It has the satellites, if you have them, each with its thesis. It has the split in euros for your monthly plan, your cap per coin, the rebalancing method and the pot, with its exit rule. And it has a final line: what you would do if the core fell twenty per cent in one month. You do not need to buy anything to complete the mission. The mission is to write. See you in module nine, where we read the market more calmly.
+
+**Texto no ecrã:** house portfolios · mirror, not mould · three questions · target portfolio written · mission: one page
+**Check question:** What is the difference between copying a portfolio and learning from it? Answer: copying takes someone else's assets; learning takes the structure, the rule and the question of why.
+**Fecho / CTA da aula:** End of Module 8. Next module: 9, Reading the market as an investor. On-screen button: “Continue to Module 9”.

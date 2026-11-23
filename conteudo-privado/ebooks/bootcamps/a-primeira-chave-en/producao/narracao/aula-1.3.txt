@@ -1,0 +1,15 @@
+In October 2008, a short document appeared that changed the conversation about money. Let's look at the context.
+
+In 2008, the financial world was in crisis. Large banks had lent money to people who couldn't repay it, and the problem spread through the whole system. Governments and central banks rushed to rescue institutions. Many people lost their home, their job or their savings. It was in this context that many people started asking whether the traditional financial system was the only possible path.
+
+On 31 October 2008, a document with that title appeared on the internet. It was signed by a person using the name Satoshi Nakamoto. To this day, nobody knows for sure who that person is, or whether it's a group. That's the first strange thing, and it's worth keeping in mind, because it forces us to judge the idea and not the person.
+
+The central idea was simple to say and hard to do. Money that could be sent from one person to another without going through a bank, without an intermediary approving every transfer. Instead of relying on trust in an institution, it relied on a rule written in code, which the whole network checked. That's the difference to hold on to: trust in a person versus trust in a process.
+
+On 3 January 2009, the network created the first block, called the genesis block. Inside that block, the author left a message: a headline from a British newspaper about bank bailouts. You don't need to interpret it much. Whoever wrote it wanted to make clear the context in which the idea was born, and that tells you something about the distrust that animated it at the time. It isn't an absolute truth about anyone's intentions, but it's a historical fact that explains a lot of the discourse you hear today.
+
+Let's be clear about what I'm doing here. I'm telling a story. If you want context, think of it this way: back then, for most people, money meant a bank. Anyone who wanted to transfer value to the other side of the world depended on banks, on delays and on fees. The proposal was to cut out that middleman, and not much more than that.
+
+The problem the document tries to solve has a name: double spending. With a digital file, copying costs nothing. If you send a photo to someone, you still have it. With digital money, the question is different: how do you guarantee that the same unit isn't spent twice, without a bank confirming every operation? That question is older than Bitcoin, and it's the key to understanding everything else.
+
+Reflection exercise: write on one line what you think an intermediary does when it approves a transfer. Then write what you lose if it doesn't exist. There's no right answer. The goal is for you to see what Bitcoin tries to replace, and what that replacement costs.

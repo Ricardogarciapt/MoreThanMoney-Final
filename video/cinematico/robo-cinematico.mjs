@@ -36,7 +36,8 @@ function correr(cmd, args, opts = {}) {
 }
 
 async function baixar(url, destino) {
-  const r = await fetch(url, { signal: AbortSignal.timeout(120_000) })
+  // a Wikimedia recusa pedidos sem User-Agent identificável
+  const r = await fetch(url, { signal: AbortSignal.timeout(120_000), headers: { 'user-agent': 'MTM-reels/1.0 (+https://www.morethanmoney.pt)' } })
   if (!r.ok) throw new Error(`download ${r.status}`)
   fs.writeFileSync(destino, Buffer.from(await r.arrayBuffer()))
   return r.headers.get('content-type') || ''
@@ -129,6 +130,18 @@ async function montar({ id, marca, video, cin }) {
     } catch (e) { log('apoio falhou', u, e.message) }
   }
 
+  // Referências visuais (22/11, «se falas do GTA VI, mostra o GTA VI»): imagem real do que a voz nomeia
+  const refs = []
+  if (Array.isArray(cin.visuais) && cin.visuais.length) log('referências pedidas', cin.visuais.length)
+  for (const [i, r] of (Array.isArray(cin.visuais) ? cin.visuais : []).slice(0, 4).entries()) {
+    try {
+      if (!r || !/^https:\/\//.test(r.url || '') || !r.quando) continue
+      const nome = `${id}-ref-${i}.jpg`
+      await baixar(r.url, path.join(AUTO, nome))
+      refs.push({ ...r, src: `stock/auto/${nome}` })
+    } catch (e) { log('referência falhou', r && r.url, e.message) }
+  }
+
   // palavras com tempos
   const pal = path.join(AUTO, `${id}-palavras.json`)
   let palavras = arg('palavras') ? JSON.parse(fs.readFileSync(arg('palavras'), 'utf8')) : []
@@ -145,13 +158,58 @@ async function montar({ id, marca, video, cin }) {
   // Molde de edição (21/11): vem do projecto; sem ele roda pelo dia (cinema → impacto → documental).
   const MOLDES = ['cinema', 'impacto', 'documental']
   config.molde = MOLDES.includes(cin.molde) ? cin.molde : arg('molde') && MOLDES.includes(arg('molde')) ? arg('molde') : MOLDES[Math.floor(Date.now() / 86400000) % 3]
+  // Estilo de edição (22/11, «usa mais estilos»): vem do projecto; sem ele roda por reel (id + dia), para os 5 do dia
+  // não saírem iguais.
+  const ESTILOS = ['classico', 'palavra', 'nativo', 'noir']
+  const semente = [...String(id)].reduce((s, c) => s + c.charCodeAt(0), 0) + Math.floor(Date.now() / 86400000)
+  config.estilo = ESTILOS.includes(cin.estilo) ? cin.estilo : arg('estilo') && ESTILOS.includes(arg('estilo')) ? arg('estilo') : ESTILOS[semente % ESTILOS.length]
+  // Lista viva (22/11, formatos virais): cada item entra quando a voz diz a palavra mais marcante dele.
+  if (cin.lista && Array.isArray(cin.lista.itens) && cin.lista.itens.length >= 2) {
+    const n = (t) => String(t).toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9 ]/g, ' ')
+    const ini = config.gancho.ate, fimL = config.cta.de - 0.3, k = cin.lista.itens.length
+    let cursor = ini
+    // 22/11: quando a voz numera («Um:», «Dois:», «Primeiro:»…), cada item entra no seu número — a busca por
+    // palavra trocava «ação» por «motivação» e «opera» por «operação» e mostrava itens antes do tempo.
+    const ORD = /^(um|uma|dois|duas|tres|quatro|cinco|seis|sete|primeiro|segundo|terceiro|quarto|quinto|sexto|setimo)$/
+    const ords = palavras.filter((w, j) => w.ini >= ini - 0.3 && w.ini < fimL && ORD.test(n(w.w).trim()) && /[:,.]$/.test(w.w.trim()) && j < palavras.length - 1)
+    if (ords.length >= k) {
+      const itens = cin.lista.itens.map((t, i) => ({ em: +Math.max(ini, ords[i].ini - 0.05).toFixed(2), t }))
+      config.lista = { titulo: cin.lista.titulo || '', itens, ...(cin.lista.contagem ? { contagem: true } : {}) }
+    }
+    const itens = config.lista ? config.lista.itens : cin.lista.itens.map((t, i) => {
+      const chaves = n(t).split(/\s+/).filter((x) => x.length >= 4).sort((a, b) => b.length - a.length)
+      const p = palavras.find((w) => w.ini >= cursor - 0.05 && w.ini < fimL && chaves.some((c) => n(w.w).trim().startsWith(c.slice(0, 5))))
+      const em = p ? Math.max(cursor, p.ini - 0.15) : ini + ((fimL - ini) * i) / k
+      cursor = em + 0.4
+      return { em: +em.toFixed(2), t }
+    })
+    if (!config.lista) config.lista = { titulo: cin.lista.titulo || '', itens, ...(cin.lista.contagem ? { contagem: true } : {}) }
+    config.chips = []
+    config.imagens = []
+  }
+  if (refs.length) {
+    const nn = (t) => String(t).toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]/g, '')
+    const fimR = config.cta.de - 0.4
+    config.referencias = []
+    for (const r of refs) {
+      const alvo = nn(String(r.quando).split(/\s+/)[0]).slice(0, 5)
+      const p = palavras.find((w) => w.ini >= config.gancho.ate - 0.3 && w.ini < fimR && alvo && nn(w.w).startsWith(alvo))
+        || palavras.find((w) => w.ini < fimR && alvo && nn(w.w).startsWith(alvo))
+      if (!p) { log('referência sem palavra', r.quando); continue }
+      // nunca durante o gancho (23/11, texto sobreposto): se a palavra cai lá, o cartão entra logo a seguir
+      const em = +Math.max(config.gancho.ate + 0.15, p.ini - 0.1).toFixed(2)
+      if (em > fimR - 1) { log('referência sem espaço', r.quando); continue }
+      if (config.referencias.some((x) => Math.abs(x.em - em) < 2)) continue
+      config.referencias.push({ em, ate: +Math.min(fimR, em + (Number(r.dur) || 2.2)).toFixed(2), src: r.src, ...(r.etiqueta ? { t: String(r.etiqueta).slice(0, 24) } : {}), ...(r.fonte ? { fonte: String(r.fonte).slice(0, 40) } : {}) })
+    }
+  }
   await capturarDemos(config, stockPresente())
   log('peça', JSON.stringify(config))
   const fim = legendas[legendas.length - 1][1]
   fs.writeFileSync(path.join(AUTO, `${id}-tempos.json`), JSON.stringify(temposSom(config, fim)))
   correr('python3', ['som/anuncio-reel/sintese.py', path.join(AUTO, `${id}-tempos.json`), path.join(AUTO, `${id}-musica.wav`)])
 
-  const props = { marca, formato: 'reel', anuncio: 'auto', auto: { config, legendas, video: `stock/auto/${path.basename(video)}`, musica: `stock/auto/${id}-musica.wav` } }
+  const props = { marca, formato: 'reel', anuncio: 'auto', auto: { config, legendas, video: `stock/auto/${path.basename(video)}`, musica: `stock/auto/${id}-musica.wav`, ...(cin.sem_musica ? { semMusica: true } : {}) } }
   const fprops = path.join(AUTO, `${id}-props.json`)
   fs.writeFileSync(fprops, JSON.stringify(props))
   fs.mkdirSync(path.join(AQUI, 'out'), { recursive: true })
@@ -172,7 +230,91 @@ async function montar({ id, marca, video, cin }) {
   return final
 }
 
-const limpar = (id) => { for (const f of fs.existsSync(AUTO) ? fs.readdirSync(AUTO) : []) if (f.startsWith(id)) fs.rmSync(path.join(AUTO, f), { force: true }) }
+/**
+ * Fundo dos reels narrados: planos de ~3 s escolhidos por id (sempre os mesmos para o mesmo reel), das fotos
+ * reais do Ricardo e do stock, a 1080×1920, com a voz por cima. Sai um mp4 que o resto do robô trata como o gémeo.
+ *
+ * 22/11 (Ricardo, depois do 1.º lote): (1) os clips HeyGen das fotos mexiam demasiado os lábios («muito robótico»)
+ * → as fotos passam a planos Ken Burns sobre a foto parada: a foto inteira (4:5) sobre o próprio fundo desfocado,
+ * a aproximar devagar para o rosto (FOCO) — melhor enquadramento, sem caras a mexer. (2) o CTA vinha colado às
+ * dicas → 2,5 s de pausa na voz antes da frase do CTA, cobertos pelos planos (outras fotos a animar).
+ */
+const FOCO_FOTOS = { estudio: [0.33, 0.2], farda: [0.52, 0.3], palco: [0.47, 0.24], recomeco: [0.45, 0.55], retrato: [0.42, 0.3] }
+const PAUSA_CTA = 2.5
+
+/** Mete PAUSA_CTA s de silêncio antes da frase do CTA (a última que manda comentar/seguir). Devolve o ficheiro a usar. */
+function vozComPausa({ id, voz, cin }) {
+  const pal = path.join(AUTO, `${id}-voz-palavras.json`)
+  const w = spawnSync('python3', [path.join(AQUI, 'som/transcrever.py'), voz, pal, cin.texto || ''], { stdio: 'inherit' })
+  if (w.status !== 0 || !fs.existsSync(pal)) { log('pausa CTA: sem Whisper, voz tal como está'); return voz }
+  const ps = JSON.parse(fs.readFileSync(pal, 'utf8'))
+  const n = (t) => String(t).toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-z0-9]/g, '')
+  const chave = n(cin.palavra_chave || '')
+  const re = /^(comenta|escreve|manda|envia|segue|clica)/
+  let i = -1
+  for (let k = ps.length - 1; k > 2; k--) if (re.test(n(ps[k].w)) || (chave && n(ps[k].w) === chave && re.test(n(ps[k - 1]?.w || '')))) { i = re.test(n(ps[k].w)) ? k : k - 1; break }
+  if (i < 3) { log('pausa CTA: frase do CTA não encontrada'); return voz }
+  // recua até ao início da frase (palavra anterior acaba em . ! ? ou :)
+  let j = i
+  while (j > 1 && !/[.!?:…]$/.test(ps[j - 1].w)) j--
+  if (j < 2) j = i
+  const corte = +((ps[j - 1].fim + ps[j].ini) / 2).toFixed(3)
+  const saida = path.join(AUTO, `${id}-voz-pausa.wav`)
+  correr('ffmpeg', ['-loglevel', 'error', '-y', '-i', voz, '-filter_complex',
+    `[0:a]aresample=44100,asplit=2[x][y];[x]atrim=0:${corte},asetpts=PTS-STARTPTS[a1];[y]atrim=start=${corte},asetpts=PTS-STARTPTS[a2];anullsrc=r=44100:cl=mono,atrim=0:${PAUSA_CTA}[s];[a1][s][a2]concat=n=3:v=0:a=1,aformat=channel_layouts=mono[a]`,
+    '-map', '[a]', saida])
+  log('pausa CTA', `${PAUSA_CTA}s aos ${corte}s (antes de «${ps[j].w}»)`)
+  return saida
+}
+
+/** Foto parada → plano de 3 s: foto inteira sobre o fundo desfocado, aproximação lenta para o rosto. */
+function planoFoto(k, i, destino) {
+  const dir = path.join(AQUI, 'public/fotos-planos')
+  const quadro = path.join(AUTO, `quadro-${k}.png`)
+  if (!fs.existsSync(quadro)) {
+    correr('ffmpeg', ['-loglevel', 'error', '-y', '-i', path.join(dir, `${k}-fundo.jpg`), '-i', path.join(dir, `${k}-figura.png`), '-filter_complex',
+      '[1:v][0:v]scale2ref[fg][bg];[bg][fg]overlay=0:0,split=2[a][b];' +
+      '[a]scale=1080:1920:force_original_aspect_ratio=increase,crop=1080:1920,boxblur=28:2,eq=brightness=-0.22:saturation=0.85[fundo];' +
+      '[b]scale=1080:-2[foto];[fundo][foto]overlay=0:(H-h)/2-60,format=rgb24',
+      '-frames:v', '1', quadro])
+  }
+  const [fx, fy] = FOCO_FOTOS[k] || [0.5, 0.35]
+  // posição do rosto no quadro 1080×1920 (foto 4:5 com 1080×1350, centrada e 60 px acima)
+  const qx = fx, qy = (1920 / 2 - 60 - 675 + fy * 1350) / 1920
+  const z = i % 2 === 0 ? 'min(1.0+0.0022*on,1.2)' : 'max(1.2-0.0022*on,1.0)'
+  correr('ffmpeg', ['-loglevel', 'error', '-y', '-loop', '1', '-i', quadro, '-vf',
+    `scale=3240:5760,zoompan=z='${z}':x='iw*${qx}-iw/zoom*${qx}':y='ih*${qy}-ih/zoom*${qy}':d=1:s=1080x1920:fps=30,format=yuv420p`,
+    '-frames:v', '90', '-c:v', 'libx264', '-crf', '18', '-preset', 'veryfast', destino])
+  return destino
+}
+
+function baseNarrada({ id, marca, voz, destino, cin = {} }) {
+  const vozFinal = vozComPausa({ id, voz, cin })
+  const dur = duracaoVideo(vozFinal) + 0.4
+  const dir = path.join(AQUI, 'public/fotos-planos')
+  const deFotos = Object.keys(FOCO_FOTOS).filter((k) => fs.existsSync(path.join(dir, `${k}-fundo.jpg`)) && fs.existsSync(path.join(dir, `${k}-figura.png`))).map((k) => ({ foto: k }))
+  const deStock = stockPresente().filter((n) => !n.startsWith('auto') && !n.startsWith('quadro')).map((n) => ({ video: path.join(STOCK, `${n}.mp4`) }))
+  // RG: as fotos dele primeiro; MTM: b-roll primeiro, fotos do educador pelo meio.
+  const pool = marca === 'ricardo-garcia' ? [...deFotos, ...deFotos, ...deStock] : [...deStock, ...deFotos]
+  if (!pool.length) throw new Error('narrado: sem fotos nem stock')
+  let h = 0
+  for (const c of String(id)) h = (h * 31 + c.charCodeAt(0)) >>> 0
+  const rnd = () => ((h = (h * 1103515245 + 12345) >>> 0) / 4294967296)
+  const ordem = [...pool].sort(() => rnd() - 0.5)
+  const n = Math.ceil(dur / 3)
+  const planos = Array.from({ length: n }, (_, i) => {
+    let p = ordem[i % ordem.length]
+    // nunca a mesma foto/vídeo duas vezes seguidas
+    if (i > 0) { const ant = ordem[(i - 1) % ordem.length]; if ((p.foto && p.foto === ant.foto) || (p.video && p.video === ant.video)) p = ordem[(i + 1) % ordem.length] }
+    return p.foto ? planoFoto(p.foto, i, path.join(AUTO, `${id}-plano-${i}.mp4`)) : p.video
+  })
+  const ins = planos.flatMap((f) => ['-stream_loop', '-1', '-t', '3.2', '-i', f])
+  const vf = planos.map((_, i) => `[${i}:v]scale=1080:1920:force_original_aspect_ratio=increase,crop=1080:1920,setsar=1,fps=30,trim=duration=3,setpts=PTS-STARTPTS[v${i}]`).join(';')
+  const cat = planos.map((_, i) => `[v${i}]`).join('') + `concat=n=${n}:v=1:a=0[v]`
+  correr('ffmpeg', ['-loglevel', 'error', '-y', ...ins, '-i', vozFinal, '-filter_complex', `${vf};${cat}`, '-map', '[v]', '-map', `${n}:a`, '-t', String(dur), '-c:v', 'libx264', '-crf', '18', '-preset', 'veryfast', '-pix_fmt', 'yuv420p', '-c:a', 'aac', '-b:a', '192k', destino])
+}
+
+const limpar = (id) => { for (const f of fs.existsSync(AUTO) ? fs.readdirSync(AUTO) : []) if (f.startsWith(id) || f.startsWith('quadro-')) fs.rmSync(path.join(AUTO, f), { force: true }) }
 
 async function umTrabalho() {
   const r = await fetch(`${API}/api/estudio/motor/projeto?moldes=cinematico`, { headers: auth })
@@ -186,10 +328,17 @@ async function umTrabalho() {
     const cin = t.projeto.cinematico || {}
     const marca = cin.marca === 'morethanmoney' || t.marca === 'morethanmoney' ? 'morethanmoney' : 'ricardo-garcia'
     const url = t.projeto.clips?.[0]?.fonte?.url
-    if (!url) throw new Error('sem vídeo do gémeo')
     fs.mkdirSync(AUTO, { recursive: true })
     const video = path.join(AUTO, `${t.id}.mp4`)
-    await baixar(url, video)
+    if (t.narracao_url) {
+      // Reel narrado (22/11): voz clonada + fotos reais animadas e b-roll por baixo, em vez do gémeo.
+      const voz = path.join(AUTO, `${t.id}-voz.mp3`)
+      await baixar(t.narracao_url, voz)
+      baseNarrada({ id: t.id, marca, voz, destino: video, cin })
+    } else {
+      if (!url) throw new Error('sem vídeo do gémeo')
+      await baixar(url, video)
+    }
     // take filmado com cortes: só o troço escolhido (o gémeo da HeyGen vem inteiro)
     const c0 = t.projeto.clips[0]
     if (c0 && (c0.de > 0.05 || (c0.duracao_fonte && c0.ate < c0.duracao_fonte - 0.05))) {
@@ -200,7 +349,9 @@ async function umTrabalho() {
     const final = await montar({ id: t.id, marca, video, cin })
     const s = await fetch(t.subir_url, { method: 'PUT', headers: { 'content-type': 'video/mp4', 'x-upsert': 'true' }, body: fs.readFileSync(final) })
     if (!s.ok) throw new Error(`upload ${s.status}`)
-    log('pronto', t.id, await (await responder({ ok: true })).text())
+    // Capa (22/11, Ricardo): todos os reels levam capa, cada uma diferente; uma capa que falhe não trava o reel.
+    const capa = await subirCapa(t, marca, cin).catch((e) => { log('capa falhou', t.id, e.message); return false })
+    log('pronto', t.id, await (await responder({ ok: true, capa })).text())
     fs.rmSync(final, { force: true })
   } catch (e) {
     log('falhou', t.id, e.message)
@@ -208,6 +359,38 @@ async function umTrabalho() {
   } finally {
     limpar(t.id)
   }
+  return true
+}
+
+/**
+ * Capa 9:16 (video/cinematico/capas/capa_reel.py): RG no estilo @ricardogarciapt (ciano + faixa azul),
+ * MTM com o branding MTM (ouro sobre carvão). A foto sai do id do projecto, para cada capa ser diferente.
+ * Linhas: cin.capa ou, sem elas, o gancho partido em branco / destaque / faixa.
+ */
+function linhasDaCapa(cin) {
+  if (Array.isArray(cin.capa) && cin.capa.length) return cin.capa
+  const p = String(cin.gancho || cin.lista?.titulo || '').replace(/[.!?…]+$/, '').split(/\s+/).filter(Boolean)
+  if (p.length <= 2) return [['w', p.join(' ') || 'Trading'], ['c', cin.palavra_chave || 'com método']]
+  if (p.length <= 4) return [['w', p.slice(0, 2).join(' ')], ['c', p.slice(2).join(' ')]]
+  const a = Math.ceil(p.length * 0.35), b = Math.ceil(p.length * 0.65)
+  return [['w', p.slice(0, a).join(' ')], ['c', p.slice(a, b).join(' ')], ['box', p.slice(b).join(' ')]]
+}
+
+async function subirCapa(t, marca, cin) {
+  if (!t.capa_subir_url) return false
+  const saida = path.join(AUTO, `${t.id}-capa.jpg`)
+  // 22/11: a imagem real de que o reel fala (1.ª referência visual, ou cin.capa_ref) entra na capa; logo opcional.
+  const extra = []
+  const ref0 = path.join(AUTO, `${t.id}-ref-0.jpg`)
+  if (cin.capa_ref && /^https:\/\//.test(cin.capa_ref)) await baixar(cin.capa_ref, ref0).catch(() => {})
+  if (fs.existsSync(ref0)) extra.push(`--ref=${ref0}`)
+  if (cin.capa_logo && /^https:\/\//.test(cin.capa_logo)) {
+    const lg = path.join(AUTO, `${t.id}-capa-logo.png`)
+    if (await baixar(cin.capa_logo, lg).then(() => true).catch(() => false)) extra.push(`--ref_logo=${lg}`)
+  }
+  correr('python3', [path.join(AQUI, 'capas', 'capa_reel.py'), `--marca=${marca}`, `--semente=${t.id}`, `--linhas=${JSON.stringify(linhasDaCapa(cin))}`, ...extra, `--saida=${saida}`])
+  const r = await fetch(t.capa_subir_url, { method: 'PUT', headers: { 'content-type': 'image/jpeg', 'x-upsert': 'true' }, body: fs.readFileSync(saida) })
+  if (!r.ok) throw new Error(`upload capa ${r.status}`)
   return true
 }
 

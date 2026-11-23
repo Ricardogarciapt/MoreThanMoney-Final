@@ -18,7 +18,11 @@ const caps = fs.existsSync(capsF) ? fs.readFileSync(capsF, 'utf8').trim() : ''
 const lib = fs.readFileSync(path.join(DIR, '../../lib/estrategias-mtm.ts'), 'utf8')
 const bloco = lib.split('slug: "' + (G.playlist || est) + '"')[1] || ''
 const pl = (bloco.match(/playlist: \{ pt: (null|"[^"]+"), en: (null|"[^"]+") \}/) || [])
-const playlist = (lang === 'pt' ? pl[1] : pl[2] || 'null').replace(/"/g, '')
+const playlist = G.playlistPropria && G.tituloPlaylist?.[lang]
+  ? G.tituloPlaylist[lang]
+  : (lang === 'pt' ? pl[1] : pl[2] || 'null').replace(/"/g, '')
+// o WebTrader é o terminal da casa: nas tags não faz sentido o TradingView
+const ferramenta = est === 'webtrader' ? 'WebTrader' : 'TradingView'
 
 const PT = {
   titulo: G.serie ? `${G.estrategia} ${nv}/${N} · ${V.titulo} | MoreThanMoney` : `${V.rotulo.replace('·', '· Módulo')} · ${V.titulo} | MoreThanMoney`,
@@ -32,7 +36,7 @@ const PT = {
 
 ⚠️ Conteúdo educativo, não constitui consultoria financeira. O trading envolve risco de perda; resultados passados não garantem resultados futuros.
 ▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬`,
-  tags: ['MoreThanMoney', 'Ricardo Garcia', G.estrategia, 'bootcamp', 'trading', 'TradingView', 'gestão de risco', 'educação financeira'],
+  tags: ['MoreThanMoney', 'Ricardo Garcia', G.estrategia, 'bootcamp', 'trading', ferramenta, 'gestão de risco', 'educação financeira'],
 }
 const EN = {
   titulo: G.serie ? `${G.estrategia} ${nv}/${N} · ${V.titulo} | MoreThanMoney` : `${V.rotulo.replace('·', '· Module')} · ${V.titulo} | MoreThanMoney`,
@@ -46,7 +50,7 @@ const EN = {
 
 ⚠️ Educational content, not financial advice. Trading involves risk of loss; past results do not guarantee future results.
 ▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬`,
-  tags: ['MoreThanMoney', 'Ricardo Garcia', G.estrategia, 'bootcamp', 'trading', 'TradingView', 'risk management', 'trading education'],
+  tags: ['MoreThanMoney', 'Ricardo Garcia', G.estrategia, 'bootcamp', 'trading', ferramenta, 'risk management', 'trading education'],
 }
 const L = lang === 'en' ? EN : PT
 const titulo = L.titulo.length > 100 ? L.titulo.replace(' | MoreThanMoney', '') : L.titulo

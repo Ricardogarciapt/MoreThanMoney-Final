@@ -1,0 +1,13 @@
+Hay días en que el precio cae tanto que parece un elástico estirado hasta el límite. El DEFY se hizo para enseñarte esos días.
+
+El DEFY es otro escáner de MTM. Dibuja bandas de agotamiento alrededor de una media suave: una interior, una media y una exterior. Cuando el precio se estira hasta la banda exterior y gira con una vela fuerte, el DEFY marca una idea. Para el trader, es un posible punto de entrada. Para nosotros, que hacemos DCA, es otra cosa: es una señal de que el precio está estirado hacia abajo, lejos de su normalidad.
+
+El DEFY también suma confirmaciones. ¿El precio está en un nivel donde ya reaccionó antes? ¿La nube de tendencia está del mismo lado? ¿Hay una ruptura de volumen? Con tres confirmaciones aparece una estrella. Con más, dos o tres. Y cuando todo se alinea, la vela se vuelve dorada. Las estrellas miden cuántas confirmaciones hay. No miden la certeza del resultado, que esa no existe.
+
+¿Cómo se usa en el DCA? Como segunda opinión. Si en tu día de refuerzo el DCA Inteligente dice Compra Fuerte, y el DEFY tiene una idea de compra en el gráfico diario, con estrellas, las dos lecturas coinciden: el precio está estirado y ha habido una caída fuerte. Es el tipo de semana en la que tiene sentido usar el bote de reserva. Si solo una de las dos coincide, compras la base y un poco más del bote, si quieres. Si ninguna coincide, base.
+
+Vamos a ponerlo en un cuadro sencillo, para que lo pegues al lado de la pantalla. Dos lecturas a favor: base más bote. Una lectura a favor: base más la mitad del bote, como máximo. Ninguna: solo base. Y por encima de todo, el techo mensual, que no se rompe. Elige una herramienta, Momentum o DEFY. Las dos a la vez, al principio, es ruido de más.
+
+Cuidado con una tentación. El DEFY dibuja entrada, stop y objetivos, porque se hizo para trading. No es porque uses el DEFY que tu DCA pasa a tener stop y objetivos. Tu DCA es a largo plazo y sigue siendo así. Si algún día quieres hacer trading con el DEFY, eso es otro curso, otra cuenta y otro riesgo.
+
+Resumen de la lección: el DEFY te muestra cuándo el precio se ha estirado demasiado. En el DCA, sirve solo para decidir si usas el bote. En la próxima lección juntamos todo en un ritual de viernes que cabe en quince minutos.

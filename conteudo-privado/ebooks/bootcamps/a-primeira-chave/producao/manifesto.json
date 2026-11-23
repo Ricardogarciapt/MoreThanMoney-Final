@@ -1,6 +1,6 @@
 {
   "slug": "a-primeira-chave",
-  "gerado": "2026-11-21",
+  "gerado": "2026-11-22",
   "velocidade": 1.03,
   "modulos": [
     {
@@ -1292,163 +1292,1364 @@
     },
     {
       "ficheiro": "modulo-8.md",
-      "titulo": "Módulo 8 — Impostos, perpétuos e o teu plano de 30 dias (≈17 min)",
+      "titulo": "Módulo 8 — Construir o teu portefólio (≈14 min)",
       "aulas": [
         {
           "id": "8.1",
-          "titulo": "Aula 8.1 — Impostos em Portugal: a regra dos 365 dias",
-          "gancho": "Em cripto, o imposto não se paga no dia em que compras. Pode aparecer, porém, no dia em que vendes, se não estiveres preparado.",
+          "titulo": "Aula 8.1 — Núcleo e satélites",
+          "gancho": "Imagina uma casa. Tens uma estrutura que não mexes e uns quartos que vais decorando ao longo dos anos. Um portefólio cripto funciona quase da mesma maneira.",
           "cenas": [
             {
               "cena": 1,
-              "visual": "Calendário animado com 365 dias a encherem-se, e um marcador a assinalar o dia 365.",
-              "narracao": "Vou falar de impostos em termos gerais, porque as regras mudam e quem decide a tua situação é um contabilista certificado. Dito isto, há um princípio base que deves conhecer. Desde 2023, em Portugal, as mais-valias de cripto detidas durante menos de 365 dias são tributadas à taxa de 28 por cento. Se as detiveres 365 dias ou mais, ficam, em regra, isentas. Uma mais-valia é a diferença positiva entre o valor de venda e o valor de compra. Se vendes por menos do que compraste, não há mais-valia para tributar. O princípio é simples. Os detalhes é que mudam a conta, e são eles que te apanham desprevenido. Por exemplo, a data de compra e a data de venda contam dias, e um dia de diferença pode mudar tudo."
+              "visual": "Ruben em plano médio, fundo quase preto, pormenores a ouro. Texto no ecrã: «Conteúdo educativo. O risco de perda é real.»",
+              "narracao": "Antes de montares seja o que for, quero que percebas uma coisa. Num portefólio, a pergunta mais importante não é que moeda compro. É quanto do meu dinheiro vai para cada papel, e porquê. Este módulo é sobre essa pergunta. Vamos construir a carteira em camadas, da mais estável à mais arriscada, e cada camada tem um papel próprio. Se chegaste até aqui, já sabes o que é o DCA e já tens o teu plano, com valor base, dia fixo e teto. Falta dar forma ao que compras. E repara: estamos a falar de organização e de educação. Nenhuma carteira te dá garantias. O risco de perda é real e pode ser total."
             },
             {
               "cena": 2,
-              "visual": "Exemplo ilustrativo com as contas no ecrã: mil euros de compra, mil e trezentos de venda, trezentos de ganho, oitenta e quatro de imposto. Legenda: «valores redondos, sem taxas».",
-              "narracao": "Vamos a um exemplo ilustrativo, com valores redondos e sem taxas. Compras mil euros de cripto e, três meses depois, vendes por mil e trezentos. A mais-valia é de trezentos euros. Sobre esses trezentos aplicas os vinte e oito por cento, e dá oitenta e quatro euros. Repara bem: o imposto não incide sobre o valor total de mil e trezentos, mas só sobre o ganho. Se o mesmo investimento tivesse sido mantido durante 365 dias ou mais, a regra geral seria outra, e a conta ficaria, em regra, isenta. Tudo isto pode mudar, por isso confirma sempre a versão atual antes de tirares conclusões. Pensa também que as taxas pagas na compra e na venda podem reduzir o ganho, e por isso entram no registo."
+              "visual": "Animação: um círculo grande dourado ao centro, com círculos menores à volta. Legendas: «núcleo» no centro, «satélites» à volta.",
+              "narracao": "O modelo que vamos usar chama-se núcleo e satélites. O núcleo é a parte grande, aquela que tens a intenção de manter durante anos. Costuma ser formado pelos ativos mais conhecidos e com mais história, e é aí que o teu DCA passa a maior parte do tempo. Os satélites são a parte menor: ativos mais pequenos, mais voláteis, com uma tese própria que tens de conseguir explicar em duas frases. O núcleo aguenta as tempestades. Os satélites são onde te podes arrepender mais depressa. Por isso, o núcleo é a base e os satélites são um extra, com teto."
             },
             {
               "cena": 3,
-              "visual": "Ecrã com uma folha de cálculo: colunas Data, Ativo, Quantidade, Valor em euros, Taxas, Tipo de operação.",
-              "narracao": "Por isso, regista tudo. Cada compra, cada venda e cada troca, com a data, o ativo, a quantidade, o valor em euros no momento e as taxas pagas. Acrescenta uma coluna para o tipo de operação, para saberes de imediato o que foi compra, venda ou troca. Não te fies em memórias nem em prints soltos, porque daqui a um ano já não vais lembrar-te de tudo. Uma folha de cálculo simples chega para começar. Quando chegar a altura de declarar, vais agradecer a ti próprio, e o contabilista também. Se fizeres uma troca de uma moeda por outra, regista as duas pontas da operação, porque ambas contam."
+              "visual": "Gráfico de barras empilhadas: núcleo em baixo, satélites em cima, com uma linha a tracejado a marcar o teto dos satélites. Legenda: «exemplo ilustrativo».",
+              "narracao": "Vamos pôr números para perceberes a ordem de grandeza. Exemplo ilustrativo: um plano de cem euros por mês. Noventa euros vão para o núcleo e dez para os satélites. Depois, dentro dos satélites, nenhum ativo recebe mais do que uma fatia pequena, por exemplo um terço do bolo dos satélites. Estes números não são uma recomendação. São uma forma de tornar visível uma decisão que, sem papel, fica escondida num impulso de quinta-feira à noite. Quando a decisão está escrita, é muito mais difícil tomá-la mal por impulso. Repara que a conta é sempre a mesma: primeiro o total, depois a divisão, e só no fim o nome de cada ativo."
             },
             {
               "cena": 4,
-              "visual": "Aviso grande no ecrã: «Confirma com um contabilista certificado». Por baixo, três casos em lista: troca de cripto por cripto, staking, airdrops.",
-              "narracao": "Agora o aviso mais importante da aula. Trocas de cripto por cripto, rendimentos de staking, airdrops e outros casos podem ter tratamento diferente, e não quero adivinhar isso num vídeo. Existe também a opção de englobamento, em que o ganho entra no teu rendimento anual. Pode ser mais vantajosa ou menos, conforme o teu escalão, e essa comparação precisa de alguém que veja os teus números completos. Não tomes decisões fiscais com base num vídeo de dois minutos, nem com base no que alguém disse num grupo de mensagens. Leva para a reunião com o contabilista a tua folha de registo, e as perguntas que escreveste antes."
+              "visual": "Ruben com um caderno aberto numa página dividida em duas colunas: «núcleo» e «satélites», com um espaço por baixo para a tese de cada ativo.",
+              "narracao": "Cada satélite tem de ter uma tese escrita. Pergunta-te: porque está ele aqui? Que problema resolve, ou que aposta estou a fazer? Se a resposta for porque subiu muito na semana passada, não é uma tese, é uma notícia. Escreve a tese antes de comprares e revê-a uma vez por mês. Se já não consegues explicar porque está ali, sai do satélite. Atenção: o DCA não pára por causa disso. É o plano que muda, no caderno, com calma, e nunca no meio de uma queda. O dinheiro novo passa então a ir para outro sítio do plano."
             },
             {
               "cena": 5,
-              "visual": "Caso ilustrativo. Um escritório em Lisboa, o Pedro, 31 anos, designer, a folhear extratos antigos num portátil. Legenda: «caso ilustrativo».",
-              "narracao": "Caso ilustrativo: o Pedro, 31 anos, designer em Lisboa, fez várias compras e vendas ao longo do ano, sem registar nada. Quando chegou a altura de declarar, não sabia as datas exatas, nem o valor que tinha pago em cada operação. Passou semanas a pesquisar em extratos e em conversas antigas. O imposto em si nem era o pior. O pior foi o stress de reconstruir um ano inteiro de memória. Um registo de dez minutos por mês teria evitado tudo isso, e teria poupado horas de dúvidas."
+              "visual": "Ecrã dividido: à esquerda, uma carteira com dez fatias minúsculas; à direita, uma com três fatias bem definidas. Texto: «menos ativos, mais tese».",
+              "narracao": "Uma armadilha muito comum é ter doze ativos com fatias de um euro. Parece diversificação, mas na prática é uma coleção de decisões que não percebes. Quem começa deve ter um núcleo com um ou dois ativos e, no máximo, dois ou três satélites. Se estás a pensar em mais, espera. Podes sempre acrescentar depois, quando já tiveres o hábito de escrever a tese e de registar cada compra. Menos ativos, mais tese, e um DCA que acompanhas de verdade, em vez de um DCA que se perde num ecrã cheio de moedas."
             },
             {
               "cena": 6,
-              "visual": "Três ícones em fila: um calendário, uma percentagem, uma folha. Seta para a aula 7.2.",
-              "narracao": "Resumindo: menos de 365 dias pode significar 28 por cento sobre o ganho, 365 dias ou mais é, em regra, isenção, e o registo é o teu melhor aliado. Na próxima aula vamos falar de perpétuos e alavancagem, o terreno onde os números podem perder-se em minutos, e onde o imposto é a menor das tuas preocupações."
-            }
-          ],
-          "palavras": 640,
-          "minutos": 4.1
-        },
-        {
-          "id": "8.2",
-          "titulo": "Aula 8.2 — Perpétuos e alavancagem: porque não começar aqui",
-          "gancho": "Imagina uma aposta em que, se o preço mexer um por cento contra ti, perdes tudo o que lá puseste. Parece exagero. Com alavancagem muito alta, em perpétuos, pode acontecer em segundos.",
-          "cenas": [
-            {
-              "cena": 1,
-              "visual": "Um contrato no ecrã, sem data de validade, com um símbolo de infinito a girar.",
-              "narracao": "Um perpétuo é um contrato derivado sem data de validade. Em vez de comprares o ativo, apostas que o preço vai subir ou descer. Podes ficar comprado, se achas que sobe, ou vendido, se achas que desce. Existe muitas vezes uma taxa de financiamento, paga periodicamente entre quem está comprado e quem está vendido, conforme a diferença de preço entre o contrato e o mercado à vista. A alavancagem permite abrir uma posição muito maior do que o dinheiro que tens depositado. E é aqui que o risco se multiplica, porque o que ganhas e o que perdes são calculados sobre a posição inteira, e não sobre o teu depósito. Isto quer dizer que um movimento pequeno do preço pode representar uma fatia enorme do teu dinheiro."
-            },
-            {
-              "cena": 2,
-              "visual": "Tabela animada no ecrã, com duas colunas: alavancagem e queda aproximada que liquida a posição.",
-              "narracao": "Vamos aos números aproximados, sem contar taxas. Com dois vezes, uma queda de cerca de cinquenta por cento liquida a posição. Com cinco vezes, cerca de vinte por cento. Com dez vezes, cerca de dez. Com vinte vezes, cerca de cinco. Com cinquenta vezes, cerca de dois por cento. E com cem vezes, cerca de um por cento. Um por cento. Num mercado como o cripto, que pode mexer um por cento sem grande esforço numa só tarde, isto não é alavancagem. É uma roleta com o teu dinheiro. Repara que, quanto maior a alavancagem, mais curto o caminho até à liquidação, e não há margem para errar. E atenção: as taxas e a margem de manutenção fazem a liquidação acontecer ainda mais cedo do que a tabela sugere."
-            },
-            {
-              "cena": 3,
-              "visual": "Caso ilustrativo. Um quarto em Lisboa, o Hugo, 27 anos, programador, com um portátil onde um gráfico fica vermelho. Legenda: «caso ilustrativo».",
-              "narracao": "Caso ilustrativo: o Hugo, 27 anos, programador em Lisboa, abriu uma posição com cinquenta vezes de alavancagem, porque, nas palavras dele, só precisava de acertar uma vez. O preço fez um movimento pequeno contra ele, de pouco mais de dois por cento, e a posição foi liquidada em minutos. Perdeu a margem toda, incluindo dinheiro que tinha poupado para outras coisas. Ele não perdeu por ser um mau programador. Perdeu porque a estrutura do produto amplifica cada erro, e ele não tinha um limite escrito antes de entrar. Quando a alavancagem é alta, cada movimento pequeno pesa como um grande."
-            },
-            {
-              "cena": 4,
-              "visual": "Três cartões no ecrã: «Ainda não lês o mercado com segurança», «Ainda não tens regras testadas», «Ainda não sabes lidar com uma posição a perder».",
-              "narracao": "Por isso, a minha recomendação é clara: não comeces por aqui. Um iniciante ainda não tem uma leitura sólida do mercado, ainda não tem regras de risco testadas e ainda não sabe lidar com a emoção de estar numa posição a perder. Os perpétuos amplificam tudo, os acertos e os erros, e a amplificação dos erros costuma chegar primeiro. Se a tua primeira experiência for um perpétuo, a primeira lição pode sair cara. Primeiro aprende a comprar, a guardar e a registar. Só depois, se quiseres, estudas derivados, sempre com dinheiro que aceitas perder por completo."
-            },
-            {
-              "cena": 5,
-              "visual": "Um telemóvel com a notificação «Sinal recebido: entrar já!» e, por baixo, a pergunta: «Quem decide?».",
-              "narracao": "Mesmo quando há um sinal, um scanner ou uma ferramenta a apontar uma entrada, a decisão e o risco continuam a ser teus. Um sinal não te dá o tamanho da posição, não te dá o limite de perda, e não te diz o que fazer quando o preço vai contra ti. Se entras só porque chegou uma notificação com urgência, estás a delegar algo que não podes delegar. Pergunta-te sempre: se esta ferramenta falhar, eu sei o que faço? Se a resposta for não, não entres. E se a resposta for sim, pensa ainda no tamanho da posição antes de avançar."
-            },
-            {
-              "cena": 6,
-              "visual": "Ecrã final com a frase: «A alavancagem não cria dinheiro. Só amplifica o que já acontece».",
-              "narracao": "Guarda esta ideia: a alavancagem não cria dinheiro. Só amplifica o que já acontece no mercado, para os dois lados. Se não consegues explicar a liquidação com as tuas próprias palavras, ainda não estás pronto para lhe tocar. Escreve a explicação num papel, sem olhar para as notas, e compara depois. Na próxima aula vamos juntar tudo o que vimos num plano de trinta dias, que é a parte prática deste bootcamp."
-            }
-          ],
-          "palavras": 658,
-          "minutos": 4.3
-        },
-        {
-          "id": "8.3",
-          "titulo": "Aula 8.3 — O teu plano de 30 dias",
-          "gancho": "Em trinta dias não vais dominar o cripto. Mas podes sair com uma base sólida, e isso já é muito mais do que a maioria de quem começa com pressa.",
-          "cenas": [
-            {
-              "cena": 1,
-              "visual": "Tabela no ecrã com quatro colunas, uma por semana: segurança, escolher e comprar, DCA e registo, revisão.",
-              "narracao": "Vamos desenhar um plano de trinta dias, dividido em quatro semanas. Semana um: segurança. Ativas a autenticação por aplicação, crias o gestor de palavras-passe, escreves a seed phrase em papel e confirmas as plataformas que vais usar. Semana dois: escolhes uma plataforma regulada, fazes a verificação de identidade, percebes as taxas e aprendes a diferença entre ordem de mercado e ordem limite. Semana três: começas o DCA com um valor pequeno e registas tudo. Semana quatro: revês os números, as regras e o que sentiste. Cada semana tem uma tarefa principal e uma secundária, para não ficares preso ao detalhe. E uma semana por fase, sem saltar nenhuma. Se uma semana correr mal, repete-a antes de avançares. Não há prémio por pressa."
-            },
-            {
-              "cena": 2,
-              "visual": "Checklist de segurança imprimível, com quadrados para marcar.",
-              "narracao": "Na primeira semana, o teu checklist mínimo é este. Palavra-passe única e forte, guardada num gestor. Autenticação de dois fatores por aplicação, e não por SMS. Seed phrase escrita à mão, em dois sítios separados, nunca fotografada, nunca enviada, nunca guardada num email ou numa nota do telemóvel. Endereços verificados, guardados nos marcadores. Nenhum link de mensagem, nunca. E desliga as notificações de preço que te fazem olhar para o ecrã a cada minuto. Não é preciso ser perfeito. É preciso ser consistente. Se te lembrares disto de cor, já estás à frente de muita gente que começa com dinheiro e sem esta base."
-            },
-            {
-              "cena": 3,
-              "visual": "Lista de termos no ecrã: seed phrase, DCA, halving, liquidação, dominância, airdrop, mais-valia.",
-              "narracao": "Para não te perderes nas palavras, vai ao glossário do e-book, que tem trinta termos explicados em linguagem simples. Seed phrase, DCA, halving, liquidação, dominância, airdrop, mais-valia, e por aí fora. Por exemplo, mais-valia, liquidação e custódia são termos que vais encontrar em quase todas as conversas. Escreve no teu caderno as palavras que não percebes e procura-as antes de decidires. Um termo que não entendes é sempre um sinal para parar. O que seria perigoso era decidir sem perceber o que estás a fazer. Se encontrares um termo novo numa aula, pára o vídeo, procura-o e só depois continuas."
-            },
-            {
-              "cena": 4,
-              "visual": "Diário de revisão no ecrã, com perguntas numeradas, e uma caneta a sublinhar a última.",
-              "narracao": "Ao fim de trinta dias, faz uma revisão honesta. Quantas vezes cumpriste o plano, e quantas vezes te desviaste? O que te fez querer mudar de rota? Quanto investiste no total, e quanto vale hoje o que compraste? Não respondas com o que gostavas que tivesse acontecido. Responde com o que aconteceu, mesmo que não seja bonito. Se quiseres, partilha essa revisão com alguém de confiança, porque ajuda a ser honesto. Esse registo vale mais do que qualquer conselho que eu te possa dar, porque é a tua própria experiência, escrita com números verdadeiros. Relê-o no fim de cada semana, e não só no fim do mês."
-            },
-            {
-              "cena": 5,
-              "visual": "Aviso grande no ecrã: «Este plano não garante nada».",
-              "narracao": "Antes de avançares, um aviso que não é opcional. Este plano não garante lucros nem resultados. Serve para aprenderes com segurança e com dinheiro que podes perder. Se algum dia alguém te prometer que um plano como este te vai dar um rendimento certo, desconfia logo, e volta às aulas 5.1 e 5.2. A promessa de certeza é quase sempre a primeira pista de uma burla. E se o plano correr mal, não é sinal de que és incompetente. É sinal de que aprendeste algo caro, e isso também conta."
-            },
-            {
-              "cena": 6,
-              "visual": "Ecrã com a semana um destacada, e a frase: «Segurança primeiro».",
-              "narracao": "O primeiro passo deste plano é o mais aborrecido, e é o mais importante: segurança. Antes de comprares o que quer que seja, a tua chave tem de estar guardada e a tua conta tem de estar protegida. Se fizeres a tua primeira semana já hoje, estás à frente de quem ainda nem começou. Na última aula deste bootcamp vou fechar com um aviso final e com um convite. Até lá, escreve a tua semana um. E guarda a checklist de segurança à vista, porque a tua memória, na pressa, não é fiável."
+              "visual": "Folha de exercício com três linhas: «núcleo», «satélite 1», «satélite 2». Ruben a escrever à mão.",
+              "narracao": "Exercício de três minutos. Pega no teu plano e escreve três linhas no caderno. Na primeira, o núcleo, com o ativo e a percentagem do plano. Na segunda e na terceira, os satélites, se os quiseres ter, com a tese em duas frases cada um. Se não tens satélites, escreve sem satélites e segue em frente. É uma decisão válida, e muitas vezes a mais sensata. Na próxima aula vemos quanto pôr em cada peça e como as stablecoins entram nesta conta. Não há uma percentagem exata que sirva a toda a gente. Quem te diz que há, está a vender-te alguma coisa."
             }
           ],
           "palavras": 646,
           "minutos": 4.2
         },
         {
-          "id": "8.4",
-          "titulo": "Aula 8.4 — Fecho: aviso final, convite e missão do módulo",
-          "gancho": "Chegámos ao fim do bootcamp. Antes de qualquer outra coisa, preciso de te dizer uma coisa com clareza, em voz alta.",
+          "id": "8.2",
+          "titulo": "Aula 8.2 — Quanto em BTC, ETH e stablecoins",
+          "gancho": "Toda a gente pergunta quanto deve pôr em cada moeda. A resposta honesta começa por outra pergunta: para que serve cada uma?",
           "cenas": [
             {
               "cena": 1,
-              "visual": "Ecrã com texto grande e sóbrio: «Conteúdo educativo, não é aconselhamento financeiro. O risco de perda é real».",
-              "narracao": "Este bootcamp é conteúdo educativo. Não é aconselhamento financeiro. Não é uma recomendação de compra ou venda de nenhum ativo, e não sabe nada sobre a tua situação, o teu rendimento, as tuas dívidas ou os teus objetivos. Cripto é um mercado de alto risco. O risco de perda é real, e podes perder parte ou a totalidade do que lá puseres. Nunca invistas o que não podes perder. E não tomes decisões fiscais ou de investimento sem falar com um profissional habilitado, que veja os teus números completos e te explique o que se aplica ao teu caso. Se tiveres dúvidas sobre impostos, leva-as escritas, e pede uma resposta por escrito."
+              "visual": "Três cartões no ecrã, um por moeda: BTC, ETH e stablecoins, cada um com uma frase curta sobre o seu papel.",
+              "narracao": "Vamos ver as três peças mais comuns de um portefólio cripto. O Bitcoin é a moeda mais antiga e mais conhecida, e por isso muita gente o usa como base do núcleo. A Ethereum é uma plataforma onde correm aplicações, e o seu papel é diferente: é uma aposta sobre o uso dessa plataforma, com mais variáveis pelo caminho. As stablecoins são fichas ligadas, em geral, a uma moeda como o dólar. Tentam manter um valor estável, mas não são dinheiro na conta do banco, e têm riscos próprios. Cada uma responde a uma pergunta diferente. Não as metas todas no mesmo saco."
             },
             {
               "cena": 2,
-              "visual": "Três cartões em fila, cada um com uma frase curta, a aparecerem um de cada vez.",
-              "narracao": "Se levares só três coisas destas semanas, que sejam estas. A primeira: a chave é tua, e ninguém legítimo ta pede. Nem o suporte, nem um técnico, nem alguém que te conhece há meses numa conversa simpática. A segunda: os números de exemplo são sempre ilustrativos, e a regra mais antiga continua a ser a melhor. Desconfia de quem promete dobrar e de quem te apressa. A terceira: um plano escrito e uma espera de vinte e quatro horas valem mais do que qualquer palpite, por mais confiante que pareça. Não é preciso decorar nada. É preciso voltar a estas regras quando a pressa aparecer. Estas três regras cabem num post-it, e isso é uma virtude, não um defeito."
+              "visual": "Animação: uma barra de cem por cento dividida em três partes, com as legendas «BTC», «ETH» e «stablecoins». Canto do ecrã: «exemplo ilustrativo».",
+              "narracao": "Vamos fazer contas com um exemplo ilustrativo. Imagina um plano de cem euros por mês e uma regra que tu próprio escreveste: o núcleo é Bitcoin, os satélites são Ethereum e uma parte pequena fica em stablecoins. Um desenho possível, só para veres a conta, seria setenta, vinte e dez. Setenta euros em Bitcoin, vinte em Ethereum, dez em stablecoins. Repara que isto não é recomendação. É um exemplo para veres como uma percentagem se transforma em euros, e para perceberes que o teu desenho tem de caber no teu plano, e não no que viste num vídeo de outra pessoa."
             },
             {
               "cena": 3,
-              "visual": "Dois cartões no ecrã: «Salas DCA com MTM» e «Comunidade MoreThanMoney».",
-              "narracao": "Se quiseres continuar a praticar com outras pessoas, há as Salas DCA com MTM, onde se trabalha o método com acompanhamento e perguntas em direto. Há também a comunidade MoreThanMoney, onde partilhas dúvidas e aprendes com quem também está a começar. Não te prometo resultados, porque não os controlo nem os garanto a ninguém, e desconfia de quem te prometer o contrário. O que te ofereço é um sítio para perguntar sem vergonha, com pessoas que também estão a aprender, e com as regras de segurança à frente de tudo. Se entrares, entra para aprender, e não para ter a certeza de nada."
+              "visual": "Tabela animada: «plano de 100 € · exemplo ilustrativo», com as linhas BTC 70 €, ETH 20 € e stablecoins 10 €. Por baixo, uma linha: «se a ETH cai 20 %, a parte dela passa a valer menos».",
+              "narracao": "Agora, o que acontece quando o mercado mexe. Imagina, exemplo ilustrativo, que a parte de Ethereum desce vinte por cento. Os vinte euros que lá meteste passam a valer dezasseis. Não é uma tragédia, é aritmética. O que importa é que a divisão do teu plano não muda por causa disso. O mês seguinte continua a ser cem euros, e a divisão continua a ser setenta, vinte e dez. Se mudares a divisão a meio de uma queda, estás a decidir com medo. Se mesmo assim precisares de mudar, regista a mudança no caderno e escreve porquê, com a data."
             },
             {
               "cena": 4,
-              "visual": "Três botões no ecrã: «Rever o plano», «Fazer a checklist», «Decidir, sem pressa».",
-              "narracao": "Os próximos passos são simples. Revê o plano de trinta dias. Faz a checklist de segurança, ponto por ponto. E decide, sem pressa, se queres entrar nas Salas ou na comunidade. A decisão é tua, e pode ser não. Escolhe um passo de cada vez, e não os três ao mesmo tempo. Se alguém te disser que tens de decidir hoje, ou que vais perder uma oportunidade única, já sabes o que fazer: fechas a conversa, respiras e voltas a este plano. Quem ganha com a tua pressa não é quem te quer bem. Em caso de dúvida, o silêncio também é uma resposta válida."
+              "visual": "Ruben com um quadro de três colunas desenhado no caderno: «papel», «quando faz sentido», «o que pode correr mal».",
+              "narracao": "Vamos ao papel de cada peça, que é o que deve guiar a tua escolha. O Bitcoin tem o papel de base, com uma história longa, muita liquidez e muita discussão à volta. A Ethereum tem o papel de aposta sobre a plataforma, com mais complexidade e mais fatores que podem mudar. As stablecoins têm o papel de estacionamento e de liquidez, nunca de crescimento, e trazem riscos de emissor, de ligação à moeda de referência e de regulação. Repara que o que pode correr mal está escrito ao lado de cada uma. Quem só escreve o lado bom ainda não fez o trabalho."
             },
             {
               "cena": 5,
-              "visual": "Ecrã de missão, com um quadrado para marcar e a frase «Missão do módulo 8».",
-              "narracao": "A missão do módulo sete, e do bootcamp, é uma só. Até ao fim desta semana, escreve o teu plano de trinta dias numa folha, com a data de hoje, e assina-o. Guarda-o num sítio seguro, separado da tua seed phrase, sem misturar as duas coisas. Depois, marca a palavra feito na checklist que imprimiste. Obrigado por teres dado a estas aulas o tempo que pedem. Nem todos se sentam a estudar isto com calma, e isso já diz muito sobre ti."
+              "visual": "Ecrã com uma tabela de «teto por moeda». Nota no canto: «exemplo ilustrativo, não recomendação».",
+              "narracao": "Uma regra prática: define um teto por moeda antes de começares. Exemplo ilustrativo: nenhum satélite passa de dez por cento do plano, e as stablecoins não passam de vinte por cento, mesmo que pareçam seguras. Estes números servem só para fazeres a tua conta. O que interessa é que o teto existe, que está escrito e que o cumpres. Se o teu plano é pequeno, faz as contas com cinco ou dez euros e vê se o desenho ainda faz sentido. Muitas vezes não faz, e é muito melhor descobrir isso no papel do que com o dinheiro já na plataforma."
+            },
+            {
+              "cena": 6,
+              "visual": "Folha de exercício com uma tabela por preencher. Ruben risca uma linha e escreve outra por cima.",
+              "narracao": "Exercício: escreve o teu plano mensal, por exemplo cento e cinquenta euros, e divide-o em três linhas: BTC, ETH e stablecoins. Usa um desenho que te pareça razoável para ti. Depois faz a conta de um mês em que a parte mais pequena cai vinte por cento, exemplo ilustrativo, e de outro em que sobe. Não é para acertar. É para veres se conseguias manter o plano sem lhe tocar. Se a resposta for não, o desenho é grande de mais para o teu bolso ou para o teu estômago. Ajusta-o até conseguires cumprir."
+            }
+          ],
+          "palavras": 625,
+          "minutos": 4
+        },
+        {
+          "id": "8.3",
+          "titulo": "Aula 8.3 — Rebalanceamento e o pote de reserva",
+          "gancho": "Um portefólio mexe sozinho. Uma moeda sobe, outra desce, e a divisão que escreveste há três meses já não existe. O que fazes com isso?",
+          "cenas": [
+            {
+              "cena": 1,
+              "visual": "Dois gráficos de barras lado a lado. À esquerda: 70, 20 e 10. À direita: 80, 12 e 8. Legenda: «exemplo ilustrativo».",
+              "narracao": "Chama-se deriva. Exemplo ilustrativo: começaste com setenta por cento em Bitcoin, vinte em Ethereum e dez em stablecoins. Passado um ano, o Bitcoin subiu muito e tens oitenta por cento. A Ethereum e as stablecoins ficaram com doze e oito. Ninguém te deu um sinal. A carteira simplesmente mudou de forma. O rebalanceamento é o ato de voltar à divisão que escreveste, com uma regra que definiste antes, e não com a vontade do dia. Não é uma adivinha sobre o que vai acontecer. É manter o risco que escolheste."
+            },
+            {
+              "cena": 2,
+              "visual": "Ruben com um calendário na mão e um quadro com duas regras escritas: «calendário: uma vez por trimestre» e «banda: mexo se fugir cinco pontos».",
+              "narracao": "Há duas formas simples de rebalancear. A primeira é pelo calendário: uma vez por trimestre, revês a divisão e corriges o que se afastou. A segunda é pela banda: só mexes quando uma parte se afasta mais de um certo número de pontos do alvo. Exemplo ilustrativo: uma banda de cinco pontos. Se o núcleo está escrito como setenta, mexes apenas se sair dos sessenta e cinco ou dos setenta e cinco. Cada método tem vantagens. O calendário é mais simples de cumprir. A banda só reage quando o desvio é a sério. Escolhe um, escreve-o no caderno e cumpre-o, sem exceções de ocasião."
+            },
+            {
+              "cena": 3,
+              "visual": "Animação: um pote de barro com moedas douradas, rótulo «pote de reserva», setas de entrada à esquerda e de saída à direita.",
+              "narracao": "Agora o pote de reserva, que já conheces do módulo sete. É a parte do dinheiro do plano que não foi gasta numa semana. Não desaparece e não se perde: fica guardada, e tem um uso só. Reforçar nas semanas em que a etiqueta do DCA Inteligente é de Forte Compra, dentro do teto mensal. O teto manda. O pote não é uma segunda conta para gastar à vontade. Por isso, tem de estar escrito no caderno, com um saldo e uma regra de saída, para que nunca seja uma decisão improvisada."
+            },
+            {
+              "cena": 4,
+              "visual": "Folha de caderno com quatro campos: «pote: saldo», «entrada», «saída», «regra».",
+              "narracao": "A regra de saída é a parte mais importante, e escreve-a antes de precisares dela. Por exemplo: o pote só se usa em semanas de Forte Compra, e nunca para mais de metade do saldo de uma vez. Exemplo ilustrativo, claro. E há outra regra que nunca se quebra: o pote não se usa para comprar o que subiu muito. Se o mercado está em euforia, o pote fica quieto. Quando usares o pote, regista a semana, o ativo e o motivo, na mesma folha de registo do ritual de sexta, para que o dinheiro guardado tenha sempre uma história contável."
+            },
+            {
+              "cena": 5,
+              "visual": "Ruben, plano próximo, a falar para a câmara. Frase no ecrã: «Rebalancear não é adivinhar.»",
+              "narracao": "Uma confusão frequente: rebalancear não é tentar adivinhar o topo ou o fundo. Quando vendes um pouco do que subiu para voltares à divisão, não estás a dizer que o preço vai cair. Estás a manter o risco que escolheste. E quando compras o que caiu para repor a divisão, não estás a dizer que vai subir. Estás a respeitar o plano. Rebalancear também tem custos: taxas da plataforma, eventuais impostos, que vemos no fim do programa, e o trabalho de registar tudo. Por isso não rebalances todas as semanas, e confirma sempre as condições na tua plataforma autorizada."
+            },
+            {
+              "cena": 6,
+              "visual": "Folha de exercício com a linha «data · divisão antes · divisão depois · motivo». Ruben escreve a regra e um saldo inicial.",
+              "narracao": "Exercício de cinco minutos. Escreve no caderno a tua regra de rebalanceamento: calendário ou banda, e o valor. Depois cria o teu pote: uma linha com o saldo inicial, que pode perfeitamente ser zero. Escreve a regra de saída numa frase. E guarda o caderno. Não tens de rebalancear hoje. Tens de saber, antes de precisares, o que farias. É isso que separa um plano de um desejo. Se não souberes qual escolher, começa pelo calendário, porque é o mais fácil de cumprir numa semana cheia. Repara que não estás a escolher a melhor regra do mundo, estás a escolher uma que vais respeitar."
+            }
+          ],
+          "palavras": 615,
+          "minutos": 4
+        },
+        {
+          "id": "8.4",
+          "titulo": "Aula 8.4 — Ler os Portefólios da casa sem os copiar",
+          "gancho": "Copiar é o caminho mais curto para não aprenderes nada. Ver com atenção é mais lento, e dá muito mais.",
+          "cenas": [
+            {
+              "cena": 1,
+              "visual": "Ecrã da app MTM System, separador Portefólios, com as duas carteiras da casa. Texto no ecrã: «carteiras de demonstração e educação».",
+              "narracao": "Já conheces as duas carteiras da casa: uma de cripto e uma de ETF, reforçadas todas as sextas-feiras e registadas compra a compra. Hoje vamos aprender a lê-las. Não para as copiar, mas para ver uma estrutura registada a funcionar ao longo do tempo. Uma carteira de demonstração não te diz o que fazer. Diz-te o que foi feito, com regras que, idealmente, estão escritas, e deixa-te perguntar porquê. Essa pergunta é o que vale a pena levares desta aula. Não precisas de as decorar. Precisas de as abrir com um objetivo claro, que é aprender o método e não copiar o resultado."
+            },
+            {
+              "cena": 2,
+              "visual": "Zoom em três zonas do ecrã, cada uma com uma legenda: «estrutura», «datas», «coerência».",
+              "narracao": "Vê três coisas. Primeiro, a estrutura: quantos ativos há e qual pesa mais. Segundo, a disciplina: as datas dos movimentos, todas em sexta-feira. Terceiro, a coerência: compara cada reforço com o que o DCA Inteligente indicava nesse dia. Se a carteira segue a sua própria regra, vês isso nas datas e nas etiquetas. Se não segue, pergunta porquê. Um leitor atento não procura a resposta certa. Procura a regra por trás de cada movimento, e repara quando ela não aparece. Faz esta leitura com o caderno aberto, e não de memória, porque a memória tende a guardar só o que gostas de ver."
+            },
+            {
+              "cena": 3,
+              "visual": "Ruben a mostrar o caderno, com duas colunas: «o que copio» e «o que aprendo».",
+              "narracao": "Há uma distinção que te peço que faças sempre. O que copiar: nada de ativos, nada de percentagens, nada de momentos. O que aprender: a ordem das coisas. Primeiro escreve-se a estrutura. Depois define-se o ritmo. Só depois se reforça. Os ativos de uma carteira de outra pessoa, ou da casa, são o contexto dela, e o teu contexto é outro: outro valor base, outro prazo, outra tolerância à queda. Copiar o contexto alheio é a forma mais rápida de comprar no fundo errado sem perceberes porquê. Quando a distinção estiver clara, a carteira da casa deixa de ser um espelho de ambição e passa a ser um espelho de método."
+            },
+            {
+              "cena": 4,
+              "visual": "Animação: três perguntas aparecem uma a uma sobre um gráfico: «Porque está aqui?», «Quanto pesa, e mudou?», «Que regra explica a mudança?».",
+              "narracao": "Quando olhares para uma carteira, faz-lhe três perguntas. Porque é que este ativo está aqui? Quanto pesa, e isso mudou ao longo do tempo? Que regra explica uma mudança? Se não encontras resposta, não é defeito teu. Muitas vezes a resposta simplesmente não está escrita. Nesse caso, a carteira não é um exemplo para ti, é só um registo. E tudo bem: um registo também ensina, desde que saibas que não estás a ver um manual. Escreve as respostas com a data ao lado, porque daqui a uns meses vais querer comparar a tua leitura de hoje com a de quando já tiveres mais experiência."
+            },
+            {
+              "cena": 5,
+              "visual": "Ecrã dividido: a carteira da casa à esquerda, a tabela do aluno à direita. Texto no ecrã: «espelho, não molde».",
+              "narracao": "Usa a carteira da casa como espelho. Quando tiveres a tua tabela, põe as duas lado a lado. Pergunta: a minha divisão tem a mesma lógica? Tem núcleo, satélites com teto, pote e regra? Se a tua tem uma coisa que a casa não tem, por exemplo um satélite diferente, escreve porquê. A diferença não é um erro. É a tua decisão, e é isso que queremos ver no caderno. E lembra-te: resultados passados não garantem resultados futuros, nem os da casa, nem os teus. E se alguma diferença te incomodar, não a apagues logo. Escreve-a e deixa-a lá durante uma semana antes de decidires o que fazer."
+            },
+            {
+              "cena": 6,
+              "visual": "Ruben com o caderno fechado à frente. Aviso em letras grandes no ecrã: «Carteiras de demonstração e educação. Resultados passados não garantem resultados futuros.»",
+              "narracao": "Missão deste módulo: escreve o teu portefólio-alvo no caderno. Uma página. Tem o núcleo, com o ativo e o peso. Tem os satélites, se os tiveres, cada um com a sua tese. Tem a divisão em euros para o teu plano mensal, o teu teto por moeda, o método de rebalanceamento e o pote, com a regra de saída. E tem uma linha final: o que farias se o núcleo caísse vinte por cento num mês. Não precisas de comprar nada para cumprir a missão. A missão é escrever. Vemo-nos no módulo nove, onde lemos o mercado com mais calma."
+            }
+          ],
+          "palavras": 650,
+          "minutos": 4.2
+        }
+      ]
+    },
+    {
+      "ficheiro": "modulo-9.md",
+      "titulo": "Módulo 9 — Ler o mercado como investidor (≈14 min)",
+      "aulas": [
+        {
+          "id": "9.1",
+          "titulo": "Aula 9.1 — Momentum semanal",
+          "gancho": "Um gráfico diário mostra a semana que passou. O semanal mostra o ano. Se só olhas para um deles, estás a ver metade do filme.",
+          "cenas": [
+            {
+              "cena": 1,
+              "visual": "Ruben em plano médio, fundo quase preto, pormenores a ouro. Gravação de ecrã do TradingView: gráfico semanal do Bitcoin com o Momentum. Texto no ecrã: «Conteúdo educativo. O risco de perda é real.»",
+              "narracao": "Hoje vamos ler o Momentum no gráfico semanal. Já conheces as cinco confirmações: a nuvem presente e com a cor certa, a nuvem do lado certo das velas, a média exponencial a concordar, o volume com a cor da direção e o RSI a cruzar na zona certa. No semanal, cada vela é uma semana inteira. Isto muda o ritmo da leitura. Uma leitura semanal não se altera de sexta para segunda. Por isso é um quadro de fundo, e não um botão. Quem lê o semanal todas as manhãs está a procurar ruído com uma lupa. E o risco de perda é real, em qualquer gráfico, e fica sempre contigo."
+            },
+            {
+              "cena": 2,
+              "visual": "Animação: cinco quadrados num gráfico semanal que se acendem um a um. Por baixo, três faixas: «cinco em cinco», «quatro em cinco», «três ou menos».",
+              "narracao": "Lê as confirmações como as lias no diário, mas com outra paciência. Cinco em cinco, a verde: a tendência de fundo está a favor. Quatro em cinco ainda é uma leitura útil. Três ou menos: o semanal não tem uma opinião forte, e isso também é informação. A pergunta que fazes é simples: o semanal confirma o que o diário está a dizer? Se o diário está a verde e o semanal está a vermelho, não é uma contradição a resolver à pressa. É um sinal de que a descida pode não ter acabado, e de que o pote deve ser usado com mais calma, e não com mais pressa."
+            },
+            {
+              "cena": 3,
+              "visual": "Três gráficos semanais lado a lado, com legendas: «virou para compra depois de descida longa», «vermelho forte prolongado», «lateral com caixas lilás».",
+              "narracao": "Vamos a três cenários típicos. Primeiro: o semanal virou para verde depois de uma descida longa. É um bom momento para confirmar que o pote está pronto, porque as semanas de Forte Compra podem chegar a seguir. Segundo: vermelho forte há várias semanas. Aqui a regra é a mesma do módulo sete: base sempre, e o pote parado até o semanal começar a aliviar. Terceiro: caixas lilás no semanal, mercado lateral. Para o DCA, é um período para acumular com paciência, sem pressa de usar o pote. Em nenhum dos três casos o semanal pára o DCA. Ele só ajuda a decidir o tamanho."
+            },
+            {
+              "cena": 4,
+              "visual": "Ruben a mostrar um calendário com duas marcações: «semanal: uma vez por mês» e «diário: cada sexta».",
+              "narracao": "Agora o ritmo, que é a parte que mais gente falha. O semanal lês-o uma vez por mês, num fim de semana tranquilo, para veres o quadro todo e rever o teu plano. O diário lês-o cada sexta, dentro do teu ritual. A leitura semanal não substitui a diária: a semanal define o contexto, e a diária decide o dia. Se alguma vez te apanhares a abrir o semanal todas as manhãs, pára, respira e volta ao caderno. Isso é ansiedade a vestir a roupa de análise, e custa caro em decisões apressadas."
+            },
+            {
+              "cena": 5,
+              "visual": "Ruben, plano próximo, a falar para a câmara. Frase no ecrã: «O semanal dá o mapa, não o horário.»",
+              "narracao": "Um erro comum é procurar no semanal o dia exato da compra. Esse dia não existe. O semanal dá o mapa: a direção de fundo e o peso da tendência. Não te diz se amanhã é o melhor dia para nada. E há outra armadilha: mudar de plano só porque o semanal mudou de cor uma vez. Espera que a mudança se confirme em mais uma ou duas velas. Se o teu plano é de longo prazo, o semanal serve para ajustar o tamanho do pote, e nunca para parar o DCA. Nunca."
+            },
+            {
+              "cena": 6,
+              "visual": "Folha de exercício com quatro colunas: «mês», «semanal», «confirmações», «mudou o plano?».",
+              "narracao": "Exercício de três minutos. Abre o semanal de um ativo do teu plano, conta as cinco confirmações e escreve o resultado no caderno, com a data. Depois escreve, numa frase, se o plano muda ou não. Se não muda, escreve sem mudança. Pode parecer uma formalidade, mas é disciplina. Daqui a seis meses, tens um histórico de leituras, e não uma memória de quando te lembras. E a memória, como sabes, costuma estar do lado da história que já nos convém. Se o semanal estiver ilegível para ti, não faz mal. Escreve não consigo ler e pergunta-te porquê. Muitas vezes é falta de hábito, e o hábito vem com a repetição."
+            }
+          ],
+          "palavras": 647,
+          "minutos": 4.2
+        },
+        {
+          "id": "9.2",
+          "titulo": "Aula 9.2 — DEFY como segunda opinião",
+          "gancho": "Uma segunda opinião só vale alguma coisa se não for cópia da primeira. Por isso, vamos ver o que o DEFY pergunta que o Momentum não pergunta.",
+          "cenas": [
+            {
+              "cena": 1,
+              "visual": "Gráfico diário com o DEFY: bandas de exaustão interior, média e exterior à volta de uma média suave, com a projeção tracejada.",
+              "narracao": "Já conheces o DEFY das aulas anteriores. Desenha bandas de exaustão à volta de uma média suave: uma interior, uma média e uma exterior. A pergunta que o DEFY faz é outra. Enquanto o Momentum pergunta se a direção está a favor, o DEFY pergunta se o movimento já foi longe de mais. São perguntas diferentes, e é por isso que podem discordar. Quando discordam, não há avaria. Há informação. E essa informação vale mais do que uma concordância forçada. Não vamos repetir tudo o que já viste no módulo sete. Vamos olhar para o DEFY como uma leitura extra, que entra depois do Momentum, e não antes."
+            },
+            {
+              "cena": 2,
+              "visual": "Zoom numa vela que toca a banda exterior e vira com uma vela forte. Por cima, as estrelas da ideia.",
+              "narracao": "Quando o preço chega à banda exterior e vira com uma vela forte, o DEFY pode marcar uma ideia. As estrelas contam as confirmações: o nível já reagiu antes? A nuvem de tendência está do mesmo lado? Há quebra de volume? Três confirmações dão uma estrela, mais dão duas ou três, e quando tudo se alinha a vela fica dourada. As estrelas medem quantas confirmações existem. Não medem a certeza do resultado, que essa não existe. Uma vela dourada não é garantia de subida. É um preço esticado com muitas peças a encaixar, e só isso."
+            },
+            {
+              "cena": 3,
+              "visual": "Tabela animada com quatro linhas: «Momentum a verde com 4 ou 5 · DEFY com estrelas», «Momentum a verde · DEFY sem estrelas», «Momentum vermelho ou lilás · DEFY com estrelas», «Momentum vermelho ou lilás · DEFY sem estrelas».",
+              "narracao": "Vamos às combinações. Momentum verde e DEFY com estrelas: as duas leituras a favor. Se a etiqueta do DCA também ajuda, é uma semana para usar o pote com critério. Momentum verde e DEFY sem estrelas: uma leitura a favor. Momentum vermelho ou lilás com estrelas no DEFY: também uma leitura a favor, porque a ideia de compra existe, mas a tendência ainda não concorda. E Momentum vermelho ou lilás sem estrelas: nenhuma leitura a favor, e chega a base. Repara que não há nenhuma linha que diga compra tudo. Essa linha não existe, e se a encontrares num grupo qualquer, desconfia dela."
+            },
+            {
+              "cena": 4,
+              "visual": "Ruben a desenhar no caderno uma tabela de decisão de três linhas: «duas a favor: base + pote», «uma a favor: base + no máximo meio pote», «nenhuma: base».",
+              "narracao": "Vamos pôr isto num quadro simples, para colares ao lado do ecrã. Duas leituras a favor: base mais pote, dentro do teto. Uma leitura a favor: base mais, no máximo, meio pote. Nenhuma: só a base. Por cima de tudo está o teto mensal, que não se fura, e a etiqueta do DCA Inteligente, que dá o ponto de partida. O DEFY é uma segunda opinião. Não é o primeiro critério, e não tem poder para cancelar a etiqueta. Ajuda a escolher quanto do pote usar, e só isso. Imprime-o ou copia-o à mão, e mantém-no sempre à frente na sexta-feira, para que a decisão não dependa de quem estiver mais cansado nesse dia."
+            },
+            {
+              "cena": 5,
+              "visual": "Aviso no ecrã, letras grandes: «Os sinais do DEFY são para trading. No DCA, só mexem no tamanho.»",
+              "narracao": "Repete comigo: os sinais do DEFY foram pensados para trading. Trazem entrada, stop e alvos porque é isso que um trader precisa. No DCA não usas esses níveis. Não compras no preço de entrada, não colocas stop e não tiras alvos. O teu DCA é de longo prazo, e o DEFY só mexe no tamanho do reforço. Se um dia quiseres fazer trading com regras, é outro percurso, com outra formação, outra conta e outro risco. Não é este. E não é por teres o DEFY no ecrã que o teu DCA passa a ter stop."
+            },
+            {
+              "cena": 6,
+              "visual": "Folha de exercício com três gráficos e três caixas por preencher: «estrelas», «Momentum», «decisão».",
+              "narracao": "Exercício: abre o gráfico diário de um ativo do teu plano com o DEFY. Conta as estrelas, se houver. Depois olha para o Momentum do mesmo gráfico. Escreve as duas leituras e a decisão: base, base mais meio pote, ou base mais pote, sempre dentro do teto. Faz isto durante uma semana, sem comprar nada a mais. Vais ver que as duas ferramentas discordam mais vezes do que imaginavas, e que essa discordância ensina mais do que a concordância. Se não houver estrelas em nenhuma semana, também é uma leitura válida. Regista que não houve ideia e segue o plano, sem procurar uma estrela que não está lá."
+            }
+          ],
+          "palavras": 652,
+          "minutos": 4.2
+        },
+        {
+          "id": "9.3",
+          "titulo": "Aula 9.3 — Sentimento, medo e euforia, e a dominância do BTC",
+          "gancho": "Já ouviste alguém dizer há medo no mercado ou isto está em euforia. Parece informação. Mas o que muda, de facto, no teu plano? Vamos ver.",
+          "cenas": [
+            {
+              "cena": 1,
+              "visual": "Ecrã com um medidor de sentimento, uma escala de zero a cem em tons dourados. Texto no ecrã: «índices públicos de sentimento · contexto, não sinal».",
+              "narracao": "Sentimento é o humor coletivo. Há índices públicos que tentam medir se as pessoas estão com medo ou com ganância. Costumam juntar vários sinais, por exemplo a volatilidade e a atenção pública ao tema, e apresentam o resultado numa escala de zero a cem. Zero é medo extremo; cem é euforia extrema. Repara nas palavras: estes índices são construções. Não são o mercado. São uma fotografia de como as pessoas estão a sentir o mercado. Antes de usares qualquer um, lê na própria página como é construído. Útil para contexto, mas nunca um comando."
+            },
+            {
+              "cena": 2,
+              "visual": "Animação: uma escala com três zonas, «medo extremo», «neutro» e «euforia», e uma seta a indicar o plano: «o número não muda o reforço».",
+              "narracao": "Porque é que o medo e a euforia importam? Porque o comportamento das pessoas tende a piorar nos extremos: compram mais no topo e vendem mais no fundo. O DCA foi desenhado precisamente para fugir a essa armadilha. Por isso, o sentimento não te diz quanto comprar de base. Diz-te onde estás na emoção coletiva. Um medo extremo é um bom momento para lembrar o plano escrito. Uma euforia extrema é um bom momento para lembrar o teto. Em nenhum dos casos o DCA pára, e em nenhum dos casos o número do índice mexe no reforço por si só."
+            },
+            {
+              "cena": 3,
+              "visual": "Gráfico de linha da dominância do Bitcoin, com a legenda: «dominância do BTC = fatia do Bitcoin no valor total do mercado cripto».",
+              "narracao": "Agora a dominância do Bitcoin. É a fatia que o Bitcoin ocupa no valor total do mercado de cripto. Exemplo ilustrativo: se o mercado todo valesse cem, e o Bitcoin valesse cinquenta, a dominância seria de cinquenta por cento. Quando a dominância sobe, costuma significar que o dinheiro se está a concentrar no Bitcoin e que as moedas mais pequenas sofrem mais. Quando desce, pode acontecer o contrário, com as moedas pequenas a ganhar terreno. São padrões que se observam, e não leis. Nunca sabes quanto tempo duram, e nunca sabes se se repetem na mesma forma."
+            },
+            {
+              "cena": 4,
+              "visual": "Ecrã dividido: à esquerda, a divisão do plano escrita no caderno; à direita, a mesma divisão com os satélites a valer menos. Legenda: «exemplo ilustrativo».",
+              "narracao": "Vejamos como isto cai no teu plano. Exemplo ilustrativo: a dominância passa de cinquenta para cinquenta e seis por cento. Se os teus satélites são moedas pequenas, é bem possível que tenham caído mais do que o núcleo. Isto é contexto para o teu caderno, e a pergunta é outra: a minha divisão mudou? Se mudou, é hora de ver a regra de rebalanceamento que escreveste no módulo oito. Não compres mais satélite só porque a dominância subiu. Primeiro confirmas se o satélite tem tese escrita e se o núcleo ainda cabe no plano."
+            },
+            {
+              "cena": 5,
+              "visual": "Ruben, plano próximo, com a frase no ecrã: «Sentimento é contexto. A etiqueta é o ponto de partida.»",
+              "narracao": "Regra de ouro desta aula: sentimento e dominância são contexto. Não substituem a etiqueta do DCA Inteligente, não substituem o Momentum nem o DEFY, e não mudam o teu teto. Podem entrar numa linha do caderno, algo como contexto da semana: medo elevado, dominância a subir. Isso é útil para revisitares daqui a três meses. Mas não mudam o número da compra. Se te apanhares a dizer com esta euforia, não compro, volta a esta aula. A euforia é motivo para olhar para o pote com calma. Não é motivo para parar o plano."
+            },
+            {
+              "cena": 6,
+              "visual": "Folha de exercício com quatro colunas: «data», «sentimento», «dominância», «mudou o plano?».",
+              "narracao": "Exercício de dois minutos: escreve no caderno o valor atual do índice de sentimento que usares e a dominância do Bitcoin, com a data. Depois responde a uma pergunta: o meu plano mudou por causa disto? Na maior parte das semanas, a resposta é não, e está bem assim. Esta linha não é para mudares a compra. É para perceberes, com o tempo, em que momentos o humor do mercado te empurrava a decidir mal. Esse padrão, quando o vês escrito, deixa de ter tanto poder sobre ti. Se usares mais do que um índice, escreve todos, e nota se apontam para o mesmo lado. Quando não apontam, também é informação útil."
+            }
+          ],
+          "palavras": 617,
+          "minutos": 4
+        },
+        {
+          "id": "9.4",
+          "titulo": "Aula 9.4 — Juntar tudo para escolher o tamanho do reforço",
+          "gancho": "Já tens várias ferramentas na cabeça. Mas a pergunta da sexta é uma só: quanto compro? Vamos responder a essa pergunta com ordem.",
+          "cenas": [
+            {
+              "cena": 1,
+              "visual": "Quadro desenhado a giz, com quatro passos numerados. Texto no ecrã: «1 etiqueta · 2 leituras · 3 contexto · 4 teto e registo».",
+              "narracao": "Vamos juntar tudo num método só, com quatro passos e sempre por esta ordem. Primeiro, a etiqueta do DCA Inteligente, que dá o ponto de partida. Segundo, as leituras do diário: o Momentum e o DEFY, contando quantas estão a favor. Terceiro, o contexto: sentimento e dominância, que se escrevem mas não mudam o número. Quarto, o teto mensal e o registo. A ordem importa. Se começares pelo contexto, começas a construir a tua história antes de veres o gráfico, e é exatamente aí que as decisões se tornam emocionais."
+            },
+            {
+              "cena": 2,
+              "visual": "Tabela animada com as quatro etiquetas: «Forte Compra», «Compra», «Aguardar», «Não Reforçar». Ao lado, o ponto de partida de cada uma.",
+              "narracao": "A etiqueta dá o máximo do dia. Forte Compra pode chegar a até duas vezes a base. Compra, a uma vez e meia. Aguardar, metade da base, e o resto fica no pote. Não Reforçar, zero para esse ativo nessa semana, e a base inteira vai para o pote. Não Reforçar nunca usa o pote. Depois, as leituras decidem quanto do pote entra. Duas ou mais a favor: base mais pote, dentro do que a etiqueta permite. Uma: base mais, no máximo, meio pote. Nenhuma: só a base. Em nenhuma linha, o teto mensal é ultrapassado."
+            },
+            {
+              "cena": 3,
+              "visual": "Ecrã com um exemplo em quatro semanas, com colunas: «semana», «etiqueta», «leituras», «compra», «pote». Legenda no topo: «exemplo ilustrativo».",
+              "narracao": "Vejamos um exemplo ilustrativo, com uma base de vinte e cinco euros por semana e um pote que começa com quarenta euros. Semana um: Forte Compra, duas leituras a favor. Compras cinquenta: vinte e cinco da base e vinte e cinco do pote, e o pote desce para quinze. Semana dois: Compra, uma leitura a favor. Compras vinte e cinco da base e, no máximo, meio pote, sete euros e cinquenta. O pote fica em sete e cinquenta. Semana três: Não Reforçar. Zero para o ativo, e os vinte e cinco da base vão para o pote, que sobe para trinta e dois e cinquenta. Semana quatro: nenhuma leitura a favor, e compras só a base. O dinheiro novo do mês foi de cem euros. O que saiu do pote foi dinheiro que já estava guardado."
+            },
+            {
+              "cena": 4,
+              "visual": "Ruben, plano próximo. Frase no ecrã: «O DCA não pára. Só muda o tamanho.»",
+              "narracao": "Esta frase é a mais importante do programa até aqui. No exemplo que acabámos de ver, não houve uma única semana em que o plano parou. Houve semanas com compra maior, uma semana só com a base, e uma semana em que o ativo não recebeu compra, mas o dinheiro foi para o pote e continua a ser parte do plano. Há uma coisa que nunca fazes: parar o plano porque o gráfico está feio, ou porque toda a gente está eufórica. Se o teu DCA parar, deixou de ser DCA. Passou a ser um palpite com calendário."
+            },
+            {
+              "cena": 5,
+              "visual": "Folha do ritual de sexta com as colunas: «data», «ativo», «etiqueta», «leituras», «sentimento e dominância», «compra», «pote».",
+              "narracao": "Onde se regista tudo? Na folha do ritual de sexta que usas desde o módulo sete. Data, ativo, etiqueta, leituras de Momentum e DEFY, uma linha de contexto com o sentimento e a dominância, quanto compraste, quanto foi para o pote e quanto saiu dele. Sem este registo, a decisão fica na memória, e a memória costuma embelezar o que fizemos. Com ele, daqui a meses consegues ver o teu próprio padrão: se compras mais quando estás eufórico, se o pote fica sempre parado, se a etiqueta te dá mais sinais do que as leituras. Isso é aprendizagem a sério."
+            },
+            {
+              "cena": 6,
+              "visual": "Ruben com um calendário onde estão marcadas quatro sextas. Texto final no ecrã: «Missão do módulo 9: quatro leituras de sexta, registadas.» Por baixo, o aviso educativo.",
+              "narracao": "Missão do módulo: faz as quatro leituras de sexta e regista cada uma. Em cada sexta, segue os quatro passos: etiqueta, leituras, contexto, teto e registo. Se não tens dinheiro para comprar, faz a leitura na mesma e regista o que farias. A missão é o registo, e não a compra. Quatro sextas seguidas dão-te o primeiro histórico do teu próprio método. No fim, reserva cinco minutos e compara a primeira leitura com a última. E lembra-te: nada disto garante resultados. É educação. O risco de perda é real, e fica sempre contigo. Vemo-nos no módulo dez."
+            }
+          ],
+          "palavras": 640,
+          "minutos": 4.1
+        }
+      ]
+    },
+    {
+      "ficheiro": "modulo-10.md",
+      "titulo": "Módulo 10 — Realizar e proteger (≈14 min)",
+      "aulas": [
+        {
+          "id": "10.1",
+          "titulo": "Aula 10.1 — Tirar lucro com regras escritas",
+          "gancho": "Quase toda a gente sabe comprar. Muito poucos sabem quando vender, e ainda menos sabem porque venderam. Hoje escrevemos isso antes de precisarmos.",
+          "cenas": [
+            {
+              "cena": 1,
+              "visual": "Ruben em plano médio, fundo quase preto, pormenores a ouro. Texto no ecrã: «Conteúdo educativo. O risco de perda é real.»",
+              "narracao": "Antes de mais, o aviso que vai aparecer sempre que mexermos em dinheiro: conteúdo educativo. O risco de perda é real, e em cripto pode ser total. Dito isto, vamos a uma pergunta que quase ninguém faz a sério: quando é que tiras lucro? Muita gente só pensa nisso quando o preço já subiu ou já caiu, e aí a decisão é emocional. Ganância de um lado, medo do outro. A ideia desta aula é simples: a decisão de vender tem de ser tomada num dia calmo, num papel, com regras que escreveste antes. Quando o mercado acelera, não é altura de pensar. É altura de cumprir o que já decidiste."
+            },
+            {
+              "cena": 2,
+              "visual": "Animação: uma linha de preço a subir por degraus. Em cada degrau, uma pequena fatia dourada é retirada e posta de lado. Texto: «escada de realização».",
+              "narracao": "Chamamos a isto escada de realização. Cada degrau é um nível de subida, medido em relação ao teu preço médio de compra. Em cada degrau vendes uma parte fixa da posição, e o resto continua contigo. Repara no que isto faz: a parte que vendes fica convertida em euros, e a parte que guardas continua a participar se o mercado continuar a subir. Não é uma fórmula mágica, e não te diz quando chega o topo. Diz-te apenas o que fazes em cada degrau, antes de o degrau chegar. É isso que tira o drama da decisão."
+            },
+            {
+              "cena": 3,
+              "visual": "Tabela desenhada no caderno do Ruben, com o título «Exemplo ilustrativo». Colunas: degrau · subida face ao preço médio · parte a vender · o que fica.",
+              "narracao": "Vou dar-te um exemplo ilustrativo, só para veres a mecânica. Imagina uma posição com preço médio de cem. No primeiro degrau, com mais cinquenta por cento, vendes um quinto da posição. No segundo degrau, com mais cem por cento, vendes outro quinto. No terceiro, com mais duzentos por cento, vendes mais um quinto. O que sobra fica contigo, com a sua própria regra. Os números são meus, escolhidos para o exemplo. Não são uma previsão, não são um alvo e não são uma recomendação. Tu escolhes os teus degraus e as tuas percentagens, conforme o teu plano e a tua tolerância ao risco. O importante é que estejam escritos."
+            },
+            {
+              "cena": 4,
+              "visual": "Ecrã do caderno com três regras escritas à mão, ao lado de um cronómetro parado. Texto: «degrau · parte · data».",
+              "narracao": "Cada degrau tem três informações, e as três têm de estar escritas. Primeira: o degrau, em percentagem face ao teu preço médio. Segunda: a parte, em fração da tua posição e não em euros, para que a regra continue a fazer sentido quando a posição mudar. Terceira: a data ou a condição de revisão. Por exemplo, revejo a escada na primeira sexta de cada mês. Se não há data nem condição, a regra não existe, é só um desejo. E há uma coisa que a escada não substitui: o DCA. As compras continuam a fazer-se no teu dia, conforme o módulo sete. Vender uma parte é uma decisão separada, com o seu próprio papel."
+            },
+            {
+              "cena": 5,
+              "visual": "Ruben a falar para a câmara, com a frase no ecrã: «O que não está escrito não existe.»",
+              "narracao": "Há três erros que vejo com frequência e que a escada evita. O primeiro é mudar a regra a meio, porque o preço está a correr e dá vontade de ver mais. O segundo é vender tudo de uma vez por medo, num dia de pânico, e depois assistir à subida sem a tua parte. O terceiro é não vender nada e chamar a isso paciência, quando na verdade é falta de plano. Com a escada escrita, qualquer um destes erros tem de passar primeiro pelo papel. Isso já te dá uma pausa. E a pausa, em mercados rápidos, vale mais do que parece."
+            },
+            {
+              "cena": 6,
+              "visual": "Folha de exercício com quatro linhas em branco e o título «A minha escada». Ruben com a caneta no ar.",
+              "narracao": "Exercício de cinco minutos, para fazeres hoje. Pega no teu caderno e escreve a tua escada para uma posição do teu plano. Três degraus chegam. Para cada um, escreve o degrau, a parte e a data de revisão. Não precisas de acertar. Precisas de ter escrito, e de o ter feito com calma, sem o ecrã aberto ao lado. Depois guarda a folha junto ao plano do módulo sete, para que as duas coisas se leiam juntas. Na próxima aula falamos do que fazer quando o mercado não sobe, mas cai de forma brutal, e porque é que esse plano também tem de estar escrito antes."
+            }
+          ],
+          "palavras": 664,
+          "minutos": 4.3
+        },
+        {
+          "id": "10.2",
+          "titulo": "Aula 10.2 — O que fazer num crash: o plano escrito antes",
+          "gancho": "Um dia de queda forte não tem cara de crise. Tem cara de notificação, de amigo a ligar e de dedo a querer carregar em vender. Por isso o plano tem de estar escrito antes.",
+          "cenas": [
+            {
+              "cena": 1,
+              "visual": "Gráfico diário de cripto em queda acentuada, velas vermelhas, sem números legíveis. Texto no ecrã: «Plano escrito antes.»",
+              "narracao": "Quedas grandes acontecem em cripto. Não te vou dizer quando nem quanto, porque não sei, e ninguém sabe. O que sei é que acontecem com frequência suficiente para merecerem um plano. E o momento em que mais se decide mal é exatamente o da queda, quando o ecrã está vermelho, as conversas estão em pânico e o cérebro quer fazer alguma coisa, qualquer coisa, já. A solução não é ter mais coragem no momento. É ter menos decisões para tomar nesse momento. Por isso escrevemos o plano hoje, quando estamos calmos, e não amanhã, quando já estiver a arder."
+            },
+            {
+              "cena": 2,
+              "visual": "Ruben sentado à mesa, com o caderno aberto em três secções: «antes», «durante», «depois». Texto: «três partes, uma página».",
+              "narracao": "O plano para um crash tem três partes. Antes: o que já tens montado. O teu valor base, o teu teto mensal, o teu pote de reserva e os alertas ligados na app. Durante: o que fazes em cada faixa de queda, escrito com a mesma lógica do DCA Inteligente, em que a etiqueta de Forte Compra muda o tamanho do reforço e não te manda parar. Depois: quando e como revês a estratégia. Uma página chega. Se não cabe numa página, ainda está a ser pensado demais, e na hora da queda ninguém lê vinte."
+            },
+            {
+              "cena": 3,
+              "visual": "Animação: uma linha de preço a cair por degraus. Em cada degrau, uma caixa com a frase «ação escrita».",
+              "narracao": "Vamos ao durante, que é o coração do plano. Para cada faixa de queda, escreves a ação. Por exemplo, exemplo ilustrativo: se o ativo cair mais de trinta por cento face ao teu preço médio, o DCA continua na base. Se o pote tiver dinheiro, usas parte dele, dentro do teto, como ensina o módulo sete. Não vendes nada nessa faixa. Repara bem: o DCA nunca pára, só muda de tamanho. Uma queda não te dá licença para deixares de comprar, e também não te obriga a comprar mais do que o teto permite. Se a tua estratégia tiver uma posição que queres mesmo vender numa queda, isso é uma regra escrita à parte, com a sua própria condição."
+            },
+            {
+              "cena": 4,
+              "visual": "Ecrã do telemóvel com uma notificação de queda, e um polegar a pairar sobre a palavra «vender». Texto: «pausa de 24 horas».",
+              "narracao": "Há uma regra que deve estar em todos os planos de crash: a pausa. Quando algo te faz querer vender fora do plano, esperas vinte e quatro horas. Não é um castigo, é um filtro. Muita da decisão de pânico desaparece em vinte e quatro horas. Se depois da pausa ainda achas que a venda faz sentido, escreve porquê, com a condição que a justifica, e vê se bate com a regra que escreveste para o crash. Se não bate, fica com o plano. E desliga as notificações de preço durante o dia da queda. Ver o gráfico de cinco em cinco minutos não te ajuda a pensar. Só te dá a sensação de que estás a fazer alguma coisa."
+            },
+            {
+              "cena": 5,
+              "visual": "Ruben a falar para a câmara, com a frase no ecrã: «Ninguém te lembra do plano por ti.»",
+              "narracao": "Uma coisa que te digo sem rodeios: numa queda, as pessoas à tua volta vão dizer coisas. Umas vão dizer para venderes tudo, outras para comprares tudo, e outras vão mostrar gráficos que parecem certezas. Nenhuma delas tem a tua tabela. Por isso o plano fica escrito e assinado por ti, guardado onde o vês. Se o tiveres só na cabeça, na queda a tua cabeça vai-te dizer o que ela quiser. Escreve também o contacto de uma pessoa de confiança que te possa lembrar do plano. Não para decidir por ti. Para te lembrar do que decidiste quando estavas calmo."
+            },
+            {
+              "cena": 6,
+              "visual": "Folha de crash com as três secções preenchidas com um exemplo. Ruben aponta para a secção «depois».",
+              "narracao": "Missão desta aula, de dez minutos: escreve o teu plano de crash em meia página. Antes, durante e depois. Põe pelo menos três faixas de queda, com a ação de cada uma, a regra da pausa de vinte e quatro horas e o nome da pessoa de confiança. No fim, assina e data. Guarda a folha junto à escada de realização da aula anterior. Na próxima aula falamos da parte que quase ninguém leva a sério até ser tarde: a segurança da tua seed, e porque é que a cópia digital é o pior sítio para ela estar."
+            }
+          ],
+          "palavras": 668,
+          "minutos": 4.3
+        },
+        {
+          "id": "10.3",
+          "titulo": "Aula 10.3 — Segurança avançada: cópias, metal e locais",
+          "gancho": "A tua seed é a tua conta inteira. E a pior coisa que lhe podes fazer não é perdê-la num dia de azar. É deixá-la onde alguém a pode ver com calma.",
+          "cenas": [
+            {
+              "cena": 1,
+              "visual": "Ruben com um cartão de papel com as palavras tapadas, mesa vazia à volta. Texto no ecrã: «Nunca digital.»",
+              "narracao": "Na aula quatro falámos da tua seed, as palavras que dão acesso às tuas moedas. Agora vamos um nível acima, porque quando o valor cresce, o risco muda de forma. Há duas ameaças que pesam igual: perder a seed, e alguém ficar com ela. Qualquer plano de segurança tem de tratar das duas. A regra que não se negoceia é esta: a seed nunca fica em formato digital. Nem fotografia, nem nota no telemóvel, nem email para ti próprio, nem ficheiro na nuvem, nem gestor de palavras-passe. Qualquer uma destas coisas pode ser copiada, sincronizada ou roubada, e tudo isso pode acontecer sem que tu dês por nada."
+            },
+            {
+              "cena": 2,
+              "visual": "Animação: uma placa metálica com letras gravadas, a ser colocada num cofre. Texto no ecrã: «papel arde · metal aguenta».",
+              "narracao": "Se não é digital, então é papel? Pode ser, mas o papel é frágil. Arde, molha-se, desfaz-se com o tempo, e uma mudança de casa pode deitar fora uma folha dobrada numa gaveta. Por isso a opção mais sólida é o metal: uma placa ou um suporte onde as palavras ficam gravadas ou perfuradas, resistentes ao fogo e à água. Usar papel como primeira cópia não é um erro, desde que a cópia de metal venha a seguir. O objetivo é que a informação sobreviva a um incêndio, a uma inundação ou a um dia em que a tua casa fique de pernas para o ar."
+            },
+            {
+              "cena": 3,
+              "visual": "Mapa simples com duas moradas marcadas com cruzes. Texto no ecrã: «duas cópias · dois sítios».",
+              "narracao": "Agora a regra das cópias. Duas cópias, em dois sítios diferentes. Não é a mesma gaveta, não é o mesmo cofre, não é a mesma casa. Se um incêndio ou um assalto leva uma, a outra continua lá. Uma das opções é um cofre em casa, bem escondido e fixo à estrutura. A outra pode ser um cofre num sítio de confiança, fora de casa. Não há um sítio perfeito. Há sítios em que o risco de perda é baixo e o risco de acesso indevido também é baixo. Escolhe com esse equilíbrio na cabeça, e escreve no plano onde está cada cópia."
+            },
+            {
+              "cena": 4,
+              "visual": "Ruben a segurar um cartão de aviso com um símbolo de alerta. Texto no ecrã: «Nenhum suporte legítimo pede a seed.»",
+              "narracao": "Uma regra que parece óbvia e que muita gente quebra: ninguém te pede a seed. Nenhum apoio legítimo, nenhuma plataforma autorizada, nenhuma pessoa a dizer que é do suporte pede as palavras. Se alguém te pedir, mesmo que o pedido venha com um logótipo bonito, uma mensagem urgente ou um telefonema simpático, a resposta é não. E não a escrevas em nenhum site, nem numa app de terceiros, nem a um amigo que está a ajudar-te a configurar algo. A seed só se usa no momento de restaurar a tua carteira, num sítio que controlas. Depois volta para a cópia de papel e para o metal."
+            },
+            {
+              "cena": 5,
+              "visual": "Ruben a falar para a câmara, com uma folha de palavras de teste na mão. Texto no ecrã: «Testa, não copies.»",
+              "narracao": "Como é que sabes que a cópia funciona? Não a abres para verificar, porque cada vez que a expões há uma pequena exposição. O que fazes é um teste de restauro, numa carteira nova e vazia, sem o teu valor principal, seguindo o procedimento que já conheces do módulo quatro. Se o teste correr bem, a cópia está boa. Se não correr, descobres agora, e não no dia em que precisares dela. Faz este teste uma vez por ano, ou sempre que mudares de carteira. E nunca juntes as cópias numa só foto, numa só pasta ou num só envelope."
+            },
+            {
+              "cena": 6,
+              "visual": "Lista de verificação no ecrã com quatro quadrados: «sem digital», «duas cópias», «dois sítios», «teste feito». Ruben a marcar cada um.",
+              "narracao": "Missão desta aula, para fazeres esta semana: confere a tua seed em quatro perguntas. Está fora de qualquer formato digital? Tens duas cópias? Estão em dois sítios diferentes? E fizeste o teste de restauro numa carteira nova? Se a resposta a alguma for não, é aí que está o trabalho. Não é glamoroso, mas é o que separa quem perde um telemóvel de quem perde o acesso às suas moedas. Na última aula deste módulo falamos do que acontece à tua seed e às tuas moedas quando já não estiveres por perto para cuidar delas."
+            }
+          ],
+          "palavras": 650,
+          "minutos": 4.2
+        },
+        {
+          "id": "10.4",
+          "titulo": "Aula 10.4 — Herança cripto e a missão do nível 2",
+          "gancho": "Ninguém gosta de pensar nisto. Mas se as tuas moedas só existem na tua cabeça, quando faltares, elas faltam também a quem gostas. Isto tem solução, e é mais simples do que parece.",
+          "cenas": [
+            {
+              "cena": 1,
+              "visual": "Ruben em plano médio, com um documento dobrado em cima da mesa. Texto no ecrã: «Plano de herança cripto».",
+              "narracao": "Vamos à herança. Este é o último ponto de segurança do nível dois, e é o que mais gente adia. A ideia é simples: alguém de confiança tem de conseguir perceber o que existe, onde está e como aceder a isso, quando tu já não puderes. Não é preciso dar-lhe a seed, nem agora nem nunca. O que lhe dás é um mapa. Um mapa diz que tens cripto, em que tipos de carteira e em que plataformas autorizadas, quais são as cópias, onde estão, e a quem pedir ajuda para as encontrar. Escrito assim, o mapa protege a tua família e não expõe as tuas moedas."
+            },
+            {
+              "cena": 2,
+              "visual": "Animação: três envelopes alinhados, com as etiquetas «mapa», «cópias» e «contactos». Texto no ecrã: «o mapa sem a chave».",
+              "narracao": "Separa a informação em três partes. O mapa: o que tens e onde está, sem palavras de acesso. As cópias da seed, que são a chave, ficam nos sítios seguros da aula anterior, e nunca no mesmo envelope do mapa. E os contactos: quem é o advogado ou o notário de confiança a quem perguntar como isto funciona no teu caso, e quem é a pessoa que vai ler o mapa quando for preciso. A regra de ouro é que nenhuma das partes, sozinha, dá acesso às tuas moedas. Quem lê o mapa não tem a chave. Quem tem a chave não sabe o que ela abre. Os dois precisam de se encontrar."
+            },
+            {
+              "cena": 3,
+              "visual": "Ruben a falar, com o caderno aberto numa página com o título «Ponto legal». Texto no ecrã: «Fala com um profissional».",
+              "narracao": "Uma nota honesta sobre a parte legal. As regras de herança variam de país para país, e variam ainda mais quando os bens são digitais. Não te vou dizer aqui o que a lei prevê para o teu caso, porque isso depende da tua situação e de quem vai herdar. O que te peço é que, antes de dar o teu plano por fechado, fales com um advogado ou um notário de confiança. Leva o mapa, sem as palavras de acesso, e pergunta como deve ser redigido para valer. E se viveres ou tiveres bens noutro país, pergunta também por esse. Isto não é aconselhamento jurídico. É um aviso para não deixares o assunto para depois."
+            },
+            {
+              "cena": 4,
+              "visual": "Ecrã do caderno com a folha do plano DCA do nível 2: valor base, teto mensal, pote, ativos, dia de reforço, alertas. Texto no ecrã: «missão do nível 2».",
+              "narracao": "Agora a missão do nível dois, que junta tudo o que fizeste nos módulos sete a dez. Primeiro, o teu plano DCA escrito, com o teto mensal fixo e o pote de reserva, numa folha só. Tem o valor base, os ativos, o dia de reforço, as regras de tamanho com a tabela do DCA Inteligente e o que acontece ao que não gastas. Segundo, os alertas DCA ligados na app MTM System, nas definições. Terceiro, o ritual de sexta-feira feito quatro semanas seguidas, com o registo de cada uma no caderno. Se numa sexta não compras, o ritual faz-se na mesma e regista-se o que terias feito. Quatro linhas, uma por semana."
+            },
+            {
+              "cena": 5,
+              "visual": "Calendário de quatro sextas-feiras marcadas com um visto dourado. Ruben mostra o caderno com as quatro linhas. Texto no ecrã: «4 sextas · 4 registos».",
+              "narracao": "Porque é que quatro semanas e não uma? Porque uma semana é uma coincidência. Quatro semanas seguidas são um hábito a começar. E é no hábito que o DCA funciona, não no dia em que correu bem ou mal. Repara também no que não te peço: não te peço que tenhas acertado, nem que tenhas lucro. Peço que o processo tenha acontecido quatro vezes, com o mesmo horário e a mesma folha. Se uma sexta falhar por uma razão real, como uma viagem ou uma doença, não é um fracasso. Reinicias a contagem e segues em frente. O que não podes é fingir que o registo existe quando não existe."
+            },
+            {
+              "cena": 6,
+              "visual": "Ruben a fechar o caderno. Texto final no ecrã: «Missão do nível 2: plano, alertas, quatro sextas registadas.» Por baixo, o aviso educativo.",
+              "narracao": "Missão do nível dois, resumida: plano DCA escrito com teto e pote, alertas DCA ligados, e quatro sextas seguidas de ritual registado. Não se mede pelo que o mercado fez, mede-se por teres feito. E a herança entra aqui também, em forma de mapa, com a chave separada. Lembra-te do essencial: isto é conteúdo educativo, não é aconselhamento financeiro. O risco de perda é real, e as ferramentas da MTM ajudam-te a decidir com informação. Não decidem por ti. No nível três entram os perpétuos, que são outro jogo. Antes de lá chegarmos, o plano deste nível tem de estar feito."
+            }
+          ],
+          "palavras": 693,
+          "minutos": 4.5
+        }
+      ]
+    },
+    {
+      "ficheiro": "modulo-11.md",
+      "titulo": "Módulo 11 — Perpétuos a sério (≈17 min)",
+      "aulas": [
+        {
+          "id": "11.1",
+          "titulo": "Aula 11.1 — O que é um perpétuo e o funding",
+          "gancho": "Um perpétuo é um contrato que não expira. Parece simples, e a parte que não expira é exatamente a que te vai custar atenção.",
+          "cenas": [
+            {
+              "cena": 1,
+              "visual": "Ruben em plano médio, fundo quase preto, pormenores a ouro. Texto no ecrã: «Conteúdo educativo. O risco de perda é real.»",
+              "narracao": "Antes de qualquer número, o aviso que vai estar no ecrã durante todo este módulo: conteúdo educativo. O risco de perda é real. Nos perpétuos pode perder-se tudo o que colocaste em margem, e isso acontece mais depressa do que a maioria pensa. Este módulo é para perceber, não para começar. O nível três é opcional. E antes de qualquer euro real, o que vale é a conta simulada, como já sabes desde o início do bootcamp. Dito isto, vamos ao que é um perpétuo. Quero que saias daqui com uma frase clara."
+            },
+            {
+              "cena": 2,
+              "visual": "Animação: um contrato com uma seta infinita e a palavra «sem data de validade». Texto no ecrã: «perpétuo = sem data».",
+              "narracao": "Um contrato de futuros normal tem uma data de expiração. No fim dessa data, liquida-se, e acabou. Um perpétuo não tem essa data. Fica aberto enquanto quiseres e enquanto tiveres margem para o manter. Para se manter parecido com o preço à vista, o perpétuo usa um mecanismo que se chama funding. Não é uma taxa de corretagem. É um pagamento que acontece de tempos a tempos, entre quem está comprado e quem está vendido. Quando o perpétuo está acima do preço à vista, quem está comprado paga a quem está vendido. Quando está abaixo, acontece o contrário. É a parte que mais gente ignora, e pesa mais do que parece em posições abertas dias seguidos."
+            },
+            {
+              "cena": 3,
+              "visual": "Tabela no ecrã: «Exemplo ilustrativo · posição comprada de 1.000 € de nocional · funding de 0,05 % por período». Ruben aponta para a tabela.",
+              "narracao": "Vamos a um exemplo ilustrativo. Tens uma posição comprada com mil euros de valor nocional, que é o tamanho total da posição, e não o dinheiro que puseste. O funding está a zero vírgula zero cinco por cento por período de pagamento. Por período, pagas cinquenta cêntimos. Se o funding for positivo, quem está comprado paga. Se for negativo, quem está comprado recebe. O número serve só para fazer a conta, e o funding muda com o tempo. Interessa-te o mecanismo: quem fica muito tempo em posição com o funding a jogar contra si paga uma pequena parte, todos os dias, e isso não aparece no gráfico das velas."
+            },
+            {
+              "cena": 4,
+              "visual": "Ecrã dividido em dois: à esquerda o gráfico do perpétuo, à direita o gráfico do preço à vista, com a diferença entre os dois a piscar. Texto no ecrã: «perpétuo contra preço à vista».",
+              "narracao": "Porque é que o perpétuo se mantém perto do preço à vista? Porque o funding empurra. Quando há muita gente comprada e o perpétuo fica acima do preço real, o funding fica positivo, e quem está comprado paga para manter a posição. Isso tende a arrefecer a procura do lado comprado. Ao contrário, quando há muita gente vendida, o funding fica negativo, e quem vende é que paga. Não é magia, é um incentivo. Na prática, o funding é um custo ou um rendimento que corre enquanto a posição está aberta, e muda de sinal conforme o ambiente do mercado."
+            },
+            {
+              "cena": 5,
+              "visual": "Folha de exercício com uma linha do tempo de três dias, e campos «funding pago» por dia. Ruben com a caneta na mão.",
+              "narracao": "Exercício de dois minutos, em papel. Uma posição comprada de mil euros de nocional, com funding de zero vírgula zero cinco por cento por período, e três períodos por dia, que é um dos formatos comuns. Quanto pagas em vinte e quatro horas? Três períodos de cinquenta cêntimos dão um euro e cinquenta. Um euro e cinquenta por dia, sobre um nocional de mil. Exemplo ilustrativo, claro. Agora repete a conta com a posição aberta uma semana inteira. Se o funding jogar contra ti todos os dias, quanto pagas no total? Faz a conta sem calculadora, e só depois confirma. Na próxima aula vemos o que acontece à tua margem quando as coisas correm mal."
+            }
+          ],
+          "palavras": 557,
+          "minutos": 3.6
+        },
+        {
+          "id": "11.2",
+          "titulo": "Aula 11.2 — Margem isolada e margem cruzada",
+          "gancho": "Duas contas com o mesmo saldo podem reagir de maneira completamente diferente à mesma queda. A diferença está numa escolha que quase ninguém lê.",
+          "cenas": [
+            {
+              "cena": 1,
+              "visual": "Ecrã de um painel de margem simulado, com duas opções, «isolada» e «cruzada». Texto no ecrã: «margem: o que te protege e o que arrisca».",
+              "narracao": "A margem é o dinheiro que colocas para segurar a posição. Não é o custo da posição toda, é a garantia. Quando abres um perpétuo com alavancagem, a plataforma exige uma margem inicial, e é essa margem que sobe e desce com o mercado. Existem duas formas de a organizar: isolada e cruzada. A diferença não está na alavancagem. Está em quem paga quando a posição corre mal. Esta escolha parece técnica, mas é uma das decisões de risco mais importantes deste módulo, e muitas vezes é a que se toma sem pensar."
+            },
+            {
+              "cena": 2,
+              "visual": "Animação com duas caixas. Na isolada, uma caixa pequena com um muro à volta, só com uma posição lá dentro. Na cruzada, uma caixa grande com várias posições e um só saldo partilhado.",
+              "narracao": "Margem isolada quer dizer que cada posição tem a sua própria garantia. Se pões cem euros numa posição, só esses cem euros estão em risco. Se a posição for liquidada, perdes esses cem, e o resto da conta fica intacto. Margem cruzada quer dizer que todas as posições partilham o saldo disponível. Uma posição em dificuldade pode usar o dinheiro das outras para aguentar. Parece uma vantagem, e às vezes é, mas tem um custo: uma única posição má pode arrastar a conta inteira. Para quem está a aprender, isso é um problema grande."
+            },
+            {
+              "cena": 3,
+              "visual": "Tabela comparativa no ecrã: «isolada: limite por posição · cruzada: partilha o saldo». Ruben aponta para a linha do risco.",
+              "narracao": "Vamos pôr as duas lado a lado, com um exemplo ilustrativo. Tens uma conta simulada de mil euros e abres duas posições. Com margem isolada, dás cem euros a cada uma. Se a primeira correr mal e for liquidada, perdes esses cem, e a segunda continua com os seus cem. Com margem cruzada, as duas usam o saldo total de mil. Se a primeira correr mal, a segunda pode usar o que sobra, e a liquidação só acontece quando a conta inteira chega ao limite. Ou seja, a cruzada aguenta mais tempo, mas quando falha, falha em conjunto. Os números são para a conta, não para qualquer posição real."
+            },
+            {
+              "cena": 4,
+              "visual": "Ruben a falar para a câmara, com um cartão na mão. Texto no ecrã: «A cruzada não te protege. Só adia.»",
+              "narracao": "Uma opinião minha, que podes discutir: para quem está a começar, a margem isolada é a escolha que recomendo. Quem está a começar ainda não tem um plano de risco testado, e a isolada obriga-te a decidir quanto põe cada posição. Esse limite é um ensino. Com a cruzada, a conta funciona como um só bolo, e é fácil dar mais margem a uma posição que está a perder, na esperança de que recupere. Chama-se pôr mais dinheiro numa coisa que já está a correr mal. A cruzada tem o seu lugar para quem já tem regras escritas e testadas, mas não é onde se começa."
+            },
+            {
+              "cena": 5,
+              "visual": "Folha de exercício com duas colunas, «isolada» e «cruzada», e um campo: «o que acontece à outra posição se a primeira correr mal?».",
+              "narracao": "Exercício de três minutos. Se a plataforma que usas to permitir, faz em conta simulada: abre duas posições pequenas com a mesma alavancagem, uma em margem isolada e outra em cruzada. Se não der, faz no papel. Preenche a folha: quanto dinheiro está dentro de cada posição, o que acontece à outra se a primeira correr mal, e qual das duas te deixa mais tranquilo. Não há resposta certa para a última pergunta, só a tua. Na próxima aula vemos o que é a liquidação e como se calcula, de forma simplificada, com uma conta ilustrativa."
+            }
+          ],
+          "palavras": 522,
+          "minutos": 3.4
+        },
+        {
+          "id": "11.3",
+          "titulo": "Aula 11.3 — Liquidação, com uma conta ilustrativa",
+          "gancho": "A liquidação é o momento em que a plataforma fecha a tua posição porque já não há garantia suficiente. Ninguém te pergunta. Acontece.",
+          "cenas": [
+            {
+              "cena": 1,
+              "visual": "Ruben com o caderno aberto numa página com uma conta a lápis. Texto no ecrã: «Exemplo ilustrativo».",
+              "narracao": "Vamos fazer a conta da liquidação passo a passo, com uma conta ilustrativa. Não é a conta de ninguém. São números redondos, para veres a mecânica. Imagina uma conta simulada com quinhentos euros de margem numa posição comprada, com alavancagem de dez vezes. Dez vezes quer dizer que a posição tem um valor nocional de cinco mil euros. Os quinhentos são a tua garantia, os cinco mil são o tamanho da aposta. Esta diferença é o centro desta aula. E repara: o exemplo é ilustrativo, e a plataforma que usares pode ter números e regras diferentes."
+            },
+            {
+              "cena": 2,
+              "visual": "Animação: uma barra de margem a encher-se de dourado, com um traço vermelho que desce devagar à medida que o preço cai. Texto no ecrã: «margem a consumir-se».",
+              "narracao": "Quando o preço se mexe contra a tua posição, a perda sai da margem. Com cinco mil de nocional, cada um por cento de movimento contra ti vale cinquenta euros. Se o preço descer dez por cento, perdes quinhentos, e a margem fica a zero. Numa conta simplificada, é aí que a liquidação acontece: quando a perda consome a margem. Só que isto é uma simplificação, e a diferença é importante. Na prática, a plataforma exige uma margem mínima de manutenção, e liquida antes de a margem chegar a zero. Por isso o preço de liquidação real fica um pouco mais perto da entrada do que a conta simples diz."
+            },
+            {
+              "cena": 3,
+              "visual": "Tabela no ecrã: «entrada 100 · liquidação simplificada ≈ 90 · exemplo ilustrativo». Ruben aponta para os números.",
+              "narracao": "Vamos ao preço. Imagina que a posição é comprada à entrada de cem. Com esta conta simplificada, a liquidação fica perto de noventa, porque é a queda de dez por cento que a margem de quinhentos aguenta sobre os cinco mil de nocional. Repara na lógica por trás: aproximadamente um a dividir pela alavancagem. Dez vezes dá dez por cento. Vinte vezes dá cinco por cento. Quanto mais alavancagem, mais curta a distância até à liquidação. Ou seja, a alavancagem não te dá mais tempo. Encurta a margem de erro. Este número é um exemplo ilustrativo, e não é uma regra para qualquer posição."
+            },
+            {
+              "cena": 4,
+              "visual": "Ruben a falar para a câmara, com a frase no ecrã: «Liquidação não é um número. É uma data que chega sem avisar.»",
+              "narracao": "E agora o ponto que quero que guardes. A liquidação não avisa. Não há um momento em que a plataforma te diz que vai fechar, e não há garantia de que o preço para exatamente no valor que calculaste. Num mercado rápido, com uma vela longa e de repente, o preço pode passar pelo nível de liquidação em segundos, e o fecho acontece ao preço que houver nesse momento, que pode ser pior do que o número que escreveste. Por isso, o preço de liquidação que vês no ecrã é um limite de referência e não uma proteção. A proteção, se existir, está noutro sítio: é o stop, que vamos ver mais à frente neste nível."
+            },
+            {
+              "cena": 5,
+              "visual": "Ruben a fechar o caderno. Cartão no ecrã: «Recalcula sempre antes de abrir.»",
+              "narracao": "Missão desta aula: pega numa conta ilustrativa, numa simulação, e calcula a liquidação simplificada para três alavancagens, cinco, dez e vinte. Escreve a distância percentual até ao preço de liquidação em cada caso. Depois confirma no painel da plataforma que usas, se o tiver. Se os números não batem, procura a diferença, que costuma estar na margem de manutenção e nas fees. Não abras nenhuma posição real para fazer esta conta, nem por curiosidade. Na próxima aula falamos dos custos, que é onde a conta costuma ser mais cara do que parece."
+            }
+          ],
+          "palavras": 541,
+          "minutos": 3.5
+        },
+        {
+          "id": "11.4",
+          "titulo": "Aula 11.4 — Fees e o custo real",
+          "gancho": "Uma operação pode parecer que correu bem e, quando fazes a conta às fees, já não sobrou nada. Esta aula é a das contas que ninguém faz à frente do ecrã.",
+          "cenas": [
+            {
+              "cena": 1,
+              "visual": "Ruben com uma folha de fatura, título «fatura ilustrativa». Texto no ecrã: «custos que não se veem».",
+              "narracao": "Vamos falar de dinheiro que sai sem se ver. Nos perpétuos há pelo menos três tipos de custo. A fee de abertura, a fee de fecho e o funding que já vimos. Há ainda um custo escondido, que é o spread, a diferença entre o preço de compra e o de venda no momento. Cada um é pequeno, mas somados e multiplicados pela alavancagem e pela frequência, podem comer uma parte grande do que pensavas ter. Esta fatura é ilustrativa, sem valores de nenhuma plataforma em concreto. A tua plataforma autorizada tem as suas tabelas, e tens de as ler antes de abrir."
+            },
+            {
+              "cena": 2,
+              "visual": "Animação: uma seta de entrada e uma seta de saída, cada uma com uma pequena fatia cortada. Texto no ecrã: «maker · taker».",
+              "narracao": "A fee depende da forma como entras. Quando colocas uma ordem que fica à espera no livro de ordens, e não é executada de imediato, costumas pagar uma fee mais baixa, chamada de maker. Quando a ordem entra de imediato e leva liquidez do mercado, pagas uma fee mais alta, a de taker. As plataformas variam, por isso confirma no menu de taxas da plataforma autorizada, antes de abrir, a fee de cada tipo de ordem. Pergunta-te também se o tipo de ordem que vais usar é o que queres, e não o mais rápido de clicar."
+            },
+            {
+              "cena": 3,
+              "visual": "Tabela no ecrã: «nocional 5.000 € · fee de 0,05 % por lado · exemplo ilustrativo». Ruben aponta para os números.",
+              "narracao": "Exemplo ilustrativo, com números redondos. Nocional de cinco mil euros, e uma fee de zero vírgula zero cinco por cento por cada lado da operação, abertura e fecho. Abrir custa dois euros e meio. Fechar custa outros dois euros e meio. Total, cinco euros, numa operação de cinco mil. Parece pouco. Agora olha para a margem: quinhentos euros. Cinco euros em quinhentos são um por cento da garantia, só em fees, antes de o mercado se mexer. Se repetires esta operação dez vezes com a mesma margem, são cinquenta euros, dez por cento da garantia, a ir para a plataforma. Nenhum desses cinquenta euros aparece no gráfico."
+            },
+            {
+              "cena": 4,
+              "visual": "Ruben a falar para a câmara, com o painel de conta simulado a aparecer ao lado. Texto no ecrã: «custo de fees para o tamanho da conta».",
+              "narracao": "É aqui que o painel de conta do Aurum Flow Cripto ajuda. Mostra o nocional, a alavancagem útil e o custo de fees para o tamanho da tua conta, antes de abrires. A pergunta que deves fazer sempre é esta: se a operação der exatamente o que o plano prevê, quanto fica depois das fees? Se a resposta for quase nada, a operação pode não valer o esforço, por mais bonita que pareça no gráfico. Isto não é uma garantia de nada. É uma conta de cabeça que te protege de uma ilusão."
+            },
+            {
+              "cena": 5,
+              "visual": "Folha de exercício com campos: «nocional», «fee de abrir», «fee de fechar», «custo total», «em % da margem». Ruben a apontar para o primeiro campo.",
+              "narracao": "Exercício de cinco minutos, no papel. Uma margem de mil euros, alavancagem de cinco vezes, e uma fee de zero vírgula zero cinco por cento por lado. Qual é o nocional? Cinco mil. Quanto custa abrir? Dois euros e meio. Quanto custa fechar? Outros dois euros e meio. Qual é o custo total, em percentagem da margem? Meio por cento. Agora repete com alavancagem de vinte vezes, mantendo a mesma margem. Não precisas de acertar a fee da tua plataforma. Precisas de perceber que o custo sobe com o nocional, e não com a margem que puseste. Na próxima aula vemos a parte mais importante do módulo: porque é que a alavancagem não muda o risco certo."
+            }
+          ],
+          "palavras": 548,
+          "minutos": 3.5
+        },
+        {
+          "id": "11.5",
+          "titulo": "Aula 11.5 — A alavancagem não muda o risco certo",
+          "gancho": "Alavancagem parece um acelerador. Mas se fosse só um acelerador, o que travava o carro? A resposta é o stop e o tamanho da posição, e não o número que aparece no ecrã.",
+          "cenas": [
+            {
+              "cena": 1,
+              "visual": "Ruben em plano médio, fundo quase preto. Texto no ecrã: «O risco define-se pelo stop e pelo tamanho».",
+              "narracao": "Chegamos à aula que resume o nível três, e talvez seja a mais importante do módulo. Quando alguém te diz que vai usar cinco vezes, ou vinte vezes, a pergunta certa não é quanto é a alavancagem. A pergunta certa é: quanto perco se o stop for atingido? Essa pergunta tem uma resposta que não depende da alavancagem. Depende de duas coisas: a distância do stop e o tamanho da posição. A alavancagem só diz quanta margem precisas para segurar essa posição. Vamos ver porquê com contas, e com exemplos ilustrativos, claro."
+            },
+            {
+              "cena": 2,
+              "visual": "Animação com uma fórmula no ecrã: «perda = nocional × distância do stop». Texto no ecrã: «risco = nocional × stop».",
+              "narracao": "A fórmula cabe num guardanapo: a perda, se o stop for atingido, é igual ao nocional multiplicado pela distância do stop em percentagem. Mais nada. Não entra a alavancagem. Entra o tamanho da posição, que é o nocional, e entra o sítio onde estás disposto a sair. Com isto, o risco por operação fica definido antes de abrires. Se queres perder no máximo um por cento da tua conta, escolhes o nocional e a distância do stop de forma que a perda, nesse caso, seja um por cento. E a alavancagem fica como consequência dessa escolha, e não como ponto de partida."
+            },
+            {
+              "cena": 3,
+              "visual": "Três colunas no ecrã com a mesma conta: «conta: 1.000 € · risco: 10 € (1 %)». Exemplo ilustrativo.",
+              "narracao": "Vamos com a mesma conta de mil euros, com um risco de dez euros por operação, que é um por cento. Primeiro caso: stop a dois por cento do preço de entrada. Nocional: dez a dividir por dois por cento, dá quinhentos euros. Alavancagem, face à conta, meia vez. Segundo caso: stop a um por cento. Nocional de mil euros, alavancagem de uma vez. Terceiro caso: stop a meio por cento. Nocional de dois mil, alavancagem de duas vezes. Nos três, se o stop for atingido, perdes exatamente dez euros. O que mudou foi o nocional e a alavancagem, e não o risco. Este é o ponto que quero que guardes."
+            },
+            {
+              "cena": 4,
+              "visual": "Ruben com o caderno aberto. Cartão no ecrã: «Stop não é garantia.»",
+              "narracao": "Uma ressalva importante: o stop é uma ordem, e uma ordem pode ser executada a um preço pior do que o que escreveste, se o mercado der um salto. Num movimento brusco, o fecho pode sair mais longe do que o nível marcado. Por isso o stop reduz o risco, mas não o elimina. E a liquidação continua a existir, porque se a margem for pequena demais para a distância do stop, a plataforma fecha a posição antes de o stop chegar. A regra não é ponho stop e fico descansado. A regra é: o stop fica longe o suficiente para o ruído normal, e a posição é pequena o suficiente para que um salto não te arrase a conta."
+            },
+            {
+              "cena": 5,
+              "visual": "Ruben a fechar o caderno. Texto no ecrã: «Nível 3: só em conta simulada, até 30 operações com diário.»",
+              "narracao": "Vamos à regra do nível três, que não se negoceia. Este nível faz-se só em conta simulada, MTM Funded ou WebTrader, até cumprires trinta operações com diário completo. Trinta, e não três. O diário regista a data, o plano, o stop, o nocional, o risco em euros, a fee, o motivo de entrada, o motivo de saída e o que aprendeste. Só depois de trinta operações é que se pode pensar numa conta real, e essa decisão é tua, nunca com o dinheiro da renda. Missão desta aula: abre a tua conta simulada, faz o cálculo de risco com o modelo da aula, regista as primeiras linhas do diário, e escreve no topo da folha: zero de trinta."
+            }
+          ],
+          "palavras": 576,
+          "minutos": 3.7
+        }
+      ]
+    },
+    {
+      "ficheiro": "modulo-12.md",
+      "titulo": "Módulo 12 — A estratégia Aurum Flow Cripto (≈17 min)",
+      "aulas": [
+        {
+          "id": "12.1",
+          "titulo": "Aula 12.1 — A filosofia: só a favor da tendência",
+          "gancho": "Dois traders olham para o mesmo gráfico de uma hora. Um compra cada descida, porque está barato. O outro espera para ver para que lado vai o mercado. Adivinha qual dos dois eu ensino.",
+          "cenas": [
+            {
+              "cena": 1,
+              "visual": "Ruben em plano médio, fundo quase preto. Texto no ecrã: «Conteúdo educativo. O risco de perda é real.»",
+              "narracao": "Bem-vindo ao nível três. Este nível é opcional e é o mais exigente. Vamos estudar a estratégia Aurum Flow Cripto, um scanner de perpétuos cripto otimizado para o gráfico de uma hora. Não é uma máquina de dinheiro, nem uma promessa. É um conjunto de regras que se pode ler, testar e, sobretudo, recusar. Cada linha desta aula é uma regra. Antes de continuares, repara no aviso no ecrã: o risco de perda é real, e pode ser total. Não é uma formalidade. É a premissa de tudo o que vem a seguir."
+            },
+            {
+              "cena": 2,
+              "visual": "Gráfico de uma hora de um par cripto, em carvão e ouro, com uma seta longa a subir.",
+              "narracao": "A primeira regra da casa: o Aurum Flow só opera a favor da tendência. Se o mercado sobe de forma clara, procura compras. Se desce de forma clara, procura vendas. Parece óbvio, mas muitas perdas de quem começa vêm de fazer o contrário: comprar uma queda porque já está barato, ou vender uma subida porque já está caro. Estar barato ou caro não diz nada sobre a direção. Pode ficar ainda mais barato amanhã. A tendência é a única coisa que te diz para que lado está a empurrar o mercado."
+            },
+            {
+              "cena": 3,
+              "visual": "Dois gráficos lado a lado. À esquerda, entrada contra a tendência, com caixa vermelha. À direita, entrada a favor, com caixa verde. Rótulo: exemplo ilustrativo.",
+              "narracao": "Olha para estes dois exemplos ilustrativos. À esquerda, alguém compra numa descida forte, convencido de que o preço ia voltar. O mercado continua para baixo e o stop é atingido. À direita, a entrada acontece depois de o preço fazer um novo máximo e voltar a subir. Nenhum dos casos tem garantias, e um exemplo bonito não prova nada. Mas o segundo é o tipo de entrada que o método procura, porque o vento sopra no mesmo sentido do barco. É essa a diferença que queremos treinar. Repara bem nisto, porque é a base de tudo o que vem a seguir."
+            },
+            {
+              "cena": 4,
+              "visual": "Ruben com o caderno aberto. Na página, à mão: «1H · só a favor · sem tendência, sem entrada».",
+              "narracao": "Porque é que o gráfico de uma hora? Porque é um equilíbrio. O de cinco minutos muda a cada momento e apanha ruído. O diário mostra o quadro grande, mas dá poucos sinais. O de uma hora mantém a leitura da tendência limpa e dá sinais com uma frequência razoável. É por isso que o Aurum Flow foi otimizado para ele. E deves saber uma coisa: se mudares de gráfico, estás a usar outra estratégia, mesmo que o nome seja o mesmo. Não trates o 1H como um pormenor técnico. É a base de tudo."
+            },
+            {
+              "cena": 5,
+              "visual": "Ruben em plano próximo, a falar para a câmara.",
+              "narracao": "Uma nota honesta, antes de avançarmos. Esta estratégia não te diz quantas operações vais ganhar, nem quanto ganhas em cada uma. Não tenho essa taxa para te dar, e nenhum material deste curso a tem. Se alguém te vender um sinal com uma taxa de acerto, desconfia logo. O que o método te dá é disciplina e um plano escrito. O resto aprendes tu, com as tuas marcações, e é exatamente isso que treinamos na missão deste módulo, em conta simulada. Não há atalho aqui, e é por isso que vale a pena treinar."
+            },
+            {
+              "cena": 6,
+              "visual": "Lista no ecrã, fundo carvão: «1. Tendência clara no 1H · 2. Direção a favor · 3. Plano escrito antes de clicar».",
+              "narracao": "Resumo. Primeiro, a tendência manda. Segundo, só entras a favor dela. Terceiro, nunca entras sem um plano escrito antes de tocar em qualquer botão. Na próxima aula vemos como a tendência se mede, com as três médias DEMA e a confirmação de momentum. Até lá, faz uma coisa simples: abre um gráfico de uma hora e diz em voz alta para que lado vai o mercado. Não tires mais conclusões do que isso. Só isso, por agora. Repara bem nisto, porque é a base de tudo o que vem a seguir. Escreve isto no caderno antes de avançares."
+            }
+          ],
+          "palavras": 606,
+          "minutos": 3.9
+        },
+        {
+          "id": "12.2",
+          "titulo": "Aula 12.2 — O filtro das três DEMA e a confirmação de momentum",
+          "gancho": "Dizer há tendência é fácil. Provar com números é outra história. Para isso servem três médias e um indicador de força.",
+          "cenas": [
+            {
+              "cena": 1,
+              "visual": "Gráfico de uma hora com três linhas: DEMA 15 em ouro claro, DEMA 50 em ouro, DEMA 238 em cinzento.",
+              "narracao": "Para medir a tendência, o Aurum Flow usa três médias DEMA, de 15, 50 e 238 períodos. Uma DEMA tem menos atraso do que uma média simples e reage mais depressa. A de 15 mostra o movimento recente, a de 50 o médio prazo, a de 238 o pano de fundo. Quando as três estão ordenadas na mesma direção e o preço está do mesmo lado, o filtro diz que há tendência. Quando estão emaranhadas, o filtro diz que não há. E um filtro que diz não é tão útil como um que diz sim, porque te poupa uma entrada má."
+            },
+            {
+              "cena": 2,
+              "visual": "Dois gráficos: à esquerda, as três linhas ordenadas e o preço por cima; à direita, as linhas cruzadas. Legendas: «alinhadas» · «emaranhadas».",
+              "narracao": "Repara na diferença. À esquerda, as três médias estão ordenadas, com a mais rápida em cima e a mais lenta em baixo, e o preço anda por cima delas. Isso é uma tendência de alta. À direita, as linhas cruzam-se e o preço atravessa-as de um lado para o outro. Isso é lateral. Os dois são exemplos ilustrativos. Se olhares para dez gráficos destes, vais ver que o lateral aparece mais vezes do que gostarias. Com o filtro, é um não sem drama, e não um sinal que tens de forçar."
+            },
+            {
+              "cena": 3,
+              "visual": "Ruben com o dedo no ecrã, apontando para o indicador RSI no painel inferior. Texto: «RSI · confirmação de momentum».",
+              "narracao": "O filtro de tendência diz para que lado olhar, mas não diz quando. Para isso entra a confirmação de momentum, feita com o RSI. O RSI mede a força recente dos movimentos numa escala de zero a cem. Numa entrada de compra, queremos que o RSI confirme a força na mesma direção do sinal, e não que vire contra ela. Numa entrada de venda, é o contrário. Não há aqui um número mágico que te dou para decorar. A regra é a direção: o momentum tem de estar do lado da tendência."
+            },
+            {
+              "cena": 4,
+              "visual": "Checklist dourada no ecrã com duas caixas: «tendência: três DEMA alinhadas» e «momentum: RSI a confirmar». Ambas com visto.",
+              "narracao": "Juntas as duas partes, tens a porta de entrada. Primeiro, as três DEMA dizem que há tendência e dizem para que lado. Segundo, o RSI confirma que a força vai na mesma direção. Só com as duas, o sinal é elegível. Se uma falha, não há sinal. Não é uma preferência, é uma porta fechada. E repara que isto não te obriga a acertar no topo nem no fundo. Obriga-te a esperar que o mercado mostre a sua mão antes de tu mostrares a tua. Não tires conclusões precipitadas do que acabaste de ouvir."
+            },
+            {
+              "cena": 5,
+              "visual": "Ruben a escrever no caderno três perguntas: «DEMA alinhadas? · RSI a confirmar? · mesma direção?».",
+              "narracao": "Faz o exercício que vais repetir em todas as aulas deste módulo. Escolhe um gráfico de uma hora. Primeira pergunta: as três médias estão ordenadas? Segunda: o RSI confirma a mesma direção? Terceira: as duas respostas apontam para o mesmo lado? Se a resposta a qualquer uma for não, escreve sem sinal e passa ao gráfico seguinte. Não é um fracasso. É o filtro a fazer o trabalho dele, e a fazê-lo sem te pedir opinião nenhuma. Não há atalho aqui, e é por isso que vale a pena treinar. Escreve isto no caderno antes de avançares."
+            },
+            {
+              "cena": 6,
+              "visual": "Ruben em plano médio, fundo carvão. Frase no ecrã: «O filtro não prevê. Pergunta sempre da mesma maneira.»",
+              "narracao": "Resumo. As três DEMA respondem à pergunta da tendência. O RSI responde à pergunta do momentum. O sinal só existe quando as duas respostas apontam para o mesmo lado. Não há previsão aqui. Há uma pergunta feita sempre da mesma forma, para que não decidas com o estado de espírito do dia. Na próxima aula lemos um sinal completo, da entrada ao último alvo, e vês as distâncias em percentagem que o tornam comparável. Repara bem nisto, porque é a base de tudo o que vem a seguir. Escreve isto no caderno antes de avançares."
+            }
+          ],
+          "palavras": 591,
+          "minutos": 3.8
+        },
+        {
+          "id": "12.3",
+          "titulo": "Aula 12.3 — Ler um sinal: entrada, stop e distâncias em %",
+          "gancho": "Um sinal é um cartão com quatro números. Se souberes ler os quatro, sabes o que estás a aceitar antes de o aceitar.",
+          "cenas": [
+            {
+              "cena": 1,
+              "visual": "Ecrã de um sinal do Aurum Flow, com zoom no cartão. Legendas: «entrada» · «stop» · «alvos». Rótulo: exemplo ilustrativo.",
+              "narracao": "Este é um sinal. É um exemplo ilustrativo, montado para a aula. À primeira vista importam quatro coisas: o preço de entrada, o stop, os três alvos, e a distância de cada nível em pontos e em percentagem. O sinal é um plano estático. Foi fixado na vela que o gerou e não se reescreve quando o preço mexe. Se o preço já se afastou da entrada, o plano continua exatamente o mesmo. Esta distinção vai ser importante na missão, porque vais comparar o plano escrito com o que o mercado fez depois."
+            },
+            {
+              "cena": 2,
+              "visual": "Animação: uma linha vertical com a entrada, o stop abaixo e uma chaveta marcada «1,5 × ATR». Texto: «stop = 1,5 × ATR».",
+              "narracao": "O stop fica a uma distância de um vírgula cinco ATR. O ATR é a média da amplitude das velas recentes. Diz-te quanto o ativo costuma mexer numa vela de uma hora. Ao multiplicar por um vírgula cinco, o stop fica longe o suficiente para o ruído normal não o apanhar, e perto o suficiente para que uma perda seja a prevista. A ideia é que o stop acompanhe o comportamento real do ativo, e não um número fixo que escolheste no impulso. Um stop escolhido no impulso é uma aposta disfarçada de plano."
+            },
+            {
+              "cena": 3,
+              "visual": "Ruben com uma calculadora. No ecrã: «entrada 100 · stop −2 %». Rótulo: exemplo ilustrativo.",
+              "narracao": "Vamos às contas, com um exemplo ilustrativo. A entrada é cem, e o stop fica dois por cento abaixo, ou seja, em noventa e oito. Essa é a tua distância de risco: dois por cento. Agora os alvos. O primeiro, a um vírgula cinco para um, está três por cento acima da entrada. O segundo, a três para um, seis por cento. O terceiro, a seis para um, doze por cento. Repara que todos os números se medem em relação ao risco, nunca ao preço absoluto. É isso que te deixa comparar sinais de ativos com preços completamente diferentes."
+            },
+            {
+              "cena": 4,
+              "visual": "Tabela no ecrã: «Entrada 100 · Stop 98 (−2 %) · Alvo 1: 103 (+3 %) · Alvo 2: 106 (+6 %) · Alvo 3: 112 (+12 %)». Rótulo: exemplo ilustrativo.",
+              "narracao": "Aqui está o mesmo exemplo numa tabela. Entrada cem, stop noventa e oito, e os alvos em cento e três, cento e seis e cento e doze. Repito: exemplo ilustrativo, porque um número sem contexto convida a fantasias. Não te estou a dizer que o preço vai lá chegar. Estou a dizer que, se entrares, é isto que o plano pede. Cada nível custa o risco de dois por cento e devolve um vírgula cinco, três ou seis vezes esse risco, caso seja atingido. Nada mais, e nada menos. Escreve isto no caderno antes de avançares."
+            },
+            {
+              "cena": 5,
+              "visual": "Ruben no caderno, com um formulário: «entrada · stop · distância do stop em % · alvo 1 · alvo 2 · alvo 3».",
+              "narracao": "Para treinares, copia este formulário para o teu caderno e preenche-o sempre pela mesma ordem. Entrada, stop, a distância do stop em percentagem, e os três alvos com a respetiva distância. Se um sinal não te deixa preencher estes campos sem adivinhar, ainda não está completo para ti. Não o uses. Lê o cartão até o conseguires preencher de cor, sem ajudas, e só então passa à decisão. A ordem importa: primeiro lês, depois decides. Repara bem nisto, porque é a base de tudo o que vem a seguir. Não há atalho aqui, e é por isso que vale a pena treinar."
+            },
+            {
+              "cena": 6,
+              "visual": "Ruben em plano médio. Frase no ecrã: «Ler antes de agir.»",
+              "narracao": "Resumo. Um sinal é um plano fixo com quatro partes. A entrada é onde o plano começa. O stop é onde o plano admite que errou, medido em ATR. Os alvos são onde o plano recolhe, medidos em múltiplos do risco. As distâncias em percentagem deixam-te comparar sinais e perceber o peso de cada um no teu saldo. Na próxima aula falamos dos alvos com mais detalhe, e de uma regra que tens de escrever antes de precisares dela: o que fazes quando o primeiro alvo é atingido. Escreve isto no caderno antes de avançares."
+            }
+          ],
+          "palavras": 602,
+          "minutos": 3.9
+        },
+        {
+          "id": "12.4",
+          "titulo": "Aula 12.4 — Os três alvos, as saídas parciais e o break-even",
+          "gancho": "Quando o preço vai na tua direção, o problema muda. Já não é o que fazes se errares. É o que fazes quando acertas.",
+          "cenas": [
+            {
+              "cena": 1,
+              "visual": "Gráfico com a entrada e os três alvos como linhas horizontais a ouro, de intensidade crescente. Texto: «1:1,5 · 1:3 · 1:6».",
+              "narracao": "Os três alvos estão a um vírgula cinco, a três e a seis vezes o risco. Não são três previsões. São três pontos de decisão. O primeiro é o mais próximo, e por isso o que chega primeiro. O último é o mais ambicioso, e pode nunca ser atingido. Um sinal que chega ao segundo alvo não falhou no primeiro. Cada alvo é um momento diferente, com a sua própria decisão, e é por isso que o plano os separa em vez de os juntar num único número. Não tires conclusões precipitadas do que acabaste de ouvir."
+            },
+            {
+              "cena": 2,
+              "visual": "Ruben a mostrar o caderno, com a página de regras de saída. Texto: «saída parcial · escrita antes de entrar».",
+              "narracao": "Agora a parte que muda a forma de operar: as saídas parciais. A ideia é simples. Não tens de fechar a posição toda no mesmo sítio. Podes fechar uma parte no primeiro alvo, outra no segundo, e deixar uma parte a correr para o terceiro. O que já recolheste fica recolhido, e o que falta tem espaço para correr. Mas a percentagem de cada parte não é um número que escolhes em cima do gráfico. É uma regra que escreves antes de entrar. Decidida durante a operação, já é emoção, e a emoção costuma escolher a saída errada."
+            },
+            {
+              "cena": 3,
+              "visual": "Ecrã com o stop a subir para a entrada depois do primeiro alvo. Legenda: «break-even: stop na entrada». Texto: «regra pessoal · escrita antes».",
+              "narracao": "O break-even é o passo que a maioria salta e depois lamenta. Quando o preço atinge o primeiro alvo, podes levar o stop para a entrada. Se o mercado voltar, a parte que ficou aberta fecha perto de zero, em vez de devolver o risco inteiro. Atenção: isto é uma regra tua. Não contes com nenhum botão a fazê-lo por ti, e a decisão de a aplicar é inteiramente tua. Escreve-a com as palavras que vais usar. Por exemplo: ao atingir o primeiro alvo, fecho uma parte e levo o stop para a entrada."
+            },
+            {
+              "cena": 4,
+              "visual": "Gráfico de exemplo: o preço sobe até ao alvo 1, depois regressa à entrada. Rótulo: exemplo ilustrativo · sem garantias.",
+              "narracao": "Vamos ver isto num exemplo ilustrativo, com a entrada em cem e o stop em noventa e oito. O preço sobe até cento e três. Digamos que fechas uma parte e levas o stop para cem. Depois, o mercado volta atrás e chega a cem. A parte que ficou fecha no break-even, e a parte que recolheste no primeiro alvo fica como ganho. Se o preço tivesse caído logo a seguir à entrada, a perda seria a do stop original, sem mais nada. O que a regra muda é o que acontece depois de o plano provar que tinha razão."
+            },
+            {
+              "cena": 5,
+              "visual": "Ruben em plano próximo, a falar para a câmara. Texto: «Não copies percentagens de ninguém.»",
+              "narracao": "Agora o exercício de caderno. Escreve quatro linhas: a percentagem que fechas no primeiro alvo, a que fechas no segundo, a parte que deixas a correr para o terceiro, e a regra do stop. Não precisas de copiar percentagens de ninguém, nem as que aparecem neste curso. Precisas de ter as tuas. E escreve também o que fazes se o preço chegar ao segundo alvo e voltar atrás. Quem não tem essa linha escrita decide sempre no último minuto, e no último minuto ninguém decide bem. Escreve isto no caderno antes de avançares."
+            },
+            {
+              "cena": 6,
+              "visual": "Ruben em plano médio. Texto no ecrã: «1:1,5 · 1:3 · 1:6 · saídas escritas · break-even é regra tua».",
+              "narracao": "Resumo. Três alvos, três decisões. Saídas parciais que defines antes de entrar. Break-even como regra escrita, que protege a operação depois de o plano ter tido razão. Nada disto garante lucro. É uma forma de não deixar a emoção decidir o que fazes com uma operação aberta. Na próxima aula, a parte que mais protege: quando não entrar. A maioria dos erros de quem começa não acontece dentro da operação. Acontece antes dela, quando entra sem razão. Repara bem nisto, porque é a base de tudo o que vem a seguir. Não há atalho aqui, e é por isso que vale a pena treinar."
+            }
+          ],
+          "palavras": 610,
+          "minutos": 3.9
+        },
+        {
+          "id": "12.5",
+          "titulo": "Aula 12.5 — Quando não entrar, e a missão",
+          "gancho": "A aula que menos gente quer ver é a que mais protege. Neste método, muitas vezes a melhor decisão é não entrar.",
+          "cenas": [
+            {
+              "cena": 1,
+              "visual": "Ruben em plano médio, fundo quase preto. Texto no ecrã: «Não entrar também é uma decisão.»",
+              "narracao": "Há três situações em que a regra é não entrar, mesmo que exista um sinal no ecrã. A primeira: o sinal vai contra a tendência. Já vimos porquê. Se as três DEMA dizem uma coisa e o sinal diz outra, não há sinal para ti, por muito bonito que pareça. A segunda: há uma notícia de impacto forte marcada para as próximas horas. A terceira: já atingiste o teu limite diário de perda. Essa é a mais importante, e vamos vê-la com calma no módulo treze, porque é aí que muitas contas se perdem."
+            },
+            {
+              "cena": 2,
+              "visual": "Gráfico com um sinal de venda marcado a vermelho. Ao lado, as três DEMA alinhadas para cima. Texto: «contra a tendência → não entrar». Rótulo: exemplo ilustrativo.",
+              "narracao": "Vê este exemplo ilustrativo. Aparece um sinal de venda, mas as três médias estão alinhadas para cima. Há uma vela de correção, e o instinto diz agora. Não é. A tendência está do outro lado, e o sinal é apenas uma reação a uma pausa. Quando tiveres dúvidas, pergunta-te uma coisa só: estou a entrar a favor da tendência? Se a resposta for não, a resposta à entrada também é não. Não precisas de mais argumentos do que esse. Não tires conclusões precipitadas do que acabaste de ouvir. Escreve isto no caderno antes de avançares."
+            },
+            {
+              "cena": 3,
+              "visual": "Calendário económico com um dia marcado a dourado. Texto: «notícia de impacto · sem entradas novas nessa janela».",
+              "narracao": "A segunda situação é o calendário. Antes de cada sessão, vê se há uma notícia de impacto forte marcada para as próximas horas. Se houver, a regra é simples: não abres posições novas nessa janela. Nessas horas, o preço pode saltar por razões que nenhum gráfico de uma hora consegue ler. Podes continuar a estudar, a marcar e a registar. O que não fazes é entrar por cima de uma notícia que não controlas, só porque o gráfico parecia limpo cinco minutos antes. Repara bem nisto, porque é a base de tudo o que vem a seguir."
+            },
+            {
+              "cena": 4,
+              "visual": "Ruben com o caderno. Três caixas por baixo das regras de saída: «contra a tendência», «notícia forte», «limite diário atingido».",
+              "narracao": "Escreve estas três regras de não entrar por baixo das regras de saída. Contra a tendência: não entro. Notícia forte na janela: não abro posição nova. Limite diário atingido: não entro mais nesse dia, mesmo que o sinal pareça perfeito no papel. Repara que estas regras não dependem de como te sentes. Dependem de factos que se verificam ou não. É isso que as torna úteis, e é isso que as torna fáceis de cumprir quando mais precisas. Não há atalho aqui, e é por isso que vale a pena treinar. Escreve isto no caderno antes de avançares."
+            },
+            {
+              "cena": 5,
+              "visual": "Ecrã com o texto: «Missão do módulo 12: marca 10 sinais passados no gráfico de 1H, em conta simulada».",
+              "narracao": "Agora a missão. Vais marcar dez sinais passados do Aurum Flow no gráfico de uma hora, em conta simulada, no WebTrader MTM ou numa conta MTM Funded. Não é dinheiro real e não é para acertar. É para treinar a leitura. Para cada sinal, anota a entrada, o stop, os três alvos com as distâncias em percentagem, se o sinal passava o filtro de tendência e de momentum, e se o primeiro alvo foi atingido, sim ou não. Não tires conclusões de dez sinais. Dez sinais dão-te prática, nada mais, e a prática é o que queremos."
+            },
+            {
+              "cena": 6,
+              "visual": "Ruben em plano próximo, com o aviso no ecrã: «Conteúdo educativo, não é aconselhamento financeiro. O risco de perda é real.»",
+              "narracao": "Uma última palavra. Nenhum destes dez sinais te diz o que vai acontecer com o próximo. A conta simulada existe para isso: errar sem custo real. E antes de um único euro real, o programa pede trinta operações simuladas com diário completo. Este módulo é só o primeiro passo, e não é um atalho. Conteúdo educativo, não é aconselhamento financeiro. O risco de perda é real, e pode ser total. No módulo treze falamos da parte que protege a tua conta: o tamanho da posição. Não tires conclusões precipitadas do que acabaste de ouvir."
+            }
+          ],
+          "palavras": 597,
+          "minutos": 3.9
+        }
+      ]
+    },
+    {
+      "ficheiro": "modulo-13.md",
+      "titulo": "Módulo 13 — Risco e tamanho de posição (≈15 min)",
+      "aulas": [
+        {
+          "id": "13.1",
+          "titulo": "Aula 13.1 — Risco de 1 % por operação",
+          "gancho": "Podes ter a melhor estratégia do mundo e acabar sem conta. Basta uma sequência de operações grandes e más. A defesa não é acertar mais. É perder pouco de cada vez.",
+          "cenas": [
+            {
+              "cena": 1,
+              "visual": "Ruben em plano médio, fundo quase preto. Texto no ecrã: «Conteúdo educativo. O risco de perda é real.»",
+              "narracao": "Este é o módulo mais chato do nível três e, para muita gente, o mais importante. Antes de falarmos de números, o aviso habitual. Conteúdo educativo. O risco de perda é real e pode ser total. Esta aula não te promete que vais ganhar. Promete-te uma coisa mais modesta e mais útil: que uma operação má não te tira aquilo que levaste anos a juntar. Essa é a única promessa que um curso sobre risco pode fazer com honestidade. E mesmo essa depende de ti, de cumprires a regra todos os dias, sem exceções que pareçam razoáveis no momento."
+            },
+            {
+              "cena": 2,
+              "visual": "Animação: uma barra de saldo dividida em cem fatias iguais, com uma fatia dourada acesa. Texto: «1 % do saldo por operação».",
+              "narracao": "A regra que vamos usar é esta: arriscas no máximo um por cento do saldo em cada operação. Um por cento, e não aquilo que achas que o sinal merece. Se tens mil euros de conta simulada, o risco máximo de uma operação é de dez euros. E atenção: risco não é o montante investido. É quanto perdes se o stop for atingido. São coisas diferentes, e a confusão entre as duas é a origem de muitas contas que desaparecem. Repara que a fatia dourada é pequena de propósito. Uma fatia pequena não te deixa cair. Exemplo ilustrativo, com conta simulada, como sempre."
+            },
+            {
+              "cena": 3,
+              "visual": "Dois blocos lado a lado. À esquerda: «investido 500 € · stop −2 % · risco 10 €». À direita: «investido 200 € · stop −15 % · risco 30 €». Rótulo: exemplo ilustrativo.",
+              "narracao": "Olha para estes dois casos, exemplos ilustrativos. No primeiro, investes quinhentos euros, mas o stop está a dois por cento. Se for atingido, perdes dez euros. No segundo, investes apenas duzentos, mas o stop está a quinze por cento, e perdes trinta. Quem olha só para o montante investido acha que o primeiro é o grande risco. Está enganado. O número que controla a conta é a perda no stop. Por isso a pergunta certa não é quanto invisto?, é quanto perco se o stop for atingido?. Essa pergunta protege o saldo, e é a que vamos treinar durante todo o módulo."
+            },
+            {
+              "cena": 4,
+              "visual": "Ruben com o caderno aberto. Na página, a fórmula: «risco máximo = saldo × 1 %». Por baixo: «1 000 € × 1 % = 10 €».",
+              "narracao": "Escreve a fórmula no topo do caderno: saldo vezes um por cento. Com mil euros simulados, o teto de perda de cada operação são dez euros. Esse teto não muda porque o sinal te parece bom. Um sinal entusiasmante não te autoriza a arriscar mais. Um sinal fraco pode levar-te a arriscar menos, e isso também está certo. O que muda de operação para operação é o tamanho da posição, e isso é a próxima aula. O risco fica fixo. Se alguma vez escreveres outro número no caderno, pára e volta a esta página. O erro está na conta, nunca no mercado."
+            },
+            {
+              "cena": 5,
+              "visual": "Ruben em plano próximo, a falar para a câmara. Texto: «dez perdas seguidas de 1 % ≈ 10 % da conta».",
+              "narracao": "Vamos ser realistas. Vais perder operações. Isso faz parte do método e não é sinal de que o método está avariado. Com um por cento, uma perda é um arranhão. Dez perdas seguidas de um por cento cada tiram-te cerca de dez por cento da conta. É um mau período, que se recupera com paciência e com regras. O que destrói contas é o contrário: arriscar dez ou vinte por cento numa só operação porque desta vez é diferente. Se alguma vez ouvires essa frase na tua cabeça, lembra-te da fórmula. Ela não discute. Calcula. E é por isso que funciona."
+            },
+            {
+              "cena": 6,
+              "visual": "Ruben em plano médio, fundo carvão. Lista no ecrã: «1 % do saldo · risco é a perda no stop · 1 000 € → 10 €».",
+              "narracao": "Resumo. O risco de cada operação é um por cento do saldo. Não é o que investes, é o que perdes se o stop for atingido. Esta regra protege-te das sequências, porque nenhuma perda isolada te pode tirar o jogo. Ela também te obriga a uma coisa que o DCA já te ensinou: decidir o tamanho antes de sentires a pressão do mercado. Na próxima aula pegamos nesta regra e calculamos o tamanho exato da posição, a partir da distância do stop que aprendeste no módulo doze. Não é magia. É uma divisão."
+            }
+          ],
+          "palavras": 631,
+          "minutos": 4.1
+        },
+        {
+          "id": "13.2",
+          "titulo": "Aula 13.2 — Calcular o tamanho a partir da distância do stop",
+          "gancho": "Já sabes quanto podes perder: dez euros. Falta a pergunta que quase ninguém faz: quanto posso comprar para que, se o stop for atingido, perca exatamente esses dez?",
+          "cenas": [
+            {
+              "cena": 1,
+              "visual": "Ecrã com o exemplo do módulo 12: entrada em 100, stop a 98. Rótulo: exemplo ilustrativo.",
+              "narracao": "Vamos usar o exemplo do módulo doze, com a entrada em cem e o stop dois por cento abaixo, em noventa e oito. Exemplo ilustrativo, como sempre. A conta simulada tem mil euros e o risco máximo é de dez. A pergunta é: quanto devo ter investido nesta posição para que o stop, se for atingido, custe exatamente dez euros? Não é um número que se adivinha. Tem uma fórmula, e a fórmula cabe num cartão. Vou mostrar-ta devagar, com a calculadora na mão, para que possas refazer a conta sozinho sem olhar para mim."
+            },
+            {
+              "cena": 2,
+              "visual": "Diagrama com a fórmula em destaque: «Tamanho = risco em € ÷ distância do stop em %».",
+              "narracao": "A fórmula é esta: o tamanho da posição é igual ao risco em euros a dividir pela distância do stop em percentagem. O risco são dez euros. A distância do stop são dois por cento. Dez a dividir por dois por cento, ou por zero vírgula zero dois na conta, dá quinhentos. Quinhentos euros de posição. Se o preço cair dois por cento, perdes dois por cento de quinhentos, que são dez euros. Exatamente o teu risco, nem mais um cêntimo. Cada peça tem um papel: o risco define o teto, o stop define a distância, e o tamanho é o que encaixa entre os dois."
+            },
+            {
+              "cena": 3,
+              "visual": "Tabela no ecrã: «stop 2 % → posição 500 € · stop 4 % → 250 € · stop 5 % → 200 €». Texto: «mesmo risco, tamanhos diferentes».",
+              "narracao": "Repara no que acontece quando mudas só a distância do stop, mantendo o risco em dez euros. Com o stop a dois por cento, a posição é de quinhentos euros. Com o stop a quatro por cento, cai para duzentos e cinquenta. Com o stop a cinco por cento, fica em duzentos. O risco é sempre dez. Um stop mais largo obriga a uma posição mais pequena. Um stop mais curto deixa-te comprar mais. Exemplo ilustrativo, mas a lição é firme: nunca escolhas o tamanho antes de saberes onde está o stop. É o stop que manda na posição, e não o contrário."
+            },
+            {
+              "cena": 4,
+              "visual": "Ruben no caderno, com quatro passos numerados: «1 saldo · 2 risco de 1 % · 3 distância do stop em % · 4 tamanho = 2 ÷ 3».",
+              "narracao": "Escreve o procedimento em quatro passos, sempre pela mesma ordem. Um: o saldo da conta. Dois: o risco, um por cento desse saldo. Três: a distância do stop em percentagem, tirada do plano do sinal. Quatro: divides o dois pelo três. Esse resultado é o tamanho. Se não tens a distância do stop, não tens sinal, e não há tamanho que se possa calcular. Não adivinhes a distância nem a arredondes para o que te convém. Ela vem do plano escrito antes de entrares, e é aí que deve ficar."
+            },
+            {
+              "cena": 5,
+              "visual": "Ruben com um segundo exemplo no caderno: «10 € ÷ 3 % = 333 € → fica em 330 €». Rótulo: exemplo ilustrativo.",
+              "narracao": "Segundo exemplo, também ilustrativo. O stop está agora a três por cento. Dez a dividir por zero vírgula zero três dá trezentos e trinta e três. Não arredondas para cima. Arredondar para cima é aumentar o risco sem querer, e uma conta que cresce sem te aperceberes é exatamente o que queremos evitar. Arredondas para baixo, para trezentos e trinta, sem hesitar. Repara que o stop mais largo deu uma posição mais pequena, como vimos há pouco. A regra bate sempre certo, e é isso que a torna confiável. Quando não bate, o erro está na conta."
+            },
+            {
+              "cena": 6,
+              "visual": "Ruben em plano médio. Frase no ecrã: «Stop primeiro, tamanho depois.»",
+              "narracao": "Resumo. Primeiro o stop, depois o tamanho. A fórmula é o risco em euros a dividir pela distância do stop em percentagem, e arredondas sempre para baixo. Não há opinião nesta conta. Há uma distância, um risco e um resultado. Se algum dia sentires que o tamanho devia ser maior porque o sinal é bom, lembra-te desta aula: a convicção não entra na fórmula. Na próxima aula olhamos para a alavancagem, que muita gente confunde com o tamanho, e para o painel de conta do Aurum Flow, que mostra várias destas contas já feitas."
+            }
+          ],
+          "palavras": 613,
+          "minutos": 4
+        },
+        {
+          "id": "13.3",
+          "titulo": "Aula 13.3 — Alavancagem útil e o painel de conta",
+          "gancho": "A alavancagem é o botão que mais gente confunde com o tamanho da posição. E confundir os dois é o caminho mais curto para perder mais do que querias.",
+          "cenas": [
+            {
+              "cena": 1,
+              "visual": "Ecrã com um controlo de alavancagem a mexer. Texto: «alavancagem ≠ tamanho ≠ risco».",
+              "narracao": "Vamos separar três coisas que parecem uma só. A alavancagem é o multiplicador que a plataforma te dá para abrir uma posição maior do que o dinheiro que tens depositado. O tamanho, ou notional, é o valor total da posição. E o risco é quanto perdes se o stop for atingido. A alavancagem não cria risco do nada. Ela muda quanto dinheiro tens de reservar como margem, e torna fácil abrir posições grandes sem dares por isso. Se o tamanho e o stop não mudaram, o risco também não mudou, seja qual for a alavancagem que escolheste."
+            },
+            {
+              "cena": 2,
+              "visual": "Painel de conta do Aurum Flow, com os valores de hoje desfocados. Texto: «alavancagem útil · notional · fees · risco % por operação».",
+              "narracao": "O painel de conta do Aurum Flow mostra quatro coisas para o tamanho que escolheste. A alavancagem útil: a alavancagem de que a posição precisa, para o tamanho escolhido, e não o máximo que a plataforma oferece. O notional, que é o valor total da posição. O custo de fees, à entrada e à saída, que come parte do resultado. E o risco em percentagem por operação. Os valores no ecrã estão desfocados, porque não interessam para a lição. O que interessa é aprenderes a ler os quatro, e não a decorar números."
+            },
+            {
+              "cena": 3,
+              "visual": "Ruben com o exemplo no ecrã: «conta 1 000 € · posição 500 € · alavancagem útil ≈ 1×». Rótulo: exemplo ilustrativo.",
+              "narracao": "Aplica isto ao exemplo de há pouco: conta de mil euros, posição de quinhentos. A alavancagem útil é baixa, cerca de uma vez. Quer dizer que a posição cabe na conta sem esticar nada. Agora imagina que o painel te mostrava dez vezes para a mesma posição. O que mudava? O tamanho continuava a ser quinhentos e o stop continuava a dois por cento. A única coisa que mudava era a margem que a plataforma pede para segurar a posição. Quem escolhe a alavancagem não escolhe o risco. O risco já estava escrito no stop e na fórmula."
+            },
+            {
+              "cena": 4,
+              "visual": "Ruben no caderno, com a regra escrita em destaque: «usa a alavancagem que o tamanho pede, nunca a máxima».",
+              "narracao": "A regra que escreves no caderno é esta, sem exceções: a alavancagem que uso é a que o tamanho calculado exige, nunca a máxima oferecida, mesmo que a plataforma a apresente como a opção normal. Se a conta cabe sem alavancar, não alavanco. Se a posição exige alguma alavancagem, o painel mostra-ta. E confirmas sempre o notional antes de carregar em confirmar. Não é uma regra de medo, é uma regra de precisão. A plataforma mostra o máximo porque é o que mostra. O teu interesse é outro: é o tamanho que calculaste na aula anterior, e mais nada."
+            },
+            {
+              "cena": 5,
+              "visual": "Ruben com a conta das fees no ecrã: «exemplo ilustrativo: taxa de 0,1 % por lado · posição 500 € → 0,50 € à entrada + 0,50 € à saída».",
+              "narracao": "Por fim, as fees. Num exemplo ilustrativo, com uma taxa de zero vírgula um por cento por lado, uma posição de quinhentos paga cinquenta cêntimos à entrada e cinquenta cêntimos à saída. Parece pouco. Mas, com um stop de dois por cento e um risco de dez euros, um euro de fees é dez por cento do risco que definiste. Não é um detalhe. Por isso o painel mostra o custo, e por isso olhas para ele antes de confirmar, e não depois. A taxa real é a da tua plataforma, e está nas condições dela. Confirma-a. Não uses a minha como se fosse a tua."
+            },
+            {
+              "cena": 6,
+              "visual": "Ruben em plano médio. Texto no ecrã: «alavancagem ≠ tamanho ≠ risco · 4 números no painel · fees contam».",
+              "narracao": "Resumo. A alavancagem é a forma como a plataforma pede margem. O tamanho é o valor da posição. O risco é a perda no stop. Não confundas as três. O painel do Aurum Flow mostra a alavancagem útil, o notional, as fees e o risco por operação, e a tua regra é olhar para os quatro antes de carregar em qualquer botão. Na última aula do módulo falamos do que acontece depois de uma perda, de um dia mau, e de como se pára a tempo, antes que um dia mau vire uma semana má."
+            }
+          ],
+          "palavras": 617,
+          "minutos": 4
+        },
+        {
+          "id": "13.4",
+          "titulo": "Aula 13.4 — Limite diário, séries de perdas e regras de paragem",
+          "gancho": "A pior decisão de uma conta raramente é a primeira perda. É a quarta, depois de uma manhã má, quando decides que agora é que é.",
+          "cenas": [
+            {
+              "cena": 1,
+              "visual": "Ruben em plano médio. Texto no ecrã: «o dia mau também se planeia».",
+              "narracao": "Última aula do módulo, e talvez a que mais te poupa. Tudo o que vimos até agora trata de operações isoladas. Mas quem perde dinheiro, quase sempre, perde em sequência. Uma perda, depois outra, depois uma terceira, e a cabeça começa a pedir uma recuperação imediata. Essa vontade tem nome: perseguir perdas. E o antídoto não é força de vontade, que se gasta depressa. É uma regra escrita antes de começar o dia. Quem decide o que faz depois de três perdas às dez da manhã já está a decidir com a cabeça em modo de vingança. Por isso, a decisão tem de estar tomada antes."
+            },
+            {
+              "cena": 2,
+              "visual": "Gráfico de barras com três barras vermelhas, cada uma marcada «−1 %». Rótulo: exemplo ilustrativo.",
+              "narracao": "Olha para esta série, exemplo ilustrativo. Três perdas de um por cento cada. Na conta de mil euros, são cerca de trinta euros. Dói, mas não é o fim. O problema começa quando a quarta operação sai maior, porque a pessoa quer recuperar depressa. Nesse momento, o risco deixa de estar no um por cento da regra e passa a ser uma aposta de desespero. Ninguém decide isso de propósito. Acontece aos poucos, com a justificação de que desta vez compensa. A regra de paragem existe para impedir essa passagem, e para que não tenhas de a discutir contigo mesmo no pior momento."
+            },
+            {
+              "cena": 3,
+              "visual": "Ruben com o caderno, a escrever três regras de paragem. Texto: «limite diário · série de perdas · paragem é paragem».",
+              "narracao": "Escreve três regras de paragem, com os teus números. A primeira é o limite diário de perda. Por exemplo, e é só um exemplo ilustrativo, dois por cento do saldo num dia: atingiste, fechas a plataforma. A segunda é a série de perdas: três perdas seguidas no mesmo dia, e paras. A terceira é a mais importante: depois de uma paragem, não voltas ao ecrã nesse dia, nem para ver se o sinal melhorou. Esta é a regra que mais contas salva, porque o mercado não te deve nada e volta sempre amanhã. Os números que escreves são os teus. Os que uso aqui são pequenos de propósito."
+            },
+            {
+              "cena": 4,
+              "visual": "Checklist de dois minutos no ecrã: «limite escrito? · série escrita? · máximo de operações? · notícias da janela vistas?».",
+              "narracao": "Antes de cada sessão, faz uma rotina de dois minutos. O limite diário está escrito? A série de perdas está escrita? Sabes quantas operações vais tomar, no máximo? Viste as notícias da janela? Se a resposta a alguma for não, não começas. Repara que esta rotina não diz nada sobre o mercado. Diz tudo sobre ti. É a parte do trading que mais se parece com o ritual de sexta do DCA: regras antes do dinheiro, e não durante. Quem tem esta rotina feita não precisa de ser mais esperto que o mercado. Precisa de ser mais previsível do que a sua própria emoção."
+            },
+            {
+              "cena": 5,
+              "visual": "Ecrã com o texto: «Missão do módulo 13: calculadora de tamanho para 5 sinais, em conta simulada de 1 000 €».",
+              "narracao": "Missão do módulo. Escolhe cinco sinais passados do Aurum Flow e faz as contas numa conta simulada de mil euros. Para cada sinal, preenche a calculadora de tamanho: o risco em euros, a distância do stop em percentagem, o tamanho calculado arredondado para baixo, a alavancagem útil que o painel mostra e o custo de fees. Não abras nenhuma posição real para isto. Precisas de fazer a conta cinco vezes, sem saltar nenhuma. Se uma delas te deixar dúvidas, volta à fórmula e não ao instinto. A calculadora não tem opinião. A tua intuição tem, e é por isso que a calculadora vem primeiro."
+            },
+            {
+              "cena": 6,
+              "visual": "Ruben em plano próximo, com o aviso no ecrã: «Conteúdo educativo, não é aconselhamento financeiro. O risco de perda é real, e pode ser total.»",
+              "narracao": "Fecho do módulo treze, e do bloco de risco. Um por cento por operação. Tamanho a partir do stop. Alavancagem que o tamanho pede, e nunca a máxima. Limite diário e série de perdas escritos antes do primeiro sinal. Nenhuma destas regras te garante lucro. O que fazem é limitar o que uma má sequência te pode tirar, e isso já é muito. Conteúdo educativo, não é aconselhamento financeiro. O risco de perda é real, e pode ser total. No módulo catorze vemos como executar sem emoção, com o WebTrader, as contas simuladas e o MTM Auto."
+            }
+          ],
+          "palavras": 648,
+          "minutos": 4.2
+        }
+      ]
+    },
+    {
+      "ficheiro": "modulo-14.md",
+      "titulo": "Módulo 14 — Executar sem emoção (≈18 min)",
+      "aulas": [
+        {
+          "id": "14.1",
+          "titulo": "Aula 14.1 — WebTrader MTM e conta simulada MTM Funded",
+          "gancho": "Se há uma coisa que o mercado ensina depressa, é esta: a emoção não espera que estejas pronto. Por isso, antes de qualquer dinheiro, treinamos num sítio onde o erro não custa dinheiro real.",
+          "cenas": [
+            {
+              "cena": 1,
+              "visual": "Ecrã escuro, com a frase em dourado: «Conteúdo educativo. O risco de perda é real.» Depois, Ruben em plano médio, à secretária, com um caderno fechado à frente.",
+              "narracao": "Antes de começar, um aviso que vale para este módulo inteiro. Conteúdo educativo. O risco de perda é real. Nesta aula conheces as ferramentas onde praticas, e a primeira regra é a mais importante de todas: praticar faz-se em conta simulada, nunca com o dinheiro da renda, nunca com dinheiro que precisas para as contas do mês. Eu sei que apetece saltar esta parte e ir logo para a conta real. Não saltes. Quem treina com calma aprende o que a pressa esconde. Vamos ver as três peças deste módulo: o WebTrader MTM, a conta simulada MTM Funded e, mais à frente, o MTM Auto. Nada disto é um atalho para ganhar dinheiro. É um sítio para aprenderes a fazer as coisas bem, com regras escritas, antes de qualquer risco real."
+            },
+            {
+              "cena": 2,
+              "visual": "Ecrã do WebTrader MTM aberto no navegador, com o gráfico ao centro e o painel de negociação ao lado. Legenda pequena: «ecrã ilustrativo».",
+              "narracao": "Primeira peça: o WebTrader MTM. É a versão para navegador da ferramenta de execução da MoreThanMoney. Abres no computador, vês o gráfico do ativo e o painel onde se colocam as ordens. Não é preciso saber tudo de uma vez. Nesta fase, o que te interessa é uma coisa só: perceber onde está cada elemento do ecrã antes de tocares em qualquer botão. Quem clica sem saber onde está não está a treinar, está a improvisar. E improvisar com emoção, num ecrã com botões de compra e de venda, é a receita mais simples para uma decisão de que te arrependes."
+            },
+            {
+              "cena": 3,
+              "visual": "Ecrã com o rótulo «Conta simulada MTM Funded» e, ao lado, uma etiqueta grande: «SIMULADA».",
+              "narracao": "Segunda peça: as contas simuladas MTM Funded. Repara na palavra que está no ecrã: simulada. São contas de simulação, com dinheiro que não existe. Não há depósito real, não há levantamento, não há saldo verdadeiro a perder. O que treinas aqui é o método: a entrada, o stop, o tamanho, o registo. Quando a emoção aparecer, e vai aparecer, a diferença é esta: o dinheiro é simulado, mas a disciplina que praticas é real. Atenção, porém. Uma conta simulada não reproduz o nervo de perder dinheiro verdadeiro. Por isso, o teste da simulação não é ganhar. É cumprir as regras, operação a operação, mesmo quando a conta parece pequena e a tentação parece grande."
+            },
+            {
+              "cena": 4,
+              "visual": "Lista animada no ecrã: «1 · abre a conta simulada · 2 · escolhe um ativo do teu plano · 3 · escreve a regra antes de clicar».",
+              "narracao": "Como se treina, na prática. Primeiro, abres a conta simulada no WebTrader. Segundo, escolhes um só ativo, um que já conheças dos módulos anteriores. Terceiro, e este é o passo que as pessoas saltam: escreves a regra antes de clicar. Porque entras, onde fica o stop, qual é o tamanho, e o que farás se o preço andar contra ti. Só depois colocas a ordem. Se não conseguires escrever a regra em duas frases, não entras. Isto parece burocracia, e é mesmo. A burocracia é o que te protege da emoção no momento em que ela aparece com mais força, que é quase sempre o momento em que o preço se mexe depressa."
+            },
+            {
+              "cena": 5,
+              "visual": "Ruben com o caderno aberto. No ecrã, a frase: «A simulação treina o método. Não prova nada.»",
+              "narracao": "Uma última nota, porque é fácil enganar-se. Uma conta simulada que sobe não prova que a estratégia funciona. Uma conta simulada que desce não prova que és mau. O que a simulação mostra é se cumpriste o teu próprio processo, e esse é o único indicador que te interessa nesta fase. Não olhes para o saldo como troféu. E se alguém te mostrar um print de uma conta simulada com um saldo alto, como prova de que ganha dinheiro, desconfia. Um print não é uma estatística, e uma conta de treino não é um histórico real. Quando precisares de um número, pede a série completa de operações, não a imagem bonita. Exemplo ilustrativo, claro: um print com um saldo alto pode esconder cem operações, sem uma única regra escrita."
+            }
+          ],
+          "palavras": 622,
+          "minutos": 4
+        },
+        {
+          "id": "14.2",
+          "titulo": "Aula 14.2 — MTM Auto: copiar com regras e limites",
+          "gancho": "Copiar parece a solução para quem não tem tempo. Mas há uma pergunta que quase ninguém faz antes de ligar: quem responde pelo que acontece depois?",
+          "cenas": [
+            {
+              "cena": 1,
+              "visual": "Ecrã do MTM Auto com a lista de estratégias disponíveis. Em destaque, a expressão «regras e limites».",
+              "narracao": "Terceira peça deste módulo: o MTM Auto. É a ferramenta da MoreThanMoney para copiar estratégias, e a palavra-chave é esta: com regras e limites. Ou seja, não é um botão que copia tudo às cegas. Antes de ligares uma estratégia, tens de ver quais são as regras que ela segue e quais são os limites que a ferramenta aplica. Isto é muito diferente de copiar alguém que apareceu num grupo de mensagens, sem saberes nada do que essa pessoa faz. Aqui há regras à vista, e isso já é meio caminho para uma decisão informada. Mas só meio caminho. A outra metade é tua."
+            },
+            {
+              "cena": 2,
+              "visual": "Ecrã dividido em dois: à esquerda, «regras da estratégia»; à direita, «limites da ferramenta». Setas a ligar as duas colunas.",
+              "narracao": "Antes de ligares qualquer estratégia, lê três coisas. Primeiro, o que ela faz: em que mercados trabalha, com que tipo de entradas e com que frequência. Segundo, os limites que se aplicam do teu lado da cópia. Terceiro, o que acontece quando as coisas correm mal. Se não consegues dizer, com as tuas palavras, o que a estratégia faz e o que acontece no pior caso, não ligues. E repara numa coisa que parece contraintuitiva: uma estratégia que esteve muito tempo em alta não tem, por isso, menos risco. Pode até ter mais, porque a confiança cresce justamente antes de uma descida."
+            },
+            {
+              "cena": 3,
+              "visual": "Ruben, em plano próximo, com a frase no ecrã: «Copiar não é delegar a responsabilidade.»",
+              "narracao": "Agora a parte que importa mais. Copiar não te tira a responsabilidade. Quando ligas uma cópia, continuas a ser o dono da decisão de a ter ligado. Quem executa é a ferramenta, mas quem escolheu a estratégia, quem decidiu quanto quer arriscar e quem decide parar és tu. Isto vale mesmo quando a estratégia é de alguém em quem confias, e mesmo quando a ferramenta é da casa. A ferramenta executa o que está escrito. Não sabe quanto dinheiro é o teu dinheiro da renda, não sabe que tens uma conta para pagar na sexta, e não sabe que estás cansado e com vontade de recuperar uma perda. Essas coisas só tu sabes, e só tu as podes ter em conta."
+            },
+            {
+              "cena": 4,
+              "visual": "Calendário com três semanas, uma seta a descer. Legenda: «caso ilustrativo».",
+              "narracao": "Caso ilustrativo. A Inês, trinta e cinco anos, ligou uma cópia porque não tinha tempo para acompanhar os mercados. Durante umas semanas pareceu-lhe perfeito. Depois veio uma descida, e ela não tinha definido quanto estava disposta a perder. Juntou mais dinheiro para recuperar e, quando deu por isso, já não estava a copiar uma estratégia. Estava a tentar ganhar de volta uma perda. A ferramenta fez exatamente o que estava escrito. O erro foi não ter escrito o limite dela. Se a Inês tivesse definido, antes de ligar, quanto podia perder e o que faria ao atingir esse valor, a história teria sido outra. Exemplo ilustrativo, claro."
+            },
+            {
+              "cena": 5,
+              "visual": "Lista de verificação no ecrã: «1 · sei o que a estratégia faz · 2 · conheço os limites · 3 · sei quanto posso perder · 4 · sei quando paro».",
+              "narracao": "Antes de copiar, quatro perguntas, escritas no caderno. Sei o que a estratégia faz? Conheço os limites que se aplicam? Sei quanto posso perder, em euros, sem que isso me afete a vida? E sei quando paro, e o que faço nesse dia? Se alguma resposta for não, a cópia fica desligada. O exercício prático desta aula faz-se na conta simulada: ligas o MTM Auto numa conta simulada, observas durante uma semana e escreves, em cada dia, o que sentiste. A cópia não é o fim do processo. É só mais uma peça dele."
+            }
+          ],
+          "palavras": 554,
+          "minutos": 3.6
+        },
+        {
+          "id": "14.3",
+          "titulo": "Aula 14.3 — O diário de trading",
+          "gancho": "Se não está escrito, não aconteceu. Parece exagero, até percebermos quantas decisões tomamos de memória e quantas vezes as recontamos mal.",
+          "cenas": [
+            {
+              "cena": 1,
+              "visual": "Caderno aberto na página do diário, com os campos a aparecerem um a um. Legenda: «modelo no caderno do curso».",
+              "narracao": "Esta aula é sobre o diário de trading. Não é um dossiê bonito. É uma página onde escreves cada operação antes, durante e depois. O modelo completo vem no caderno do aluno, mas a ideia é simples: uma operação que não está no diário, para efeitos de aprendizagem, não existiu. Porque a memória é generosa com as vitórias e cruel com os erros. Uma semana depois, lembras-te de ter tido razão. Não te lembras de ter entrado fora da regra, nem de ter mexido no stop à pressa. O diário existe para acabar com essa seleção automática que o nosso cérebro faz sem pedir licença."
+            },
+            {
+              "cena": 2,
+              "visual": "Duas colunas animadas: à esquerda, «antes»: data · ativo · motivo · regra · tamanho · stop · alvos. À direita, «depois»: resultado · regra cumprida? · o que senti.",
+              "narracao": "Vamos aos campos. Antes de entrar, registas a data, o ativo e o motivo da entrada, escrito numa frase, e qual é a regra que estás a aplicar. Registas o tamanho da posição e quanto perdes se o stop for atingido, sempre em euros, nunca só em percentagem. E registas o stop e os alvos. Antes de tocares no botão, o diário já tem tudo. Depois de fechar, acrescentas o resultado, se a regra foi cumprida, e uma linha sobre o que sentiste. Exemplo ilustrativo: entrei porque o preço voltou à média; perco vinte euros se o stop bater; cumpri a regra; senti pressa às dez da manhã."
+            },
+            {
+              "cena": 3,
+              "visual": "Ruben a apontar para a coluna «regra cumprida? sim ou não», destacada a dourado.",
+              "narracao": "A coluna mais importante é a que quase ninguém preenche: a regra foi cumprida, sim ou não. Porque o objetivo, nesta fase, não é ganhar. É executar o processo que escreveste. Uma operação perdedora com a regra cumprida é uma boa operação de treino. Uma operação ganhadora fora da regra é um aviso, não um elogio. Se marcares não e a operação deu lucro, escreve isso mesmo, sem desculpas. Esse não vai ser a informação mais útil que tiveste numa semana inteira, porque mostra-te onde a emoção se intrometeu, mesmo quando correu bem. Escreve-a sempre, mesmo quando a resposta te incomoda."
+            },
+            {
+              "cena": 4,
+              "visual": "Folha do diário com três linhas preenchidas. Legenda: «caso ilustrativo».",
+              "narracao": "Caso ilustrativo: o Rui, vinte e nove anos, operou três vezes numa semana. Na primeira, cumpriu a regra e perdeu o valor previsto, sem drama. Na segunda, mexeu no stop a meio, porque não queria ver a perda a crescer. Na terceira, entrou sem motivo escrito, só porque o gráfico parecia andar depressa. Quando fez a revisão, as duas últimas linhas tinham não na coluna da regra. Foi aí que percebeu o problema. Não era o mercado. Era ele a sair do processo, duas vezes, em silêncio. O diário mostrou isso em dois minutos. A memória teria escondido tudo."
+            },
+            {
+              "cena": 5,
+              "visual": "Ruben com o caderno fechado. Texto no ecrã: «Escreve antes. Fecha depois. Nunca reescrevas.»",
+              "narracao": "Duas regras para não estragares o diário. Primeira: escreve antes de entrar. Um diário escrito depois é uma história, e as histórias ajustam-se sozinhas. Segunda: nunca reescrevas uma linha antiga. Se errares uma palavra, riscas e escreves por cima, com a data da correção. Se apagares o que fizeste mal, estás a apagar a única coisa que te pode ensinar. O diário não serve para te julgar. Serve para te mostrares a ti próprio o que realmente fizeste, com a data de hoje e sem maquilhagem. Tira isto do caderno e deixa-o à vista, para o releres antes de cada sessão."
+            }
+          ],
+          "palavras": 535,
+          "minutos": 3.5
+        },
+        {
+          "id": "14.4",
+          "titulo": "Aula 14.4 — Auditoria semanal e rotina de 30 minutos",
+          "gancho": "Trinta minutos por semana, com o diário aberto à frente. Sem esta rotina, o diário é só um caderno cheio de linhas.",
+          "cenas": [
+            {
+              "cena": 1,
+              "visual": "Relógio animado com trinta minutos divididos em quatro blocos: «preparar 5 · rever operações 10 · auditar regras 10 · decidir 5».",
+              "narracao": "Esta é a rotina. Trinta minutos, uma vez por semana, sempre no mesmo dia e à mesma hora. Divide-se assim: cinco minutos para preparar, dez para rever as operações da semana, dez para auditar as regras e cinco para decidir uma única coisa a mudar. Repara no tempo. Trinta minutos é pouco de propósito. Uma revisão que dura três horas transforma-se em ansiedade, e uma revisão de cinco minutos transforma-se em desculpa. Trinta minutos chegam para seres honesto, e não são tantos que te façam querer mexer em tudo ao mesmo tempo. Escolhe o dia e a hora no teu calendário, como se fosse uma reunião marcada."
+            },
+            {
+              "cena": 2,
+              "visual": "Ecrã do diário com a semana preenchida. Setas a apontar para a coluna «regra cumprida».",
+              "narracao": "Primeiro, rever as operações. Abres o diário da semana e lês cada linha de cima a baixo, sem editar nada. Procuras três coisas: quantas operações fizeste, quantas cumpriram a regra e em que momentos saíste do processo. Não olhas para o resultado em euros como juiz. O resultado é um dado, e um dado sozinho engana. Uma semana de lucro com três regras partidas é uma semana má. Uma semana de perda com todas as regras cumpridas é uma semana de treino bem feita. Lê com um lápis na mão e assinala as linhas que te deixam desconfortável, sem as corrigir."
+            },
+            {
+              "cena": 3,
+              "visual": "Lista no ecrã: «auditoria · tamanho dentro do plano? · stop mexido? · entrada sem motivo escrito? · regra por regra, com prova do diário».",
+              "narracao": "Depois, a auditoria. Para cada regra escrita no teu plano, respondes sim ou não, com uma prova tirada do diário. O tamanho esteve dentro do que definiste? O stop foi mexido? Houve alguma entrada sem motivo escrito? Qualquer não é um ponto de atenção, e cada ponto de atenção tem uma causa. A causa mais frequente quase nunca é técnica. É emocional: tédio, pressa, vontade de recuperar, medo de perder a subida. Dá-lhe um nome, escreve-o ao lado e vê se se repete na semana seguinte. Não é uma punição. É uma leitura fria, feita com a mesma calma com que farias a revisão de qualquer outro processo."
+            },
+            {
+              "cena": 4,
+              "visual": "Ruben a escrever numa folha, com a frase no ecrã: «Uma coisa para mudar esta semana.»",
+              "narracao": "Agora, o passo mais difícil: decidir uma coisa. Só uma. Pergunta-te qual é o erro que mais se repetiu e escreve uma regra concreta para o evitar. Por exemplo: a partir de agora, nenhuma ordem entra sem o motivo escrito. E aqui fica a regra de ouro desta aula: não mudes as regras a meio da semana. Muda-as no dia da revisão, depois de as veres escritas. Mudar tudo ao sabor da última operação é a forma mais rápida de nunca saberes o que funciona e o que não funciona. Se a mudança for grande demais, reduz-la até caber numa única frase."
+            },
+            {
+              "cena": 5,
+              "visual": "Ecrã final com a rotina em cinco linhas: «dia e hora fixos · diário aberto · auditoria · uma mudança · registo da revisão».",
+              "narracao": "Último passo, e este não se salta: regista a própria revisão. Data, número de operações, número de regras cumpridas e a mudança que escolheste. Assim, daqui a três meses, consegues ver se a tua disciplina subiu ou desceu, e não apenas o que sentes sobre ela. Trinta minutos por semana, sem falhar, valem mais do que uma maratona de estudo que nunca se repete. E se numa semana não conseguires, faz a versão curta: dez minutos, só a auditoria. Mais vale pouco e feito do que muito e adiado. Sem registo, a revisão não aconteceu."
+            }
+          ],
+          "palavras": 535,
+          "minutos": 3.5
+        },
+        {
+          "id": "14.5",
+          "titulo": "Aula 14.5 — Regras de paragem, psicologia e missão do nível 3",
+          "gancho": "A pior decisão de um dia de mercado quase nunca é a primeira. É a quarta, tomada para recuperar a terceira.",
+          "cenas": [
+            {
+              "cena": 1,
+              "visual": "Ecrã com «regras de paragem» em letras grandes e, por baixo, três itens: «perdas seguidas · perda máxima do dia · horário limite».",
+              "narracao": "Chegámos à última aula do módulo, e à parte que decide se as outras servem para alguma coisa. Regras de paragem. São as regras que dizem quando páras, antes de começares a discutir contigo próprio. Podem ser três: um número máximo de perdas seguidas, um valor máximo de perda no dia e um horário depois do qual não se entra. Escreve-as com os números que escolheres. Não há um número mágico, nem o meu. Há o teu número, escrito antes e cumprido. E se o número for atingido, o dia acaba ali, mesmo que o gráfico esteja a fazer exatamente aquilo que querias."
+            },
+            {
+              "cena": 2,
+              "visual": "Três setas em espiral no ecrã: «perco» → «aumento o tamanho» → «perco mais».",
+              "narracao": "Agora a psicologia, sem rodeios. Há uma espiral clássica. Perdes uma operação e sentes vontade de a recuperar. Aumentas o tamanho da seguinte, para recuperar mais depressa. Perdes outra vez, porque a posição maior amplifica a perda, e entras numa terceira para tapar o buraco. Cada passo parece razoável no momento. O conjunto é um desastre. Quebra esta espiral com uma regra simples: nunca aumentes o tamanho depois de uma perda. O tamanho é o do plano, sempre, o que escreveste antes de qualquer emoção aparecer. Repara que a espiral não precisa de ganância. Basta a vontade de tapar um buraco."
+            },
+            {
+              "cena": 3,
+              "visual": "Ruben a respirar fundo, em silêncio. No ecrã, em letras grandes: «pausa de vinte e quatro horas».",
+              "narracao": "E quando sentires que a emoção está a tomar conta, usa a pausa. Se bateste numa regra de paragem, ou se sentes que não consegues pensar com clareza, fecha o WebTrader e não voltes nesse dia. Se quiseres mesmo voltar a olhar para um mercado, espera vinte e quatro horas e volta com o diário à frente. A pausa não é fraqueza. É a regra mais barata que existe, e é a que mais dinheiro poupa a quem a usa. Se alguém te disser que tens de decidir já, porque a oportunidade não volta, já sabes o que isso é. Fecha a conversa, respira e volta ao teu plano."
+            },
+            {
+              "cena": 4,
+              "visual": "Caderno com uma página riscada e uma frase sublinhada: «quero recuperar». Legenda: «caso ilustrativo».",
+              "narracao": "Caso ilustrativo: o Tiago, quarenta anos, não tinha regra de paragem. Numa manhã, perdeu duas operações seguidas e decidiu que ia recuperar antes do almoço. Não era a primeira vez que pensava assim, mas foi a primeira vez que o diário estava à frente dele. Escreveu, sem querer: quero recuperar. Essa frase denunciava tudo. Fechou o ecrã. Na revisão de sexta, percebeu que as perdas daquela manhã tinham a mesma origem: pressa. Exemplo ilustrativo, claro, porque o que importa é o padrão, e não o valor de cada operação. Pensa nisto na tua próxima semana, antes de precisares dela."
+            },
+            {
+              "cena": 5,
+              "visual": "Ecrã de missão, com um quadrado para marcar e o título «Missão do nível 3». Checklist: «regras de paragem escritas · 30 operações simuladas · diário completo · revisão semanal feita».",
+              "narracao": "A missão do nível três, que é opcional, e que é a mais exigente deste curso: trinta operações em conta simulada, com diário completo, antes de pensares em conta real. Trinta. Não são trinta dias de sorte. São trinta operações com as regras escritas antes, com o tamanho do plano e com a revisão semanal feita. Cada operação com a linha do diário preenchida, incluindo a coluna da regra. Se no fim não tiveres cumprido as regras de forma consistente, a missão não está cumprida, e recomeças com mais calma. Ninguém precisa do nível três para ser investidor com o DCA. E pensar em conta real só depois disto, e só com dinheiro que aceitas perder por completo."
+            }
+          ],
+          "palavras": 551,
+          "minutos": 3.6
+        }
+      ]
+    },
+    {
+      "ficheiro": "modulo-15.md",
+      "titulo": "Módulo 15 — Impostos, plano de 90 dias e certificado (≈15 min)",
+      "aulas": [
+        {
+          "id": "15.1",
+          "titulo": "Aula 15.1 — Impostos em Portugal: a regra dos 365 dias",
+          "gancho": "Em cripto, o imposto não se paga no dia em que compras. Pode aparecer, porém, no dia em que vendes, se não estiveres preparado.",
+          "cenas": [
+            {
+              "cena": 1,
+              "visual": "Calendário animado com 365 dias a encherem-se, e um marcador a assinalar o dia 365.",
+              "narracao": "Vamos aos impostos, com uma nota prévia: falo em termos gerais, porque as regras mudam, e quem decide a tua situação é um contabilista certificado. Dito isto, há um princípio base que deves conhecer. Em Portugal, as mais-valias de cripto detidas durante menos de 365 dias são tributadas à taxa de 28 por cento. Se as detiveres 365 dias ou mais, ficam, em regra, isentas. Uma mais-valia é a diferença positiva entre o valor de venda e o valor de compra. Se vendes por menos do que compraste, não há mais-valia para tributar. O princípio é simples. Os detalhes é que mudam a conta, e são eles que apanham quem não está preparado. A data de compra e a data de venda contam dias, e um só dia de diferença pode mudar tudo."
+            },
+            {
+              "cena": 2,
+              "visual": "Contas no ecrã: «mil euros de compra · mil e trezentos de venda · trezentos de mais-valia · oitenta e quatro de imposto a 28 %». Legenda: «exemplo ilustrativo · valores redondos, sem taxas».",
+              "narracao": "Vamos a um exemplo ilustrativo, com valores redondos e sem taxas. Compras mil euros de cripto e, três meses depois, vendes por mil e trezentos. A mais-valia é de trezentos euros. Sobre esses trezentos aplicas os vinte e oito por cento, e dá oitenta e quatro euros. Repara bem: o imposto não incide sobre o total de mil e trezentos, incide só sobre o ganho. Se o mesmo investimento tivesse sido mantido durante 365 dias ou mais, a regra geral seria outra, e a conta ficaria, em regra, isenta. Tudo isto pode mudar, por isso confirma sempre a versão atual antes de tirares conclusões."
+            },
+            {
+              "cena": 3,
+              "visual": "Ecrã com uma folha de registo: colunas «Data», «Ativo», «Quantidade», «Valor em euros», «Taxas», «Tipo de operação».",
+              "narracao": "Por isso, regista tudo. Cada compra, cada venda e cada troca, com a data, o ativo, a quantidade, o valor em euros no momento e as taxas pagas. Acrescenta uma coluna para o tipo de operação. Não te fies em memórias nem em prints soltos, porque daqui a um ano já não vais lembrar-te de tudo. Uma folha de cálculo simples chega para começar. Se fizeres uma troca de uma moeda por outra, regista as duas pontas da operação, porque ambas podem contar. E guarda esta folha junto do diário de trading que aprendeste no módulo 14. São dois registos diferentes, e ambos te pagam o tempo que levam."
+            },
+            {
+              "cena": 4,
+              "visual": "Aviso grande no ecrã: «Confirma com um contabilista certificado». Por baixo, em lista: «troca de cripto por cripto · staking · airdrops · englobamento».",
+              "narracao": "Agora o aviso mais importante da aula. Trocas de cripto por cripto, rendimentos de staking, airdrops e outros casos podem ter tratamento diferente, e não quero adivinhar isso num vídeo. Existe também a opção de englobamento, em que o ganho entra no teu rendimento anual. Pode ser mais vantajosa ou menos, conforme o teu escalão, e essa comparação precisa de alguém que veja os teus números completos. Não tomes decisões fiscais com base num vídeo, nem com base no que alguém disse num grupo de mensagens. Leva para a reunião com o contabilista a tua folha de registo e as perguntas que escreveste antes."
+            },
+            {
+              "cena": 5,
+              "visual": "Texto grande no ecrã: «Vives em França ou noutro país? As regras são outras. Confirma junto da autoridade fiscal local e de um contabilista.» Ruben em plano próximo.",
+              "narracao": "Uma nota importante para quem não vive em Portugal, por exemplo em França ou noutro país. Esta aula explica as regras portuguesas, e as regras de outros países são outras. Podem ser diferentes na taxa, no prazo, na forma de declarar e no modo como tratam o cripto. Não apliques nada do que disse à tua situação sem confirmar. O que deves fazer é contactar a autoridade fiscal do teu país de residência e um contabilista habilitado nesse país. Pede a resposta por escrito e leva os teus registos. Se vives em França, por exemplo, a conversa é com as autoridades francesas e com um profissional francês, e não com este vídeo."
+            },
+            {
+              "cena": 6,
+              "visual": "Caso ilustrativo: o Pedro, trinta e um anos, designer em Lisboa, a folhear extratos antigos num portátil. Legenda: «caso ilustrativo».",
+              "narracao": "Caso ilustrativo: o Pedro fez várias compras e vendas ao longo do ano, sem registar nada. Quando chegou a altura de declarar, não sabia as datas exatas nem o valor que tinha pago em cada operação. Passou semanas a pesquisar em extratos e em conversas antigas. O imposto em si nem era o pior. O pior foi o stress de reconstruir um ano inteiro de memória. Um registo de dez minutos por mês teria evitado tudo isso. Resumindo: menos de 365 dias pode significar 28 por cento sobre o ganho, 365 dias ou mais é, em regra, isenção, e o registo é o teu melhor aliado."
+            }
+          ],
+          "palavras": 692,
+          "minutos": 4.5
+        },
+        {
+          "id": "15.2",
+          "titulo": "Aula 15.2 — O teu plano de 90 dias",
+          "gancho": "Noventa dias parecem muito tempo. Mas o que vais ver é um calendário com três fases e uma regra: não saltes nenhuma.",
+          "cenas": [
+            {
+              "cena": 1,
+              "visual": "Calendário de noventa dias em três blocos coloridos: «dias 1–30 · fundamentos e primeira compra», «dias 31–60 · o ritual DCA», «dias 61–90 · nível 3, opcional, em conta simulada».",
+              "narracao": "O plano de noventa dias tem três fases, e cada uma tem a sua missão. Dias um a trinta: fundamentos e primeira compra. Dias trinta e um a sessenta: o ritual DCA, o da sexta-feira, feito todas as semanas e registado. Dias sessenta e um a noventa: o nível três, que é opcional, e que só acontece em conta simulada. Repara na ordem. Primeiro percebes a tua chave e o dinheiro, depois compras com regra, e só depois praticas o que quiseres praticar, sem risco real. Não há atalhos entre as fases. Se uma correr mal, repete-a antes de avançares."
+            },
+            {
+              "cena": 2,
+              "visual": "Ecrã da fase um com quatro blocos: «semana 1 · segurança», «semana 2 · escolher e verificar», «semana 3 · primeira compra», «semana 4 · revisão».",
+              "narracao": "Fase um, dias um a trinta. Semana um: segurança. Autenticação por aplicação, gestor de palavras-passe e a seed phrase escrita à mão, guardada em dois sítios separados. Semana dois: escolhes uma plataforma autorizada, fazes a verificação de identidade, percebes as taxas e a diferença entre ordem de mercado e ordem limite. Semana três: a primeira compra, com um valor pequeno, por exemplo dez euros, seguida de uma transferência de teste para a tua carteira. Exemplo ilustrativo, claro. Semana quatro: revês a checklist anti-burla e assinas a missão do nível um. Sem a checklist assinada, o nível um não está fechado."
+            },
+            {
+              "cena": 3,
+              "visual": "Ruben com o caderno aberto. No ecrã: «Ritual de sexta · 15 minutos · quatro semanas seguidas · registo feito».",
+              "narracao": "Fase dois, dias trinta e um a sessenta. Aqui entra o ritual de sexta-feira, que aprendeste no módulo 7 com o DCA Inteligente, e tudo o que montaste nos módulos 8, 9 e 10: o portefólio com o pote de reserva, a leitura do mercado e as regras para realizar lucros. A missão do nível dois é simples de dizer e difícil de cumprir: um plano DCA escrito, com o teto mensal e o pote, os alertas DCA ligados na app e o ritual feito quatro semanas seguidas, registado no caderno. Se uma sexta falhar, não recomeças do zero. Registas o que aconteceu e voltas na sexta seguinte. O que conta é a consistência, e não a perfeição."
+            },
+            {
+              "cena": 4,
+              "visual": "Ecrã da fase três com três caixas: «diário completo», «regras de paragem escritas», «30 operações simuladas». Legenda: «opcional».",
+              "narracao": "Fase três, dias sessenta e um a noventa, e aqui é opcional. Se quiseres seguir para o nível três, com o Aurum Flow Cripto e os perpétuos, a regra é a mesma que vimos no módulo 14: conta simulada, regras de paragem escritas e trinta operações com diário completo antes de pensares em conta real. Se não quiseres, está tudo bem. Um investidor que faz o DCA com disciplina e revê o seu plano não precisa de derivados para estar a fazer um bom trabalho. Os derivados são uma escolha, nunca uma obrigação, e nunca com dinheiro que te faça falta."
+            },
+            {
+              "cena": 5,
+              "visual": "Caderno com o plano de noventa dias, com as datas preenchidas à mão. Legenda: «caso ilustrativo».",
+              "narracao": "Caso ilustrativo: a Sara fez o plano com o caderno ao lado. Na fase um, chegou à semana três sem comprar nada, porque não tinha confiança na plataforma. Em vez de saltar para a fase dois, repetiu a semana dois, fez a verificação e só então comprou. Na fase dois, falhou uma sexta por causa de uma viagem. Registou a falta no caderno e continuou na semana seguinte. Quando chegou aos noventa dias, não tinha feito tudo na perfeição. Tinha feito tudo na ordem certa. E é isso que o plano pede."
+            },
+            {
+              "cena": 6,
+              "visual": "Ruben a fechar o caderno. No ecrã: «Uma fase de cada vez.»",
+              "narracao": "Uma última regra para o plano. Escreve-o numa folha, com as datas reais de início e de fim de cada fase, e assina-o. Põe a revisão de cada fase no calendário, como se fosse uma consulta marcada. E não avances para a fase seguinte só porque te sentes entediado. O tédio é normal no DCA, e é exatamente aí que a maior parte das pessoas abandona. Se a fase estiver fechada, avanças. Se não estiver, voltas à semana em falta. Isto não é uma corrida. É um calendário, e o calendário é teu. Guarda uma cópia do plano no caderno do curso, para o teres sempre à mão."
+            }
+          ],
+          "palavras": 641,
+          "minutos": 4.1
+        },
+        {
+          "id": "15.3",
+          "titulo": "Aula 15.3 — Revisão do curso inteiro",
+          "gancho": "Catorze módulos depois, a pergunta honesta é esta: o que é que realmente levas contigo?",
+          "cenas": [
+            {
+              "cena": 1,
+              "visual": "Mapa com três níveis lado a lado: «nível 1 · módulos 1 a 5», «nível 2 · módulos 6 a 10», «nível 3 · módulos 11 a 14, opcional».",
+              "narracao": "Vamos rever o curso inteiro, em poucos minutos, por níveis. Nível um, fundamentos, módulos um a cinco: o dinheiro e a blockchain, o mapa das moedas, a primeira compra segura, a tua chave e o escudo anti-burla. Nível dois, investidor com o DCA Inteligente, módulos seis a dez: os ciclos e o halving, o teu DCA com as ferramentas da casa, o portefólio com o pote de reserva, a leitura do mercado e a realização de lucros com regras escritas. Nível três, opcional, módulos onze a catorze: perpétuos, a estratégia Aurum Flow Cripto, risco e tamanho de posição, e executar sem emoção. Três níveis, uma ideia: cada um depende do anterior."
+            },
+            {
+              "cena": 2,
+              "visual": "Lista de verificação no ecrã: «missão do nível 1 · primeira compra · transferência de teste · checklist anti-burla assinada».",
+              "narracao": "Revisão do nível um. A missão era uma primeira compra, pequena, numa plataforma autorizada, uma transferência de teste para a tua carteira e a checklist anti-burla assinada. Se as três caixas estão marcadas, o nível um está fechado. Se não estão, não avances. Uma compra feita sem a chave guardada e sem a checklist é um risco que não precisas de correr. Repara que não te pedi um resultado. Pedi-te processo: verificar, guardar, confirmar e registar. Isso é o que se pode controlar, e é o que o curso te ensinou a fazer."
+            },
+            {
+              "cena": 3,
+              "visual": "Ecrã com as missões dos níveis dois e três, lado a lado, com a palavra «escrito» destacada.",
+              "narracao": "Revisão do nível dois: plano DCA escrito, com teto mensal e pote de reserva, alertas DCA ligados e quatro semanas seguidas do ritual de sexta, registadas. E do nível três, se o fizeste: trinta operações simuladas com diário completo e regras de paragem escritas. Pergunta-te, para cada missão: o que está escrito? Se a resposta for só eu acho que sim, a missão não está fechada. O curso pede-te papel, não memória. Esse papel é a prova de que estás a aprender, e é também a única forma honesta de avaliares o teu próprio progresso."
+            },
+            {
+              "cena": 4,
+              "visual": "Lista de conceitos no ecrã: «chave e seed · DCA · pote de reserva · liquidação · diário · regras de paragem · mais-valia».",
+              "narracao": "Agora os conceitos que não podem faltar, e que deves saber explicar sem olhar para as notas. Porque é que a chave é tua. O que é o DCA, e porque é que não pára. O que é o pote de reserva. O que é a liquidação, e porque é que a alavancagem não cria dinheiro. Para que serve o diário. E porque é que uma regra de paragem existe antes da emoção aparecer. Se não consegues explicar um destes conceitos com as tuas palavras, volta ao módulo correspondente. Não tens de decorar. Tens de perceber. Se quiseres, escreve cada um numa frase e compara com a versão do módulo correspondente quando acabares."
+            },
+            {
+              "cena": 5,
+              "visual": "Ruben em plano próximo, com a frase no ecrã: «Escolhe o que aplicas primeiro. Não tudo.»",
+              "narracao": "Uma tentação típica, no fim de um curso, é querer aplicar tudo na mesma semana. Não faças isso. Escolhe uma coisa do que aprendeste e aplica-a durante um mês. Pode ser a checklist de segurança, pode ser o ritual de sexta, pode ser o diário. Uma prática pequena e constante vale mais do que dez intenções grandes. E se perceberes que te falta algum módulo, volta lá antes de avançares. Não há prémio para quem acaba primeiro, e o que interessa é que percebas o que estás a fazer. Se sentires essa vontade, escreve-a no caderno e espera uma semana antes de agir."
+            },
+            {
+              "cena": 6,
+              "visual": "Ecrã com cinco perguntas numeradas: «1 · o que ficou? · 2 · o que ainda não cumpro? · 3 · que regra vou mudar? · 4 · que missão falta? · 5 · o que pergunto ao contabilista?»",
+              "narracao": "Antes do exame, cinco perguntas, escritas no caderno. O que ficou? O que ainda não estou a cumprir? Que regra vou mudar esta semana? Que missão falta fechar? E o que quero perguntar ao contabilista, se tiver dúvidas de impostos? Escreve as respostas, com data. Estas cinco perguntas são o teu resumo pessoal do curso, e valem mais do que qualquer resumo que eu te pudesse dar. A seguir está o exame final. Não tens de as responder em voz alta, mas tens de as escrever, com a data de hoje, e de as guardar junto do plano de noventa dias. São o teu ponto de partida para o que vem depois do curso, e vale a pena fazê-las com tempo e sem pressa."
+            }
+          ],
+          "palavras": 654,
+          "minutos": 4.2
+        },
+        {
+          "id": "15.4",
+          "titulo": "Aula 15.4 — Exame final, certificado e acompanhamento",
+          "gancho": "Chegámos ao exame. Antes dele, uma pergunta que só tu podes responder: o que é que vais fazer com tudo isto, na próxima semana?",
+          "cenas": [
+            {
+              "cena": 1,
+              "visual": "Ecrã com o título «Exame final» e, por baixo, «perguntas sobre os catorze módulos». Ruben em plano médio.",
+              "narracao": "O exame final cobre os catorze módulos. São perguntas sobre o que aprendeste, e não sobre o que o mercado vai fazer, porque ninguém sabe isso. Vais encontrar perguntas sobre a chave e a segurança, sobre o DCA e o pote, sobre o diário, sobre a regra dos 365 dias e sobre a leitura do risco. Se fizeste as missões com papel, o exame é uma revisão tranquila. Se saltaste módulos, este é o momento de voltar a eles. Não há truque. Há processo, e o exame só pede o que o curso já te pediu ao longo do caminho."
+            },
+            {
+              "cena": 2,
+              "visual": "Modelo de certificado no ecrã, com o campo do nome em branco e a legenda «certificado de conclusão MTM».",
+              "narracao": "Quando passares no exame, recebes o certificado MTM. Convém ser claro sobre o que ele é. É um certificado de conclusão deste curso. Não é uma licença, não é uma certificação profissional regulada e não te autoriza a prestar aconselhamento financeiro a ninguém. Mostra que completaste o programa e fizeste as missões. Usa-o com essa honestidade. Se alguém te disser que um certificado destes dá acesso a rendimentos garantidos, estás perante o sinal de alarme que já conheces de outros módulos. Repara que o certificado é o fim de um percurso de estudo, e não o início de uma carreira."
+            },
+            {
+              "cena": 3,
+              "visual": "Ecrã com duas caixas: «sessões de grupo mensais» e «sala do curso no chat da app».",
+              "narracao": "Depois do curso, há acompanhamento. Uma sessão de grupo por mês, para levares as perguntas que foram surgindo no ritual, no diário e no plano. E a sala do curso, no chat da app, onde podes perguntar a outros alunos e tirar dúvidas sobre cada módulo. Atenção a uma coisa: é um espaço para aprender, não para decidir por ninguém. Não é uma recomendação de compra ou de venda, e ninguém da sala conhece a tua situação. Se alguém te pedir dinheiro, dados ou a tua chave, sai da conversa e avisa."
+            },
+            {
+              "cena": 4,
+              "visual": "Checklist no ecrã: «1 · missões fechadas · 2 · exame feito · 3 · plano de 90 dias assinado e guardado».",
+              "narracao": "Antes de fechares o curso, três coisas. Primeiro, as missões dos níveis que decidiste fazer, com o papel preenchido. Segundo, o exame final, feito com calma e sem pressa de acabar. Terceiro, o plano de noventa dias assinado e guardado num sítio separado da tua seed phrase. Não misturas as duas coisas, porque quem guarda o plano e a chave no mesmo sítio tem um problema de segurança. Esta checklist é a tua prova de que chegaste ao fim com método. Se alguma destas não estiver feita, não é o fim do mundo: regressa ao módulo correspondente, faz o que falta e só depois dá o curso por terminado."
+            },
+            {
+              "cena": 5,
+              "visual": "Ruben, plano próximo, com três frases no ecrã: «A chave é tua.» · «Os números são ilustrativos.» · «Espera vinte e quatro horas.»",
+              "narracao": "Agora, o aviso final, que não é opcional. Este curso é conteúdo educativo. Não é aconselhamento financeiro, não é uma recomendação de compra ou venda de nenhum ativo, e não sabe nada sobre a tua situação, o teu rendimento, as tuas dívidas ou os teus objetivos. Cripto é um mercado de alto risco. O risco de perda é real, e podes perder parte ou a totalidade do que lá puseres. Três regras para levares contigo. A chave é tua, e ninguém legítimo ta pede: nem o suporte, nem um técnico, nem alguém simpático numa conversa. Os números de exemplo são sempre ilustrativos, e desconfia de quem te promete ganhos e de quem te apressa. E um plano escrito, com vinte e quatro horas de espera, vale mais do que qualquer palpite."
             },
             {
               "cena": 6,
               "visual": "Ecrã final com o logótipo MoreThanMoney e a frase: «Cuida da tua chave».",
-              "narracao": "Antes de fechar, deixo-te uma última ideia. Em cripto, o mercado vai estar sempre aí, amanhã, na semana que vem e daqui a um ano. Não precisas de entrar hoje para não perder uma oportunidade, porque as oportunidades repetem-se, e a tua segurança não se repete. Se algum dia tiveres dúvidas, volta a estas aulas, faz a checklist e escreve o que observas. Até à próxima. Se quiseres voltar a estas aulas, estão cá. Lembra-te: conteúdo educativo, não é aconselhamento financeiro, e o risco de perda é real. Cuida da tua chave."
+              "narracao": "Antes de fechar, a missão final do curso: escreve o teu plano de noventa dias numa folha, com a data de hoje, assina-o e guarda-o num sítio seguro, separado da tua seed phrase. Depois, faz as cinco perguntas da revisão. Obrigado por teres dado a este curso o tempo que pede. Nem todos se sentam a estudar isto com calma, e isso já diz muito sobre ti. Lembra-te: conteúdo educativo, não é aconselhamento financeiro, e o risco de perda é real. Cuida da tua chave. Até à próxima. Relê também a revisão do módulo 14 sobre a espiral, porque é aí que a tentação costuma voltar."
             }
           ],
-          "palavras": 634,
-          "minutos": 4.1
+          "palavras": 662,
+          "minutos": 4.3
         }
       ]
     }

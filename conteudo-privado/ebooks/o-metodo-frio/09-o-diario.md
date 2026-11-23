@@ -44,6 +44,23 @@ Resultado: +10,00 $
 
 Duas ganhas, duas perdidas, e a semana fechou positiva porque os ganhos foram o dobro das perdas. Exemplo ilustrativo, para mostrar a lógica, não uma previsão.
 
+## No ecrã: o Histórico, a matéria-prima do diário
+
+O quarto botão da barra de baixo, **Histórico**, guarda tudo o que já fechou. Não precisas de te lembrar de nada: a app lembra-se por ti.
+
+1. Toca em **Histórico** e escolhe o período no topo: hoje, última semana, último mês ou um intervalo à tua escolha.
+2. No topo vês o resumo do período: lucro, depósitos, saldo. Por baixo, cada operação com par, direção, volume, preços e resultado.
+3. Toca numa operação para veres a hora de abertura e de fecho, o stop e o alvo.
+4. Copia esses dados para o diário no próprio dia. A coluna «Cumpri o plano?» e o estado emocional, esses, só tu os podes escrever.
+
+No PC é ainda mais rápido: na caixa de ferramentas, separador **Histórico**, botão direito › **Relatório** (*Report*). O MT5 gera um ficheiro com todas as operações do período, que podes abrir numa folha de cálculo.
+
+Para os prints: no telemóvel, a captura de ecrã normal chega. No PC, botão direito no gráfico › **Guardar como imagem** (*Save As Picture*), e o print fica com as tuas zonas, o stop e o alvo desenhados.
+
+:::historia A Marta, dia 21
+Três semanas de diário e a Marta fez o que o capítulo pedia: abriu o Histórico do mês e separou as perdas em duas pilhas. As perdas com plano estavam espalhadas pela semana. As perdas sem plano estavam todas no mesmo sítio: sextas-feiras, depois de turnos da noite, entre as 16h e as 18h. Nenhuma estratégia nova lhe teria mostrado isto. Escreveu a única mudança da semana seguinte: «Sexta depois do turno da noite, o MetaTrader não se abre».
+:::
+
 ## A revisão de domingo
 
 Vinte minutos, ao domingo, com café:
@@ -71,6 +88,12 @@ Com estes três números, a conversa contigo próprio deixa de ser «acho que es
 imagem: O diário não mente. Tu às vezes mentes.
 legenda: A diferença entre quem evolui e quem anda em círculos não está na estratégia. Está em quem escreve o que fez, incluindo o que não queria ver.
 :::
+
+## Da minha vida: eu era um número
+
+Em 2021 a minha mulher, a Liliana, teve um diagnóstico de cancro da mama. Para justificar uma ausência, pediram-me uma «declaração de compromisso de honra» de que a minha mulher tinha cancro. Percebo que os serviços precisem de papéis. Ainda assim, naquele dia senti que era um número numa folha, e não uma pessoa com uma família em casa. Não culpo quem me fez o pedido nem a instituição onde servi com orgulho. Era o sistema a funcionar como funciona.
+
+Foi aí que comecei a escrever tudo. O que sentia, o que decidia, o que aprendia. O meu diário de trading nasceu desse caderno. Um diário é o contrário de ser um número: é o sítio onde a tua decisão tem um porquê, uma emoção e um nome. Quando o relês ao domingo, não te vês como uma estatística. Vês-te como alguém que está a mudar.
 
 ## A regra fria deste capítulo
 

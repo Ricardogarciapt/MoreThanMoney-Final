@@ -27,7 +27,7 @@ export async function aulasConcretas(de: Date, dias: number): Promise<AulaConcre
   const ate = new Date(de.getTime() + dias * 86_400_000)
   const [{ data: slotRows, error: e1 }, { data: avulsas, error: e2 }] = await Promise.all([
     db().from('lms_stream_schedules')
-      .select('id, stream_id, weekday, start_time, duration_min, timezone, access_tier, stream:lms_streams(id, title, access_tier, educator_id, educator:lms_educators(id, display_name))')
+      .select('id, stream_id, weekday, start_time, duration_min, timezone, access_tier, every_n_weeks, anchor_date, stream:lms_streams(id, title, access_tier, educator_id, educator:lms_educators(id, display_name))')
       .eq('is_active', true),
     db().from('lms_streams')
       .select('id, title, access_tier, scheduled_start_at, educator_id, educator:lms_educators(id, display_name)')
@@ -52,6 +52,8 @@ export async function aulasConcretas(de: Date, dias: number): Promise<AulaConcre
       duration_min: (r.duration_min as number | null) ?? null,
       timezone: (r.timezone as string | null) ?? null,
       access_tier: (r.access_tier as string | null) ?? null,
+      every_n_weeks: (r.every_n_weeks as number | null) ?? null,
+      anchor_date: (r.anchor_date as string | null) ?? null,
       is_active: true,
     })
   }

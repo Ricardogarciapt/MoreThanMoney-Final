@@ -140,7 +140,7 @@ export default function Biblioteca() {
               <button
                 key={v.lingua}
                 onClick={() => window.open(v.url, "_blank", "noopener,noreferrer")}
-                title={v.lingua === "EN" ? "Read in English" : "Leer en español"}
+                title={{ EN: "Read in English", ES: "Leer en español", FR: "Lire en français" }[v.lingua]}
                 className="rounded-lg border border-[#D2A63C]/50 px-2.5 py-2 text-xs font-semibold text-[#E9C46A] hover:bg-[#D2A63C]/10"
               >
                 {v.lingua}
@@ -160,14 +160,18 @@ export default function Biblioteca() {
 
 /**
  * Um e-book é um só produto com três línguas: o `conteudo_url` aponta para a versão PT
- * (/api/ebooks/<slug>) e as versões EN/ES vivem em /api/ebooks-traducoes/<slug>-en|es,
+ * (/api/ebooks/<slug>) e as versões EN/ES (e FR, quando há) vivem em /api/ebooks-traducoes/<slug>-en|es|fr,
  * com o mesmo acesso. Fora disso (cursos, links externos) não aparece nada.
  */
-function versoesEbook(url: string): { lingua: "EN" | "ES"; url: string }[] {
+// Livros que também têm versão em francês (conteudo-privado/ebooks/<slug>-fr/).
+const COM_FRANCES = new Set(["a-primeira-chave"])
+
+function versoesEbook(url: string): { lingua: "EN" | "ES" | "FR"; url: string }[] {
   const m = url.match(/^(.*)\/api\/ebooks\/([a-z0-9-]+?)(\?.*)?$/)
-  if (!m || /-(en|es)$/.test(m[2])) return []
-  return (["en", "es"] as const).map((l) => ({
-    lingua: l.toUpperCase() as "EN" | "ES",
+  if (!m || /-(en|es|fr)$/.test(m[2])) return []
+  const linguas: ("en" | "es" | "fr")[] = COM_FRANCES.has(m[2]) ? ["en", "es", "fr"] : ["en", "es"]
+  return linguas.map((l) => ({
+    lingua: l.toUpperCase() as "EN" | "ES" | "FR",
     url: `${m[1]}/api/ebooks-traducoes/${m[2]}-${l}${m[3] ?? ""}`,
   }))
 }

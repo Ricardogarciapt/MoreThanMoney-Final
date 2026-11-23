@@ -159,7 +159,7 @@ async function aulasDoEducador(educadorId: string, de: Date, ate: Date): Promise
   const dias = Math.max(1, Math.ceil((ate.getTime() - de.getTime()) / 86_400_000) + 1)
   const [{ data: salas }, { data: avulsas }] = await Promise.all([
     db().from('lms_stream_schedules')
-      .select('id, stream_id, weekday, start_time, duration_min, timezone, access_tier, stream:lms_streams!inner(educator_id)')
+      .select('id, stream_id, weekday, start_time, duration_min, timezone, access_tier, every_n_weeks, anchor_date, stream:lms_streams!inner(educator_id)')
       .eq('is_active', true)
       .eq('stream.educator_id', educadorId),
     db().from('lms_streams').select('scheduled_start_at')
@@ -175,6 +175,8 @@ async function aulasDoEducador(educadorId: string, de: Date, ate: Date): Promise
     duration_min: (r.duration_min as number | null) ?? null,
     timezone: (r.timezone as string | null) ?? null,
     access_tier: (r.access_tier as string | null) ?? null,
+    every_n_weeks: (r.every_n_weeks as number | null) ?? null,
+    anchor_date: (r.anchor_date as string | null) ?? null,
     is_active: true,
   }))
   const out: Intervalo[] = projectSchedule(slots, { from: de, days: dias }).map((p) => {

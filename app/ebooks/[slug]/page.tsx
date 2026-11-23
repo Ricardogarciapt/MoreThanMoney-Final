@@ -11,7 +11,7 @@ import Link from 'next/link'
 import { getSupabaseAdmin } from '@/lib/supabase-admin-client'
 import { ehEbook, partesEbook, type LinguaEbook } from '@/lib/ebooks/acesso'
 import { VENDAS } from '@/lib/ebooks/vendas'
-import { EBOOKS_GRATIS } from '@/lib/ebooks/gratis'
+import { EBOOKS_GRATIS, EBOOKS_SO_GRATIS } from '@/lib/ebooks/gratis'
 import FormGratis from '@/components/ebooks/form-gratis'
 
 export const revalidate = 300
@@ -21,8 +21,9 @@ const TX = {
   pt: { loc: 'pt-PT', previa: 'Pré-visualização: este e-book ainda não está à venda.', quero: 'Quero o e-book', formato: 'PDF + versão interativa · acesso imediato', capaAlt: 'Capa do e-book', dentro: 'O que está lá dentro', paginasAlt: 'Três páginas do interior do e-book', paginasNota: 'Na versão interativa, os gráficos desenham-se à tua frente enquanto lês, no telemóvel ou no computador.', paraTi: 'É para ti se…', naoE: 'O que não é', quem: 'Quem escreve', faq: 'Perguntas frequentes', comprar: 'Comprar', por: 'por', meta: (a: string) => `e-book de ${a}`, lingua: 'Ler noutra língua' },
   en: { loc: 'en-GB', previa: 'Preview: this e-book is not on sale yet.', quero: 'I want the e-book', formato: 'PDF + interactive version · instant access', capaAlt: 'Cover of the e-book', dentro: "What's inside", paginasAlt: 'Three pages from inside the e-book', paginasNota: 'In the interactive version, the charts draw themselves as you read, on your phone or computer.', paraTi: "It's for you if…", naoE: 'What it is not', quem: 'Who wrote it', faq: 'Frequently asked questions', comprar: 'Buy', por: 'for', meta: (a: string) => `e-book by ${a}`, lingua: 'Read in another language' },
   es: { loc: 'es-ES', previa: 'Vista previa: este e-book aún no está a la venta.', quero: 'Quiero el e-book', formato: 'PDF + versión interactiva · acceso inmediato', capaAlt: 'Portada del e-book', dentro: 'Lo que hay dentro', paginasAlt: 'Tres páginas del interior del e-book', paginasNota: 'En la versión interactiva, los gráficos se dibujan mientras lees, en el móvil o en el ordenador.', paraTi: 'Es para ti si…', naoE: 'Lo que no es', quem: 'Quién lo escribe', faq: 'Preguntas frecuentes', comprar: 'Comprar', por: 'por', meta: (a: string) => `e-book de ${a}`, lingua: 'Leer en otro idioma' },
+  fr: { loc: 'fr-FR', previa: 'Aperçu : cet e-book n’est pas encore en vente.', quero: 'Je veux l’e-book', formato: 'PDF + version interactive · accès immédiat', capaAlt: 'Couverture de l’e-book', dentro: 'Ce qu’il y a dedans', paginasAlt: 'Trois pages de l’intérieur de l’e-book', paginasNota: 'Dans la version interactive, les graphiques se dessinent pendant que tu lis, sur ton téléphone ou ton ordinateur.', paraTi: 'C’est pour toi si…', naoE: 'Ce que ce n’est pas', quem: 'Qui l’écrit', faq: 'Questions fréquentes', comprar: 'Acheter', por: 'pour', meta: (a: string) => `e-book de ${a}`, lingua: 'Lire dans une autre langue' },
 } as const satisfies Record<LinguaEbook, unknown>
-const NOMES_LINGUA: Record<LinguaEbook, string> = { pt: 'PT', en: 'EN', es: 'ES' }
+const NOMES_LINGUA: Record<LinguaEbook, string> = { pt: 'PT', en: 'EN', es: 'ES', fr: 'FR' }
 
 async function produto(slug: string) {
   const { data } = await getSupabaseAdmin().from('marketplace_produtos')
@@ -50,14 +51,16 @@ export default async function PaginaEbook({ params, searchParams }: { params: Pr
   if (!ehEbook(slug)) notFound()
   // Um livro = um produto no marketplace: preço, estado e compra vêm sempre da versão PT.
   const p = await produto(partesEbook(slug).base)
-  const publicado = p?.estado === 'publicado' && p.activo
+  // Livros só grátis (oferta dos webinars) não têm produto no marketplace: a página é pública sempre.
+  const soGratis = EBOOKS_SO_GRATIS.has(partesEbook(slug).base)
+  const publicado = soGratis || (p?.estado === 'publicado' && p.activo)
   if (!publicado && sp.previa !== '1') notFound()
   const v = VENDAS[slug]
   const { base, lingua } = partesEbook(slug)
   const t = TX[lingua]
-  const versoes = (['pt', 'en', 'es'] as LinguaEbook[]).map((l) => ({ l, slug: l === 'pt' ? base : `${base}-${l}` })).filter((x) => ehEbook(x.slug))
+  const versoes = (['pt', 'en', 'es', 'fr'] as LinguaEbook[]).map((l) => ({ l, slug: l === 'pt' ? base : `${base}-${l}` })).filter((x) => ehEbook(x.slug))
   const preco = p ? euros(p.preco_cents, t.loc) : ''
-  const comprar = `/marketplace/${base}`
+  const comprar = soGratis ? '#gratis' : `/marketplace/${base}`
   const estilo = { ['--c' as string]: v.cor, ['--c2' as string]: v.cor2, background: v.fundo } as React.CSSProperties
   const T = { fontFamily: v.fonteTitulo }
 
@@ -86,7 +89,7 @@ export default async function PaginaEbook({ params, searchParams }: { params: Pr
             <p className="mt-4 max-w-xl text-base leading-relaxed text-white/70 md:text-lg">{v.sub}</p>
             <div className="mt-8 flex flex-wrap items-center gap-4">
               <Link href={comprar} className="rounded-full px-7 py-4 text-base font-bold text-black shadow-lg transition hover:-translate-y-0.5" style={{ background: `linear-gradient(90deg, ${v.cor}, ${v.cor2})` }}>
-                {t.quero}{preco ? ` · ${preco}` : ''}
+                {soGratis ? `${t.quero} · grátis` : `${t.quero}${preco ? ` · ${preco}` : ''}`}
               </Link>
               <span className="text-sm text-white/55">{t.formato}</span>
             </div>
@@ -179,7 +182,17 @@ export default async function PaginaEbook({ params, searchParams }: { params: Pr
       </section>
 
       {/* DUAS FORMAS DE O TER (5 € com acompanhamento, ou grátis por contacto) */}
-      {EBOOKS_GRATIS.has(slug) && (
+      {soGratis && (
+        <section id="gratis" className="mx-auto max-w-2xl px-4 pb-16">
+          <div className="rounded-[2rem] p-8" style={{ background: `linear-gradient(135deg, ${v.cor}22, transparent)`, border: `1px solid ${v.cor}88` }}>
+            <p className="text-xs font-semibold uppercase tracking-[0.3em]" style={{ color: v.cor2 }}>Oferta</p>
+            <h3 className="mt-3 text-3xl" style={T}>Recebe o e-book grátis</h3>
+            <p className="mt-3 mb-6 text-white/65">Deixa o teu email, o WhatsApp e quatro respostas rápidas. O link chega-te logo a seguir e dá para abrir durante um ano.</p>
+            <FormGratis slug={slug} titulo={`${v.titulo} ${v.titulo2}`} />
+          </div>
+        </section>
+      )}
+      {EBOOKS_GRATIS.has(slug) && !soGratis && (
         <section id="gratis" className="mx-auto grid max-w-6xl gap-6 px-4 pb-16 md:grid-cols-2">
           <div className="rounded-[2rem] p-8" style={{ background: `linear-gradient(135deg, ${v.cor}2a, transparent)`, border: `1px solid ${v.cor}88` }}>
             <p className="text-xs font-semibold uppercase tracking-[0.3em]" style={{ color: v.cor2 }}>Com acompanhamento</p>
@@ -206,7 +219,7 @@ export default async function PaginaEbook({ params, searchParams }: { params: Pr
           <h2 className="text-3xl md:text-5xl" style={T}>{v.titulo} <span style={{ color: v.cor }}>{v.titulo2}</span></h2>
           <p className="mx-auto mt-4 max-w-xl text-white/75">{v.sub}</p>
           <Link href={comprar} className="mt-8 inline-block rounded-full px-8 py-4 text-lg font-bold text-black" style={{ background: `linear-gradient(90deg, ${v.cor}, ${v.cor2})` }}>
-            {t.comprar}{preco ? ` ${t.por} ${preco}` : ''}
+            {soGratis ? `${t.quero} · grátis` : `${t.comprar}${preco ? ` ${t.por} ${preco}` : ''}`}
           </Link>
           <p className="mx-auto mt-8 max-w-2xl text-xs leading-relaxed text-white/45">{v.aviso}</p>
         </div>

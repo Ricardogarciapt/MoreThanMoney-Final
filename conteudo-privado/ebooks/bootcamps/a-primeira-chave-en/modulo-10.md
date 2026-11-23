@@ -1,0 +1,104 @@
+# Módulo 10 — Taking profit and protecting (≈14 min)
+**Objetivo:** move from “buy and wait” to a written plan for exits and protection, so that the hard decisions (selling, stopping the constant checking, surviving a fall) are already made before the market puts you to the test.  **No fim, o aluno consegue:** 1) write a profit-taking ladder with clear rules for taking profit; 2) draft a plan for a crash before it happens; 3) keep the seed in safe copies, with nothing digital; 4) leave a crypto inheritance plan and complete the level 2 mission.
+
+**Production note:** the ladder example uses illustrative numbers. Always say “illustrative example” out loud and leave it on screen. Do not film real seeds or copies of real seeds, not even for a second. Use an example sheet with test words.
+
+## Aula 10.1 — Taking profit with written rules (≈3–4 min)
+**Gancho (0:00–0:20):** "Almost everyone knows how to buy. Very few know when to sell, and even fewer know why they sold. Today we write that down before we need it."
+
+**[CENA 1]** Ruben in a medium shot, almost black background, details in gold. Text on screen: “Educational content. The risk of loss is real.”
+**NARRAÇÃO:** First, the warning that will appear whenever we touch money: educational content. The risk of loss is real, and in crypto it can be total. With that said, let us go to a question that almost nobody answers seriously: when do you take profit? Many people only think about it once the price has already risen or already fallen, and then the decision is emotional. Greed on one side, fear on the other. The idea of this lesson is simple: the decision to sell has to be taken on a calm day, on paper, with rules you wrote beforehand. When the market accelerates, it is not the time to think. It is the time to carry out what you have already decided.
+
+**[CENA 2]** Animation: a price line rising in steps. At each step, a small gold slice is taken out and set aside. Text: “profit-taking ladder”.
+**NARRAÇÃO:** We call this a profit-taking ladder. Each rung is a level of gain, measured against your average purchase price. On each rung you sell a fixed part of the position, and the rest stays with you. Notice what this does: the part you sell is converted into euros, and the part you keep continues to take part if the market keeps rising. It is not a magic formula, and it does not tell you when the top arrives. It only tells you what you will do on each rung, before the rung is reached. That is what takes the drama out of the decision.
+
+**[CENA 3]** Table drawn in Ruben's notebook, with the title “Illustrative example”. Columns: rung · gain against average price · part to sell · what is left.
+**NARRAÇÃO:** I will give you an illustrative example, just so you can see the mechanics. Imagine a position with an average price of one hundred. On the first rung, at plus fifty per cent, you sell a fifth of the position. On the second rung, at plus one hundred per cent, you sell another fifth. On the third, at plus two hundred per cent, you sell one more fifth. What is left stays with you, under its own rule. The numbers are mine, chosen for the example. They are not a forecast, not a target and not a recommendation. You choose your own rungs and your own percentages, according to your plan and your tolerance for risk. What matters is that they are written down.
+
+**[CENA 4]** Notebook page with three rules written by hand, next to a stopped stopwatch. Text: “rung · part · date”.
+**NARRAÇÃO:** Each rung has three pieces of information, and all three have to be written down. First: the rung, as a percentage against your average price. Second: the part, as a fraction of your position and not in euros, so the rule still makes sense when the position changes. Third: the date or the condition for review. For example, I review the ladder on the first Friday of every month. If there is neither a date nor a condition, the rule does not exist, it is just a wish. And there is one thing the ladder does not replace: the DCA. Purchases still happen on your day, as in module seven. Selling a part is a separate decision, with its own role.
+
+**[CENA 5]** Ruben talking to camera, with the line on screen: “What is not written down does not exist.”
+**NARRAÇÃO:** There are three mistakes I see often, and the ladder prevents them. The first is changing the rule halfway, because the price is running and you want to see more. The second is selling everything at once out of fear, on a day of panic, and then watching the rise without your part. The third is selling nothing and calling that patience, when in fact it is a lack of plan. With the ladder written down, any of these mistakes has to go through paper first. That alone gives you a pause. And in fast markets, a pause is worth more than it seems.
+
+**[CENA 6]** Exercise sheet with four blank lines and the title “My ladder”. Ruben with the pen in the air.
+**NARRAÇÃO:** Five-minute exercise, to do today. Take your notebook and write your ladder for one position in your plan. Three rungs are enough. For each one, write the rung, the part and the review date. You do not have to get it right. You have to write it down, and do it calmly, without the screen open beside you. Then keep the sheet next to the plan from module seven, so the two can be read together. Next lesson we talk about what to do when the market does not rise, but falls in a brutal way, and why that plan also has to be written down before it is needed.
+
+**Texto no ecrã:** ladder written in advance · rung, part and date · illustrative example · the DCA continues
+**Check question:** Does the ladder force you to buy more when the price rises? Answer: no. It only defines what you sell on each rung, and the DCA stays separate.
+**Fecho / CTA da aula:** "Next lesson: the plan for a crash, written before it happens."
+
+## Aula 10.2 — What to do in a crash: the plan written beforehand (≈3–4 min)
+**Gancho (0:00–0:20):** "A day of heavy falls does not look like a crisis. It looks like a notification, a friend calling and a finger that wants to press sell. That is why the plan has to be written beforehand."
+
+**[CENA 1]** Daily crypto chart in a steep fall, red candles, no legible numbers. Text on screen: “Plan written beforehand.”
+**NARRAÇÃO:** Large falls happen in crypto. I am not going to tell you when or how big, because I do not know, and nobody knows. What I do know is that they happen often enough to deserve a plan. And the moment when decisions are most often made badly is precisely the moment of the fall, when the screen is red, the conversations are in panic and the brain wants to do something, anything, right now. The solution is not to have more courage in the moment. It is to have fewer decisions to make in that moment. That is why we write the plan today, when we are calm, and not tomorrow, when it is already on fire.
+
+**[CENA 2]** Ruben sitting at a table, with the notebook open to three sections: “before”, “during”, “after”. Text: “three parts, one page”.
+**NARRAÇÃO:** The plan for a crash has three parts. Before: what you already have set up. Your base amount, your monthly ceiling, your reserve pot and the alerts switched on in the app. During: what you do in each band of decline, written with the same logic as the MTM Smart DCA, in which the Strong Buy label changes the size of the top-up and does not tell you to stop. After: when and how you review the strategy. One page is enough. If it does not fit on one page, it is still being thought out too much, and on the day of the fall nobody reads twenty.
+
+**[CENA 3]** Animation: a price line falling in steps. In each step, a box with the phrase “written action”.
+**NARRAÇÃO:** Now the during, which is the heart of the plan. For each band of decline, you write the action. For example, illustrative example: if the asset falls more than thirty per cent against your average price, the DCA continues on the base. If the pot has money, you use part of it, within the ceiling, as module seven teaches. You do not sell anything in that band. Notice this carefully: the DCA never stops, it only changes size. A fall does not give you permission to stop buying, and it does not oblige you to buy more than the ceiling allows. If your strategy has a position you genuinely want to sell in a fall, that is a separate written rule, with its own condition.
+
+**[CENA 4]** Phone screen with a fall notification, and a thumb hovering over the word “sell”. Text: “24-hour pause”.
+**NARRAÇÃO:** There is one rule that should be in every crash plan: the pause. When something makes you want to sell outside the plan, you wait twenty-four hours. It is not a punishment, it is a filter. A great deal of panic decisions disappear within twenty-four hours. If after the pause you still think the sale makes sense, write down why, with the condition that justifies it, and check whether it matches the rule you wrote for the crash. If it does not match, keep to the plan. And switch off price notifications during the day of the fall. Looking at the chart every five minutes does not help you think. It only gives you the feeling that you are doing something.
+
+**[CENA 5]** Ruben talking to camera, with the line on screen: “Nobody will remind you of the plan for you.”
+**NARRAÇÃO:** I will tell you this plainly: in a fall, the people around you will say things. Some will tell you to sell everything, others to buy everything, and others will show charts that look like certainties. None of them has your table. That is why the plan stays written and signed by you, kept where you can see it. If you only have it in your head, in a fall your head will tell you whatever it likes. Also write down the contact of one trusted person who can remind you of the plan. Not to decide for you. To remind you of what you decided when you were calm.
+
+**[CENA 6]** Crash sheet with the three sections filled in with an example. Ruben points at the “after” section.
+**NARRAÇÃO:** Mission for this lesson, ten minutes: write your crash plan on half a page. Before, during and after. Include at least three bands of decline, with the action for each one, the twenty-four-hour pause rule and the name of the trusted person. At the end, sign and date it. Keep the sheet next to the profit-taking ladder from the previous lesson. Next lesson we talk about the part nobody takes seriously until it is too late: the safety of your seed, and why a digital copy is the worst place for it to be.
+
+**Texto no ecrã:** plan written beforehand · three parts, one page · 24-hour pause · the DCA never stops, it only adjusts
+**Check question:** On a day of heavy falls, what do you do with the DCA? Answer: you keep buying on the base, within the ceiling, and use the pot if the plan says so. You do not stop.
+**Fecho / CTA da aula:** "Next lesson: advanced security for your seed."
+
+## Aula 10.3 — Advanced security: copies, metal and places (≈3–4 min)
+**Gancho (0:00–0:20):** "Your seed is your entire account. And the worst thing you can do to it is not to lose it on an unlucky day. It is to leave it where someone can look at it at their leisure."
+
+**[CENA 1]** Ruben with a paper card with the words covered, empty table around him. Text on screen: “Never digital.”
+**NARRAÇÃO:** In lesson four we talked about your seed, the words that give access to your coins. Now we go one level up, because when the value grows, the risk changes shape. There are two threats that weigh the same: losing the seed, and someone else getting hold of it. Any security plan has to deal with both. The rule that is not negotiable is this: the seed never exists in digital form. Not a photo, not a note on your phone, not an email to yourself, not a file in the cloud, not a password manager. Any of these can be copied, synced or stolen, and all of that can happen without you noticing anything.
+
+**[CENA 2]** Animation: a metal plate with engraved letters, being placed in a safe. Text on screen: “paper burns · metal endures”.
+**NARRAÇÃO:** If it is not digital, is it paper? It can be, but paper is fragile. It burns, it gets wet, it breaks down over time, and a house move can throw away a folded sheet in a drawer. That is why the most solid option is metal: a plate or a holder where the words are engraved or punched, resistant to fire and water. Using paper as the first copy is not a mistake, as long as the metal copy follows. The goal is for the information to survive a fire, a flood or a day when your home is turned upside down.
+
+**[CENA 3]** Simple map with two addresses marked with crosses. Text on screen: “two copies · two places”.
+**NARRAÇÃO:** Now the rule about copies. Two copies, in two different places. Not the same drawer, not the same safe, not the same house. If a fire or a burglary takes one, the other is still there. One option is a safe at home, well hidden and fixed to the structure. The other can be a safe in a trusted place, outside the home. There is no perfect place. There are places where the risk of loss is low and the risk of improper access is also low. Choose with that balance in mind, and write in the plan where each copy is.
+
+**[CENA 4]** Ruben holding a warning card with an alert symbol. Text on screen: “No legitimate support asks for the seed.”
+**NARRAÇÃO:** A rule that sounds obvious and that many people break: nobody asks you for the seed. No legitimate support service, no authorised platform, no person saying they are from support asks for the words. If anyone asks, even if the request comes with a beautiful logo, an urgent message or a friendly phone call, the answer is no. And do not write it down on any website, in any third-party app, or for a friend who is helping you set something up. The seed is only used at the moment of restoring your wallet, in a place you control. Afterwards it goes back to the paper copy and the metal one.
+
+**[CENA 5]** Ruben talking to camera, holding a sheet of test words. Text on screen: “Test, do not copy.”
+**NARRAÇÃO:** How do you know the copy works? You do not open it to check, because every time you expose it there is a small exposure. What you do is a restore test, in a new, empty wallet, with none of your main value, following the procedure you already know from module four. If the test works, the copy is good. If it does not, you find out now, and not on the day you need it. Do this test once a year, or whenever you change wallets. And never put the copies together in one photo, one folder or one envelope.
+
+**[CENA 6]** Checklist on screen with four squares: “no digital”, “two copies”, “two places”, “test done”. Ruben ticking each one.
+**NARRAÇÃO:** Mission for this lesson, to do this week: check your seed against four questions. Is it free of any digital format? Do you have two copies? Are they in two different places? And have you done the restore test in a new wallet? If the answer to any of these is no, that is where the work is. It is not glamorous, but it is what separates someone who loses a phone from someone who loses access to their coins. In the last lesson of this module we talk about what happens to your seed and your coins when you are no longer around to look after them.
+
+**Texto no ecrã:** no digital · two copies · two places · metal endures · nobody asks for the seed
+**Check question:** Can you keep a photo of the seed on your phone “just for safety”? Answer: no. Any digital copy can be copied or synced, so no.
+**Fecho / CTA da aula:** "Next lesson: crypto inheritance and the level 2 mission."
+
+## Aula 10.4 — Crypto inheritance and the level 2 mission (≈3–4 min)
+**Gancho (0:00–0:20):** "Nobody likes to think about this. But if your coins exist only in your head, when you are gone, they are missing for the people you love too. This has a solution, and it is simpler than it sounds."
+
+**[CENA 1]** Ruben in a medium shot, with a folded document on the table in front of him. Text on screen: “Crypto inheritance plan”.
+**NARRAÇÃO:** Let us go to inheritance. This is the last security point of level two, and it is the one most people put off. The idea is simple: someone you trust needs to be able to understand what exists, where it is and how to access it, when you can no longer do so. You do not need to give them the seed, neither now nor ever. What you give them is a map. A map says that you have crypto, in which types of wallet and on which authorised platforms, what the copies are, where they are kept and whom to ask for help finding them. Written this way, the map protects your family and does not expose your coins.
+
+**[CENA 2]** Animation: three envelopes lined up, labelled “map”, “copies” and “contacts”. Text on screen: “the map without the key”.
+**NARRAÇÃO:** Separate the information into three parts. The map: what you have and where it is, with no access words. The seed copies, which are the key, stay in the safe places from the previous lesson, and never in the same envelope as the map. And the contacts: who is the trusted lawyer or notary to ask how this works in your case, and who is the person who will read the map when it is needed. The golden rule is that no single part, on its own, gives access to your coins. Whoever reads the map does not have the key. Whoever has the key does not know what it opens. The two have to come together.
+
+**[CENA 3]** Ruben speaking, with the notebook open on a page titled “Legal point”. Text on screen: “Talk to a professional”.
+**NARRAÇÃO:** An honest note about the legal side. Inheritance rules vary from country to country, and they vary even more when the assets are digital. I am not going to tell you here what the law provides for your case, because that depends on your situation and on who will inherit. What I ask is that, before you consider your plan finished, you talk to a lawyer or a trusted notary. Take the map, without the access words, and ask how it should be drafted to be valid. And if you live or have assets in another country, ask about that one too. This is not legal advice. It is a warning not to leave the subject for later.
+
+**[CENA 4]** Notebook page with the level 2 DCA plan sheet: base amount, monthly ceiling, pot, assets, top-up day, alerts. Text on screen: “level 2 mission”.
+**NARRAÇÃO:** Now the level two mission, which brings together everything you did in modules seven to ten. First, your written DCA plan, with the fixed monthly ceiling and the reserve pot, on a single sheet. It has the base amount, the assets, the top-up day, the size rules with the MTM Smart DCA table and what happens to the money you do not spend. Second, the DCA alerts switched on in the MTM System app, in the settings. Third, the Friday ritual carried out four weeks in a row, with a record of each one in the notebook. If on a Friday you do not buy, you still do the ritual and record what you would have done. Four lines, one per week.
+
+**[CENA 5]** Calendar with four Fridays marked with a gold tick. Ruben shows the notebook with the four lines. Text on screen: “4 Fridays · 4 records”.
+**NARRAÇÃO:** Why four weeks and not one? Because one week is a coincidence. Four weeks in a row are a habit beginning. And it is in habit that DCA works, not on the day it went well or badly. Notice also what I am not asking of you: I am not asking you to have got it right, or to have made a profit. I am asking that the process has happened four times, at the same time and on the same sheet. If one Friday is missed for a real reason, such as a trip or an illness, it is not a failure. You restart the count and carry on. What you cannot do is pretend the record exists when it does not.
+
+**[CENA 6]** Ruben closing the notebook. Final text on screen: “Level 2 mission: plan, alerts, four recorded Fridays.” Underneath, the educational warning.
+**NARRAÇÃO:** Level two mission, in short: a written DCA plan with ceiling and pot, DCA alerts switched on, and four consecutive Fridays of recorded ritual. It is not measured by what the market did. It is measured by whether you did it. And inheritance comes in here too, in the form of a map, with the key kept separate. Remember the essentials: this is educational content, not financial advice. The risk of loss is real, and the MTM tools help you decide with information. They do not decide for you. Level three brings in perpetuals, which are a different game. Before we get there, the plan for this level has to be done.
+
+**Texto no ecrã:** inheritance plan · map without the key · lawyer or notary · mission: plan + alerts + 4 Fridays
+**Check question:** Why can the inheritance map not contain the seed? Answer: because whoever reads the map would then have access to the coins. The key stays separate, in the safe places.
+**Fecho / CTA da aula:** End of Module 10. Next module: 11, Perpetuals for real. On-screen button: “Continue to Module 11”.

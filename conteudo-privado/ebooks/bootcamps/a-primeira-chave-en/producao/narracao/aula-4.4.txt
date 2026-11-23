@@ -1,0 +1,17 @@
+A wet piece of paper can't be read. A stolen photo protects nothing. How do you keep a key safe for twenty years?
+
+We've reached the last lesson of the module, and the plan you're going to put together. The central idea is this: your backup has to survive three things. Fire, water, and your own forgetfulness. It may sound like an exaggerated list, but it's the list of problems most people report when they lose access. A good plan thinks about these three risks from the start, not when it's already too late.
+
+Paper is cheap and good for getting started. But paper degrades with damp, with time, with a spilled coffee. That's why many people use metal plates, with the words engraved or stamped into them. One product sold in the MTM shop is the Cryptotag Zeus, a metal plate for recording your seed. It isn't the only method, and it isn't mandatory. It's a way to have a copy that doesn't wear out easily, and that already counts for a lot.
+
+Let's build the plan in four steps. First, decide how many copies you want. Two is the reasonable minimum. One copy means that if it's lost, you lose everything. And if the paper copy and the metal copy are in the same place, you aren't making two copies. You're making one, twice. More than three complicates management and increases exposure. For most people, two well-kept copies are the right balance between security and simplicity.
+
+Second, choose different locations. If both copies are in the same drawer, a fire or a burglary takes both. Think about home, and a trusted place outside it, with safe and discreet access. The goal isn't to hide them, it's to spread the risk. A copy that survives a problem at home is a copy that saves you.
+
+Third, decide who knows what. Nobody needs to know the phrase. It's enough for someone you trust to know that a plan exists, and where the copies are, in case something happens to you. That person doesn't need to have the words. If they do, they become one more point of failure, and one more place where the phrase can be copied without you knowing.
+
+Fourth, test the recovery. This is the part almost nobody does, and it's the most important. With a zero or negligible amount, in an official app, try to recreate the wallet using only the written phrase. If you manage it, the copy works. If you don't, you've discovered the problem now, and not when you really need it. A failed test today is a cheap lesson. A test that reveals a failure ten years from now is a loss. Repeat the test whenever you change wallet or app, and at least once a year, because apps change and memory does too.
+
+Illustrative case: Inês engraved the phrase on a metal plate, kept a second paper copy in a relative's safe, and did the recovery test with a symbolic amount in a test wallet. It took an afternoon. For her, it was the most useful afternoon of the year as far as crypto goes. Not because she gained anything, but because she stopped depending on luck. Notice that the plan doesn't require anything technical. It requires method and discipline. Inês didn't have to become an expert. She had to have a plan and stick to it.
+
+The idea I want you to take from here is that the four steps have one common goal: for your key to keep existing when you're no longer paying attention to it. A key that only works in your head isn't a key. It's a hope. And hope isn't a security plan. Think of it as insurance: you don't like paying for it, but you never see it as wasted on the day you need it.

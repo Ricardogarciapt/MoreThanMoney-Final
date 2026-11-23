@@ -1,3 +1,4 @@
+import { falarParaStorage } from '@/lib/voz'
 import { NextRequest, NextResponse } from 'next/server'
 import { getSupabaseAdmin } from '@/lib/supabase-admin-client'
 import { ehMotor } from '@/lib/conteudo-magnetico/acesso'
@@ -6,6 +7,7 @@ import { normalizarPalavras } from '@/lib/estudio/texto'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
+export const maxDuration = 60
 
 /**
  * MOTOR DO EDITOR — o Mac (services/estudio-editor → renderProjeto) monta aqui os projectos da
@@ -60,12 +62,26 @@ export async function GET(request: NextRequest) {
   const palavras: Record<string, unknown> = {}
   for (const t of takes ?? []) palavras[t.id] = normalizarPalavras((t.transcricao as any)?.palavras)
 
+  // Reel narrado (22/11): sem gémeo, a voz clonada do Ricardo é gerada aqui (Fish, com cache).
+  let narracao_url: string | null = null
+  if (p.cinematico?.narrado && !p.clips[0]?.fonte.url && !p.clips[0]?.fonte.caminho) {
+    const r = await falarParaStorage(db as any, p.cinematico.texto, `reels-narrados/${cand.id}.mp3`)
+    if (!r.ok) {
+      await db.from('estudio_projetos').update({ estado: 'erro', erro: `voz: ${r.motivo} ${r.detalhe}`.slice(0, 300) }).eq('id', cand.id)
+      return NextResponse.json({ ok: true, trabalho: null })
+    }
+    // ?v= evita a CDN servir a voz antiga quando o guião muda (o caminho é o mesmo)
+    narracao_url = `${r.url}?v=${Date.now()}`
+  }
+
   const destino = `estudio/projetos/${cand.id}.mp4`
   const { data: subida } = await db.storage.from('uploads').createSignedUploadUrl(destino, { upsert: true })
   if (!subida) {
     await db.from('estudio_projetos').update({ estado: 'erro', erro: 'motor: falhou a preparar o upload' }).eq('id', cand.id)
     return NextResponse.json({ erro: 'Não consegui preparar o upload.' }, { status: 500 })
   }
+  // Capa do reel (22/11, Ricardo: todos os reels levam capa, cada uma diferente): o robô desenha-a e sobe-a aqui.
+  const { data: subidaCapa } = await db.storage.from('uploads').createSignedUploadUrl(`estudio/projetos/${cand.id}-capa.jpg`, { upsert: true })
   return NextResponse.json({
     ok: true,
     trabalho: {
@@ -74,7 +90,9 @@ export async function GET(request: NextRequest) {
       marca: cand.marca,
       projeto: { ...p, clips: p.clips.map(comUrl), musica: p.musica ? comUrl(p.musica) : null },
       palavras,
+      narracao_url,
       subir_url: subida.signedUrl,
+      capa_subir_url: subidaCapa?.signedUrl ?? null,
     },
   })
 }
@@ -84,14 +102,19 @@ export async function POST(request: NextRequest) {
   const b = await request.json().catch(() => ({}))
   if (typeof b.id !== 'string') return NextResponse.json({ erro: 'Falta o id.' }, { status: 400 })
   const db = getSupabaseAdmin()
-  const { data: p } = await db.from('estudio_projetos').select('id, estado').eq('id', b.id).maybeSingle()
+  const { data: p } = await db.from('estudio_projetos').select('id, estado, projeto').eq('id', b.id).maybeSingle()
   if (!p || p.estado !== 'a_montar') return NextResponse.json({ erro: 'Trabalho desconhecido ou já fechado.' }, { status: 409 })
   if (!b.ok) {
     await db.from('estudio_projetos').update({ estado: 'erro', erro: String(b.erro || 'erro').slice(0, 500) }).eq('id', p.id)
     return NextResponse.json({ ok: true })
   }
   const url = db.storage.from('uploads').getPublicUrl(`estudio/projetos/${p.id}.mp4`).data.publicUrl
-  await db.from('estudio_projetos').update({ estado: 'pronto', erro: null, video_url: `${url}?v=${Date.now()}`, atualizado_em: new Date().toISOString() }).eq('id', p.id)
+  const agora = Date.now()
+  const atual = (p.projeto ?? {}) as Record<string, any>
+  const projeto = b.capa
+    ? { ...atual, cinematico: { ...(atual.cinematico ?? {}), capa_url: `${db.storage.from('uploads').getPublicUrl(`estudio/projetos/${p.id}-capa.jpg`).data.publicUrl}?v=${agora}` } }
+    : atual
+  await db.from('estudio_projetos').update({ estado: 'pronto', erro: null, video_url: `${url}?v=${agora}`, projeto, atualizado_em: new Date().toISOString() }).eq('id', p.id)
   // Reel do clone HeyGen → fila do Instagram como rascunho + pedido de aprovação ao Ricardo.
   const { rascunhoDoReelDoClone } = await import('@/lib/estudio/reel-aprovacao')
   const post_id = await rascunhoDoReelDoClone(db, p.id)

@@ -134,6 +134,40 @@ export type Cinematico = {
    *  documental — barras de cinema, imagens a ecrã inteiro em corte (a voz continua), legenda discreta
    */
   molde?: MoldeEdicao
+  /**
+   * Lista viva (22/11/2026, formatos virais): um painel que se vai preenchendo enquanto o gémeo
+   * fala — «3 coisas», «5 erros» (contagem decrescente), «o caminho do zero». Cada item entra quando
+   * a legenda diz as palavras dele (ou, sem correspondência, a intervalos iguais).
+   */
+  lista?: { titulo: string; itens: string[]; contagem?: boolean }
+  /**
+   * Reel narrado (22/11/2026, «5 reels por dia» por conta sem gastar HeyGen): sem gémeo; a voz é o
+   * clone Fish do Ricardo (gerada pelo site) e o fundo são as fotos reais animadas + b-roll.
+   */
+  narrado?: boolean
+  /**
+   * Capa do reel (22/11/2026, Ricardo: todos os reels levam capa, cada uma diferente; RG no estilo
+   * dele, MTM com o branding MTM). Linhas do título: w = branco, c = destaque (ciano/ouro), box = faixa, k = kicker dourado por cima (só MTM).
+   * Sem linhas, o robô parte o gancho. capa_url é a imagem já desenhada (vai para media_urls[1]).
+   */
+  capa?: [('w' | 'c' | 'box' | 'k'), string][]
+  capa_url?: string
+  /** 22/11 (Ricardo): reel «para música trend» — sai só com a voz e fica em rascunho para ele juntar o áudio na app. */
+  sem_musica?: boolean
+  /** Áudio trend de referência (nome + link) que ele junta na app. */
+  audio?: string
+  /** Estilo de edição: classico · palavra · nativo · noir (sem ele o robô roda por reel). */
+  estilo?: 'classico' | 'palavra' | 'nativo' | 'noir'
+  /**
+   * Referências visuais (22/11): imagem real do que a voz nomeia (GTA VI, Munger, o gráfico…), mostrada quando a
+   * palavra `quando` é dita. url https de fonte livre ou kit de imprensa oficial; fonte = crédito no canto.
+   */
+  visuais?: { quando: string; url: string; etiqueta?: string; fonte?: string; dur?: number }[]
+  /** Capa com referência (22/11): imagem real à direita (omissão: 1.ª de visuais) e logo da marca citada no canto. */
+  capa_ref?: string
+  capa_logo?: string
+  /** Funil que o CTA alimenta: Educação · PU Prime IB · Ricardo · B2B. */
+  funil?: string
 }
 
 export const MOLDES_EDICAO = ['cinema', 'impacto', 'documental'] as const
@@ -156,7 +190,34 @@ export function normalizarCinematico(v: any): Cinematico | null {
     apoio: (Array.isArray(v.apoio) ? v.apoio : []).filter((u: unknown) => typeof u === 'string' && /^https:\/\//.test(u)).slice(0, 4),
     cta_url: txt(v.cta_url, 80).trim(),
     ...((MOLDES_EDICAO as readonly string[]).includes(v.molde) ? { molde: v.molde as MoldeEdicao } : {}),
+    ...normalizarLista(v.lista),
+    ...(v.narrado === true ? { narrado: true } : {}),
+    ...normalizarCapa(v.capa),
+    ...(typeof v.capa_url === 'string' && /^https:\/\//.test(v.capa_url) ? { capa_url: v.capa_url.slice(0, 400) } : {}),
+    ...(typeof v.capa_ref === 'string' && /^https:\/\//.test(v.capa_ref) ? { capa_ref: v.capa_ref.slice(0, 400) } : {}),
+    ...(typeof v.capa_logo === 'string' && /^https:\/\//.test(v.capa_logo) ? { capa_logo: v.capa_logo.slice(0, 400) } : {}),
+    ...(Array.isArray(v.visuais) ? { visuais: v.visuais.filter((r: any) => r && typeof r.quando === 'string' && typeof r.url === 'string' && /^https:\/\//.test(r.url)).slice(0, 4).map((r: any) => ({ quando: txt(r.quando, 40).trim(), url: r.url.slice(0, 400), ...(r.etiqueta ? { etiqueta: txt(r.etiqueta, 24).trim() } : {}), ...(r.fonte ? { fonte: txt(r.fonte, 40).trim() } : {}), ...(Number(r.dur) > 0 ? { dur: Math.min(4, Number(r.dur)) } : {}) })) } : {}),
+    ...(['classico', 'palavra', 'nativo', 'noir'].includes(v.estilo) ? { estilo: v.estilo } : {}),
+    ...(v.sem_musica === true ? { sem_musica: true } : {}),
+    ...(typeof v.audio === 'string' && v.audio.trim() ? { audio: txt(v.audio, 200).trim() } : {}),
+    ...(typeof v.funil === 'string' && v.funil.trim() ? { funil: txt(v.funil, 30).trim() } : {}),
   }
+}
+
+function normalizarCapa(c: any): { capa?: Cinematico['capa'] } {
+  if (!Array.isArray(c)) return {}
+  const linhas = c
+    .filter((l: any) => Array.isArray(l) && ['w', 'c', 'box', 'k'].includes(l[0]) && typeof l[1] === 'string' && l[1].trim())
+    .map((l: any) => [l[0], txt(l[1], 40).trim()] as [('w' | 'c' | 'box' | 'k'), string])
+    .slice(0, 4)
+  return linhas.length ? { capa: linhas } : {}
+}
+
+function normalizarLista(l: any): { lista?: Cinematico['lista'] } {
+  if (!l || typeof l !== 'object' || !Array.isArray(l.itens)) return {}
+  const itens = l.itens.filter((i: unknown) => typeof i === 'string' && i.trim()).map((i: string) => txt(i, 60).trim()).slice(0, 7)
+  if (itens.length < 2) return {}
+  return { lista: { titulo: txt(l.titulo, 40).trim(), itens, ...(l.contagem ? { contagem: true } : {}) } }
 }
 
 export const PROJETO_VAZIO: Projeto = {

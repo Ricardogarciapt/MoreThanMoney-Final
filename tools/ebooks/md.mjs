@@ -221,7 +221,10 @@ function ilustrado(tipo, arg, corpo, ctx) {
       if (!src) { ctx?.avisos?.push(`foto em falta: ${f}`); return '' }
       return `<figure style="--r:${inclina()}deg"><img src="${src}" alt=""><figcaption>${inline(leg)}</figcaption></figure>`
     }).join('')
-    return `<div class="galeria${arg ? '' : ''}">${arg ? `<div class="ga-tit">${inline(arg)}</div>` : ''}<div class="ga-grelha">${itens}</div></div>`
+    const fichs = corpo.filter((l) => l.trim()).map((l) => l.split('|')[0].trim())
+    const ecras = fichs.length && fichs.every((f) => /^mt5-(video|tel)-/.test(f))
+    const tel = ecras && fichs.every((f) => /^mt5-tel-/.test(f))
+    return `<div class="galeria${ecras ? ' ecras' : ''}${tel ? ' tel' : ''}"${ecras ? ` style="--n:${fichs.length}"` : ''}>${arg ? `<div class="ga-tit">${inline(arg)}</div>` : ''}<div class="ga-grelha">${itens}</div></div>`
   }
   // ecra
   const linhasE = corpo.filter((l) => l.trim()).map((l) => {

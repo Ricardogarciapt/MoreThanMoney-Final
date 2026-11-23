@@ -20,6 +20,7 @@
  */
 import { blocoFramework } from "@/lib/framework-mtm"
 import { LANGUAGE_NAMES_EN } from "@/lib/chat-traducao-idiomas"
+import { NOME_LINGUA_EN } from "./lingua"
 import { baseConhecimento, blocoSalas } from "./conhecimento"
 
 export const TIPOS_SINAL = [
@@ -78,8 +79,9 @@ export const MENTOR_SISTEMA = `És o Mentor da More Than Money (MTM): o acompanh
 Quando o aluno contar um progresso concreto, dá-lhe os parabéns de forma genuína. Se fizer sentido, pergunta se aceita que a equipa o contacte para partilhar a história — só com autorização dele, e nunca insistas.`
 
 /** Língua: a da ÚLTIMA mensagem escrita pelo aluno; a da app só quando a mensagem veio de um botão. */
-export function blocoIdioma(langApp: string, ultimaPorBotao: boolean): string {
+export function blocoIdioma(langApp: string, ultimaPorBotao: boolean, linguaDetetada?: string | null): string {
   const nomeApp = LANGUAGE_NAMES_EN[langApp] || langApp
+  const nomeDet = linguaDetetada ? NOME_LINGUA_EN[linguaDetetada] || linguaDetetada : ""
   return `## Língua (regra mais importante)
 - Responde SEMPRE na língua em que o aluno escreveu a ÚLTIMA mensagem, mesmo que estas instruções estejam em português.
 - Se ele mudar de língua a meio, mudas tu também, sem comentar a mudança.
@@ -90,7 +92,11 @@ export function blocoIdioma(langApp: string, ultimaPorBotao: boolean): string {
       ? `\n- A última mensagem foi gerada por um botão da app, não escrita por ele: responde em ${nomeApp} (código ${langApp}), a língua da app dele.`
       : `\n- A língua da app dele é ${nomeApp} (código ${langApp}); usa-a só se não conseguires perceber a língua da mensagem.`
   }
-- Nunca traduzas nomes de produtos, scanners, educadores ou cursos (MTM, MTM Auto, Premium, GoldKiller, Sensei, DEFY, WebTrader, MTM Funded, Fast Start…).`
+- Nunca traduzas nomes de produtos, scanners, educadores ou cursos (MTM, MTM Auto, Premium, GoldKiller, Sensei, DEFY, WebTrader, MTM Funded, Fast Start…).${
+    nomeDet && !ultimaPorBotao
+      ? `\n- A última mensagem do aluno está em ${nomeDet} (código ${linguaDetetada}). Escreve a resposta inteira em ${nomeDet}, do princípio ao fim, sem passar para português a meio.\n\nReply ONLY in ${nomeDet}. Do not write your reasoning; write only the message to the student.`
+      : `\n\nWrite only the message to the student, never your reasoning.`
+  }`
 }
 
 export function blocoContexto(c: ContextoAluno): string {
@@ -119,6 +125,8 @@ export function montarSistema(o: {
   ultimaPorBotao: boolean
   contexto: ContextoAluno
   comNotas?: boolean
+  /** Língua da última mensagem, vista pelo servidor (`detetarLingua`). */
+  linguaDetetada?: string | null
   salas?: { titulo: string; academia?: string | null; quando?: string | null }[]
 }): string {
   return [
@@ -129,7 +137,7 @@ export function montarSistema(o: {
     blocoFramework("apoio"),
     o.comNotas === false ? "" : BLOCO_NOTAS,
     // A língua vai no fim de propósito: os modelos pequenos dão mais peso ao que lêem por último.
-    blocoIdioma(o.langApp, o.ultimaPorBotao),
+    blocoIdioma(o.langApp, o.ultimaPorBotao, o.linguaDetetada),
   ]
     .filter(Boolean)
     .join("\n\n")

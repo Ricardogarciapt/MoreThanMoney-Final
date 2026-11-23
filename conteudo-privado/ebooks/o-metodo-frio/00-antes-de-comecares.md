@@ -16,7 +16,7 @@ Quente é decidir durante a operação. Frio é decidir antes dela, por escrito,
 
 Cometi erros. Alguns saíram caros, em dinheiro e em noites mal dormidas. Não os escrevo aqui para fazer drama, escrevo-os porque cada um deles virou uma regra, e as regras são a parte deste negócio que se pode ensinar.
 
-A primeira versão deste e-book chamava-se «Investir sem Emoções». Era um resumo de uma aula: útil, mas genérico, e com um nome que prometia uma coisa (investir) e entregava outra (trading de Forex). Esta é a edição refeita do zero. Mais direta, mais prática, com o MetaTrader 5 passo a passo e com os erros clássicos postos à frente, para não os teres de pagar tu.
+A primeira versão deste e-book chamava-se «Investir sem Emoções». Era um resumo de uma aula: útil, mas genérico, e com um nome que prometia uma coisa (investir) e entregava outra (trading de Forex). Esta é a edição refeita do zero. Mais direta, mais prática, com o MetaTrader 5 passo a passo ao longo dos capítulos, ecrãs reais da app e os erros clássicos postos à frente, para não os teres de pagar tu.
 
 Se já leste o meu outro livro, «Destruí Tudo. E Ainda Bem.», sabes de onde venho e porque é que a disciplina é a minha obsessão. Este é o irmão técnico desse. Lá está a história e a mentalidade. Aqui está a bancada de trabalho.
 
@@ -24,6 +24,23 @@ Se já leste o meu outro livro, «Destruí Tudo. E Ainda Bem.», sabes de onde v
 imagem: O mercado não sabe que existes.
 legenda: E isso é uma ótima notícia. Quer dizer que não está contra ti. Só tens de deixar de estar contra ti próprio. 🧊
 :::
+
+## De onde venho, em poucas linhas
+
+Nasci no Porto e fui adotado aos 17 meses por uma família humilde. Crescemos nove pessoas numa casa centenária com quatro ou cinco divisões. A comida dividia-se, a higiene era a possível, e vi pessoas de quem gostava adoecer e partir por causa de uma pobreza que não se escolhe. Só por volta dos oito anos comecei a chamar-lhes mãe, avó e irmã. Essas palavras custaram-me a sair, e ficaram.
+
+Aos 16 anos pedi à minha avó Miquinhas 25 € para comprar umas calças largas de hip-hop. Era a moda no Porto daquela altura e eu queria ser igual aos outros. Ela olhou para mim e disse: «Oh Ricardo, já não posso, já toda a gente me cravou.» O subsídio que eu recebia por ser adotado estava a alimentar a casa inteira: havia doentes, havia desempregados, e o dinheiro não esticava mais. Foi nesse dia que decidi que não ia morrer pobre. Uma semana depois estava a trabalhar e a estudar, e mudei-me para a casa ao lado, que tinha uma renda de 25 €. O mesmo valor das calças.
+
+:::cartao Portugal, para contexto
+- **2003:** o salário mínimo nacional era de 356,60 €. Foi o ano em que entrei para o Exército.
+- **2011 a 2014:** pedido de assistência financeira, programa da troika e salário mínimo congelado nos 485 €. Na função pública houve cortes nos salários e nos subsídios.
+- **2013:** o desemprego passou os 17 %. Entre os jovens, mais de um em cada três não tinha trabalho.
+- **2021 a 2023:** pandemia, depois inflação de perto de 8 % em 2022 e prestações da casa a subir com a Euribor.
+
+Números públicos (INE, Banco de Portugal), arredondados. Servem para perceberes o terreno em que muita gente da minha geração tentou construir alguma coisa.
+:::
+
+Não conto isto para que tenhas pena. Conto-o porque o Forex atrai muita gente exatamente desse sítio: quem faz contas ao fim do mês, quem já trabalha muito e quer uma saída. É a pessoa que mais precisa de um método frio, porque é a que mais tem a perder com um método quente. Ao longo do livro vou contar-te, capítulo a capítulo, os pedaços da minha vida que me ensinaram cada regra.
 
 ## O que este livro é (e o que não é)
 
@@ -40,12 +57,19 @@ Não é um atalho. Não há aqui nenhuma estratégia que «nunca perde», nem pr
 
 ## Como ler este livro
 
-Cada capítulo tem quatro peças, sempre pela mesma ordem:
+Este livro não deixa a parte prática para o fim. No capítulo 1 instalas o MetaTrader 5 numa conta demo, e a partir daí cada capítulo junta uma ideia nova ao ecrã da app onde ela se aplica. Aprendes o spread a olhar para as tuas Cotações, o lote a olhar para o campo «Volume», o gráfico com o dedo no gráfico. Quando chegares à ordem, no capítulo 6, já sabes usar todas as peças.
+
+[[grafico:percurso-mt5]]
+
+Cada capítulo tem as mesmas peças, sempre pela mesma ordem:
 
 1. **Uma ideia** que muda a forma como vês o mercado.
-2. **Um erro clássico**, aquele que quase toda a gente comete no início, com a explicação do que custa.
-3. **Uma regra fria**, curta, para colares perto do ecrã.
-4. **Uma tarefa para hoje** no MetaTrader 5 ou num caderno, que se faz em menos de 30 minutos.
+2. **O ecrã**: onde essa ideia vive no MetaTrader, com capturas reais da app.
+3. **Um erro clássico**, aquele que quase toda a gente comete no início, com a explicação do que custa.
+4. **Um pedaço da história da Marta**, uma personagem de exemplo que começa do zero no capítulo 1 e aplica cada regra, com tropeções incluídos, até ao fim do livro.
+5. **Um pedaço da minha vida**, do Porto aos paraquedistas, aos Fuzileiros e à GNR, com o momento em que aprendi essa regra.
+6. **Uma regra fria**, curta, para colares perto do ecrã.
+7. **Uma tarefa para hoje** na tua demo ou num caderno, que se faz em menos de 30 minutos.
 
 :::cartao As cinco regras frias deste livro
 - Decido antes. No momento, só executo.
@@ -55,7 +79,7 @@ Cada capítulo tem quatro peças, sempre pela mesma ordem:
 - Tudo o que faço fica no diário.
 :::
 
-Lê com o MetaTrader 5 aberto numa conta demo. Lê com um caderno ao lado. Este livro foi feito para ser riscado.
+Lê com o telemóvel ao lado e, a partir do capítulo 1, com o MetaTrader 5 aberto numa conta demo. Lê com um caderno ao lado. Este livro foi feito para ser riscado.
 
 :::exercicio Antes de virares a página
 1. Escreve numa folha porque é que queres aprender Forex. Uma frase, sem enfeites: ____________

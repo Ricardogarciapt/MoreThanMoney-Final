@@ -10,11 +10,15 @@ I'm Ricardo Garcia. I grew up in an adoptive family, from humble origins, in the
 
 There's one thing that people who don't grow up with a very firm base learn early: to look ahead and to count what they have. It took me years to realise that resisting on your own is an expensive method. And that it can be replaced by a better one.
 
+We were nine in a century-old house with four or five rooms. It was only around the age of eight that I started saying mum, grandma and sister. My adoptive grandfather was strict, but he was also the one who took me by the hand to the backyard, to the chickens and the vegetable patches, and who worked at the Vilares grocery store, among the dried cod and the hanging chouriços. When he died, I lost the person who supported me, told me off and gave me a direction. My adoptive mother, a classroom assistant at a school in Porto, never got over that loss, and she fell ill.
+
 [[foto: rg-recomeco.jpg | Today. The smile came later, not before. | lado]]
 
 ## Sixteen years old
 
 At sixteen I realised I had to be different. Not because I was better than other people. Because, from the very start, I already was, and the path I could see ahead of me didn't suit me. That feeling never went away, and it stayed with me through the years that followed.
+
+The exact moment had a price: €25. I asked my grandmother Miquinhas for it, for a pair of baggy hip-hop trousers, the kind everyone wore in Porto. She, who gave me the most love, answered: "Oh Ricardo, I can't anymore, everyone has already borrowed from me." The allowance I got for being adopted was feeding the house. That day I decided I was not going to die poor. A week later I was working and studying, and I moved into the house next door, with a rent of €25.
 
 :::destaque
 When you feel you were born "for something else", the feeling doesn't tell you what to do. It only tells you that the path you're on is no longer yours.
@@ -23,6 +27,8 @@ When you feel you were born "for something else", the feeling doesn't tell you w
 ## Fourteen years of service
 
 Before I got to civilian life, I went through three state institutions. I joined the Army (Exército) in 2003, moved to the Marines (Fuzileiros) in 2008 and then to the GNR (National Republican Guard, a Portuguese police force) in 2010. In total, fourteen years of service. That's where I built the discipline I talk about in the next chapter, and it's also where I realised that discipline on its own isn't enough to change your life.
+
+In the Army I chose the paratroopers, even though I was afraid of heights. I got in by the skin of my teeth in the physical tests and came out the best of the course in that part. On the second jump my right knee blew out on the landing, one day before the wings and the beret. I left to look after my health. It was my first giving up, and I was told I would never run again. Then came the cavalry and, after that, civilian life in restaurants, warehouses and logistics. Unemployed, I applied to the Marines without knowing how to swim. I got in, trained three times a day and finished the course in 12th place. In the GNR I guided myself by three phrases: "There is always someone worse off than us", "Where one eats, two can eat" and "Time does not stop".
 
 One thing discipline teaches very well is how to comply. Keeping to schedules, following orders, doing what's expected of you. The problem is that complying well with a life you didn't choose is a sophisticated way of getting stuck. That's the hardest part to admit, which is why I'm writing it down here.
 
@@ -39,6 +45,8 @@ rg-curso-gnr.jpg | My GNR course. The whole class, in white.
 I left my dream job. It sounds contradictory, and it is. But the job, however much I loved it, stopped giving me what I needed. And what I needed at that time was time, clear thinking and being close to my family.
 
 Liliana, my wife, was fighting breast cancer. Constança was three years old. We sold the house we loved so we'd be nearer the treatments. The state salary wasn't enough. I was spending three hours a day commuting. I had no freedom and no headspace. On top of that there was post-traumatic stress from a past I'd been carrying on my own, and it was wearing me down.
+
+That year I no longer had any living adoptive family: my grandmother, my sister Carla and my mother had all passed away. My take-home pay was €1,037 a month. The last straw was a piece of paper. To justify an absence, they asked me for a declaration of honour that my wife had cancer. I don't blame the person who asked for it, or the institution where I served. But that day I felt like a number. I started studying personal development and trading at night and on the train, and about six months later I left. In *The Cold Method* I tell these years in more detail, chapter by chapter.
 
 :::historia
 What happened in my life doesn't come down to one career choice. It was a set of pieces falling at the same time, and I was the last to notice that the problem wasn't one piece: it was the whole structure.

@@ -89,7 +89,8 @@ export async function rascunhoDoReelDoClone(db: SupabaseClient, projetoId: strin
       ig_username: ARROBA[perfil].slice(1),
       pillar: 'estudio',
       media_type: 'REELS',
-      media_urls: [video],
+      // media_urls[1] (imagem) = capa do reel (lib/instagram/publish.ts).
+      media_urls: p.cinematico?.capa_url ? [video, String(p.cinematico.capa_url)] : [video],
       caption: legendaDoGuiao(g),
       scheduled_at: proximaJanela(Date.now()).toISOString(),
       status: 'draft',

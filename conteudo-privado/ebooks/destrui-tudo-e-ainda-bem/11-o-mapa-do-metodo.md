@@ -71,14 +71,6 @@ tempo: 15 min a 1 hora
 Funciona por cores: verde compra, vermelho vende. Junta cinco peças (nuvem, posição da nuvem, média exponencial, volume e RSI) e cada uma vale um ponto. As caixas lilás marcam mercado lateral, e mercado lateral é sítio onde não se entra.
 :::
 
-:::scanner Quantum
-foto: sc-quantum.jpg
-estilo: Tendência com entrada em recuo
-ativos: Forex, cripto, índices, ouro
-tempo: 15 min a 1 hora
-Três tempos, sempre pela mesma ordem: confirmar a tendência, esperar que o preço recue e entrar quando o oscilador está na zona certa e aparece o sinal. A parte difícil não é ver o sinal. É esperar pelo recuo.
-:::
-
 :::scanner Sniper Pro
 foto: sc-sniper-pro.jpg
 estilo: Intradiário, impulso e reversão
@@ -116,7 +108,7 @@ A pergunta certa não é «qual é a melhor». É «qual é que cabe no meu dia�
 | Se a tua vida é assim | Começa a olhar para |
 |---|---|
 | Tens 15 minutos de manhã e outros 15 à noite | Leitura de regressão no gráfico de 1 hora ou 4 horas (capítulo 7) |
-| Tens a hora de almoço, que em Lisboa coincide com Londres aberta | Sniper Pro ou Quantum, com confirmação no gráfico maior |
+| Tens a hora de almoço, que em Lisboa coincide com Londres aberta | Sniper Pro, com confirmação no gráfico maior |
 | Tens a tarde livre e consegues estar atento | Golden Zone ou TrendShot, só na sobreposição Londres e Nova Iorque |
 | Só podes ver ao fim de semana | Gráfico diário e semanal; nada de scalping |
 

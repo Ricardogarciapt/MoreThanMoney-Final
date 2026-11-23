@@ -51,13 +51,29 @@ Rui: Fechado. Vou ao ginásio.
 
 O Rui é uma personagem de exemplo, mas a conversa é das mais comuns que existem. Ter alguém a quem dizer em voz alta «vou partir a regra» já trava metade das asneiras.
 
+:::historia A Marta, dia 24
+Duas perdas antes das 8h. As duas com plano, as duas com stop, 5 € cada. A Marta sentiu a vontade conhecida: «a terceira recupera tudo». Olhou para o fundo do telemóvel, onde estava o plano, e leu a linha «Duas perdas, fecha o dia». Em vez de fechar só a app, foi a Configurações e terminou a sessão da conta. Para voltar a entrar teria de procurar a palavra-passe no caderno, e esses trinta segundos de fricção chegaram. Escreveu no diário: estado emocional 2, regra cumprida. Foi a primeira vez que se sentiu orgulhosa de um dia negativo.
+:::
+
 ## Rotinas que arrefecem
 
 - **Antes da sessão**: lê o plano em voz alta, respira fundo três vezes, escreve o estado emocional no diário.
-- **Durante**: uma operação de cada vez; depois de clicar, sai do gráfico. Ficar a olhar para cada tick não muda o resultado, só o teu batimento cardíaco.
+- **Durante**: uma operação de cada vez; depois de clicar, sai do gráfico e deixa os alertas do capítulo 7 avisarem-te. Ficar a olhar para cada tick não muda o resultado, só o teu batimento cardíaco.
 - **Depois**: diário preenchido, MT5 fechado, alarme de fim de janela respeitado.
 
 Há um livro que recomendo a quem quer ir mais fundo nisto: «The Daily Trading Coach», de Brett Steenbarger, um psicólogo que trabalha com traders. Cada capítulo é uma lição curta para aplicar no dia seguinte.
+
+## Da minha vida: o ano em que tudo veio junto
+
+[[foto: rg-pb.jpg | Frio não é não sentir. É sentir e decidir na mesma. | lado]]
+
+No dia de anos da minha filha já se suspeitava do cancro da Liliana. Nesse mesmo dia, o meu sobrinho teve um acidente de carro. A rapariga que ia com ele morreu. Ele esteve em coma e hoje anda de cadeira de rodas. A Constança tinha três anos. Em novembro o diagnóstico confirmou-se e começaram os tratamentos.
+
+Nessa altura já não tinha família adotiva viva. A minha avó morreu de velhice quando eu estava no curso de Fuzileiros. A minha irmã Carla morreu de cancro do pulmão em 2019, no mesmo mês da minha mãe. Só conheci a minha família biológica depois do funeral da minha mãe, e não ficámos ligados. Mudámo-nos para Santarém à procura de apoio, vendemos a casa de que gostávamos, e o dinheiro e o tempo não chegavam para nada.
+
+Também trazia comigo uma agressão de que fui alvo, fora de serviço, por causa do meu trabalho. Deixou marcas que demorei anos a tratar. Não vou alongar-me nisso aqui.
+
+Tirei a licença parental toda e estive presente. E foi nesse ano, o pior de todos, que aprendi a regra mais importante deste livro: as emoções não se desligam, gerem-se. Quem decide com a cabeça a ferver perde, no mercado e na vida. As regras de paragem deste capítulo são as que eu precisei de ter quando tudo veio junto.
 
 ## A regra fria deste capítulo
 

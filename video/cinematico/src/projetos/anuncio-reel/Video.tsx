@@ -1,6 +1,6 @@
 import React from 'react'
 import { AbsoluteFill, Audio, Freeze, Img, OffthreadVideo, Sequence, getInputProps, interpolate, random, spring, staticFile, useCurrentFrame, useVideoConfig } from 'remotion'
-import { anuncioDe, segsDe, videoDe, musicaDe, fimVoz, type Anuncio, type Imagem } from './anuncios'
+import { anuncioDe, segsDe, videoDe, musicaDe, semMusica, fimVoz, type Anuncio, type Imagem } from './anuncios'
 import { FPS, OURO, OURO_CLARO, FUNDO, MARCA } from '../../motor/marca'
 import { Pelicula, Plano, clamp, ease } from '../../motor/util'
 
@@ -41,6 +41,8 @@ function modoPip(fr: number, imgs: Imagem[]) {
 
 /* ── Cortes secos com zoom (jump cut) a cada frase ── */
 const moldeDe = (a: Anuncio) => (getInputProps() as { molde?: Anuncio['molde'] }).molde ?? a.molde ?? 'cinema'
+const estiloDe = (a: Anuncio) => (getInputProps() as { estilo?: Anuncio['estilo'] }).estilo ?? a.estilo ?? 'classico'
+const NOIR = 'grayscale(1) contrast(1.28) brightness(0.96)'
 const METADE = Math.round(H * 0.5)
 const BARRA = 170 // barras de cinema do molde documental
 
@@ -68,14 +70,15 @@ const Gemeo: React.FC<{ k: string; a: Anuncio }> = ({ k, a }) => {
   const w = interpolate(m, [0, 1], [W, alvo.w]), h = interpolate(m, [0, 1], [H, alvo.h])
   const x = interpolate(m, [0, 1], [0, alvo.x]), y = interpolate(m, [0, 1], [0, alvo.y])
   const opGemeo = molde === 'documental' ? 1 - m : 1
-  const zf = zoomFrase(t, k, molde)
+  const est = estiloDe(a)
+  const zf = zoomFrase(t, k, molde) * (est === 'palavra' ? 1.04 : 1)
   // pequeno tremor no corte
   const ultimoCorte = segsDe(k).filter((s, i, arr) => i > 0 && s[0] <= t && /[.?:!]$/.test(arr[i - 1][2].trim())).pop()
   const desdeCorte = ultimoCorte ? fr - f(ultimoCorte[0]) : 99
   const shake = molde === 'documental' ? 0 : desdeCorte < 6 ? (6 - desdeCorte) * 1.6 * Math.sin(desdeCorte * 2.3) : 0
   const push = interpolate(fr, [0, f(fim)], [1.0, 1.05])
   const z = (m > 0.5 && molde === 'cinema' ? 1.12 : zf) * push
-  const filtro = `contrast(1.08) saturate(1.06) brightness(${1 - fimCena * 0.55}) blur(${fimCena * 14}px)`
+  const filtro = `${est === 'noir' ? NOIR : est === 'nativo' ? 'saturate(1.02)' : 'contrast(1.08) saturate(1.06)'} brightness(${1 - fimCena * 0.55}) blur(${fimCena * 14}px)`
   const estilo: React.CSSProperties = { width: '100%', height: '100%', objectFit: 'cover', transform: `translate(${shake}px, ${shake * 0.6}px) scale(${z})`, transformOrigin: '50% 30%', filter: filtro }
   return (
     <div style={{ position: 'absolute', left: x, top: y, width: w, height: h, opacity: opGemeo, borderRadius: molde === 'cinema' ? m * 30 : 0, overflow: 'hidden', zIndex: 5, borderTop: molde === 'impacto' && m > 0.05 ? `${Math.round(6 * m)}px solid ${OURO_CLARO}` : undefined, boxShadow: molde === 'cinema' && m > 0.05 ? `0 30px 90px rgba(0,0,0,.65), 0 0 0 ${3 * m}px ${OURO_CLARO}, 0 0 ${50 * m}px ${OURO}` : undefined }}>
@@ -177,8 +180,30 @@ const Legendas: React.FC<{ k: string; a: Anuncio }> = ({ k, a }) => {
   if (!seg) return null
   const palavras = seg[2].split(' ')
   const pos = (t - seg[0]) / Math.max(0.2, seg[1] - seg[0])
-  const ativa = Math.min(palavras.length - 1, Math.floor(pos * palavras.length))
+  const ativa = Math.max(0, Math.min(palavras.length - 1, Math.floor(pos * palavras.length)))
   const molde = moldeDe(a)
+  const est = estiloDe(a)
+  if (est === 'palavra') {
+    // uma palavra de cada vez, enorme, com murro (estilo «palavra a palavra» dos virais)
+    const p = palavras[ativa] || ''
+    if (!p) return null
+    const iniP = f(seg[0] + (ativa / palavras.length) * (seg[1] - seg[0]))
+    const s = spring({ frame: fr - iniP, fps, config: { damping: 11, stiffness: 260 } })
+    const forte = p.replace(/[^\p{L}\p{N}]/gu, '').length >= 6 || /\d/.test(p)
+    return (
+      <div style={{ position: 'absolute', left: 40, right: 40, top: a.lista ? 1500 : 1180, textAlign: 'center', zIndex: 9 }}>
+        <span style={{ display: 'inline-block', fontFamily: ANTON, textTransform: 'uppercase', fontSize: p.length > 10 ? 120 : 156, lineHeight: 1, color: forte ? OURO_CLARO : '#fff', transform: `scale(${0.55 + 0.45 * s}) rotate(${(1 - s) * (ativa % 2 ? 4 : -4)}deg)`, WebkitTextStroke: '5px rgba(0,0,0,.9)', paintOrder: 'stroke fill', textShadow: '0 12px 30px rgba(0,0,0,.85)' }}>{p}</span>
+      </div>
+    )
+  }
+  if (est === 'nativo') {
+    // legenda como a do próprio Instagram: frase em caixas brancas, letra preta, sem efeitos
+    return (
+      <div style={{ position: 'absolute', left: 80, right: 80, top: a.lista ? 1500 : 1320, textAlign: 'center', zIndex: 9, lineHeight: 1.55 }}>
+        <span style={{ fontFamily: "'Helvetica Neue', Arial, sans-serif", fontWeight: 700, fontSize: 58, color: '#111', background: '#fff', padding: '6px 18px', borderRadius: 14, boxDecorationBreak: 'clone', WebkitBoxDecorationBreak: 'clone' }}>{seg[2]}</span>
+      </div>
+    )
+  }
   if (molde === 'documental') {
     // legenda discreta, frase inteira, por cima da barra de baixo
     return (
@@ -189,7 +214,7 @@ const Legendas: React.FC<{ k: string; a: Anuncio }> = ({ k, a }) => {
       </div>
     )
   }
-  const top = molde === 'impacto' && modoPip(fr, a.imagens) > 0.5 ? METADE - 70 : 1440
+  const top = a.lista ? 1470 : molde === 'impacto' && modoPip(fr, a.imagens) > 0.5 ? METADE - 70 : 1440
   return (
     <div style={{ position: 'absolute', left: 60, right: 60, top, textAlign: 'center', zIndex: 9 }}>
       {palavras.map((p, i) => {
@@ -204,10 +229,47 @@ const Legendas: React.FC<{ k: string; a: Anuncio }> = ({ k, a }) => {
 }
 
 /* ── Etiquetas que entram com a voz ── */
+/**
+ * Lista viva (22/11, formato viral «lista que se preenche»): painel de vidro sobre o peito do gémeo
+ * (a cara fica livre), cada linha entra com mola quando a voz a diz; a linha activa fica a ouro.
+ */
+const ListaViva: React.FC<{ a: Anuncio }> = ({ a }) => {
+  const fr = useCurrentFrame()
+  const { fps } = useVideoConfig()
+  const t = fr / FPS
+  const l = a.lista
+  if (!l || t < a.gancho.ate - 0.2 || t >= a.cta.de) return null
+  const n = l.itens.length
+  const linha = n > 5 ? 82 : 96
+  const altura = 96 + n * linha
+  const topo = 1400 - altura
+  const ativa = l.itens.reduce((m, it, i) => (t >= it.em ? i : m), -1)
+  const entrada = spring({ frame: fr - f(a.gancho.ate - 0.2), fps, config: { damping: 16, stiffness: 160 } })
+  const saida = interpolate(t, [a.cta.de - 0.35, a.cta.de], [1, 0], clamp)
+  return (
+    <div style={{ position: 'absolute', left: 54, right: 54, top: topo, height: altura, zIndex: 8, opacity: entrada * saida, transform: `translateY(${(1 - entrada) * 60}px)`, borderRadius: 30, background: 'rgba(8,8,10,.74)', border: `2px solid color-mix(in srgb, ${OURO_CLARO} 70%, transparent)`, boxShadow: `0 24px 70px rgba(0,0,0,.6), 0 0 40px color-mix(in srgb, ${OURO} 30%, transparent)`, backdropFilter: 'blur(14px)', padding: '22px 34px', boxSizing: 'border-box' }}>
+      <div style={{ fontFamily: OSW, fontWeight: 700, fontSize: 36, letterSpacing: 5, textTransform: 'uppercase', color: OURO_CLARO, height: 60 }}>{l.titulo}</div>
+      {l.itens.map((it, i) => {
+        const s = spring({ frame: fr - f(it.em), fps, config: { damping: 14, stiffness: 210 } })
+        const on = i === ativa
+        const num = l.contagem ? n - i : i + 1
+        const visto = t >= it.em - 0.05
+        return (
+          <div key={i} style={{ display: 'flex', alignItems: 'center', height: linha, gap: 22, borderTop: i ? '1px solid rgba(255,255,255,.08)' : undefined }}>
+            <div style={{ width: 62, height: 62, flex: '0 0 62px', borderRadius: 16, display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: ANTON, fontSize: 40, color: on ? '#111' : visto ? OURO_CLARO : 'rgba(255,255,255,.35)', background: on ? `linear-gradient(135deg, ${OURO_CLARO}, ${OURO})` : 'rgba(255,255,255,.06)', boxShadow: on ? `0 0 26px ${OURO}` : undefined }}>{num}</div>
+            <div style={{ fontFamily: OSW, fontWeight: 600, fontSize: n > 5 ? 42 : 46, lineHeight: 1.1, color: on ? OURO_CLARO : '#fff', opacity: visto ? s : 0, transform: `translateX(${(1 - s) * 50}px)`, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{visto ? it.t : ''}</div>
+          </div>
+        )
+      })}
+    </div>
+  )
+}
+
 const Chips: React.FC<{ a: Anuncio }> = ({ a }) => {
   const fr = useCurrentFrame()
   const { fps } = useVideoConfig()
   const t = fr / FPS
+  if (refAtiva(a, fr)) return null
   const vis = a.chips.map((c, i) => ({ ...c, i })).filter((c) => t >= c.em - 0.1 && t < c.em + 3.0 && t < a.cta.de)
   return (
     <>
@@ -249,7 +311,7 @@ const Destaque: React.FC<{ a: Anuncio }> = ({ a }) => {
 const Cartoes: React.FC<{ a: Anuncio }> = ({ a }) => {
   const fr = useCurrentFrame()
   const { fps } = useVideoConfig()
-  if (!a.cartoes) return null
+  if (!a.cartoes || refAtiva(a, fr)) return null
   const fim = f(a.imagens[a.imagens.length - 1].ate)
   if (fr > fim + 10) return null
   const o = interpolate(fr, [fim - 4, fim + 10], [1, 0], clamp)
@@ -404,19 +466,57 @@ const FotoPlanos: React.FC<{ k: string; de: number; ate: number }> = ({ k, de, a
   )
 }
 
+/** 23/11: enquanto o cartão de referência está no ecrã, chips e cartões laterais saem (nada por cima de nada). */
+const refAtiva = (a: Anuncio, fr: number) => (a.referencias || []).some((x) => fr >= f(x.em) - 4 && fr <= f(x.ate) + 10)
+
+/* ── Referências visuais (22/11): a imagem real do que a voz nomeia salta em cartão quando a palavra é dita ── */
+const Referencias: React.FC<{ a: Anuncio }> = ({ a }) => {
+  const fr = useCurrentFrame()
+  const { fps } = useVideoConfig()
+  const r = (a.referencias || []).find((x) => fr >= f(x.em) - 2 && fr <= f(x.ate) + 8)
+  if (!r) return null
+  // 23/11 «letras sobrepostas»: o cartão nunca entra durante o gancho e acaba sempre acima do texto
+  // que estiver no ecrã (gancho a 1060, lista viva por cima de 1400, legendas a 1180).
+  if (fr < f(a.gancho.ate)) return null
+  const nL = a.lista ? a.lista.itens.length : 0
+  const topoLista = a.lista ? 1400 - (96 + nL * (nL > 5 ? 82 : 96)) : 1180
+  const TOPO = 210
+  const alt = Math.max(420, Math.min(900, topoLista - 50 - TOPO))
+  const larg = Math.min(820, Math.round(alt * 0.84))
+  const A = f(r.em), B = f(r.ate)
+  const s = spring({ frame: fr - A, fps, config: { damping: 12, stiffness: 200 } })
+  const sai = interpolate(fr, [B, B + 8], [1, 0], clamp)
+  const kb = interpolate(fr, [A, B], [1.0, 1.12], clamp)
+  const rot = (A % 2 ? 1 : -1) * 2.5
+  return (
+    <div style={{ position: 'absolute', left: Math.round((W - larg) / 2), top: TOPO, width: larg, height: alt, zIndex: 8, opacity: sai, transform: `translateY(${(1 - s) * 140}px) scale(${0.82 + 0.18 * s}) rotate(${rot * s}deg)` }}>
+      <div style={{ position: 'absolute', inset: 0, borderRadius: 34, overflow: 'hidden', border: `5px solid ${OURO_CLARO}`, boxShadow: `0 40px 110px rgba(0,0,0,.75), 0 0 60px ${OURO}55`, background: '#000' }}>
+        <Img src={staticFile(r.src)} style={{ width: '100%', height: '100%', objectFit: 'cover', transform: `scale(${kb})` }} />
+        {r.fonte ? <div style={{ position: 'absolute', right: 14, bottom: 10, fontFamily: OSW, fontSize: 22, color: 'rgba(255,255,255,.75)', textShadow: '0 2px 6px #000' }}>{r.fonte}</div> : null}
+      </div>
+      {r.t ? <div style={{ position: 'absolute', left: -20, top: -34, padding: '10px 26px', background: OURO_CLARO, color: '#0a0907', fontFamily: ANTON, fontSize: 54, textTransform: 'uppercase', borderRadius: 12, transform: 'rotate(-4deg)', boxShadow: '0 12px 30px rgba(0,0,0,.6)' }}>{r.t}</div> : null}
+    </div>
+  )
+}
+
 export const Video: React.FC = () => {
   const k = chave()
   const a = anuncioDe(k)
   const { durationInFrames } = useVideoConfig()
   const fim = f(fimVoz(k))
   const fr = useCurrentFrame()
-  const volMusica = interpolate(fr, [0, fim - 6, fim + 6], [0.16, 0.16, 0.5], clamp)
+  // 22/11 regras de som dos virais: voz sozinha nos primeiros 2,5 s, depois a música entra como cama a −18 dB
+  // (≈0,126) e só sobe no fim, depois da voz.
+  const entra = Math.min(f(2.5), Math.max(1, fim - 20))
+  const volMusica = interpolate(fr, [0, entra, entra + 12, fim - 6, fim + 6], [0, 0, 0.126, 0.126, 0.5], clamp)
   const molde = moldeDe(a)
+  const est = estiloDe(a)
+  const progresso = interpolate(fr, [0, fim], [0, 1], clamp)
   return (
     <AbsoluteFill style={{ background: FUNDO, overflow: 'hidden' }}>
       <style>{FONTES}</style>
       {/* imagens de apoio por baixo do gémeo em janela (impacto: só na metade de cima) */}
-      <div style={molde === 'impacto' ? { position: 'absolute', left: 0, top: 0, width: W, height: METADE, overflow: 'hidden', zIndex: 2 } : { position: 'absolute', inset: 0, zIndex: 2 }}>
+      <div style={{ ...(molde === 'impacto' ? { position: 'absolute', left: 0, top: 0, width: W, height: METADE, overflow: 'hidden', zIndex: 2 } : { position: 'absolute', inset: 0, zIndex: 2 }), ...(est === 'noir' ? { filter: NOIR } : {}) }}>
       {a.imagens.map((i, n) =>
         i.tipo === 'video' ? (
           <AbsoluteFill key={n} style={{ zIndex: 2 }}><Plano src={i.src} de={f(i.de) - 6} dur={f(i.ate) - f(i.de) + 12} grade={i.grade} zoom={[1.06, 1.18]} escuro={0.15} /></AbsoluteFill>
@@ -438,8 +538,10 @@ export const Video: React.FC = () => {
       {fr >= fim - 6 && <AbsoluteFill style={{ zIndex: 4, opacity: interpolate(fr, [fim - 6, fim + 10], [0, 0.6], clamp) }}><FundoMarca /></AbsoluteFill>}
       <Gemeo k={k} a={a} />
       <Gancho a={a} />
+      <Referencias a={a} />
       <Legendas k={k} a={a} />
       <Chips a={a} />
+      <ListaViva a={a} />
       <Destaque a={a} />
       <Cartoes a={a} />
       <Cta k={k} a={a} />
@@ -450,9 +552,10 @@ export const Video: React.FC = () => {
         {[...a.imagens.map((i) => i.de), a.cta.de].map((s, n) => <Varrimento key={n} em={f(s)} sentido={n % 2 ? -1 : 1} />)}
       </AbsoluteFill>
       {fr < 10 && <AbsoluteFill style={{ zIndex: 19, background: '#000', opacity: interpolate(fr, [0, 9], [1, 0], clamp), pointerEvents: 'none' }} />}
-      <AbsoluteFill style={{ zIndex: 16, pointerEvents: 'none' }}><Pelicula /></AbsoluteFill>
+      {est === 'nativo' ? null : <AbsoluteFill style={{ zIndex: 16, pointerEvents: 'none' }}><Pelicula /></AbsoluteFill>}
+      {est === 'palavra' && fr < fim && <div style={{ position: 'absolute', left: 0, top: 0, height: 10, width: W * progresso, background: OURO_CLARO, zIndex: 18, boxShadow: `0 0 16px ${OURO}` }} />}
       <Moldura k={k} a={a} total={durationInFrames} />
-      <Audio src={staticFile(musicaDe(k))} volume={volMusica} />
+      {semMusica(k) ? null : <Audio src={staticFile(musicaDe(k))} volume={volMusica} />}
     </AbsoluteFill>
   )
 }

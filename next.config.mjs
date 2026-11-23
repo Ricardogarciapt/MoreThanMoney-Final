@@ -1,7 +1,7 @@
 import { withOpinlyConfig } from '@opinly/next'
 
 // E-books entregues por /api/ebooks (PT) e /api/ebooks-traducoes (EN/ES). Livro novo: acrescentar aqui.
-const LIVROS = ['destrui-tudo-e-ainda-bem', 'a-primeira-chave', 'so-as-maos', 'o-metodo-frio']
+const LIVROS = ['destrui-tudo-e-ainda-bem', 'a-primeira-chave', 'so-as-maos', 'o-metodo-frio', 'a-decisao-que-adias']
 const servidos = (slugs) => slugs.flatMap((s) => [`./conteudo-privado/ebooks/${s}/${s}.html`, `./conteudo-privado/ebooks/${s}/${s}.pdf`])
 
 /** @type {import('next').NextConfig} */
@@ -13,10 +13,12 @@ const nextConfig = {
   // separadas: tudo junto dava 360 MB e a Vercel recusa funções acima de 250 MB.
   outputFileTracingIncludes: {
     '/api/ebooks/[slug]': servidos(LIVROS),
-    '/api/ebooks-traducoes/[slug]': servidos(LIVROS.flatMap((l) => [`${l}-en`, `${l}-es`])),
+    '/api/ebooks-traducoes/[slug]': servidos([...LIVROS.flatMap((l) => [`${l}-en`, `${l}-es`]), 'a-primeira-chave-fr']),
   },
   outputFileTracingExcludes: {
     '*': ['public/videos/**', 'public/**/*.mp4', 'public/**/*.mov'],
+    // O formulário grátis só assina links: não precisa dos livros nem do public/ (passava os 250 MB).
+    '/api/ebooks/[slug]/gratis': ['conteudo-privado/**', 'public/**'],
   },
   eslint: {
     ignoreDuringBuilds: true,

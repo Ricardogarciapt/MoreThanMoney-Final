@@ -1,12 +1,13 @@
 'use client'
 import { useState } from 'react'
-import { PERGUNTAS, type Pergunta } from '@/lib/ebooks/gratis'
+import { perguntasDe } from '@/lib/ebooks/gratis'
 
 const campo = 'w-full rounded-xl border border-white/15 bg-black/40 px-4 py-3 text-white placeholder-white/35 outline-none focus:border-[var(--c)]'
 
-export default function FormGratis({ slug }: { slug: string }) {
+export default function FormGratis({ slug, titulo = 'O Método Frio' }: { slug: string; titulo?: string }) {
+  const PERGUNTAS = perguntasDe(slug)
   const [f, setF] = useState({ nome: '', email: '', indicativo: '+351', telefone: '', aceito: false, site: '' })
-  const [resp, setResp] = useState<Partial<Record<Pergunta, string>>>({})
+  const [resp, setResp] = useState<Record<string, string>>({})
   const [erros, setErros] = useState<Record<string, string>>({})
   const [estado, setEstado] = useState<'livre' | 'aenviar' | 'feito'>('livre')
   const [link, setLink] = useState<string | null>(null)
@@ -28,7 +29,7 @@ export default function FormGratis({ slug }: { slug: string }) {
       <div className="rounded-2xl border border-[var(--c)]/40 bg-black/40 p-6 text-center">
         <p className="text-xl font-bold text-white">Está aqui o teu e-book. 📘</p>
         <p className="mt-2 text-white/65">Guarda este link: dá para abrir durante um ano, no telemóvel ou no computador.</p>
-        {link && <a href={link} className="mt-5 inline-block rounded-full px-7 py-3 font-bold text-black" style={{ background: 'linear-gradient(90deg, var(--c), var(--c2))' }}>Abrir «O Método Frio»</a>}
+        {link && <a href={link} className="mt-5 inline-block rounded-full px-7 py-3 font-bold text-black" style={{ background: 'linear-gradient(90deg, var(--c), var(--c2))' }}>Abrir «{titulo}»</a>}
       </div>
     )
   }
@@ -52,7 +53,7 @@ export default function FormGratis({ slug }: { slug: string }) {
         </div>
         {err('telefone')}
       </div>
-      {(Object.keys(PERGUNTAS) as Pergunta[]).map((k) => (
+      {Object.keys(PERGUNTAS).map((k) => (
         <fieldset key={k}>
           <legend className="mb-2 text-sm font-semibold text-white/80">{PERGUNTAS[k].rotulo}</legend>
           <div className="flex flex-wrap gap-2">
