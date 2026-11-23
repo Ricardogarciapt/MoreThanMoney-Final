@@ -403,10 +403,6 @@
     {
       "path": "/api/cron/missao-push?tipo=serie",
       "schedule": "0 20 * * *"
-    },
-    {
-      "path": "/api/cron/threads-recrutamento",
-      "schedule": "23 9-21/2 * * *"
     }
   ]
 }
