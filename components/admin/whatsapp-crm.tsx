@@ -15,6 +15,7 @@
  * ser aberta ao fim de dois dias.
  */
 
+import { linkWhatsApp } from "@/lib/whatsapp/primeira-mensagem"
 import { useCallback, useEffect, useState } from "react"
 import { Clock, Loader2, MessageSquare, RefreshCw, Send, User } from "lucide-react"
 
@@ -111,6 +112,22 @@ export default function WhatsappCrm() {
     setNota("Enviada.")
     setTexto("")
     await abrir(c.telefone === aberta ? c.telefone : c.telefone)
+    await ler()
+  }
+
+  /** Fora das 24 h: o template de retoma (a Meta só deixa passar templates; o servidor decide). */
+  const retomar = async (c: Conversa) => {
+    setOcupado(c.telefone); setErro(null); setNota(null)
+    const nome = (c.nome ?? "").trim().split(/\s+/)[0] || "olá"
+    const r = await fetch("/api/admin/whatsapp", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ para: c.telefone, finalidade: "campanha", template: { nome: "mtm_seguimento", idioma: "pt_PT", parametros: [nome, "o que falámos"] } }),
+    }).then((x) => x.json()).catch(() => null)
+    setOcupado(null)
+    if (!r?.ok) { setErro(r?.porque ?? "O template não saiu."); return }
+    setNota("Template de retoma enviado. Quando a pessoa responder, a janela abre e escreves à vontade.")
+    await abrir(c.telefone)
     await ler()
   }
 
@@ -237,9 +254,9 @@ export default function WhatsappCrm() {
                       <textarea
                         value={texto}
                         onChange={(e) => setTexto(e.target.value)}
-                        disabled={!c.pode.textoLivre || ocupado === c.telefone}
+                        disabled={ocupado === c.telefone}
                         rows={2}
-                        placeholder={c.pode.textoLivre ? "Escreve a resposta…" : "Fora da janela — só passa um template aprovado."}
+                        placeholder={c.pode.textoLivre ? "Escreve a resposta…" : "Fora das 24 h: escreve e abre no teu WhatsApp, ou manda o template de retoma."}
                         className={`${CAMPO} flex-1 resize-y disabled:opacity-50`}
                       />
                       <button
@@ -251,6 +268,27 @@ export default function WhatsappCrm() {
                         Enviar
                       </button>
                     </div>
+                    {!c.pode.textoLivre && (
+                      <div className="flex flex-wrap items-center gap-2">
+                        <button
+                          onClick={() => void retomar(c)}
+                          disabled={ocupado === c.telefone}
+                          className="rounded-md border border-[#D2A63C]/40 bg-[#D2A63C]/10 px-2.5 py-1.5 text-[12px] text-[#D2A63C] disabled:opacity-40"
+                        >
+                          Mandar template de retoma
+                        </button>
+                        {linkWhatsApp(c.telefone, texto.trim() || null) && (
+                          <a
+                            href={linkWhatsApp(c.telefone, texto.trim() || null) ?? "#"}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="rounded-md border border-zinc-700 px-2.5 py-1.5 text-[12px] text-zinc-300 hover:border-[#D2A63C] hover:text-[#D2A63C]"
+                          >
+                            Abrir no meu WhatsApp (sem limite)
+                          </a>
+                        )}
+                      </div>
+                    )}
 
                     <div className="flex flex-wrap items-center gap-2">
                       <input
