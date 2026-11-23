@@ -70,6 +70,12 @@ export type ContaAutoSeguidora = ContaAuto & {
   espelhar_saidas?: boolean | null
   be_ativo?: boolean | null
   trailing_ativo?: boolean | null
+  /**
+   * «Sair com a mestre» (teste B, 23/11): a cópia fica com o SL INICIAL da mestre como stop de
+   * emergência na corretora e NÃO recebe o trailing/BE — sai quando a mestre fecha (e nas parciais).
+   * Mede-se em copia_resultados contra as contas que copiam o trailing.
+   */
+  sair_com_mestre?: boolean | null
   plataforma?: string | null
   login?: string | null
   servidor?: string | null
@@ -133,7 +139,8 @@ export interface RotaDesejada {
  *  · fechar_com_origem é sempre true: a mestre fechar é o fim da ideia, em qualquer modo.
  * Contas do site (mtmcopy_connections) não têm estes interruptores → tudo true, como antes.
  */
-export function flagsDaContaAuto(c: Pick<ContaAutoSeguidora, 'espelhar_saidas' | 'be_ativo' | 'trailing_ativo'>): { copiar_parciais: boolean; copiar_modificacoes: boolean; fechar_com_origem: boolean } {
+export function flagsDaContaAuto(c: Pick<ContaAutoSeguidora, 'espelhar_saidas' | 'be_ativo' | 'trailing_ativo' | 'sair_com_mestre'>): { copiar_parciais: boolean; copiar_modificacoes: boolean; fechar_com_origem: boolean } {
+  if (c.sair_com_mestre === true) return { copiar_parciais: true, copiar_modificacoes: false, fechar_com_origem: true }
   const espelha = c.espelhar_saidas === true
   const gereStop = c.be_ativo !== false || c.trailing_ativo !== false
   return { copiar_parciais: espelha, copiar_modificacoes: espelha || !gereStop, fechar_com_origem: true }
