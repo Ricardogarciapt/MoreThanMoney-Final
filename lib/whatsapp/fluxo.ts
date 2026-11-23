@@ -35,6 +35,8 @@ import {
 } from '@/lib/vendas/guiao-whatsapp'
 
 const FUNIL = 'whatsapp:funil'
+const ESPERA_DEPOIS_DO_AUDIO_MS = 6000
+const esperar = (ms: number) => new Promise((r) => setTimeout(r, ms))
 
 /** O id/título de um botão ou linha de lista, normalizado para a intenção. Puro. */
 export function intencaoDoBotao(idOuTitulo: string | null | undefined): RotaWa | 'sim' | 'depois' | 'sair' | null {
@@ -64,7 +66,7 @@ async function avisarRicardo(texto: string) {
 }
 
 /**
- * Áudio na voz do Ricardo, com o aviso de IA. Se a voz falhar, o mesmo texto sai escrito: o funil
+ * Áudio na voz do Ricardo (o aviso de IA vai no rodapé da lista que se segue). Se a voz falhar, o mesmo texto sai escrito: o funil
  * nunca pára por causa do áudio.
  */
 async function falar(para: string, texto: string): Promise<'audio' | 'texto' | 'falhou'> {
@@ -74,10 +76,7 @@ async function falar(para: string, texto: string): Promise<'audio' | 'texto' | '
     const pub = await falarParaStorage(db as never, texto, `wa-audio/guiao/${ref}.mp3`)
     if (pub.ok) {
       const r = await enviarWhatsApp({ para, finalidade: 'resposta', audioUrl: pub.url, texto, agente: { funil: FUNIL } })
-      if (r.enviado) {
-        await enviarWhatsApp({ para, finalidade: 'resposta', texto: AVISO_IA })
-        return 'audio'
-      }
+      if (r.enviado) return 'audio'
     }
   } catch (e) {
     console.warn('[whatsapp-fluxo] voz falhou:', e instanceof Error ? e.message : e)
@@ -137,11 +136,14 @@ export async function tratarFluxoWhatsApp(p: {
   const veioDoReencontro = stage === 'wa_reencontro' || p.botao === BOTAO_SIM || p.botao === BOTAO_DEPOIS
   if (veioDoReencontro && intencao === 'sim') {
     await gravarOptIn(p.e164, `tocou/respondeu «${p.botao ?? p.texto}» ao template mtm_reencontro`)
-    await falar(p.from, audioAbertura(nome || 'olá'))
+    const comoSaiu = await falar(p.from, audioAbertura(nome || 'olá'))
+    // A Meta vai buscar o ficheiro do áudio antes de o entregar; uma lista enviada logo a seguir chega
+    // ANTES dele. Espera-se uns segundos para a lista aparecer sempre depois do áudio (pedido 23/11).
+    if (comoSaiu === 'audio') await esperar(ESPERA_DEPOIS_DO_AUDIO_MS)
     await enviarWhatsApp({
       para: p.from,
       finalidade: 'resposta',
-      interativo: { tipo: 'lista', corpo: TEXTO_MENU, botao: BOTAO_MENU, linhas: MENU_ROTAS },
+      interativo: { tipo: 'lista', corpo: TEXTO_MENU, botao: BOTAO_MENU, linhas: MENU_ROTAS, ...(comoSaiu === 'audio' ? { rodape: AVISO_IA } : {}) },
     })
     await guardarEstado(chatId, { stage: 'wa_menu', first_name: nome || null })
     return true
@@ -155,8 +157,14 @@ export async function tratarFluxoWhatsApp(p: {
   const rota = intencao && (ROTAS_WA as readonly string[]).includes(intencao) ? (intencao as RotaWa) : null
   // A rota só se dispara pelo guião uma vez (menu ou escolha explícita); depois o closer IA conduz.
   if (rota && (stage === 'wa_menu' || stage === 'wa_reencontro' || p.botao)) {
-    await falar(p.from, audioDaRota(rota, nome || 'olá'))
-    await enviarWhatsApp({ para: p.from, finalidade: 'resposta', texto: textoDaRota(rota), agente: { funil: FUNIL } })
+    const comoSaiu = await falar(p.from, audioDaRota(rota, nome || 'olá'))
+    if (comoSaiu === 'audio') await esperar(ESPERA_DEPOIS_DO_AUDIO_MS)
+    await enviarWhatsApp({
+      para: p.from,
+      finalidade: 'resposta',
+      texto: textoDaRota(rota) + (comoSaiu === 'audio' ? `\n\n_${AVISO_IA}_` : ''),
+      agente: { funil: FUNIL },
+    })
     await guardarEstado(chatId, { stage: `wa_rota_${rota}`, interest: rota, first_name: nome || null })
     if (rota === 'solucoes') {
       await avisarRicardo(`🏢 <b>WhatsApp: interesse em Soluções (B2B)</b>\n${nome || p.e164} · ${p.e164}`)

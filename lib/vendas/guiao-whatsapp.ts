@@ -41,16 +41,25 @@ export const MENU_ROTAS: Array<{ id: RotaWa; titulo: string; descricao: string }
 export const TEXTO_MENU = 'Para eu não te fazer perder tempo: o que te interessa mais agora?'
 export const BOTAO_MENU = 'Escolher'
 
-/** Áudio 1 — depois do «Sim». ~35 s. {nome} é substituído. */
+/**
+ * Áudio 1 — depois do «Sim». ~60–70 s, conta um pouco da história (pedido do Ricardo 23/11:
+ * «o áudio pode contar um pouco mais da história»). {nome} é substituído.
+ * A lista de rotas sai SEMPRE depois deste áudio (`lib/whatsapp/fluxo.ts`).
+ */
 export function audioAbertura(nome: string): string {
   return (
-    `Olá ${nome}, obrigado por responderes. Vou ser rápido. ` +
-    `Nos últimos anos montei a MoreThanMoney, uma plataforma de educação financeira e trading, ` +
-    `com comunidade, sinais educativos e ferramentas próprias. ` +
-    `E agora também ajudamos empresas a pôr a inteligência artificial a trabalhar por elas. ` +
+    `Olá ${nome}, obrigado por responderes, a sério. ` +
+    `Deixa-me contar-te em um minuto de onde isto vem. ` +
+    `Passei muitos anos na farda: Exército, Fuzileiros e depois catorze anos na GNR. ` +
+    `Era uma vida estável, mas eu sentia que estava preso às mesmas horas e ao mesmo ordenado. ` +
+    `Comecei a estudar trading à noite, errei muito, perdi dinheiro, e foi aí que aprendi o mais importante: ` +
+    `método e gestão de risco valem mais do que qualquer palpite. ` +
+    `Foi daí que nasceu a MoreThanMoney: uma plataforma de educação financeira e trading, ` +
+    `com comunidade, ferramentas próprias e acompanhamento. ` +
+    `Hoje também ajudamos empresas a pôr a inteligência artificial a trabalhar por elas. ` +
     `Não te vou prometer dinheiro fácil, isso não existe. ` +
     `Mas se quiseres aprender a sério, ou dar um salto no teu negócio, acho que te posso ajudar. ` +
-    `Vou mandar-te uma lista a seguir, escolhe o que faz mais sentido para ti.`
+    `A seguir a este áudio mando-te uma lista. Escolhe o que faz mais sentido para ti.`
   )
 }
 
@@ -113,7 +122,11 @@ export function textoDaRota(rota: RotaWa): string {
 }
 
 export const TEXTO_DEPOIS = 'Sem problema 🙂 Fica com o meu contacto. Quando quiseres, é só escreveres aqui.'
-export const AVISO_IA = '🎙️ Áudio com a voz do Ricardo, gerada por IA.'
+/**
+ * Rodapé discreto da lista que segue o áudio (≤ 60 car.). Substitui a mensagem solta de aviso, que o
+ * Ricardo achou desnecessária (23/11); fica só esta linha pequena por causa do AI Act (art. 50.º).
+ */
+export const AVISO_IA = 'Áudio com a voz do Ricardo, feita com IA'
 export const TEXTO_HUMANO = 'Combinado, vou passar-te ao Ricardo. Se preferires marcar já uma conversa: ' + `${SITE}/agendar`
 
 /** Lê a intenção numa resposta escrita (quando a pessoa não toca nos botões). Puro. */
