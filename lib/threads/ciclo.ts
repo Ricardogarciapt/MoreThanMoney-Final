@@ -9,6 +9,7 @@
  */
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { lerToken, publicarTexto, renovarSeFaltarPouco, respostasDe } from '@/lib/threads/cliente'
+import { correrConteudoThreads } from '@/lib/threads/conteudo'
 import { correrAgenteThreads, respostaARecruta } from '@/lib/threads/agente'
 import { devePublicar, ehInteressado, postDaSemana, respostaAoInteressado } from '@/lib/threads/recrutamento'
 
@@ -99,8 +100,15 @@ export async function correrRecrutamentoThreads(db: SupabaseClient): Promise<Rec
   await db.from('site_settings').upsert({ key: CHAVE, value: est }, { onConflict: 'key' })
 
   // 23/11: prospeção ativa, conversas e métricas (IA grátis). Uma falha lá não estraga o resto.
-  const agente = await correrAgenteThreads(db, token, { responsavel, postsNossos: est.posts ?? [] }).catch((e) => ({
+  // Conteúdo para todos os funis (post de valor de ~6 em 6 h + respostas a quem comenta).
+  const conteudo = await correrConteudoThreads(db, token, responsavel).catch((e) => ({
     erro: e instanceof Error ? e.message : String(e),
   }))
-  return { ok: true, ...r, agente }
+  const { data: ct } = await db.from('site_settings').select('value').eq('key', 'threads_conteudo').maybeSingle()
+  const postsConteudo = ((ct?.value as { posts?: { id: string }[] } | null)?.posts ?? []).map((p) => p.id)
+
+  const agente = await correrAgenteThreads(db, token, { responsavel, postsNossos: [...(est.posts ?? []), ...postsConteudo] }).catch((e) => ({
+    erro: e instanceof Error ? e.message : String(e),
+  }))
+  return { ok: true, ...r, conteudo, agente }
 }
