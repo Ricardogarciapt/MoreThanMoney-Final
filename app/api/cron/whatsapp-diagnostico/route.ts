@@ -116,10 +116,10 @@ export async function GET(req: NextRequest) {
     const submetidos: Record<string, unknown> = {}
     for (const t of TEMPLATES_MTM) {
       if (existentes.some((e) => e.name === t.name && e.language === t.language)) {
-        submetidos[t.name] = 'já existe'
+        submetidos[`${t.name}/${t.language}`] = 'já existe'
         continue
       }
-      submetidos[t.name] = limpo(await g(`${waba}/message_templates`, token, { method: 'POST', body: JSON.stringify(t) }))
+      submetidos[`${t.name}/${t.language}`] = limpo(await g(`${waba}/message_templates`, token, { method: 'POST', body: JSON.stringify(t) }))
     }
     out.templates_submetidos = submetidos
     const de_novo = await g(`${waba}/message_templates?fields=name,status,language,category,rejected_reason,quality_score&limit=100`, token)
