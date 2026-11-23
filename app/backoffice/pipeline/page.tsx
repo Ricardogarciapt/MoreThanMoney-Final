@@ -157,7 +157,9 @@ export default async function PipelinePage({ searchParams }: { searchParams: Pro
         Guiões de setter e closer (triagem, chamada, objecções, follow-up):{' '}
         <a href="/backoffice/material#kit" className="text-[#D2A63C] hover:underline">abrir o teu kit</a>.{' '}
         Vista por funil:{' '}
-        <a href="/backoffice/pipeline/quadro" className="text-[#D2A63C] hover:underline">quadro do pipeline</a>.
+        <a href="/backoffice/pipeline/quadro" className="text-[#D2A63C] hover:underline">quadro do pipeline</a>.{' '}
+        Primeira mensagem já escrita:{' '}
+        <a href="/backoffice/pipeline/whatsapp" className="text-[#D2A63C] hover:underline">fila de WhatsApp</a>.
       </p>
 
       {aviso && <Aviso>{aviso}</Aviso>}

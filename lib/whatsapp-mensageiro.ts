@@ -318,6 +318,8 @@ export interface PedidoDeEnvio {
    * começou, em vez de a receita ficar por atribuir como ficaram os 35 € de 01/10.
    */
   agente?: { funil?: string; codigoExplicito?: unknown }
+  /** Ver `Pedido.licencaDono` em `lib/whatsapp-envio.ts` — só para o template de pedido de licença. */
+  licencaDono?: string | null
 }
 
 export interface ResultadoEnvio {
@@ -368,7 +370,7 @@ export async function enviarWhatsApp(p: PedidoDeEnvio): Promise<ResultadoEnvio> 
   const estado = p.estado ?? (e164 ? await lerEstadoDoContacto(e164) : { baseLegal: null, retirou: false, canal: null, ultimaEntradaIso: null })
 
   const decisao = decidirEnvio(
-    { para: p.para, tipo, templateNome: p.template?.nome ?? null, finalidade: p.finalidade },
+    { para: p.para, tipo, templateNome: p.template?.nome ?? null, finalidade: p.finalidade, licencaDono: p.licencaDono ?? null },
     estado,
     agoraMs,
   )
