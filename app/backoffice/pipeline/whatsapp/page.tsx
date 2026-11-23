@@ -34,7 +34,7 @@ export default async function FilaWhatsApp({ searchParams }: { searchParams: Pro
   try {
     const base = () =>
       db.from('vendas_negocios').select('id, nome, telefone, origem, interesse, etiquetas, criado_em', { count: 'exact' })
-        .eq('estado', 'lead').not('telefone', 'is', null).neq('contactavel', false)
+        .eq('estado', 'lead').not('telefone', 'is', null)
     const [novos, antiga] = await Promise.all([
       base().neq('origem', 'whatsapp_import').order('criado_em', { ascending: false }).limit(fila === 'novos' ? POR_PAGINA : 1),
       base().eq('origem', 'whatsapp_import').order('criado_em', { ascending: true }).limit(fila === 'antiga' ? POR_PAGINA : 1),

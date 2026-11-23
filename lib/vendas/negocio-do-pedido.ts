@@ -61,7 +61,6 @@ export async function ligarPedidoAoNegocio(
         .from('vendas_negocios')
         .update({
           etiquetas: juntas,
-          contactavel: true,
           nota: [existente.nota, `${new Date().toISOString().slice(0, 10)}: ${nota}`].filter(Boolean).join('\n'),
           email: pedido.email || undefined,
           atualizado_em: new Date().toISOString(),
@@ -81,7 +80,6 @@ export async function ligarPedidoAoNegocio(
         funil: funilDoInteresse(pedido.interesse),
         estado: 'lead',
         interesse: pedido.interesse,
-        contactavel: true,
         etiquetas,
         nota,
       })

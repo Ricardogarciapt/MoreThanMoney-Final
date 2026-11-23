@@ -94,7 +94,7 @@ export async function correrReencontro(db: Db): Promise<ResultadoReencontro> {
       const { data: fora } = await db.from('contacto_exclusao').select('identificador').in('identificador', [...variantesDoNumero(e164), `+${digitos}`]).limit(1)
       if (fora?.length) {
         r.recusados.exclusao = (r.recusados.exclusao ?? 0) + 1
-        await db.from('vendas_negocios').update({ contactavel: false }).eq('id', c.id)
+        await db.from('vendas_negocios').update({ estado: 'perdido', motivo_perda: 'pediu para sair (SAIR / lista de exclusão)' }).eq('id', c.id)
         continue
       }
     }
