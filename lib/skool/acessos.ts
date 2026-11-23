@@ -24,6 +24,8 @@ export const CURSOS = {
 }
 const BOOTCAMP = 'f17ea2b8'
 
+// Quem entrou antes da mudança para grupo grátis (23/11/2026 13:45 Lisboa) é legado.
+const CORTE_LEGADO = Date.parse('2026-11-23T13:45:00Z')
 const MAX_CONVITES = 10
 const MAX_RETIRADAS = 15 // travão: mais do que isto numa corrida é suspeito → não retira nada
 
@@ -134,9 +136,9 @@ export async function sincronizarAcessos(opts: { simular?: boolean } = {}): Prom
   const resumo = { legado: 0, concedidos: 0, convites: 0, retirados: 0, compradores: 0, acoes: [] as string[] }
   const nomesParaIds = (nomes: string[]) => nomes.map((n) => ids[n]).filter(Boolean)
 
-  // 1) Primeira corrida: quem já lá está fica «legado» para sempre.
+  // 1) Primeira corrida: quem já lá estava a 23/11 fica «legado» para sempre (nunca se lhe tira nada).
   if (!registos.length) {
-    const linhas = membros.map((m) => ({
+    const linhas = membros.filter((m) => !m.entrou || Date.parse(m.entrou) < CORTE_LEGADO).map((m) => ({
       skool_member_id: m.mid,
       skool_email: m.email || null,
       status: 'legado',
@@ -155,7 +157,6 @@ export async function sincronizarAcessos(opts: { simular?: boolean } = {}): Prom
   for (const [email, d] of direito) {
     const membro = membros.find((m) => m.email === email)
     const reg = (membro && porMid.get(membro.mid)) || porEmail.get(email)
-    if (reg?.status === 'legado' && d.patamar === 'mensal') continue // já tem o que tinha; não mexer
     const alvo = nomesParaIds(cursosDo(d.patamar))
     if (membro) {
       const ja = new Set(reg?.webhook_payload?.concedidos ?? [])
