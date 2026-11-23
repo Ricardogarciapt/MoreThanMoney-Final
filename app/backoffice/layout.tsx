@@ -28,6 +28,7 @@ const TRABALHO: Array<{ href: string; label: string; exige: Capacidade }> = [
   { href: '/backoffice/extracto', label: 'O meu extracto', exige: 'bo.extracto_proprio' },
   { href: '/backoffice/equipa', label: 'A minha equipa', exige: 'bo.equipa_ver' },
   { href: '/backoffice/material', label: 'Materiais', exige: 'bo.material' },
+  { href: '/backoffice/material/formacao', label: 'Academia de Vendas', exige: 'bo.material' },
 ]
 
 export default async function BackofficeLayout({ children }: { children: React.ReactNode }) {

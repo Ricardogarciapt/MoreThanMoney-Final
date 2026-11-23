@@ -7,8 +7,9 @@ import { Titulo, clamp, ease, fontTexto, Plano } from '../../../motor/util'
 import { OURO, OURO_CLARO } from '../tempo'
 import { Poeira } from './Relogio'
 import { ouro } from '../../../motor/marca'
+import { t, tt } from '../i18n'
 
-const NOS = ['WhatsApp', 'Instagram', 'Agenda', 'Email', 'Faturação', 'CRM', 'Site', 'Relatórios']
+const NOS = ['WhatsApp', 'Instagram', t('Agenda'), 'Email', t('Faturação'), 'CRM', 'Site', t('Relatórios')]
 const RAIO = 3.1, CAM = 9, FOV = 45
 
 const pos = (i: number, f: number) => {
@@ -58,16 +59,16 @@ const Etiquetas: React.FC<{ f: number }> = ({ f }) => {
           <div key={n} style={{ position: 'absolute', left: sx, top: sy + 34, transform: `translateX(-50%) scale(${s})`, padding: '8px 16px', borderRadius: 999, background: 'rgba(10,10,12,.75)', border: `1px solid ${ouro(0.45)}`, color: '#fff', fontFamily: fontTexto, fontWeight: 700, fontSize: 22, whiteSpace: 'nowrap' }}>{n}</div>
         )
       })}
-      <div style={{ position: 'absolute', left: 960, top: 540, transform: 'translate(-50%,-50%)', fontFamily: fontTexto, fontWeight: 900, fontSize: 40, color: '#1a1306', letterSpacing: 1 }}>IA</div>
+      <div style={{ position: 'absolute', left: 960, top: 540, transform: 'translate(-50%,-50%)', fontFamily: fontTexto, fontWeight: 900, fontSize: 40, color: '#1a1306', letterSpacing: 1 }}>{t('IA')}</div>
     </>
   )
 }
 
 const CARTOES = [
-  ['💬', 'Responde a mensagens', 'Dia e noite, no tom do teu negócio.'],
-  ['📅', 'Marca e lembra', 'Agenda própria com lembretes automáticos.'],
-  ['🎯', 'Qualifica contactos', 'Sabes quem está pronto para comprar.'],
-  ['📊', 'Relatórios sozinhos', 'Vês onde perdes tempo e dinheiro.'],
+  ['💬', t('Responde a mensagens'), t('Dia e noite, no tom do teu negócio.')],
+  ['📅', t('Marca e lembra'), t('Agenda própria com lembretes automáticos.')],
+  ['🎯', t('Qualifica contactos'), t('Sabes quem está pronto para comprar.')],
+  ['📊', t('Relatórios sozinhos'), t('Vês onde perdes tempo e dinheiro.')],
 ]
 
 export const Automacao: React.FC = () => {
@@ -88,10 +89,10 @@ export const Automacao: React.FC = () => {
       </AbsoluteFill>
       <Plano src="negocio_tecnologia_2" de={185} dur={235} grade="neutro" escuro={0.62} fade={16} />
       <div style={{ position: 'absolute', left: 0, right: 0, top: 70, height: 140 }}>
-        <Titulo texto="Ligamos tudo com IA." de={10} ate={180} size={86} destaque={['IA']} />
+        <Titulo {...tt('Ligamos tudo com IA.', ['IA'], 86)} de={10} ate={180} />
       </div>
       <div style={{ position: 'absolute', left: 0, right: 0, top: 150, height: 160 }}>
-        <Titulo texto="Automação onde perdes tempo." de={205} ate={410} size={100} destaque={['perdes', 'tempo']} />
+        <Titulo {...tt('Automação onde perdes tempo.', ['perdes', 'tempo'], 100)} de={205} ate={410} />
       </div>
       <div style={{ position: 'absolute', left: 160, right: 160, top: 400, display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 28 }}>
         {CARTOES.map(([ic, t, d], i) => {

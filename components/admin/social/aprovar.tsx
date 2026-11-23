@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from "react"
 import { Check, Pause, Clock, Pencil, X, Download, Copy, ChevronDown, RefreshCw, Music, AlertTriangle } from "lucide-react"
 import { supabase } from "@/lib/supabase"
 import { useToast } from "@/hooks/use-toast"
+import { PartilharPeca } from "@/components/admin/social/partilhar"
 
 /**
  * «Para aprovar» — pedido do Ricardo (23/11): «tornar mais fácil a organização para eu conseguir
@@ -551,6 +552,13 @@ function Cartao({ i, agir, soLeitura }: { i: Item; agir: (id: string, acao: stri
           <Botao onClick={() => agir(i.id, "descartar")} perigo>
             <X className="h-3.5 w-3.5" /> Descartar
           </Botao>
+        </div>
+      )}
+
+      {/* Partilha manual: Instagram, TikTok, YouTube Shorts, Facebook, Threads, WhatsApp. Não publica nada. */}
+      {!soLeitura && (i.video || imagem) && (
+        <div className="border-t border-white/[0.05] px-2.5 py-2">
+          <PartilharPeca legenda={i.legenda} media={i.video ?? imagem ?? null} titulo={c?.titulo ?? c?.gancho ?? i.origemNome} imagem={!i.video} />
         </div>
       )}
     </article>

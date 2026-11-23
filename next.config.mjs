@@ -14,6 +14,8 @@ const nextConfig = {
   outputFileTracingIncludes: {
     '/api/ebooks/[slug]': servidos(LIVROS),
     '/api/ebooks-traducoes/[slug]': servidos([...LIVROS.flatMap((l) => [`${l}-en`, `${l}-es`]), 'a-primeira-chave-fr']),
+    // material do curso do Ruben (slides, caderno e guia nas 4 línguas, ~31 MB): só sai pela rota com acesso
+    '/api/cursos/a-primeira-chave/material': ['./conteudo-privado/cursos/a-primeira-chave/**/*.pdf'],
   },
   outputFileTracingExcludes: {
     '*': ['public/videos/**', 'public/**/*.mp4', 'public/**/*.mov'],
@@ -129,6 +131,11 @@ const nextConfig = {
   },
   async headers() {
     return [
+      {
+        // Vídeos do Skool: o carregamento na página About é feito a partir de skool.com, que os vai buscar aqui.
+        source: '/skool/video/:ficheiro*',
+        headers: [{ key: 'Access-Control-Allow-Origin', value: 'https://www.skool.com' }],
+      },
       {
         source: '/.well-known/apple-app-site-association',
         headers: [{ key: 'Content-Type', value: 'application/json' }],

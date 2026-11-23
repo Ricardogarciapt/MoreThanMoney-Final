@@ -30,6 +30,7 @@ async function main() {
     assert.deepEqual(flagsDaContaAuto({ espelhar_saidas: true, be_ativo: true, trailing_ativo: true }), { copiar_parciais: true, copiar_modificacoes: true, fechar_com_origem: true })
     assert.deepEqual(flagsDaContaAuto({ espelhar_saidas: false, be_ativo: false, trailing_ativo: false }), { copiar_parciais: false, copiar_modificacoes: true, fechar_com_origem: true })
     assert.deepEqual(flagsDaContaAuto({}), { copiar_parciais: false, copiar_modificacoes: false, fechar_com_origem: true }, 'por omissão: copiar a estratégia, BE/trailing ligados')
+    assert.deepEqual(flagsDaContaAuto({ espelhar_saidas: true, be_ativo: true, trailing_ativo: true, sair_com_mestre: true }), { copiar_parciais: true, copiar_modificacoes: false, fechar_com_origem: true }, 'sair com a mestre: parciais e fecho sim, trailing não')
   })
   // planeamento: a rota auto: nasce com as flags do cliente
   await ok(() => {

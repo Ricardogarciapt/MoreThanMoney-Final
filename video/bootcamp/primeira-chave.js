@@ -125,6 +125,63 @@
     },
   }
 
+  // ---------------------------------------------------------------- cenas com animação por tema (23/11)
+  // Quando a cena traz s.tema, o painel lateral deixa de ser o gráfico genérico e passa a ser a animação
+  // do tema da secção (primeira-chave-temas.js). Sem tema, ficam os tipos originais do cenas.html.
+  const ORIG = Object.assign({}, typeof TIPOS !== 'undefined' ? TIPOS : {})
+  const PT = () => window.PC_TEMAS
+  const LADO = { x: 1000, y: 200, w: 820, h: 640 }
+  function painelLado(r, s, rect = LADO) {
+    const P = PT().painel(r, s.tema, { ...rect, fase: s.fase || 0 }, el, grafico); P.wrap.style.zIndex = 2
+    return (k, peso) => { P.u(k); P.wrap.style.opacity = out(k / 0.8); P.wrap.style.transform = `perspective(1800px) rotateY(${-12 + Math.sin(k / 4) * 5}deg) rotateX(${3 + Math.sin(k / 6) * 2}deg) translateZ(${Math.sin(k / 5) * 20}px) scale(${lerp(0.9, 1, out(k / 1.2))})` }
+  }
+  function painelFundo(r, s, op = 0.28) {
+    const P = PT().painel(r, s.tema, { x: 160, y: 60, w: 1600, h: 960, fundo: true }, el, grafico)
+    return k => { P.u(k); P.wrap.style.opacity = op * out(k / 1); P.wrap.style.transform = `scale(${1.02 + k * 0.004})` }
+  }
+  Object.assign(tipos, {
+    // abre cada secção: número grande, «secção 2 de 4», título e a animação do tema em grande
+    secao(r, s) {
+      const sl = painelLado(r, s, { x: 900, y: 170, w: 920, h: 700 })
+      const b = el('div', 'abs', null, { left: '130px', top: '230px', width: '760px', transformStyle: 'preserve-3d' })
+      b.innerHTML = `<div class="anton" style="font-size:300px;line-height:.85;color:transparent;-webkit-text-stroke:3px var(--ouro)">${s.numero || ''}</div><div class="kicker" style="margin-top:26px">${s.kicker || ''}</div><div class="h2" style="margin-top:14px;font-size:84px">${s.titulo || ''}</div>`
+      r.append(b)
+      return (k, d, f, peso) => { sl(k, peso); b.style.opacity = out(k / 0.9); b.style.transform = `rotateY(${(1 - out(k / 1.4)) * -32}deg) translateX(${(1 - out(k / 1.4)) * -140}px)`
+        b.firstChild.style.transform = `translateZ(${Math.sin(k / 2) * 30}px)` }
+    },
+    pontos(r, s) {
+      if (!s.tema || !PT()) return ORIG.pontos(r, s)
+      const sl = painelLado(r, s); const b = el('div', 'abs', null, { left: '110px', top: '170px', width: '840px' })
+      b.innerHTML = `<div class="kicker">${s.kicker || ''}</div><div class="h2" style="margin:18px 0 30px">${s.titulo || ''}</div>`
+      const its = (s.itens || []).map((t, i) => { const e = el('div', 'item', `<b class="n">${String(i + 1).padStart(2, '0')}</b><span>${t}</span>`); b.append(e); return e })
+      r.append(b); return (k, d, f, peso) => { entra(b.firstChild, k / 0.8); entra(b.children[1], (k - 0.2) / 0.8); const span = Math.max(1, (f || d) - 1.5); its.forEach((e, i) => entra(e, (k - 1 - i * span / its.length) / 0.7, 30)); sl(k, peso) }
+    },
+    checklist(r, s) {
+      if (!s.tema || !PT()) return ORIG.checklist(r, s)
+      const sl = painelLado(r, s); const b = el('div', 'abs', null, { left: '110px', top: '170px', width: '840px' })
+      b.innerHTML = `<div class="kicker">${s.kicker || ''}</div><div class="h2" style="margin:18px 0 26px">${s.titulo || ''}</div>`
+      const its = (s.itens || []).map(t => { const e = el('div', 'item', `<span class="check"></span><span>${t}</span>`, { fontSize: '34px', padding: '16px 0' }); b.append(e); return e })
+      r.append(b); return (k, d, f, peso) => { sl(k, peso); entra(b.firstChild, k / 0.8); entra(b.children[1], (k - 0.2) / 0.8); const span = Math.max(1, (f || d) - 1.5)
+        its.forEach((e, i) => { const kk = k - 1 - i * span / its.length; entra(e, kk / 0.6, 20); const c = e.firstChild, on = kk > 0.5; c.style.background = on ? 'var(--ouro)' : 'transparent'; c.textContent = on ? '✓' : '' }) }
+    },
+    // o tema em ecrã quase inteiro, com o título por cima: as cenas «visuais» da secção
+    visual(r, s) {
+      const P = PT().painel(r, s.tema, { x: 360, y: 250, w: 1200, h: 760, fase: s.fase || 0 }, el, grafico)
+      const b = el('div', 'abs', null, { left: '0', right: '0', top: '120px', textAlign: 'center' })
+      b.innerHTML = `<div class="kicker">${s.kicker || ''}</div><div style="font:700 50px/1.2 Inter;margin:14px auto 0;max-width:1500px">${s.titulo || ''}</div>`
+      r.append(b)
+      return k => { P.u(k); P.wrap.style.opacity = out(k / 0.8); P.wrap.style.transform = `perspective(2000px) rotateX(${lerp(18, 4, out(k / 2)) + Math.sin(k / 5) * 2}deg) rotateY(${Math.sin(k / 6) * 6}deg) scale(${lerp(0.88, 1, out(k / 2))})`; entra(b, k / 0.8) }
+    },
+    frase(r, s) {
+      if (!s.tema || !PT()) return ORIG.frase(r, s)
+      const bg = painelFundo(r, s, 0.22); const u = ORIG.frase(r, s); return (k, d, f, peso) => { bg(k); u(k, d, f, peso) }
+    },
+    abertura(r, s) {
+      if (!s.tema || !PT()) return ORIG.abertura(r, s)
+      const bg = painelFundo(r, s, 0.3); const u = ORIG.abertura(r, s); return (k, d, f, peso) => { bg(k); u(k, d, f, peso) }
+    },
+  })
+
   window.MOTORES = window.MOTORES || {}
   window.MOTORES['primeira-chave'] = { grafico, tipos, camadasLado: ['medias', 'dca'] }
 })()

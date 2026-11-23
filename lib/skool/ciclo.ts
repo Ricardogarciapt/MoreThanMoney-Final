@@ -1,7 +1,9 @@
 import { getSupabaseAdmin } from '@/lib/supabase-admin-client'
 import { chamarIAGratis } from '@/lib/ia/chamar'
+import { sincronizarAcessos } from '@/lib/skool/acessos'
 import { blocoFramework } from '@/lib/framework-mtm'
 import { chamarApi, idDoGrupo, lerPagina, lerSessao } from '@/lib/skool/cliente'
+import { bootcampDoDia, programaDoDia, promoverEvento, responderComentarios, type EstadoComunidade } from '@/lib/skool/comunidade'
 
 /**
  * Ciclo automático do Skool MoreThanMoney (corre de hora a hora, ver app/api/cron/skool-ciclo).
@@ -27,12 +29,14 @@ const MAX_DEFY_DIA = 10
 
 interface Estado {
   ligado?: boolean
+  comunidade?: EstadoComunidade
   feedDesde?: string
   defyDesde?: string
   dcaDesde?: string
   defyMapa?: Record<string, string> // chat_messages.id → skool post id
-  dia?: { data: string; desafio?: boolean; sala?: boolean; vitorias?: boolean; defy?: number }
+  dia?: { data: string; desafio?: boolean; sala?: boolean; vitorias?: boolean; defy?: number; programa?: boolean; bootcamp?: boolean }
   ultimaCorrida?: string
+  acessosEm?: string
   ultimoErro?: string | null
 }
 
@@ -42,11 +46,15 @@ interface Categorias {
   cripto: string
 }
 
+const normal = (s: string) => s.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase()
+
 const agoraLisboa = () => {
   const d = new Date()
   const f = new Intl.DateTimeFormat('pt-PT', { timeZone: 'Europe/Lisbon', year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', weekday: 'short', hour12: false })
   const p = Object.fromEntries(f.formatToParts(d).map((x) => [x.type, x.value]))
-  return { data: `${p.year}-${p.month}-${p.day}`, hora: Number(p.hour), segunda: /^seg/i.test(String(p.weekday)) }
+  const dias = ['dom', 'seg', 'ter', 'qua', 'qui', 'sex', 'sáb']
+  const semana = Math.max(0, dias.findIndex((d) => normal(String(p.weekday)).startsWith(normal(d))))
+  return { data: `${p.year}-${p.month}-${p.day}`, hora: Number(p.hour), segunda: semana === 1, semana }
 }
 
 async function lerEstado(): Promise<Estado> {
@@ -60,8 +68,6 @@ async function gravarEstado(e: Estado) {
   if (mapa.length > 300) e.defyMapa = Object.fromEntries(mapa.slice(-300))
   await getSupabaseAdmin().from('site_settings').upsert({ key: CHAVE, value: e }, { onConflict: 'key' })
 }
-
-const normal = (s: string) => s.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase()
 
 export async function categoriasDoGrupo(): Promise<Categorias & { todas: { id: string; nome: string }[] }> {
   const s = await lerSessao()
@@ -82,12 +88,12 @@ async function publicar(categoria: string, titulo: string, conteudo: string): Pr
   return r?.id
 }
 
-async function comentar(postId: string, conteudo: string) {
+async function comentar(postId: string, conteudo: string, paiId?: string) {
   await chamarApi('POST', 'posts?follow=true', {
     post_type: 'comment',
     group_id: await idDoGrupo(),
     root_id: postId,
-    parent_id: postId,
+    parent_id: paiId ?? postId,
     metadata: { content: conteudo.slice(0, 4000), attachments: '', action: 0, video_ids: '' },
   })
 }
@@ -207,7 +213,7 @@ async function desafioDoDia(cat: Categorias): Promise<void> {
   })
   const o = JSON.parse(r.texto) as { titulo?: string; texto?: string }
   if (!o.titulo || !o.texto) throw new Error('IA não devolveu o desafio')
-  await publicar(cat.geral, o.titulo, `${o.texto}\n\n🏆 Quem cumprir 5 desafios na semana é destacado na segunda-feira.`)
+  await publicar(cat.geral, o.titulo, `${o.texto}\n\n🏆 Quem cumprir 5 desafios na semana é destacado na segunda-feira.\n📲 Na app Missão também ganhas XP com o desafio: ${SITE}/ricardogarcia/app`)
 }
 
 async function salaDoDia(cat: Categorias): Promise<void> {
@@ -281,6 +287,23 @@ export async function correrCicloSkool(): Promise<Record<string, unknown>> {
   await passo('dca', () => sincronizarDca(e, cat, log))
   if (!e.dia.desafio && hoje.hora >= 9) await passo('desafio', async () => { await desafioDoDia(cat); e.dia!.desafio = true; log.push('desafio') })
   if (!e.dia.sala && hoje.hora >= 13) await passo('sala', async () => { await salaDoDia(cat); e.dia!.sala = true; log.push('sala') })
+  // Acessos (pagantes do site ↔ cursos do Skool), de 3 em 3 horas.
+  if (!e.acessosEm || Date.now() - Date.parse(e.acessosEm) > 3 * 3600_000) {
+    await passo('acessos', async () => {
+      const r = await sincronizarAcessos()
+      e.acessosEm = new Date().toISOString()
+      log.push(`acessos: ${JSON.stringify({ c: r.concedidos, v: r.convites, r: r.retirados })}`)
+    })
+  }
+  // Comunidade: respostas a comentários (todas as horas, das 8h às 23h), bootcamp (12h), programa (18h), eventos (3 em 3 dias).
+  e.comunidade ??= {}
+  const com = e.comunidade
+  if (hoje.hora >= 8 && hoje.hora <= 23) await passo('respostas', () => responderComentarios(com, comentar, log))
+  if (!e.dia.bootcamp && hoje.hora >= 12) await passo('bootcamp', async () => { const r = await bootcampDoDia(hoje.semana, publicar, cat.geral); e.dia!.bootcamp = true; if (r) log.push(r) })
+  if (!e.dia.programa && hoje.hora >= 18) await passo('programa', async () => { log.push(`programa ${await programaDoDia(hoje.semana, publicar, cat.geral)}`); e.dia!.programa = true })
+  if (hoje.hora >= 19 && (!com.eventoEm || Date.now() - Date.parse(com.eventoEm) > 3 * 86_400_000)) {
+    await passo('evento', async () => { const r = await promoverEvento(publicar, cat.geral); com.eventoEm = new Date().toISOString(); if (r) log.push(r) })
+  }
   if (hoje.segunda && !e.dia.vitorias && hoje.hora >= 10) await passo('vitorias', async () => { await vitoriasDaSemana(cat); e.dia!.vitorias = true; log.push('vitorias') })
 
   e.ultimaCorrida = new Date().toISOString()
