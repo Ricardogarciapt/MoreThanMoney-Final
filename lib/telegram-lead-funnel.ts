@@ -266,7 +266,9 @@ export async function runLeadFunnelReply(input: {
   // ao bot em privado ABRIU a conversa — passa a `qualifying`, senão o follow-up nunca o via e o
   // negócio ficava em «lead» para sempre (era o caso de 57 dos 62 leads do Telegram).
   const vemDeFora = lead?.stage === 'no_grupo' || lead?.stage === 'pedido_sinais'
-  const stage = interest ? 'routed' : lead?.stage === 'new' || !lead || vemDeFora ? 'qualifying' : lead?.stage || 'qualifying'
+  // 23/11: as fases do funil de WhatsApp (wa_*) são do motor do WhatsApp; o closer não as apaga,
+  // senão quem pediu uma pessoa ou já marcou voltava a entrar no seguimento automático.
+  const stage = String(lead?.stage ?? '').startsWith('wa_') ? String(lead!.stage) : interest ? 'routed' : lead?.stage === 'new' || !lead || vemDeFora ? 'qualifying' : lead?.stage || 'qualifying'
   const source = input.source || lead?.source || 'telegram'
   // Tags canónicas — MESMO vocabulário em todos os canais para segmentar os contactos.
   const tags = Array.from(new Set([

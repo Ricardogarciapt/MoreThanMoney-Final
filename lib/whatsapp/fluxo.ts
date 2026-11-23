@@ -15,7 +15,7 @@
 import { createHash } from 'crypto'
 import { getSupabaseAdmin } from '@/lib/supabase-admin-client'
 import { falarParaStorage } from '@/lib/voz'
-import { enviarWhatsApp, lerEstadoDoContacto } from '@/lib/whatsapp-mensageiro'
+import { enviarWhatsApp } from '@/lib/whatsapp-mensageiro'
 import {
   GUIAO,
   ID_HUMANO,
@@ -29,9 +29,14 @@ import {
   type RotaWa,
 } from '@/lib/vendas/guiao-whatsapp'
 import { LINGUAS, ehLingua, linguaDoIndicativo, linguaEscolhida, linhasDeLinguas, type Lingua } from '@/lib/whatsapp/linguas'
-import { variantesDoNumero } from '@/lib/whatsapp-envio'
+import { passarParaSetter } from '@/lib/whatsapp/setter'
+import { seguirLinks } from '@/lib/whatsapp/link-seguido'
+import { ID_SEG_AGENDAR, ID_SEG_DUVIDA, TEXTOS_SEGUIMENTO } from '@/lib/whatsapp/seguimento-site'
+import { linkAgendar } from '@/lib/agenda/link'
 
 const FUNIL = 'whatsapp:funil'
+/** O mesmo link da agenda que o guião usa: `seguirLinks` troca-o pelo link com rasto. */
+const AGENDA = linkAgendar('apresentacao')
 const ESPERA_DEPOIS_DO_AUDIO_MS = 6000
 const esperar = (ms: number) => new Promise((r) => setTimeout(r, ms))
 
@@ -54,50 +59,7 @@ export function intencaoDoBotao(idOuTitulo: string | null | undefined): RotaWa |
   return null
 }
 
-/**
- * Quem pede uma pessoa vai para a FILA DOS SETTERS no pipeline (pedido do Ricardo 23/11): o negócio
- * ganha a etiqueta `quer_pessoa` e uma tarefa aberta para hoje, papel setter. Nunca rebenta o funil.
- */
-async function passarParaSetter(e164: string, nome: string, lingua: Lingua, frase: string) {
-  try {
-    const db = getSupabaseAdmin()
-    type Neg = { id: string; etiquetas: string[] | null; nome: string | null }
-    const { data } = await db.from('vendas_negocios').select('id, etiquetas, nome').in('telefone', variantesDoNumero(e164)).order('criado_em', { ascending: false }).limit(1)
-    let neg = (data?.[0] as Neg | undefined) ?? null
-    if (!neg) {
-      const { data: novo } = await db
-        .from('vendas_negocios')
-        .insert({ nome: nome || null, telefone: e164, origem: 'whatsapp', chave_origem: `wa-humano:${e164}`, funil: 'educacao', estado: 'lead', etiquetas: ['quer_pessoa', `lingua-${lingua}`] })
-        .select('id, etiquetas, nome')
-        .single()
-      neg = (novo as Neg | null) ?? null
-    } else {
-      await db
-        .from('vendas_negocios')
-        .update({ etiquetas: [...new Set([...(neg.etiquetas ?? []), 'quer_pessoa', `lingua-${lingua}`])], atualizado_em: new Date().toISOString() })
-        .eq('id', neg.id)
-    }
-    if (!neg) return
-    const hoje = new Date().toISOString().slice(0, 10)
-    const chave = `wa-humano:${neg.id}:${hoje}`
-    const { data: ja } = await db.from('vendas_tarefas').select('id').eq('chave', chave).maybeSingle()
-    if (!ja) {
-      await db.from('vendas_tarefas').insert({
-        chave,
-        titulo: `Falar com ${neg.nome || nome || e164} no WhatsApp (pediu uma pessoa)`,
-        descricao: `Pediu para falar com uma pessoa no funil de WhatsApp. Língua: ${lingua.toUpperCase()}. Número ${e164}. Disse: «${frase.slice(0, 300)}». Já recebeu o link da agenda.`,
-        negocio_id: neg.id,
-        papel: 'setter',
-        prazo: hoje,
-        estado: 'aberta',
-      })
-    }
-  } catch (e) {
-    console.error('[whatsapp-fluxo] fila de setters falhou:', e instanceof Error ? e.message : e)
-  }
-}
-
-async function avisarRicardo(texto: string) {
+export async function avisarRicardo(texto: string) {
   try {
     const { sendTelegramChannelMessage } = await import('@/lib/mtmcopy/telegram-bot')
     const db = getSupabaseAdmin()
@@ -136,7 +98,7 @@ async function falar(para: string, texto: string): Promise<'audio' | 'texto' | '
 async function guardarEstado(chatId: string, campos: Record<string, unknown>) {
   await getSupabaseAdmin()
     .from('telegram_leads')
-    .upsert({ chat_id: chatId, source: 'whatsapp', ...campos, updated_at: new Date().toISOString() }, { onConflict: 'chat_id' })
+    .upsert({ chat_id: chatId, source: 'whatsapp', followup_count: 0, ...campos, updated_at: new Date().toISOString() }, { onConflict: 'chat_id' })
 }
 
 async function gravarOptIn(e164: string, prova: string) {
@@ -204,7 +166,25 @@ export async function tratarFluxoWhatsApp(p: {
     return true
   }
 
-  const intencao = intencaoDoBotao(p.botao) ?? lerIntencao(p.texto)
+  // ── Botões do seguimento de quem foi ao site (lib/whatsapp/seguimento-site.ts) ─────────────
+  if (p.botao === ID_SEG_DUVIDA || p.botao === TEXTOS_SEGUIMENTO[lingua].botaoDuvida) {
+    await enviarWhatsApp({ para: p.from, finalidade: 'resposta', texto: TEXTOS_SEGUIMENTO[lingua].respostaDuvida, agente: { funil: FUNIL } })
+    await guardarEstado(chatId, { first_name: nome || null, lang: lingua })
+    return true
+  }
+  if (p.botao === ID_SEG_AGENDAR || p.botao === TEXTOS_SEGUIMENTO[lingua].botaoAgendar) {
+    await enviarWhatsApp({ para: p.from, finalidade: 'resposta', texto: seguirLinks(TEXTOS_SEGUIMENTO[lingua].respostaAgendar(AGENDA), p.e164, AGENDA), agente: { funil: FUNIL } })
+    await guardarEstado(chatId, { first_name: nome || null, lang: lingua })
+    return true
+  }
+
+  // Texto livre: só conta como «botão escrito» se for curto e sem pergunta («sim», «aprender»,
+  // «corretora»). Uma frase a sério («não percebi quanto custa o premium?») vai para o closer IA,
+  // que pensa e responde no contexto (pedido do Ricardo 23/11). Pedir uma pessoa e SAIR valem sempre.
+  const intencaoTexto = p.botao ? null : lerIntencao(p.texto)
+  const textoCurto = p.texto.trim().split(/\s+/).length <= 5 && !p.texto.includes('?')
+  const intencao =
+    intencaoDoBotao(p.botao) ?? (intencaoTexto === 'humano' || intencaoTexto === 'sair' || textoCurto ? intencaoTexto : null)
 
   if (intencao === 'lingua') {
     await enviarWhatsApp({
@@ -217,7 +197,7 @@ export async function tratarFluxoWhatsApp(p: {
   }
 
   if (intencao === 'humano') {
-    await enviarWhatsApp({ para: p.from, finalidade: 'resposta', texto: g().textoHumano, agente: { funil: FUNIL } })
+    await enviarWhatsApp({ para: p.from, finalidade: 'resposta', texto: seguirLinks(g().textoHumano, p.e164, AGENDA), agente: { funil: FUNIL } })
     await guardarEstado(chatId, { stage: 'wa_humano', first_name: nome || null, lang: lingua })
     await passarParaSetter(p.e164, nome, lingua, p.botao ?? p.texto)
     await avisarRicardo(`🙋 <b>WhatsApp: quer falar com uma pessoa</b>\n${nome || p.e164} · ${p.e164} · ${lingua.toUpperCase()}\nFicou na fila dos setters no pipeline.\n«${p.texto.slice(0, 200)}»`)
@@ -245,7 +225,7 @@ export async function tratarFluxoWhatsApp(p: {
     await enviarWhatsApp({
       para: p.from,
       finalidade: 'resposta',
-      texto: textoDaRota(rota, lingua) + (comoSaiu === 'audio' ? `\n\n_${g().avisoIa}_` : ''),
+      texto: seguirLinks(textoDaRota(rota, lingua), p.e164, AGENDA) + (comoSaiu === 'audio' ? `\n\n_${g().avisoIa}_` : ''),
       agente: { funil: FUNIL },
     })
     await guardarEstado(chatId, { stage: `wa_rota_${rota}`, interest: rota, first_name: nome || null, lang: lingua })
@@ -255,19 +235,7 @@ export async function tratarFluxoWhatsApp(p: {
     return true
   }
 
-  // Ainda no menu e escreveu outra coisa: volta a mostrar a lista uma vez, sem insistir mais.
-  if (stage === 'wa_menu' && !rota) {
-    const estado = await lerEstadoDoContacto(p.e164)
-    if (!estado.retirou) {
-      await enviarWhatsApp({
-        para: p.from,
-        finalidade: 'resposta',
-        interativo: { tipo: 'lista', corpo: g().textoMenuDeNovo, botao: g().botaoMenu, linhas: menuComLingua(lingua) },
-      })
-      await guardarEstado(chatId, { stage: 'wa_menu_2' })
-      return true
-    }
-  }
+  // Tudo o resto (perguntas, dúvidas, conversa) é do closer IA, que pensa e responde.
   return false
 }
 

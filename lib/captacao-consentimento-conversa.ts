@@ -67,7 +67,12 @@ export function devePerguntar(e: EstadoDoPedido): boolean {
  * perceber é muito maior do que o de perceber a mais. Uma pessoa que pede para parar e continua a
  * receber deixa de ser um lead e passa a ser uma queixa.
  */
-const SAIR = /\b(p[aá]ra|parar|pare|stop|unsubscribe|cancelar|remove[r]?|descad|sai[r]?\s+(da|do)\s+lista|n[aã]o\s+(me\s+)?(mandes?|envies?|escrevas?)\s+mais|deixa[- ]me\s+em\s+paz|tira[- ]me)\b/i
+// 23/11: «para» é a preposição mais comum do português. Solta no meio de uma frase («estou pronto
+// PARA usar automatismos») tirava a pessoa da lista para sempre. As palavras curtas só contam
+// SOZINHAS na mensagem; no meio de uma frase só contam pedidos explícitos.
+const SAIR_SOZINHO = /^\s*(p[aá]ra|parar|pare|stop|unsubscribe|cancelar|remover?|sair|chega)\s*(por\s+favor|pf|pfv)?\s*[.!]*\s*$/i
+const SAIR_FRASE = /(\b(parar|pára|para|stop|cancelar|chega\s+de)\s+(as\s+|com\s+as\s+|de\s+receber\s+(as\s+)?)?(mensagens|msgs?|notifica[cç][oõ]es|isto)\b|\bparar\s+de\s+receber|\bn[aã]o\s+quero\s+mais\s+(mensagens|receber)|\bj[aá]\s+n[aã]o\s+quero\s+receber|\bp[aá]ra\s+(de\s+)?(me\s+)?(mandar|enviar|escrever|contactar)|\bparem\s+de\s+(me\s+)?(mandar|enviar|escrever|contactar)|\bdescad|\bsai[r]?\s+(da|do|desta)\s+lista|\bn[aã]o\s+(me\s+)?(mandes?|envies?|escrevas?|mandem|enviem|escrevam)\s+mais|\bn[aã]o\s+quero\s+(receber|mais\s+mensagens)|\bdeixa[- ]me\s+em\s+paz|\btira[- ]me\b|\bremove[r]?[- ]me\b|\bremovam[- ]me\b|\bunsubscribe\b|\bstop\s+messages\b)/i
+const SAIR = { test: (t: string) => SAIR_SOZINHO.test(t) || SAIR_FRASE.test(t) }
 
 /**
  * O «sim» — curto e sem ambiguidade. Só conta quando há pergunta pendente.

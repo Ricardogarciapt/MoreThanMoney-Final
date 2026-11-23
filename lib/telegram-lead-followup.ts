@@ -30,6 +30,8 @@ export async function runLeadFollowups(): Promise<{ ok: boolean; sent: number; r
     .from('telegram_leads')
     .select('chat_id, first_name, interest, stage, followup_count, updated_at, last_followup_at, broker_uid, granted_at, premium_group_granted_at, email')
     .in('stage', ['new', 'qualifying', 'routed'])
+    // Os do WhatsApp têm seguimento próprio (lib/whatsapp/seguimento-site-motor.ts): pelo Telegram nem chegavam.
+    .or('source.is.null,source.neq.whatsapp')
     .is('granted_at', null)
     .lt('followup_count', MAX_TOUCHES)
     .order('updated_at', { ascending: true })
