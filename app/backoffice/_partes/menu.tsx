@@ -22,10 +22,13 @@ export function MenuBackoffice({ seccoes }: { seccoes: SeccaoMenu[] }) {
   const [aberto, setAberto] = useState(false)
   useEffect(() => { setAberto(false) }, [caminho])
 
-  const activo = (href: string) => {
+  const casa = (href: string) => {
     const h = semPrefixo(href)
     return h === '/' ? caminho === '/' : caminho === h || caminho.startsWith(`${h}/`)
   }
+  // Só o item mais específico fica activo (Materiais e Academia, que vive dentro de Materiais, não acendem os dois).
+  const maisLongo = seccoes.flatMap((s) => s.itens).filter((i) => casa(i.href)).sort((a, b) => b.href.length - a.href.length)[0]?.href
+  const activo = (href: string) => href === maisLongo
 
   return (
     <>
