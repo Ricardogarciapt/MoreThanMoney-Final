@@ -84,9 +84,21 @@ export async function GET(request: NextRequest) {
     if (p.post_id) porPost.set(p.post_id, p)
   }
 
-  const { data: autos } = await sb.from('mtm_automacoes').select('valor,ativa').eq('ativa', true)
+  // `valor` é uma lista («TRIAL,GRÁTIS,…»), como o funil do Instagram a lê (lib/instagram/funnel.ts).
+  const { data: autos } = await sb
+    .from('mtm_automacoes')
+    .select('valor')
+    .eq('ativa', true)
+    .eq('canal', 'instagram_comentario')
   const automacoes = Array.from(
-    new Set((autos ?? []).map((a: any) => String(a.valor ?? '').trim().toUpperCase()).filter(Boolean)),
+    new Set(
+      (autos ?? []).flatMap((a: any) =>
+        String(a.valor ?? '')
+          .split(/[,;]/)
+          .map((k) => k.trim().toUpperCase())
+          .filter(Boolean),
+      ),
+    ),
   )
 
   const itens = linhas.map((l) => {
