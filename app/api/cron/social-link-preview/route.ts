@@ -3,6 +3,7 @@ import { isCronAuthorized } from '@/lib/cron-auth'
 import { getSupabaseAdmin } from '@/lib/supabase-admin-client'
 import { fetchLinkPreview } from '@/lib/link-preview-fetch'
 import { backfillLinkPreviews } from '@/lib/social/link-preview'
+import { correrCicloSkool } from '@/lib/skool/ciclo'
 
 /**
  * Backfill das thumbnails de link nos posts do feed (pedido do dono a 05/10/2026).
@@ -22,7 +23,9 @@ export async function GET(request: NextRequest) {
       janela: 200,
       maximo: 20,
     })
-    return NextResponse.json({ ok: true, ...resultado })
+    // Ciclo do Skool encadeado aqui (vercel.json no tecto de 100 crons). Nunca deixa cair o backfill.
+    const skool = await correrCicloSkool().catch((e) => ({ ok: false, erro: e instanceof Error ? e.message : String(e) }))
+    return NextResponse.json({ ok: true, ...resultado, skool })
   } catch (e) {
     console.error('[cron/social-link-preview]', e)
     return NextResponse.json({ error: 'Erro no backfill' }, { status: 500 })

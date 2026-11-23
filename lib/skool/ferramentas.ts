@@ -1,5 +1,7 @@
 import type { Ferramenta } from '@/lib/mcp/ferramentas'
 import { chamarApi, curto, guardarSessao, idDoGrupo, lerPagina, lerSessao } from '@/lib/skool/cliente'
+import { categoriasDoGrupo, correrCicloSkool } from '@/lib/skool/ciclo'
+import { getSupabaseAdmin } from '@/lib/supabase-admin-client'
 
 /**
  * Ferramentas do conector MCP do Skool.
@@ -333,6 +335,35 @@ export const FERRAMENTAS_SKOOL: Ferramenta[] = [
     correr: async (a) => {
       exigirConfirmacao(a)
       return chamarApi('POST', `channels/${encodeURIComponent(String(a.canal_id))}/messages`, { content: String(a.texto), attachments: [] })
+    },
+  },
+
+  // ── Ciclo automático ───────────────────────────────────────────────────────────────────
+  {
+    nome: 'skool_ciclo_estado',
+    descricao: 'Estado do ciclo automático (feed da app → Skool, ideias DEFY, DCA, desafio e sala do dia): última corrida, erros, o que já saiu hoje e as categorias usadas.',
+    esquema: { type: 'object', properties: {}, additionalProperties: false },
+    correr: async () => {
+      const { data } = await getSupabaseAdmin().from('site_settings').select('value').eq('key', 'skool_ciclo').maybeSingle()
+      const v = (data?.value ?? {}) as Record<string, unknown>
+      return { ...v, defyMapa: undefined, sinais_ligados: Object.keys((v.defyMapa as object) ?? {}).length, categorias: await categoriasDoGrupo().catch((e) => String(e)) }
+    },
+  },
+  {
+    nome: 'skool_ciclo_correr',
+    descricao: 'Corre já o ciclo automático (normalmente corre de hora a hora sozinho).',
+    esquema: { type: 'object', properties: {}, additionalProperties: false },
+    correr: async () => correrCicloSkool(),
+  },
+  {
+    nome: 'skool_ciclo_ligar',
+    descricao: 'Liga ou desliga o ciclo automático do Skool.',
+    esquema: { type: 'object', properties: { ligado: { type: 'boolean' } }, required: ['ligado'], additionalProperties: false },
+    correr: async (a) => {
+      const db = getSupabaseAdmin()
+      const { data } = await db.from('site_settings').select('value').eq('key', 'skool_ciclo').maybeSingle()
+      await db.from('site_settings').upsert({ key: 'skool_ciclo', value: { ...((data?.value as object) ?? {}), ligado: a.ligado === true } }, { onConflict: 'key' })
+      return { ligado: a.ligado === true }
     },
   },
 
