@@ -366,7 +366,7 @@ export interface CorpoTemplate {
 /** Mensagem interactiva (só dentro da janela): botões (até 3) ou lista (até 10 linhas). */
 export type Interativo =
   | { tipo: 'botoes'; corpo: string; botoes: Array<{ id: string; titulo: string }> }
-  | { tipo: 'lista'; corpo: string; botao: string; linhas: Array<{ id: string; titulo: string; descricao?: string }> }
+  | { tipo: 'lista'; corpo: string; botao: string; linhas: Array<{ id: string; titulo: string; descricao?: string }>; rodape?: string }
 
 export function corpoParaCloudApi(
   paraE164: string,
@@ -391,6 +391,7 @@ export function corpoParaCloudApi(
         : {
             type: 'list',
             body: { text: i.corpo.slice(0, 1024) },
+            ...(i.rodape ? { footer: { text: i.rodape.slice(0, 60) } } : {}),
             action: {
               button: i.botao.slice(0, 20),
               sections: [
