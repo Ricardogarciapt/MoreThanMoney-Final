@@ -134,7 +134,7 @@ export function BotaoVoz() {
           if (estado === 'a-gravar') parar()
           else if (estado === 'parado') void comecar()
         }}
-        className="fixed bottom-5 right-5 z-50 grid h-14 w-14 place-items-center rounded-full shadow-lg shadow-black/50 transition active:scale-95"
+        className="fixed bottom-[calc(5.25rem+env(safe-area-inset-bottom))] right-4 z-50 grid h-14 w-14 place-items-center rounded-full shadow-lg shadow-black/50 transition active:scale-95 sm:bottom-[calc(6rem+env(safe-area-inset-bottom))] sm:right-6"
         style={{ background: estado === 'a-gravar' ? '#dc2626' : OURO }}
       >
         {estado === 'a-pensar' ? (
@@ -148,7 +148,7 @@ export function BotaoVoz() {
       </button>
 
       {aberto && (
-        <div className="fixed bottom-24 right-4 z-50 w-[min(92vw,380px)] rounded-2xl border border-white/10 bg-[#0d1016] p-4 text-sm text-zinc-200 shadow-2xl shadow-black/60">
+        <div className="fixed bottom-[calc(9.5rem+env(safe-area-inset-bottom))] right-4 z-50 w-[min(92vw,380px)] sm:bottom-[calc(10.25rem+env(safe-area-inset-bottom))] sm:right-6 rounded-2xl border border-white/10 bg-[#0d1016] p-4 text-sm text-zinc-200 shadow-2xl shadow-black/60">
           <div className="mb-2 flex items-center justify-between">
             <span className="text-xs font-semibold uppercase tracking-[0.18em]" style={{ color: OURO }}>
               {estado === 'a-gravar' ? 'A ouvir… toca para parar' : estado === 'a-pensar' ? 'A tratar…' : 'Comando por voz'}
