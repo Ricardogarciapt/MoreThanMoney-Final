@@ -1,6 +1,25 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { requireAdmin } from '@/lib/admin-api-helpers'
-import { tokenDoYoutube } from '@/lib/videocliper/publicar'
+
+/**
+ * Token do YouTube para esta rota. Lê YOUTUBE_CLIENT_ID/SECRET e, na falta deles, GOOGLE_CLIENT_ID/SECRET
+ * (o par que existe em produção). O refresh token é o YOUTUBE_REFRESH_TOKEN. Não toca no helper partilhado
+ * do videocliper, para não mudar a publicação que já corre.
+ */
+async function tokenDoYoutube(): Promise<string> {
+  const cid = (process.env.YOUTUBE_CLIENT_ID || process.env.GOOGLE_CLIENT_ID || '').trim()
+  const secret = (process.env.YOUTUBE_CLIENT_SECRET || process.env.GOOGLE_CLIENT_SECRET || '').trim()
+  const refresh = (process.env.YOUTUBE_REFRESH_TOKEN || '').trim()
+  if (!cid || !secret || !refresh) throw new Error('credenciais do YouTube em falta (client id, client secret, refresh token)')
+  const r = await fetch('https://oauth2.googleapis.com/token', {
+    method: 'POST',
+    headers: { 'content-type': 'application/x-www-form-urlencoded' },
+    body: new URLSearchParams({ client_id: cid, client_secret: secret, refresh_token: refresh, grant_type: 'refresh_token' }),
+  })
+  const j = (await r.json().catch(() => ({}))) as { access_token?: string; error?: string }
+  if (!j.access_token) throw new Error(`token do YouTube recusado: ${j.error ?? 'sem access_token'}`)
+  return j.access_token
+}
 
 export const dynamic = 'force-dynamic'
 export const maxDuration = 300
