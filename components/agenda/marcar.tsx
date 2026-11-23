@@ -75,6 +75,10 @@ export default function Marcar({ slugInicial }: { slugInicial?: string }) {
         const v = q.get(k)
         if (v) o[k] = v.slice(0, 80)
       }
+      // Veio do funil de WhatsApp (link /w/…): o cookie diz de que lead se trata, mesmo que tenha
+      // navegado pelo site antes de chegar aqui.
+      const wa = document.cookie.match(/(?:^|; )mtm_wa=([^;]+)/)?.[1]
+      if (wa) o.wa = decodeURIComponent(wa).slice(0, 40)
       setOrigem(o)
       // Quem acabou de pedir o protótipo já nos deu nome, email e telemóvel: não se pede outra vez.
       const pre = JSON.parse(sessionStorage.getItem("mtm_agenda_pre") || "null") as { nome?: string; email?: string; telefone?: string } | null

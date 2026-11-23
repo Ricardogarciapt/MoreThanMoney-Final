@@ -30,6 +30,9 @@ export async function GET(request: NextRequest) {
   const db = getSupabaseAdmin()
 
   const ingestao = await ingerirQuentes(db)
+  // 23/11: o seguimento de quem saiu do WhatsApp para o site corre aqui, de 5 em 5 minutos.
+  const { correrSeguimentoSite } = await import('@/lib/whatsapp/seguimento-site-motor')
+  const seguimentoSite = await correrSeguimentoSite().catch((e) => ({ erro: e instanceof Error ? e.message : String(e) }))
 
   const desde = new Date(Date.now() - JANELA_MIN * 60000).toISOString()
   const { data, error } = await db
@@ -40,10 +43,10 @@ export async function GET(request: NextRequest) {
     .gte('criado_em', desde)
     .order('criado_em', { ascending: true })
     .limit(20)
-  if (error) return NextResponse.json({ ok: false, ingestao, error: error.message }, { status: 500 })
+  if (error) return NextResponse.json({ ok: false, ingestao, seguimentoSite, error: error.message }, { status: 500 })
 
   const leads = (data ?? []) as LeadNovo[]
-  if (!leads.length) return NextResponse.json({ ok: true, ingestao, avisados: 0 })
+  if (!leads.length) return NextResponse.json({ ok: true, ingestao, seguimentoSite, avisados: 0 })
 
   const chaves = leads.map((l) => `lead-instantaneo:${l.id}`)
   const { data: ja } = await db.from('bot_avisos_enviados').select('chave').in('chave', chaves)

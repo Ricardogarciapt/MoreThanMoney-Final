@@ -49,6 +49,17 @@ for (const frase of [
   assert.equal(lerResposta(frase, true), 'sair', `«${frase}» com pergunta pendente tem de sair`)
 }
 
+// 23/11: frases normais com «para» NÃO são pedidos de saída (o Ricardo foi tirado da lista por isto).
+for (const frase of [
+  'Estou pronto para usar automatismos', 'quero aprender para mudar de vida', 'para quando é a próxima aula?',
+  'quero cancelar a subscrição do premium e passar para membro', 'Para mim faz sentido', 'as mensagens para o grupo chegam?', 'manda mensagens para a minha mulher também',
+]) {
+  assert.notEqual(lerResposta(frase, false), 'sair', `«${frase}» não é pedido de saída`)
+}
+for (const frase of ['Parar mensagens', 'parar as mensagens', 'para de receber mensagens', 'chega de mensagens', 'stop msgs', 'não quero mais mensagens', 'pára de me mandar mensagens', 'quero sair da lista', 'não quero receber mais nada', 'Stop!', 'parar por favor']) {
+  assert.equal(lerResposta(frase, false), 'sair', `«${frase}» tem de sair`)
+}
+
 // ── O «sim» só vale com pergunta feita ─────────────────────────────────────
 
 /**

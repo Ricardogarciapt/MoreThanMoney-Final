@@ -346,7 +346,13 @@ async function ligarAoPipeline(p: {
 }): Promise<void> {
   try {
     const email = p.email.toLowerCase()
-    const { data: existente } = await db().from('vendas_negocios').select('id').ilike('email', email).limit(1).maybeSingle()
+    // 23/11: quem veio do WhatsApp chega SEM email no negócio, só com telefone. Antes a marcação
+    // criava um negócio novo e o lead do WhatsApp ficava órfão, a receber seguimento como se nada
+    // fosse. Agora liga-se pelo link com rasto (utm_content / cookie) e pelo telefone.
+    const { negocioDoWhatsApp } = await import('@/lib/whatsapp/agenda-wa')
+    const doWa = await negocioDoWhatsApp({ utm: p.utm, telefone: p.telefone, email })
+    const { data: porEmail } = doWa ? { data: null } : await db().from('vendas_negocios').select('id').ilike('email', email).limit(1).maybeSingle()
+    const existente = doWa ? { id: doWa } : porEmail
 
     if (existente?.id) {
       await db().from('agenda_marcacoes').update({ negocio_id: existente.id }).eq('id', p.id)
