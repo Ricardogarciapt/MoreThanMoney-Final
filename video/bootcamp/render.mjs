@@ -61,12 +61,19 @@ if (!falas.length && entrada) {
   execFileSync('ffmpeg', ['-y', '-v', 'error', '-i', entrada, '-filter_complex',
     `[0:a]aresample=48000,volume=-6dB,apad=whole_dur=${total.toFixed(2)}[out]`, '-map', '[out]', '-ac', '2', audio])
 }
+// tratamento da voz (pedido do Ricardo 23/11: ganho e níveis). --perfil-voz=limpa|presenca|radio; o guião pode fixar "perfilVoz"
+const PERFIS_VOZ = {
+  limpa: { voz: 'highpass=f=80,acompressor=threshold=-20dB:ratio=2.5:attack=10:release=200:makeup=2', entrada: -8 },
+  presenca: { voz: 'highpass=f=80,equalizer=f=220:t=q:w=1.2:g=-2,equalizer=f=3200:t=q:w=1.4:g=3,equalizer=f=7500:t=q:w=2:g=-1.5,acompressor=threshold=-20dB:ratio=3:attack=8:release=180:makeup=2', entrada: -10 },
+  radio: { voz: 'highpass=f=90,equalizer=f=220:t=q:w=1.2:g=-2.5,equalizer=f=3000:t=q:w=1.4:g=2.5,acompressor=threshold=-24dB:ratio=4.5:attack=5:release=150:makeup=4,alimiter=limit=0.8', entrada: -14 },
+}
+const perfilVoz = PERFIS_VOZ[arg('perfil-voz') || G.perfilVoz] || null
 if (falas.length) {
   // concatena em blocos para não abrir centenas de entradas no mesmo ffmpeg
   const ins = [], filt = []
   falas.forEach((c, i) => { ins.push('-i', c.audio); filt.push(`[${i}:a]aresample=48000,atempo=${VEL},adelay=${Math.round(c.ini * 1000)}:all=1[a${i}]`) })
   const musica = path.join(DIR, 'musica.mp3'), temMusica = fs.existsSync(musica)
-  filt.push(`${falas.map((_, i) => `[a${i}]`).join('')}amix=inputs=${falas.length}:normalize=0,apad=whole_dur=${total.toFixed(2)},${motorVideo.LOUDNORM},aresample=48000${temMusica ? ',asplit[voz][chave]' : '[out]'}`)
+  filt.push(`${falas.map((_, i) => `[a${i}]`).join('')}amix=inputs=${falas.length}:normalize=0,apad=whole_dur=${total.toFixed(2)},${perfilVoz ? perfilVoz.voz + ',' : ''}${motorVideo.LOUDNORM},aresample=48000${temMusica ? ',asplit[voz][chave]' : '[out]'}`)
   if (temMusica) {
     ins.push('-stream_loop', '-1', '-i', musica)
     filt.push(`[${falas.length}:a]aresample=48000,atrim=0:${total.toFixed(2)},loudnorm=I=-30,aresample=48000,afade=t=in:d=1,afade=t=out:st=${(total - 4).toFixed(2)}:d=4[m]`,
@@ -79,11 +86,18 @@ if (falas.length) {
     filt.push(ult)
     ins.push('-i', entrada)
     const k = ins.filter(x => x === '-i').length - 1
-    filt.push(`[${k}:a]aresample=48000,volume=-8dB,apad=whole_dur=${total.toFixed(2)}[ent]`, `[pre][ent]amix=inputs=2:normalize=0:duration=first,alimiter=limit=0.89[out]`)
+    if (perfilVoz) {
+      // com perfil: a entrada baixa sozinha quando a voz entra (sidechain), para a voz ficar sempre à frente
+      filt.push(ult.replace(/\[pre\]$/, ',asplit[pre][chv]')); filt.splice(filt.length - 2, 1)
+      filt.push(`[${k}:a]aresample=48000,volume=${perfilVoz.entrada}dB,apad=whole_dur=${total.toFixed(2)}[ent0]`,
+        `[ent0][chv]sidechaincompress=threshold=0.02:ratio=10:attack=15:release=400[ent]`,
+        `[pre][ent]amix=inputs=2:normalize=0:duration=first,alimiter=limit=0.89[out]`)
+    } else filt.push(`[${k}:a]aresample=48000,volume=-8dB,apad=whole_dur=${total.toFixed(2)}[ent]`, `[pre][ent]amix=inputs=2:normalize=0:duration=first,alimiter=limit=0.89[out]`)
   }
   execFileSync('ffmpeg', ['-y', '-v', 'error', ...ins, '-filter_complex', filt.join(';'), '-map', '[out]', '-ac', '2', audio])
 }
 
+if (process.argv.includes('--so-audio')) { console.log('áudio:', audio); process.exit(0) }
 const de = Number(arg('de') || 0), ate = Number(arg('ate') || total)
 const browser = await chromium.launch().catch(() => chromium.launch({ channel: 'chrome' }))
 const page = await browser.newPage({ viewport: { width: 1920, height: 1080 } })
