@@ -130,6 +130,11 @@ const nextConfig = {
   async headers() {
     return [
       {
+        // Vídeos do Skool: o carregamento na página About é feito a partir de skool.com, que os vai buscar aqui.
+        source: '/skool/video/:ficheiro*',
+        headers: [{ key: 'Access-Control-Allow-Origin', value: 'https://www.skool.com' }],
+      },
+      {
         source: '/.well-known/apple-app-site-association',
         headers: [{ key: 'Content-Type', value: 'application/json' }],
       },
