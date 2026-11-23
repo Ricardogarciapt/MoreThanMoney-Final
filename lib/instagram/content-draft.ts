@@ -238,6 +238,11 @@ export async function correrContentDraft(req: NextRequest, deps: DepsContentDraf
     .select('id', { count: 'exact', head: true })
     .eq('ig_account_id', IG_MTM)
     .in('status', ['draft', 'approved', 'processing'])
+    // 23/11: só conta o que ESTE agente gerou na última semana. Os reels do estúdio, os carrosséis
+    // diários e os ~100 posts antigos postos em pausa (error 'pausa-…') não podem travar o lote novo.
+    .or('created_by.like.agente:%,created_by.eq.sales-machine')
+    .gte('created_at', new Date(Date.now() - 7 * 864e5).toISOString())
+    .or('error.is.null,error.not.like.pausa-%')
   if ((pending ?? 0) >= TARGET_BACKLOG) {
     return NextResponse.json({ ok: true, skipped: 'backlog_cheio', pending })
   }
