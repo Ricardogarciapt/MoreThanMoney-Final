@@ -6,7 +6,7 @@
  * ser UM só ficheiro de voz para todos (não gasta créditos por pessoa). Quem nunca abriu o bot não
  * pode receber (o Telegram responde 403): fica como estava e conta como «não alcançável».
  *
- *   GET ?chave=<whatsapp_diag_chave>[&limite=40][&ensaio=1]
+ *   GET ?chave=<whatsapp_diag_chave>[&limite=40][&desde=0][&ensaio=1]
  */
 import { NextRequest, NextResponse } from 'next/server'
 import { getSupabaseAdmin } from '@/lib/supabase-admin-client'
@@ -26,6 +26,8 @@ export async function GET(req: NextRequest) {
   if (!(await autorizado(req))) return NextResponse.json({ ok: false, erro: 'nao_autorizado' }, { status: 401 })
   const limite = Math.min(120, Math.max(1, Number(req.nextUrl.searchParams.get('limite') ?? 40)))
   const ensaio = req.nextUrl.searchParams.get('ensaio') === '1'
+  // Os inalcançáveis ficam no estágio antigo: `desde` salta-os em lotes curtos (a função tem tecto de tempo).
+  const desde = Math.max(0, Number(req.nextUrl.searchParams.get('desde') ?? 0))
   const db = getSupabaseAdmin()
   const { data, error } = await db
     .from('telegram_leads')
@@ -35,7 +37,8 @@ export async function GET(req: NextRequest) {
     .not('chat_id', 'like', 'wa:%')
     .not('chat_id', 'like', '-%')
     .order('updated_at', { ascending: false })
-    .limit(limite)
+    .order('chat_id', { ascending: true })
+    .range(desde, desde + limite - 1)
   if (error) return NextResponse.json({ ok: false, erro: error.message }, { status: 500 })
   const leads = (data ?? []) as Array<{ chat_id: string; lang: string | null; stage: string | null }>
   if (ensaio) return NextResponse.json({ ok: true, ensaio: true, seriam: leads.length, porEtapa: leads.reduce<Record<string, number>>((a, l) => ((a[l.stage ?? '?'] = (a[l.stage ?? '?'] ?? 0) + 1), a), {}) })
