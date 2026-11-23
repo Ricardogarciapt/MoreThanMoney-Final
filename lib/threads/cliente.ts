@@ -61,11 +61,32 @@ export async function publicarTexto(t: TokenThreads, texto: string, respostaA?: 
   const corpo = new URLSearchParams({ media_type: 'TEXT', text: texto.slice(0, 500), access_token: t.access_token })
   if (respostaA) corpo.set('reply_to_id', respostaA)
   const c = await pedir<{ id: string }>(`${THREADS_GRAPH}/me/threads`, { method: 'POST', body: corpo })
-  const p = await pedir<{ id: string }>(`${THREADS_GRAPH}/me/threads_publish`, {
-    method: 'POST',
-    body: new URLSearchParams({ creation_id: c.id, access_token: t.access_token }),
-  })
-  return p.id
+  await esperarContentor(t, c.id)
+  return publicarContentor(t, c.id)
+}
+
+/** O contentor demora uns segundos a existir para o publish (sobretudo respostas): espera FINISHED. */
+async function esperarContentor(t: TokenThreads, id: string): Promise<void> {
+  for (let i = 0; i < 8; i++) {
+    const st = await pedir<{ status?: string; error_message?: string }>(
+      `${THREADS_GRAPH}/${id}?fields=status,error_message&access_token=${encodeURIComponent(t.access_token)}`,
+    ).catch(() => ({ status: undefined as string | undefined, error_message: undefined as string | undefined }))
+    if (st.status === 'FINISHED') return
+    if (st.status === 'ERROR' || st.status === 'EXPIRED') throw new Error(`contentor: ${st.error_message ?? st.status}`)
+    await new Promise((r) => setTimeout(r, 2500))
+  }
+}
+
+/** Publica com uma segunda tentativa se a Meta ainda disser que o contentor não existe. */
+async function publicarContentor(t: TokenThreads, id: string): Promise<string> {
+  const corpo = () => new URLSearchParams({ creation_id: id, access_token: t.access_token })
+  try {
+    return (await pedir<{ id: string }>(`${THREADS_GRAPH}/me/threads_publish`, { method: 'POST', body: corpo() })).id
+  } catch (e) {
+    if (!/does not exist/i.test(String(e))) throw e
+    await new Promise((r) => setTimeout(r, 5000))
+    return (await pedir<{ id: string }>(`${THREADS_GRAPH}/me/threads_publish`, { method: 'POST', body: corpo() })).id
+  }
 }
 
 /** Post com imagem (URL pública nossa ou livre de direitos). Espera o contentor ficar pronto. */
@@ -74,19 +95,8 @@ export async function publicarImagem(t: TokenThreads, texto: string, imagemUrl: 
     method: 'POST',
     body: new URLSearchParams({ media_type: 'IMAGE', image_url: imagemUrl, text: texto.slice(0, 500), access_token: t.access_token }),
   })
-  for (let i = 0; i < 6; i++) {
-    const st = await pedir<{ status?: string; error_message?: string }>(
-      `${THREADS_GRAPH}/${c.id}?fields=status,error_message&access_token=${encodeURIComponent(t.access_token)}`,
-    )
-    if (st.status === 'FINISHED') break
-    if (st.status === 'ERROR' || st.status === 'EXPIRED') throw new Error(`imagem: ${st.error_message ?? st.status}`)
-    await new Promise((r) => setTimeout(r, 3000))
-  }
-  const p = await pedir<{ id: string }>(`${THREADS_GRAPH}/me/threads_publish`, {
-    method: 'POST',
-    body: new URLSearchParams({ creation_id: c.id, access_token: t.access_token }),
-  })
-  return p.id
+  await esperarContentor(t, c.id)
+  return publicarContentor(t, c.id)
 }
 
 export type RespostaThreads = { id: string; text?: string; username?: string; timestamp?: string }
