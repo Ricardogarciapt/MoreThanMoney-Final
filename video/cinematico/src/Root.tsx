@@ -7,10 +7,13 @@ import { TOTAL as TOTAL_LANDING_RICARDO } from './projetos/landing-ricardo/tempo
 import { Video as AnuncioReel } from './projetos/anuncio-reel/Video'
 import { duracao as duracaoAnuncio } from './projetos/anuncio-reel/anuncios'
 import { FPS, formatoPedido } from './motor/marca'
+import { Video as FastStartV1 } from './projetos/fast-start-forex/Video'
+import { TOTAL as TOTAL_FAST_V1 } from './projetos/fast-start-forex/cenas'
 
 // Cada projecto (guião + cenas) regista aqui a sua composição. O motor (src/motor) e a marca são comuns.
 export const Root: React.FC = () => (
   <>
+    <Composition id="FastStartV1" component={FastStartV1} durationInFrames={TOTAL_FAST_V1} fps={FPS} {...formatoPedido('youtube')} />
     <Composition id="Solucoes" component={Solucoes} durationInFrames={TOTAL_SOLUCOES} fps={FPS} {...formatoPedido('youtube')} />
     <Composition id="LandingRicardo" component={LandingRicardo} durationInFrames={TOTAL_LANDING_RICARDO} fps={FPS} {...formatoPedido('youtube')} />
     <Composition id="AnuncioReel" component={AnuncioReel} durationInFrames={300} fps={FPS} width={1080} height={1920}
