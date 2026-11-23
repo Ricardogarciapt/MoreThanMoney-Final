@@ -15,7 +15,7 @@
  * ser aberta ao fim de dois dias.
  */
 
-import { linkWhatsApp } from "@/lib/whatsapp/primeira-mensagem"
+import { FUNIS_MENSAGEM, linkWhatsApp, mensagemDoFunil, type IdFunilMensagem } from "@/lib/whatsapp/primeira-mensagem"
 import { useCallback, useEffect, useState } from "react"
 import { Clock, Loader2, MessageSquare, RefreshCw, Send, User } from "lucide-react"
 
@@ -61,6 +61,8 @@ export default function WhatsappCrm() {
   const [ocupado, setOcupado] = useState<string | null>(null)
   const [erro, setErro] = useState<string | null>(null)
   const [nota, setNota] = useState<string | null>(null)
+  const [funil, setFunil] = useState<IdFunilMensagem>("seguimento")
+  const [tema, setTema] = useState("")
 
   const ler = useCallback(async () => {
     setErro(null)
@@ -119,10 +121,12 @@ export default function WhatsappCrm() {
   const retomar = async (c: Conversa) => {
     setOcupado(c.telefone); setErro(null); setNota(null)
     const nome = (c.nome ?? "").trim().split(/\s+/)[0] || "olá"
+    const def = FUNIS_MENSAGEM.find((f) => f.id === funil && f.template) ?? FUNIS_MENSAGEM.find((f) => f.id === "seguimento")!
+    const parametros = def.comTema ? [nome, tema.trim() || "o que falámos"] : [nome]
     const r = await fetch("/api/admin/whatsapp", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ para: c.telefone, finalidade: "campanha", template: { nome: "mtm_seguimento", idioma: "pt_PT", parametros: [nome, "o que falámos"] } }),
+      body: JSON.stringify({ para: c.telefone, finalidade: def.finalidade, template: { nome: def.template, idioma: "pt_PT", parametros } }),
     }).then((x) => x.json()).catch(() => null)
     setOcupado(null)
     if (!r?.ok) { setErro(r?.porque ?? "O template não saiu."); return }
@@ -250,6 +254,25 @@ export default function WhatsappCrm() {
                   <div className="mt-3 space-y-2">
                     {/* O motivo vem do servidor e aparece SEMPRE, aberta ou fechada a janela. */}
                     <p className={`text-[11.5px] ${c.pode.textoLivre ? "text-zinc-400" : "text-amber-300"}`}>{c.pode.porque}</p>
+                    <div className="flex flex-wrap items-center gap-2">
+                      <select
+                        value={funil}
+                        onChange={(e) => {
+                          const f = e.target.value as IdFunilMensagem
+                          setFunil(f)
+                          setTexto(mensagemDoFunil(f, { nome: c.nome }, tema))
+                        }}
+                        className={`${CAMPO} w-auto`}
+                      >
+                        {FUNIS_MENSAGEM.filter((f) => f.template).map((f) => (
+                          <option key={f.id} value={f.id}>{f.nome}</option>
+                        ))}
+                      </select>
+                      {FUNIS_MENSAGEM.find((f) => f.id === funil)?.comTema && (
+                        <input value={tema} onChange={(e) => setTema(e.target.value)} placeholder="Tema" className={`${CAMPO} w-48`} />
+                      )}
+                      <span className="text-[11px] text-zinc-500">Escolhe o funil: o texto entra na caixa e o template de retoma é o mesmo.</span>
+                    </div>
                     <div className="flex items-start gap-2">
                       <textarea
                         value={texto}
@@ -275,7 +298,7 @@ export default function WhatsappCrm() {
                           disabled={ocupado === c.telefone}
                           className="rounded-md border border-[#D2A63C]/40 bg-[#D2A63C]/10 px-2.5 py-1.5 text-[12px] text-[#D2A63C] disabled:opacity-40"
                         >
-                          Mandar template de retoma
+                          Mandar template do funil
                         </button>
                         {linkWhatsApp(c.telefone, texto.trim() || null) && (
                           <a
