@@ -89,12 +89,15 @@ function saudacao(l: Lingua): string {
 }
 
 /** Áudio de abertura → espera → menu de rotas (com pessoa e bandeiras). */
-export async function abrirFunilTelegram(chatId: string, nome: string, lingua: Lingua): Promise<void> {
+export async function abrirFunilTelegram(chatId: string, nome: string, lingua: Lingua): Promise<boolean> {
   const g = GUIAO[lingua]
   const como = await falar(chatId, audioAbertura(nome || saudacao(lingua), lingua), lingua)
+  // O Telegram recusa (403) a quem nunca abriu o bot: aí nada se grava e o lead fica como estava.
+  if (como === 'falhou') return false
   if (como === 'audio') await esperar(ESPERA_DEPOIS_DO_AUDIO_MS)
-  await enviarTextoTelegram(chatId, g.textoMenu, tecladoMenu(lingua))
-  await guardar(chatId, { stage: 'tg_menu', first_name: nome || null, lang: lingua })
+  const ok = await enviarTextoTelegram(chatId, g.textoMenu, tecladoMenu(lingua))
+  if (ok) await guardar(chatId, { stage: 'tg_menu', first_name: nome || null, lang: lingua })
+  return ok
 }
 
 /** Rota escolhida: áudio da rota → texto com link com rasto. */
