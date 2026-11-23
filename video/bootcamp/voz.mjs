@@ -31,7 +31,8 @@ for (const lang of langs) {
       for (let tentativa = 1; ; tentativa++) {
         const res = await fetch('https://api.fish.audio/v1/tts', {
           method: 'POST',
-          headers: { ...(env('FISH_API_KEY') ? { Authorization: `Bearer ${env('FISH_API_KEY')}` } : {}), 'Content-Type': 'application/json', model: env('FISH_MODEL') || 's2.1-pro-free' },
+          // sem chave local (nuvem), o proxy de saída troca o cabeçalho pela chave da casa
+          headers: { Authorization: `Bearer ${env('FISH_API_KEY') || 'proxy'}`, 'Content-Type': 'application/json', model: env('FISH_MODEL') || 's2.1-pro-free' },
           body: JSON.stringify({ text: texto, reference_id: VOZ, format: 'mp3', mp3_bitrate: 128, normalize: true, latency: 'normal' }),
         })
         if (res.ok) { fs.writeFileSync(mp3, Buffer.from(await res.arrayBuffer())); break }
