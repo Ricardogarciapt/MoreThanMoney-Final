@@ -122,7 +122,20 @@ export function escadaNumaLinha(): string {
   return (
     `Membro ${PRECO_MEMBRO} (entrada) · Premium ${PRECO_PREMIUM} (1º mês ${PRECO_PREMIUM_1O_MES}) · ` +
     `${NOME_DEGRAU_TOPO} ${PRECO_TOPO} (o topo, anual) · ` +
+    `${entradaNumaLinha()} · ` +
     `rota PU Prime ${MIN_DEPOSIT}$ = Premium + grupos grátis enquanto financiado`
+  )
+}
+
+/**
+ * Os degraus de entrada numa linha (pagamento único). Entram na escada dos prompts para a IA os
+ * oferecer a quem recusa a mensalidade, em vez de deixar a conversa morrer no «agora não».
+ */
+export function entradaNumaLinha(): string {
+  return (
+    `degrau de ENTRADA, pagamento único, para quem recusa a mensalidade: «O Método Frio» + 7 dias de acompanhamento ${eur(ENTRADA_LER_EUR)} ` +
+    `(morethanmoney.pt/ebooks/o-metodo-frio) ou Desafio MTM Funded Launch 10K em conta SIMULADA ${eur(ENTRADA_PRATICAR_EUR)} ` +
+    `(morethanmoney.pt/mtmfunded/checkout?programa=${SLUG_ENTRADA_PRATICAR}; sem dinheiro real em risco)`
   )
 }
 
@@ -145,7 +158,8 @@ export function escadaEmLinhas(): string {
   return (
     `🥉 <b>Membro · ${PRECO_MEMBRO}</b> — comunidade, sinais base e formação. É a porta de entrada.\n` +
     `👑 <b>Premium · ${PRECO_PREMIUM}</b> (1º mês ${PRECO_PREMIUM_1O_MES}) — Scanner, Trading Alerts, Tap to Trade, salas Premium e aulas.\n` +
-    `🏆 <b>${NOME_DEGRAU_TOPO} · ${PRECO_TOPO}</b> — o topo da escada: um ano inteiro de Premium, com estatuto VIP.`
+    `🏆 <b>${NOME_DEGRAU_TOPO} · ${PRECO_TOPO}</b> — o topo da escada: um ano inteiro de Premium, com estatuto VIP.\n` +
+    `🎟️ <b>Primeiro passo de pagamento único</b> (para quem ainda não quer mensalidade): «O Método Frio» + 7 dias de acompanhamento · ${eur(ENTRADA_LER_EUR)}, ou o Desafio MTM Funded Launch 10K em conta simulada · ${eur(ENTRADA_PRATICAR_EUR)}.`
   )
 }
 

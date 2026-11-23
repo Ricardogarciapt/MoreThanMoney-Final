@@ -16,6 +16,8 @@
  */
 import { AG, linkAssinado } from '@/lib/agentes/codigos'
 import { MIN_DEPOSIT, PRECO_MEMBRO } from '@/lib/escada-precos'
+import { porta } from '@/lib/escada-caminhos'
+const SITE_FU = 'https://www.morethanmoney.pt'
 
 export type PassoPago = 'membro' | 'corretora'
 
@@ -55,6 +57,9 @@ export function linkDoPasso(passo: PassoPago): string {
 export function textoDoToque(passo: PassoPago, toque: number, primeiroNome?: string | null): string {
   const ola = primeiroNome ? `${primeiroNome}, ` : ''
   const link = linkDoPasso(passo)
+  // Último toque: o degrau de entrada (pagamento único) para quem recusa — lib/escada-caminhos.ts.
+  const ler = porta('entrada_ler')
+  const desafio = porta('entrada_praticar')
   if (passo === 'membro') {
     if (toque <= 1) {
       return `Ei ${primeiroNome || ''} 👋 fiquei a pensar na tua mensagem. O próximo passo é entrar como Membro (${PRECO_MEMBRO}): formação, sessões ao vivo e a comunidade, com cada sinal mostrado do início ao fim em pips e percentagem. Entras aqui 👉 ${link}`.replace('Ei  👋', 'Ei 👋')
@@ -65,7 +70,7 @@ export function textoDoToque(passo: PassoPago, toque: number, primeiroNome?: str
     if (toque === 3) {
       return `${ola}uma pergunta só: o que te está a travar — o preço, o tempo, ou não saberes se é para ti? Diz-me e eu respondo-te com franqueza. Se já estiveres decidido, é aqui 👉 ${link}`
     }
-    return `${ola}não te volto a chatear com isto 🙏 Se quiseres avançar, o pack Membro está aqui: ${link}. Fico por aqui para qualquer dúvida.`
+    return `${ola}não te volto a chatear com isto 🙏 Se quiseres avançar, o pack Membro está aqui: ${link}. Se ainda não for altura de mensalidade, há um primeiro passo de pagamento único: ${ler.titulo} 👉 ${SITE_FU}${ler.href}. Fico por aqui para qualquer dúvida.`
   }
   if (toque <= 1) {
     return `${ola}o passo seguinte é abrir a tua conta na PU Prime e depositar a partir de $${MIN_DEPOSIT} — com a conta validada, o Premium e os grupos de sinais ficam incluídos. Abres aqui 👉 ${link}`
@@ -76,8 +81,8 @@ export function textoDoToque(passo: PassoPago, toque: number, primeiroNome?: str
   if (toque === 2) {
     return `${ola}ficou a faltar a conta na corretora. É o que desbloqueia o Premium e os sinais. Abres em 2 minutos 👉 ${link} e depois mandas-me o UID aqui.`
   }
-  return `${ola}vou deixar-te à vontade 🙏 Quando quiseres desbloquear o Premium, abre a conta aqui: ${link} e manda-me o UID.`
+  return `${ola}vou deixar-te à vontade 🙏 Quando quiseres desbloquear o Premium, abre a conta aqui: ${link} e manda-me o UID. Se primeiro quiseres treinar sem arriscar o teu dinheiro: ${desafio.titulo} 👉 ${SITE_FU}${desafio.href}`
 }
 
 /** Palavras que fariam de um follow-up uma oferta grátis. A guarda proíbe-as. */
-export const PALAVRAS_DE_GRATIS = /gr[áa]tis|gratuit|\btrial\b|\bfree\b|teste\b|sem cart[ãa]o|0\s*€/i
+export const PALAVRAS_DE_GRATIS = /gr[áa]tis|gratuit|\btrial\b|\bfree\b|teste\b|sem cart[ãa]o|(?<![\d,.])0\s*€/i
