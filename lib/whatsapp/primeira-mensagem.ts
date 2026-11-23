@@ -41,7 +41,7 @@ export function primeiraMensagem(n: NegocioParaMensagem): string {
   const ola = nome ? `Olá ${nome}` : 'Olá'
   const familia = familiaDaOrigem(n.origem)
 
-  // O mesmo texto do template mtm_reencontro_v2: apresenta o número e pede licença.
+  // O mesmo texto do template mtm_reencontro_v3: apresenta o número e pede licença.
   if (familia === 'importado') return mensagemDoFunil('reencontro', n)
 
   if (familia === 'ebook') {
@@ -94,7 +94,7 @@ export interface FunilMensagem {
 /** Uma entrada por funil. Os textos manuais espelham o corpo dos templates (`templates-mtm.ts`). */
 export const FUNIS_MENSAGEM: FunilMensagem[] = [
   { id: 'auto', nome: 'Automática (pela origem do lead)', template: null, finalidade: 'campanha', comTema: false },
-  { id: 'reencontro', nome: 'Reencontro (contactos antigos)', template: 'mtm_reencontro_v2', finalidade: 'campanha', comTema: false },
+  { id: 'reencontro', nome: 'Reencontro (contactos antigos)', template: 'mtm_reencontro_v3', finalidade: 'campanha', comTema: false },
   { id: 'educacao', nome: 'Funil Educação', template: 'mtm_funil_educacao', finalidade: 'servico', comTema: false },
   { id: 'corretora', nome: 'Funil Corretora', template: 'mtm_funil_corretora', finalidade: 'servico', comTema: false },
   { id: 'funded', nome: 'Funil MTM Funded', template: 'mtm_funil_funded', finalidade: 'servico', comTema: false },
@@ -115,9 +115,9 @@ export function mensagemDoFunil(id: IdFunilMensagem, n: NegocioParaMensagem, tem
   switch (id) {
     case 'reencontro':
       return (
-        `${ola}, é o Ricardo Garcia 👋\n\nEste é o número oficial da MoreThanMoney, o meu número de trabalho (guarda-o, se quiseres). ` +
-        'Tinha o teu contacto e lembrei-me de ti: estou a abrir uma coisa nova e queria saber se te interessa.\n\n' +
-        `Posso mandar-te um áudio curto, de 1 minuto, a explicar?\n\n${SAIDA}`
+        `${ola}, é o Ricardo Garcia 👋\n\nPassei a usar este número para o meu trabalho na MoreThanMoney, por isso escrevo-te daqui (guarda-o, se quiseres).\n\n` +
+        'Tenho ajudado pessoas a aprender trading com método e empresas a pôr a IA a trabalhar por elas. Gravei um áudio de 1 minuto a contar como tudo começou.\n\n' +
+        `Posso mandar-to?\n\n${SAIDA}`
       )
     case 'educacao':
       return `${ola}, aqui é a equipa MoreThanMoney. Pediste para te contactarmos sobre a formação em trading.\n\nPara te orientarmos bem: já operaste alguma vez ou estás a começar do zero?\n\n${SAIDA}`
