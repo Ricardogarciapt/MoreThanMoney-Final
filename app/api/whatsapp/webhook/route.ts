@@ -52,6 +52,8 @@ interface WAMessage {
   interactive?: { button_reply?: { id?: string; title?: string }; list_reply?: { id?: string; title?: string } }
   /** Foto (o print do depósito, no passo da corretora). */
   image?: { id?: string; caption?: string; mime_type?: string }
+  /** Áudio ou nota de voz (23/11: amostras de voz dos educadores chegam assim). */
+  audio?: { id?: string; mime_type?: string; voice?: boolean }
 }
 
 /** Descarrega uma foto recebida no WhatsApp (Graph API: id → url → bytes). Nada se guarda. */
@@ -150,6 +152,30 @@ export async function POST(req: NextRequest) {
           } catch (e) {
             console.error('[whatsapp] foto/print falhou:', e instanceof Error ? e.message : e)
           }
+          continue
+        }
+        /**
+         * 23/11: ÁUDIOS GUARDAM-SE. Antes caíam no `!text` e perdiam-se — foi assim que se perdeu a
+         * amostra de voz da Liliana. Ficam no balde privado `estudio` (whatsapp-audios/<número>/) e o
+         * caminho fica no livro, para quem os for buscar (clone de voz, suporte). Não passam pelo funil.
+         */
+        if (from && m.type === 'audio' && m.audio?.id) {
+          let caminho = ''
+          try {
+            const audio = await baixarFotoWhatsApp(m.audio.id)
+            if (audio) {
+              const ext = /mpeg|mp3/i.test(m.audio.mime_type ?? '') ? 'mp3' : /mp4|m4a|aac/i.test(m.audio.mime_type ?? '') ? 'm4a' : 'ogg'
+              caminho = `whatsapp-audios/${from}/${new Date().toISOString().replace(/[:.]/g, '-')}-${m.id ?? m.audio.id}.${ext}`
+              const { error } = await getSupabaseAdmin().storage.from('estudio').upload(caminho, audio, {
+                contentType: m.audio.mime_type ?? 'audio/ogg',
+                upsert: true,
+              })
+              if (error) { console.error('[whatsapp] áudio não gravou:', error.message); caminho = '' }
+            }
+          } catch (e) {
+            console.error('[whatsapp] áudio falhou:', e instanceof Error ? e.message : e)
+          }
+          await registarEntrada({ numero: from, texto: caminho ? `[áudio] estudio/${caminho}` : '[áudio] (não foi possível guardar)', waMessageId: m.id ?? null, nome: contactName })
           continue
         }
         if (!from || !text) continue
