@@ -34,6 +34,15 @@ const NOMES: Record<string, string> = {
   'so-as-maos-es': 'Solo las Manos - Maria Costa',
   'o-metodo-frio-en': 'The Cold Method - Ricardo Garcia',
   'o-metodo-frio-es': 'El Método Frío - Ricardo Garcia',
+  'o-primeiro-passo': 'O Primeiro Passo - Ricardo Garcia',
+  'o-primeiro-passo-en': 'The First Step - Ricardo Garcia',
+  'o-primeiro-passo-es': 'El Primer Paso - Ricardo Garcia',
+  'o-plano-de-3-passos': 'O Plano de 3 Passos - Ricardo Garcia',
+  'o-plano-de-3-passos-en': 'The 3-Step Plan - Ricardo Garcia',
+  'o-plano-de-3-passos-es': 'El Plan de 3 Pasos - Ricardo Garcia',
+  'guia-dos-scanners': 'Guia dos Scanners MTM - Ricardo Garcia',
+  'guia-dos-scanners-en': 'The MTM Scanners Guide - Ricardo Garcia',
+  'guia-dos-scanners-es': 'La Guia de los Scanners MTM - Ricardo Garcia',
 }
 const disposicao = (slug: string) => {
   const nome = NOMES[slug] ?? slug

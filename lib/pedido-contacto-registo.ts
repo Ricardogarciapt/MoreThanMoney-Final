@@ -78,7 +78,7 @@ async function decisoesDoMotor(pedido: PedidoValido): Promise<Record<string, Dec
   return out
 }
 
-async function avisarDono(texto: string) {
+export async function avisarDono(texto: string) {
   try {
     const { sendTelegramChannelMessage } = await import('@/lib/mtmcopy/telegram-bot')
     const db = getSupabaseAdmin()

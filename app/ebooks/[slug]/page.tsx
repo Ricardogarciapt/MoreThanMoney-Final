@@ -13,6 +13,8 @@ import { ehEbook, partesEbook, type LinguaEbook } from '@/lib/ebooks/acesso'
 import { VENDAS } from '@/lib/ebooks/vendas'
 import { EBOOKS_GRATIS, EBOOKS_SO_GRATIS } from '@/lib/ebooks/gratis'
 import FormGratis from '@/components/ebooks/form-gratis'
+import MedicaoConsentida from '@/components/funis/medicao-consentida'
+import { freebieDe } from '@/lib/freebies'
 
 export const revalidate = 300
 
@@ -60,12 +62,15 @@ export default async function PaginaEbook({ params, searchParams }: { params: Pr
   const t = TX[lingua]
   const versoes = (['pt', 'en', 'es', 'fr'] as LinguaEbook[]).map((l) => ({ l, slug: l === 'pt' ? base : `${base}-${l}` })).filter((x) => ehEbook(x.slug))
   const preco = p ? euros(p.preco_cents, t.loc) : ''
-  const comprar = soGratis ? '#gratis' : `/marketplace/${base}`
+  // O «Guia dos Scanners» vem com os 30 dias do GoldKiller: pede-se na página própria (cupão FREEBIE).
+  const goldkiller = base === 'guia-dos-scanners'
+  const comprar = goldkiller ? '/gratis/goldkiller' : soGratis ? '#gratis' : `/marketplace/${base}`
   const estilo = { ['--c' as string]: v.cor, ['--c2' as string]: v.cor2, background: v.fundo } as React.CSSProperties
   const T = { fontFamily: v.fonteTitulo }
 
   return (
     <main lang={t.loc} style={estilo} className="min-h-screen text-[#f3ede2] [&_::selection]:bg-[var(--c)]">
+      {freebieDe(slug) && <MedicaoConsentida funil="freebie" conteudo={base} />}
       {!publicado && <div className="bg-amber-500 px-4 py-2 text-center text-sm font-semibold text-black">Pré-visualização: este e-book ainda não está à venda.</div>}
 
       {/* HERO */}
@@ -187,8 +192,13 @@ export default async function PaginaEbook({ params, searchParams }: { params: Pr
           <div className="rounded-[2rem] p-8" style={{ background: `linear-gradient(135deg, ${v.cor}22, transparent)`, border: `1px solid ${v.cor}88` }}>
             <p className="text-xs font-semibold uppercase tracking-[0.3em]" style={{ color: v.cor2 }}>Oferta</p>
             <h3 className="mt-3 text-3xl" style={T}>Recebe o e-book grátis</h3>
-            <p className="mt-3 mb-6 text-white/65">Deixa o teu email, o WhatsApp e quatro respostas rápidas. O link chega-te logo a seguir e dá para abrir durante um ano.</p>
-            <FormGratis slug={slug} titulo={`${v.titulo} ${v.titulo2}`} />
+            {goldkiller ? (<>
+              <p className="mt-3 mb-6 text-white/65">Vem com 30 dias do Scanner GoldKiller no teu TradingView. Pede os dois na mesma página, com o cupão FREEBIE.</p>
+              <Link href="/gratis/goldkiller" className="inline-block rounded-full px-7 py-4 font-bold text-black" style={{ background: 'linear-gradient(90deg, var(--c), var(--c2))' }}>Quero o guia e o GoldKiller grátis</Link>
+            </>) : (<>
+              <p className="mt-3 mb-6 text-white/65">Deixa o teu email, o WhatsApp e {freebieDe(slug) ? 'duas' : 'quatro'} respostas rápidas. O link chega-te logo a seguir e dá para abrir durante um ano.</p>
+              <FormGratis slug={slug} titulo={`${v.titulo} ${v.titulo2}`} />
+            </>)}
           </div>
         </section>
       )}

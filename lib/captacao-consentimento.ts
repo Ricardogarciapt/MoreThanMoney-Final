@@ -171,7 +171,7 @@ export interface PontoDeCaptura {
 export const PONTOS_DE_CAPTURA: readonly PontoDeCaptura[] = [
   {
     canal: 'iman_leads',
-    onde: 'Página do ímane de leads (os 3 freebies já escritos em docs/freebies)',
+    onde: 'Os 3 freebies (/gratis, /ebooks/<slug>#gratis, /gratis/goldkiller; lib/freebies.ts)',
     pedido:
       'Quero receber o material por email e as novidades da MoreThanMoney. Posso cancelar em qualquer email que receber.',
   },

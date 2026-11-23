@@ -23,7 +23,7 @@ export const UI = {
     rotulos: { destaque: 'Ideia-chave', exercicio: 'Exercício', alerta: 'Atenção', historia: 'História' },
     pergunta: 'Pergunta', mensagens: 'Mensagens', recorta: 'Recorta e guarda', espreitadela: 'Espreitadela do curso', ferramenta: 'Ferramenta MTM',
     ficha: { estilo: 'Estilo', ativos: 'Ativos', tempo: 'Gráfico' }, novaVenda: 'Nova venda ♥', semImpulso: 'SEM IMPULSO',
-    carimbo: { rg: ['Disciplina · Dinheiro · Mercados ·', '10', 'semanas'], frio: ['Forex · Como iniciar · Sem impulso ·', '1 %', 'por operação'], mente: ['Crenças · Identidade · Decisão ·', '30', 'dias'], cripto: ['Cripto para iniciantes · Sem hype ·', '1.º', 'euro'], faceless: ['Vender sem mostrar a cara · Só as mãos ·', '30', 'dias'] },
+    carimbo: { passo: ['Guia grátis · Dinheiro · Primeiro passo ·', '7', 'dias'], plano: ['Educar · Rendimento · Automatizar ·', '3', 'passos'], scanners: ['Guia grátis · Scanner GoldKiller · Vídeos ·', '30', 'dias'], rg: ['Disciplina · Dinheiro · Mercados ·', '10', 'semanas'], frio: ['Forex · Como iniciar · Sem impulso ·', '1 %', 'por operação'], mente: ['Crenças · Identidade · Decisão ·', '30', 'dias'], cripto: ['Cripto para iniciantes · Sem hype ·', '1.º', 'euro'], faceless: ['Vender sem mostrar a cara · Só as mãos ·', '30', 'dias'] },
     colecao: 'Coleção MTM',
     fechoMtm: 'Continua o caminho com a comunidade MoreThanMoney: aulas ao vivo, ferramentas e pessoas que estão a fazer o mesmo percurso.',
   },
@@ -34,7 +34,7 @@ export const UI = {
     rotulos: { destaque: 'Key idea', exercicio: 'Exercise', alerta: 'Warning', historia: 'Story' },
     pergunta: 'Question', mensagens: 'Messages', recorta: 'Cut out and keep', espreitadela: 'A peek inside the course', ferramenta: 'MTM tool',
     ficha: { estilo: 'Style', ativos: 'Assets', tempo: 'Chart' }, novaVenda: 'New sale ♥', semImpulso: 'NO IMPULSE',
-    carimbo: { rg: ['Discipline · Money · Markets ·', '10', 'weeks'], frio: ['Forex · Getting started · No impulse ·', '1%', 'per trade'], mente: ['Beliefs · Identity · Decision ·', '30', 'days'], cripto: ['Crypto for beginners · No hype ·', '1st', 'euro'], faceless: ['Sell without showing your face ·', '30', 'days'] },
+    carimbo: { passo: ['Free guide · Money · First step ·', '7', 'days'], plano: ['Learn · Income · Automate ·', '3', 'steps'], scanners: ['Free guide · GoldKiller Scanner · Videos ·', '30', 'days'], rg: ['Discipline · Money · Markets ·', '10', 'weeks'], frio: ['Forex · Getting started · No impulse ·', '1%', 'per trade'], mente: ['Beliefs · Identity · Decision ·', '30', 'days'], cripto: ['Crypto for beginners · No hype ·', '1st', 'euro'], faceless: ['Sell without showing your face ·', '30', 'days'] },
     colecao: 'MTM Collection',
     fechoMtm: 'Keep going with the MoreThanMoney community: live classes, tools and people walking the same road.',
   },
@@ -45,7 +45,7 @@ export const UI = {
     rotulos: { destaque: 'Idea clave', exercicio: 'Ejercicio', alerta: 'Atención', historia: 'Historia' },
     pergunta: 'Pregunta', mensagens: 'Mensajes', recorta: 'Recorta y guarda', espreitadela: 'Un vistazo al curso', ferramenta: 'Herramienta MTM',
     ficha: { estilo: 'Estilo', ativos: 'Activos', tempo: 'Gráfico' }, novaVenda: 'Nueva venta ♥', semImpulso: 'SIN IMPULSO',
-    carimbo: { rg: ['Disciplina · Dinero · Mercados ·', '10', 'semanas'], frio: ['Forex · Cómo empezar · Sin impulso ·', '1 %', 'por operación'], mente: ['Creencias · Identidad · Decisión ·', '30', 'días'], cripto: ['Cripto para principiantes · Sin hype ·', '1.º', 'euro'], faceless: ['Vender sin mostrar la cara · Solo manos ·', '30', 'días'] },
+    carimbo: { passo: ['Guía gratis · Dinero · Primer paso ·', '7', 'días'], plano: ['Aprender · Ingresos · Automatizar ·', '3', 'pasos'], scanners: ['Guía gratis · Scanner GoldKiller · Vídeos ·', '30', 'días'], rg: ['Disciplina · Dinero · Mercados ·', '10', 'semanas'], frio: ['Forex · Cómo empezar · Sin impulso ·', '1 %', 'por operación'], mente: ['Creencias · Identidad · Decisión ·', '30', 'días'], cripto: ['Cripto para principiantes · Sin hype ·', '1.º', 'euro'], faceless: ['Vender sin mostrar la cara · Solo manos ·', '30', 'días'] },
     colecao: 'Colección MTM',
     fechoMtm: 'Sigue el camino con la comunidad MoreThanMoney: clases en directo, herramientas y personas que están haciendo el mismo recorrido.',
   },
@@ -56,7 +56,7 @@ export const UI = {
     rotulos: { destaque: 'Idée clé', exercicio: 'Exercice', alerta: 'Attention', historia: 'Histoire' },
     pergunta: 'Question', mensagens: 'Messages', recorta: 'À découper et garder', espreitadela: 'Un aperçu de la formation', ferramenta: 'Outil MTM',
     ficha: { estilo: 'Style', ativos: 'Actifs', tempo: 'Graphique' }, novaVenda: 'Nouvelle vente ♥', semImpulso: 'SANS IMPULSION',
-    carimbo: { rg: ['Discipline · Argent · Marchés ·', '10', 'semaines'], frio: ['Forex · Débuter · Sans impulsion ·', '1 %', 'par trade'], mente: ['Croyances · Identité · Décision ·', '30', 'jours'], cripto: ['Crypto pour débutants · Sans hype ·', '1er', 'euro'], faceless: ['Vendre sans montrer son visage ·', '30', 'jours'] },
+    carimbo: { passo: ['Guide gratuit · Argent · Premier pas ·', '7', 'jours'], plano: ['Apprendre · Revenus · Automatiser ·', '3', 'étapes'], scanners: ['Guide gratuit · Scanner GoldKiller · Vidéos ·', '30', 'jours'], rg: ['Discipline · Argent · Marchés ·', '10', 'semaines'], frio: ['Forex · Débuter · Sans impulsion ·', '1 %', 'par trade'], mente: ['Croyances · Identité · Décision ·', '30', 'jours'], cripto: ['Crypto pour débutants · Sans hype ·', '1er', 'euro'], faceless: ['Vendre sans montrer son visage ·', '30', 'jours'] },
     colecao: 'Collection MTM',
     fechoMtm: 'Continue le chemin avec la communauté MoreThanMoney : cours en direct, outils et des personnes qui font le même parcours.',
   },
@@ -64,6 +64,54 @@ export const UI = {
 
 // textos de capa e ficha de cada livro, por língua (o resto vem do livro PT)
 export const LIVROS_TRAD = {
+  'o-primeiro-passo': {
+    en: {
+      titulo: 'The First', titulo2: 'Step',
+      subtitulo: 'For anyone who has never invested and wants to stop trading only their time for money.',
+      autorBio: 'Founder of MoreThanMoney. Fourteen years of service (Army, Marines, Portuguese National Guard) before starting again from zero. Today he teaches money and markets with a method, in community and without promises.',
+      funcao: 'Free guide', edicao: '1st edition · November 2026 · free guide',
+      aviso: 'Educational content. It is not financial advice or an investment recommendation. Investing carries risk, including the loss of capital. Trading leveraged Forex and CFDs carries a high risk of loss and most retail accounts lose money with CFDs. Past results do not guarantee future results.',
+    },
+    es: {
+      titulo: 'El Primer', titulo2: 'Paso',
+      subtitulo: 'Para quien nunca ha invertido y quiere dejar de cambiar solo su tiempo por dinero.',
+      autorBio: 'Fundador de MoreThanMoney. Catorce años de servicio (Ejército, Infantería de Marina, Guardia Nacional Republicana) antes de empezar de cero. Hoy enseña dinero y mercados con método, en comunidad y sin promesas.',
+      funcao: 'Guía gratuita', edicao: '1.ª edición · noviembre de 2026 · guía gratuita',
+      aviso: 'Contenido educativo. No constituye asesoramiento financiero ni recomendación de inversión. Invertir conlleva riesgo, incluida la pérdida del capital. Operar Forex y CFD con apalancamiento conlleva un riesgo elevado de pérdida y la mayoría de las cuentas minoristas pierden dinero con CFD. Los resultados pasados no garantizan resultados futuros.',
+    },
+  },
+  'o-plano-de-3-passos': {
+    en: {
+      titulo: 'The 3-Step', titulo2: 'Plan',
+      subtitulo: 'Learn, build income, automate. A simple written plan, with worksheets and 30 days to follow.',
+      autorBio: 'Founder of MoreThanMoney. Fourteen years of service (Army, Marines, Portuguese National Guard) before starting again from zero. Today he teaches markets with a method: written rules, measured risk and a journal that does not lie.',
+      funcao: 'Free guide', edicao: '1st edition · November 2026 · free guide',
+      aviso: 'Educational content. It is not financial advice or an investment recommendation. Trading leveraged Forex, gold and CFDs carries a high risk of loss, including all of your capital. Most retail accounts lose money with CFDs. MTM Funded accounts are simulated; MoreThanMoney is not a prop firm. Past results do not guarantee future results.',
+    },
+    es: {
+      titulo: 'El Plan', titulo2: 'de 3 Pasos',
+      subtitulo: 'Aprender, crear ingresos, automatizar. Un plan sencillo y escrito, con hojas de trabajo y 30 días para seguir.',
+      autorBio: 'Fundador de MoreThanMoney. Catorce años de servicio (Ejército, Infantería de Marina, Guardia Nacional Republicana) antes de empezar de cero. Hoy enseña mercados con método: reglas escritas, riesgo medido y un diario que no miente.',
+      funcao: 'Guía gratuita', edicao: '1.ª edición · noviembre de 2026 · guía gratuita',
+      aviso: 'Contenido educativo. No constituye asesoramiento financiero ni recomendación de inversión. Operar Forex, oro y CFD con apalancamiento conlleva un riesgo elevado de pérdida, incluida la totalidad del capital. La mayoría de las cuentas minoristas pierden dinero con CFD. Las cuentas MTM Funded son simuladas; MoreThanMoney no es una prop firm. Los resultados pasados no garantizan resultados futuros.',
+    },
+  },
+  'guia-dos-scanners': {
+    en: {
+      titulo: 'The MTM', titulo2: 'Scanners Guide',
+      subtitulo: 'The GoldKiller Scanner step by step, with the bootcamp videos and a 30-day plan in demo.',
+      autorBio: 'Founder of MoreThanMoney. Fourteen years of service (Army, Marines, Portuguese National Guard) before starting again from zero. Today he teaches markets with a method: scanners, written rules and risk management, without promises.',
+      funcao: 'Free guide · GoldKiller', edicao: '1st edition · November 2026 · free guide',
+      aviso: 'Educational content. It is not financial advice or an investment recommendation. Scanners are analysis tools: they do not guarantee results. Trading leveraged gold, Forex and CFDs carries a high risk of loss, including all of your capital. Most retail accounts lose money with CFDs. Charts are simulations with generated prices.',
+    },
+    es: {
+      titulo: 'La Guía de los', titulo2: 'Scanners MTM',
+      subtitulo: 'El Scanner GoldKiller paso a paso, con los vídeos del bootcamp y un plan de 30 días en demo.',
+      autorBio: 'Fundador de MoreThanMoney. Catorce años de servicio (Ejército, Infantería de Marina, Guardia Nacional Republicana) antes de empezar de cero. Hoy enseña mercados con método: scanners, reglas escritas y gestión del riesgo, sin promesas.',
+      funcao: 'Guía gratuita · GoldKiller', edicao: '1.ª edición · noviembre de 2026 · guía gratuita',
+      aviso: 'Contenido educativo. No constituye asesoramiento financiero ni recomendación de inversión. Los scanners son herramientas de análisis: no garantizan resultados. Operar oro, Forex y CFD con apalancamiento conlleva un riesgo elevado de pérdida, incluida la totalidad del capital. La mayoría de las cuentas minoristas pierden dinero con CFD. Los gráficos son simulaciones con precios generados.',
+    },
+  },
   'destrui-tudo-e-ainda-bem': {
     en: {
       titulo: 'I Destroyed It All.', titulo2: "And I'm Glad.",
