@@ -1,7 +1,7 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
 import MedicaoConsentida from '@/components/funis/medicao-consentida'
-import { CAMINHO_DO_PERFIL, porta, type PerfilLead } from '@/lib/escada-caminhos'
+import { CAMINHO_DO_PERFIL, PATAMARES, porta, type PerfilLead } from '@/lib/escada-caminhos'
 
 export const metadata: Metadata = {
   title: 'O teu caminho · MoreThanMoney',
@@ -56,6 +56,20 @@ export default function Caminho() {
               </article>
             )
           })}
+        </div>
+
+        <h2 className="mt-20 text-3xl font-black md:text-4xl">O que cada patamar abre</h2>
+        <p className="mt-3 max-w-2xl text-white/60">Acima do grátis, cada curso pertence a um patamar. Sobes quando o anterior já te deu o que precisavas.</p>
+        <div className="mt-8 grid gap-4 md:grid-cols-4">
+          {PATAMARES.map((p) => (
+            <Link key={p.chave} href={p.href} className="flex flex-col rounded-3xl border border-white/10 bg-white/[0.03] p-5 hover:border-[#D2A63C]/60">
+              <p className="text-sm font-bold uppercase tracking-widest text-[#E9C46A]">{p.nome}</p>
+              <p className="mt-2 text-2xl font-black">{p.preco}</p>
+              <ul className="mt-4 space-y-2 text-sm text-white/65">
+                {p.inclui.map((i) => <li key={i}>· {i}</li>)}
+              </ul>
+            </Link>
+          ))}
         </div>
 
         <div className="mt-14 rounded-3xl border border-white/10 p-6 text-center">

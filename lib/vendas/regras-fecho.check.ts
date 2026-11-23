@@ -13,6 +13,8 @@ const caso = (nome: string, f: () => void) => { f(); n++; console.log(`  ok  ${n
 
 caso('o agente fecha a escada', () => {
   for (const tipo of ['membro', 'premium', 'anual', 'rota_corretora'] as const) assert.equal(quemFecha({ tipo }), 'agente', tipo)
+  assert.equal(quemFecha({ tipo: 'bootcamp' }), 'agente', 'bootcamp 310 € fecha-se com link')
+  assert.equal(quemFecha({ tipo: 'mentoria' }), 'ricardo', 'mentoria 2.000 € é do Ricardo')
 })
 caso('MAU: oferta à medida nunca fecha sozinha, nem barata nem sem valor', () => {
   assert.equal(quemFecha({ tipo: 'outro', valorEur: 1500 }), 'ricardo')
