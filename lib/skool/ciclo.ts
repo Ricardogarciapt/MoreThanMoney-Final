@@ -1,5 +1,6 @@
 import { getSupabaseAdmin } from '@/lib/supabase-admin-client'
 import { chamarIAGratis } from '@/lib/ia/chamar'
+import { sincronizarAcessos } from '@/lib/skool/acessos'
 import { blocoFramework } from '@/lib/framework-mtm'
 import { chamarApi, idDoGrupo, lerPagina, lerSessao } from '@/lib/skool/cliente'
 
@@ -33,6 +34,7 @@ interface Estado {
   defyMapa?: Record<string, string> // chat_messages.id → skool post id
   dia?: { data: string; desafio?: boolean; sala?: boolean; vitorias?: boolean; defy?: number }
   ultimaCorrida?: string
+  acessosEm?: string
   ultimoErro?: string | null
 }
 
@@ -281,6 +283,14 @@ export async function correrCicloSkool(): Promise<Record<string, unknown>> {
   await passo('dca', () => sincronizarDca(e, cat, log))
   if (!e.dia.desafio && hoje.hora >= 9) await passo('desafio', async () => { await desafioDoDia(cat); e.dia!.desafio = true; log.push('desafio') })
   if (!e.dia.sala && hoje.hora >= 13) await passo('sala', async () => { await salaDoDia(cat); e.dia!.sala = true; log.push('sala') })
+  // Acessos (pagantes do site ↔ cursos do Skool), de 3 em 3 horas.
+  if (!e.acessosEm || Date.now() - Date.parse(e.acessosEm) > 3 * 3600_000) {
+    await passo('acessos', async () => {
+      const r = await sincronizarAcessos()
+      e.acessosEm = new Date().toISOString()
+      log.push(`acessos: ${JSON.stringify({ c: r.concedidos, v: r.convites, r: r.retirados })}`)
+    })
+  }
   if (hoje.segunda && !e.dia.vitorias && hoje.hora >= 10) await passo('vitorias', async () => { await vitoriasDaSemana(cat); e.dia!.vitorias = true; log.push('vitorias') })
 
   e.ultimaCorrida = new Date().toISOString()

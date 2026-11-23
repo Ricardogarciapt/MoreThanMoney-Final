@@ -1,6 +1,7 @@
 import type { Ferramenta } from '@/lib/mcp/ferramentas'
 import { chamarApi, curto, guardarSessao, idDoGrupo, lerPagina, lerSessao } from '@/lib/skool/cliente'
 import { categoriasDoGrupo, correrCicloSkool } from '@/lib/skool/ciclo'
+import { CURSOS, sincronizarAcessos } from '@/lib/skool/acessos'
 import { getSupabaseAdmin } from '@/lib/supabase-admin-client'
 
 /**
@@ -365,6 +366,27 @@ export const FERRAMENTAS_SKOOL: Ferramenta[] = [
       await db.from('site_settings').upsert({ key: 'skool_ciclo', value: { ...((data?.value as object) ?? {}), ligado: a.ligado === true } }, { onConflict: 'key' })
       return { ligado: a.ligado === true }
     },
+  },
+
+  // ── Acessos (patamares grátis / mensal / total, em sintonia com /admin) ───────────────
+  {
+    nome: 'skool_acessos_estado',
+    descricao: 'Como estão os acessos ao Skool: patamares e cursos de cada um, última sincronização, e contagem de membros por estado (legado, pagante, convidado, grátis, comprador).',
+    esquema: { type: 'object', properties: {}, additionalProperties: false },
+    correr: async () => {
+      const db = getSupabaseAdmin()
+      const { data } = await db.from('site_settings').select('value').eq('key', 'skool_acessos').maybeSingle()
+      const { data: regs } = await db.from('skool_members').select('status')
+      const porEstado: Record<string, number> = {}
+      for (const r of regs ?? []) porEstado[r.status] = (porEstado[r.status] ?? 0) + 1
+      return { patamares: CURSOS, config: data?.value ?? {}, porEstado }
+    },
+  },
+  {
+    nome: 'skool_acessos_sincronizar',
+    descricao: 'Sincroniza já os acessos: convida quem paga no site, dá-lhe os cursos do patamar, e devolve ao grátis quem deixou de pagar (nunca toca nos membros legado). simular=true só mostra o que faria.',
+    esquema: { type: 'object', properties: { simular: { type: 'boolean' } }, additionalProperties: false },
+    correr: async (a) => sincronizarAcessos({ simular: a.simular === true }),
   },
 
   // ── Genéricas (para o que o Skool tiver e ainda não tiver ferramenta própria) ──────────
