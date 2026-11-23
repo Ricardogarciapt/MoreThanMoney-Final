@@ -147,7 +147,7 @@ AULAS.forEach((ids, vi) => {
 })
 
 const G = {
-  estrategia: TX.curso, motor: 'primeira-chave', marca: 'MoreThanMoney · Ruben Pereira', vel: 1.0, marcaVideo: 'morethanmoney',
+  estrategia: TX.curso, motor: 'primeira-chave', marca: 'MoreThanMoney · Ruben Pereira', vel: 1.0, entrada: true, marcaVideo: 'morethanmoney',
   tituloPlaylist: `${TX.curso} · Ruben Pereira`,
   pronuncia: [['DCA', 'D C A'], ['BTC', 'B T C'], ['ETH', 'E T H'], ['ETF', 'E T F'], ['ATR', 'A T R'], ['RSI', 'R S I'], ['DEMA', 'D E M A'], ['MTM', 'M T M'], ['DEFY', 'Défi']],
   videos,
