@@ -216,7 +216,7 @@ export function htmlCena({ cena, aula, total, indice, L, dur, raiz }) {
     corpo = `${j.html}
       <div class="ecra-titulo entra" style="--i:.5">${esc(c.titulo[L])}</div>
       <div class="destaques">${c.destaques.map((d, i) => `<div class="destaque entra" style="--i:${1.2 + i * r}"><span class="n">${i + 1}</span><span>${esc(d[L])}</span></div>`).join('')}</div>
-      ${j.exemplo ? `<div class="exemplo">${L === 'pt' ? 'Ecrã ilustrativo do back-office · dados de exemplo' : 'Illustrative back-office screen · sample data'}</div>` : ''}`
+      <div class="exemplo">${j.exemplo ? (L === 'pt' ? 'Ecrã ilustrativo do back-office · dados de exemplo' : 'Illustrative back-office screen · sample data') : (L === 'pt' ? 'Back-office real · dados de exemplo' : 'Real back-office · sample data')}</div>`
   } else if (c.tipo === 'guiao') {
     const txt = c.texto[L]
     const escrita = Math.min(dur * 0.65, Math.max(3, txt.length / 28))
