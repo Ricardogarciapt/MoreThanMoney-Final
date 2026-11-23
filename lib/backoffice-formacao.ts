@@ -162,7 +162,7 @@ const aula1: Aula = {
         t('Cursos narrados para a equipa do cliente', 'Narrated courses for the client’s team'),
       ],
       fala: t(
-        'Em morethanmoney.pt barra soluções vendemos ao dono de um negócio local o que lhe rouba horas: página com app e agenda, agentes de IA que respondem e marcam, scanners em licença e cursos narrados como este. O cliente vê a demo do dia, carrega em receber protótipo e cai na nossa agenda e no CRM.',
+        'Na página Soluções do site vendemos ao dono de um negócio local o que lhe rouba horas: página com app e agenda, agentes de IA que respondem e marcam, scanners em licença e cursos narrados como este. O cliente vê a demo do dia, carrega em receber protótipo e cai na nossa agenda e no CRM.',
         'At morethanmoney.pt slash solucoes we sell local business owners what eats their hours: a page with an app and booking, AI agents that reply and book, licensed scanners and narrated courses like this one. The client sees the demo of the day, taps get a prototype, and lands in our calendar and CRM.',
       ),
     },
@@ -440,7 +440,7 @@ const aula3: Aula = {
       titulo: t('Tarefa da aula', 'Lesson task'),
       cta: t('10 conversas hoje, com uma pergunta cada', '10 conversations today, one question each'),
       fala: t(
-        'Tarefa: abre dez conversas hoje com o guião de primeiro contacto e regista quem responder com uma dor clara. Constância ganha a talento.',
+        'Tarefa: abre dez conversas hoje com o guião de primeiro contacto e regista quem responder com uma dor clara. A constância vale mais do que o talento.',
         'Task: open ten conversations today with the first-contact script and log anyone who replies with a clear pain. Consistency beats talent.',
       ),
     },
@@ -515,7 +515,7 @@ const aula4: Aula = {
         'From what you tell me, it makes sense to show you the system in a short call: you’ll see the WebTrader, how we filter entries and how risk is managed. I have {time1} or {time2} — which works better?',
       ),
       fala: t(
-        'Quando propões a chamada, dás sempre duas horas concretas, nunca quando puderes. E dizes o que vai acontecer na chamada, para não parecer uma venda às cegas. O link de agenda está em Materiais.',
+        'Quando propões a chamada, dás sempre duas horas concretas, nunca um «quando puderes». E dizes o que vai acontecer na chamada, para não parecer uma venda às cegas. O link de agenda está em Materiais.',
         "When you propose the call, always give two concrete times, never whenever you can. And say what will happen on the call, so it doesn't feel like a blind sales pitch. The booking link is in Materials.",
       ),
     },
