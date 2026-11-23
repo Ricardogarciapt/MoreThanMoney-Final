@@ -12,6 +12,7 @@ import fs from 'node:fs'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import * as motorVideo from '../motor/motor.mjs'
+import { gerarEntrada } from './entrada.mjs'
 
 const { chromium } = createRequire(import.meta.url)('playwright')
 const DIR = path.dirname(fileURLToPath(import.meta.url))
@@ -53,6 +54,13 @@ fs.mkdirSync(out, { recursive: true })
 const base = `bootcamp-${est}-${nv}-${lang}`
 const audio = path.join(out, `${base}.wav`)
 const falas = TL.filter(c => c.audio)
+// entrada musical (guião com "entrada": true): sting sintetizado nos primeiros ~9 s, com ou sem voz
+const entrada = G.entrada && !process.argv.includes('--sem-entrada') ? gerarEntrada(path.join(out, 'entrada.wav')) : null
+const temAudio = falas.length > 0 || !!entrada
+if (!falas.length && entrada) {
+  execFileSync('ffmpeg', ['-y', '-v', 'error', '-i', entrada, '-filter_complex',
+    `[0:a]aresample=48000,volume=-6dB,apad=whole_dur=${total.toFixed(2)}[out]`, '-map', '[out]', '-ac', '2', audio])
+}
 if (falas.length) {
   // concatena em blocos para não abrir centenas de entradas no mesmo ffmpeg
   const ins = [], filt = []
@@ -65,6 +73,14 @@ if (falas.length) {
       `[m][chave]sidechaincompress=threshold=0.015:ratio=8:attack=20:release=500[md]`,
       `[voz][md]amix=inputs=2:normalize=0:duration=first,alimiter=limit=0.89[out]`)
   }
+  if (entrada) {
+    // a entrada fica por cima da mistura final: soa sozinha antes da 1.ª fala e baixa por baixo da voz
+    const ult = filt.pop().replace(/\[out\]$/, '[pre]')
+    filt.push(ult)
+    ins.push('-i', entrada)
+    const k = ins.filter(x => x === '-i').length - 1
+    filt.push(`[${k}:a]aresample=48000,volume=-8dB,apad=whole_dur=${total.toFixed(2)}[ent]`, `[pre][ent]amix=inputs=2:normalize=0:duration=first,alimiter=limit=0.89[out]`)
+  }
   execFileSync('ffmpeg', ['-y', '-v', 'error', ...ins, '-filter_complex', filt.join(';'), '-map', '[out]', '-ac', '2', audio])
 }
 
@@ -74,6 +90,9 @@ const page = await browser.newPage({ viewport: { width: 1920, height: 1080 } })
 await page.goto('file://' + path.join(DIR, 'cenas.html'))
 // gráfico fiel ao Pine da estratégia, quando existe (video/bootcamp/<motor>.js)
 const motorJs = path.join(DIR, `${G.motor || est}.js`)
+// animações por tema (ex.: primeira-chave-temas.js), carregadas antes do motor
+const temasJs = path.join(DIR, `${G.motor || est}-temas.js`)
+if (fs.existsSync(temasJs)) await page.addScriptTag({ path: temasJs })
 if (fs.existsSync(motorJs)) await page.addScriptTag({ path: motorJs })
 const cenas = Object.fromEntries(V.cenas.map(c => [c.id, c]))
 await page.evaluate(([tl, leg, dados, tot]) => { window.TOTAL = tot; window.iniciar(tl, leg, dados) },
@@ -83,9 +102,9 @@ await page.waitForTimeout(400)
 
 const mp4 = path.join(out, `${base}${preview ? '-preview' : ''}.mp4`)
 const args = ['-y', '-v', 'error', '-f', 'image2pipe', '-framerate', String(FPS), '-c:v', 'mjpeg', '-i', '-']
-if (falas.length) args.push('-ss', String(de), '-i', audio)
-args.push('-r', String(FPS), ...motorVideo.codificar(preview ? 'rascunho' : 'final', { semAudio: !falas.length }))
-if (falas.length) args.push('-shortest')
+if (temAudio) args.push('-ss', String(de), '-i', audio)
+args.push('-r', String(FPS), ...motorVideo.codificar(preview ? 'rascunho' : 'final', { semAudio: !temAudio }))
+if (temAudio) args.push('-shortest')
 args.push(mp4)
 const ff = spawn('ffmpeg', args, { stdio: ['pipe', 'inherit', 'inherit'] })
 const n0 = Math.floor(de * FPS), n1 = Math.ceil(Math.min(ate, total) * FPS)
