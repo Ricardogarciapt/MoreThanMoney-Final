@@ -7,6 +7,7 @@
  */
 export type Secao =
   | "inicio"
+  | "aprovar"
   | "fila"
   | "cartoes"
   | "factos"
@@ -42,6 +43,7 @@ export const GRUPOS_SOCIAL: readonly GrupoSocial[] = [
     nome: "Publicar",
     resumo: "O que sai nas duas contas e com que factos.",
     secoes: [
+      { id: "aprovar", nome: "Para aprovar", nota: "Cada peça com vídeo, capa, guião, funil e palavra-chave. Aprovar, pausar, hora, legenda." },
       { id: "fila", nome: "Publicações", nota: "Rascunhos, aprovados, publicados e falhados." },
       { id: "cartoes", nome: "Estúdio de cartões", nota: "Cartões e carrosséis com a marca." },
       { id: "factos", nome: "Factos nos cartões", nota: "Os números que entram nas imagens." },
