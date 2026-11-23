@@ -51,3 +51,20 @@ Corre em paralelo e afina, não bloqueia. Testes na fila (`publico_virtual_teste
 Quando chegarem os relatórios, a ordem dos caminhos muda em `CAMINHO_DO_PERFIL`, num sítio só.
 
 Preços de produtos pagos existentes não foram alterados.
+
+## 23/11, à noite: a escada do Ricardo
+
+Ordem do dono: **grátis → Premium 65 €/mês (com a comunidade privada) → Bootcamp de Trading completo
+310 € (compra única, não está no Premium) → Mentoria Privada MTM 2.000 €**.
+
+| Perfil | Íman | 1.º pago | Depois | Topo |
+|---|---|---|---|---|
+| Aprender | O Primeiro Passo | Premium (recusa: Membro → Método Frio 5 €) | Bootcamp 310 € | Mentoria 2.000 € |
+| Ferramentas | GoldKiller 30 dias | Premium (recusa: Membro) | Bootcamp 310 € | Mentoria 2.000 € |
+| Capital | Como funciona | Rota Corretora, que já traz o Premium (hesita: Desafio 10 €) | Bootcamp 310 € | Mentoria 2.000 € |
+
+- `PATAMARES` em `lib/escada-caminhos.ts` diz o que cada patamar abre (divisão de acessos por preço);
+  /caminho desenha-a e a comunidade divide os cursos pela mesma lista.
+- Membro 35 €, Elite 597 €/ano e os degraus de 5/10 € ficam como alternativas, sem mudar preços.
+- /mentoria: página do high-ticket, sem checkout; a chamada é `/agendar?t=fecho-alto-valor` e quem
+  fecha é o Ricardo (`regras-fecho.ts`, tipo `mentoria`). O Bootcamp fecha-o o agente com o link do marketplace.

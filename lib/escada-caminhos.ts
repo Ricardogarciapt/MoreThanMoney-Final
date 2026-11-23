@@ -14,7 +14,7 @@
  *
  * Regra: um guião novo importa daqui. Não escreve o caminho à mão.
  */
-import { ENTRADA_LER_EUR, ENTRADA_PRATICAR_EUR, SLUG_ENTRADA_PRATICAR, MIN_DEPOSIT, NOME_DEGRAU_TOPO, PRECO_MEMBRO, PRECO_PREMIUM, PRECO_PREMIUM_1O_MES, PRECO_TOPO } from '@/lib/escada-precos'
+import { BOOTCAMP_HREF, ENTRADA_LER_EUR, ENTRADA_PRATICAR_EUR, MENTORIA_HREF, SLUG_ENTRADA_PRATICAR, MIN_DEPOSIT, NOME_DEGRAU_TOPO, PRECO_BOOTCAMP, PRECO_MEMBRO, PRECO_MENTORIA, PRECO_PREMIUM, PRECO_PREMIUM_1O_MES, PRECO_TOPO } from '@/lib/escada-precos'
 import { DIAS_TRIAL_PREMIUM, TRIAL_PEDE_CARTAO } from '@/lib/stripe-checkout-premium'
 
 // ───────────────────────── o trial, dito com verdade ─────────────────────────
@@ -92,10 +92,10 @@ const PORTAS = {
   membro: {
     chave: 'membro',
     titulo: `Membro · ${PRECO_MEMBRO}`,
-    texto: 'Aulas ao vivo, academias, comunidade e as estratégias base. Cancelas quando quiseres.',
+    texto: 'A versão leve do Premium: aulas ao vivo, academias e as estratégias base. Cancelas quando quiseres.',
     href: '/upgrade?plan=app_member_monthly',
     tipo: 'pago',
-    alternativa: 'entrada_praticar',
+    alternativa: 'entrada_ler',
   },
   pack_scanners: {
     chave: 'pack_scanners',
@@ -107,7 +107,7 @@ const PORTAS = {
   premium: {
     chave: 'premium',
     titulo: `Premium · ${PRECO_PREMIUM}`,
-    texto: `Tudo do Membro + Premium Scanner, Trading Alerts, Tap to Trade e salas Premium. ${TRIAL_CURTO}, ou o 1.º mês a ${PRECO_PREMIUM_1O_MES}.`,
+    texto: `Scanners, Trading Alerts, Tap to Trade, salas Premium e a comunidade privada. ${TRIAL_CURTO}, ou o 1.º mês a ${PRECO_PREMIUM_1O_MES}.`,
     href: '/register?plan=premium',
     tipo: 'pago',
     alternativa: 'membro',
@@ -120,10 +120,24 @@ const PORTAS = {
     tipo: 'corretora',
     alternativa: 'entrada_praticar',
   },
+  bootcamp: {
+    chave: 'bootcamp',
+    titulo: `Bootcamp de Trading completo · ${PRECO_BOOTCAMP}`,
+    texto: 'O curso completo, módulo a módulo, com avaliação final e certificado. Compra única, fica teu; não está incluído no Premium.',
+    href: BOOTCAMP_HREF,
+    tipo: 'pago',
+  },
+  mentoria: {
+    chave: 'mentoria',
+    titulo: `Mentoria Privada MTM · ${PRECO_MENTORIA}`,
+    texto: 'O Método MTM com acompanhamento pessoal do Ricardo, em privado. Começa por uma chamada para ver se faz sentido para ti.',
+    href: MENTORIA_HREF,
+    tipo: 'pago',
+  },
   topo: {
     chave: 'topo',
     titulo: `${NOME_DEGRAU_TOPO} · ${PRECO_TOPO}`,
-    texto: 'Um ano inteiro de Premium com estatuto VIP. Para quem já está dentro e quer ficar.',
+    texto: 'O Premium pago ao ano, com estatuto VIP. Para quem já está dentro e quer ficar.',
     href: '/upgrade',
     tipo: 'pago',
   },
@@ -134,19 +148,64 @@ export type ChavePorta = keyof typeof PORTAS
 /**
  * Cada perfil tem UMA sequência. O índice 0 é o íman; o 1 é o primeiro passo pago.
  *
- * 23/11/2026 (estudo da escada): entre o grátis e a mensalidade entra um degrau de pagamento
- * único e barato. Quem já pagou uma vez compra a segunda com muito menos atrito do que quem salta
- * do zero para uma subscrição — e era esse salto que não acontecia.
- *  • aprender    — guia grátis → Método Frio + 7 dias (5 €) → Premium com trial (recusa o cartão: Membro) → topo.
- *  • ferramentas — GoldKiller 30 dias → Membro, que mantém o GoldKiller (recusa a mensalidade: Desafio Launch 10K simulado, 10 €) → Premium → topo.
- *  • capital     — como funciona → Rota Corretora (Premium + MTM Auto incluídos; se hesitar: o Desafio simulado para treinar primeiro) → topo.
+ * 23/11/2026, à noite — a escada do Ricardo: grátis → Premium 65 €/mês (com a comunidade privada)
+ * → Bootcamp de Trading completo 310 € (compra única) → Mentoria Privada MTM 2.000 €.
+ * Os degraus baratos da manhã (Método Frio 5 €, Desafio simulado 10 €) e o Membro 35 € ficam como
+ * ALTERNATIVA para quem recusa a mensalidade, nunca como caminho principal.
+ *  • aprender    — guia grátis → Premium (recusa: Membro → Método Frio) → Bootcamp → Mentoria.
+ *  • ferramentas — GoldKiller 30 dias → Premium (recusa: Membro) → Bootcamp → Mentoria.
+ *  • capital     — como funciona → Rota Corretora, que já traz o Premium (hesita: Desafio simulado) → Bootcamp → Mentoria.
  * O público virtual (MiroFish) corre em paralelo para afinar; muda-se AQUI.
  */
 export const CAMINHO_DO_PERFIL: Readonly<Record<PerfilLead, readonly ChavePorta[]>> = Object.freeze({
-  aprender: ['iman_aprender', 'entrada_ler', 'premium', 'topo'],
-  ferramentas: ['iman_ferramentas', 'membro', 'premium', 'topo'],
-  capital: ['iman_capital', 'corretora', 'topo'],
+  aprender: ['iman_aprender', 'premium', 'bootcamp', 'mentoria'],
+  ferramentas: ['iman_ferramentas', 'premium', 'bootcamp', 'mentoria'],
+  capital: ['iman_capital', 'corretora', 'bootcamp', 'mentoria'],
 })
+
+/**
+ * O que cada patamar ABRE — a divisão de acessos por preço. A página /caminho desenha-a e o
+ * trabalho da comunidade usa a mesma lista para dividir os cursos. Acima do grátis, cada curso
+ * pertence a um patamar e só a um.
+ */
+export interface Patamar {
+  chave: 'gratis' | 'premium' | 'bootcamp' | 'mentoria'
+  nome: string
+  preco: string
+  inclui: readonly string[]
+  href: string
+}
+
+export const PATAMARES: readonly Patamar[] = [
+  {
+    chave: 'gratis',
+    nome: 'Grátis',
+    preco: '0 €',
+    inclui: ['Guias grátis (O Primeiro Passo, Plano de 3 Passos, Guia dos Scanners)', 'GoldKiller 30 dias', 'Aulas e vídeos abertos', 'Comunidade aberta'],
+    href: '/gratis',
+  },
+  {
+    chave: 'premium',
+    nome: 'Premium',
+    preco: PRECO_PREMIUM,
+    inclui: ['Tudo do grátis', 'Scanners MTM no TradingView', 'Trading Alerts e Tap to Trade', 'Salas Premium e aulas ao vivo', 'Comunidade privada e os cursos de cada scanner'],
+    href: '/register?plan=premium',
+  },
+  {
+    chave: 'bootcamp',
+    nome: 'Bootcamp de Trading',
+    preco: PRECO_BOOTCAMP,
+    inclui: ['O curso completo, módulo a módulo', 'Avaliação final e certificado verificável', 'Compra única, fica teu', 'Não está incluído no Premium'],
+    href: BOOTCAMP_HREF,
+  },
+  {
+    chave: 'mentoria',
+    nome: 'Mentoria Privada MTM',
+    preco: PRECO_MENTORIA,
+    inclui: ['O Método MTM completo', 'Acompanhamento pessoal do Ricardo, em privado', 'Formato e calendário combinados na chamada'],
+    href: MENTORIA_HREF,
+  },
+]
 
 export function porta(chave: ChavePorta): Porta {
   return PORTAS[chave]
@@ -164,6 +223,8 @@ export interface EstadoNaEscada {
   ehPremium?: boolean
   depositoValidado?: boolean
   ehTopo?: boolean
+  comprouBootcamp?: boolean
+  ehMentorado?: boolean
 }
 
 function jaTem(chave: ChavePorta, e: EstadoNaEscada): boolean {
@@ -185,6 +246,10 @@ function jaTem(chave: ChavePorta, e: EstadoNaEscada): boolean {
       return !!e.depositoValidado
     case 'topo':
       return !!e.ehTopo
+    case 'bootcamp':
+      return !!(e.comprouBootcamp || e.ehMentorado)
+    case 'mentoria':
+      return !!e.ehMentorado
   }
 }
 

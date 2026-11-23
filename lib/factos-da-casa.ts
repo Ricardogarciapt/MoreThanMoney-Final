@@ -51,8 +51,9 @@ export const BOOTCAMP_HORAS = 30
 export const BOOTCAMP_HORAS_ERRADAS = 50
 export const BOOTCAMP_PERGUNTAS = 38
 export const BOOTCAMP_NOTA_MINIMA_PCT = 70
-/** Preço de tabela no marketplace, em euros. */
-export const BOOTCAMP_PRECO_EUR = 310
+/** Preço de tabela no marketplace, em euros. Vive na escada (`escada-precos.ts`), reexporta-se aqui. */
+import { BOOTCAMP_PRECO_EUR } from '@/lib/escada-precos'
+export { BOOTCAMP_PRECO_EUR }
 /** A campanha em vigor a 01/10/2026, em percentagem. */
 export const BOOTCAMP_CAMPANHA_PCT = 15
 

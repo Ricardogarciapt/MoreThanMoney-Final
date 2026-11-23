@@ -23,7 +23,7 @@
  * Um agente que fecha uma venda que devia subir não dá erro: dá um cliente de 1.500 € tratado como
  * um de 35 €. A guarda (`regras-fecho.check.ts`) prova os limites sem rede e sem base.
  */
-import { MEMBRO_MENSAL_EUR, PREMIUM_MENSAL_EUR, TOPO_ANUAL_EUR, NOME_DEGRAU_TOPO, MIN_DEPOSIT } from '@/lib/escada-precos'
+import { MEMBRO_MENSAL_EUR, PREMIUM_MENSAL_EUR, TOPO_ANUAL_EUR, NOME_DEGRAU_TOPO, MIN_DEPOSIT, BOOTCAMP_PRECO_EUR, BOOTCAMP_HREF, PRECO_MENTORIA } from '@/lib/escada-precos'
 
 /** A partir deste valor (uma venda, em euros) o fecho é do Ricardo, e um dia dos closers humanos. */
 export const ALTO_VALOR_EUR = 1200
@@ -35,6 +35,10 @@ export type OfertaFecho =
   | { tipo: 'premium' }
   | { tipo: 'anual' } // o degrau de cima (Elite) e qualquer pack anual da escada
   | { tipo: 'rota_corretora' }
+  /** Bootcamp de Trading completo (310 €, compra única no marketplace). */
+  | { tipo: 'bootcamp' }
+  /** Mentoria Privada MTM (2.000 €): high-ticket, sempre com o Ricardo. */
+  | { tipo: 'mentoria' }
   | { tipo: 'funded' }
   /** Tudo o que não está na escada: mentoria individual, pacote à medida, proposta. */
   | { tipo: 'outro'; valorEur: number | null }
@@ -51,7 +55,10 @@ export function quemFecha(o: OfertaFecho): QuemFecha {
     case 'premium':
     case 'anual':
     case 'rota_corretora':
+    case 'bootcamp':
       return 'agente'
+    case 'mentoria':
+      return 'ricardo'
     case 'funded':
       return 'parar'
     case 'outro':
@@ -77,13 +84,14 @@ export const TIPO_FECHO_ALTO_VALOR = 'fecho-alto-valor'
 export function regrasDeFechoParaPrompt(linkAgendarAltoValor: string): string {
   return [
     'QUEM FECHA (regra do Ricardo, 16/11):',
-    `· TU fechas sozinho, com o link do site: Membro ${MEMBRO_MENSAL_EUR}€/mês, Premium ${PREMIUM_MENSAL_EUR}€/mês, ${NOME_DEGRAU_TOPO} ${TOPO_ANUAL_EUR}€/ano, e a Rota Corretora (abrir conta PU Prime pelo nosso link e depositar a partir de ${MIN_DEPOSIT}$; o dinheiro é do cliente e fica na conta dele).`,
-    `· SOBE para o Ricardo tudo o que for a partir de ${ALTO_VALOR_EUR}€ ou feito à medida (mentoria individual, pacote fechado à mão, proposta): não fechas, não dás preço; marcas a chamada de fecho em ${linkAgendarAltoValor}.`,
+    `· TU fechas sozinho, com o link do site: Membro ${MEMBRO_MENSAL_EUR}€/mês, Premium ${PREMIUM_MENSAL_EUR}€/mês, ${NOME_DEGRAU_TOPO} ${TOPO_ANUAL_EUR}€/ano, o Bootcamp de Trading completo ${BOOTCAMP_PRECO_EUR}€ (compra única, morethanmoney.pt${BOOTCAMP_HREF}; não está incluído no Premium), e a Rota Corretora (abrir conta PU Prime pelo nosso link e depositar a partir de ${MIN_DEPOSIT}$; o dinheiro é do cliente e fica na conta dele).`,
+    `· SOBE para o Ricardo tudo o que for a partir de ${ALTO_VALOR_EUR}€ ou feito à medida (a Mentoria Privada MTM ${PRECO_MENTORIA}, pacote fechado à mão, proposta): não fechas, não dás preço; marcas a chamada de fecho em ${linkAgendarAltoValor}.`,
     '· Quem não tem capital próprio não compra nada: vai para o MTM Funded (conta simulada).',
     'ORDEM DO FECHO:',
     `1. Rota Corretora primeiro, para quem tem pelo menos ${MIN_DEPOSIT}$ que pode pôr a trabalhar sem lhe fazer falta e quer o acesso completo: com a conta validada, o Premium e os grupos ficam incluídos enquanto a conta estiver financiada.`,
     '2. Quem prefere ficar na corretora que já tem, ou não quer depositar agora: Membro (entrada) ou Premium (completo).',
     `3. Quem quer o ano inteiro: ${NOME_DEGRAU_TOPO}.`,
+    `4. Quem já está no Premium e quer a formação completa: o Bootcamp (${BOOTCAMP_PRECO_EUR}€). Quem quer acompanhamento pessoal: a Mentoria Privada (${PRECO_MENTORIA}), sempre por chamada com o Ricardo.`,
     'FECHO ÉTICO (obrigatório):',
     '· Confirma que a pessoa percebeu o preço, o que recebe e que cancela quando quiser antes de mandar o link.',
     '· Nada de pressão, prazos inventados, «últimas vagas» ou culpa. Urgência só se houver uma campanha real em vigor.',

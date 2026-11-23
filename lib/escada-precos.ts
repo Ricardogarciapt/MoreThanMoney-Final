@@ -44,6 +44,17 @@ export const ENTRADA_LER_EUR = 5
 export const ENTRADA_PRATICAR_EUR = 10
 export const SLUG_ENTRADA_PRATICAR = 'launch-10k-2f'
 
+/**
+ * A escada do dono a 23/11/2026: grátis → Premium 65 €/mês (com a comunidade privada) → Bootcamp de
+ * Trading completo 310 € (compra única, NÃO está no Premium) → Mentoria Privada MTM 2.000 €.
+ * O Bootcamp vive no marketplace (`marketplace_produtos.bootcamp-morethanmoney`, 31000 cents).
+ * A mentoria é high-ticket: fecha-a o Ricardo numa chamada (`regras-fecho.ts`), não há checkout.
+ */
+export const BOOTCAMP_PRECO_EUR = 310
+export const BOOTCAMP_HREF = '/marketplace/bootcamp-morethanmoney'
+export const MENTORIA_PRIVADA_EUR = 2000
+export const MENTORIA_HREF = '/mentoria'
+
 /** O bónus que a PU Prime dá sobre o depósito, em percentagem. */
 export const BONUS_DEPOSITO_PCT = 100
 
@@ -66,6 +77,8 @@ export const PRECO_MEMBRO = `${eur(MEMBRO_MENSAL_EUR)}/mês`
 export const PRECO_PREMIUM = `${eur(PREMIUM_MENSAL_EUR)}/mês`
 export const PRECO_PREMIUM_1O_MES = eur(PREMIUM_1O_MES_EUR)
 export const PRECO_TOPO = `${eur(TOPO_ANUAL_EUR)}/ano`
+export const PRECO_BOOTCAMP = eur(BOOTCAMP_PRECO_EUR)
+export const PRECO_MENTORIA = '2.000€'
 
 /**
  * O bónus da PU Prime, nas palavras do dono (2026-09-24):
@@ -120,8 +133,10 @@ export const TOPO_LINK_PAGAMENTO: string | null = '/upgrade'
  */
 export function escadaNumaLinha(): string {
   return (
-    `Membro ${PRECO_MEMBRO} (entrada) · Premium ${PRECO_PREMIUM} (1º mês ${PRECO_PREMIUM_1O_MES}) · ` +
-    `${NOME_DEGRAU_TOPO} ${PRECO_TOPO} (o topo, anual) · ` +
+    `ESCADA (ordem do Ricardo, 23/11): grátis → Premium ${PRECO_PREMIUM} (1º mês ${PRECO_PREMIUM_1O_MES}; scanners, alertas e comunidade privada) → ` +
+    `Bootcamp de Trading completo ${PRECO_BOOTCAMP} (compra única; o Bootcamp NÃO está incluído no Premium) → ` +
+    `Mentoria Privada MTM ${PRECO_MENTORIA} (high-ticket, fecha-a o Ricardo numa chamada) · ` +
+    `alternativas: Membro ${PRECO_MEMBRO} (versão leve do Premium) · ${NOME_DEGRAU_TOPO} ${PRECO_TOPO} (o Premium pago ao ano) · ` +
     `${entradaNumaLinha()} · ` +
     `rota PU Prime ${MIN_DEPOSIT}$ = Premium + grupos grátis enquanto financiado`
   )
@@ -156,9 +171,10 @@ export function bonusNumaLinha(): string {
  */
 export function escadaEmLinhas(): string {
   return (
-    `🥉 <b>Membro · ${PRECO_MEMBRO}</b> — comunidade, sinais base e formação. É a porta de entrada.\n` +
-    `👑 <b>Premium · ${PRECO_PREMIUM}</b> (1º mês ${PRECO_PREMIUM_1O_MES}) — Scanner, Trading Alerts, Tap to Trade, salas Premium e aulas.\n` +
-    `🏆 <b>${NOME_DEGRAU_TOPO} · ${PRECO_TOPO}</b> — o topo da escada: um ano inteiro de Premium, com estatuto VIP.\n` +
+    `👑 <b>Premium · ${PRECO_PREMIUM}</b> (1º mês ${PRECO_PREMIUM_1O_MES}) — Scanners, Trading Alerts, Tap to Trade, salas Premium e a comunidade privada.\n` +
+    `🎓 <b>Bootcamp de Trading · ${PRECO_BOOTCAMP}</b> — o curso completo, compra única (não está incluído no Premium).\n` +
+    `🤝 <b>Mentoria Privada MTM · ${PRECO_MENTORIA}</b> — o Método MTM com acompanhamento pessoal do Ricardo. Fecha-se numa chamada.\n` +
+    `🥉 <b>Membro · ${PRECO_MEMBRO}</b> — a versão leve do Premium. 🏆 <b>${NOME_DEGRAU_TOPO} · ${PRECO_TOPO}</b> — o Premium pago ao ano, com estatuto VIP.\n` +
     `🎟️ <b>Primeiro passo de pagamento único</b> (para quem ainda não quer mensalidade): «O Método Frio» + 7 dias de acompanhamento · ${eur(ENTRADA_LER_EUR)}, ou o Desafio MTM Funded Launch 10K em conta simulada · ${eur(ENTRADA_PRATICAR_EUR)}.`
   )
 }

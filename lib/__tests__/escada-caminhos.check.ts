@@ -9,6 +9,7 @@ import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
 import {
   CAMINHO_DO_PERFIL,
+  PATAMARES,
   PERFIS,
   TRIAL_CONDICAO,
   TRIAL_CURTO,
@@ -24,18 +25,22 @@ for (const p of PERFIS) {
   const c = CAMINHO_DO_PERFIL[p]
   assert.equal(porta(c[0]).tipo, 'gratis', `${p}: começa por um íman`)
   assert.notEqual(porta(c[1]).tipo, 'gratis', `${p}: o 2.º degrau é pago (não se fecha com o grátis)`)
-  assert.equal(c[c.length - 1], 'topo', `${p}: acaba no topo`)
+  assert.equal(c[c.length - 1], 'mentoria', `${p}: acaba na mentoria privada`)
+  assert.ok(c.includes('bootcamp'), `${p}: passa pelo Bootcamp`)
 }
 assert.equal(passoSeguinte(null)?.chave, 'iman_aprender')
-assert.equal(passoSeguinte('aprender', { recebeuIman: true })?.chave, 'entrada_ler')
-assert.equal(passoSeguinte('aprender', { recebeuIman: true, comprouEntrada: true })?.chave, 'premium')
-assert.equal(passoSeguinte('ferramentas', { recebeuIman: true })?.chave, 'membro')
-assert.equal(porta('membro').alternativa, 'entrada_praticar')
-assert.equal(passoSeguinte('aprender', { recebeuIman: true, ehMembro: true })?.chave, 'premium')
-assert.equal(passoSeguinte('ferramentas', { recebeuIman: true, ehMembro: true })?.chave, 'premium')
+assert.equal(passoSeguinte('aprender', { recebeuIman: true })?.chave, 'premium')
+assert.equal(porta('premium').alternativa, 'membro')
+assert.equal(porta('membro').alternativa, 'entrada_ler')
+assert.equal(porta('corretora').alternativa, 'entrada_praticar')
+assert.equal(passoSeguinte('ferramentas', { recebeuIman: true })?.chave, 'premium')
+assert.equal(passoSeguinte('aprender', { recebeuIman: true, ehPremium: true })?.chave, 'bootcamp')
 assert.equal(passoSeguinte('capital', { recebeuIman: true })?.chave, 'corretora')
-assert.equal(passoSeguinte('capital', { recebeuIman: true, depositoValidado: true })?.chave, 'topo')
-assert.equal(passoSeguinte('aprender', { ehTopo: true, recebeuIman: true }), null)
+assert.equal(passoSeguinte('capital', { recebeuIman: true, depositoValidado: true })?.chave, 'bootcamp')
+assert.equal(passoSeguinte('ferramentas', { recebeuIman: true, ehPremium: true, comprouBootcamp: true })?.chave, 'mentoria')
+assert.equal(passoSeguinte('aprender', { recebeuIman: true, ehPremium: true, ehMentorado: true }), null)
+// o Bootcamp é compra à parte: o Premium não o abre
+assert.ok(!PATAMARES.find((p) => p.chave === 'premium')!.inclui.some((i) => /bootcamp/i.test(i)))
 assert.equal(perfilDoInteresse('corretora'), 'capital')
 assert.equal(perfilDoInteresse('scanner goldkiller'), 'ferramentas')
 assert.equal(perfilDoInteresse('formacao'), 'aprender')
