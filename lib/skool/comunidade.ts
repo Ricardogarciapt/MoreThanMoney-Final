@@ -146,9 +146,34 @@ async function proximaLive(): Promise<{ titulo: string; quando: string; link: st
     .order('scheduled_start_at', { ascending: true })
     .limit(1)
   const s = data?.[0]
-  if (!s) return null
-  const quando = new Intl.DateTimeFormat('pt-PT', { timeZone: 'Europe/Lisbon', weekday: 'long', hour: '2-digit', minute: '2-digit' }).format(new Date(s.scheduled_start_at))
-  return { titulo: s.title, quando, link: `${SITE}/live-sessions/${s.id}` }
+  if (s) {
+    const quando = new Intl.DateTimeFormat('pt-PT', { timeZone: 'Europe/Lisbon', weekday: 'long', hour: '2-digit', minute: '2-digit' }).format(new Date(s.scheduled_start_at))
+    return { titulo: s.title, quando, link: `${SITE}/live-sessions/${s.id}` }
+  }
+  return proximaLiveRecorrente()
+}
+
+/** Sessões grátis recorrentes (lms_stream_schedules, plano «free»), as mesmas de /FreeSession. */
+async function proximaLiveRecorrente(): Promise<{ titulo: string; quando: string; link: string } | null> {
+  const { data } = await getSupabaseAdmin()
+    .from('lms_stream_schedules')
+    .select('weekday, start_time, access_tier, stream:lms_streams(title, access_tier)')
+    .eq('is_active', true)
+  const DIAS = ['domingo', 'segunda', 'terça', 'quarta', 'quinta', 'sexta', 'sábado']
+  const hoje = new Date(new Date().toLocaleString('en-US', { timeZone: 'Europe/Lisbon' }))
+  const minAgora = hoje.getDay() * 1440 + hoje.getHours() * 60 + hoje.getMinutes()
+  let melhor: { dist: number; titulo: string; quando: string } | null = null
+  for (const r of (data ?? []) as any[]) {
+    const stream = Array.isArray(r.stream) ? r.stream[0] : r.stream
+    if ((r.access_tier ?? stream?.access_tier) !== 'free') continue
+    const [h, m] = String(r.start_time).split(':').map(Number)
+    const min = Number(r.weekday) * 1440 + h * 60 + m
+    const dist = (min - minAgora + 7 * 1440) % (7 * 1440)
+    if (!melhor || dist < melhor.dist) {
+      melhor = { dist, titulo: stream?.title ?? 'Sessão aberta', quando: `${DIAS[Number(r.weekday)]} às ${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}` }
+    }
+  }
+  return melhor ? { titulo: melhor.titulo, quando: melhor.quando, link: `${SITE}/FreeSession` } : null
 }
 
 /** dia: 1 = segunda (anúncio), 2–4 = dias 1 a 3 do bootcamp. */
@@ -159,7 +184,7 @@ export async function bootcampDoDia(diaSemana: number, publicar: Publicar, categ
   const live = await proximaLive()
   const linhaLive = live
     ? `🔴 Live call: «${live.titulo}», ${live.quando} (hora de Lisboa) → ${live.link}`
-    : `🔴 Lives e sessões abertas: ${SITE}/live-sessions · dúvidas a sós: ${SITE}/agendar`
+    : `🔴 Lives e sessões abertas: ${SITE}/FreeSession · dúvidas a sós: ${SITE}/agendar`
   const yt = (id: string) => `https://youtu.be/${id}`
 
   if (diaSemana === 1) {
