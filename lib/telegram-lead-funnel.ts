@@ -77,6 +77,40 @@ interface LeadRow {
   message_count: number | null
   /** Etiquetas canónicas do lead. É aqui que vive a marca de já se ter pedido o consentimento. */
   tags: string[] | null
+  /** Língua escolhida ou deduzida (pt, en, fr, de, es) — o funil de WhatsApp grava-a. */
+  lang: string | null
+}
+
+/**
+ * ADAPTATIVO (pedido do Ricardo 23/11: «deves ser adaptativo no funil IA»). O closer recebe o que já
+ * se sabe deste lead — a língua, a rota que escolheu no guião de WhatsApp, a fase — e ajusta-se: não
+ * volta a perguntar o que a pessoa já respondeu, não vende trading a quem pediu IA para a empresa, e
+ * imita o ritmo dela (curta com quem escreve curto). Puro.
+ */
+export function contextoAdaptativo(lead: Pick<LeadRow, 'lang' | 'interest' | 'stage' | 'source'> | null): string {
+  const linhas: string[] = ['═══ ADAPTA-TE A ESTA PESSOA ═══']
+  const nomes: Record<string, string> = { pt: 'português de Portugal', en: 'inglês', fr: 'francês', de: 'alemão', es: 'espanhol' }
+  if (lead?.lang && nomes[lead.lang]) {
+    linhas.push(`- Língua desta conversa: ${nomes[lead.lang]}. Responde nessa língua; se ela mudar de língua, muda com ela.`)
+  } else {
+    linhas.push('- Responde na língua em que a pessoa escreve.')
+  }
+  const rota = lead?.interest ?? ''
+  const rotas: Record<string, string> = {
+    educacao: 'escolheu APRENDER TRADING no menu: aprofunda a formação (Membro → Premium), pergunta a experiência dela.',
+    corretora: 'escolheu ACESSO COMPLETO (rota da corretora): conduz passo a passo à abertura de conta e ao UID, uma coisa de cada vez.',
+    funded: 'escolheu TESTAR SEM ARRISCAR (MTM Funded, conta simulada, não é prop firm): explica as regras do 1.º desafio.',
+    solucoes: 'escolheu IA PARA O NEGÓCIO: esquece o trading. Percebe o ramo, o problema e o volume de clientes, e propõe uma conversa curta pela agenda.',
+    curioso: 'só quer CONHECER: explica em 2 frases e descobre qual das rotas lhe faz sentido.',
+  }
+  if (rotas[rota]) linhas.push(`- Já ${rotas[rota]} Não lhe voltes a mostrar o menu.`)
+  if (lead?.stage === 'wa_humano') linhas.push('- Pediu para falar com uma pessoa: diz que a equipa já foi avisada e lembra o link da agenda, sem vender.')
+  linhas.push(
+    '- Imita o ritmo: se escreve pouco, responde em 1–2 frases; se faz perguntas detalhadas, responde com detalhe.',
+    '- Lê o nível dela (iniciante, já opera, empresário) e ajusta o vocabulário. Nunca repitas uma pergunta que já foi respondida no histórico.',
+    '- Se a pessoa hesitar ou pedir uma pessoa, oferece falar com a equipa e a agenda em vez de insistir.',
+  )
+  return linhas.join('\n')
 }
 
 /** Deteta o interesse a partir do texto do lead (heurística leve, complementa a IA). */
@@ -110,7 +144,7 @@ export async function runLeadFunnelReply(input: {
   const supabase = getSupabaseAdmin()
   const { data: existing } = await supabase
     .from('telegram_leads')
-    .select('chat_id, first_name, interest, stage, source, history, message_count, tags')
+    .select('chat_id, first_name, interest, stage, source, history, message_count, tags, lang')
     .eq('chat_id', input.chatId)
     .maybeSingle()
   const lead = (existing ?? null) as LeadRow | null
@@ -191,7 +225,7 @@ export async function runLeadFunnelReply(input: {
         'x-api-key': key,
         'anthropic-version': '2023-06-01',
       },
-      body: JSON.stringify({ model, max_tokens: 350, system: `${systemPrompt}\n\n${blocoFramework('closer')}`, messages }),
+      body: JSON.stringify({ model, max_tokens: 350, system: `${systemPrompt}\n\n${contextoAdaptativo(lead)}\n\n${blocoFramework('closer')}`, messages }),
     })
     if (res.ok) {
       const data = await res.json()

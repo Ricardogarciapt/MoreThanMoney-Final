@@ -20,7 +20,8 @@ import type { SupabaseClient } from '@supabase/supabase-js'
 import { enviarWhatsApp } from '@/lib/whatsapp-mensageiro'
 import { normalizarE164, variantesDoNumero } from '@/lib/whatsapp-envio'
 import { primeiroNome } from '@/lib/whatsapp/templates-mtm'
-import { TEMPLATE_REENCONTRO } from '@/lib/vendas/guiao-whatsapp'
+import { TEMPLATE_REENCONTRO, TEMPLATE_REENCONTRO_V3 } from '@/lib/vendas/guiao-whatsapp'
+import { INFO_LINGUA, linguaDoIndicativo, type Lingua } from '@/lib/whatsapp/linguas'
 
 type Db = SupabaseClient
 const CHAVE = 'whatsapp_reencontro'
@@ -100,11 +101,14 @@ export async function correrReencontro(db: Db): Promise<ResultadoReencontro> {
         continue
       }
     }
+    // Língua pelo indicativo; só o v3 existe nas 5 línguas, os antigos são só em português.
+    const tpl = cfg.template || TEMPLATE_REENCONTRO
+    const lingua: Lingua = tpl === TEMPLATE_REENCONTRO_V3 ? linguaDoIndicativo(c.telefone) : 'pt'
     const res = await enviarWhatsApp({
       licencaDono: cfg.licenca_dono?.por ? `${cfg.licenca_dono.por} ${cfg.licenca_dono.em ?? ''}`.trim() : null,
       para: c.telefone,
       finalidade: 'campanha',
-      template: { nome: cfg.template || TEMPLATE_REENCONTRO, idioma: 'pt_PT', parametros: [primeiroNome(c.nome)] },
+      template: { nome: tpl, idioma: INFO_LINGUA[lingua].codigoMeta, parametros: [primeiroNome(c.nome)] },
       agente: { funil: 'whatsapp:reencontro' },
     })
     if (!res.enviado) {
@@ -114,7 +118,7 @@ export async function correrReencontro(db: Db): Promise<ResultadoReencontro> {
     }
     r.enviados++
     await db.from('telegram_leads').upsert(
-      { chat_id: `wa:${digitos}`, source: 'whatsapp', stage: 'wa_reencontro', first_name: primeiroNome(c.nome), updated_at: new Date().toISOString() },
+      { chat_id: `wa:${digitos}`, source: 'whatsapp', stage: 'wa_reencontro', first_name: primeiroNome(c.nome), lang: lingua, updated_at: new Date().toISOString() },
       { onConflict: 'chat_id' },
     )
     await db.from('vendas_negocios').update({ estado: 'contactado' }).eq('id', c.id)

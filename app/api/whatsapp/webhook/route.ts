@@ -52,6 +52,20 @@ interface WAMessage {
 }
 
 /** O que a pessoa escreveu ou tocou, e o id do botão/linha quando tocou. Puro. */
+/** A confirmação de saída na língua do contacto (a que escolheu, ou a do indicativo). */
+async function textoDeSaida(from: string, numero: string): Promise<string> {
+  const { ehLingua, linguaDoIndicativo } = await import('@/lib/whatsapp/linguas')
+  const { data } = await getSupabaseAdmin().from('telegram_leads').select('lang').eq('chat_id', `wa:${from}`).maybeSingle()
+  const l = ehLingua(data?.lang) ? data!.lang : linguaDoIndicativo(numero)
+  return {
+    pt: 'Feito, não voltas a receber mensagens nossas por aqui. Se um dia quiseres voltar, é só escreveres. 🙏',
+    en: "Done, you won't get any more messages from us here. If you ever want to come back, just write. 🙏",
+    fr: "C'est fait, tu ne recevras plus de messages de notre part ici. Si un jour tu veux revenir, écris-nous. 🙏",
+    de: 'Erledigt, du bekommst hier keine Nachrichten mehr von uns. Wenn du irgendwann zurückkommen willst, schreib einfach. 🙏',
+    es: 'Hecho, no volverás a recibir mensajes nuestros por aquí. Si algún día quieres volver, solo escríbenos. 🙏',
+  }[l as 'pt' | 'en' | 'fr' | 'de' | 'es']
+}
+
 function lerEntrada(m: WAMessage): { texto: string; botao: string | null } {
   const br = m.interactive?.button_reply
   const lr = m.interactive?.list_reply
@@ -120,7 +134,11 @@ export async function POST(req: NextRequest) {
          * Grava na exclusão global e marca o consentimento retirado; responde uma vez (janela aberta,
          * grátis) e não passa pelo funil.
          */
-        if ((/^(sair|parar|stop|cancelar|unsubscribe)[.!]?$/i.test(text) || /^n[aã]o quero receber/i.test(text)) && numero) {
+        if (
+          (/^(sair|parar|stop|cancelar|unsubscribe|arr[eê]ter|abmelden|baja)[.!]?$/i.test(text) ||
+            /^(n[aã]o quero receber|stop messages|ne plus recevoir|nicht mehr erhalten|no quiero recibir)/i.test(text)) &&
+          numero
+        ) {
           const db = getSupabaseAdmin()
           const agora = new Date().toISOString()
           const { data: ja } = await db.from('contacto_exclusao').select('identificador').eq('identificador', numero).limit(1)
@@ -135,7 +153,7 @@ export async function POST(req: NextRequest) {
           await enviarWhatsApp({
             para: from,
             finalidade: 'resposta',
-            texto: 'Feito, não voltas a receber mensagens nossas por aqui. Se um dia quiseres voltar, é só escreveres. 🙏',
+            texto: await textoDeSaida(from, numero),
             estado: { ...estadoSair, retirou: false, ultimaEntradaIso: estadoSair.ultimaEntradaIso ?? agora },
           })
           continue
