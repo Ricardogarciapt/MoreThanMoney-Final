@@ -10,6 +10,9 @@
  * ouve o Ricardo (voz clone, `lib/voz`) a explicá-la em ~40 s. O segmento sai de `utm_campaign`
  * (os links do funil de WhatsApp passam por /w/<código> e trazem-no) ou, sem ele, do funil.
  *
+ * Os fechos seguem a escada (lib/escada-caminhos.ts, PR #473): aprender → Método Frio; ferramentas →
+ * Membro (ou desafio simulado); trial do Premium dito com verdade (pede cartão desde 16/11).
+ *
  * Regras de sempre: nada de números de desempenho, nada de promessas, aviso educativo, PT-PT.
  * O áudio gera-se uma vez por texto (cache no storage `lms-tts`) em /api/narracao.
  */
@@ -44,7 +47,7 @@ export const SEGMENTOS = {
       { imagem: `${APP}/app-scanner.jpg`, legenda: 'Scanners com a lógica à vista', fala: 'Depois vês os scanners a trabalhar, e percebes porque aparece cada ideia, não só o quê.' },
       { imagem: `${APP}/app-chat.jpg`, legenda: 'Comunidade e sessões ao vivo', fala: 'E não ficas sozinho: há comunidade e sessões ao vivo para tirares dúvidas.' },
     ],
-    fecho: 'Experimenta o Premium três dias, sem cartão, e decide com calma.',
+    fecho: 'Começa pelo guia grátis, ou pelo Método Frio com sete dias de acompanhamento comigo, num pagamento único, sem mensalidade.',
   },
   premium: {
     chave: 'premium',
@@ -54,7 +57,7 @@ export const SEGMENTOS = {
       { imagem: `${APP}/app-alertas.jpg`, legenda: 'Alertas no telemóvel', fala: 'Os alertas chegam ao telemóvel, e com um toque abres a ideia toda.' },
       { imagem: `${APP}/app-aulas.jpg`, legenda: 'Bootcamps e sessões', fala: 'E tens os bootcamps de cada estratégia para perceberes o que estás a seguir.' },
     ],
-    fecho: 'São três dias grátis, sem cartão. Nada se renova sem tu quereres.',
+    fecho: 'São três dias grátis: pedimos o cartão à entrada, não cobramos nada nesses dias, avisamos na véspera e cancelas com um clique.',
   },
   membro: {
     chave: 'membro',
@@ -64,7 +67,7 @@ export const SEGMENTOS = {
       { imagem: `${APP}/app-webtrader.jpg`, legenda: 'WebTrader para treinar', fala: 'Treinas no WebTrader, em conta simulada, antes de arriscares dinheiro teu.' },
       { imagem: `${APP}/app-chat.jpg`, legenda: 'Sessões ao vivo e comunidade', fala: 'E estás nas sessões ao vivo e na comunidade, com quem está no mesmo caminho.' },
     ],
-    fecho: 'Se preferires, experimenta primeiro o Premium três dias, sem cartão.',
+    fecho: 'Cancelas quando quiseres. E se ainda não quiseres mensalidade, podes treinar primeiro no desafio em conta simulada.',
   },
   corretora: {
     chave: 'corretora',
