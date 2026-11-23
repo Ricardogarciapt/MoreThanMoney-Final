@@ -31,9 +31,10 @@ export const MODULOS_GESTAO: readonly ModuloGestao[] = [
     descricao: 'Os bots da VPS: se os relays estão vivos, o que cada rota publicou e os teus grupos sem o bot.' },
   { slug: 'agenda', nome: 'Agenda', grupo: 'Clientes & CRM', exige: 'bo.gestao_crm',
     descricao: 'As marcações da agenda própria (/agendar), disponibilidade e tipos de reunião.' },
-  { slug: 'whatsapp', nome: 'WhatsApp', grupo: 'Clientes & CRM', exige: 'bo.gestao_crm',
-    descricao: 'As conversas e o envio — com a janela das 24 h e o consentimento decididos no servidor.',
-    vistas: [{ id: 'conversas', nome: 'Conversas' }, { id: 'escrever', nome: 'Escrever a alguém' }] },
+  // 23/11: um só sítio para as conversas dos dois canais (o slug fica «whatsapp» para não partir links).
+  { slug: 'whatsapp', nome: 'Conversas (WhatsApp e Telegram)', grupo: 'Clientes & CRM', exige: 'bo.gestao_crm',
+    descricao: 'WhatsApp e Telegram lado a lado: responder, empurrar o lead para um passo do funil e ver que páginas abriu. No WhatsApp a janela das 24 h e o consentimento são decididos no servidor.',
+    vistas: [{ id: 'conversas', nome: 'WhatsApp' }, { id: 'telegram', nome: 'Telegram' }, { id: 'escrever', nome: 'Escrever no WhatsApp' }] },
   { slug: 'suporte', nome: 'Ronda de suporte', grupo: 'Clientes & CRM', exige: 'bo.gestao_crm',
     descricao: 'As conversas do balão de apoio: o que o agente resolveu, o que espera pela equipa (15 min / 1 h) e o que foi escalado ao Ricardo.' },
   { slug: 'leads', nome: 'Leads sociais', grupo: 'Clientes & CRM', exige: 'bo.gestao_crm',

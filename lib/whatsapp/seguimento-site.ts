@@ -25,7 +25,7 @@ export const ID_SEG_AGENDAR = 'seg_agendar'
 export type Toque = 'clique' | 'lembrete' | 'ultima_janela' | 'template' | 'setter'
 
 /** Fases em que o seguimento NÃO corre: ainda sem «Sim», pediu pessoa, disse «agora não», já marcou. */
-export const FASES_FORA = ['wa_reencontro', 'wa_lingua_reencontro', 'wa_humano', 'wa_depois', 'wa_agendou', 'wa_saiu'] as const
+export const FASES_FORA = ['wa_reencontro', 'wa_lingua_reencontro', 'wa_humano', 'wa_depois', 'wa_agendou', 'wa_saiu', 'tg_humano', 'tg_agendou'] as const
 
 const MIN = 60_000
 const H = 60 * MIN
@@ -44,6 +44,8 @@ export interface EstadoSeguimento {
   saiu: boolean
   /** Hora local de Lisboa (0–23). */
   horaLisboa: number
+  /** No Telegram não há template: depois da janela passa logo ao setter. */
+  canal?: 'whatsapp' | 'telegram'
   agora: number
 }
 
@@ -75,7 +77,7 @@ export function proximoToque(e: EstadoSeguimento): Toque | null {
   }
   if ((fc === 1 || fc === 2) && !dentroJanela) {
     if (!passou(e.ultimoToqueIso, 44 * H, e.agora)) return null
-    return e.lingua === 'pt' ? 'template' : 'setter'
+    return e.lingua === 'pt' && e.canal !== 'telegram' ? 'template' : 'setter'
   }
   if (fc === 3) return passou(e.ultimoToqueIso, 72 * H, e.agora) ? 'setter' : null
   return null

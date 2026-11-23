@@ -23,6 +23,7 @@ const ECRAS: Record<string, React.ComponentType> = {
   telegram: dynamic(() => import('@/components/admin/telegram-painel'), { ssr: false, loading: carregar }),
   agenda: dynamic(() => import('@/components/admin/agenda-admin'), { ssr: false, loading: carregar }),
   'whatsapp:conversas': dynamic(() => import('@/components/admin/whatsapp-crm'), { ssr: false, loading: carregar }),
+  'whatsapp:telegram': dynamic(() => import('@/components/admin/telegram-crm'), { ssr: false, loading: carregar }),
   'whatsapp:escrever': dynamic(() => import('@/app/admin/whatsapp/page'), { ssr: false, loading: carregar }),
   suporte: dynamic(() => import('@/components/admin/suporte-crm'), { ssr: false, loading: carregar }),
   leads: dynamic(() => import('@/components/admin/social/leads-engagement').then((m) => { const C = m.default; return function LeadsCRM() { return <div className="p-4"><C embutido /></div> } }), { ssr: false, loading: carregar }),
