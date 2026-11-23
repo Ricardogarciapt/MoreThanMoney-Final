@@ -13,7 +13,7 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { chamarIAGratis } from '@/lib/ia/chamar'
 import { blocoFramework } from '@/lib/framework-mtm'
-import { publicarTexto, respostasDe, type TokenThreads } from '@/lib/threads/cliente'
+import { publicarImagem, publicarTexto, respostasDe, type TokenThreads } from '@/lib/threads/cliente'
 import { limparResposta } from '@/lib/threads/prospecao'
 import { SITE } from '@/lib/threads/recrutamento'
 
@@ -28,11 +28,14 @@ export type Funil = {
   trading: boolean
   tema: string
   recurso: string
+  /** Imagem nossa (real, sem IA de pessoas) servida em público pelo site. */
+  imagem?: string
 }
 
 export const FUNIS: Funil[] = [
   {
     id: 'educacao',
+    imagem: `${SITE}/bootcamp-mtm-sala-estudo.png`,
     palavra: 'PASSO',
     link: `${SITE}/caminho`,
     funilCrm: 'educacao',
@@ -63,6 +66,7 @@ export const FUNIS: Funil[] = [
   },
   {
     id: 'b2b',
+    imagem: `${SITE}/images/solucoes/solucoes-poster.jpg`,
     palavra: 'SOLUÇÕES',
     link: `${SITE}/solucoes`,
     funilCrm: 'b2b',
@@ -73,7 +77,7 @@ export const FUNIS: Funil[] = [
   },
 ]
 
-type EstadoConteudo = { ligado?: boolean; ultimo_em?: string | null; indice?: number; posts?: { id: string; funil: string }[]; respondidos?: string[] }
+type EstadoConteudo = { ligado?: boolean; temas?: { dia: string; lista: string[] }; ultimo_em?: string | null; indice?: number; posts?: { id: string; funil: string }[]; respondidos?: string[] }
 
 /** Lisboa está em UTC+0 no inverno e +1 no verão; para a janela 8–22 h chega aproximar pelo fuso do servidor. */
 function horaLisboa(agora: Date): number {
@@ -96,7 +100,53 @@ function sistema(): string {
   ].join('\n\n')
 }
 
-async function escreverPost(f: Funil): Promise<string> {
+/**
+ * Temas do dia a partir dos relatórios do MiroFish (público virtual que corre no Mac; não se lança
+ * outro aqui). Lê os relatórios feitos nos últimos 10 dias e tira 3 temas que pegam no público.
+ * Guardado por dia; sem relatórios, fica vazio e o post usa o tema fixo do funil.
+ */
+async function temasDoMiroFish(db: SupabaseClient, est: EstadoConteudo, agora: Date): Promise<string[]> {
+  const dia = agora.toISOString().slice(0, 10)
+  if (est.temas?.dia === dia) return est.temas.lista
+  let lista: string[] = []
+  try {
+    const desde = new Date(agora.getTime() - 10 * 86_400_000).toISOString()
+    const { data } = await db
+      .from('publico_virtual_testes')
+      .select('relatorio')
+      .eq('estado', 'feito')
+      .gte('actualizado_em', desde)
+      .order('actualizado_em', { ascending: false })
+      .limit(3)
+    const texto = (data ?? []).map((r) => String(r.relatorio ?? '').slice(0, 2500)).join('\n\n---\n\n')
+    if (texto.trim()) {
+      const r = await chamarIAGratis({
+        sistema: 'Extrais temas de conteúdo de relatórios de simulação de público. Respondes só JSON.',
+        mensagens: [
+          {
+            role: 'user',
+            content:
+              `Relatórios do público virtual (simulação, não pessoas reais):\n${texto}\n\n` +
+              'Dá 3 temas curtos (máx. 15 palavras cada) para posts no Threads que este público comentaria, ligados a trading com método, liberdade financeira ou negócios. JSON: {"temas": ["..",".."]}',
+          },
+        ],
+        json: true,
+        maxTokens: 200,
+        temperatura: 0.5,
+        tarefa: 'threads-conteudo',
+        prioridade: 'fundo',
+        timeoutMs: 15_000,
+      })
+      lista = ((JSON.parse(r.texto) as { temas?: string[] }).temas ?? []).filter((t) => typeof t === 'string' && t.length < 160).slice(0, 3)
+    }
+  } catch {
+    lista = []
+  }
+  est.temas = { dia, lista }
+  return lista
+}
+
+async function escreverPost(f: Funil, temaExtra?: string): Promise<string> {
   try {
     const r = await chamarIAGratis({
       sistema: sistema(),
@@ -105,6 +155,7 @@ async function escreverPost(f: Funil): Promise<string> {
           role: 'user',
           content:
             `Escreve um post para o Threads (máx. 380 caracteres, só o texto) sobre: ${f.tema}.\n` +
+            (temaExtra ? `Ângulo de hoje (o que o público anda a discutir): ${temaExtra}. Liga-o ao tema de forma natural.\n` : '') +
             'Começa com uma frase que prenda (uma verdade incómoda ou uma pergunta). Dá uma ideia útil. ' +
             `Acaba exatamente com um convite a comentar a palavra «${f.palavra}». Sem links.`,
         },
@@ -187,7 +238,7 @@ async function registar(db: SupabaseClient, responsavel: string | undefined, f: 
 
 /** Publica (se for hora) e responde aos comentários dos posts de funil. Nunca lança. */
 export async function correrConteudoThreads(db: SupabaseClient, token: TokenThreads, responsavel?: string): Promise<Record<string, unknown>> {
-  const out = { publicado: null as string | null, funil: null as string | null, respostas: 0, erros: [] as string[] }
+  const out = { publicado: null as string | null, funil: null as string | null, tema: null as string | null, respostas: 0, erros: [] as string[] }
   const { data } = await db.from('site_settings').select('value').eq('key', CHAVE).maybeSingle()
   const est: EstadoConteudo = { ligado: true, indice: 0, posts: [], respondidos: [], ...(data?.value as EstadoConteudo | null) }
   if (est.ligado === false) return { desligado: true }
@@ -196,9 +247,14 @@ export async function correrConteudoThreads(db: SupabaseClient, token: TokenThre
   if (devePublicarConteudo(est.ultimo_em, agora)) {
     const f = FUNIS[(est.indice ?? 0) % FUNIS.length]
     try {
-      let texto = await escreverPost(f)
+      const temas = await temasDoMiroFish(db, est, agora)
+      const tema = temas.length ? temas[(est.indice ?? 0) % temas.length] : undefined
+      let texto = await escreverPost(f, tema)
       if (f.trading && !texto.includes(DISCLAIMER)) texto = `${texto}\n\n${DISCLAIMER}`
-      out.publicado = await publicarTexto(token, texto)
+      out.tema = tema ?? null
+      out.publicado = f.imagem
+        ? await publicarImagem(token, texto, f.imagem).catch(() => publicarTexto(token, texto))
+        : await publicarTexto(token, texto)
       out.funil = f.id
       est.posts = [{ id: out.publicado, funil: f.id }, ...(est.posts ?? [])].slice(0, 20)
       est.ultimo_em = agora.toISOString()
