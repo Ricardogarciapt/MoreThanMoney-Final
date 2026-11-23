@@ -11,7 +11,9 @@ EST=curso-a-primeira-chave
 VERSAO=vel093
 node video/bootcamp/entrada.mjs "video/bootcamp/saida/$EST/entrada.wav"  # gera antes, para os 2 processos não a escreverem ao mesmo tempo
 uma() {
-  local n=$1 l=$2 alvo="$DEST/$l/aula-$(printf %02d "$n")-$l.mp4"
+  local n=$1 l=$2
+  # Em linha separada: no mesmo `local`, $n e $l ainda eram os do ciclo e a aula par gravava por cima da ímpar.
+  local alvo="$DEST/$l/aula-$(printf %02d "$n")-$l.mp4"
   [ -f "$alvo" ] && [ -f "${alvo%.mp4}.$VERSAO" ] && { echo "já feita: $alvo"; return; }
   mkdir -p "$DEST/$l"
   local log; log=$(mktemp)
