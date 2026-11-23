@@ -1,9 +1,11 @@
 import type { Metadata } from 'next'
 import Image from 'next/image'
 import Link from 'next/link'
+import { Suspense } from 'react'
 import { notFound } from 'next/navigation'
 import FormularioFunil from '@/components/funis/formulario-funil'
 import MedicaoConsentida from '@/components/funis/medicao-consentida'
+import DemoNarrada from '@/components/funis/demo-narrada'
 import { AVISO_GERAL, FUNIS, FUNIS_PUBLICIDADE, ehFunilPublicidade } from '@/lib/funis-publicidade'
 import { FREEBIES } from '@/lib/freebies'
 
@@ -63,6 +65,11 @@ export default async function PaginaFunil({ params }: Props) {
           <Image src={f.imagem.src} alt={f.imagem.alt} fill priority sizes="(min-width: 768px) 45vw, 100vw" className="object-cover" />
         </div>
       </section>
+
+      {/* Links de agentes (?ag=) e canais da máquina (utm_source): demo da app narrada pela voz do Ricardo. */}
+      <Suspense fallback={null}>
+        <DemoNarrada funil={f.chave} />
+      </Suspense>
 
       {/* Porquê: lista com divisórias, não cartões iguais. */}
       <section className="border-t border-white/10">
