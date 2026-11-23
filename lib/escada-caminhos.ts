@@ -297,6 +297,7 @@ export function caminhosNumaLinha(): string {
     `[aprender, começa do zero ou já perdeu] ${linha('aprender')} · ` +
     `[ferramentas, já opera] ${linha('ferramentas')} · ` +
     `[capital, tem ${MIN_DEPOSIT} $ e quer operar a sério] ${linha('capital')}. ` +
-    `Trial do Premium: ${TRIAL_CONDICAO}. Nunca digas «sem cartão» sobre o trial do Premium se ele pedir cartão.`
+    `Trial do Premium: ${TRIAL_CONDICAO}. Nunca digas «sem cartão» sobre o trial do Premium se ele pedir cartão. ` +
+    `Os degraus de 5 € e 10 € existem SÓ no site: dentro da comunidade privada salta-se do grátis para o Premium (decisão do Ricardo, 23/11).`
   )
 }
