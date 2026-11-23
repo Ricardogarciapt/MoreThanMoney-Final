@@ -149,7 +149,7 @@ export async function correrAgenteThreads(
   token: TokenThreads,
   ctx: { responsavel?: string; postsNossos: string[] },
 ): Promise<Record<string, unknown>> {
-  const out = { novas: 0, seguimentos: 0, aprendidos: 0, erros: [] as string[] }
+  const out = { novas: 0, seguimentos: 0, aprendidos: 0, pesquisa: [] as string[], erros: [] as string[] }
   const { data } = await db.from('site_settings').select('value').eq('key', CHAVE).maybeSingle()
   const est: EstadoProspecao & { ligado?: boolean } = { ligado: true, vistos: [], conversas: [], ...(data?.value as EstadoProspecao | null) }
   if (est.ligado === false) return { desligado: true }
@@ -186,6 +186,8 @@ export async function correrAgenteThreads(
     let posts: Awaited<ReturnType<typeof pesquisar>> = []
     try {
       posts = await pesquisar(token, q)
+      const validos = posts.filter((p) => postValido(p, token.username, vistos, agora)).length
+      out.pesquisa.push(`«${q}»: ${posts.length} posts, ${validos} válidos`)
     } catch (e) {
       out.erros.push(`pesquisa «${q}»: ${e instanceof Error ? e.message : e}`)
       continue
