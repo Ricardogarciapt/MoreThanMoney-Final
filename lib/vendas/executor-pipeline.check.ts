@@ -2,7 +2,7 @@
  * Guarda do executor do pipeline, do opt-in de Telegram e da aprovação da DM do setter (10/11).
  * Corre com: npx tsx lib/vendas/executor-pipeline.check.ts
  */
-import { emailDoToque, toqueDevido, MAX_TOQUES_EMAIL, assinaturaSaida, linkSaida } from './executor-pipeline'
+import { emailDoToque, toqueDevido, MAX_TOQUES_EMAIL, assinaturaSaida, linkSaida, varianteDoNegocio } from './executor-pipeline'
 import { decidirContacto, temSaida, identificaMtm, TECTOS_PADRAO } from '@/lib/agentes/contacto-inicial'
 import { pedidoOptin, respostaDoBotao, TEXTO_OPTIN, linkOptin } from '@/lib/telegram-optin'
 import { lerBotaoDm, mensagemDeAprovacao } from '@/lib/instagram/setter-aprovacao'
@@ -35,6 +35,20 @@ ok(!toqueDevido(2, null, agora), '2.º sem o 1.º enviado não sai')
 ok(!toqueDevido(2, '2026-11-09T12:00:00Z', agora), '2.º não sai ao fim de 1 dia')
 ok(toqueDevido(2, '2026-11-07T11:00:00Z', agora), '2.º sai ao fim de 3 dias')
 ok(!toqueDevido(4, '2026-01-01T00:00:00Z', agora), 'não há 4.º toque')
+
+console.log('\nVariante freebie GoldKiller')
+ok(varianteDoNegocio(['iman-de-leads', 'freebie-goldkiller']) === 'freebie-goldkiller' && varianteDoNegocio(null) === 'padrao', 'variante lida da etiqueta')
+for (let t = 1; t <= MAX_TOQUES_EMAIL; t++) {
+  const m = emailDoToque(t, 'Ana', 'ana@exemplo.pt', 'freebie-goldkiller')
+  ok(temSaida(m.texto) && identificaMtm(m.texto) && /não constitui consultoria/i.test(m.texto), `freebie toque ${t}: saída, MTM e aviso`)
+  ok(!/garant(id|e)o|lucro certo|ganhar? \d/i.test(m.texto.replace(/não garantem/i, '')), `freebie toque ${t} sem promessas`)
+  ok(/GoldKiller/.test(m.texto), `freebie toque ${t} fala do GoldKiller`)
+}
+ok(!toqueDevido(1, null, agora, 'freebie-goldkiller', '2026-11-09T12:00:00Z'), 'freebie: 1.º não sai no dia seguinte ao pedido')
+ok(toqueDevido(1, null, agora, 'freebie-goldkiller', '2026-11-07T11:00:00Z'), 'freebie: 1.º sai 3 dias depois do pedido')
+ok(!toqueDevido(1, null, agora, 'freebie-goldkiller', null), 'freebie: sem data do pedido não arrisca')
+ok(!toqueDevido(2, '2026-11-05T12:00:00Z', agora, 'freebie-goldkiller', null), 'freebie: 2.º espera 9 dias')
+ok(toqueDevido(2, '2026-11-01T11:00:00Z', agora, 'freebie-goldkiller', null), 'freebie: 2.º sai ao fim de 9 dias')
 
 console.log('\nOpt-in Telegram')
 const q = pedidoOptin('Rui')
