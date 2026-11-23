@@ -50,6 +50,7 @@ import { EstudioCartoes } from "@/components/admin/estudio-cartoes"
 import SocialLeads from "@/components/admin/social/leads-engagement"
 import { FasesVendas } from "./fases-vendas"
 import { MetaLeadgen } from "@/components/admin/social/meta-leadgen"
+import { AprovarConteudo } from "@/components/admin/social/aprovar"
 import { VisaoGeral, type ResumoSocial } from "@/components/admin/social/visao-geral"
 import { GRUPOS_SOCIAL, TODAS_SECOES, grupoDa, type Secao } from "@/components/admin/social/navegacao"
 
@@ -443,6 +444,7 @@ export default function CentroSocial({ embutido = false }: { embutido?: boolean 
           )}
         </nav>
 
+        {aba === "aprovar" && <AprovarConteudo />}
         {aba === "inicio" && <VisaoGeral r={resumo} dono={dono} irPara={setAba} />}
         {aba === "factos" && <PainelFactos painel={painel} aoEstudio={aoEstudio} />}
         {aba === "vendas" && <FasesVendas />}

@@ -3,6 +3,7 @@ import * as THREE from 'three'
 import { AbsoluteFill, interpolate, spring, useCurrentFrame, useVideoConfig } from 'remotion'
 import { ThreeCanvas } from '@remotion/three'
 import { Titulo, clamp, rng, fontTexto, Plano } from '../../../motor/util'
+import { t, tt } from '../i18n'
 
 function texturaAgenda(seed: number) {
   const c = document.createElement('canvas'); c.width = 256; c.height = 340
@@ -12,7 +13,7 @@ function texturaAgenda(seed: number) {
   for (let y = 40; y < 340; y += 22) { g.beginPath(); g.moveTo(10, y); g.lineTo(246, y); g.stroke() }
   g.strokeStyle = 'rgba(200,60,60,.5)'; g.beginPath(); g.moveTo(42, 0); g.lineTo(42, 340); g.stroke()
   g.fillStyle = '#222'; g.font = 'bold 18px serif'
-  const dias = ['SEG', 'TER', 'QUA', 'QUI', 'SEX', 'SÁB']; g.fillText(dias[Math.floor(r() * 6)] + ' ' + (1 + Math.floor(r() * 28)), 50, 28)
+  const dias = t('SEG TER QUA QUI SEX SÁB').split(' '); g.fillText(dias[Math.floor(r() * 6)] + ' ' + (1 + Math.floor(r() * 28)), 50, 28)
   g.strokeStyle = 'rgba(20,30,90,.85)'; g.lineWidth = 2
   for (let y = 58; y < 330; y += 22) {
     if (r() < 0.3) continue
@@ -23,7 +24,7 @@ function texturaAgenda(seed: number) {
     if (r() < 0.25) { g.strokeStyle = 'rgba(200,30,30,.8)'; g.beginPath(); g.moveTo(48, y - 3); g.lineTo(fim, y - 6); g.stroke(); g.strokeStyle = 'rgba(20,30,90,.85)' }
   }
   if (r() < 0.5) { g.fillStyle = 'rgba(255,230,90,.85)'; g.fillRect(150 + r() * 40, 200 + r() * 60, 80, 70) }
-  const t = new THREE.CanvasTexture(c); t.anisotropy = 4; return t
+  const tx = new THREE.CanvasTexture(c); tx.anisotropy = 4; return tx
 }
 
 const Folhas: React.FC<{ f: number }> = ({ f }) => {
@@ -47,8 +48,8 @@ const Folhas: React.FC<{ f: number }> = ({ f }) => {
 }
 
 const MSGS = [
-  ['Rita', 'Olá! Ainda há vaga amanhã?'], ['João', 'Qual é o preço?'], ['Ana', 'Consegue ligar-me?'],
-  ['Pedro', 'Tenho de desmarcar a de quinta 😕'], ['Marta', 'Já enviei mensagem ontem…'], ['Rui', 'Estão abertos ao sábado?'],
+  ['Rita', t('Olá! Ainda há vaga amanhã?')], ['João', t('Qual é o preço?')], ['Ana', t('Consegue ligar-me?')],
+  ['Pedro', t('Tenho de desmarcar a de quinta 😕')], ['Marta', t('Já enviei mensagem ontem…')], ['Rui', t('Estão abertos ao sábado?')],
   ['Sofia', '???'],
 ]
 
@@ -66,7 +67,7 @@ const Notificacoes: React.FC<{ f: number }> = ({ f }) => {
             <div style={{ display: 'flex', gap: 16, alignItems: 'center', padding: '16px 20px', borderRadius: 22, background: 'rgba(28,28,32,.82)', border: '1px solid rgba(255,255,255,.08)', boxShadow: '0 20px 50px rgba(0,0,0,.5)', backdropFilter: 'blur(10px)', fontFamily: fontTexto }}>
               <div style={{ width: 54, height: 54, borderRadius: 14, background: '#25D366', display: 'grid', placeItems: 'center', color: '#fff', fontWeight: 800, fontSize: 26 }}>{quem[0]}</div>
               <div style={{ flex: 1 }}>
-                <div style={{ color: '#fff', fontWeight: 700, fontSize: 22 }}>{quem} <span style={{ color: '#888', fontWeight: 500, fontSize: 18 }}>· agora</span></div>
+                <div style={{ color: '#fff', fontWeight: 700, fontSize: 22 }}>{quem} <span style={{ color: '#888', fontWeight: 500, fontSize: 18 }}>· {t('agora')}</span></div>
                 <div style={{ color: '#ddd', fontSize: 22 }}>{txt}</div>
               </div>
             </div>
@@ -97,9 +98,9 @@ export const Caos: React.FC = () => {
       <Notificacoes f={f} />
       <div style={{ position: 'absolute', right: 70, top: 92, width: 64, height: 64, borderRadius: 32, background: '#ff3b30', color: '#fff', fontFamily: fontTexto, fontWeight: 800, fontSize: 30, display: 'grid', placeItems: 'center', boxShadow: '0 0 30px rgba(255,59,48,.7)', zIndex: 5 }}>{n}</div>
       <div style={{ position: 'absolute', inset: 0, transform: glitch ? `translateX(${(f % 2 ? 1 : -1) * 14}px)` : undefined }}>
-        <Titulo texto="Agenda em papel." de={6} ate={70} size={130} align="left" x={110} y={-20} />
-        <Titulo texto="Mensagens perdidas." de={80} ate={142} size={130} align="left" x={110} y={-20} />
-        <Titulo texto="Clientes que não voltam." de={152} ate={226} size={118} align="left" x={110} y={-20} cor="#ff6b5e" />
+        <Titulo {...tt('Agenda em papel.', [], 130)} de={6} ate={70} align="left" x={110} y={-20} />
+        <Titulo {...tt('Mensagens perdidas.', [], 130)} de={80} ate={142} align="left" x={110} y={-20} />
+        <Titulo {...tt('Clientes que não voltam.', [], 118)} de={152} ate={226} align="left" x={110} y={-20} cor="#ff6b5e" />
       </div>
       {glitch && <AbsoluteFill style={{ background: 'repeating-linear-gradient(0deg, rgba(255,255,255,.06) 0 2px, transparent 2px 6px)', mixBlendMode: 'screen' }} />}
     </AbsoluteFill>

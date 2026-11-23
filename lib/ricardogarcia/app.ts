@@ -116,7 +116,7 @@ export async function ligarAoCrm(m: { id: string; nome: string; email: string; t
     } else {
       const { data: novo } = await db().from('vendas_negocios').insert({
         nome: m.nome.slice(0, 120), email: m.email, telefone: m.telefone || null, estado: 'lead', funil: 'educacao',
-        origem: 'app-ricardo', chave_origem: `app-ricardo:${m.id}`, etiquetas: ['app-ricardo'], contactavel: true,
+        origem: 'app-ricardo', chave_origem: `app-ricardo:${m.id}`, etiquetas: ['app-ricardo'],
         nota: 'Entrou pela app «Missão» do Ricardo.',
       }).select('id').maybeSingle()
       id = novo?.id

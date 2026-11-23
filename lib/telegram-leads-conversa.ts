@@ -27,6 +27,7 @@ import { REGRAS_CASA, peneira } from '@/lib/marketing/regras'
 import { DISCLAIMER } from '@/lib/telegram-leads-posts'
 import { blocoFramework } from '@/lib/framework-mtm'
 import { CHAVE_CONFIG as CHAVE_COMUNIDADE, lerConfig as lerConfigComunidade } from '@/lib/telegram-comunidade'
+import { caminhosNumaLinha } from '@/lib/escada-caminhos'
 
 type Supa = ReturnType<typeof getSupabaseAdmin>
 
@@ -106,6 +107,7 @@ No grupo NUNCA peças UID, email, prints, valores ou dados pessoais — para iss
 ${contextoDaCasa()}
 
 Escada: ${escadaNumaLinha()}
+Caminhos: ${caminhosNumaLinha()}
 Resultados medidos: ${prova ? `${prova} — se citares, usa só isto, tal como está` : 'NÃO há resultados medidos agora: não cites número nenhum de desempenho.'}
 
 ${REGRAS_CASA}

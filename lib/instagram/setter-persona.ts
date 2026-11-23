@@ -51,6 +51,7 @@ import {
 } from '@/lib/escada-precos'
 import { blocoFramework } from '@/lib/framework-mtm'
 import { LINK_AGENDAR_ONBOARDING } from '@/lib/agenda/link'
+import { caminhosNumaLinha } from '@/lib/escada-caminhos'
 
 // ═════════════════════════ 1. OS LIMITES DA META, EM CÓDIGO ═════════════════════════
 
@@ -307,7 +308,7 @@ export function guiaoFase2(passo: PassoDeQualificacao): string {
     `REGRAS QUE NÃO SE NEGOCEIAM:\n· ${REGRAS_DURAS}\n\n` +
     `QUEM É ESTA PESSOA (o cliente que procuramos): ${clienteIdeal()}\n\n` +
     `O QUE TEMOS PARA LHE DAR: ${propostaValor()}\n\n` +
-    `A ESCADA E OS PREÇOS (são estes e mais nenhuns):\n· ${escadaNumaLinha()}\n` +
+    `A ESCADA E OS PREÇOS (são estes e mais nenhuns):\n· ${escadaNumaLinha()}\n· ${caminhosNumaLinha()}\n` +
     `· ${ondeComprarTopoNumaLinha()}\n\n` +
     `A REGRA DA UMA PERGUNTA: fazes UMA pergunta por mensagem. Uma. Duas perguntas seguidas é um ` +
     `questionário, e a pessoa fecha a conversa em vez de responder a um formulário.\n\n` +

@@ -100,6 +100,8 @@ export async function GET(req: NextRequest) {
       token,
     ),
   )
+  // 23/11: chamadas de voz (WhatsApp Business Calling). Diz se o número tem chamadas ligadas.
+  out.chamadas = limpo(await g(`${phoneId}/settings`, token))
   out.numeros_da_waba = limpo(await g(`${waba}/phone_numbers?fields=id,display_phone_number,verified_name,status,quality_rating,code_verification_status,platform_type`, token))
 
   if (acao === 'subscrever') {
@@ -114,10 +116,10 @@ export async function GET(req: NextRequest) {
     const submetidos: Record<string, unknown> = {}
     for (const t of TEMPLATES_MTM) {
       if (existentes.some((e) => e.name === t.name && e.language === t.language)) {
-        submetidos[t.name] = 'já existe'
+        submetidos[`${t.name}/${t.language}`] = 'já existe'
         continue
       }
-      submetidos[t.name] = limpo(await g(`${waba}/message_templates`, token, { method: 'POST', body: JSON.stringify(t) }))
+      submetidos[`${t.name}/${t.language}`] = limpo(await g(`${waba}/message_templates`, token, { method: 'POST', body: JSON.stringify(t) }))
     }
     out.templates_submetidos = submetidos
     const de_novo = await g(`${waba}/message_templates?fields=name,status,language,category,rejected_reason,quality_score&limit=100`, token)

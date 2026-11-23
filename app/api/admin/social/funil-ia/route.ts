@@ -8,6 +8,7 @@ import type { Funil, NoDoFunil, TipoDeNo } from "@/lib/funis"
 import { escadaNumaLinha, bonusNumaLinha } from "@/lib/escada-precos"
 import { chamarIA, mensagemIndisponivel } from '@/lib/ia/chamar'
 import { blocoFramework } from "@/lib/framework-mtm"
+import { caminhosNumaLinha } from '@/lib/escada-caminhos'
 
 export const runtime = "nodejs"
 export const dynamic = "force-dynamic"
@@ -66,6 +67,7 @@ export async function POST(req: NextRequest) {
     `· ids curtos, sem espaços, únicos.\n\n` +
     `Regras da MoreThanMoney:\n` +
     `· A escada é: ${escadaNumaLinha()}.\n` +
+    `· ${caminhosNumaLinha()}\n` +
     `· ${bonusNumaLinha()}\n` +
     `· NÃO lideres com o grátis. O teste de 14 dias só se oferece a quem diz que não quer pagar nem depositar agora.\n` +
     `· NUNCA inventes números de resultados, percentagens ou promessas de lucro. Não os tens.\n` +

@@ -33,6 +33,7 @@ import { getSupabaseAdmin } from '@/lib/supabase-admin-client'
  * Ver `lib/factos-da-casa.ts`.
  */
 import { contextoDaCasa } from '@/lib/factos-da-casa'
+import { caminhosNumaLinha } from '@/lib/escada-caminhos'
 
 function buildSystem(PROOF: string): string { return `És um CLOSER humano da MoreThanMoney a conversar EM PRIVADO (Telegram/WhatsApp/IG) com um lead. Caloroso, seguro, direto. Curto: máx ~60 palavras, 1–3 frases, no máx 1 emoji. Uma pergunta de cada vez. O teu trabalho é QUALIFICAR e FECHAR — não és um FAQ.
 
@@ -55,6 +56,7 @@ ${contextoDaCasa()}
 FACTOS REAIS (só estes; MTM = educação financeira + trading, comunidade PT):
 - Prova: ${PROOF}
 - Escada: ${escadaNumaLinha()}
+- ${caminhosNumaLinha()}
 - ${bonusNumaLinha()}
 - Corretora: PU Prime (link acima). Grupos: Forex, Sensei, Premium, GoldKiller.
 
@@ -77,6 +79,40 @@ interface LeadRow {
   message_count: number | null
   /** Etiquetas canónicas do lead. É aqui que vive a marca de já se ter pedido o consentimento. */
   tags: string[] | null
+  /** Língua escolhida ou deduzida (pt, en, fr, de, es) — o funil de WhatsApp grava-a. */
+  lang: string | null
+}
+
+/**
+ * ADAPTATIVO (pedido do Ricardo 23/11: «deves ser adaptativo no funil IA»). O closer recebe o que já
+ * se sabe deste lead — a língua, a rota que escolheu no guião de WhatsApp, a fase — e ajusta-se: não
+ * volta a perguntar o que a pessoa já respondeu, não vende trading a quem pediu IA para a empresa, e
+ * imita o ritmo dela (curta com quem escreve curto). Puro.
+ */
+export function contextoAdaptativo(lead: Pick<LeadRow, 'lang' | 'interest' | 'stage' | 'source'> | null): string {
+  const linhas: string[] = ['═══ ADAPTA-TE A ESTA PESSOA ═══']
+  const nomes: Record<string, string> = { pt: 'português de Portugal', en: 'inglês', fr: 'francês', de: 'alemão', es: 'espanhol' }
+  if (lead?.lang && nomes[lead.lang]) {
+    linhas.push(`- Língua desta conversa: ${nomes[lead.lang]}. Responde nessa língua; se ela mudar de língua, muda com ela.`)
+  } else {
+    linhas.push('- Responde na língua em que a pessoa escreve.')
+  }
+  const rota = lead?.interest ?? ''
+  const rotas: Record<string, string> = {
+    educacao: 'escolheu APRENDER TRADING no menu: aprofunda a formação (Membro → Premium), pergunta a experiência dela.',
+    corretora: 'escolheu ACESSO COMPLETO (rota da corretora): conduz passo a passo à abertura de conta e ao UID, uma coisa de cada vez.',
+    funded: 'escolheu TESTAR SEM ARRISCAR (MTM Funded, conta simulada, não é prop firm): explica as regras do 1.º desafio.',
+    solucoes: 'escolheu IA PARA O NEGÓCIO: esquece o trading. Percebe o ramo, o problema e o volume de clientes, e propõe uma conversa curta pela agenda.',
+    curioso: 'só quer CONHECER: explica em 2 frases e descobre qual das rotas lhe faz sentido.',
+  }
+  if (rotas[rota]) linhas.push(`- Já ${rotas[rota]} Não lhe voltes a mostrar o menu.`)
+  if (lead?.stage === 'wa_humano') linhas.push('- Pediu para falar com uma pessoa: diz que a equipa já foi avisada e lembra o link da agenda, sem vender.')
+  linhas.push(
+    '- Imita o ritmo: se escreve pouco, responde em 1–2 frases; se faz perguntas detalhadas, responde com detalhe.',
+    '- Lê o nível dela (iniciante, já opera, empresário) e ajusta o vocabulário. Nunca repitas uma pergunta que já foi respondida no histórico.',
+    '- Se a pessoa hesitar ou pedir uma pessoa, oferece falar com a equipa e a agenda em vez de insistir.',
+  )
+  return linhas.join('\n')
 }
 
 /** Deteta o interesse a partir do texto do lead (heurística leve, complementa a IA). */
@@ -100,17 +136,11 @@ export async function runLeadFunnelReply(input: {
   /** Canal de origem — para segmentar com as MESMAS tags (telegram | whatsapp | instagram). */
   source?: string
 }): Promise<string | null> {
-  const key = process.env.ANTHROPIC_API_KEY?.trim()
-  if (!key) return null
-  const model =
-    process.env.TELEGRAM_FUNNEL_MODEL?.trim() ||
-    process.env.ANTHROPIC_MODEL?.trim() ||
-    'claude-haiku-4-5-20251001'
 
   const supabase = getSupabaseAdmin()
   const { data: existing } = await supabase
     .from('telegram_leads')
-    .select('chat_id, first_name, interest, stage, source, history, message_count, tags')
+    .select('chat_id, first_name, interest, stage, source, history, message_count, tags, lang')
     .eq('chat_id', input.chatId)
     .maybeSingle()
   const lead = (existing ?? null) as LeadRow | null
@@ -175,6 +205,10 @@ export async function runLeadFunnelReply(input: {
     `${MTMAUTO_PRECO} mas fica a ZERO com conta real na PU Prime, e conduz passo a passo — abrir conta pelo ` +
     `nosso link, depositar ${MIN_DEPOSIT} $ (o dinheiro é dele e fica na conta dele), mandar o UID e o print para eu ` +
     `validar, e só depois instalar a app e ligar a conta MT5. Uma coisa de cada vez, nunca tudo de enfiada. ` +
+    `QUANDO A PESSOA QUER ABRIR CONTA (diz «conta», «quero abrir», «sim» ao link): NÃO perguntes se podes enviar o link — ` +
+    `manda-o JÁ nessa mensagem: https://www.puprime.com/campaign?cs=morethanmoney , diz que o depósito mínimo é ${MIN_DEPOSIT} $ ` +
+    `e que depois te manda AQUI MESMO, nesta conversa, o UID (só o número) e um print do depósito, que tu validas. ` +
+    `Tudo se faz nesta conversa, nunca a mandes para outro sítio para validar. ` +
     `Se for (A): segue o funil normal da comunidade. Se ainda não sabe, pergunta com as duas opções. ` +
     `NUNCA cites lucro em euros nem prometas ganhos: ` +
     `os resultados dos sinais falam-se em PIPS e PERCENTAGEM, e o valor em dinheiro apresenta-se como ` +
@@ -182,25 +216,22 @@ export async function runLeadFunnelReply(input: {
     `passados não garantem resultados futuros.`,
   )
 
+  // 23/11: IA via `lib/ia/chamar.ts`, grátis primeiro (regra do Framework). A chamada directa à
+  // Anthropic falhava sem créditos e o lead recebia sempre a mesma pergunta de recurso, em loop.
   let answer: string | null = null
   try {
-    const res = await fetch('https://api.anthropic.com/v1/messages', {
-      method: 'POST',
-      headers: {
-        'content-type': 'application/json',
-        'x-api-key': key,
-        'anthropic-version': '2023-06-01',
-      },
-      body: JSON.stringify({ model, max_tokens: 350, system: `${systemPrompt}\n\n${blocoFramework('closer')}`, messages }),
+    const { chamarIAGratis } = await import('@/lib/ia/chamar')
+    const r = await chamarIAGratis({
+      sistema: `${systemPrompt}\n\n${contextoAdaptativo(lead)}\n\n${blocoFramework('closer')}`,
+      mensagens: messages,
+      maxTokens: 350,
+      tarefa: 'telegram-bot',
+      prioridade: 'interativo',
+      timeoutMs: 15_000,
     })
-    if (res.ok) {
-      const data = await res.json()
-      answer = (data?.content?.[0]?.text ?? '').trim() || null
-    } else {
-      console.error('[lead-funnel] Anthropic', res.status, (await res.text()).slice(0, 200))
-    }
+    answer = (r.texto ?? '').trim() || null
   } catch (e) {
-    console.error('[lead-funnel] erro Claude:', e)
+    console.error('[lead-funnel] IA falhou:', e instanceof Error ? e.message : e)
   }
   if (!answer) return null
 
@@ -216,7 +247,8 @@ export async function runLeadFunnelReply(input: {
    * Sem isto o WhatsApp é um canal de uma mensagem só: a Meta deixa responder dentro das 24 horas
    * em que a pessoa escreveu e mais nada, e o número fica na base a não servir para nada.
    */
-  const perguntar = devePerguntar({
+  // 23/11: não se cola o pedido de consentimento a uma mensagem com um link (o passo é o link).
+  const perguntar = !/https?:\/\//.test(answer) && devePerguntar({
     mensagensDela: (lead?.message_count ?? 0) + 1,
     jaPerguntado: etiquetas.includes(ETIQUETA_PERGUNTADO),
     jaConsentiu: false,
@@ -232,7 +264,9 @@ export async function runLeadFunnelReply(input: {
   // ao bot em privado ABRIU a conversa — passa a `qualifying`, senão o follow-up nunca o via e o
   // negócio ficava em «lead» para sempre (era o caso de 57 dos 62 leads do Telegram).
   const vemDeFora = lead?.stage === 'no_grupo' || lead?.stage === 'pedido_sinais'
-  const stage = interest ? 'routed' : lead?.stage === 'new' || !lead || vemDeFora ? 'qualifying' : lead?.stage || 'qualifying'
+  // 23/11: as fases do funil de WhatsApp (wa_*) são do motor do WhatsApp; o closer não as apaga,
+  // senão quem pediu uma pessoa ou já marcou voltava a entrar no seguimento automático.
+  const stage = /^(wa|tg)_/.test(String(lead?.stage ?? '')) ? String(lead!.stage) : interest ? 'routed' : lead?.stage === 'new' || !lead || vemDeFora ? 'qualifying' : lead?.stage || 'qualifying'
   const source = input.source || lead?.source || 'telegram'
   // Tags canónicas — MESMO vocabulário em todos os canais para segmentar os contactos.
   const tags = Array.from(new Set([

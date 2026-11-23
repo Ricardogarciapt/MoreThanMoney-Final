@@ -30,6 +30,7 @@ import { linkAssinado } from '@/lib/agentes/codigos'
 import { AGENTE_DO_PASSO } from '@/lib/vendas/escada-followup'
 import { PRECO_MEMBRO } from '@/lib/escada-precos'
 import { MIN_DEPOSIT } from '@/lib/broker/deposito-minimo'
+import { porta } from '@/lib/escada-caminhos'
 
 type Db = SupabaseClient
 
@@ -37,6 +38,18 @@ export const CHAVE_CONFIG = 'pipeline_executor'
 export const MAX_TOQUES_EMAIL = 3
 /** Dias entre toques de email: 1.º logo, 2.º 3 dias depois, 3.º 5 dias depois do 2.º. */
 export const DIAS_ENTRE_TOQUES = [0, 3, 5] as const
+/**
+ * Variante «freebie GoldKiller» (23/11, pedido do Ricardo): quem pediu o GoldKiller grátis (cupão
+ * FREEBIE, 30 dias, etiqueta `freebie-goldkiller` posta pela página /gratis/goldkiller) recebe os
+ * mesmos 3 toques pela mesma fila e passagem legal, mas com texto sobre o scanner e ao ritmo do
+ * acesso: 1.º 3 dias depois do pedido (o email de ativação já saiu), 2.º no dia ~12, 3.º no dia ~28.
+ */
+export const ETQ_FREEBIE_GOLDKILLER = 'freebie-goldkiller'
+export const DIAS_FREEBIE_GOLDKILLER = [3, 9, 16] as const
+export type VarianteSeguimento = 'padrao' | 'freebie-goldkiller'
+export function varianteDoNegocio(etiquetas: string[] | null | undefined): VarianteSeguimento {
+  return (etiquetas ?? []).includes(ETQ_FREEBIE_GOLDKILLER) ? 'freebie-goldkiller' : 'padrao'
+}
 const SITE = (process.env.NEXT_PUBLIC_SITE_URL || 'https://www.morethanmoney.pt').replace(/\/$/, '')
 
 // ── Puro ────────────────────────────────────────────────────────────────────────────────────
@@ -53,14 +66,54 @@ export function linkSaida(email: string): string {
 }
 
 /** O email de cada toque. Tom do framework: sem promessas de lucro, preço dito, saída em todos. */
-export function emailDoToque(toque: number, primeiroNome: string | null, email: string): { assunto: string; texto: string } {
+export function emailDoToque(
+  toque: number,
+  primeiroNome: string | null,
+  email: string,
+  variante: VarianteSeguimento = 'padrao',
+): { assunto: string; texto: string } {
   const ola = primeiroNome ? `Olá ${primeiroNome},` : 'Olá,'
   const membro = linkAssinado('/register?plano=membro', AGENTE_DO_PASSO.membro)
   const corretora = linkAssinado('/abrir-conta', AGENTE_DO_PASSO.corretora)
+  // Degraus de entrada (pagamento único) para quem recusa a mensalidade — lib/escada-caminhos.ts.
+  const ler = porta('entrada_ler')
+  const desafio = porta('entrada_praticar')
   const rodape =
     `\n\n—\nRicardo Garcia · MoreThanMoney (morethanmoney.pt)\n` +
     `Conteúdo educativo, não constitui consultoria financeira. Resultados passados não garantem resultados futuros.\n` +
     `Recebes isto porque aceitaste receber novidades da MoreThanMoney. Para deixar de receber: ${linkSaida(email)}`
+  if (variante === 'freebie-goldkiller') {
+    const guia = `${SITE}/gratis/goldkiller`
+    if (toque <= 1) {
+      return {
+        assunto: 'Como usar o GoldKiller em 15 minutos por dia',
+        texto:
+          `${ola}\n\nJá tens o GoldKiller no teu TradingView. A rotina que recomendamos é curta: abre o ouro (XAU/USD) ` +
+          `no gráfico de 15 minutos, vê a zona que o scanner marca, espera pela confirmação e define o stop ANTES de entrar. ` +
+          `Se não houver sinal claro, não há operação, e isso também é método.\n\nO guia que recebeste explica cada passo ` +
+          `e continua disponível aqui: ${guia}\n\nDúvidas num gráfico? Responde a este email com um print.` + rodape,
+      }
+    }
+    if (toque === 2) {
+      return {
+        assunto: 'O scanner é uma parte. O resto é gestão de risco',
+        texto:
+          `${ola}\n\nUma ferramenta marca o mapa; quem decide és tu. É por isso que os membros da MoreThanMoney têm mais do que ` +
+          `o scanner: sessões ao vivo, as academias, a comunidade e cada sinal mostrado do início ao fim em pips.\n\n` +
+          `No pack Membro (${PRECO_MEMBRO}) o GoldKiller continua ativo quando os teus 30 dias acabarem. Cancelas quando quiseres.\n\n` +
+          `Conhece aqui: ${membro}` + rodape,
+      }
+    }
+    return {
+      assunto: 'O teu GoldKiller grátis está a acabar',
+      texto:
+        `${ola}\n\nFaltam poucos dias para o teu acesso de 30 dias ao GoldKiller terminar. Se quiseres mantê-lo, ` +
+        `o pack Membro (${PRECO_MEMBRO}) inclui-o, com a formação e a comunidade: ${membro}\n\n` +
+        `Se preferires a rota da corretora, com a conta validada o Premium fica incluído: ${corretora}\n\n` +
+        `Se ainda não é altura de uma mensalidade: ${desafio.titulo}. ${desafio.texto} ${SITE}${desafio.href}\n\n` +
+        `Não te volto a escrever sobre isto. Qualquer dúvida, é só responder.` + rodape,
+    }
+  }
   if (toque <= 1) {
     return {
       assunto: 'O próximo passo na MoreThanMoney',
@@ -83,16 +136,29 @@ export function emailDoToque(toque: number, primeiroNome: string | null, email: 
     assunto: 'Fico por aqui',
     texto:
       `${ola}\n\nNão te volto a escrever sobre isto. Se um dia quiseres avançar, o pack Membro está em ${membro} ` +
-      `e a rota da corretora em ${corretora}. Qualquer dúvida, é só responder.` + rodape,
+      `e a rota da corretora em ${corretora}.\n\nSe ainda não é altura de uma mensalidade, há um primeiro passo de pagamento único: ` +
+      `${ler.titulo} (${SITE}${ler.href}), ou ${desafio.titulo} (${SITE}${desafio.href}).\n\nQualquer dúvida, é só responder.` + rodape,
   }
 }
 
 /** Já é altura do toque `n` (1-based), dado quando saiu o anterior? */
-export function toqueDevido(n: number, ultimoEnvioIso: string | null, agora = Date.now()): boolean {
+export function toqueDevido(
+  n: number,
+  ultimoEnvioIso: string | null,
+  agora = Date.now(),
+  variante: VarianteSeguimento = 'padrao',
+  criadoIso: string | null = null,
+): boolean {
   if (n < 1 || n > MAX_TOQUES_EMAIL) return false
-  if (n === 1) return true
+  const dias = variante === 'freebie-goldkiller' ? DIAS_FREEBIE_GOLDKILLER : DIAS_ENTRE_TOQUES
+  if (n === 1) {
+    if (variante === 'padrao') return true
+    // Freebie: conta a partir do pedido; sem data conhecida não arrisca um toque cedo demais.
+    if (!criadoIso) return false
+    return agora - Date.parse(criadoIso) >= dias[0] * 86_400_000
+  }
   if (!ultimoEnvioIso) return false
-  return agora - Date.parse(ultimoEnvioIso) >= DIAS_ENTRE_TOQUES[n - 1] * 86_400_000
+  return agora - Date.parse(ultimoEnvioIso) >= dias[n - 1] * 86_400_000
 }
 
 // ── Base de dados ───────────────────────────────────────────────────────────────────────────
@@ -165,11 +231,13 @@ export async function rascunharEmails(db: Db, max: number): Promise<number> {
   if (!consent.size) return 0
   const { data: negocios } = await db
     .from('vendas_negocios')
-    .select('id, nome, email, estado')
+    .select('id, nome, email, estado, etiquetas, criado_em')
     .in('estado', ['lead', 'contactado', 'qualificado'])
     .not('email', 'is', null)
     .limit(1000)
-  const alvo = ((negocios ?? []) as Array<{ id: string; nome: string | null; email: string; estado: string }>)
+  const alvo = ((negocios ?? []) as Array<{
+    id: string; nome: string | null; email: string; estado: string; etiquetas: string[] | null; criado_em: string | null
+  }>)
     .filter((n) => consent.has(String(n.email).trim().toLowerCase()))
   if (!alvo.length) return 0
 
@@ -194,10 +262,11 @@ export async function rascunharEmails(db: Db, max: number): Promise<number> {
     const h = historico.get(n.id) ?? { toque: 0, enviado_em: null, aberto: false }
     if (h.aberto) continue
     const toque = h.toque + 1
-    if (!toqueDevido(toque, h.enviado_em)) continue
+    const variante = varianteDoNegocio(n.etiquetas)
+    if (!toqueDevido(toque, h.enviado_em, Date.now(), variante, n.criado_em)) continue
     const email = String(n.email).trim().toLowerCase()
     const nome = (n.nome ?? '').split(' ')[0] || null
-    const m = emailDoToque(toque, nome, email)
+    const m = emailDoToque(toque, nome, email, variante)
     const r = await criarEnvioPorAprovar({
       kind: KIND_ENVIO.EMAIL_SEGUIMENTO,
       chave: `email-seguimento:${n.id}:${toque}`,
@@ -212,6 +281,7 @@ export async function rascunharEmails(db: Db, max: number): Promise<number> {
         referencia: n.id,
         negocio_id: n.id,
         toque,
+        variante,
         agente: AGENTE_DO_PASSO.membro,
         familia_oferta: 'formacao',
       } as never,

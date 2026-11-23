@@ -200,7 +200,18 @@ export interface Pedido {
   tipo: 'texto' | 'template'
   templateNome?: string | null
   finalidade: Finalidade
+  /**
+   * LICENÇA DO DONO (23/11/2026). Só vale para os templates que PEDEM LICENÇA
+   * (`TEMPLATES_PEDIDO_DE_LICENCA`): uma mensagem, com botões, em que a pessoa diz se quer ou não
+   * receber. O Ricardo decidiu (23/11) abordar assim os contactos antigos do WhatsApp dele, que não
+   * têm linha no livro. Não passa por cima do «retirou» nem do número inválido, e não serve para
+   * mais nenhum template: o que vem depois só sai com o «Sim» dela (opt-in com prova, `fluxo.ts`).
+   */
+  licencaDono?: string | null
 }
+
+/** Templates cujo corpo é só um pedido de licença com botões Sim / Não / Sair. */
+export const TEMPLATES_PEDIDO_DE_LICENCA = ['mtm_reencontro', 'mtm_reencontro_v2'] as const
 
 export interface Decisao {
   pode: boolean
@@ -237,6 +248,14 @@ export function decidirEnvio(p: Pedido, estado: EstadoDoContacto, agoraMs: numbe
       codigo: 'numero_invalido',
       porque: `número não utilizável: ${normalizarE164(p.para).porque}`,
     }
+  }
+
+  if (
+    p.licencaDono &&
+    p.tipo === 'template' &&
+    (TEMPLATES_PEDIDO_DE_LICENCA as readonly string[]).includes(p.templateNome ?? '')
+  ) {
+    return { ...base, pode: true, codigo: 'ok', porque: `pedido de licença por decisão do dono (${p.licencaDono})` }
   }
 
   /**
@@ -347,7 +366,7 @@ export interface CorpoTemplate {
 /** Mensagem interactiva (só dentro da janela): botões (até 3) ou lista (até 10 linhas). */
 export type Interativo =
   | { tipo: 'botoes'; corpo: string; botoes: Array<{ id: string; titulo: string }> }
-  | { tipo: 'lista'; corpo: string; botao: string; linhas: Array<{ id: string; titulo: string; descricao?: string }> }
+  | { tipo: 'lista'; corpo: string; botao: string; linhas: Array<{ id: string; titulo: string; descricao?: string }>; rodape?: string }
 
 export function corpoParaCloudApi(
   paraE164: string,
@@ -372,6 +391,7 @@ export function corpoParaCloudApi(
         : {
             type: 'list',
             body: { text: i.corpo.slice(0, 1024) },
+            ...(i.rodape ? { footer: { text: i.rodape.slice(0, 60) } } : {}),
             action: {
               button: i.botao.slice(0, 20),
               sections: [

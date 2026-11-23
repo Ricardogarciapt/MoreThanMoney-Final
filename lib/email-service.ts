@@ -200,3 +200,38 @@ ${p.links.fr ? bloco('Français', 'Ton livre est prêt. Ouvre-le avec le lien ci
 <p style="margin:28px 0 0;font-size:12px;color:#999">Conteúdo educativo, não constitui consultoria financeira. · MoreThanMoney.pt</p></div>`
   await sendHtmlMail(p.to, `O teu livro: «${p.titulo}» · Your book · Tu libro`, html)
 }
+
+/**
+ * Email de um freebie (e-book grátis em troca de contacto, 23/11/2026): o link assinado nas três
+ * línguas e o passo seguinte de sempre (Premium 3 dias grátis, plano Membro). Para o GoldKiller
+ * grátis leva também o aviso de que o acesso no TradingView é ativado pela equipa em até 24 h.
+ */
+export async function sendFreebieEmail(p: {
+  to: string
+  nome?: string | null
+  titulo: string
+  links: { pt: string; en?: string; es?: string }
+  goldkiller?: { tvUsername: string; dias: number } | null
+}) {
+  const site = getSiteUrl()
+  const esc = (t: string) => t.replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c] as string)
+  const ouro = '#D2A63C'
+  const btn = (href: string, txt: string, cheio = true) =>
+    `<a href="${href}" style="display:inline-block;${cheio ? `background:${ouro};color:#0b0b0d` : `border:1px solid ${ouro};color:${ouro}`};text-decoration:none;font-weight:700;padding:12px 20px;border-radius:10px;margin:4px 6px 4px 0">${txt}</a>`
+  const ola = p.nome ? `, ${esc(p.nome.split(' ')[0])}` : ''
+  const gk = p.goldkiller
+    ? `<h2 style="color:${ouro};font-size:18px;margin:28px 0 8px">O teu GoldKiller grátis</h2>
+<p style="margin:0 0 12px;line-height:1.55">Recebemos o pedido com o cupão FREEBIE para o utilizador <b>${esc(p.goldkiller.tvUsername)}</b> do TradingView. A equipa ativa o acesso em até 24 horas e avisamos-te. A partir daí tens ${p.goldkiller.dias} dias. No TradingView, abre o ouro (XAUUSD), clica em Indicadores › Só por convite e escolhe MTM Gold Killer. O capítulo 1 do guia explica tudo passo a passo.</p>`
+    : ''
+  const outras = [p.links.en ? btn(p.links.en, 'Read in English', false) : '', p.links.es ? btn(p.links.es, 'Leer en español', false) : ''].join('')
+  const html = `<div style="font-family:Arial,sans-serif;background:#0b0b0d;color:#eee;padding:28px;border-radius:14px;max-width:600px">
+<h1 style="color:#E9C46A;font-size:22px;margin:0 0 6px">«${esc(p.titulo)}»</h1>
+<p style="margin:12px 0;line-height:1.55">Obrigado${ola}! O teu guia está pronto. O link abre durante um ano, no telemóvel ou no computador, e dá para descarregar o PDF.</p>
+${btn(p.links.pt, 'Abrir o guia')}${outras}
+${gk}
+<h2 style="color:${ouro};font-size:18px;margin:28px 0 8px">O passo seguinte</h2>
+<p style="margin:0 0 12px;line-height:1.55">Se quiseres fazer isto acompanhado, o Premium tem 3 dias grátis (só cobra ao 4.º dia e cancelas quando quiseres): aulas ao vivo, comunidade, WebTrader e as ideias da casa. Quando quiseres continuar, o plano Membro dá-te tudo isso todos os meses.</p>
+${btn(`${site}/register`, 'Premium 3 dias grátis')}${btn(`${site}/upgrade?plan=app_member_monthly`, 'Ser Membro', false)}
+<p style="margin:28px 0 0;font-size:12px;color:#999">Conteúdo educativo, não constitui consultoria financeira. Negociar tem risco. Para deixares de receber, responde SAIR. · MoreThanMoney.pt</p></div>`
+  await sendHtmlMail(p.to, `O teu guia grátis: «${p.titulo}»`, html)
+}

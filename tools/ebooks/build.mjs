@@ -123,7 +123,7 @@ function decoCapa(livro) {
 function carimbo(livro) {
   const chave = livro.variante || livro.tema
   const t = ui(livro).carimbo[chave]
-  const cor = { rg: '#E9C46A', frio: '#E9C46A', mente: '#E9C46A', cripto: '#F3CF73', faceless: '#E6D3B5' }[chave]
+  const cor = { rg: '#E9C46A', frio: '#E9C46A', mente: '#E9C46A', passo: '#E9C46A', plano: '#E9C46A', scanners: '#E9C46A', cripto: '#F3CF73', faceless: '#E6D3B5' }[chave]
   return `<svg class="capa-carimbo" viewBox="0 0 120 120" aria-hidden="true"><defs><path id="circ-${livro.tema}" d="M60,60 m-47,0 a47,47 0 1,1 94,0 a47,47 0 1,1 -94,0"/></defs>
     <circle cx="60" cy="60" r="58" fill="rgba(10,9,8,.55)" stroke="${cor}" stroke-width="1"/><circle cx="60" cy="60" r="36" fill="none" stroke="${cor}" stroke-width=".6" opacity=".6"/>
     <text fill="${cor}"><textPath href="#circ-${livro.tema}" textLength="288" lengthAdjust="spacing">${t[0]}</textPath></text>

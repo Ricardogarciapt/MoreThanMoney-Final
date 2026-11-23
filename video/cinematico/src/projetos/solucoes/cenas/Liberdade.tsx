@@ -4,6 +4,7 @@ import { ThreeCanvas } from '@remotion/three'
 import { EffectComposer, Bloom } from '@react-three/postprocessing'
 import { Titulo, clamp, rng, Plano } from '../../../motor/util'
 import { OURO, OURO_CLARO } from '../tempo'
+import { t, tt } from '../i18n'
 
 const Sobem: React.FC<{ f: number }> = ({ f }) => {
   const base = useMemo(() => { const r = rng(21); return Array.from({ length: 900 }, () => [(r() - 0.5) * 40, r() * 14 - 2, -r() * 40, 0.5 + r()]) }, [])
@@ -41,9 +42,9 @@ export const Liberdade: React.FC = () => {
       <Plano src="liberdade_1" de={0} dur={112} grade="ouro" fade={6} zoom={[1.02, 1.1]} />
       <Plano src="liberdade_2" de={104} dur={106} grade="ouro" fade={8} zoom={[1.05, 1.12]} />
       <AbsoluteFill style={{ background: 'linear-gradient(180deg, rgba(0,0,0,.35), rgba(0,0,0,0) 40%, rgba(0,0,0,.45))' }} />
-      <Titulo texto="Mais tempo." de={8} ate={70} size={150} y={-60} />
-      <Titulo texto="Mais liberdade." de={72} ate={130} size={150} y={-60} destaque={['liberdade']} />
-      <Titulo texto="Mais do que dinheiro." de={135} ate={200} size={120} y={-60} destaque={['dinheiro']} />
+      <Titulo {...tt('Mais tempo.', [], 150)} de={8} ate={70} y={-60} />
+      <Titulo {...tt('Mais liberdade.', ['liberdade'], 150)} de={72} ate={130} y={-60} />
+      <Titulo {...tt('Mais do que dinheiro.', ['dinheiro'], 120)} de={135} ate={200} y={-60} />
     </AbsoluteFill>
   )
 }

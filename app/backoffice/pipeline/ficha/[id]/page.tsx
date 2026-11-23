@@ -244,6 +244,7 @@ export default async function FichaPage({ params }: { params: Promise<{ id: stri
                   {t.message_count ?? 0} mensagens · {quando(t.updated_at)}
                   {t.broker_uid ? ' · UID da corretora enviado' : ''}
                 </span>
+                <Link href="/backoffice/gestao/whatsapp?v=telegram" className="text-[11px] text-[#D2A63C] hover:underline">abrir conversas</Link>
               </p>
             ))
           }

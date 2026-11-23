@@ -66,6 +66,8 @@ export const FASE_ACCAO: Record<Fase, string> = {
 export const ETQ_EDIFICADO = 'edificado'
 export const ETQ_ONBOARDING_OK = 'onboarding_ok'
 export const ETQ_RECRUTA = 'recruta'
+/** Candidato à equipa comercial (formulário /work): recebe a proposta de função, não a de educador. */
+export const ETQ_CANDIDATO_EQUIPA = 'candidato_equipa'
 
 /**
  * A fase de um negócio. `null` = fora do funil (perdido, ou cliente com onboarding feito).

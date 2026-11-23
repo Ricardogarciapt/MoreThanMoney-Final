@@ -18,6 +18,10 @@ export const EBOOKS = {
   'so-as-maos': { titulo: 'Só as Mãos', autor: 'Maria Costa' },
   'o-metodo-frio': { titulo: 'O Método Frio', autor: 'Ricardo Garcia' },
   'a-decisao-que-adias': { titulo: 'A Decisão Que Adias', autor: 'Liliana Salgueiro' },
+  // os três guias grátis (ímanes de leads, 23/11/2026): lib/freebies.ts
+  'o-primeiro-passo': { titulo: 'O Primeiro Passo', autor: 'Ricardo Garcia' },
+  'o-plano-de-3-passos': { titulo: 'O Plano de 3 Passos', autor: 'Ricardo Garcia' },
+  'guia-dos-scanners': { titulo: 'Guia dos Scanners MTM', autor: 'Ricardo Garcia' },
   // versões traduzidas (mesmo livro, outra língua; conteudo-privado/ebooks/<slug>-en|es/)
   'destrui-tudo-e-ainda-bem-en': { titulo: "I Destroyed It All. And I'm Glad.", autor: 'Ricardo Garcia' },
   'destrui-tudo-e-ainda-bem-es': { titulo: 'Lo Destruí Todo. Y Menos Mal.', autor: 'Ricardo Garcia' },
@@ -28,6 +32,12 @@ export const EBOOKS = {
   'a-primeira-chave-fr': { titulo: 'La Première Clé', autor: 'Ruben Pereira' },
   'so-as-maos-en': { titulo: 'Just the Hands', autor: 'Maria Costa' },
   'so-as-maos-es': { titulo: 'Solo las Manos', autor: 'Maria Costa' },
+  'o-primeiro-passo-en': { titulo: 'The First Step', autor: 'Ricardo Garcia' },
+  'o-primeiro-passo-es': { titulo: 'El Primer Paso', autor: 'Ricardo Garcia' },
+  'o-plano-de-3-passos-en': { titulo: 'The 3-Step Plan', autor: 'Ricardo Garcia' },
+  'o-plano-de-3-passos-es': { titulo: 'El Plan de 3 Pasos', autor: 'Ricardo Garcia' },
+  'guia-dos-scanners-en': { titulo: 'The MTM Scanners Guide', autor: 'Ricardo Garcia' },
+  'guia-dos-scanners-es': { titulo: 'La Guía de los Scanners MTM', autor: 'Ricardo Garcia' },
 } as const
 export type LinguaEbook = 'pt' | 'en' | 'es' | 'fr'
 /** 'o-metodo-frio-en' → { base: 'o-metodo-frio', lingua: 'en' } */

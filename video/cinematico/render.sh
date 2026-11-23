@@ -6,6 +6,7 @@
 #     --voz=<pasta>       narração (falaNN.wav/mp3) misturada por cima da música (som/misturar-voz.py)
 #     --formato=youtube   youtube | reel | feed (omissão: o da composição)
 #     --frames=0-299      só um troço (ensaio)
+#     --idioma=en      textos do ecrã noutra língua (en|de|fr; projectos com i18n, ex.: Solucoes)
 #     --slug=nome         nome do ficheiro final (omissão: a composição)
 #     --cliente='{...}'   perfil B2B em linha (com --marca=modelo-b2b), ex.: '{"nome":"Estúdio Ana","cores":{"destaque":"#C0392B"}}'
 #
@@ -14,9 +15,9 @@
 set -euo pipefail
 AQUI="$(cd "$(dirname "$0")" && pwd)"; REPO="$(cd "$AQUI/../.." && pwd)"
 COMP="${1:?composição (ex.: Solucoes)}"; MARCA="${2:-morethanmoney}"; shift 2 || true
-VOZ=""; FORMATO=""; FRAMES=""; SLUG="$COMP"; CLIENTE=""
+IDIOMA=""; VOZ=""; FORMATO=""; FRAMES=""; SLUG="$COMP"; CLIENTE=""
 for a in "$@"; do case "$a" in
-  --voz=*) VOZ="${a#*=}";; --formato=*) FORMATO="${a#*=}";; --frames=*) FRAMES="${a#*=}";;
+  --voz=*) VOZ="${a#*=}";; --idioma=*) IDIOMA="${a#*=}";; --formato=*) FORMATO="${a#*=}";; --frames=*) FRAMES="${a#*=}";;
   --slug=*) SLUG="${a#*=}";; --cliente=*) CLIENTE="${a#*=}";; esac; done
 MOTOR="node $REPO/video/motor/motor.mjs"
 cd "$AQUI"
@@ -32,7 +33,7 @@ SOM=out/som.wav
 if [ -n "$VOZ" ]; then python3 som/misturar-voz.py "$VOZ"; SOM=out/som-narrado.wav; fi
 # browser: o do Playwright pré-instalado (nuvem) ou o que o Remotion descarregar (Mac)
 BR=(); for b in /opt/pw-browsers/chromium_headless_shell-*/chrome-headless-shell-linux64/chrome-headless-shell; do [ -x "$b" ] && BR=(--browser-executable="$b" --gl=swangle); done
-PROPS="{\"marca\":\"$MARCA\"${FORMATO:+,\"formato\":\"$FORMATO\"}${CLIENTE:+,\"cliente\":$CLIENTE}}"
+PROPS="{\"marca\":\"$MARCA\"${FORMATO:+,\"formato\":\"$FORMATO\"}${IDIOMA:+,\"idioma\":\"$IDIOMA\"}${CLIENTE:+,\"cliente\":$CLIENTE}}"
 npx remotion render src/index.ts "$COMP" out/mudo.mp4 --muted --crf=16 --concurrency=3 --log=error \
   --props="$PROPS" ${FRAMES:+--frames=$FRAMES} ${BR[@]+"${BR[@]}"}
 DEST="$($MOTOR saida "$MARCA" cinematico "$SLUG")"

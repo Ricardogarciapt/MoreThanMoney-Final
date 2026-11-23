@@ -14,6 +14,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getSupabaseAdmin, verifyAdminAccess } from '@/lib/admin-api-helpers'
 import { centimosEmEuros } from '@/lib/vendas/calculo'
+import { getStripeClient } from '@/lib/stripe-client'
+import { pagarComissoesAprovadas } from '@/lib/pagamentos/comissoes-stripe'
 
 const supabase = getSupabaseAdmin()
 
@@ -75,6 +77,22 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: `Acção desconhecida: ${accao}` }, { status: 400 })
   }
   if (ids.length === 0) return NextResponse.json({ error: 'Falta a lista de comissões' }, { status: 400 })
+
+  // PAGAR POR STRIPE: transfere para a conta de recebimento de cada pessoa (lote por pessoa).
+  // Continua a exigir a confirmação; o que não puder ir (janela de 30 dias, sem conta, dívida,
+  // casa) volta com o motivo, e fica aprovado.
+  if (accao === 'pagar' && body.via === 'stripe') {
+    try {
+      const r = await pagarComissoesAprovadas(supabase, getStripeClient(), {
+        ids,
+        ensaio: body.confirmar !== true,
+        por: auth.userId ?? null,
+      })
+      return NextResponse.json({ accao, via: 'stripe', ...r }, { status: body.confirmar === true ? 200 : 409 })
+    } catch (e) {
+      return NextResponse.json({ error: e instanceof Error ? e.message : String(e) }, { status: 500 })
+    }
+  }
 
   const { data: actuais, error: erroLeitura } = await supabase
     .from('vendas_comissoes')

@@ -4,7 +4,10 @@
     "arn1"
   ],
   "crons": [
-    { "path": "/api/cron/dm-caixa", "schedule": "*/5 * * * *" },
+    {
+      "path": "/api/cron/dm-caixa",
+      "schedule": "*/5 * * * *"
+    },
     {
       "path": "/api/cron/lead-instantaneo",
       "schedule": "*/5 * * * *"

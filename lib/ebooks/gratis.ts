@@ -3,10 +3,10 @@
  * «O Método Frio» vende-se a 5 € COM 7 dias de acompanhamento, ou sai grátis em troca de
  * email + WhatsApp + um formulário curto, SEM acompanhamento.
  */
-export const EBOOKS_GRATIS = new Set(['o-metodo-frio', 'a-decisao-que-adias'])
+export const EBOOKS_GRATIS = new Set(['o-metodo-frio', 'a-decisao-que-adias', 'o-primeiro-passo', 'o-plano-de-3-passos', 'guia-dos-scanners'])
 
 /** Livros que SÓ existem grátis (sem versão paga nem produto no marketplace): oferta dos webinars. */
-export const EBOOKS_SO_GRATIS = new Set(['a-decisao-que-adias'])
+export const EBOOKS_SO_GRATIS = new Set(['a-decisao-que-adias', 'o-primeiro-passo', 'o-plano-de-3-passos', 'guia-dos-scanners'])
 
 export const PERGUNTAS = {
   experiencia: { rotulo: 'Experiência em trading', opcoes: { nunca: 'Nunca operei', menos_1: 'Menos de 1 ano', mais_1: 'Mais de 1 ano' } },
@@ -25,7 +25,12 @@ export const PERGUNTAS_MENTE = {
 } as const
 type Perguntas = Record<string, { rotulo: string; opcoes: Record<string, string> }>
 export function perguntasDe(slug: string): Perguntas {
-  return (slug.startsWith('a-decisao-que-adias') ? PERGUNTAS_MENTE : PERGUNTAS) as Perguntas
+  if (slug.startsWith('a-decisao-que-adias')) return PERGUNTAS_MENTE as Perguntas
+  // Guias grátis: só duas perguntas, para o formulário não travar quem chega de um anúncio.
+  if (/^(o-primeiro-passo|o-plano-de-3-passos|guia-dos-scanners)/.test(slug)) {
+    return { experiencia: PERGUNTAS.experiencia, tempo: PERGUNTAS.tempo } as Perguntas
+  }
+  return PERGUNTAS as Perguntas
 }
 
 export function validarRespostas(r: unknown, slug = 'o-metodo-frio'): { ok: true; respostas: Record<string, string> } | { ok: false; erros: Record<string, string> } {

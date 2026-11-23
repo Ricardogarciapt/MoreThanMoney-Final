@@ -83,7 +83,7 @@ export async function talvezAudioWhatsApp(p: {
     })
     if (!ok) return { enviado: false, motivo: corpo?.error?.message ?? `HTTP ${res.status}` }
 
-    await enviarWhatsApp({ para: e164, finalidade: 'resposta', texto: AVISO_AUDIO_IA, estado })
+    if (AVISO_AUDIO_IA) await enviarWhatsApp({ para: e164, finalidade: 'resposta', texto: AVISO_AUDIO_IA, estado })
     return { enviado: true, momento }
   } catch (e) {
     return { enviado: false, motivo: e instanceof Error ? e.message : 'erro' }

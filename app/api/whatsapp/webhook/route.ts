@@ -3,6 +3,7 @@ import { runLeadFunnelReply } from '@/lib/telegram-lead-funnel'
 import { getSupabaseAdmin } from '@/lib/supabase-admin-client'
 import { enviarWhatsApp, lerEstadoDoContacto, registarEntrada } from '@/lib/whatsapp-mensageiro'
 import { talvezAudioWhatsApp } from '@/lib/whatsapp/audio'
+import { linkAgendar } from '@/lib/agenda/link'
 
 /**
  * Webhook do WhatsApp (Meta Cloud API) — funil de vendas MTM no WhatsApp, reutilizando o MESMO
@@ -49,9 +50,40 @@ interface WAMessage {
   button?: { text?: string; payload?: string }
   /** Toque num botão ou numa linha de lista de uma mensagem interativa. */
   interactive?: { button_reply?: { id?: string; title?: string }; list_reply?: { id?: string; title?: string } }
+  /** Foto (o print do depósito, no passo da corretora). */
+  image?: { id?: string; caption?: string; mime_type?: string }
+}
+
+/** Descarrega uma foto recebida no WhatsApp (Graph API: id → url → bytes). Nada se guarda. */
+async function baixarFotoWhatsApp(mediaId: string): Promise<Blob | null> {
+  const token = (process.env.WHATSAPP_TOKEN ?? '').trim()
+  if (!token) return null
+  try {
+    const meta = await fetch(`https://graph.facebook.com/v21.0/${mediaId}`, { headers: { Authorization: `Bearer ${token}` } })
+    const j = (await meta.json().catch(() => null)) as { url?: string } | null
+    if (!j?.url) return null
+    const r = await fetch(j.url, { headers: { Authorization: `Bearer ${token}` } })
+    return r.ok ? await r.blob() : null
+  } catch {
+    return null
+  }
 }
 
 /** O que a pessoa escreveu ou tocou, e o id do botão/linha quando tocou. Puro. */
+/** A confirmação de saída na língua do contacto (a que escolheu, ou a do indicativo). */
+async function textoDeSaida(from: string, numero: string): Promise<string> {
+  const { ehLingua, linguaDoIndicativo } = await import('@/lib/whatsapp/linguas')
+  const { data } = await getSupabaseAdmin().from('telegram_leads').select('lang').eq('chat_id', `wa:${from}`).maybeSingle()
+  const l = ehLingua(data?.lang) ? data!.lang : linguaDoIndicativo(numero)
+  return {
+    pt: 'Feito, não voltas a receber mensagens nossas por aqui. Se um dia quiseres voltar, é só escreveres. 🙏',
+    en: "Done, you won't get any more messages from us here. If you ever want to come back, just write. 🙏",
+    fr: "C'est fait, tu ne recevras plus de messages de notre part ici. Si un jour tu veux revenir, écris-nous. 🙏",
+    de: 'Erledigt, du bekommst hier keine Nachrichten mehr von uns. Wenn du irgendwann zurückkommen willst, schreib einfach. 🙏',
+    es: 'Hecho, no volverás a recibir mensajes nuestros por aquí. Si algún día quieres volver, solo escríbenos. 🙏',
+  }[l as 'pt' | 'en' | 'fr' | 'de' | 'es']
+}
+
 function lerEntrada(m: WAMessage): { texto: string; botao: string | null } {
   const br = m.interactive?.button_reply
   const lr = m.interactive?.list_reply
@@ -102,6 +134,24 @@ export async function POST(req: NextRequest) {
       for (const m of (value?.messages ?? []) as WAMessage[]) {
         const from = m.from
         const { texto: text, botao } = lerEntrada(m)
+
+        /**
+         * 23/11: ABRIR CONTA E VALIDAR SEM SAIR DO WHATSAPP. O print do depósito chega como foto e vai
+         * ao Ricardo para aprovar (o mesmo motor do Telegram, `lib/telegram-broker-gate.ts`).
+         */
+        if (from && m.type === 'image' && m.image?.id) {
+          try {
+            await registarEntrada({ numero: from, texto: '[foto]', waMessageId: m.id ?? null, nome: contactName })
+            const foto = await baixarFotoWhatsApp(m.image.id)
+            if (foto) {
+              const { handleProofPhoto } = await import('@/lib/telegram-broker-gate')
+              await handleProofPhoto(getSupabaseAdmin() as never, `wa:${from}`, foto, contactName)
+            }
+          } catch (e) {
+            console.error('[whatsapp] foto/print falhou:', e instanceof Error ? e.message : e)
+          }
+          continue
+        }
         if (!from || !text) continue
 
         /**
@@ -120,7 +170,11 @@ export async function POST(req: NextRequest) {
          * Grava na exclusão global e marca o consentimento retirado; responde uma vez (janela aberta,
          * grátis) e não passa pelo funil.
          */
-        if ((/^(sair|parar|stop|cancelar|unsubscribe)[.!]?$/i.test(text) || /^n[aã]o quero receber/i.test(text)) && numero) {
+        if (
+          (/^(sair|parar|stop|cancelar|unsubscribe|arr[eê]ter|abmelden|baja)[.!]?$/i.test(text) ||
+            /^(n[aã]o quero receber|stop messages|ne plus recevoir|nicht mehr erhalten|no quiero recibir)/i.test(text)) &&
+          numero
+        ) {
           const db = getSupabaseAdmin()
           const agora = new Date().toISOString()
           const { data: ja } = await db.from('contacto_exclusao').select('identificador').eq('identificador', numero).limit(1)
@@ -135,7 +189,7 @@ export async function POST(req: NextRequest) {
           await enviarWhatsApp({
             para: from,
             finalidade: 'resposta',
-            texto: 'Feito, não voltas a receber mensagens nossas por aqui. Se um dia quiseres voltar, é só escreveres. 🙏',
+            texto: await textoDeSaida(from, numero),
             estado: { ...estadoSair, retirou: false, ultimaEntradaIso: estadoSair.ultimaEntradaIso ?? agora },
           })
           continue
@@ -146,6 +200,22 @@ export async function POST(req: NextRequest) {
          * guião texto → áudio → lista → áudio → link (`lib/whatsapp/fluxo.ts`). Vem ANTES do filtro de
          * leads novos porque o reencontro é precisamente com contactos que o Ricardo já tem.
          */
+        // 23/11: UID da PU Prime (só o número) ou email da conta → validação, como no Telegram.
+        if (!botao) {
+          try {
+            const bg = await import('@/lib/telegram-broker-gate')
+            const uid = bg.looksLikeBrokerUid(text)
+            const db = getSupabaseAdmin() as never
+            if (uid) {
+              await bg.handleBrokerUid(db, `wa:${from}`, uid, contactName)
+              continue
+            }
+            if (await bg.tratarEmailPrimeGate(db, `wa:${from}`, text)) continue
+          } catch (e) {
+            console.error('[whatsapp] validação da corretora falhou:', e instanceof Error ? e.message : e)
+          }
+        }
+
         const { data: est } = await getSupabaseAdmin().from('telegram_leads').select('stage').eq('chat_id', `wa:${from}`).maybeSingle()
         const noGuiao = typeof est?.stage === 'string' && est.stage.startsWith('wa_') && est.stage !== 'wa_humano'
         if (numero) {
@@ -192,6 +262,27 @@ export async function POST(req: NextRequest) {
          * Sem código, a mensagem sai exactamente igual — só fica escrita como não atribuível. A
          * capacidade de responder nunca depende de haver atribuição.
          */
+        // 23/11: se a IA falhar duas vezes seguidas, não se repete a pergunta de recurso em loop:
+        // passa-se à fila dos setters (uma pessoa responde) e diz-se isso ao lead.
+        let recurso = 'Diz-me só: procuras aprender, copiar sinais prontos ou algo automático? 🙂'
+        if (!reply) {
+          const { data: ultimas } = await getSupabaseAdmin()
+            .from('whatsapp_mensagens')
+            .select('texto')
+            .eq('direcao', 'saida')
+            .order('criado_em', { ascending: false })
+            .eq('telefone', numero ?? from)
+            .limit(1)
+          if (String(ultimas?.[0]?.texto ?? '') === recurso) {
+            recurso = `Boa pergunta. Vou passar-te a uma pessoa da equipa, que te responde aqui mesmo. Se preferires falar já, marca aqui: ${linkAgendar('apresentacao')}`
+            try {
+              const { passarParaSetter } = await import('@/lib/whatsapp/setter')
+              await passarParaSetter(numero ?? from, contactName ?? '', 'pt', text.slice(0, 200), 'pediu')
+            } catch (e) {
+              console.warn('[whatsapp] setter falhou:', e instanceof Error ? e.message : e)
+            }
+          }
+        }
         const { data: leadWa } = await getSupabaseAdmin()
           .from('telegram_leads')
           .select('agente_codigo')
@@ -200,7 +291,7 @@ export async function POST(req: NextRequest) {
         const r = await enviarWhatsApp({
           para: from,
           finalidade: 'resposta',
-          texto: reply || 'Diz-me só: procuras aprender, copiar sinais prontos ou algo automático? 🙂',
+          texto: reply || recurso,
           estado: estado ? { ...estado, ultimaEntradaIso: estado.ultimaEntradaIso ?? new Date().toISOString() } : undefined,
           agente: {
             funil: 'whatsapp:funil',

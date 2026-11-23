@@ -9,12 +9,21 @@
  *   ?ensaio=1 devolve o que faria sem gravar
  *
  * Corre duas vezes por dia (06:20 e 13:20 UTC): é idempotente, e a 11/11 a base deu 503 às 06:20.
+ *
+ * Depois de fechar o livro, PAGA o que já foi aprovado (23/11/2026; aqui e não num cron novo porque
+ * o vercel.json está no tecto de 100 crons): acerta o estado das contas Stripe Connect por acabar,
+ * transfere as comissões da equipa aprovadas e fora da janela de 30 dias, e as do MLM aprovadas
+ * cujo beneficiário já tem conta completa. Interruptor: `site_settings.comissoes_pagamento.auto`.
+ * Com `?ensaio=1` só mostra o plano. O resumo fica em `site_settings.comissoes_pagamento.ultima`.
  */
 import { NextRequest, NextResponse } from 'next/server'
 import { isCronAuthorized } from '@/lib/cron-auth'
 import { getSupabaseAdmin } from '@/lib/supabase-admin-client'
 import { getStripeClient } from '@/lib/stripe-client'
 import { reconciliarStripe } from '@/lib/vendas/reconciliar-stripe'
+import { sincronizarContasPorAcabar } from '@/lib/pagamentos/connect'
+import { pagamentoAutomaticoLigado, pagarComissoesAprovadas, CHAVE_DEFINICOES } from '@/lib/pagamentos/comissoes-stripe'
+import { payApprovedCommissions } from '@/lib/mlm-commission-payout'
 
 export const dynamic = 'force-dynamic'
 export const maxDuration = 300
@@ -42,9 +51,59 @@ export async function GET(req: NextRequest) {
     if (r.registadas || r.codigosPreenchidos || r.falhadas) {
       console.log(`[vendas-reconciliar] ${r.registadas} vendas registadas, ${r.codigosPreenchidos} códigos preenchidos, ${r.falhadas} por gravar (${r.dias} d)`)
     }
-    return NextResponse.json({ ok: true, ...r })
+    const pagamentos = await pagarAprovadas(db, ensaio)
+    return NextResponse.json({ ok: true, ...r, pagamentos })
   } catch (e) {
     console.error('[vendas-reconciliar] falhou:', e)
     return NextResponse.json({ ok: false, error: e instanceof Error ? e.message : String(e) }, { status: 500 })
+  }
+}
+
+async function pagarAprovadas(db: ReturnType<typeof getSupabaseAdmin>, ensaio: boolean) {
+  const stripe = getStripeClient()
+  try {
+    const contas = ensaio ? null : await sincronizarContasPorAcabar(db, stripe)
+    const auto = await pagamentoAutomaticoLigado(db)
+    const equipa = await pagarComissoesAprovadas(db, stripe, { ensaio: ensaio || !auto })
+
+    let mlm: { transferred: number; failed: number } | null = null
+    if (auto && !ensaio) {
+      const { data: prontas } = await db
+        .from('mlm_commissions')
+        .select('id, beneficiary:profiles!mlm_commissions_beneficiary_id_fkey(stripe_connect_status, user_type)')
+        .eq('status', 'approved')
+        .limit(500)
+      const ids = (prontas ?? [])
+        .filter((c: Record<string, unknown>) => {
+          const b = (Array.isArray(c.beneficiary) ? c.beneficiary[0] : c.beneficiary) as { stripe_connect_status?: string; user_type?: string } | null
+          return b?.stripe_connect_status === 'complete' && b?.user_type !== 'admin'
+        })
+        .map((c: Record<string, unknown>) => String(c.id))
+      if (ids.length) {
+        const r = await payApprovedCommissions(db, stripe, ids)
+        mlm = { transferred: r.transferred, failed: r.failed }
+      }
+    }
+
+    const resumo = {
+      em: new Date().toISOString(),
+      auto,
+      contas,
+      equipa: { pagos: equipa.pagos.length, falhados: equipa.falhados, espera: equipa.espera.length, totalPagoCents: equipa.pagos.reduce((t, p) => t + p.totalCents, 0) },
+      mlm,
+    }
+    if (!ensaio) {
+      const { data: atual } = await db.from('site_settings').select('value').eq('key', CHAVE_DEFINICOES).maybeSingle()
+      await db
+        .from('site_settings')
+        .upsert({ key: CHAVE_DEFINICOES, value: { ...((atual?.value as object) ?? {}), ultima: resumo } }, { onConflict: 'key' })
+    }
+    if (equipa.pagos.length || equipa.falhados.length || mlm?.transferred) {
+      console.log(`[comissoes-pagar] equipa ${equipa.pagos.length} pagos, ${equipa.falhados.length} falhados; mlm ${mlm?.transferred ?? 0}`)
+    }
+    return { ...resumo, plano: ensaio ? equipa : undefined }
+  } catch (e) {
+    console.error('[comissoes-pagar] falhou:', e)
+    return { erro: e instanceof Error ? e.message : String(e) }
   }
 }

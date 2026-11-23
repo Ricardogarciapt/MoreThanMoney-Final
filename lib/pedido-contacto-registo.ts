@@ -78,7 +78,7 @@ async function decisoesDoMotor(pedido: PedidoValido): Promise<Record<string, Dec
   return out
 }
 
-async function avisarDono(texto: string) {
+export async function avisarDono(texto: string) {
   try {
     const { sendTelegramChannelMessage } = await import('@/lib/mtmcopy/telegram-bot')
     const db = getSupabaseAdmin()
@@ -102,6 +102,8 @@ export interface ResultadoRegisto {
   pedidoId?: string
   consentimentos?: number
   tarefa?: { id: string | null; estado: string | null }
+  /** O negócio no pipeline do back-office (novo ou o que já existia com o mesmo telefone/email). */
+  negocioId?: string | null
   erro?: string
 }
 
@@ -111,6 +113,8 @@ export async function registarPedidoDeContacto(p: {
   fonte: Fonte
   ipHash?: string | null
   meta?: { leadgenId: string; formId: string | null; pageId: string | null; adId: string | null }
+  /** Como entra no pipeline (e-book, íman…). Sem isto entra como «formulario»/«meta_lead_ads». */
+  negocio?: { origem?: string; etiquetas?: string[]; nota?: string }
 }): Promise<ResultadoRegisto> {
   const db = getSupabaseAdmin()
   const { pedido } = p
@@ -141,6 +145,12 @@ export async function registarPedidoDeContacto(p: {
   }
   const pedidoId = (ins as { id: string }).id
 
+  // Entra já no pipeline do back-office (CRM, funil das 7 fases, executor), com ou sem consentimento:
+  // o back-office tem de ver o lead; quem decide se pode ser contactado continua a ser o livro.
+  const { ligarPedidoAoNegocio } = await import('@/lib/vendas/negocio-do-pedido')
+  const negocio = await ligarPedidoAoNegocio(db, { pedidoId, pedido, fonte: p.fonte, ...p.negocio })
+  const negocioId = negocio?.id ?? null
+
   // Uma linha por canal marcado. Sem caixa marcada não há linhas — e então também não há tarefa.
   let consentimentos = 0
   if (p.linhas.length) {
@@ -156,7 +166,7 @@ export async function registarPedidoDeContacto(p: {
       `📥 <b>Lead sem consentimento</b> (${p.fonte})\n${esc(pedido.nome)} · ${esc(INTERESSES[pedido.interesse])}\n` +
         'Nenhuma caixa marcada: NÃO pode ser contactado pelos agentes.',
     )
-    return { ok: true, pedidoId, consentimentos: 0, tarefa: { id: null, estado: null } }
+    return { ok: true, pedidoId, consentimentos: 0, tarefa: { id: null, estado: null }, negocioId }
   }
 
   const canais = p.linhas.map((l) => l.canal) as CanalContacto[]
@@ -228,5 +238,5 @@ export async function registarPedidoDeContacto(p: {
       whatsappNota,
   )
 
-  return { ok: true, pedidoId, consentimentos, tarefa }
+  return { ok: true, pedidoId, consentimentos, tarefa, negocioId }
 }

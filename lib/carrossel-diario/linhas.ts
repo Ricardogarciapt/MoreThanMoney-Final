@@ -71,7 +71,7 @@ const CTA = {
   palavraChave: 'COMEÇAR',
   oQue: 'o link para começares',
   objetivo:
-    'CTA directo: convidar a pessoa a começar hoje (conta gratuita, aulas, app e o Premium com experiência de 3 dias sem cartão). Honesto, sem urgência falsa e sem prometer resultados. Todas as lâminas empurram para comentar COMEÇAR.',
+    'CTA directo: convidar a pessoa a começar hoje (conta gratuita, aulas, app e o Premium com experiência de 3 dias grátis, cancelas quando quiseres; nunca escrever «sem cartão»). Honesto, sem urgência falsa e sem prometer resultados. Todas as lâminas empurram para comentar COMEÇAR.',
 }
 
 export const LINHAS_POSTS: LinhaPost[] = [
@@ -131,7 +131,7 @@ export const LINHAS_POSTS: LinhaPost[] = [
     hora: { h: 20, m: 30 },
     temas: [
       { slug: 'cta-comeca-hoje', tema: 'Começa hoje: conta gratuita, aulas e app num só sítio', ...CTA },
-      { slug: 'cta-premium-3-dias', tema: 'Experimenta o Premium 3 dias sem cartão e decide depois', ...CTA },
+      { slug: 'cta-premium-3-dias', tema: 'Experimenta o Premium 3 dias grátis e decide depois', ...CTA },
       { slug: 'cta-tres-caminhos', tema: 'Três caminhos na MTM: aprender, abrir a tua conta ou treinar num desafio', ...CTA },
       { slug: 'cta-comunidade', tema: 'Não aprendas sozinho: entra na comunidade MTM', ...CTA },
       { slug: 'cta-app', tema: 'A app MTM no telemóvel: aulas, alertas e treino num só lugar', ...CTA },

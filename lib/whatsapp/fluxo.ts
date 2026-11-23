@@ -15,39 +15,51 @@
 import { createHash } from 'crypto'
 import { getSupabaseAdmin } from '@/lib/supabase-admin-client'
 import { falarParaStorage } from '@/lib/voz'
-import { enviarWhatsApp, lerEstadoDoContacto } from '@/lib/whatsapp-mensageiro'
+import { enviarWhatsApp } from '@/lib/whatsapp-mensageiro'
 import {
-  AVISO_IA,
-  BOTAO_DEPOIS,
-  BOTAO_MENU,
-  BOTAO_SAIR,
-  BOTAO_SIM,
-  MENU_ROTAS,
+  GUIAO,
+  ID_HUMANO,
+  ID_MUDAR_LINGUA,
   ROTAS_WA,
-  TEXTO_DEPOIS,
-  TEXTO_HUMANO,
-  TEXTO_MENU,
   audioAbertura,
   audioDaRota,
   lerIntencao,
+  menuComLingua,
   textoDaRota,
   type RotaWa,
 } from '@/lib/vendas/guiao-whatsapp'
+import { LINGUAS, ehLingua, linguaDoIndicativo, linguaEscolhida, linhasDeLinguas, type Lingua } from '@/lib/whatsapp/linguas'
+import { passarParaSetter } from '@/lib/whatsapp/setter'
+import { seguirLinks } from '@/lib/whatsapp/link-seguido'
+import { ID_SEG_AGENDAR, ID_SEG_DUVIDA, TEXTOS_SEGUIMENTO } from '@/lib/whatsapp/seguimento-site'
+import { linkAgendar } from '@/lib/agenda/link'
 
 const FUNIL = 'whatsapp:funil'
+/** O mesmo link da agenda que o guião usa: `seguirLinks` troca-o pelo link com rasto. */
+const AGENDA = linkAgendar('apresentacao')
+const ESPERA_DEPOIS_DO_AUDIO_MS = 6000
+const esperar = (ms: number) => new Promise((r) => setTimeout(r, ms))
 
-/** O id/título de um botão ou linha de lista, normalizado para a intenção. Puro. */
-export function intencaoDoBotao(idOuTitulo: string | null | undefined): RotaWa | 'sim' | 'depois' | 'sair' | null {
+/** O id/título de um botão ou linha de lista, normalizado para a intenção, em qualquer das 5 línguas. Puro. */
+export function intencaoDoBotao(idOuTitulo: string | null | undefined): RotaWa | 'sim' | 'depois' | 'sair' | 'humano' | 'lingua' | null {
   const v = (idOuTitulo ?? '').trim()
   if (!v) return null
   if ((ROTAS_WA as readonly string[]).includes(v)) return v as RotaWa
-  if (v === BOTAO_SIM || v === 'sim') return 'sim'
-  if (v === BOTAO_DEPOIS || v === 'depois') return 'depois'
-  if (v === BOTAO_SAIR || v === 'sair') return 'sair'
+  if (v === ID_HUMANO) return 'humano'
+  if (v === ID_MUDAR_LINGUA) return 'lingua'
+  for (const l of LINGUAS) {
+    const g = GUIAO[l]
+    if (v === g.botaoSim) return 'sim'
+    if (v === g.botaoDepois) return 'depois'
+    if (v === g.botaoSair) return 'sair'
+  }
+  if (v === 'sim') return 'sim'
+  if (v === 'depois') return 'depois'
+  if (v === 'sair') return 'sair'
   return null
 }
 
-async function avisarRicardo(texto: string) {
+export async function avisarRicardo(texto: string) {
   try {
     const { sendTelegramChannelMessage } = await import('@/lib/mtmcopy/telegram-bot')
     const db = getSupabaseAdmin()
@@ -64,7 +76,7 @@ async function avisarRicardo(texto: string) {
 }
 
 /**
- * Áudio na voz do Ricardo, com o aviso de IA. Se a voz falhar, o mesmo texto sai escrito: o funil
+ * Áudio na voz do Ricardo (o aviso de IA vai no rodapé da lista que se segue). Se a voz falhar, o mesmo texto sai escrito: o funil
  * nunca pára por causa do áudio.
  */
 async function falar(para: string, texto: string): Promise<'audio' | 'texto' | 'falhou'> {
@@ -74,10 +86,7 @@ async function falar(para: string, texto: string): Promise<'audio' | 'texto' | '
     const pub = await falarParaStorage(db as never, texto, `wa-audio/guiao/${ref}.mp3`)
     if (pub.ok) {
       const r = await enviarWhatsApp({ para, finalidade: 'resposta', audioUrl: pub.url, texto, agente: { funil: FUNIL } })
-      if (r.enviado) {
-        await enviarWhatsApp({ para, finalidade: 'resposta', texto: AVISO_IA })
-        return 'audio'
-      }
+      if (r.enviado) return 'audio'
     }
   } catch (e) {
     console.warn('[whatsapp-fluxo] voz falhou:', e instanceof Error ? e.message : e)
@@ -89,7 +98,7 @@ async function falar(para: string, texto: string): Promise<'audio' | 'texto' | '
 async function guardarEstado(chatId: string, campos: Record<string, unknown>) {
   await getSupabaseAdmin()
     .from('telegram_leads')
-    .upsert({ chat_id: chatId, source: 'whatsapp', ...campos, updated_at: new Date().toISOString() }, { onConflict: 'chat_id' })
+    .upsert({ chat_id: chatId, source: 'whatsapp', followup_count: 0, ...campos, updated_at: new Date().toISOString() }, { onConflict: 'chat_id' })
 }
 
 async function gravarOptIn(e164: string, prova: string) {
@@ -122,60 +131,129 @@ export async function tratarFluxoWhatsApp(p: {
 }): Promise<boolean> {
   const db = getSupabaseAdmin()
   const chatId = `wa:${p.from}`
-  const { data: lead } = await db.from('telegram_leads').select('stage, interest, first_name').eq('chat_id', chatId).maybeSingle()
+  const { data: lead } = await db.from('telegram_leads').select('stage, interest, first_name, lang').eq('chat_id', chatId).maybeSingle()
   const stage = (lead?.stage as string | null) ?? null
   const nome = ((p.nome || (lead?.first_name as string | null) || '').trim().split(/\s+/)[0] || '').slice(0, 30)
-  const intencao = intencaoDoBotao(p.botao) ?? lerIntencao(p.texto)
+  // Língua: a que a pessoa escolheu (ou a que lhe demos) > a do indicativo.
+  let lingua: Lingua = ehLingua(lead?.lang) ? (lead!.lang as Lingua) : linguaDoIndicativo(p.e164)
+  const g = () => GUIAO[lingua]
 
-  if (intencao === 'humano') {
-    await enviarWhatsApp({ para: p.from, finalidade: 'resposta', texto: TEXTO_HUMANO, agente: { funil: FUNIL } })
-    await guardarEstado(chatId, { stage: 'wa_humano', first_name: nome || null })
-    await avisarRicardo(`🙋 <b>WhatsApp: quer falar contigo</b>\n${nome || p.e164} · ${p.e164}\n«${p.texto.slice(0, 200)}»`)
+  // ── Troca de língua (bandeiras) ─────────────────────────────────────────────────────────────
+  const escolhida = linguaEscolhida(p.botao) ?? (p.botao ? null : linguaEscolhida(p.texto))
+  if (escolhida) {
+    lingua = escolhida
+    await guardarEstado(chatId, { lang: lingua, first_name: nome || null })
+    if (stage === 'wa_reencontro' || stage === 'wa_lingua_reencontro') {
+      // Ainda não disse que sim: pergunta outra vez, já na língua dele, com botões.
+      await enviarWhatsApp({
+        para: p.from,
+        finalidade: 'resposta',
+        interativo: {
+          tipo: 'botoes',
+          corpo: g().licenca(nome),
+          botoes: [
+            { id: 'sim', titulo: g().botaoSim },
+            { id: 'depois', titulo: g().botaoDepois },
+            { id: 'sair', titulo: g().botaoSair },
+          ],
+        },
+      })
+      await guardarEstado(chatId, { stage: 'wa_reencontro' })
+      return true
+    }
+    // Já no funil: recomeça a abertura na língua nova.
+    await abrirFunil(p, chatId, nome, lingua)
     return true
   }
 
-  const veioDoReencontro = stage === 'wa_reencontro' || p.botao === BOTAO_SIM || p.botao === BOTAO_DEPOIS
-  if (veioDoReencontro && intencao === 'sim') {
-    await gravarOptIn(p.e164, `tocou/respondeu «${p.botao ?? p.texto}» ao template mtm_reencontro`)
-    await falar(p.from, audioAbertura(nome || 'olá'))
+  // ── Botões do seguimento de quem foi ao site (lib/whatsapp/seguimento-site.ts) ─────────────
+  if (p.botao === ID_SEG_DUVIDA || p.botao === TEXTOS_SEGUIMENTO[lingua].botaoDuvida) {
+    await enviarWhatsApp({ para: p.from, finalidade: 'resposta', texto: TEXTOS_SEGUIMENTO[lingua].respostaDuvida, agente: { funil: FUNIL } })
+    await guardarEstado(chatId, { first_name: nome || null, lang: lingua })
+    return true
+  }
+  if (p.botao === ID_SEG_AGENDAR || p.botao === TEXTOS_SEGUIMENTO[lingua].botaoAgendar) {
+    await enviarWhatsApp({ para: p.from, finalidade: 'resposta', texto: seguirLinks(TEXTOS_SEGUIMENTO[lingua].respostaAgendar(AGENDA), p.e164, AGENDA), agente: { funil: FUNIL } })
+    await guardarEstado(chatId, { first_name: nome || null, lang: lingua })
+    return true
+  }
+
+  // Texto livre: só conta como «botão escrito» se for curto e sem pergunta («sim», «aprender»,
+  // «corretora»). Uma frase a sério («não percebi quanto custa o premium?») vai para o closer IA,
+  // que pensa e responde no contexto (pedido do Ricardo 23/11). Pedir uma pessoa e SAIR valem sempre.
+  const intencaoTexto = p.botao ? null : lerIntencao(p.texto)
+  const textoCurto = p.texto.trim().split(/\s+/).length <= 5 && !p.texto.includes('?')
+  const intencao =
+    intencaoDoBotao(p.botao) ?? (intencaoTexto === 'humano' || intencaoTexto === 'sair' || textoCurto ? intencaoTexto : null)
+
+  if (intencao === 'lingua') {
     await enviarWhatsApp({
       para: p.from,
       finalidade: 'resposta',
-      interativo: { tipo: 'lista', corpo: TEXTO_MENU, botao: BOTAO_MENU, linhas: MENU_ROTAS },
+      interativo: { tipo: 'lista', corpo: g().textoLinguas, botao: g().botaoLinguas, linhas: linhasDeLinguas() },
     })
-    await guardarEstado(chatId, { stage: 'wa_menu', first_name: nome || null })
+    if (stage === 'wa_reencontro') await guardarEstado(chatId, { stage: 'wa_lingua_reencontro' })
+    return true
+  }
+
+  if (intencao === 'humano') {
+    await enviarWhatsApp({ para: p.from, finalidade: 'resposta', texto: seguirLinks(g().textoHumano, p.e164, AGENDA), agente: { funil: FUNIL } })
+    await guardarEstado(chatId, { stage: 'wa_humano', first_name: nome || null, lang: lingua })
+    await passarParaSetter(p.e164, nome, lingua, p.botao ?? p.texto)
+    await avisarRicardo(`🙋 <b>WhatsApp: quer falar com uma pessoa</b>\n${nome || p.e164} · ${p.e164} · ${lingua.toUpperCase()}\nFicou na fila dos setters no pipeline.\n«${p.texto.slice(0, 200)}»`)
+    return true
+  }
+
+  const veioDoReencontro =
+    stage === 'wa_reencontro' || stage === 'wa_lingua_reencontro' || (!!p.botao && (intencao === 'sim' || intencao === 'depois'))
+  if (veioDoReencontro && intencao === 'sim') {
+    await gravarOptIn(p.e164, `tocou/respondeu «${p.botao ?? p.texto}» ao template de reencontro`)
+    await abrirFunil(p, chatId, nome, lingua)
     return true
   }
   if (veioDoReencontro && intencao === 'depois') {
-    await enviarWhatsApp({ para: p.from, finalidade: 'resposta', texto: TEXTO_DEPOIS })
-    await guardarEstado(chatId, { stage: 'wa_depois', first_name: nome || null })
+    await enviarWhatsApp({ para: p.from, finalidade: 'resposta', texto: g().textoDepois })
+    await guardarEstado(chatId, { stage: 'wa_depois', first_name: nome || null, lang: lingua })
     return true
   }
 
   const rota = intencao && (ROTAS_WA as readonly string[]).includes(intencao) ? (intencao as RotaWa) : null
   // A rota só se dispara pelo guião uma vez (menu ou escolha explícita); depois o closer IA conduz.
-  if (rota && (stage === 'wa_menu' || stage === 'wa_reencontro' || p.botao)) {
-    await falar(p.from, audioDaRota(rota, nome || 'olá'))
-    await enviarWhatsApp({ para: p.from, finalidade: 'resposta', texto: textoDaRota(rota), agente: { funil: FUNIL } })
-    await guardarEstado(chatId, { stage: `wa_rota_${rota}`, interest: rota, first_name: nome || null })
+  if (rota && (stage === 'wa_menu' || stage === 'wa_menu_2' || stage === 'wa_reencontro' || p.botao)) {
+    const comoSaiu = await falar(p.from, audioDaRota(rota, nome || saudacao(lingua), lingua))
+    if (comoSaiu === 'audio') await esperar(ESPERA_DEPOIS_DO_AUDIO_MS)
+    await enviarWhatsApp({
+      para: p.from,
+      finalidade: 'resposta',
+      texto: seguirLinks(textoDaRota(rota, lingua), p.e164, AGENDA) + (comoSaiu === 'audio' && g().avisoIa ? `\n\n_${g().avisoIa}_` : ''),
+      agente: { funil: FUNIL },
+    })
+    await guardarEstado(chatId, { stage: `wa_rota_${rota}`, interest: rota, first_name: nome || null, lang: lingua })
     if (rota === 'solucoes') {
-      await avisarRicardo(`🏢 <b>WhatsApp: interesse em Soluções (B2B)</b>\n${nome || p.e164} · ${p.e164}`)
+      await avisarRicardo(`🏢 <b>WhatsApp: interesse em Soluções (B2B)</b>\n${nome || p.e164} · ${p.e164} · ${lingua.toUpperCase()}`)
     }
     return true
   }
 
-  // Ainda no menu e escreveu outra coisa: volta a mostrar a lista uma vez, sem insistir mais.
-  if (stage === 'wa_menu' && !rota) {
-    const estado = await lerEstadoDoContacto(p.e164)
-    if (!estado.retirou) {
-      await enviarWhatsApp({
-        para: p.from,
-        finalidade: 'resposta',
-        interativo: { tipo: 'lista', corpo: 'Escolhe uma opção para eu te mandar o que interessa 👇', botao: BOTAO_MENU, linhas: MENU_ROTAS },
-      })
-      await guardarEstado(chatId, { stage: 'wa_menu_2' })
-      return true
-    }
-  }
+  // Tudo o resto (perguntas, dúvidas, conversa) é do closer IA, que pensa e responde.
   return false
+}
+
+function saudacao(l: Lingua): string {
+  return { pt: 'olá', en: 'hi', fr: 'salut', de: 'hallo', es: 'hola' }[l]
+}
+
+/** Áudio de abertura → espera → lista de rotas (com pessoa e bandeiras), na língua do lead. */
+async function abrirFunil(p: { from: string }, chatId: string, nome: string, lingua: Lingua) {
+  const g = GUIAO[lingua]
+  const comoSaiu = await falar(p.from, audioAbertura(nome || saudacao(lingua), lingua))
+  // A Meta vai buscar o ficheiro do áudio antes de o entregar; uma lista enviada logo a seguir chega
+  // ANTES dele. Espera-se uns segundos para a lista aparecer sempre depois do áudio (pedido 23/11).
+  if (comoSaiu === 'audio') await esperar(ESPERA_DEPOIS_DO_AUDIO_MS)
+  await enviarWhatsApp({
+    para: p.from,
+    finalidade: 'resposta',
+    interativo: { tipo: 'lista', corpo: g.textoMenu, botao: g.botaoMenu, linhas: menuComLingua(lingua), ...(comoSaiu === 'audio' && g.avisoIa ? { rodape: g.avisoIa } : {}) },
+  })
+  await guardarEstado(chatId, { stage: 'wa_menu', first_name: nome || null, lang: lingua })
 }

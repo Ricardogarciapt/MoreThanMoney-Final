@@ -5,6 +5,7 @@ import { EffectComposer, Bloom } from '@react-three/postprocessing'
 import { Titulo, clamp, ease, rng, fontTexto, Etiqueta, Plano } from '../../../motor/util'
 import { OURO, OURO_CLARO } from '../tempo'
 import { ouro } from '../../../motor/marca'
+import { t, tt } from '../i18n'
 
 const N = 5000
 const Particulas: React.FC<{ f: number }> = ({ f }) => {
@@ -74,12 +75,12 @@ const Dispositivos: React.FC<{ f: number }> = ({ f }) => {
               <div style={{ marginLeft: 20, flex: 1, height: 22, borderRadius: 11, background: '#2a2a30', color: '#bbb', fontSize: 14, display: 'flex', alignItems: 'center', padding: '0 14px' }}>🔒 oteunegocio.pt</div>
             </div>
             <div style={{ padding: '56px 60px', background: `radial-gradient(ellipse at 80% 0%, ${ouro(0.25)}, transparent 60%)` }}>
-              <Etiqueta style={{ fontSize: 16 }}>Estúdio Ana · Lisboa</Etiqueta>
-              <div style={{ color: '#fff', fontSize: 58, fontWeight: 800, lineHeight: 1.05, marginTop: 14, letterSpacing: -1.5 }}>Marca a tua sessão<br />em 30 segundos.</div>
-              <div style={{ color: '#aaa', fontSize: 22, marginTop: 16 }}>Escolhe o dia. Recebe a confirmação no telemóvel.</div>
-              <div style={{ display: 'inline-block', marginTop: 34, padding: '18px 34px', borderRadius: 14, background: `linear-gradient(180deg, ${OURO_CLARO}, ${OURO})`, color: '#111', fontWeight: 800, fontSize: 22, boxShadow: `0 0 ${30 + 30 * Math.sin(f * 0.2)}px ${ouro(0.6)}` }}>Marcar agora →</div>
+              <Etiqueta style={{ fontSize: 16 }}>{t('Estúdio Ana · Lisboa')}</Etiqueta>
+              <div style={{ color: '#fff', fontSize: 58, fontWeight: 800, lineHeight: 1.05, marginTop: 14, letterSpacing: -1.5 }}>{t('Marca a tua sessão')}<br />{t('em 30 segundos.')}</div>
+              <div style={{ color: '#aaa', fontSize: 22, marginTop: 16 }}>{t('Escolhe o dia. Recebe a confirmação no telemóvel.')}</div>
+              <div style={{ display: 'inline-block', marginTop: 34, padding: '18px 34px', borderRadius: 14, background: `linear-gradient(180deg, ${OURO_CLARO}, ${OURO})`, color: '#111', fontWeight: 800, fontSize: 22, boxShadow: `0 0 ${30 + 30 * Math.sin(f * 0.2)}px ${ouro(0.6)}` }}>{t('Marcar agora →')}</div>
               <div style={{ display: 'flex', gap: 12, marginTop: 40 }}>
-                {['SEG 18', 'TER 19', 'QUA 20', 'QUI 21', 'SEX 22'].map((d, i) => (
+                {t('SEG TER QUA QUI SEX SÁB').split(' ').slice(0, 5).map((d, i) => `${d} ${18 + i}`).map((d, i) => (
                   <div key={d} style={{ padding: '12px 18px', borderRadius: 12, border: '1px solid rgba(255,255,255,.12)', color: i === 1 ? '#111' : '#ddd', background: i === 1 ? OURO_CLARO : 'transparent', fontWeight: 700, fontSize: 18 }}>{d}</div>
                 ))}
               </div>
@@ -99,15 +100,15 @@ const Dispositivos: React.FC<{ f: number }> = ({ f }) => {
         <div style={{ borderRadius: 54, padding: 12, background: 'linear-gradient(160deg,#3a3a3e,#111)', boxShadow: `0 60px 120px rgba(0,0,0,.75), 0 0 60px ${ouro(0.25)}` }}>
           <div style={{ borderRadius: 44, overflow: 'hidden', background: '#0b0b0d', height: 760, padding: '54px 20px 20px' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <div><div style={{ color: '#888', fontSize: 15 }}>Terça, 19</div><div style={{ color: '#fff', fontSize: 30, fontWeight: 800 }}>Marcações</div></div>
+              <div><div style={{ color: '#888', fontSize: 15 }}>{t('Terça, 19')}</div><div style={{ color: '#fff', fontSize: 30, fontWeight: 800 }}>{t('Marcações')}</div></div>
               <div style={{ width: 44, height: 44, borderRadius: 22, background: `linear-gradient(180deg,${OURO_CLARO},${OURO})` }} />
             </div>
             <div style={{ marginTop: 22 }}>
-              <Slot hora="09:00" nome="Rita M." servico="Sessão 60 min" de={150} />
-              <Slot hora="10:30" nome="João P." servico="Primeira consulta" de={178} />
-              <Slot hora="12:00" nome="Ana S." servico="Sessão 30 min" de={206} />
-              <Slot hora="15:00" nome="Pedro L." servico="Sessão 60 min" de={234} />
-              <Slot hora="17:30" nome="Marta C." servico="Avaliação" de={262} />
+              <Slot hora="09:00" nome="Rita M." servico={t('Sessão 60 min')} de={150} />
+              <Slot hora="10:30" nome="João P." servico={t('Primeira consulta')} de={178} />
+              <Slot hora="12:00" nome="Ana S." servico={t('Sessão 30 min')} de={206} />
+              <Slot hora="15:00" nome="Pedro L." servico={t('Sessão 60 min')} de={234} />
+              <Slot hora="17:30" nome="Marta C." servico={t('Avaliação')} de={262} />
             </div>
             <div style={{ marginTop: 14, padding: 14, borderRadius: 14, background: 'rgba(37,211,102,.12)', color: '#7ee2a6', fontSize: 15, opacity: interpolate(f, [280, 295], [0, 1], clamp) }}>💬 Lembretes enviados automaticamente</div>
           </div>
@@ -131,13 +132,13 @@ export const Transforma: React.FC = () => {
           </ThreeCanvas>
         </AbsoluteFill>
       )}
-      <Titulo texto="E se o teu negócio trabalhasse por ti?" de={4} ate={64} size={92} y={0} destaque={['trabalhasse', 'por', 'ti']} />
+      <Titulo {...tt('E se o teu negócio trabalhasse por ti?', ['trabalhasse', 'por', 'ti'], 92)} de={4} ate={64} y={0} />
       <Dispositivos f={f} />
       <Plano src="cliente_marca_1" de={232} dur={100} grade="ouro" escuro={0.3} zoom={[1.0, 1.1]} />
       <div style={{ position: 'absolute', left: 0, right: 0, bottom: 70 }}>
         <div style={{ position: 'relative', height: 140 }}>
-          <Titulo texto="A tua página. A tua app. A tua agenda." de={100} ate={210} size={70} destaque={['página', 'app', 'agenda']} />
-          <Titulo texto="Tudo ligado. Tudo controlado." de={220} ate={325} size={70} destaque={['ligado', 'controlado']} />
+          <Titulo {...tt('A tua página. A tua app. A tua agenda.', ['página', 'app', 'agenda'], 70)} de={100} ate={210} />
+          <Titulo {...tt('Tudo ligado. Tudo controlado.', ['ligado', 'controlado'], 70)} de={220} ate={325} />
         </div>
       </div>
     </AbsoluteFill>

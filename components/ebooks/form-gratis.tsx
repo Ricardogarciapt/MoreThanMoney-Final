@@ -1,6 +1,10 @@
 'use client'
 import { useState } from 'react'
 import { perguntasDe } from '@/lib/ebooks/gratis'
+import { FREEBIES, PROXIMO_PASSO, freebieDe } from '@/lib/freebies'
+import { passoSeguinte } from '@/lib/escada-caminhos'
+import { origemComAnuncio } from '@/components/captacao/contacto-rapido'
+import { rastrear } from '@/lib/funis-pixel-browser'
 
 const campo = 'w-full rounded-xl border border-white/15 bg-black/40 px-4 py-3 text-white placeholder-white/35 outline-none focus:border-[var(--c)]'
 
@@ -17,9 +21,14 @@ export default function FormGratis({ slug, titulo = 'O Método Frio' }: { slug: 
     e.preventDefault()
     setEstado('aenviar'); setErros({}); setErroGeral('')
     try {
-      const r = await fetch(`/api/ebooks/${slug}/gratis`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ ...f, respostas: resp }) })
+      const r = await fetch(`/api/ebooks/${slug}/gratis`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ ...f, respostas: resp, origem: origemComAnuncio(`ebook:${slug}`, window.location.search) }) })
       const j = await r.json()
-      if (j.ok) { setLink(j.link); setEstado('feito'); return }
+      if (j.ok) {
+        setLink(j.link); setEstado('feito')
+        // Pixel só carrega com cookies aceites (mesma chave das /f/*): sem OK, isto não faz nada.
+        rastrear('Lead', { content_name: titulo, content_category: 'freebie' })
+        return
+      }
       setErros(j.erros || {}); setErroGeral(j.erro || ''); setEstado('livre')
     } catch { setErroGeral('Sem ligação. Tenta outra vez.'); setEstado('livre') }
   }
@@ -30,6 +39,7 @@ export default function FormGratis({ slug, titulo = 'O Método Frio' }: { slug: 
         <p className="text-xl font-bold text-white">Está aqui o teu e-book. 📘</p>
         <p className="mt-2 text-white/65">Guarda este link: dá para abrir durante um ano, no telemóvel ou no computador.</p>
         {link && <a href={link} className="mt-5 inline-block rounded-full px-7 py-3 font-bold text-black" style={{ background: 'linear-gradient(90deg, var(--c), var(--c2))' }}>Abrir «{titulo}»</a>}
+        {freebieDe(slug) && <ProximoPasso slug={slug} />}
       </div>
     )
   }
@@ -77,5 +87,28 @@ export default function FormGratis({ slug, titulo = 'O Método Frio' }: { slug: 
         {estado === 'aenviar' ? 'A enviar…' : 'Quero a versão grátis'}
       </button>
     </form>
+  )
+}
+
+/** Depois de um freebie: o passo seguinte da escada (degrau de entrada) e os outros dois guias. */
+export function ProximoPasso({ slug }: { slug: string }) {
+  const outros = FREEBIES.filter((x) => x !== freebieDe(slug))
+  // O passo seguinte vem da escada (lib/escada-caminhos.ts): o guia dos scanners abre o caminho
+  // das ferramentas; os outros guias e e-books abrem o de quem está a aprender.
+  const passo = passoSeguinte(slug.startsWith('guia-dos-scanners') ? 'ferramentas' : 'aprender', { recebeuIman: true })
+  return (
+    <div className="mt-6 border-t border-white/10 pt-5 text-left">
+      <p className="text-sm text-white/65">Também te enviámos o link por email. O passo seguinte, quando quiseres:</p>
+      <div className="mt-3 flex flex-wrap gap-2">
+        {passo && <a href={passo.href} className="rounded-full bg-white px-5 py-2.5 text-sm font-bold text-black">{passo.titulo}</a>}
+        <a href={PROXIMO_PASSO.caminho.href} className="rounded-full border border-white/25 px-5 py-2.5 text-sm font-semibold text-white">{PROXIMO_PASSO.caminho.texto}</a>
+      </div>
+      <p className="mt-5 text-sm text-white/65">Os outros guias grátis da coleção:</p>
+      <ul className="mt-2 space-y-1 text-sm">
+        {outros.map((o) => (
+          <li key={o.slug}><a href={o.pagina} className="text-[var(--c)] underline-offset-4 hover:underline">{o.titulo}</a> <span className="text-white/45">· {o.gancho}</span></li>
+        ))}
+      </ul>
+    </div>
   )
 }
