@@ -60,8 +60,8 @@ export async function renovarSeFaltarPouco(db: SupabaseClient, t: TokenThreads):
 export async function publicarTexto(t: TokenThreads, texto: string, respostaA?: string): Promise<string> {
   const corpo = new URLSearchParams({ media_type: 'TEXT', text: texto.slice(0, 500), access_token: t.access_token })
   if (respostaA) corpo.set('reply_to_id', respostaA)
-  const c = await pedir<{ id: string }>(`${THREADS_GRAPH}/${t.user_id}/threads`, { method: 'POST', body: corpo })
-  const p = await pedir<{ id: string }>(`${THREADS_GRAPH}/${t.user_id}/threads_publish`, {
+  const c = await pedir<{ id: string }>(`${THREADS_GRAPH}/me/threads`, { method: 'POST', body: corpo })
+  const p = await pedir<{ id: string }>(`${THREADS_GRAPH}/me/threads_publish`, {
     method: 'POST',
     body: new URLSearchParams({ creation_id: c.id, access_token: t.access_token }),
   })
@@ -106,7 +106,7 @@ export async function metricasDe(t: TokenThreads, mediaId: string): Promise<Reco
 /** Menções recentes a @ricardogarciapt. Precisa de threads_manage_mentions. */
 export async function mencoes(t: TokenThreads): Promise<PostThreads[]> {
   const j = await pedir<{ data?: PostThreads[] }>(
-    `${THREADS_GRAPH}/${t.user_id}/mentions?fields=id,text,username,timestamp,permalink&access_token=${encodeURIComponent(t.access_token)}`,
+    `${THREADS_GRAPH}/me/mentions?fields=id,text,username,timestamp,permalink&access_token=${encodeURIComponent(t.access_token)}`,
   )
   return j.data ?? []
 }
