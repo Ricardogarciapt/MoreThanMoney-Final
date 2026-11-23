@@ -548,6 +548,16 @@ export default function ScannerAccessPage() {
             <p className="text-base md:text-lg lg:text-xl text-[#F3F3E6] max-w-3xl mx-auto mb-4 md:mb-8 px-2">
               Ferramentas avançadas de análise técnica para maximizar os seus resultados
             </p>
+            <Link
+              href="/app-mobile?tab=scanner"
+              className="inline-flex items-center gap-2 rounded-full border border-[#D2A63C]/60 px-4 py-2 text-sm font-medium text-[#E9C46A] hover:bg-[#D2A63C]/10 transition-colors"
+            >
+              📱 Abrir o scanner no telemóvel
+              <ChevronRight className="h-4 w-4" />
+            </Link>
+            <p className="mt-2 text-xs text-gray-500">
+              No telemóvel: app MoreThanMoney → separador Scanner (morethanmoney.pt/app-mobile?tab=scanner)
+            </p>
           </div>
         </div>
 
