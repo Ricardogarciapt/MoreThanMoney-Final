@@ -2,7 +2,7 @@
 /**
  * Academia de Vendas — narração com a VOZ DA CASA (clone Fish do Ricardo, PT-PT).
  *
- *   FISH_API_KEY=… node --experimental-strip-types video/formacao/narrar.mjs <pasta-saida> [n…] [--en]
+ *   [FISH_API_KEY=…] node --experimental-strip-types video/formacao/narrar.mjs <pasta-saida> [n…] [--en]
  *
  * Gera `0N-pt.wav` (e `0N-en.wav` com --en) a partir de `lib/backoffice-formacao.ts`. Usa a mesma voz,
  * modelo e pistas de pronúncia PT-PT de `lib/voz` (siglas soletradas à portuguesa), parte o texto por
@@ -22,10 +22,9 @@ const { AULAS, narracao } = await import(path.join(RAIZ, 'lib/backoffice-formaca
 const VOZ_RICARDO = '1e0fa8b490c744acba94da72710e6db2'
 const MODELO = process.env.FISH_MODEL || 'speech-1.6'
 const KEY = (process.env.FISH_API_KEY || '').trim()
-if (!KEY) {
-  console.error('falta FISH_API_KEY')
-  process.exit(1)
-}
+// Sem FISH_API_KEY no processo, conta-se com a chave posta como «network secret» do ambiente da nuvem
+// (o proxy acrescenta o cabeçalho Authorization nos pedidos a api.fish.audio).
+if (!KEY) console.error('sem FISH_API_KEY: a usar a chave injectada pelo ambiente para api.fish.audio')
 
 // Pistas de dicção PT-PT só para a síntese (o ecrã mantém a grafia normal).
 const PRONUNCIA_PT = [
@@ -53,7 +52,7 @@ async function sintetizar(texto, ficheiro) {
   for (let tentativa = 1; tentativa <= 3; tentativa++) {
     const res = await fetch('https://api.fish.audio/v1/tts', {
       method: 'POST',
-      headers: { Authorization: `Bearer ${KEY}`, 'Content-Type': 'application/json', model: MODELO },
+      headers: { ...(KEY ? { Authorization: `Bearer ${KEY}` } : {}), 'Content-Type': 'application/json', model: MODELO },
       body: JSON.stringify({ text: texto, reference_id: VOZ_RICARDO, format: 'wav', normalize: true, latency: 'normal' }),
     })
     if (res.ok) {
