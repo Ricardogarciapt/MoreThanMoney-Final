@@ -495,7 +495,7 @@ export default function MlmManager({
       if (action === 'pay' || auto_payout) {
         const parts = []
         if (transferred > 0) parts.push(`${transferred} via Stripe Connect`)
-        if (manual > 0) parts.push(`${manual} marcadas manual`)
+        if (manual > 0) parts.push(`${manual} à espera dos dados de recebimento (ou da casa)`)
         if (failed > 0) parts.push(`${failed} falharam`)
         setError(failed > 0 ? `Atenção: ${parts.join(' · ')}` : '')
       }

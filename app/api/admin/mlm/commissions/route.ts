@@ -159,5 +159,19 @@ export async function POST(request: NextRequest) {
     }
   }
 
+  // Pago fora do Stripe (transferência bancária, MB Way): exige a referência, como no livro da equipa.
+  if (action === 'mark_paid_manual') {
+    const ref = String(body.pagamento_ref || '').trim()
+    if (!ref) return NextResponse.json({ error: 'Falta a referência do pagamento.' }, { status: 400 })
+    const { data, error } = await supabase
+      .from('mlm_commissions')
+      .update({ status: 'paid', paid_at: new Date().toISOString(), payout_status: 'manual', notes: `Pago à mão: ${ref}` })
+      .in('id', ids)
+      .eq('status', 'approved')
+      .select('id')
+    if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+    return NextResponse.json({ success: true, action: 'paid_manual', count: data?.length ?? 0 })
+  }
+
   return NextResponse.json({ error: `Ação desconhecida: ${action}` }, { status: 400 })
 }
