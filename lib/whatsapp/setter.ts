@@ -52,3 +52,44 @@ export async function passarParaSetter(e164: string, nome: string, lingua: Lingu
   }
 }
 
+
+/** O mesmo, para um lead do Telegram (negócio pelo `telegram_id`). */
+export async function passarParaSetterTelegram(chatId: string, nome: string, lingua: Lingua, frase: string, motivo: 'pediu' | 'seguimento' = 'pediu') {
+  try {
+    const db = getSupabaseAdmin()
+    type Neg = { id: string; etiquetas: string[] | null; nome: string | null }
+    const etiqueta = motivo === 'pediu' ? 'quer_pessoa' : 'seguimento_tg'
+    const { data } = await db.from('vendas_negocios').select('id, etiquetas, nome').eq('telegram_id', chatId).order('criado_em', { ascending: false }).limit(1)
+    let neg = (data?.[0] as Neg | undefined) ?? null
+    if (!neg) {
+      const { data: novo } = await db
+        .from('vendas_negocios')
+        .insert({ nome: nome || null, telegram_id: chatId, origem: 'telegram', chave_origem: `tg-humano:${chatId}`, funil: 'educacao', estado: 'lead', etiquetas: [etiqueta, `lingua-${lingua}`] })
+        .select('id, etiquetas, nome')
+        .single()
+      neg = (novo as Neg | null) ?? null
+    } else {
+      await db
+        .from('vendas_negocios')
+        .update({ etiquetas: [...new Set([...(neg.etiquetas ?? []), etiqueta, `lingua-${lingua}`])], atualizado_em: new Date().toISOString() })
+        .eq('id', neg.id)
+    }
+    if (!neg) return
+    const hoje = new Date().toISOString().slice(0, 10)
+    const chave = `tg-${motivo === 'pediu' ? 'humano' : 'seguimento'}:${neg.id}:${hoje}`
+    const { data: ja } = await db.from('vendas_tarefas').select('id').eq('chave', chave).maybeSingle()
+    if (!ja) {
+      await db.from('vendas_tarefas').insert({
+        chave,
+        titulo: motivo === 'pediu' ? `Falar com ${neg.nome || nome || chatId} no Telegram (pediu uma pessoa)` : `Retomar ${neg.nome || nome || chatId} no Telegram (foi ao site e calou-se)`,
+        descricao: `${motivo === 'pediu' ? 'Pediu para falar com uma pessoa no funil do Telegram.' : 'Seguimento automático do Telegram esgotado.'} Língua: ${lingua.toUpperCase()}. Chat ${chatId}. ${frase.slice(0, 400)} Responde no back-office → Conversas → Telegram.`,
+        negocio_id: neg.id,
+        papel: 'setter',
+        prazo: hoje,
+        estado: 'aberta',
+      })
+    }
+  } catch (e) {
+    console.error('[telegram-funil] fila de setters falhou:', e instanceof Error ? e.message : e)
+  }
+}

@@ -14,7 +14,18 @@ export async function negocioDoWhatsApp(p: { utm: Record<string, unknown>; telef
   try {
     const db = getSupabaseAdmin()
     const codigo = [p.utm.wa, p.utm.utm_content].find((v) => typeof v === 'string' && lerCodigo(v)) as string | undefined
-    const doLink = codigo ? lerCodigo(codigo)?.e164 ?? null : null
+    const lido = codigo ? lerCodigo(codigo) : null
+    // Veio do funil do Telegram: o negócio é o do telegram_id e o lead passa a tg_agendou.
+    if (lido?.canal === 'telegram') {
+      const chatId = lido.e164.slice(3)
+      await db.from('telegram_leads').update({ stage: 'tg_agendou', updated_at: new Date().toISOString() }).eq('chat_id', chatId)
+      const { data: nt } = await db.from('vendas_negocios').select('id, email, etiquetas').eq('telegram_id', chatId).order('criado_em', { ascending: false }).limit(1)
+      const n = nt?.[0] as { id: string; email: string | null; etiquetas: string[] | null } | undefined
+      if (!n) return null
+      await db.from('vendas_negocios').update({ ...(n.email ? {} : { email: p.email }), etiquetas: [...new Set([...(n.etiquetas ?? []), 'agendou_tg'])], atualizado_em: new Date().toISOString() }).eq('id', n.id)
+      return n.id
+    }
+    const doLink = lido?.e164 ?? null
     const tel = String(p.telefone ?? '').replace(/[^\d+]/g, '')
     const e164 = doLink ?? (tel.length >= 9 ? (tel.startsWith('+') ? tel : tel.length === 9 ? `+351${tel}` : `+${tel.replace(/^00/, '')}`) : null)
     if (!e164) return null

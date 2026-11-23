@@ -38,29 +38,42 @@ function assinatura(corpo: string, s = segredo()): string {
   return createHmac('sha256', s).update(corpo).digest('base64url').slice(0, 7)
 }
 
-/** Código curto para um número + destino. `e164` com ou sem «+». */
-export function codigoDoLink(e164: string, destino: LetraDestino, s?: string): string {
-  const d = String(e164).replace(/\D/g, '')
-  const corpo = `${BigInt(d || '0').toString(36)}${destino}`
+/**
+ * Código curto para um contacto + destino. `alvo` = número (com ou sem «+») ou `tg:<chat_id>` para o
+ * Telegram (23/11): no Telegram a letra do destino vai em MAIÚSCULA, e é isso que distingue os canais.
+ */
+export function codigoDoLink(alvo: string, destino: LetraDestino, s?: string): string {
+  const tg = String(alvo).startsWith('tg:')
+  const d = String(alvo).replace(/\D/g, '')
+  const corpo = `${BigInt(d || '0').toString(36)}${tg ? destino.toUpperCase() : destino}`
   return `${corpo}${assinatura(corpo, s)}`
 }
 
-/** Lê e confirma um código. Devolve `null` se a assinatura não bater ou o destino não existir. */
-export function lerCodigo(codigo: string | null | undefined, s?: string): { e164: string; destino: LetraDestino } | null {
+/**
+ * Lê e confirma um código. Devolve `null` se a assinatura não bater ou o destino não existir.
+ * `e164` é o número com «+» no WhatsApp, ou `tg:<chat_id>` no Telegram.
+ */
+export function lerCodigo(codigo: string | null | undefined, s?: string): { e164: string; destino: LetraDestino; canal: 'whatsapp' | 'telegram' } | null {
   const c = String(codigo ?? '').trim()
-  const m = /^([0-9a-z]+)([a-z])([A-Za-z0-9_-]{7})$/.exec(c)
+  const m = /^([0-9a-z]+)([a-zA-Z])([A-Za-z0-9_-]{7})$/.exec(c)
   if (!m) return null
-  const [, num36, letra, sig] = m
+  const [, num36, letraBruta, sig] = m
+  const tg = letraBruta !== letraBruta.toLowerCase()
+  const letra = letraBruta.toLowerCase()
   if (!(letra in DESTINOS)) return null
-  if (assinatura(`${num36}${letra}`, s) !== sig) return null
+  if (assinatura(`${num36}${letraBruta}`, s) !== sig) return null
   let digitos: string
   try {
     digitos = [...num36].reduce((acc, ch) => acc * BigInt(36) + BigInt(parseInt(ch, 36)), BigInt(0)).toString()
   } catch {
     return null
   }
+  if (tg) {
+    if (digitos.length < 4 || digitos.length > 16) return null
+    return { e164: `tg:${digitos}`, destino: letra as LetraDestino, canal: 'telegram' }
+  }
   if (digitos.length < 8 || digitos.length > 15) return null
-  return { e164: `+${digitos}`, destino: letra as LetraDestino }
+  return { e164: `+${digitos}`, destino: letra as LetraDestino, canal: 'whatsapp' }
 }
 
 export function linkSeguido(e164: string, destino: LetraDestino, s?: string): string {
@@ -103,9 +116,9 @@ export function destinoDaRota(rota: string | null | undefined): LetraDestino {
 }
 
 /** URL final do redirecionamento, com as utm para a página e a agenda saberem a origem. */
-export function urlDeDestino(destino: LetraDestino, codigo: string, rota?: string): string {
+export function urlDeDestino(destino: LetraDestino, codigo: string, rota?: string, canal: 'whatsapp' | 'telegram' = 'whatsapp'): string {
   const u = new URL(DESTINOS[destino], SITE)
-  u.searchParams.set('utm_source', 'whatsapp')
+  u.searchParams.set('utm_source', canal)
   u.searchParams.set('utm_medium', 'funil')
   u.searchParams.set('utm_campaign', rota || ({ e: 'educacao', c: 'corretora', f: 'funded', s: 'solucoes', h: 'curioso', a: 'agenda' } as const)[destino])
   u.searchParams.set('utm_content', codigo)

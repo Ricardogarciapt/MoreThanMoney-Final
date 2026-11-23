@@ -381,6 +381,20 @@ export async function POST(request: NextRequest) {
         // Os botões do caminho (ecossistema vs MTM Auto) respondem-se ANTES de tudo: são de quem
         // ainda está a decidir, e uma pergunta que fica sem resposta é um lead que se vai embora.
         const dadosBotao = typeof cq.data === "string" ? cq.data : ""
+        // 23/11: o funil de conversa (o mesmo do WhatsApp: áudio, rotas, pessoa, línguas).
+        if (dadosBotao.startsWith("fx:")) {
+          const chatFx = String(cq.message?.chat?.id ?? cq.from?.id ?? "")
+          const btFx = getMtmcopyBotToken()
+          if (btFx) {
+            await fetch(`https://api.telegram.org/bot${btFx}/answerCallbackQuery`, {
+              method: "POST", headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ callback_query_id: cq.id }),
+            })
+          }
+          const { tratarBotaoFunilTelegram } = await import("@/lib/telegram/funil-conversa")
+          await tratarBotaoFunilTelegram({ chatId: chatFx, dados: dadosBotao, nomeApp: cq.from?.first_name ?? null, codigoApp: cq.from?.language_code ?? null })
+          return NextResponse.json({ ok: true })
+        }
         // Opt-in de seguimento (10/11) e aprovação humana das DMs do setter do Instagram.
         if (dadosBotao.startsWith("optin:") || dadosBotao.startsWith("igdm:") || dadosBotao.startsWith("reel:")) {
           const bt = getMtmcopyBotToken()
@@ -1148,6 +1162,14 @@ export async function POST(request: NextRequest) {
                   await contarDisparo(auto.id)
                   return NextResponse.json({ ok: true, automacao: auto.nome })
                 }
+              }
+            }
+
+            // 23/11: primeiro contacto (ou «menu») → o funil de conversa, igual ao do WhatsApp.
+            {
+              const { tratarTextoFunilTelegram } = await import("@/lib/telegram/funil-conversa")
+              if (await tratarTextoFunilTelegram({ chatId, texto: text, nomeApp: body.message.from?.first_name ?? null, codigoApp: body.message.from?.language_code ?? null })) {
+                return NextResponse.json({ ok: true, funil: "conversa" })
               }
             }
 

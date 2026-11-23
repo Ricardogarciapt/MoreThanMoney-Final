@@ -23,6 +23,13 @@ teste('outros links intactos', seguirLinks('https://youtube.com/x', '+3519126666
 const u = new URL(urlDeDestino('e', c))
 teste('utm whatsapp', u.pathname === '/f/educacao' && u.searchParams.get('utm_source') === 'whatsapp' && u.searchParams.get('utm_content') === c)
 
+// Telegram: letra em maiúscula, lê-se como tg:<chat>, utm_source telegram.
+const ct = codigoDoLink('tg:123456789', 'f', S)
+teste('código Telegram', lerCodigo(ct, S)?.e164 === 'tg:123456789' && lerCodigo(ct, S)?.canal === 'telegram' && lerCodigo(ct, S)?.destino === 'f')
+teste('WhatsApp continua whatsapp', lerCodigo(c, S)?.canal === 'whatsapp')
+teste('utm telegram', new URL(urlDeDestino('f', ct, undefined, 'telegram')).searchParams.get('utm_source') === 'telegram')
+teste('telegram sem template → setter', proximoToque({ stage: 'tg_rota_educacao', followupCount: 2, ultimaAtividadeIso: new Date(Date.parse('2026-11-23T12:00:00Z') - 60 * 3_600_000).toISOString(), ultimaEntradaIso: new Date(Date.parse('2026-11-23T12:00:00Z') - 60 * 3_600_000).toISOString(), ultimoToqueIso: new Date(Date.parse('2026-11-23T12:00:00Z') - 45 * 3_600_000).toISOString(), clicouEmIso: null, lingua: 'pt', convertido: false, saiu: false, horaLisboa: 12, agora: Date.parse('2026-11-23T12:00:00Z'), canal: 'telegram' }) === 'setter')
+
 // ── Escada do seguimento ────────────────────────────────────────────────────
 const H = 3_600_000
 const agora = Date.parse('2026-11-23T12:00:00Z')

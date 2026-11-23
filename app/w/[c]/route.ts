@@ -18,7 +18,7 @@ export async function GET(req: NextRequest, ctx: { params: Promise<{ c: string }
   const lido = lerCodigo(c)
   if (!lido) return NextResponse.redirect(SITE, 302)
 
-  const res = NextResponse.redirect(urlDeDestino(lido.destino, c), 302)
+  const res = NextResponse.redirect(urlDeDestino(lido.destino, c, undefined, lido.canal), 302)
   res.cookies.set(COOKIE_WA, c, { maxAge: 60 * 60 * 24 * 30, path: '/', sameSite: 'lax', secure: true })
 
   // Pré-visualizações de links (o próprio WhatsApp abre o URL para fazer o cartão) não contam.

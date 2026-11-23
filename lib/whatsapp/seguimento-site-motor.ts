@@ -11,7 +11,7 @@ import { variantesDoNumero } from '@/lib/whatsapp-envio'
 import { linkAgendar } from '@/lib/agenda/link'
 import { ehLingua, linguaDoIndicativo, type Lingua } from './linguas'
 import { destinoDaRota, linkSeguido, seguirLinks } from './link-seguido'
-import { passarParaSetter } from './setter'
+import { passarParaSetter, passarParaSetterTelegram } from './setter'
 import {
   FASES_FORA,
   ID_SEG_AGENDAR,
@@ -116,6 +116,91 @@ export async function correrSeguimentoSite(agora = Date.now()): Promise<{ vistos
       }
     } catch (e) {
       detalhe.push(`${l.chat_id.slice(0, 8)}… erro: ${e instanceof Error ? e.message : String(e)}`)
+    }
+  }
+  const t = await correrSeguimentoTelegram(agora, hora)
+  return { vistos: leads.length + t.vistos, enviados: enviados + t.enviados, setter: setter + t.setter, detalhe: [...detalhe, ...t.detalhe] }
+}
+
+/**
+ * O MESMO PARA O TELEGRAM (23/11): leads que passaram pelo funil de conversa (fases tg_*). No
+ * Telegram não há janela da Meta, mas a regra é a mesma por respeito: os dois primeiros toques só
+ * nas 23 h a seguir à última mensagem dela, e depois disso passa logo à fila dos setters.
+ */
+async function correrSeguimentoTelegram(agora: number, hora: number): Promise<{ vistos: number; enviados: number; setter: number; detalhe: string[] }> {
+  const db = getSupabaseAdmin()
+  const detalhe: string[] = []
+  const { data } = await db
+    .from('telegram_leads')
+    .select('chat_id, first_name, stage, interest, lang, followup_count, last_followup_at, updated_at, created_at, granted_at')
+    .like('stage', 'tg_%')
+    .is('granted_at', null)
+    .lt('followup_count', 4)
+    .not('stage', 'in', `(${FASES_FORA.join(',')})`)
+    .lt('updated_at', new Date(agora - 45 * 60_000).toISOString())
+    .gt('updated_at', new Date(agora - 10 * 24 * 3_600_000).toISOString())
+    .order('updated_at', { ascending: true })
+    .limit(40)
+  let enviados = 0
+  let setter = 0
+  const leads = (data ?? []) as Lead[]
+  const { enviarTextoTelegram } = await import('@/lib/telegram/funil-conversa')
+  for (const l of leads) {
+    try {
+      const chatId = l.chat_id
+      const alvo = `tg:${chatId}`
+      const lingua: Lingua = ehLingua(l.lang) ? l.lang : 'pt'
+      const rota = rotaDoLead(String(l.stage ?? '').replace(/^tg_/, 'wa_'), l.interest)
+      const [{ data: cliques }, { data: negs }] = await Promise.all([
+        db.from('bot_avisos_enviados').select('enviado_em').eq('tipo', 'wa-clique').eq('alvo', alvo).order('enviado_em', { ascending: false }).limit(1),
+        db.from('vendas_negocios').select('id, estado, comprador_id').eq('telegram_id', chatId).limit(3),
+      ])
+      const lista = (negs ?? []) as Array<{ id: string; estado: string | null; comprador_id: string | null }>
+      let convertido = lista.some((n) => n.comprador_id || n.estado === 'ganho' || n.estado === 'perdido')
+      if (!convertido && lista.length) {
+        const { data: marc } = await db.from('agenda_marcacoes').select('id').in('negocio_id', lista.map((n) => n.id)).is('cancelada_em', null).gte('created_at', l.created_at ?? new Date(agora - 30 * 86_400_000).toISOString()).limit(1)
+        convertido = !!marc?.length
+      }
+      const clicou = (cliques?.[0] as { enviado_em?: string } | undefined)?.enviado_em ?? null
+      const clicouAgora = clicou && l.updated_at && Date.parse(clicou) >= Date.parse(l.updated_at) - 6 * 3_600_000 ? clicou : null
+      const toque = proximoToque({
+        stage: l.stage,
+        followupCount: Number(l.followup_count || 0),
+        ultimaAtividadeIso: l.updated_at,
+        ultimaEntradaIso: l.updated_at,
+        ultimoToqueIso: l.last_followup_at,
+        clicouEmIso: clicouAgora,
+        lingua,
+        convertido,
+        saiu: false,
+        horaLisboa: hora,
+        agora,
+        canal: 'telegram',
+      })
+      if (!toque) continue
+      const chave = `tg-site:${chatId}:${toque}:${l.updated_at ?? ''}`
+      const { data: trinco } = await db.from('bot_avisos_enviados').upsert({ chave, tipo: 'tg-seguimento-site', alvo }, { onConflict: 'chave', ignoreDuplicates: true }).select('chave')
+      if (!trinco?.length) continue
+
+      const nome = (l.first_name || '').trim().split(/\s+/)[0] || ({ pt: 'Olá', en: 'Hi', fr: 'Salut', de: 'Hallo', es: 'Hola' } as const)[lingua]
+      const tx = TEXTOS_SEGUIMENTO[lingua]
+      const botoes = { inline_keyboard: [[{ text: tx.botaoDuvida, callback_data: `fx:${ID_SEG_DUVIDA}` }], [{ text: tx.botaoAgendar, callback_data: `fx:${ID_SEG_AGENDAR}` }], [{ text: tx.botaoPessoa, callback_data: `fx:${ID_HUMANO}` }]] }
+      let ok = false
+      if (toque === 'clique') ok = await enviarTextoTelegram(chatId, tx.clique(nome), botoes)
+      else if (toque === 'lembrete') ok = await enviarTextoTelegram(chatId, tx.lembrete(nome, linkSeguido(alvo, destinoDaRota(rota))), botoes)
+      else if (toque === 'ultima_janela') ok = await enviarTextoTelegram(chatId, seguirLinks(tx.ultima(nome, AGENDA), alvo, AGENDA), { inline_keyboard: botoes.inline_keyboard.slice(0, 2) })
+      else {
+        await passarParaSetterTelegram(chatId, nome, lingua, `Rota: ${rota ?? 'sem rota'}. Abriu o link do site: ${clicouAgora ? 'sim' : 'não'}. Recebeu os toques automáticos sem responder.`, 'seguimento')
+        ok = true
+      }
+      detalhe.push(`tg ${chatId.slice(0, 4)}… ${toque}: ${ok ? 'ok' : 'falhou'}`)
+      if (ok) {
+        if (toque === 'setter') setter++
+        else enviados++
+        await db.from('telegram_leads').update({ followup_count: contagemDepois(toque === 'template' ? 'setter' : toque), last_followup_at: new Date(agora).toISOString() }).eq('chat_id', chatId)
+      }
+    } catch (e) {
+      detalhe.push(`tg ${l.chat_id.slice(0, 4)}… erro: ${e instanceof Error ? e.message : String(e)}`)
     }
   }
   return { vistos: leads.length, enviados, setter, detalhe }
