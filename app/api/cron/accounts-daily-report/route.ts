@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { isCronAuthorized } from '@/lib/cron-auth'
 import { runDailyReport, reportSummary } from '@/lib/accounts-daily-report'
 import { getMtmcopyBotToken } from '@/lib/mtmcopy/telegram-bot'
-import { correrExtratosMensais, mesAnterior } from '@/lib/mtmfunded/extrato-mensal-envio'
+import { correrExtratosMensais } from '@/lib/mtmfunded/extrato-mensal-envio'
 
 /**
  * CRON diário: relatório de crescimento das contas reais (equidade, P&L do dia/mês, win rate,
@@ -35,13 +35,15 @@ export async function GET(request: NextRequest) {
       sent = !!r?.ok
     }
 
-    // Extrato mensal das contas MTM Funded: corre só no dia 1 (mês anterior), dentro deste cron
-    // diário para não gastar uma entrada nova no vercel.json (tecto de 100). Idempotente por conta
-    // e mês; sem MTM_STATEMENTS_ENVIO=1 fica em simulação.
+    // Extrato mensal das contas (MTM Funded e reais): corre no ÚLTIMO dia de cada mês, para o mês
+    // corrente, dentro deste cron diário para não gastar uma entrada nova no vercel.json (tecto de 100).
+    // Idempotente por conta e mês; sem MTM_STATEMENTS_ENVIO=1 fica em simulação.
     let extratos: unknown = null
-    if (new Date().getUTCDate() === 1) {
+    const agora = new Date()
+    const ultimoDiaDoMes = new Date(Date.UTC(agora.getUTCFullYear(), agora.getUTCMonth() + 1, 0)).getUTCDate()
+    if (agora.getUTCDate() === ultimoDiaDoMes) {
       try {
-        extratos = await correrExtratosMensais(mesAnterior(new Date()))
+        extratos = await correrExtratosMensais({ ano: agora.getUTCFullYear(), mes: agora.getUTCMonth() + 1 })
       } catch (err) {
         extratos = { erro: err instanceof Error ? err.message : 'erro' }
       }
