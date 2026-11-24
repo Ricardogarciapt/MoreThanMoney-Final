@@ -156,12 +156,19 @@ export type Rascunho = { hook: string; caption: string; cta_keyword: string; vis
 export function parseDrafts(text: string): Rascunho[] {
   const out: Rascunho[] = []
   for (const block of text.split('===POST===').slice(1)) {
+    // 24/11: um bloco sem ===END=== é uma resposta CORTADA (o Gemini de reserva devolveu 72 tokens e
+    // saiu um post «A maioria dos principiantes» sem CTA nem ressalva, aprovado pelo autopilot).
+    // Bloco incompleto não é rascunho.
+    if (!block.includes('===END===')) continue
     const body = block.split('===END===')[0]
     const kw = (body.match(/KEYWORD:\s*([^\n]+)/i)?.[1] || '').trim().toUpperCase()
     const hk = (body.match(/HOOK:\s*([^\n]+)/i)?.[1] || '').trim()
     const vis = (body.match(/VISUAL:\s*([^\n]+)/i)?.[1] || '').trim()
     const cap = (body.split(/CAPTION:\s*/i)[1] || '').trim()
     if (!cap) continue
+    // Sem o pedido de comentário a legenda não fecha o ciclo do funil: não sai.
+    if (!/coment/i.test(cap)) continue
+    if (kw && !cap.toUpperCase().includes(kw)) continue
     const capPt = corrigirPtPt(cap).texto
     out.push({ hook: corrigirPtPt(hk || capPt.split('\n')[0]).texto.slice(0, 120), caption: capPt, cta_keyword: kw, visual_brief: vis })
   }
@@ -191,7 +198,7 @@ export async function draftBatch(
     tarefa: 'content-draft',
     sistema: `${buildSystem(proofText, campanha)}\n\n${blocoFramework('conteudo')}\n\n${blocoGanchos()}\n\n${blocoLegendaReel()}`,
     mensagens: [{ role: 'user', content: user }],
-    maxTokens: 1600,
+    maxTokens: 2400,
     // `CONTENT_DRAFT_PREFERENCIA` ('rapido' | 'qualidade') substitui o antigo `CONTENT_DRAFT_MODEL`:
     // com a cadeia de fornecedores, escolher um id da Anthropic deixou de querer dizer nada.
     preferencia: process.env.CONTENT_DRAFT_PREFERENCIA?.trim() === 'rapido' ? 'rapido' : 'qualidade',
