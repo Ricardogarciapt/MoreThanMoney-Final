@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server"
 import { isCronAuthorized } from "@/lib/cron-auth"
 import { evaluateOpenAlerts } from "@/lib/mtm-alerts/evaluate"
+import { avisarAulasAida } from "@/lib/aida/aulas"
+import { getSupabaseAdmin } from "@/lib/supabase-admin-client"
 
 /**
  * CRON: avalia o estado dos Alertas MTM abertos (pending/active) contra o preço
@@ -16,6 +18,9 @@ export async function GET(request: NextRequest) {
   if (!isCronAuthorized(request)) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
   }
+  // Aviso da AIDA 15 min antes de cada aula (pedido do Ricardo, 24/11). Nunca derruba a avaliação.
+  const avisoAulas = await avisarAulasAida(getSupabaseAdmin()).catch((e) => ({ estado: "erro", erro: String(e) }))
+
   try {
     // origin + CRON_SECRET → o avaliador vai buscar as velas dos perps à rota edge/fra1
     // /api/bybit/klines (este cron corre em node/iad1, onde a Bybit está geo-bloqueada).
@@ -23,7 +28,7 @@ export async function GET(request: NextRequest) {
       origin: new URL(request.url).origin,
       secret: process.env.CRON_SECRET,
     })
-    return NextResponse.json({ success: true, ...result })
+    return NextResponse.json({ success: true, avisoAulas, ...result })
   } catch (err) {
     return NextResponse.json(
       { success: false, error: err instanceof Error ? err.message : "erro" },
