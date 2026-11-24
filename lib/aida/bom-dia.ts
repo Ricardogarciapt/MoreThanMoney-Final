@@ -34,14 +34,30 @@ export function diaLisboa(agora: Date): string {
   return new Intl.DateTimeFormat('en-CA', { year: 'numeric', month: '2-digit', day: '2-digit', timeZone: 'Europe/Lisbon' }).format(agora)
 }
 
-/** Texto do bom dia. O foco roda por dia, por isso não se repete todas as semanas. Puro. */
+const ABERTURAS = [
+  'Bom dia, comunidade MTM! ☀️',
+  'Bons dias, pessoal! ☀️',
+  'Bom dia a todos! Mais um dia para dar um passo. ☀️',
+  'Bom dia! Como está a correr a semana? ☀️',
+  'Acordámos juntos, vamos a isso. ☀️',
+]
+
+/** Índice estável por dia: varia de dia para dia sem repetir em sequência. Puro. */
+export function indiceDoDia(dia: string, tamanho: number): number {
+  let h = 0
+  for (const c of dia) h = (h * 31 + c.charCodeAt(0)) >>> 0
+  return h % tamanho
+}
+
+/** Texto do bom dia. Abertura e foco mudam de dia para dia, sem sequência fixa. Puro. */
 export function textoBomDia(agora: Date): string {
   const dia = diaLisboa(agora)
-  const foco = FOCOS[Number(dia.slice(-2)) % FOCOS.length]
+  const foco = FOCOS[indiceDoDia(dia, FOCOS.length)]
+  const abertura = ABERTURAS[indiceDoDia(dia + 'a', ABERTURAS.length)]
   return [
     MARCA_BOM_DIA,
     '',
-    `Bom dia, comunidade MTM! ☀️ Sou a AIDA, uma assistente de inteligência artificial da MoreThanMoney. Estou aqui das 07h às 22h para tirar dúvidas, moderar e ajudar-te a crescer.`,
+    `${abertura} Sou a AIDA, uma assistente de inteligência artificial da MoreThanMoney. Estou aqui das 07h às 22h para tirar dúvidas, moderar e ajudar-te a crescer.`,
     '',
     `💡 Foco do dia: ${foco}`,
     '',
