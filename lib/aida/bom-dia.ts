@@ -8,6 +8,7 @@
  */
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { resolveSystemUserId } from '@/lib/system-chat-user'
+import { notifyChatChannelMessage } from '@/lib/chat-channel-notify'
 
 export const CANAL_BOM_DIA = 'geral'
 export const MARCA_BOM_DIA = '🤖 AIDA · Bom dia'
@@ -96,6 +97,21 @@ export function textoBomDia(agora: Date, alertaEmergencia?: string | null): stri
   ].join('\n')
 }
 
+/** Notificação de uma mensagem da AIDA, como as dos membros (o Ricardo pediu que existam). */
+export async function notificarAida(messageId: string | undefined, titulo: string, corpo: string, userId: string): Promise<void> {
+  try {
+    await notifyChatChannelMessage({
+      channelSlug: CANAL_BOM_DIA,
+      title: titulo,
+      body: corpo,
+      messageId,
+      excludeUserId: userId,
+    })
+  } catch {
+    /* a notificação nunca derruba a publicação */
+  }
+}
+
 /**
  * Parabéns aos membros que fazem anos hoje, no canal geral. RGPD: a data de nascimento é dado
  * pessoal, por isso só entra quem deu consentimento para ser celebrado (`profiles.aniversario_consentimento`
@@ -157,7 +173,7 @@ export async function correrBomDiaAida(db: SupabaseClient, agora: Date = new Dat
     }
 
     const userId = await resolveSystemUserId(db)
-    const { error } = await db.from('chat_messages').insert({
+    const { data: msg, error } = await db.from('chat_messages').insert({
       channel_slug: CANAL_BOM_DIA,
       user_id: userId,
       content: textoBomDia(agora, alerta),
@@ -166,8 +182,9 @@ export async function correrBomDiaAida(db: SupabaseClient, agora: Date = new Dat
       link_preview: null,
       message_type: 'text',
       reply_to_id: null,
-    })
+    }).select('id').single()
     if (error) return { estado: 'erro', erro: error.message }
+    await notificarAida(msg?.id, 'AIDA · Bom dia', 'Bom dia, comunidade MTM! ☀️ A AIDA está de volta.', userId)
     const festejados = await festejarAniversarios(db, agora, userId).catch(() => 0)
     return { estado: 'publicado', ...(festejados ? { aniversarios: festejados } : {}) }
   } catch (e) {

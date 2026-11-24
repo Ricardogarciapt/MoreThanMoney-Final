@@ -9,7 +9,7 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { chamarIAGratis } from '@/lib/ia/chamar'
 import { resolveSystemUserId } from '@/lib/system-chat-user'
-import { CANAL_BOM_DIA, horaLisboa } from '@/lib/aida/bom-dia'
+import { CANAL_BOM_DIA, horaLisboa, notificarAida } from '@/lib/aida/bom-dia'
 
 export const MARCA_INTERACAO = '🤖 AIDA · '
 /** Horas (Lisboa) em que a AIDA pode intervir. */
@@ -83,7 +83,7 @@ export async function correrInteracaoAida(db: SupabaseClient, agora: Date = new 
     if (!texto || texto === 'SILENCIO') return { estado: 'silencio' }
 
     const userId = await resolveSystemUserId(db)
-    const { error } = await db.from('chat_messages').insert({
+    const { data: msg, error } = await db.from('chat_messages').insert({
       channel_slug: CANAL_BOM_DIA,
       user_id: userId,
       content: `${MARCA_INTERACAO}${texto.slice(0, 600)}`,
@@ -92,8 +92,9 @@ export async function correrInteracaoAida(db: SupabaseClient, agora: Date = new 
       link_preview: null,
       message_type: 'text',
       reply_to_id: null,
-    })
+    }).select('id').single()
     if (error) return { estado: 'erro', erro: error.message }
+    await notificarAida(msg?.id, 'AIDA', texto.slice(0, 140), userId)
     return { estado: 'publicado' }
   } catch (e) {
     return { estado: 'erro', erro: e instanceof Error ? e.message : String(e) }
