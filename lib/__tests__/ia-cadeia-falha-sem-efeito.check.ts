@@ -115,7 +115,10 @@ async function main() {
     assert.equal(res.status, 500, 'content-draft: prosa sem blocos não é lote')
     assert.deepEqual(base.escreveu('social_scheduled_posts'), [], 'content-draft: prosa sem blocos não escreve nada')
     assert.deepEqual(parseDrafts('nada'), [])
-    assert.equal(parseDrafts('===POST===\nKEYWORD: APP\nHOOK: Olá\nVISUAL: x\nCAPTION:\nLegenda real\n===END===').length, 1)
+    assert.equal(parseDrafts('===POST===\nKEYWORD: APP\nHOOK: Olá\nVISUAL: x\nCAPTION:\nLegenda real. Comenta "APP" 👇\n===END===').length, 1)
+    // Resposta cortada a meio (sem ===END===) ou legenda sem o pedido de comentário: zero rascunhos.
+    assert.deepEqual(parseDrafts('===POST===\nKEYWORD: APRENDER\nHOOK: Regra do 1%\nVISUAL: x\nCAPTION:\nA regra do 1%.\n\nA maioria dos principiantes'), [])
+    assert.deepEqual(parseDrafts('===POST===\nKEYWORD: APP\nHOOK: Olá\nVISUAL: x\nCAPTION:\nLegenda sem pedido\n===END==='), [])
     await assert.rejects(() => draftBatch(['APP'], 'prova', [], '', cadeiaFalha), ErroIA, 'draftBatch relança o ErroIA, não inventa lote')
   }
 
