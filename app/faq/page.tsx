@@ -122,7 +122,7 @@ Não. Há duas formas de ganhar dinheiro aqui, e aulas ao vivo nas duas. Com os 
                     </span>
                     <ul className="list-disc pl-5 space-y-1 mb-3">
                       <li><b className="text-white">Forex e metais</b> — Ricardo Garcia. Quatro salas, dos básicos à mentoria VIP, sete horários por semana e gravações organizadas em curso.</li>
-                      <li><b className="text-white">Criptomoedas</b> — Ruben Pereira. Três salas (DCA com MTM, Império Cripto, Live Trading Cripto), dois horários por semana.</li>
+                      <li><b className="text-white">Criptomoedas</b> — Ruben Pereira. Três salas (DCA com MTM, A Primeira Chave, Live Trading Cripto), dois horários por semana.</li>
                       <li><b className="text-white">Ações e ETF</b> — sem aulas próprias e sem educador atribuído. Existe a carteira de oito ETF acompanhada ao vivo, seis ações no Terminal com IA, um canal de chat dedicado e a análise de reforço publicada todos os dias.</li>
                     </ul>
                     <span className="block mb-2">

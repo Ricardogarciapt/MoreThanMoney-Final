@@ -151,7 +151,7 @@ const AREAS: Area[] = [
   {
     p: "markets",
     t: "Criptomoedas", edu: "Ruben Pereira",
-    d: "Três salas próprias — DCA com MTM, Império Cripto e Live Trading Cripto — ligadas aos portefólios e à análise de reforço mensal que corre no site.",
+    d: "Três salas próprias — DCA com MTM, A Primeira Chave e Live Trading Cripto — ligadas aos portefólios e à análise de reforço mensal que corre no site.",
     meta: ["3 salas", "2 horários por semana", "gravações"], href: "/mtmmarkets",
   },
   {
