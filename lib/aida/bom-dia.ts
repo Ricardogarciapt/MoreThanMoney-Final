@@ -49,15 +49,46 @@ export function indiceDoDia(dia: string, tamanho: number): number {
   return h % tamanho
 }
 
-/** Texto do bom dia. Abertura e foco mudam de dia para dia, sem sequência fixa. Puro. */
-export function textoBomDia(agora: Date): string {
+/** Feriados nacionais fixos (mês-dia). Os móveis (Páscoa, Corpo de Deus) entram à mão em `EVENTOS_DO_DIA`. */
+const FERIADOS_FIXOS: Record<string, string> = {
+  '01-01': 'Feliz Ano Novo!',
+  '04-25': 'Hoje é feriado: 25 de Abril.',
+  '05-01': 'Hoje é feriado: Dia do Trabalhador.',
+  '06-10': 'Hoje é feriado: Dia de Portugal.',
+  '08-15': 'Hoje é feriado: Assunção de Nossa Senhora.',
+  '10-05': 'Hoje é feriado: Implantação da República.',
+  '11-01': 'Hoje é feriado: Todos os Santos.',
+  '12-01': 'Hoje é feriado: Restauração da Independência.',
+  '12-08': 'Hoje é feriado: Imaculada Conceição.',
+  '12-25': 'Feliz Natal a todos!',
+}
+
+/**
+ * Datas à mão: eventos económicos, aniversários da equipa e feriados móveis.
+ * Acrescentar aqui (mês-dia → texto). Ex.: '11-27': 'Black Friday: cuidado com as compras por impulso.'
+ */
+export const EVENTOS_DO_DIA: Record<string, string> = {
+  '11-27': 'Black Friday: antes de comprar por impulso, pergunta-te se fazia falta na semana passada.',
+}
+
+/** Linha de ocasião do dia (feriado, data à mão, ou alerta de emergência). Puro. */
+export function ocasiaoDoDia(agora: Date, alertaEmergencia?: string | null): string | null {
+  if (alertaEmergencia && alertaEmergencia.trim()) return `🚨 ${alertaEmergencia.trim()}`
+  const md = diaLisboa(agora).slice(5)
+  return FERIADOS_FIXOS[md] ?? EVENTOS_DO_DIA[md] ?? null
+}
+
+/** Texto do bom dia. Abertura e foco mudam de dia para dia; ocasiões especiais entram à parte. Puro. */
+export function textoBomDia(agora: Date, alertaEmergencia?: string | null): string {
   const dia = diaLisboa(agora)
   const foco = FOCOS[indiceDoDia(dia, FOCOS.length)]
   const abertura = ABERTURAS[indiceDoDia(dia + 'a', ABERTURAS.length)]
+  const ocasiao = ocasiaoDoDia(agora, alertaEmergencia)
   return [
     MARCA_BOM_DIA,
     '',
     `${abertura} Sou a AIDA, uma assistente de inteligência artificial da MoreThanMoney. Estou aqui das 07h às 22h para tirar dúvidas, moderar e ajudar-te a crescer.`,
+    ...(ocasiao ? ['', ocasiao] : []),
     '',
     `💡 Foco do dia: ${foco}`,
     '',
@@ -83,11 +114,21 @@ export async function correrBomDiaAida(db: SupabaseClient, agora: Date = new Dat
       .limit(1)
     if (ja && ja.length) return { estado: 'ja_publicado' }
 
+    // Alerta de emergência ou calamidade: escrito à mão em site_settings (chave aida_alerta). Vazio = nenhum.
+    let alerta: string | null = null
+    try {
+      const { data: s } = await db.from('site_settings').select('value').eq('key', 'aida_alerta').maybeSingle()
+      const v = s?.value as unknown
+      alerta = typeof v === 'string' ? v : (v && typeof v === 'object' && typeof (v as { texto?: unknown }).texto === 'string' ? (v as { texto: string }).texto : null)
+    } catch {
+      alerta = null
+    }
+
     const userId = await resolveSystemUserId(db)
     const { error } = await db.from('chat_messages').insert({
       channel_slug: CANAL_BOM_DIA,
       user_id: userId,
-      content: textoBomDia(agora),
+      content: textoBomDia(agora, alerta),
       image_url: null,
       link_url: null,
       link_preview: null,
