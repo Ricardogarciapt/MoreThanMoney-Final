@@ -73,7 +73,7 @@ export async function correrExtratosMensais(periodo: PeriodoExtrato, opts: { env
     .from('mtm_trading_accounts')
     .select('id, user_id, tipo, etiqueta')
     .eq('motor', 'sim')
-    .eq('tipo', 'financiada')
+    .in('tipo', ['financiada', 'real'])
     .eq('estado', 'ativa')
     .is('quebrada_em', null)
   if (error) throw new Error(`contas: ${error.message}`)
@@ -128,7 +128,9 @@ export async function correrExtratosMensais(periodo: PeriodoExtrato, opts: { env
         continue
       }
 
-      const { assunto, html } = montarExtratoEmail(d, periodo, { site: getSiteUrl(), logo: getEmailLogoSrc() })
+      // Histórico completo: desde a abertura da conta até ao fim do período.
+      const { data: desdeInicio } = await db.rpc('mtm_funded_extrato', { p_account: id, p_ini: '1900-01-01T00:00:00Z', p_fim: fim })
+      const { assunto, html } = montarExtratoEmail(d, periodo, { site: getSiteUrl(), logo: getEmailLogoSrc() }, (desdeInicio as DadosExtrato | null) ?? undefined)
 
       if (!enviar) {
         resumo.simulados++

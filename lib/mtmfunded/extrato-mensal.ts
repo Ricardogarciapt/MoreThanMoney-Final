@@ -128,6 +128,7 @@ export function montarExtratoEmail(
   d: DadosExtrato,
   periodo: PeriodoExtrato,
   opts: OpcoesExtrato,
+  acumulado?: DadosExtrato,
 ): { assunto: string; html: string } {
   const rotulo = ROTULO_TIPO[d.tipo] ?? { nome: 'Conta', aviso: '' }
   const etiqueta = d.etiqueta?.trim() || 'Conta'
@@ -168,6 +169,22 @@ export function montarExtratoEmail(
     ].join(''),
   )
 
+  // Histórico completo, da abertura da conta até ao fim do período.
+  const historico = acumulado
+    ? bloco(
+        'Desde a abertura da conta',
+        [
+          linha('Capital inicial', fmtDolar(acumulado.capital_inicial)),
+          linha('Resultado acumulado', fmtMovimento(acumulado.resultado)),
+          linha('Comissões acumuladas', fmtMovimento(acumulado.comissoes)),
+          linha('Ajustes acumulados', fmtMovimento(acumulado.ajustes)),
+          acumulado.levantamentos ? linha('Levantamentos acumulados', fmtMovimento(acumulado.levantamentos)) : '',
+          linha('Operações fechadas', String(acumulado.operacoes)),
+          linha('Saldo de fecho do período', fmtDolar(acumulado.saldo_fim), true),
+        ].join(''),
+      )
+    : ''
+
   const conciliacao = d.conciliado
     ? `<p style="margin:14px 0 0 0;color:#7d7d7d;font-size:12px;">Saldo conferido com o registo de movimentos da conta.</p>`
     : ''
@@ -196,6 +213,7 @@ export function montarExtratoEmail(
 ${saldo}
 ${atividade}
 ${situacao}
+${historico}
 
 <tr><td style="padding:22px 28px 8px 28px;">
   <a href="${opts.site}/mtmfunded" style="display:inline-block;background:#D2A63C;color:#0b0b0b;text-decoration:none;font-weight:700;font-size:14px;padding:12px 22px;border-radius:10px;">Ver a minha conta</a>
