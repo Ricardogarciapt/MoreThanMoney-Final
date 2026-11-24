@@ -21,7 +21,7 @@ const TitleWords: React.FC<{ texto: string }> = ({ texto }) => {
   )
 }
 
-const CenaVideo: React.FC<{ c: Cena; idx: number }> = ({ c, idx }) => {
+const CenaVideo: React.FC<{ c: Cena; idx: number; total: number; bloco: string }> = ({ c, idx, total, bloco }) => {
   const f = useCurrentFrame()
   const { fps, durationInFrames } = useVideoConfig()
   const zoom = interpolate(f, [0, durationInFrames], [1.0, 1.03], clamp)
@@ -34,7 +34,7 @@ const CenaVideo: React.FC<{ c: Cena; idx: number }> = ({ c, idx }) => {
       {/* marca */}
       <Img src={staticFile('fast-start/logo.png')} style={{ position: 'absolute', top: 60, right: 90, height: 64, opacity: 0.9 }} />
       <div style={{ position: 'absolute', left: 90, top: 70 }}>
-        <Etiqueta>{`Fast Start Forex · ${BLOCO} · ${idx + 1}/${CENAS.length}`}</Etiqueta>
+        <Etiqueta>{`Fast Start Forex · ${bloco} · ${idx + 1}/${total}`}</Etiqueta>
       </div>
       {/* texto */}
       <div style={{ position: 'absolute', left: 90, top: 230, width: 880 }}>
@@ -52,6 +52,21 @@ const CenaVideo: React.FC<{ c: Cena; idx: number }> = ({ c, idx }) => {
           })}
         </div>
       </div>
+      {/* gráfico de apoio (pips, lotes, checklist) */}
+      {c.grafico && (() => {
+        const g = interpolate(f, [90, 120], [0, 1], clamp)
+        return (
+          <div style={{ position: 'absolute', left: 90, bottom: 110, width: 880, opacity: g, transform: `translateY(${(1 - g) * 30}px)`, border: `2px solid ${OURO}`, borderRadius: 24, background: 'rgba(10,12,18,.88)', padding: '22px 34px', boxShadow: '0 20px 60px rgba(0,0,0,.6)' }}>
+            <div style={{ fontFamily: fontTitulo, fontSize: 28, color: OURO_CLARO, textTransform: 'uppercase', letterSpacing: 1, marginBottom: 10 }}>{c.grafico.titulo}</div>
+            {c.grafico.linhas.map(([a, b], i) => (
+              <div key={i} style={{ fontFamily: fontTexto, fontSize: 26, color: '#fff', display: 'flex', justifyContent: 'space-between', gap: 24, padding: '7px 0', borderTop: i ? '1px solid rgba(210,166,60,.25)' : 'none' }}>
+                <span style={{ fontWeight: 700 }}>{a}</span>
+                <span style={{ color: 'rgba(255,255,255,.8)', textAlign: 'right' }}>{b}</span>
+              </div>
+            ))}
+          </div>
+        )
+      })()}
       {/* ecrã do telemóvel */}
       <div style={{ position: 'absolute', right: 150, top: 150, width: 520, height: 880, borderRadius: 64, border: `3px solid ${OURO}`, background: '#000', boxShadow: '0 30px 90px rgba(0,0,0,.75), 0 0 60px rgba(210,166,60,.25)', overflow: 'hidden', transform: `scale(${zoom})` }}>
         <Img src={staticFile(`fast-start/${c.img}`)} style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
@@ -63,19 +78,21 @@ const CenaVideo: React.FC<{ c: Cena; idx: number }> = ({ c, idx }) => {
   )
 }
 
-export const Video: React.FC = () => {
+export const VideoCenas: React.FC<{ cenas: Cena[]; bloco: string }> = ({ cenas, bloco }) => {
   let inicio = 0
   return (
     <AbsoluteFill style={{ background: FUNDO }}>
-      {CENAS.map((c, i) => {
+      {cenas.map((c, i) => {
         const de = inicio
         inicio += c.dur
         return (
           <Sequence key={i} from={de} durationInFrames={c.dur} layout="none">
-            <CenaVideo c={c} idx={i} />
+            <CenaVideo c={c} idx={i} total={cenas.length} bloco={bloco} />
           </Sequence>
         )
       })}
     </AbsoluteFill>
   )
 }
+
+export const Video: React.FC = () => <VideoCenas cenas={CENAS} bloco={BLOCO} />

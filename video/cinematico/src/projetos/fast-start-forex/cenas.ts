@@ -3,7 +3,8 @@ export const FPS = 30
 export const BLOCO = 'Vídeo 1'
 export const DISCLAIMER = 'Conteúdo educativo. Não constitui aconselhamento financeiro. O risco de perda é real. Exemplos ilustrativos.'
 
-export type Cena = { titulo: string; dicas: string[]; img: string; dur: number }
+export type Grafico = { titulo: string; linhas: [string, string][] }
+export type Cena = { titulo: string; dicas: string[]; img: string; dur: number; grafico?: Grafico }
 
 export const CENAS: Cena[] = [
   { titulo: 'Prepara a bancada', img: 'mt5-tel-conta.png', dur: 1512, dicas: ['Instala o MetaTrader 5', 'Usa o servidor da corretora', 'Confirma se é Demo ou Live'] },
