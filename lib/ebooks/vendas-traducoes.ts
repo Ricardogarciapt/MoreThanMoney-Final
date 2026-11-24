@@ -134,7 +134,7 @@ export const VENDAS_TRADUCOES: Record<'destrui-tudo-e-ainda-bem' | 'o-metodo-fri
       gancho: 'In crypto, whoever holds the key holds the money.',
       sub: 'From “I don’t understand any of this” to your first secure wallet and a 30-day plan. No hype, no fear and no promises.',
       autor: 'Ruben Pereira',
-      autorBio: 'Crypto educator at MoreThanMoney. “Making the complex simple. More than money, it’s a plan.” He runs the DCA Rooms with MTM, Império Cripto and Live Trading Cripto.',
+      autorBio: 'Crypto educator at MoreThanMoney. “Making the complex simple. More than money, it’s a plan.” He runs the DCA Rooms with MTM, The First Key course and Live Trading Cripto.',
       numeros: [{ v: '112', r: 'pages' }, { v: '6', r: 'animated charts' }, { v: '11', r: 'exercises' }, { v: '10', r: 'anti-scam checkpoints' }],
       capitulos: [
         { t: 'What money is', d: 'From barter to the euro, inflation and why Bitcoin was born in 2008.' },
@@ -161,7 +161,7 @@ export const VENDAS_TRADUCOES: Record<'destrui-tudo-e-ainda-bem' | 'o-metodo-fri
       gancho: 'En cripto, quien tiene la llave tiene el dinero.',
       sub: 'Del «no entiendo nada» a tu primera cartera segura y a un plan de 30 días. Sin humo, sin miedo y sin promesas.',
       autor: 'Ruben Pereira',
-      autorBio: 'Educador de cripto en MoreThanMoney. «Simplificar lo complejo. Más que dinero, es un plan.» Dirige las Salas DCA con MTM, el Império Cripto y el Live Trading Cripto.',
+      autorBio: 'Educador de cripto en MoreThanMoney. «Simplificar lo complejo. Más que dinero, es un plan.» Dirige las Salas DCA con MTM, el curso La Primera Llave y el Live Trading Cripto.',
       numeros: [{ v: '115', r: 'páginas' }, { v: '6', r: 'gráficos animados' }, { v: '11', r: 'ejercicios' }, { v: '10', r: 'puntos antiestafas' }],
       capitulos: [
         { t: 'Qué es el dinero', d: 'Del trueque al euro, la inflación y por qué nació Bitcoin en 2008.' },
@@ -188,7 +188,7 @@ export const VENDAS_TRADUCOES: Record<'destrui-tudo-e-ainda-bem' | 'o-metodo-fri
       gancho: 'En crypto, celui qui a la clé a l’argent.',
       sub: 'Du « je n’y comprends rien » à ton premier portefeuille sécurisé et à un plan de 30 jours. Sans hype, sans peur et sans promesses.',
       autor: 'Ruben Pereira',
-      autorBio: 'Éducateur crypto chez MoreThanMoney. « Simplifier le complexe. Plus que de l’argent, c’est un plan. » Il anime les salles DCA avec MTM, Império Cripto et le Live Trading Crypto.',
+      autorBio: 'Éducateur crypto chez MoreThanMoney. « Simplifier le complexe. Plus que de l’argent, c’est un plan. » Il anime les salles DCA avec MTM, le cours La Première Clé et le Live Trading Crypto.',
       numeros: [{ v: '115', r: 'pages' }, { v: '6', r: 'graphiques animés' }, { v: '11', r: 'exercices' }, { v: '10', r: 'points anti-arnaque' }],
       capitulos: [
         { t: 'Qu’est-ce que l’argent', d: 'Du troc à l’euro, l’inflation et pourquoi le Bitcoin est né en 2008.' },

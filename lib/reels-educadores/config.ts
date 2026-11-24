@@ -79,7 +79,7 @@ export const EDUCADORES: EducadorReel[] = [
     slug: 'ruben-pereira',
     nome: 'Ruben Pereira',
     area: 'Criptomoedas',
-    marca: 'DCA · Império Cripto · Live Trading Cripto',
+    marca: 'DCA · A Primeira Chave · Live Trading Cripto',
     foto: `${SITE}/reels/educadores/fotos/ruben-pereira.jpg`,
     palavra: 'CRIPTO',
     depois: 'e recebes o acesso às salas',

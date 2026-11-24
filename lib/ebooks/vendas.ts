@@ -205,7 +205,7 @@ const VENDAS_PT: Record<SlugBase | 'a-decisao-que-adias', PaginaVenda> = {
     gancho: 'Em cripto, quem tem a chave tem o dinheiro.',
     sub: 'Do «não percebo nada» à tua primeira carteira segura e a um plano de 30 dias. Sem hype, sem medo e sem promessas.',
     autor: 'Ruben Pereira', autorFoto: '/educadores/ruben/retrato.jpg',
-    autorBio: 'Educador de cripto na MoreThanMoney. «Simplificar o complexo. Mais do que dinheiro, é um plano.» Conduz as Salas DCA com MTM, o Império Cripto e o Live Trading Cripto.',
+    autorBio: 'Educador de cripto na MoreThanMoney. «Simplificar o complexo. Mais do que dinheiro, é um plano.» Conduz as Salas DCA com MTM, o curso A Primeira Chave e o Live Trading Cripto.',
     numeros: [{ v: '114', r: 'páginas' }, { v: '6', r: 'gráficos animados' }, { v: '11', r: 'exercícios' }, { v: '10', r: 'pontos anti-burla' }],
     capitulos: [
       { t: 'O que é dinheiro', d: 'Da troca ao euro, a inflação e porque nasceu o Bitcoin em 2008.' },
