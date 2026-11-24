@@ -8,6 +8,7 @@ import { redirect } from 'next/navigation'
 import type { Metadata } from 'next'
 import { LINGUAS, PRODUTO_SLUG, indice, podeAbrirCurso, type Lingua } from '@/lib/cursos/primeira-chave'
 import { sessaoDoMembro } from '@/lib/marketplace/sessao'
+import { getSupabaseAdmin } from '@/lib/supabase-admin-client'
 
 export const dynamic = 'force-dynamic'
 export const metadata: Metadata = { title: 'A Primeira Chave · Sala do curso', robots: { index: false, follow: false } }
@@ -27,6 +28,9 @@ export default async function SalaPrimeiraChave({ searchParams }: { searchParams
   if (!(await sessaoDoMembro())) redirect(`/login?redirect=${encodeURIComponent(`/cursos/a-primeira-chave?l=${l}`)}`)
   if (!(await podeAbrirCurso())) redirect(`/marketplace/${PRODUTO_SLUG}`)
   const t = TX[l], ix = indice[l]
+  // links não listados do YouTube, escritos pelo publicador do Mac (video/bootcamp/publicar-curso-ruben-youtube.mjs)
+  const { data: vids } = await getSupabaseAdmin().from('site_settings').select('value').eq('key', 'curso_primeira_chave_videos').maybeSingle()
+  const videos: Record<string, string> = ((vids?.value as Record<string, unknown> | null)?.[l] as Record<string, string>) || {}
 
   return (
     <main className="min-h-screen bg-[#0a0806] text-zinc-100">
@@ -61,9 +65,19 @@ export default async function SalaPrimeiraChave({ searchParams }: { searchParams
           <p className="mb-4 mt-1 text-sm text-zinc-400">{t.aulasTxt}</p>
           <ol className="grid gap-2 sm:grid-cols-2">
             {ix.aulas.map((titulo, i) => (
-              <li key={i} className="flex items-center gap-3 rounded-xl border border-white/5 bg-white/[0.02] px-4 py-3">
-                <span className="w-10 shrink-0 text-sm font-bold text-[#D2A63C]">{String(i + 1).padStart(2, '0')}</span>
-                <span className="text-sm text-zinc-200">{titulo}</span>
+              <li key={i}>
+                {videos[String(i + 1)] ? (
+                  <a href={videos[String(i + 1)]} target="_blank" rel="noreferrer" className="flex items-center gap-3 rounded-xl border border-[#D2A63C]/40 bg-[#D2A63C]/[0.06] px-4 py-3 hover:border-[#E9C46A]">
+                    <span className="w-10 shrink-0 text-sm font-bold text-[#D2A63C]">{String(i + 1).padStart(2, '0')}</span>
+                    <span className="flex-1 text-sm text-zinc-100">{titulo}</span>
+                    <span className="text-xs font-semibold text-[#E9C46A]">▶</span>
+                  </a>
+                ) : (
+                  <div className="flex items-center gap-3 rounded-xl border border-white/5 bg-white/[0.02] px-4 py-3">
+                    <span className="w-10 shrink-0 text-sm font-bold text-[#D2A63C]">{String(i + 1).padStart(2, '0')}</span>
+                    <span className="text-sm text-zinc-400">{titulo}</span>
+                  </div>
+                )}
               </li>
             ))}
           </ol>
