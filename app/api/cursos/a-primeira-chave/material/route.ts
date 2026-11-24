@@ -1,12 +1,13 @@
 /**
  * GET /api/cursos/a-primeira-chave/material?l=pt|en|es|fr&p=guia|slides-N|caderno-N
  * Entrega um PDF do curso só a quem o comprou (ou admin). Sem acesso → página do produto.
+ * Com `&k=<assinatura>` (links das aulas do Skool, onde a compra é feita lá) abre só essa peça.
  */
 import { NextResponse, type NextRequest } from 'next/server'
 import { createReadStream, promises as fs } from 'node:fs'
 import { Readable } from 'node:stream'
 import path from 'node:path'
-import { PRODUTO_SLUG, ficheiroDaPeca, podeAbrirCurso } from '@/lib/cursos/primeira-chave'
+import { PRODUTO_SLUG, assinaturaValida, ficheiroDaPeca, podeAbrirCurso } from '@/lib/cursos/primeira-chave'
 
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
@@ -17,7 +18,8 @@ export async function GET(req: NextRequest) {
   const peca = req.nextUrl.searchParams.get('p') || 'guia'
   const rel = ficheiroDaPeca(lingua, peca)
   if (!rel) return NextResponse.json({ error: 'Peça desconhecida' }, { status: 404 })
-  if (!(await podeAbrirCurso(req))) {
+  const assinado = await assinaturaValida(lingua, peca, req.nextUrl.searchParams.get('k')).catch(() => false)
+  if (!assinado && !(await podeAbrirCurso(req))) {
     const volta = encodeURIComponent(`/cursos/a-primeira-chave`)
     return NextResponse.redirect(new URL(`/marketplace/${PRODUTO_SLUG}?next=${volta}`, req.url))
   }

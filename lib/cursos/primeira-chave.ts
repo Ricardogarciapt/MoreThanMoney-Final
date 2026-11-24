@@ -39,3 +39,29 @@ export async function podeAbrirCurso(req?: Request): Promise<boolean> {
   const compras = await comprasDoMembro(sessao.userId)
   return temAcessoAoProduto(compras, produto.id as string, new Date().toISOString(), sessao.perfil)
 }
+
+/**
+ * Links do Skool. Quem compra o curso no Skool (310 $) paga lá e o site não vê a compra, por isso
+ * a sessão do site não lhe abre o material. As aulas do Skool levam então links ASSINADOS: cada um
+ * abre só aquela peça, naquela língua, e a assinatura vem de um segredo do servidor (nunca sai daqui).
+ * O Skool já fecha as aulas a quem não comprou; quem tiver o link abre aquele PDF e mais nada.
+ * Os links obtêm-se em /api/admin/cursos/a-primeira-chave/links-skool (só admin).
+ */
+function segredoDosLinks(): string {
+  const base = process.env.CURSO_LINKS_SEGREDO || process.env.SUPABASE_SERVICE_ROLE_KEY || ''
+  if (!base) throw new Error('sem segredo para assinar links')
+  return `skool-material:${base}`
+}
+
+export async function assinaturaDaPeca(lingua: string, peca: string): Promise<string> {
+  const { createHmac } = await import('node:crypto')
+  return createHmac('sha256', segredoDosLinks()).update(`${lingua}:${peca}`).digest('base64url').slice(0, 22)
+}
+
+export async function assinaturaValida(lingua: string, peca: string, k: string | null): Promise<boolean> {
+  if (!k) return false
+  const { timingSafeEqual } = await import('node:crypto')
+  const certo = Buffer.from(await assinaturaDaPeca(lingua, peca))
+  const dado = Buffer.from(k)
+  return certo.length === dado.length && timingSafeEqual(certo, dado)
+}
