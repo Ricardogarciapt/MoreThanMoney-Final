@@ -97,6 +97,38 @@ export function textoBomDia(agora: Date, alertaEmergencia?: string | null): stri
 }
 
 /**
+ * Parabéns aos membros que fazem anos hoje, no canal geral. RGPD: a data de nascimento é dado
+ * pessoal, por isso só entra quem deu consentimento para ser celebrado (`profiles.aniversario_consentimento`
+ * = true). Só o primeiro nome aparece, nunca a data nem a idade. Devolve quantos foram celebrados.
+ */
+export async function festejarAniversarios(db: SupabaseClient, agora: Date, userId: string): Promise<number> {
+  const mesDia = diaLisboa(agora).slice(5)
+  const { data: perfis, error } = await db
+    .from('profiles')
+    .select('full_name, birth_date')
+    .eq('aniversario_consentimento', true)
+    .not('birth_date', 'is', null)
+  if (error || !perfis) return 0
+  const nomes = perfis
+    .filter((p) => typeof p.birth_date === 'string' && p.birth_date.slice(5, 10) === mesDia)
+    .map((p) => String(p.full_name ?? '').trim().split(/\s+/)[0])
+    .filter(Boolean)
+  if (!nomes.length) return 0
+  const lista = nomes.length === 1 ? nomes[0] : `${nomes.slice(0, -1).join(', ')} e ${nomes[nomes.length - 1]}`
+  const { error: erroInsert } = await db.from('chat_messages').insert({
+    channel_slug: CANAL_BOM_DIA,
+    user_id: userId,
+    content: `🎂 Hoje é dia de festa! Parabéns, ${lista}! Que o dia seja bom e o ano traga coisas boas. 🎉 — a AIDA`,
+    image_url: null,
+    link_url: null,
+    link_preview: null,
+    message_type: 'text',
+    reply_to_id: null,
+  })
+  return erroInsert ? 0 : nomes.length
+}
+
+/**
  * Publica o bom dia uma vez por dia, na hora certa. Devolve o estado para o relatório do cron.
  * Erros são devolvidos, nunca lançados, para não derrubar o cron que o chama.
  */
@@ -136,7 +168,8 @@ export async function correrBomDiaAida(db: SupabaseClient, agora: Date = new Dat
       reply_to_id: null,
     })
     if (error) return { estado: 'erro', erro: error.message }
-    return { estado: 'publicado' }
+    const festejados = await festejarAniversarios(db, agora, userId).catch(() => 0)
+    return { estado: 'publicado', ...(festejados ? { aniversarios: festejados } : {}) }
   } catch (e) {
     return { estado: 'erro', erro: e instanceof Error ? e.message : String(e) }
   }
