@@ -7,7 +7,7 @@
  * Corre dentro do cron `social-link-preview` (a vercel.json está no tecto de crons).
  */
 import type { SupabaseClient } from '@supabase/supabase-js'
-import { resolveSystemUserId } from '@/lib/system-chat-user'
+import { resolveAidaUserId } from '@/lib/aida/perfil'
 import { notifyChatChannelMessage } from '@/lib/chat-channel-notify'
 
 export const CANAL_BOM_DIA = 'geral'
@@ -172,7 +172,7 @@ export async function correrBomDiaAida(db: SupabaseClient, agora: Date = new Dat
       alerta = null
     }
 
-    const userId = await resolveSystemUserId(db)
+    const userId = await resolveAidaUserId(db)
     const { data: msg, error } = await db.from('chat_messages').insert({
       channel_slug: CANAL_BOM_DIA,
       user_id: userId,

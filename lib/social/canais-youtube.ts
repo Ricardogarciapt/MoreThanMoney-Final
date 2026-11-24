@@ -12,6 +12,7 @@
  *    fica registado mas não publica. Ver a nota de cada canal.
  *  - Lê o feed RSS oficial do YouTube (`/feeds/videos.xml?channel_id=`), sem chave de API.
  */
+import { resolveAidaUserId } from '@/lib/aida/perfil'
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { enriquecerLinkDoPost } from '@/lib/social/link-preview'
 import { fetchLinkPreview } from '@/lib/link-preview-fetch'
@@ -169,7 +170,7 @@ export async function correrCanaisYoutube(db: SupabaseClient): Promise<Resultado
       const content = textoDaPublicacao(canal, video)
       const { link_url, link_preview } = await enriquecerLinkDoPost(content, fetchLinkPreview)
       const { error } = await db.from('posts').insert({
-        user_id: autor,
+        user_id: await resolveAidaUserId(db).catch(() => autor),
         user_name: 'AIDA',
         category: canal.categoria,
         content,

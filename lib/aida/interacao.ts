@@ -8,7 +8,7 @@
  */
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { chamarIAGratis } from '@/lib/ia/chamar'
-import { resolveSystemUserId } from '@/lib/system-chat-user'
+import { resolveAidaUserId } from '@/lib/aida/perfil'
 import { CANAL_BOM_DIA, horaLisboa, notificarAida } from '@/lib/aida/bom-dia'
 
 export const MARCA_INTERACAO = '🤖 AIDA · '
@@ -82,7 +82,7 @@ export async function correrInteracaoAida(db: SupabaseClient, agora: Date = new 
     const texto = resposta.texto.trim()
     if (!texto || texto === 'SILENCIO') return { estado: 'silencio' }
 
-    const userId = await resolveSystemUserId(db)
+    const userId = await resolveAidaUserId(db)
     const { data: msg, error } = await db.from('chat_messages').insert({
       channel_slug: CANAL_BOM_DIA,
       user_id: userId,
