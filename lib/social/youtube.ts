@@ -17,6 +17,16 @@ export function youtubeId(url: string): string | null {
   return null
 }
 
+/** Playlists (youtube.com/playlist?list=…): não têm id de vídeo, por isso não há thumbnail pelo id. */
+export function playlistYoutube(url: string): string | null {
+  let u: URL
+  try { u = new URL(url) } catch { return null }
+  const host = u.hostname.replace(/^www\.|^m\./, "")
+  if (host !== "youtube.com" || u.pathname !== "/playlist") return null
+  const list = u.searchParams.get("list")
+  return list && /^[A-Za-z0-9_-]{6,80}$/.test(list) ? list : null
+}
+
 function limpar(id: string | null): string | null {
   return id && /^[A-Za-z0-9_-]{6,20}$/.test(id) ? id : null
 }

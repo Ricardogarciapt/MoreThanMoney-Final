@@ -1,6 +1,6 @@
 import type { LinkPreviewData } from "@/lib/link-preview-types"
 import { getHostname, normalizeUrlForHref } from "@/lib/url-utils"
-import { youtubeId, previewDoYoutube, type OEmbedYoutube } from "@/lib/social/youtube"
+import { youtubeId, previewDoYoutube, playlistYoutube, type OEmbedYoutube } from "@/lib/social/youtube"
 
 function decodeHtmlEntities(s: string): string {
   return s
@@ -84,6 +84,29 @@ export async function fetchLinkPreview(urlInput: string): Promise<LinkPreviewDat
       return previewDoYoutube(url, ytId, null)
     } finally {
       clearTimeout(t)
+    }
+  }
+
+  // Playlists do YouTube: a página não dá og:image ao bot, e sem id de vídeo não há thumbnail.
+  // Usa-se o oEmbed (título e autor) e, se não vier, um cartão com o nome «Playlist no YouTube».
+  if (playlistYoutube(url)) {
+    const ctl = new AbortController()
+    const t = setTimeout(() => ctl.abort(), 5_000)
+    let o: OEmbedYoutube | null = null
+    try {
+      const r = await fetch(`https://www.youtube.com/oembed?url=${encodeURIComponent(url)}&format=json`, { signal: ctl.signal })
+      o = r.ok ? ((await r.json()) as OEmbedYoutube) : null
+    } catch {
+      o = null
+    } finally {
+      clearTimeout(t)
+    }
+    return {
+      url,
+      title: o?.title?.trim() || "Playlist no YouTube",
+      description: o?.author_name?.trim() || null,
+      image: o?.thumbnail_url || null,
+      siteName: "YouTube",
     }
   }
 
