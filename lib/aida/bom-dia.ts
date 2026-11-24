@@ -174,3 +174,32 @@ export async function correrBomDiaAida(db: SupabaseClient, agora: Date = new Dat
     return { estado: 'erro', erro: e instanceof Error ? e.message : String(e) }
   }
 }
+
+/**
+ * Bom dia da AIDA no Skool (categoria geral). Só corre com a sessão do Skool guardada
+ * (integracoes_privadas, pelo /admin/skool). Sem sessão, devolve «sem_sessao» e não faz nada.
+ * Dedupe por dia no próprio post: uma vez por dia de Lisboa, mesmo se o cron correr duas vezes.
+ */
+export async function bomDiaSkool(db: SupabaseClient, agora: Date = new Date()): Promise<{ estado: string; erro?: string }> {
+  try {
+    if (horaLisboa(agora) !== HORA_BOM_DIA) return { estado: 'fora_da_hora' }
+    const dia = diaLisboa(agora)
+    const { data: marca } = await db.from('site_settings').select('value').eq('key', 'aida_skool_ultimo_bom_dia').maybeSingle()
+    if (marca?.value === dia) return { estado: 'ja_publicado' }
+
+    const { lerSessao, chamarApi, idDoGrupo, categoriasDoGrupo } = await import('@/lib/skool/ciclo-api')
+    await lerSessao()
+    const cats = await categoriasDoGrupo()
+    const titulo = `${MARCA_BOM_DIA}`
+    const conteudo = textoBomDia(agora, null).replace(`${MARCA_BOM_DIA}\n\n`, '')
+    await chamarApi('POST', 'posts?follow=true', {
+      post_type: 'generic',
+      group_id: await idDoGrupo(),
+      metadata: { title: titulo.slice(0, 120), content: conteudo.slice(0, 9000), attachments: '', labels: cats.geral, action: 0, video_ids: '' },
+    })
+    await db.from('site_settings').upsert({ key: 'aida_skool_ultimo_bom_dia', value: dia })
+    return { estado: 'publicado' }
+  } catch (e) {
+    return { estado: 'sem_sessao_ou_erro', erro: e instanceof Error ? e.message : String(e) }
+  }
+}
