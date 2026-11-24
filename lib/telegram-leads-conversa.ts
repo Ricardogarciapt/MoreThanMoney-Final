@@ -25,6 +25,7 @@ import { escadaNumaLinha, bonusNumaLinha } from '@/lib/escada-precos'
 import { MIN_DEPOSIT } from '@/lib/broker/deposito-minimo'
 import { REGRAS_CASA, peneira } from '@/lib/marketing/regras'
 import { DISCLAIMER } from '@/lib/telegram-leads-posts'
+import { chamarIAGratis } from '@/lib/ia/chamar'
 import { blocoFramework } from '@/lib/framework-mtm'
 import { CHAVE_CONFIG as CHAVE_COMUNIDADE, lerConfig as lerConfigComunidade } from '@/lib/telegram-comunidade'
 import { caminhosNumaLinha } from '@/lib/escada-caminhos'
@@ -98,7 +99,7 @@ export function respostaAceitavel(resposta: string, prova: string | null): boole
 }
 
 function sistema(prova: string | null): string {
-  return `És o assistente da equipa MoreThanMoney a responder NO GRUPO PÚBLICO do Telegram «MTM System», onde estão pessoas a decidir se entram. Responde como uma pessoa, não como um robô nem um FAQ: curto (máx. 45 palavras, 1–3 frases), caloroso, direto, no máx. 1 emoji.
+  return `És a AIDA (Artificial Intelligence Development Assistant), a assistente de IA da equipa MoreThanMoney, a responder NO GRUPO PÚBLICO do Telegram «MTM System», onde estão pessoas a decidir se entram. Não anuncies que és IA em cada mensagem; se alguém perguntar se é uma pessoa ou uma IA, responde com verdade: és a AIDA, uma IA. Responde como uma pessoa, não como um robô nem um FAQ: curto (máx. 45 palavras, 1–3 frases), caloroso, direto, no máx. 1 emoji.
 
 O teu objetivo é tirar a dúvida e dar UM passo seguinte: criar conta (morethanmoney.pt/register, 3 dias de Premium grátis: pede os dados de pagamento mas não cobra nada nos 3 dias, avisa por email na véspera e cancela-se num clique; quem vem com experiência de outras plataformas de educação digital usa o cupão 90DAYSPREVIOUSXP e tem 90 dias como Membro), a rota da corretora (depósito ≥ ${MIN_DEPOSIT}$ que fica na conta dela) ou falar em privado comigo. Nunca as três de uma vez.
 
@@ -129,18 +130,17 @@ async function lerProva(db: Supa): Promise<string | null> {
 }
 
 async function perguntarAoModelo(pergunta: string, prova: string | null): Promise<string | null> {
-  const key = process.env.ANTHROPIC_API_KEY?.trim()
-  if (!key) return null
-  const model = process.env.TELEGRAM_FUNNEL_MODEL?.trim() || process.env.ANTHROPIC_MODEL?.trim() || 'claude-haiku-4-5-20251001'
+  // Cadeia grátis (regra da casa): nunca a API paga da Anthropic no CRM e nos funis.
   try {
-    const r = await fetch('https://api.anthropic.com/v1/messages', {
-      method: 'POST',
-      headers: { 'content-type': 'application/json', 'x-api-key': key, 'anthropic-version': '2023-06-01' },
-      body: JSON.stringify({ model, max_tokens: 220, system: sistema(prova), messages: [{ role: 'user', content: pergunta.slice(0, 1200) }] }),
+    const r = await chamarIAGratis({
+      sistema: sistema(prova),
+      mensagens: [{ role: 'user', content: pergunta.slice(0, 1200) }],
+      maxTokens: 220,
+      temperatura: 0.6,
+      tarefa: 'telegram-leads-conversa',
+      preferencia: 'rapido',
     })
-    if (!r.ok) return null
-    const j = await r.json()
-    return String(j?.content?.[0]?.text ?? '').trim() || null
+    return r.texto.trim() || null
   } catch {
     return null
   }
