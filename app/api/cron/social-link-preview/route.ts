@@ -6,6 +6,7 @@ import { backfillLinkPreviews } from '@/lib/social/link-preview'
 import { correrCicloSkool } from '@/lib/skool/ciclo'
 import { correrCanaisYoutube } from '@/lib/social/canais-youtube'
 import { correrBomDiaAida, bomDiaSkool } from '@/lib/aida/bom-dia'
+import { correrInteracaoAida } from '@/lib/aida/interacao'
 
 /**
  * Backfill das thumbnails de link nos posts do feed (pedido do dono a 05/10/2026).
@@ -32,7 +33,9 @@ export async function GET(request: NextRequest) {
     // Bom dia da AIDA às 07h de Lisboa, uma vez por dia (24/11). Nunca derruba o resto.
     const bomDia = await correrBomDiaAida(getSupabaseAdmin())
     const bomDiaNoSkool = await bomDiaSkool(getSupabaseAdmin())
-    return NextResponse.json({ ok: true, ...resultado, skool, canaisYoutube, bomDia, bomDiaNoSkool })
+    // Interação da AIDA ao longo do dia (10h, 13h, 16h, 19h de Lisboa). Erro nunca derruba o cron.
+    const interacao = await correrInteracaoAida(getSupabaseAdmin())
+    return NextResponse.json({ ok: true, ...resultado, skool, canaisYoutube, bomDia, bomDiaNoSkool, interacao })
   } catch (e) {
     console.error('[cron/social-link-preview]', e)
     return NextResponse.json({ error: 'Erro no backfill' }, { status: 500 })
