@@ -137,6 +137,11 @@ const nextConfig = {
         headers: [{ key: 'Access-Control-Allow-Origin', value: 'https://www.skool.com' }],
       },
       {
+        // Capas e infográficos dos cursos: carregados no Skool a partir de skool.com.
+        source: '/skool/:pasta(capas|infograficos)/:ficheiro*',
+        headers: [{ key: 'Access-Control-Allow-Origin', value: 'https://www.skool.com' }],
+      },
+      {
         source: '/.well-known/apple-app-site-association',
         headers: [{ key: 'Content-Type', value: 'application/json' }],
       },
