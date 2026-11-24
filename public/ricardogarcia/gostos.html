@@ -1,0 +1,102 @@
+<!doctype html>
+<html lang="pt-PT">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex,nofollow">
+<title>Gostos dos reels · Ricardo Garcia</title>
+<style>
+:root{--ouro:#D2A63C;--ouro-claro:#E9C46A;--fundo:#0b0d12;--cartao:#141821;--texto:#eef0f4;--suave:#8b93a7;--linha:#222a38}
+@media (prefers-color-scheme: light){:root:not([data-theme="dark"]){--fundo:#f7f5f0;--cartao:#fff;--texto:#16181f;--suave:#6b7280;--linha:#e5e1d6}}
+:root[data-theme="light"]{--fundo:#f7f5f0;--cartao:#fff;--texto:#16181f;--suave:#6b7280;--linha:#e5e1d6}
+body{margin:0;background:var(--fundo);color:var(--texto);font:15px/1.45 system-ui,-apple-system,Segoe UI,Roboto,sans-serif}
+main{max-width:760px;margin:0 auto;padding:20px 16px 60px}
+h1{font-size:22px;margin:4px 0 4px;color:var(--ouro)}
+.sub{color:var(--suave);font-size:13px;margin-bottom:18px}
+.reel{background:var(--cartao);border:1px solid var(--linha);border-radius:14px;padding:14px;margin-bottom:16px}
+.reel h2{font-size:16px;margin:0 0 4px;display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap}
+.contagens{font-size:12px;color:var(--suave);margin-bottom:10px}
+.pessoa{display:flex;align-items:center;gap:10px;padding:10px 0;border-top:1px solid var(--linha);flex-wrap:wrap}
+.pessoa .nome{flex:1;min-width:140px}
+.pessoa .nome b{font-weight:600}
+.pessoa .nome small{color:var(--suave);display:block}
+.estado{font-size:12px;padding:2px 8px;border-radius:999px;border:1px solid var(--linha);color:var(--suave)}
+.estado.contactado{color:var(--ouro-claro);border-color:var(--ouro)}
+.estado.respondeu{color:#34d399;border-color:#34d399}
+.estado.sem_interesse{opacity:.55}
+.acoes{display:flex;gap:6px;flex-wrap:wrap}
+button,a.btn{font:inherit;font-size:13px;padding:6px 10px;border-radius:9px;border:1px solid var(--linha);background:transparent;color:var(--texto);text-decoration:none;cursor:pointer}
+button.ouro,a.ouro{background:var(--ouro);border-color:var(--ouro);color:#111}
+button:disabled{opacity:.5;cursor:default}
+.vazio{color:var(--suave);padding:20px 0}
+#aviso{position:fixed;left:50%;bottom:20px;transform:translateX(-50%);background:var(--cartao);border:1px solid var(--ouro);padding:8px 14px;border-radius:10px;display:none}
+</style>
+</head>
+<body>
+<main>
+  <h1>Gostos dos reels</h1>
+  <div class="sub">Contacto manual. Cada botão abre o perfil ou a DM no Instagram e regista o estado. Nada é enviado por ti.</div>
+  <div id="lista"><p class="vazio">A carregar…</p></div>
+</main>
+<div id="aviso"></div>
+<script>
+(function () {
+  var API = '/api/ricardogarcia/gostos';
+  var ROTULO = { novo: 'novo', contactado: 'contactado', respondeu: 'respondeu', sem_interesse: 'sem interesse' };
+  function $(s) { return document.querySelector(s); }
+  function esc(t) { return String(t == null ? '' : t).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
+  function aviso(t) { var a = $('#aviso'); a.textContent = t; a.style.display = 'block'; clearTimeout(aviso.t); aviso.t = setTimeout(function () { a.style.display = 'none'; }, 2200); }
+  function marcar(id, estado) {
+    return fetch(API, { method: 'POST', credentials: 'same-origin', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id: id, estado: estado }) })
+      .then(function (r) { return r.json(); }).then(function (j) { if (!j.ok) throw new Error(j.erro || 'Erro'); });
+  }
+  function pintar(dados) {
+    var reels = dados.reels || [];
+    if (!reels.length) { $('#lista').innerHTML = '<p class="vazio">Sem gostos por contactar.</p>'; return; }
+    $('#lista').innerHTML = reels.map(function (r) {
+      var pessoas = r.pessoas.map(function (p) {
+        var u = esc(p.utilizador);
+        return '<div class="pessoa" data-id="' + p.id + '">' +
+          '<div class="nome"><b>@' + u + '</b>' + (p.nome ? '<small>' + esc(p.nome) + '</small>' : '') + '</div>' +
+          '<span class="estado ' + esc(p.estado) + '">' + ROTULO[p.estado] + '</span>' +
+          '<div class="acoes">' +
+          '<button class="ouro" data-abrir="dm" data-u="' + u + '">Abrir DM</button>' +
+          '<button data-abrir="perfil" data-u="' + u + '">Perfil</button>' +
+          '<button data-est="respondeu">Respondeu</button>' +
+          '<button data-est="sem_interesse">Sem interesse</button>' +
+          '</div></div>';
+      }).join('');
+      return '<section class="reel"><h2><span>Reel ' + esc(r.media_code) + '</span>' +
+        '<a class="btn" href="' + esc(r.media_url) + '" target="_blank" rel="noopener">Ver reel</a></h2>' +
+        '<div class="contagens">' + r.total + ' por contactar · ' + r.novo + ' novos · ' + r.contactado + ' contactados · ' + r.respondeu + ' responderam</div>' +
+        pessoas + '</section>';
+    }).join('') + (dados.escondidos_ja_comentaram ? '<p class="vazio">' + dados.escondidos_ja_comentaram + ' já comentaram e estão no setter (escondidos aqui).</p>' : '');
+  }
+  function carregar() {
+    fetch(API, { credentials: 'same-origin' }).then(function (r) { return r.json(); }).then(function (j) {
+      if (!j.ok) throw new Error(j.erro || 'Sem acesso');
+      pintar(j);
+    }).catch(function (e) { $('#lista').innerHTML = '<p class="vazio">' + esc(e.message) + '</p>'; });
+  }
+  document.addEventListener('click', function (ev) {
+    var b = ev.target.closest('button');
+    if (!b) return;
+    var linha = b.closest('.pessoa');
+    if (!linha) return;
+    var id = Number(linha.getAttribute('data-id'));
+    if (b.hasAttribute('data-abrir')) {
+      var u = b.getAttribute('data-u');
+      // Abre já (dentro do gesto do clique) e só depois regista o contacto.
+      window.open(b.getAttribute('data-abrir') === 'dm' ? 'https://ig.me/m/' + encodeURIComponent(u) : 'https://www.instagram.com/' + encodeURIComponent(u) + '/', '_blank', 'noopener');
+      marcar(id, 'contactado').then(carregar).catch(function (e) { aviso(e.message); });
+      return;
+    }
+    if (b.hasAttribute('data-est')) {
+      marcar(id, b.getAttribute('data-est')).then(carregar).catch(function (e) { aviso(e.message); });
+    }
+  });
+  carregar();
+})();
+</script>
+</body>
+</html>

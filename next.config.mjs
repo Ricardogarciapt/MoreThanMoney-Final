@@ -52,6 +52,7 @@ const nextConfig = {
         { source: '/ricardogarcia/', destination: '/ricardogarcia/index.html' },
         // Painel pessoal do Ricardo (só admin; a API é que guarda o acesso).
         { source: '/ricardogarcia/painel', destination: '/ricardogarcia/painel.html' },
+        { source: '/ricardogarcia/gostos', destination: '/ricardogarcia/gostos.html' },
         { source: '/ricardogarcia/app', destination: '/ricardogarcia/app.html' },
         // Site próprio da app «Missão»; a app em si vive em /ricardogarcia/app.
         { source: '/missao', destination: '/missao/index.html' },
