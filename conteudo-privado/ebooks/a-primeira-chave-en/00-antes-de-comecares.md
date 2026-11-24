@@ -72,7 +72,7 @@ eu: I hear you. That is not even on the list.
 
 It is not a get-rich course. It has no secret formulas. It will not tell you when to buy or sell. It does not guarantee returns, percentages or results. When numbers appear in examples, they are always **illustrative examples**, with round, made-up figures, so you can see the logic. They are not forecasts, nor anyone's performance data.
 
-I also want to be open about who is writing this. I am a crypto educator at MoreThanMoney, and MoreThanMoney has its own products, such as the Salas DCA com MTM, the Império Cripto and the Live Trading Cripto. If I mention them along the way, it is so you know they exist, not to push you into buying. You have every right not to use them and to keep studying on your own.
+I also want to be open about who is writing this. I am a crypto educator at MoreThanMoney, and MoreThanMoney has its own products, such as the Salas DCA com MTM, the A Primeira Chave course and the Live Trading Cripto. If I mention them along the way, it is so you know they exist, not to push you into buying. You have every right not to use them and to keep studying on your own.
 
 Before you go on, keep these three rules in your pocket. They are not complicated and you do not need to memorise them.
 

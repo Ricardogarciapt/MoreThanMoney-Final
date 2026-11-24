@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { requireAdmin } from '@/lib/admin-api-helpers'
+import { refreshTokenYoutube } from '@/lib/youtube/ligacao'
 
 /**
  * Token do YouTube para esta rota. Lê YOUTUBE_CLIENT_ID/SECRET e, na falta deles, GOOGLE_CLIENT_ID/SECRET
@@ -9,7 +10,7 @@ import { requireAdmin } from '@/lib/admin-api-helpers'
 async function tokenDoYoutube(): Promise<string> {
   const cid = (process.env.YOUTUBE_CLIENT_ID || process.env.GOOGLE_CLIENT_ID || '').trim()
   const secret = (process.env.YOUTUBE_CLIENT_SECRET || process.env.GOOGLE_CLIENT_SECRET || '').trim()
-  const refresh = (process.env.YOUTUBE_REFRESH_TOKEN || '').trim()
+  const refresh = await refreshTokenYoutube()
   if (!cid || !secret || !refresh) throw new Error('credenciais do YouTube em falta (client id, client secret, refresh token)')
   const r = await fetch('https://oauth2.googleapis.com/token', {
     method: 'POST',

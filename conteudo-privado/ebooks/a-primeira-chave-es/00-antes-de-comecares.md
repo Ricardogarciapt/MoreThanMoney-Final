@@ -72,7 +72,7 @@ eu: Te he oído. Ese ni siquiera está en la lista.
 
 No es un curso para hacerse rico. No tiene fórmulas secretas. No te dice cuándo comprar ni cuándo vender. No garantiza rentabilidades, porcentajes ni resultados. Cuando aparezcan números en los ejemplos, serán siempre **ejemplos ilustrativos**, con cifras redondas e inventadas, para que entiendas la lógica. No son predicciones, ni datos de rendimiento de nadie.
 
-También quiero ser transparente sobre quién escribe. Soy educador de cripto en MoreThanMoney, y MoreThanMoney tiene productos propios, como las Salas DCA con MTM, el Império Cripto y el Live Trading Cripto. Si los menciono a lo largo del libro, es para que sepas que existen, y no para empujarte a comprarlos. Tienes todo el derecho a no usarlos y a seguir estudiando por tu cuenta.
+También quiero ser transparente sobre quién escribe. Soy educador de cripto en MoreThanMoney, y MoreThanMoney tiene productos propios, como las Salas DCA con MTM, el curso A Primeira Chave y el Live Trading Cripto. Si los menciono a lo largo del libro, es para que sepas que existen, y no para empujarte a comprarlos. Tienes todo el derecho a no usarlos y a seguir estudiando por tu cuenta.
 
 Antes de seguir, guarda estas tres reglas en el bolsillo. No son complicadas y no necesitas memorizarlas.
 

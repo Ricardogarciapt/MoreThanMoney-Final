@@ -39,7 +39,7 @@ export async function tokenDoYoutube(): Promise<string> {
   // Em produção o par de cliente OAuth chama-se GOOGLE_CLIENT_ID/SECRET; YOUTUBE_CLIENT_* tem prioridade se existir.
   const cid = (process.env.YOUTUBE_CLIENT_ID || process.env.GOOGLE_CLIENT_ID || '').trim()
   const secret = (process.env.YOUTUBE_CLIENT_SECRET || process.env.GOOGLE_CLIENT_SECRET || '').trim()
-  const refresh = process.env.YOUTUBE_REFRESH_TOKEN?.trim()
+  const refresh = await (await import('@/lib/youtube/ligacao')).refreshTokenYoutube()
   if (!cid || !secret || !refresh) throw new Error('credenciais YOUTUBE_* em falta')
 
   const r = await fetch(YT_OAUTH, {
