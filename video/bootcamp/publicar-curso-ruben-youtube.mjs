@@ -49,7 +49,20 @@ const links = fs.existsSync(REGISTO) ? JSON.parse(fs.readFileSync(REGISTO, 'utf8
 links._playlists ||= {}
 const grava = () => fs.writeFileSync(REGISTO, JSON.stringify(links, null, 2))
 
+// O refresh token do cofre (integracoes_privadas.youtube, gravado pelo botão /api/admin/youtube/ligar) ganha ao da Vercel.
+async function refreshDoCofre() {
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL, key = process.env.SUPABASE_SERVICE_ROLE_KEY
+  if (!url || !key) return ''
+  try {
+    const r = await fetch(`${url}/rest/v1/integracoes_privadas?chave=eq.youtube&select=valor`, { headers: { apikey: key, Authorization: `Bearer ${key}` } })
+    const j = r.ok ? await r.json() : []
+    return String(j?.[0]?.valor?.refresh_token || '').trim()
+  } catch { return '' }
+}
+
 async function token() {
+  const cofre = await refreshDoCofre()
+  if (cofre) process.env.YOUTUBE_REFRESH_TOKEN = cofre
   const { YOUTUBE_CLIENT_ID: c, YOUTUBE_CLIENT_SECRET: s, YOUTUBE_REFRESH_TOKEN: r } = process.env
   if (!c || !s || !r) { console.log('ERRO credenciais YOUTUBE_* não encontradas (põe MTM_ENV=<ficheiro .env> ou exporta-as)'); process.exit(2) }
   const j = await (await fetch('https://oauth2.googleapis.com/token', { method: 'POST', headers: { 'content-type': 'application/x-www-form-urlencoded' }, body: new URLSearchParams({ client_id: c, client_secret: s, refresh_token: r, grant_type: 'refresh_token' }) })).json()

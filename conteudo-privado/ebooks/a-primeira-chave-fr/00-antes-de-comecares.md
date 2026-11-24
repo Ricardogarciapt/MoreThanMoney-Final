@@ -72,7 +72,7 @@ eu: Je t'entends. Celui-là n'est même pas sur la liste.
 
 Ce n'est pas un cours d'enrichissement. Il n'a pas de formules secrètes. Il ne te dit pas quand acheter ni quand vendre. Il ne garantit ni rendements, ni pourcentages, ni résultats. Quand des chiffres apparaissent dans les exemples, ce sont toujours des **exemples illustratifs**, avec des valeurs rondes et inventées, pour que tu comprennes la logique. Ce ne sont ni des prévisions, ni des données de performance de qui que ce soit.
 
-Je veux aussi être transparent sur qui écrit. Je suis éducateur crypto chez MoreThanMoney, et MoreThanMoney a ses propres produits, comme les Salas DCA com MTM, l'Império Cripto et le Live Trading Cripto. Si je les mentionne au fil du livre, c'est pour que tu saches qu'ils existent, et non pour te pousser à acheter. Tu as tout le droit de ne pas les utiliser et de continuer à étudier seul.
+Je veux aussi être transparent sur qui écrit. Je suis éducateur crypto chez MoreThanMoney, et MoreThanMoney a ses propres produits, comme les Salas DCA com MTM, le cours A Primeira Chave et le Live Trading Cripto. Si je les mentionne au fil du livre, c'est pour que tu saches qu'ils existent, et non pour te pousser à acheter. Tu as tout le droit de ne pas les utiliser et de continuer à étudier seul.
 
 Avant d'aller plus loin, garde ces trois règles en tête. Elles ne sont pas compliquées et tu n'as pas besoin de les apprendre par cœur.
 
