@@ -4,6 +4,7 @@ import { getSupabaseAdmin } from '@/lib/supabase-admin-client'
 import { fetchLinkPreview } from '@/lib/link-preview-fetch'
 import { backfillLinkPreviews } from '@/lib/social/link-preview'
 import { correrCicloSkool } from '@/lib/skool/ciclo'
+import { correrCanaisYoutube } from '@/lib/social/canais-youtube'
 
 /**
  * Backfill das thumbnails de link nos posts do feed (pedido do dono a 05/10/2026).
@@ -25,7 +26,9 @@ export async function GET(request: NextRequest) {
     })
     // Ciclo do Skool encadeado aqui (vercel.json no tecto de 100 crons). Nunca deixa cair o backfill.
     const skool = await correrCicloSkool().catch((e) => ({ ok: false, erro: e instanceof Error ? e.message : String(e) }))
-    return NextResponse.json({ ok: true, ...resultado, skool })
+    // Canais de YouTube curados → feed da app (24/11). Erro nunca derruba o backfill nem o Skool.
+    const canaisYoutube = await correrCanaisYoutube(getSupabaseAdmin()).catch((e) => [{ erro: e instanceof Error ? e.message : String(e) }])
+    return NextResponse.json({ ok: true, ...resultado, skool, canaisYoutube })
   } catch (e) {
     console.error('[cron/social-link-preview]', e)
     return NextResponse.json({ error: 'Erro no backfill' }, { status: 500 })
