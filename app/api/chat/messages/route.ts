@@ -1,8 +1,9 @@
-import { NextRequest, NextResponse } from "next/server"
+import { NextRequest, NextResponse, after } from "next/server"
 import { getSupabaseAdmin } from "@/lib/supabase-admin-client"
 import { canWriteChannel, type ChatChannelConfig } from "@/lib/chat-channel-permissions"
 import { awardXp } from "@/lib/xp-service"
 import { getSiteOrigin } from "@/lib/site-url"
+import { mencionaAida, responderMencaoAida } from "@/lib/aida/mencao"
 
 const CHANNEL_META: Record<string, { emoji: string; display: string }> = {
   trading:    { emoji: "📈", display: "#Trading" },
@@ -144,6 +145,17 @@ export async function POST(request: NextRequest) {
       content,
       imageUrl,
     )
+
+    // Menção a @aida: resposta depois de a resposta ao membro sair (não atrasa a publicação).
+    if (mencionaAida(content)) {
+      after(() => responderMencaoAida(supabase, {
+        channelSlug,
+        texto: content || "",
+        nome: profile.full_name || "Membro",
+        messageId: inserted.id,
+        userId: profile.id,
+      }))
+    }
 
     return NextResponse.json({
       message: inserted,
