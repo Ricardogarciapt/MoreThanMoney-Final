@@ -88,7 +88,7 @@ export function textoBomDia(agora: Date, alertaEmergencia?: string | null): stri
   return [
     MARCA_BOM_DIA,
     '',
-    `${abertura} Sou a AIDA, uma assistente de inteligência artificial da MoreThanMoney. Estou aqui das 07h às 22h para tirar dúvidas, moderar e ajudar-te a crescer.`,
+    `${abertura} Sou a AIDA, da equipa MoreThanMoney. Estou aqui das 07h às 22h para tirar dúvidas, moderar e ajudar-te a crescer.`,
     ...(ocasiao ? ['', ocasiao] : []),
     '',
     `💡 Foco do dia: ${foco}`,
