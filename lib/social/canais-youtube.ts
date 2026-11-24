@@ -30,8 +30,8 @@ export const CANAIS_YOUTUBE: CanalYoutube[] = [
     nome: 'Luis Pinto',
     tema: 'IA e Finanças',
     channelId: 'UCs5Len9qSmd9DI4vwuEw-Aw',
-    auto: false,
-    nota: 'Último vídeo («Problemas de Portugal...») a confirmar o tema antes de publicar.',
+    auto: true,
+    nota: 'Publica sempre o último vídeo; o tema vai no título.',
   },
   {
     nome: 'Admirável Cripto Mundo Novo',
@@ -42,10 +42,10 @@ export const CANAIS_YOUTUBE: CanalYoutube[] = [
   },
   {
     nome: 'António Vilaça Pacheco',
-    tema: 'Conforme o tema do vídeo',
+    tema: 'Vários temas',
     channelId: 'UCdRb0QzQzFJT63RKwvFgI0A',
-    auto: false,
-    nota: 'Publicar conforme o tema; o último vídeo é uma live (#67) a rever.',
+    auto: true,
+    nota: 'Publica sempre o último vídeo; o tema vai no título.',
   },
   {
     nome: 'Jorge Coutinho',
@@ -99,7 +99,7 @@ export function urlDoVideo(videoId: string): string {
 /** Texto da publicação: título, link e a atribuição do canal. Puro. */
 export function textoDaPublicacao(canal: CanalYoutube, video: VideoYoutube): string {
   return [
-    `📺 Novo vídeo de ${canal.nome} · ${canal.tema}`,
+    `📺 ${canal.nome} · ${canal.tema}`,
     '',
     video.titulo,
     '',
