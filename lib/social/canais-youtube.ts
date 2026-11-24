@@ -170,7 +170,7 @@ export async function correrCanaisYoutube(db: SupabaseClient): Promise<Resultado
       const { link_url, link_preview } = await enriquecerLinkDoPost(content, fetchLinkPreview)
       const { error } = await db.from('posts').insert({
         user_id: autor,
-        user_name: 'Ricardo Garcia',
+        user_name: 'AIDA',
         category: canal.categoria,
         content,
         link_url,
