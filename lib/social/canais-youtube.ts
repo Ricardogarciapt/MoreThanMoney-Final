@@ -17,6 +17,8 @@ import { enriquecerLinkDoPost } from '@/lib/social/link-preview'
 import { fetchLinkPreview } from '@/lib/link-preview-fetch'
 
 export type CanalYoutube = {
+  /** Categoria do feed (id de `posts.category`). Obrigatória: sem categoria o vídeo não aparece nos separadores. */
+  categoria: string
   nome: string
   tema: string
   channelId: string
@@ -28,6 +30,7 @@ export type CanalYoutube = {
 export const CANAIS_YOUTUBE: CanalYoutube[] = [
   {
     nome: 'Luis Pinto',
+    categoria: 'updates',
     tema: 'IA e Finanças',
     channelId: 'UCs5Len9qSmd9DI4vwuEw-Aw',
     auto: true,
@@ -35,6 +38,7 @@ export const CANAIS_YOUTUBE: CanalYoutube[] = [
   },
   {
     nome: 'Admirável Cripto Mundo Novo',
+    categoria: 'crypto',
     tema: 'Criptomoedas (Eduardo Espada)',
     channelId: 'UC4Ky4GBj0l5BOYxcygWXn5A',
     auto: true,
@@ -42,6 +46,7 @@ export const CANAIS_YOUTUBE: CanalYoutube[] = [
   },
   {
     nome: 'António Vilaça Pacheco',
+    categoria: 'social',
     tema: 'Vários temas',
     channelId: 'UCdRb0QzQzFJT63RKwvFgI0A',
     auto: true,
@@ -49,12 +54,14 @@ export const CANAIS_YOUTUBE: CanalYoutube[] = [
   },
   {
     nome: 'Jorge Coutinho',
+    categoria: 'lideranca',
     tema: 'Mindset e liderança',
     channelId: 'UCu25tu2vDf93_Y8RsCOJvXQ',
     auto: true,
   },
   {
     nome: 'Motiversity',
+    categoria: 'mindset',
     tema: 'Mindset',
     channelId: 'UC5PwYtgNAZuLQJqlQxj5D3g',
     auto: true,
@@ -163,6 +170,7 @@ export async function correrCanaisYoutube(db: SupabaseClient): Promise<Resultado
       const { link_url, link_preview } = await enriquecerLinkDoPost(content, fetchLinkPreview)
       const { error } = await db.from('posts').insert({
         user_id: autor,
+        category: canal.categoria,
         content,
         link_url,
         link_preview,
