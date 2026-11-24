@@ -19,6 +19,7 @@ export const dynamic = 'force-dynamic'
 
 const CRON_KEY = 'daily-morning-briefing'
 const CHANNEL = 'geral'
+const MOSTRAR_BLOCO_NUMEROS = false
 
 export async function GET(request: NextRequest) {
   try {
@@ -45,7 +46,8 @@ export async function GET(request: NextRequest) {
     // comunidade os pode confrontar com os sinais que viu. Em pips e percentagem: é a única medida
     // igual para quem opera 0,01 e para quem opera 1 lote. O dinheiro entra só como exemplo.
     let blocoDeNumeros = ''
-    try {
+    // Desligado a pedido do Ricardo (24/11/2026). Para voltar, pôr a constante a true.
+    if (MOSTRAR_BLOCO_NUMEROS) try {
       const { savePipsProof, blocoPips, publicavel } = await import('@/lib/pips-proof')
       const p = await savePipsProof(30)
       // Sem amostra não se publica nada. Um número construído sobre quatro trades não é prova,
