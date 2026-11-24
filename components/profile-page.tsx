@@ -39,6 +39,7 @@ export default function ProfilePage() {
     jifu_id: "",
     jifu_affiliate_link: "",
     birth_date: "",
+    aniversario_consentimento: false,
   })
   const [roleRequestData, setRoleRequestData] = useState({
     requestedRole: "",
@@ -70,6 +71,7 @@ export default function ProfilePage() {
         jifu_id: user.jifu_id || "",
         jifu_affiliate_link: user.jifu_affiliate_link || "",
         birth_date: user.birth_date || "",
+        aniversario_consentimento: (user as { aniversario_consentimento?: boolean }).aniversario_consentimento === true,
       })
     }
   }, [user])
@@ -387,6 +389,21 @@ export default function ProfilePage() {
                         className="bg-gray-800/50 border-white/10 text-white"
                       />
                     </div>
+
+                    <label htmlFor="aniversario_consentimento" className="flex items-start gap-3 text-sm text-gray-300">
+                      <input
+                        id="aniversario_consentimento"
+                        name="aniversario_consentimento"
+                        type="checkbox"
+                        checked={formData.aniversario_consentimento}
+                        onChange={(e) => setFormData((prev) => ({ ...prev, aniversario_consentimento: e.target.checked }))}
+                        className="mt-1 h-4 w-4 accent-[#D2A63C]"
+                      />
+                      <span>
+                        Quero que a AIDA me deseje feliz aniversário no canal geral (só o primeiro nome, nunca a data).
+                        Podes desligar quando quiseres.
+                      </span>
+                    </label>
 
                     <div className="space-y-2">
                       <Label htmlFor="social_media">Redes Sociais</Label>

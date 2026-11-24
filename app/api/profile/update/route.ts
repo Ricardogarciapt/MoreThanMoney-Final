@@ -13,6 +13,7 @@ const ALLOWED_FIELDS = [
   "jifu_id",
   "jifu_affiliate_link",
   "birth_date",
+  "aniversario_consentimento",
   "preferred_language",
   "country",
 ] as const
@@ -33,6 +34,10 @@ export async function PUT(request: NextRequest) {
     const updates: Record<string, unknown> = {}
     for (const field of ALLOWED_FIELDS) {
       if (field in rawUpdates) updates[field] = rawUpdates[field]
+    }
+    // Consentimento para a AIDA celebrar o aniversário: booleano estrito (RGPD, por omissão false).
+    if ("aniversario_consentimento" in updates) {
+      updates.aniversario_consentimento = updates.aniversario_consentimento === true
     }
 
     if (Object.keys(updates).length === 0) {
