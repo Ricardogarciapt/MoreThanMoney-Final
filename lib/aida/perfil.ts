@@ -10,8 +10,11 @@ import { resolveSystemUserId } from '@/lib/system-chat-user'
 
 export const EMAIL_PERFIL_AIDA = 'aida@sistema.morethanmoney.invalid'
 
+/**
+ * Por enquanto devolve sempre o utilizador de sistema: `posts.user_id` e as mensagens apontam para
+ * `auth.users`, e o perfil «AIDA» ainda não tem conta de autenticação. Quando essa conta existir,
+ * esta função passa a devolver o id do perfil.
+ */
 export async function resolveAidaUserId(db: SupabaseClient): Promise<string> {
-  const { data } = await db.from('profiles').select('id').eq('email', EMAIL_PERFIL_AIDA).maybeSingle()
-  if (data?.id) return data.id as string
   return resolveSystemUserId(db)
 }
