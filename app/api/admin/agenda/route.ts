@@ -23,7 +23,7 @@ export const GET = soGestao('bo.gestao_crm', async () => {
   const db = getSupabaseAdmin()
   const [{ data: anfitrioes }, { data: tipos }, { data: marcacoes }] = await Promise.all([
     db.from('agenda_anfitrioes')
-      .select('id, nome, email, telefone, fuso, zoom_url, janelas, intervalo_min, antecedencia_horas, horizonte_dias, max_por_dia, ativo, ordem, google_email, google_ligado_em, google_refresh_token')
+      .select('id, nome, email, telefone, fuso, zoom_url, janelas, intervalo_min, antecedencia_horas, horizonte_dias, max_por_dia, ativo, ordem, google_email, google_ligado_em, google_a_religar, google_refresh_token')
       .order('ordem'),
     db.from('agenda_tipos').select('*').order('ordem'),
     db.from('agenda_marcacoes')

@@ -118,8 +118,12 @@ export async function guardarConsentimento(anfitriaoId: string, codigo: string):
     google_refresh_token: refresh,
     google_email: email,
     google_ligado_em: new Date().toISOString(),
+    google_a_religar: false,
     updated_at: new Date().toISOString(),
   }).eq('id', anfitriaoId)
+
+  // As marcações que ficaram sem evento enquanto a ligação estava partida entram agora na agenda.
+  await recuperarNoGoogle(anfitriaoId).catch((e) => console.error('[agenda] recuperação falhou:', e))
 
   return { email }
 }
@@ -127,8 +131,53 @@ export async function guardarConsentimento(anfitriaoId: string, codigo: string):
 /** Um token de acesso fresco. Vale uma hora e não se guarda. */
 async function tokenDeAcesso(a: Anfitriao): Promise<string> {
   if (!a.google_refresh_token) throw new Error('anfitrião sem Google ligado')
-  const j = await trocarPorTokens({ refresh_token: a.google_refresh_token, grant_type: 'refresh_token' })
-  return String(j.access_token)
+  try {
+    const j = await trocarPorTokens({ refresh_token: a.google_refresh_token, grant_type: 'refresh_token' })
+    return String(j.access_token)
+  } catch (e) {
+    // invalid_grant = o Google já não aceita este refresh_token (expirou ou foi revogado). Acende-se
+    // o aviso «a religar» no painel, em vez de as marcações falharem em silêncio num log.
+    if (String(e).includes('invalid_grant')) {
+      await getSupabaseAdmin().from('agenda_anfitrioes')
+        .update({ google_a_religar: true, updated_at: new Date().toISOString() }).eq('id', a.id)
+    }
+    throw e
+  }
+}
+
+/**
+ * Depois de voltar a ligar o Google: as marcações que ficaram sem evento na agenda (criadas com a
+ * ligação partida) passam a ter evento. Só as futuras e ainda marcadas. Uma a uma, e uma falha não
+ * para as seguintes.
+ */
+export async function recuperarNoGoogle(anfitriaoId: string): Promise<number> {
+  const db = getSupabaseAdmin()
+  const { data: a } = await db.from('agenda_anfitrioes').select('*').eq('id', anfitriaoId).maybeSingle()
+  if (!a || !a.google_refresh_token) return 0
+  const { data: pendentes } = await db.from('agenda_marcacoes')
+    .select('id, inicio, fim, nome, email, telefone, local, agenda_tipos(nome, local)')
+    .eq('anfitriao_id', anfitriaoId).eq('estado', 'marcada').is('google_event_id', null)
+    .gte('inicio', new Date().toISOString()).limit(200)
+  let feitas = 0
+  for (const m of (pendentes ?? []) as any[]) {
+    try {
+      const tipo = Array.isArray(m.agenda_tipos) ? m.agenda_tipos[0] : m.agenda_tipos
+      const r = await criarEventoNoGoogle({
+        anfitriao: a as Anfitriao,
+        tipo: { nome: String(tipo?.nome ?? 'Chamada'), local: String(m.local ?? tipo?.local ?? 'meet') },
+        inicio: new Date(m.inicio), fim: new Date(m.fim),
+        nome: String(m.nome), email: String(m.email), telefone: m.telefone ?? null,
+      })
+      if (r?.eventId) {
+        await db.from('agenda_marcacoes')
+          .update({ google_event_id: r.eventId, ...(r.meetUrl ? { join_url: r.meetUrl } : {}) }).eq('id', m.id)
+        feitas++
+      }
+    } catch (e) {
+      console.error('[agenda] recuperar no Google falhou para', m.id, e)
+    }
+  }
+  return feitas
 }
 
 /**

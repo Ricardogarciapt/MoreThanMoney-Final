@@ -19,7 +19,7 @@ type Anfitriao = {
   id: string; nome: string; email: string; telefone: string | null; fuso: string; zoom_url: string | null
   janelas: Janela[]; intervalo_min: number; antecedencia_horas: number; horizonte_dias: number
   max_por_dia: number; ativo: boolean; ordem: number
-  google_email: string | null; google_ligado: boolean; google_ligado_em: string | null
+  google_email: string | null; google_ligado: boolean; google_ligado_em: string | null; google_a_religar?: boolean
 }
 type Tipo = {
   id: string; slug: string; nome: string; descricao: string | null; para_quem: string | null
@@ -286,7 +286,14 @@ function Anfitri({ a, aGravar, agir }: { a: Anfitriao; aGravar: string | null; a
           onBlur={(e) => e.target.value !== (a.zoom_url ?? "") && void agir({ accao: "anfitriao", id: a.id, zoom_url: e.target.value }, a.id)}
           className={`${CAMPO} w-[320px]`}
         />
-        {a.google_ligado ? (
+        {a.google_ligado && a.google_a_religar ? (
+          <a
+            href={`/api/admin/agenda/google/iniciar?anfitriao=${a.id}`}
+            className="flex items-center gap-1.5 rounded-lg border border-amber-400/60 bg-amber-400/10 px-2.5 py-1 text-[12px] font-medium text-amber-200"
+          >
+            ⚠ Google a religar{a.google_email ? `: ${a.google_email}` : ""} · as marcações não chegam à agenda
+          </a>
+        ) : a.google_ligado ? (
           <span className="flex items-center gap-1.5 rounded-lg border border-emerald-500/30 bg-emerald-500/10 px-2.5 py-1 text-[12px] text-emerald-300">
             <Check className="h-3.5 w-3.5" /> Google ligado{a.google_email ? `: ${a.google_email}` : ""}
           </span>
