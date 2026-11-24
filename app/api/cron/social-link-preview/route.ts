@@ -5,6 +5,7 @@ import { fetchLinkPreview } from '@/lib/link-preview-fetch'
 import { backfillLinkPreviews } from '@/lib/social/link-preview'
 import { correrCicloSkool } from '@/lib/skool/ciclo'
 import { correrCanaisYoutube } from '@/lib/social/canais-youtube'
+import { correrBomDiaAida } from '@/lib/aida/bom-dia'
 
 /**
  * Backfill das thumbnails de link nos posts do feed (pedido do dono a 05/10/2026).
@@ -28,7 +29,9 @@ export async function GET(request: NextRequest) {
     const skool = await correrCicloSkool().catch((e) => ({ ok: false, erro: e instanceof Error ? e.message : String(e) }))
     // Canais de YouTube curados → feed da app (24/11). Erro nunca derruba o backfill nem o Skool.
     const canaisYoutube = await correrCanaisYoutube(getSupabaseAdmin()).catch((e) => [{ erro: e instanceof Error ? e.message : String(e) }])
-    return NextResponse.json({ ok: true, ...resultado, skool, canaisYoutube })
+    // Bom dia da AIDA às 07h de Lisboa, uma vez por dia (24/11). Nunca derruba o resto.
+    const bomDia = await correrBomDiaAida(getSupabaseAdmin())
+    return NextResponse.json({ ok: true, ...resultado, skool, canaisYoutube, bomDia })
   } catch (e) {
     console.error('[cron/social-link-preview]', e)
     return NextResponse.json({ error: 'Erro no backfill' }, { status: 500 })
