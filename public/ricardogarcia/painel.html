@@ -283,11 +283,12 @@ dialog h2 { font-size: 24px; font-style: italic; margin-bottom: 14px; }
     pagina: '<svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="3"/><path d="M3 9h18M8 13h8M8 17h5"/></svg>',
     produtos: '<svg viewBox="0 0 24 24"><path d="M6 7h12l-1 13H7z"/><path d="M9 7a3 3 0 0 1 6 0"/></svg>',
     contactos: '<svg viewBox="0 0 24 24"><path d="M4 5h16v11H8l-4 4z"/><path d="M8 10h8"/></svg>',
+    gostos: '<svg viewBox="0 0 24 24"><path d="M12 21s-7-4.4-9.5-9A5.5 5.5 0 0 1 12 6a5.5 5.5 0 0 1 9.5 6c-2.5 4.6-9.5 9-9.5 9z"/></svg>',
     agenda: '<svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></svg>',
     metas: '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1.5"/></svg>',
     app: '<svg viewBox="0 0 24 24"><path d="M12 2l8 3v6c0 5-3.5 9-8 11-4.5-2-8-6-8-11V5z"/><path d="M8 12l3 3 5-6"/></svg>'
   };
-  var VISTAS = [['hoje', 'Hoje'], ['pagina', 'Página'], ['produtos', 'Produtos'], ['contactos', 'Contactos'], ['agenda', 'Agenda'], ['metas', 'Metas'], ['app', 'App']];
+  var VISTAS = [['hoje', 'Hoje'], ['pagina', 'Página'], ['produtos', 'Produtos'], ['contactos', 'Contactos'], ['gostos', 'Gostos'], ['agenda', 'Agenda'], ['metas', 'Metas'], ['app', 'App']];
 
   function cl(id) { return ((S.metricas || {}).porAlvo || {})[id] || 0; }
   function novos() { return S.contactos.filter(function (c) { return c.estado === 'novo'; }).length; }
@@ -304,6 +305,7 @@ dialog h2 { font-size: 24px; font-style: italic; margin-bottom: 14px; }
   }
 
   function ir(v) {
+    if (v === 'gostos') { location.href = '/ricardogarcia/gostos'; return; }
     if (sujo && vista === 'pagina' && v !== 'pagina' && !confirm('Tens alterações na página por guardar. Sair sem guardar?')) return;
     if (v !== 'pagina') sujo = false;
     vista = v; try { history.replaceState(null, '', '#' + v); } catch (e) {}
