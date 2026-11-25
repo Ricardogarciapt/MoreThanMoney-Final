@@ -224,7 +224,16 @@ async function montar({ id, marca, video, cin }) {
   const m = await import(path.join(REPO, 'video/motor/motor.mjs'))
   await m.finalizar(bruto, final, { formato: 'reel', qualidade: 'final' })
   fs.rmSync(bruto, { force: true })
-  const v = m.verificar(final, 'reel')
+  let v = m.verificar(final, 'reel')
+  // 25/11: o loudnorm de uma passagem fica às vezes a −15,6 LUFS em reels só de voz (3 de 14 caíram assim).
+  // Se o único problema é o volume, corrige-se com o ganho que falta (vídeo copiado, limitador a −1,5 dBTP).
+  if (v && v.ok === false && v.lufs != null && v.problemas.every((p) => p.startsWith('som a'))) {
+    const ganho = (-14 - v.lufs).toFixed(2), tmp = final.replace(/\.mp4$/, '-ganho.mp4')
+    log('corrigir volume', `${v.lufs} LUFS → +${ganho} dB`)
+    correr('ffmpeg', ['-y', '-hide_banner', '-loglevel', 'error', '-i', final, '-map', '0', '-c:v', 'copy', '-af', `volume=${ganho}dB,alimiter=limit=0.84:level=0`, '-c:a', 'aac', '-b:a', '192k', '-map_metadata', '-1', tmp])
+    fs.renameSync(tmp, final)
+    v = m.verificar(final, 'reel')
+  }
   log('verificar', JSON.stringify(v))
   if (v && v.ok === false) throw new Error(`verificar: ${(v.problemas || []).join('; ').slice(0, 200)}`)
   return final
